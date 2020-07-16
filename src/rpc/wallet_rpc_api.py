@@ -72,7 +72,18 @@ class WalletRpcApi:
             "/get_trade": self.get_trade,
             "/get_all_trades": self.get_all_trades,
             "/cancel_trade": self.cancel_trade,
+            "/rl_set_user_info": self.rl_set_user_info,
         }
+
+    async def rl_set_user_info(self, request):
+        wallet_id = uint32(int(request["wallet_id"]))
+        rl_user = self.service.wallet_state_manager.wallets[wallet_id]
+        await rl_user.set_user_info(
+            request["interval"],
+            request["limit"],
+            request["origin_id"],
+            request["admin_pubkey"]
+        )
 
     async def get_trade(self, request: Dict):
         if self.service is None:
