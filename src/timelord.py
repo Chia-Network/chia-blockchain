@@ -238,6 +238,9 @@ class Timelord:
                         writer.write((iter_size + str(iter)).encode())
                         await writer.drain()
                         log.info(f"New iteration submitted: {iter}")
+                        # Sanitizer will always work with only one iteration.
+                        if self.sanitizer_mode:
+                            alive_discriminant = False
             await asyncio.sleep(1)
             async with self.lock:
                 if challenge_hash in self.done_discriminants:
