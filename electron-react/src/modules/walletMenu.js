@@ -1,6 +1,7 @@
 export const standardWallet = "STANDARD_WALLET";
 export const createWallet = "CREATE_WALLET";
 export const CCWallet = "CC_WALLET";
+export const RLWallet = "RL_WALLET";
 
 export const changeWalletMenu = (item, id) => ({
   type: "WALLET_MENU",
