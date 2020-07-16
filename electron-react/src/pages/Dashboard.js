@@ -77,7 +77,8 @@ const useStyles = makeStyles(theme => ({
   content: {
     flexGrow: 1,
     height: "100vh",
-    overflow: "hidden"
+    overflowX: "hidden",
+    overflowY: "scroll"
   },
   container: {
     padding: "0px",
