@@ -140,7 +140,7 @@ full_node:
   # Send to the timelords uncompact blocks once every 'send_uncompact_interval' seconds
   # Set to 0 if you don't use this feature. The recommended value is
   # send_uncompact_interval=1800
-  send_uncompact_interval: 1800
+  send_uncompact_interval: 0
 
   farmer_peer:
       host: *self_hostname

@@ -1,6 +1,7 @@
 export const presentWallet = "WALLET";
 export const presentNode = "NODE";
 export const presentFarmer = "FARMER";
+export const presentPlotter = "PLOTTER";
 export const presentTrading = "TRADING";
 
 export const changeMainMenu = item => ({ type: "MAIN_MENU", item: item });

@@ -5,6 +5,7 @@ from typing import Dict, Optional, Tuple, List, AsyncGenerator, Callable
 import concurrent
 from pathlib import Path
 import random
+import socket
 import logging
 import traceback
 from blspy import PrivateKey
@@ -271,12 +272,18 @@ class WalletNode:
                 c.get_peer_info()
                 for c in self.global_connections.get_full_node_connections()
             ]
-            if full_node_peer in peers:
+            full_node_resolved = PeerInfo(
+                socket.gethostbyname(full_node_peer.host), full_node_peer.port
+            )
+            if full_node_peer in peers or full_node_resolved in peers:
                 self.log.info(
                     f"Will not attempt to connect to other nodes, already connected to {full_node_peer}"
                 )
                 for connection in self.global_connections.get_full_node_connections():
-                    if connection.get_peer_info() != full_node_peer:
+                    if (
+                        connection.get_peer_info() != full_node_peer
+                        and connection.get_peer_info() != full_node_resolved
+                    ):
                         self.log.info(
                             f"Closing unnecessary connection to {connection.get_peer_info()}."
                         )
