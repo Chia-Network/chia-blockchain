@@ -45,28 +45,27 @@ export const customStyles = makeStyles(theme => ({
   },
   card: {
     height: 100
-  }
+  },
+  copyButton: {
+    marginTop: theme.spacing(0),
+    marginBottom: theme.spacing(0),
+    width: 50,
+    height: 56
+  },
 }));
 
 export const CreateRLUserWallet = () => {
   const classes = useStyles();
   const custom = customStyles();
   const dispatch = useDispatch();
-  // var name_input = null;
-  var pending = useSelector(state => state.create_options.pending);
-  var created = useSelector(state => state.create_options.created);
+  const pubkey = useSelector(state => state.wallet_state.wallets[id].user_pubkey);
 
   function goBack() {
     dispatch(changeCreateWallet(CREATE_RL_WALLET_OPTIONS));
   }
 
-  // TODO: ABOVE IS DONE; BELOW IS A WORK-IN-PROGRESS
-
-  function create() {
-    dispatch(createState(true, true));
-    // var name = name_input.value;
-    // TODO: dispatch needs to include the other inputs
-    dispatch(create_rl_user());
+  function copy() {
+    navigator.clipboard.writeText(puzzle_hash);
   }
 
   return (
@@ -80,21 +79,31 @@ export const CreateRLUserWallet = () => {
           </Box>
           <Box flexGrow={1} className={classes.title}>
             <Typography component="h6" variant="h6">
-              Create Rate Limited User Wallet
+              Set Up Rate Limited User Wallet
             </Typography>
           </Box>
         </Box>
       </div>
       <div className={custom.card}>
         <Box display="flex">
+          <Box flexGrow={1}>
+            <TextField
+              disabled
+              fullWidth
+              label="Pubkey"
+              value={pubkey}
+              variant="outlined"
+            />
+          </Box>
           <Box>
             <Button
-              onClick={create}
-              className={custom.send}
+              onClick={copy}
+              className={classes.copyButton}
               variant="contained"
-              color="primary"
+              color="secondary"
+              disableElevation
             >
-              Create
+              Copy
             </Button>
           </Box>
         </Box>
