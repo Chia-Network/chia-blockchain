@@ -96,7 +96,7 @@ export const CreateNewCCWallet = () => {
           <Box flexGrow={1}>
             <TextField
               className={custom.input}
-              id="filled-secondary"
+              id="filled-secondary" // lgtm [js/duplicate-html-id]
               variant="filled"
               color="secondary"
               fullWidth
