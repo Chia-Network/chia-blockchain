@@ -78,12 +78,13 @@ class WalletRpcApi:
     async def rl_set_user_info(self, request):
         wallet_id = uint32(int(request["wallet_id"]))
         rl_user = self.service.wallet_state_manager.wallets[wallet_id]
-        await rl_user.set_user_info(
+        success = await rl_user.set_user_info(
             request["interval"],
             request["limit"],
             request["origin_id"],
             request["admin_pubkey"]
         )
+        return {"success": success}
 
     async def get_trade(self, request: Dict):
         if self.service is None:
