@@ -8,6 +8,8 @@ for setuptools_scm/PEP 440 reasons.
 
 ## [Unreleased]
 
+## [1.0beta8] aka Beta 1.8 - 2020-07-16
+
 ### Added
 
 - We have released a new plot file format. We believe that plots made in this
@@ -82,6 +84,7 @@ farmer and full node protocols.
 - HD keys now use EIP 2333 format instead of BIP32, for compatibility with
 other chains.
 - Keys are now derived with the EIP 2334 (m/12381/8444/a/b).
+
 - Removed the ability to pass in sk_seed to plotting, to increase security.
 - Linux builds of chiavdf and blspy now use a fresh build of gmp 6.2.1.
 
@@ -103,6 +106,12 @@ versions after a release tag.
 - All keys generated before Beta 1.8 are of an old format and no longer useful.
 - All plots generated before Beta 1.8 are no longer compatible with testnet and
 should be deleted.
+
+### Known Issues
+- For Windows users on pre Haswell CPUs there is a known issue that causes
+"Given G1 element failed g1_is_valid check" when attempting to generate
+keys. This is a regression from our previous fix when it was upstreamed into
+relic. We will make a patch available for these systems shortly.
 
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 
