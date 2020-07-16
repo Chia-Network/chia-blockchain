@@ -10,55 +10,94 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
-- Added a faster VDF process, which generates n-wesolowski proofs very fast, after the VDF result is known.
-This requires a high number of CPUs. To use it, set timelord.fast_algorithm = True in the config file.
-- Added a new type of timelord, which generates compact proofs of time for the existing blocks. This helps
-reducing the database size. Full nodes send 100 random un-compact blocks per hour to timelords, and if
-timelord.sanitizer_mode = True, the timelord will work on those challenges.
-- Ci's check to see if they have secret access and attempt to fail cleanly so that ci runs successfully complete from PRs or forked repositories.
-- Ability to add plots by directory name in UI
-- Confirm before closing UI
-- Farmer now sends challenges after handshake with harvester
-- UI now tries to shut down servers gracefully before exiting, and also closes daemon before starting
-- The chia executable is now available if installing from windows or mac GUI.
+- We have released a new plot file format. We believe that plots made in this
+format and with these IETF BLS keys will work without significant changes on
+mainnet at launch.
+- We now use [chacha8](https://cr.yp.to/chacha.html) and
+[blake3](https://github.com/BLAKE3-team/BLAKE3) for proof of space instead of
+the now deprecated AES methods. This should increase plotting speed and support
+more processors.
+- Plot refreshing happens during all new challenges, and only new/modified
+files are read.
+- Updated [blspy](https://github.com/Chia-Network/bls-signatures) to use the
+new [IETF standard for BLS signatures](https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-02).
+- Added a faster VDF process, which generates n-wesolowski proofs very fast,
+after the VDF result is known. This requires a high number of CPUs. To use it,
+set timelord.fast_algorithm = True in the config file.
+- Added a new type of timelord, which generates compact proofs of time for
+existing blocks. This helps reducing the database size and speeds up syncing
+a node for new users joining the network. Full nodes send 100 random un-compact
+blocks per hour to timelords, and if timelord.sanitizer_mode = True, the
+timelord will work on those challenges. Unlike the main timelord, average
+machines can run the sanitizer and contribute to the chain. Expect improvements
+to the install method for the sanitizing timelord in future releases.
+- From the UI you can add a directory that harvester will always check for
+existing and new plots. Harvester will only look in the specific directory you
+specify so you'll have to add any subfolders you want to have plots in.
+- The UI now asks for confirmation before closing and shows shutdown progress.
+- UI now tries to shut down servers gracefully before exiting, and also closes
+daemon before starting.
+- The various sub repositories (chiapos, chiavdf, etc.) now build ARM64 binary
+wheels for Linux with Python 3.8. This makes installing on Ubuntu 20.04 lts on
+a Raspberry Pi 3 or 4 easy.
+- Ci's check to see if they have secret access and attempt to fail cleanly so
+that ci runs successfully complete from PRs or forked repositories.
+- Farmer now sends challenges after a handshake with harvester.
+- The chia executable is now available if installing from the Windows or MacOS
+Graphical installer. Try `./chia -h` from
+`~\AppData\Local\Chia-Blockchain\app-0.1.8\resources\app.asar.unpacked\daemon\`
+in Windows or
+`/Applications/Chia.app/Contents/Resources/app.asar.unpacked/daemon` on MacOS.
 
 
 ### Changed
-- Minor changes have been made across the repositories to better support compiling on OpenBSD. HT @n1000.
+- Minor changes have been made across the repositories to better support
+compiling on OpenBSD. HT @n1000.
+- Changed XCH units to TXCH units for testnet.
 - A push to a branch will cancel all ci runs still running for that branch.
 - Ci's now cache pip and npm caches between runs.
-- Improve test speed with smaller discriminants, less blocks, less keys, and smaller plots.
+- Improve test speed with smaller discriminants, less blocks, less keys, and
+smaller plots.
 - RPC servers and clients were refactored.
-- Changed XCH units to TXCH units for testnet.
-- The keychain no longer support old keys that don't have mnemonics
-- The keychain uses BIP39 for seed derivation, using the "" passphrase, and also stores public keys
-- Plots.yaml has been replaced with a storing keys in the plots, and a list of directories in config.yaml
-- Auto scanning of plot directories for .plot files
-- The block header format was changed (puzzle hashes and pool signature)
-- Coinbase and fees coin are now in merkle set, and bip158 filter
-- New harvester protocol with 2/2 harvester and farmer signatures, and modified farmer and full node protocols
-- 255/256 filter which allows many plots per harvester
-- Improved create_plots and check_plots scripts, which are now "chia plots create" and "chia plots check"
+- The keychain no longer supports old keys that don't have mnemonics.
+- The keychain uses BIP39 for seed derivation, using the "" passphrase, and
+also stores public keys.
+- Plots.yaml has been replaced with a storing keys in the plots, and a list of
+directories in config.yaml
+- Auto scanning of plot directories for .plot files.
+- The block header format was changed (puzzle hashes and pool signature).
+- Coinbase and fees coin are now in merkle set, and bip158 filter.
+- New harvester protocol with 2/2 harvester and farmer signatures, and modified
+farmer and full node protocols.
+- 255/256 filter which allows virtually unlimited plots per harvester or drive.
+- Improved create_plots and check_plots scripts, which are now
+"chia plots create" and "chia plots check".
 - Add plot directories with "chia plots add"
-- Use real plot sizes in UI instead of formula
-- Use chacha/blake3 proof of space **(not on master yet)**
-- Plot refreshing happens during all new challenges, and only new/modified files are read
-- Updated blspy and use new IETF standard for bls signatures
-- HD keys now use EIP 2333 format instead of BIP32, for compatibility with other chains
+- Use real plot sizes in UI instead of a formula/
+- HD keys now use EIP 2333 format instead of BIP32, for compatibility with
+other chains.
 - Keys are now derived with the EIP 2334 (m/12381/8444/a/b).
-- Removed the ability to pass in sk_seed to plotting, to increase security
+- Removed the ability to pass in sk_seed to plotting, to increase security.
+- Linux builds of chiavdf and blspy now use a fresh build of gmp 6.2.1.
 
 ### Fixed
 - uPnP now works on Windows.
 - Log rotation should now properly rotate every 20MB and keep 7 historical logs.
-- Node had a significant memory leak under load due to an extraneous fork in the network code.
+- Node had a significant memory leak under load due to an extraneous fork
+in the network code.
 - Skylake processors on Windows without AVX would fail to run.
-- Harvester no longer runs into 512 maximum file handles open on Windows.
-- The version generator for new installers incorrectly handled the "dev" versions after a release tag.
-- Due to a python bug, ssl connections could randomly fail. Worked around [Python issue 29288](https://bugs.python.org/issue29288)
+- Harvester no longer runs into 512 maximum file handles open issue on Windows.
+- The version generator for new installers incorrectly handled the "dev"
+versions after a release tag.
+- Due to a python bug, ssl connections could randomly fail. Worked around
+[Python issue 29288](https://bugs.python.org/issue29288)
 - Removed websocket max message limit, allowing for more plots
 - Daemon was crashing when websocket gets improperly closed
 
+### Deprecated
+- All keys generated before Beta 1.8 are of an old format and no longer useful.
+- All plots generated before Beta 1.8 are no longer compatible with testnet and
+should be deleted.
 
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 
