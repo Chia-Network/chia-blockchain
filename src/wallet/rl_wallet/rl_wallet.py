@@ -3,8 +3,9 @@ import logging
 # RLWallet is subclass of Wallet
 from binascii import hexlify
 from dataclasses import dataclass
+from datetime import time
 from secrets import token_bytes
-from typing import Optional, List, Tuple, Any
+from typing import Optional, List, Tuple, Any, Dict
 
 import json
 from blspy import PrivateKey, AugSchemeMPL, G1Element
@@ -26,6 +27,7 @@ from src.wallet.rl_wallet.rl_wallet_puzzles import (
     make_clawback_solution,
     solution_for_rl,
 )
+from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -423,7 +425,28 @@ class RLWallet(AbstractWallet):
         transaction = await self.rl_generate_unsigned_transaction(
             to_puzzle_hash, amount
         )
-        return self.rl_sign_transaction(transaction)
+        spend_bundle = self.rl_sign_transaction(transaction)
+        if spend_bundle is None:
+            return None
+
+        tx_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=to_puzzle_hash,
+            amount=uint64(amount),
+            fee_amount=uint64(0),
+            incoming=False,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
+            trade_id=None,
+        )
+
+        return tx_record
 
     async def rl_sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]):
         sigs = []
@@ -575,3 +598,12 @@ class RLWallet(AbstractWallet):
         puzzle_hash = rl_make_aggregation_puzzle(wallet_puzzle).get_tree_hash()
 
         return puzzle_hash
+
+    async def generate_signed_transaction_dict(
+        self, data: Dict[str, Any]
+    ) -> Optional[TransactionRecord]:
+        if not isinstance(data["amount"], int) or not isinstance(data["amount"], int):
+            raise ValueError("An integer amount or fee is required (too many decimals)")
+        amount = uint64(data["amount"])
+        puzzle_hash = bytes32(bytes.fromhex(data["puzzle_hash"]))
+        return await self.rl_generate_signed_transaction(amount, puzzle_hash)
