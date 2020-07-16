@@ -52,8 +52,6 @@ class WalletRpcApi:
             "/get_height_info": self.get_height_info,
             "/create_new_wallet": self.create_new_wallet,
             "/get_wallets": self.get_wallets,
-            "/rl_set_admin_info": self.rl_set_admin_info,
-            "/rl_set_user_info": self.rl_set_user_info,
             "/cc_set_name": self.cc_set_name,
             "/cc_get_name": self.cc_get_name,
             "/cc_spend": self.cc_spend,
@@ -383,34 +381,6 @@ class WalletRpcApi:
         ] = await self.service.wallet_state_manager.get_all_wallets()
 
         response = {"wallets": wallets, "success": True}
-
-        return response
-
-    async def rl_set_admin_info(self, request):
-        wallet_id = int(request["wallet_id"])
-        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        user_pubkey = request["user_pubkey"]
-        limit = uint64(int(request["limit"]))
-        interval = uint64(int(request["interval"]))
-        amount = uint64(int(request["amount"]))
-
-        success = await wallet.admin_create_coin(interval, limit, user_pubkey, amount)
-
-        response = {"success": success}
-
-        return response
-
-    async def rl_set_user_info(self, request):
-        wallet_id = int(request["wallet_id"])
-        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        admin_pubkey = request["admin_pubkey"]
-        limit = uint64(int(request["limit"]))
-        interval = uint64(int(request["interval"]))
-        origin_id = request["origin_id"]
-
-        success = await wallet.set_user_info(interval, limit, origin_id, admin_pubkey)
-
-        response = {"success": success}
 
         return response
 
