@@ -17,32 +17,35 @@ mainnet at launch.
 [blake3](https://github.com/BLAKE3-team/BLAKE3) for proof of space instead of
 the now deprecated AES methods. This should increase plotting speed and support
 more processors.
-- Plot refreshing happens during all new challenges, and only new/modified
-files are read.
+- Plot refreshing happens during all new challenges and only new/modified files
+are read.
 - Updated [blspy](https://github.com/Chia-Network/bls-signatures) to use the
 new [IETF standard for BLS signatures](https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-02).
-- Added a faster VDF process, which generates n-wesolowski proofs very fast,
+- Added a faster VDF process which generates n-wesolowski proofs quickly
 after the VDF result is known. This requires a high number of CPUs. To use it,
 set timelord.fast_algorithm = True in the config file.
-- Added a new type of timelord, which generates compact proofs of time for
-existing blocks. This helps reducing the database size and speeds up syncing
-a node for new users joining the network. Full nodes send 100 random un-compact
-blocks per hour to timelords, and if timelord.sanitizer_mode = True, the
-timelord will work on those challenges. Unlike the main timelord, average
-machines can run the sanitizer and contribute to the chain. Expect improvements
-to the install method for the sanitizing timelord in future releases.
+- Added a new type of timelord helper - blue boxes, which generate compact
+proofs of time for existing proven blocks. This helps reducing the database
+size and speeds up syncing a node for new users joining the network. Full nodes
+send 100 random un-compact blocks per hour to blue boxes, and if
+timelord.sanitizer_mode = True, the blue box timelord will work on those
+challenges. Unlike the main timelord, average machines can run blue boxes
+and contribute to the chain. Expect improvements to the install method for
+blue boxes in future releases.
 - From the UI you can add a directory that harvester will always check for
 existing and new plots. Harvester will only look in the specific directory you
-specify so you'll have to add any subfolders you want to have plots in.
+specify so you'll have to add any subfolders you want to also contain plots.
 - The UI now asks for confirmation before closing and shows shutdown progress.
 - UI now tries to shut down servers gracefully before exiting, and also closes
-daemon before starting.
+the daemon before starting.
 - The various sub repositories (chiapos, chiavdf, etc.) now build ARM64 binary
 wheels for Linux with Python 3.8. This makes installing on Ubuntu 20.04 lts on
 a Raspberry Pi 3 or 4 easy.
 - Ci's check to see if they have secret access and attempt to fail cleanly so
 that ci runs successfully complete from PRs or forked repositories.
 - Farmer now sends challenges after a handshake with harvester.
+- The bls-signatures binary wheels include libsodium on all but Windows which
+we expect to add in future releases.
 - The chia executable is now available if installing from the Windows or MacOS
 Graphical installer. Try `./chia -h` from
 `~\AppData\Local\Chia-Blockchain\app-0.1.8\resources\app.asar.unpacked\daemon\`
@@ -62,8 +65,10 @@ smaller plots.
 - The keychain no longer supports old keys that don't have mnemonics.
 - The keychain uses BIP39 for seed derivation, using the "" passphrase, and
 also stores public keys.
-- Plots.yaml has been replaced with a storing keys in the plots, and a list of
-directories in config.yaml
+- Plots.yaml has been replaced.  Plot secret keys are stored in the plots,
+ and a list of directories that harvester can find plots in are in config.yaml.
+You can move plots around to any directory in config.yaml as long as the farmer
+has the correct farmer's secret key too.
 - Auto scanning of plot directories for .plot files.
 - The block header format was changed (puzzle hashes and pool signature).
 - Coinbase and fees coin are now in merkle set, and bip158 filter.
@@ -72,7 +77,7 @@ farmer and full node protocols.
 - 255/256 filter which allows virtually unlimited plots per harvester or drive.
 - Improved create_plots and check_plots scripts, which are now
 "chia plots create" and "chia plots check".
-- Add plot directories with "chia plots add"
+- Add plot directories to config.yaml from the cli with "chia plots add".
 - Use real plot sizes in UI instead of a formula/
 - HD keys now use EIP 2333 format instead of BIP32, for compatibility with
 other chains.
