@@ -251,7 +251,7 @@ class BlockTools:
                     timestamp1 = block1.header.data.timestamp
                 else:
                     block1 = block_list[0]
-                    timestamp1 = (
+                    timestamp1 = uint64(
                         block1.header.data.timestamp
                         - test_constants["BLOCK_TIME_TARGET"]
                     )
@@ -384,8 +384,8 @@ class BlockTools:
         prev_block: FullBlock,
         timestamp: uint64,
         update_difficulty: bool,
-        difficulty: uint64,
-        min_iters: uint64,
+        difficulty: int,
+        min_iters: int,
         seed: bytes = b"",
         reward_puzzlehash: bytes32 = None,
         transactions: Program = None,
@@ -403,7 +403,7 @@ class BlockTools:
                     prev_block.proof_of_space.get_hash()
                     + prev_block.proof_of_time.output.get_hash()
                 ),
-                difficulty,
+                uint64(difficulty),
             )
         else:
             challenge = Challenge(
@@ -442,8 +442,8 @@ class BlockTools:
         prev_iters: uint64,
         prev_weight: uint128,
         timestamp: uint64,
-        difficulty: uint64,
-        min_iters: uint64,
+        difficulty: int,
+        min_iters: int,
         seed: bytes,
         genesis: bool = False,
         reward_puzzlehash: bytes32 = None,

@@ -5,7 +5,7 @@ from sortedcontainers import SortedDict
 from src.types.coin import Coin
 from src.types.mempool_item import MempoolItem
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32, uint64
+from src.util.ints import uint64
 from src.types.header import Header
 
 
@@ -16,11 +16,11 @@ class Mempool:
     additions: Dict[bytes32, MempoolItem]
     removals: Dict[bytes32, MempoolItem]
     min_fee: uint64
-    size: uint32
+    size: int
 
     # if new min fee is added
     @staticmethod
-    def create(tip: Header, size: uint32):
+    def create(tip: Header, size: int):
         self = Mempool()
         self.header = tip
         self.spends = {}

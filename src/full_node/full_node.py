@@ -184,9 +184,10 @@ class FullNode:
             proof_of_time_min_iters: uint64 = self.blockchain.get_next_min_iters(
                 full_block
             )
-            proof_of_time_rate: uint64 = proof_of_time_min_iters // (
-                self.constants["BLOCK_TIME_TARGET"]
-                / self.constants["MIN_ITERS_PROPORTION"]
+            proof_of_time_rate: uint64 = uint64(
+                proof_of_time_min_iters
+                * self.constants.MIN_ITERS_PROPORTION
+                // (self.constants.BLOCK_TIME_TARGET)
             )
         rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
         yield OutboundMessage(
