@@ -74,7 +74,7 @@ class Blockchain:
     # Store
     block_store: BlockStore
     # Coinbase freeze period
-    coinbase_freeze: uint32
+    coinbase_freeze: int
     # Used to verify blocks in parallel
     pool: concurrent.futures.ProcessPoolExecutor
 

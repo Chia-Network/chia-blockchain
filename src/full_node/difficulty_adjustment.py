@@ -92,7 +92,7 @@ def get_next_difficulty(
         constants, headers, height_to_hash, headers[block2.prev_header_hash]
     )
     if block1:
-        timestamp1 = block1.data.timestamp  # i - 512 - 1
+        timestamp1 = int(block1.data.timestamp)  # i - 512 - 1
     else:
         # In the case of height == -1, there is no timestamp here, so assume the genesis block
         # took constants["BLOCK_TIME_TARGET"] seconds to mine.
