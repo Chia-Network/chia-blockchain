@@ -9,8 +9,6 @@ from src.full_node.coin_store import CoinStore
 from src.full_node.block_store import BlockStore
 from tests.setup_nodes import test_constants, bt
 
-test_constants_dict = test_constants.copy()
-
 
 @pytest.fixture(scope="module")
 def event_loop():
@@ -21,7 +19,7 @@ def event_loop():
 class TestCoinStore:
     @pytest.mark.asyncio
     async def test_basic_coin_store(self):
-        blocks = bt.get_consecutive_blocks(test_constants_dict, 9, [], 9, b"0")
+        blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
         db_path = Path("fndb_test.db")
         if db_path.exists():
@@ -42,7 +40,7 @@ class TestCoinStore:
 
     @pytest.mark.asyncio
     async def test_set_spent(self):
-        blocks = bt.get_consecutive_blocks(test_constants_dict, 9, [], 9, b"0")
+        blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
         db_path = Path("fndb_test.db")
         if db_path.exists():
@@ -70,7 +68,7 @@ class TestCoinStore:
 
     @pytest.mark.asyncio
     async def test_rollback(self):
-        blocks = bt.get_consecutive_blocks(test_constants_dict, 9, [], 9, b"0")
+        blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
 
         db_path = Path("fndb_test.db")
         if db_path.exists():
@@ -114,7 +112,7 @@ class TestCoinStore:
         initial_block_count = 20
         reorg_length = 15
         blocks = bt.get_consecutive_blocks(
-            test_constants_dict, initial_block_count, [], 9
+            test_constants, initial_block_count, [], 9
         )
         db_path = Path("blockchain_test.db")
         if db_path.exists():
@@ -144,7 +142,7 @@ class TestCoinStore:
                 assert unspent_fee.name == block.get_fees_coin().name()
 
             blocks_reorg_chain = bt.get_consecutive_blocks(
-                test_constants_dict,
+                test_constants,
                 reorg_length,
                 blocks[: initial_block_count - 10],
                 9,
@@ -185,7 +183,7 @@ class TestCoinStore:
     @pytest.mark.asyncio
     async def test_get_puzzle_hash(self):
         num_blocks = 10
-        blocks = bt.get_consecutive_blocks(test_constants_dict, num_blocks, [], 9)
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 9)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()

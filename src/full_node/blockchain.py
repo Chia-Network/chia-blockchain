@@ -225,7 +225,7 @@ class Blockchain:
             "DIFFICULTY_DELAY"
         ]:
             new_difficulty = get_next_difficulty(
-                self.constants.copy(), self.headers, self.height_to_hash, block.header
+                self.constants, self.headers, self.height_to_hash, block.header
             )
         else:
             new_difficulty = None
@@ -320,7 +320,7 @@ class Blockchain:
         assert curr_header_block is not None
         # Validate block header
         error_code: Optional[Err] = await validate_finished_block_header(
-            self.constants.copy(),
+            self.constants,
             self.headers,
             self.height_to_hash,
             curr_header_block,
@@ -493,12 +493,12 @@ class Blockchain:
 
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
         return get_next_difficulty(
-            self.constants.copy(), self.headers, self.height_to_hash, header_hash
+            self.constants, self.headers, self.height_to_hash, header_hash
         )
 
     def get_next_min_iters(self, header_hash: bytes32) -> uint64:
         return get_next_min_iters(
-            self.constants.copy(), self.headers, self.height_to_hash, header_hash
+            self.constants, self.headers, self.height_to_hash, header_hash
         )
 
     async def pre_validate_blocks_multiprocessing(
@@ -531,7 +531,7 @@ class Blockchain:
         prev_hb = self.get_header_block(prev_full_block)
         assert prev_hb is not None
         return await validate_unfinished_block_header(
-            self.constants.copy(),
+            self.constants,
             self.headers,
             self.height_to_hash,
             block.header,
