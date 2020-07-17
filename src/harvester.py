@@ -8,6 +8,7 @@ import concurrent
 from blspy import G1Element, G2Element, AugSchemeMPL
 
 from chiapos import DiskProver
+from src.consensus.constants import ConsensusConstants
 from src.protocols import harvester_protocol
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
@@ -16,7 +17,6 @@ from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
 from src.plotting.plot_tools import load_plots, PlotInfo
-from src.consensus.constants import constants as consensus_constants
 
 log = logging.getLogger(__name__)
 
@@ -33,10 +33,10 @@ class Harvester:
     _is_shutdown: bool
     executor: concurrent.futures.ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
-    constants: Dict
+    constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
 
-    def __init__(self, root_path: Path, override_constants={}):
+    def __init__(self, root_path: Path, constants: ConsensusConstants):
         self.root_path = root_path
 
         # From filename to prover
@@ -51,10 +51,8 @@ class Harvester:
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         self.state_changed_callback = None
         self.server = None
-        self.constants = consensus_constants.copy()
+        self.constants = constants
         self.cached_challenges = []
-        for key, value in override_constants.items():
-            self.constants[key] = value
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -236,7 +234,7 @@ class Harvester:
             if ProofOfSpace.can_create_proof(
                 plot_info.prover.get_id(),
                 new_challenge.challenge_hash,
-                self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
+                self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
             ):
                 awaitables.append(lookup_challenge(filename, plot_info.prover))
 

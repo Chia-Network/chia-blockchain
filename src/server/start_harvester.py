@@ -1,3 +1,4 @@
+from src.consensus.constants import constants
 from src.harvester import Harvester
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
@@ -19,7 +20,7 @@ def service_kwargs_for_harvester(root_path=DEFAULT_ROOT_PATH):
         PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])
     ]
 
-    api = Harvester(root_path)
+    api = Harvester(root_path, constants)
 
     async def start_callback():
         await api._start()
