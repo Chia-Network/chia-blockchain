@@ -14,7 +14,8 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 - Addressed pre-Haswell Windows signatures failing.
-- Removed outdated "200 plots" language from Plotter pane
+- Removed outdated "200 plots" language from Plot tab.
+- Fixed spelling error for "folder" on Plot tab.
 
 ## [1.0beta8] aka Beta 1.8 - 2020-07-16
 
