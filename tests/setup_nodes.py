@@ -222,11 +222,9 @@ async def setup_wallet_node(
 
 
 async def setup_harvester(port, farmer_port, dic={}):
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
+    consensus_constants = constants_for_dic(dic)
 
-    api = Harvester(bt.root_path, test_constants_copy)
+    api = Harvester(bt.root_path, consensus_constants)
 
     started = asyncio.Event()
 
