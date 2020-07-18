@@ -21,9 +21,10 @@ def help_message():
     print(f"command can be any of {command_list}")
     print("")
     print(
-        "chia plots create -k [size] -n [number of plots] -s [sk_seed] -i [index] -b [memory buffer size MB]"
+        "chia plots create -k [size] -n [number of plots] -b [memory buffer size MB]"
         + " -f [farmer pk] -p [pool pk] -t [tmp dir] -2 [tmp dir 2] -d [final dir]  (creates plots)"
     )
+    print("-s [sk_seed] -i [index] are available for debugging")
     print("chia plots check -n [num checks]  (checks plots)")
     print("chia plots add -d [directory] (adds a directory of plots)")
 
