@@ -14,7 +14,7 @@ from src.plotting.plot_tools import stream_plot_info
 from src.rpc.farmer_rpc_api import FarmerRpcApi
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
 
-from tests.setup_nodes import setup_farmer_harvester, bt
+from tests.setup_nodes import setup_farmer_harvester, test_constants, bt
 from src.util.block_tools import get_plot_dir
 from tests.time_out_assert import time_out_assert
 
@@ -28,7 +28,7 @@ def event_loop():
 class TestRpc:
     @pytest.fixture(scope="function")
     async def simulation(self):
-        async for _ in setup_farmer_harvester():
+        async for _ in setup_farmer_harvester(test_constants):
             yield _
 
     @pytest.mark.asyncio

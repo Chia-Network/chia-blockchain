@@ -21,7 +21,7 @@ def event_loop():
 class TestRpc:
     @pytest.fixture(scope="function")
     async def two_nodes(self):
-        async for _ in setup_two_nodes():
+        async for _ in setup_two_nodes(test_constants):
             yield _
 
     @pytest.mark.asyncio

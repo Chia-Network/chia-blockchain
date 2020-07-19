@@ -34,12 +34,13 @@ def event_loop():
 class TestWalletSync:
     @pytest.fixture(scope="function")
     async def wallet_node(self):
-        async for _ in setup_node_and_wallet(dic={"COINBASE_FREEZE_PERIOD": 0}):
+        constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+        async for _ in setup_node_and_wallet(constants):
             yield _
 
     @pytest.fixture(scope="function")
     async def wallet_node_starting_height(self):
-        async for _ in setup_node_and_wallet(starting_height=100):
+        async for _ in setup_node_and_wallet(test_constants, starting_height=100):
             yield _
 
     @pytest.mark.asyncio
