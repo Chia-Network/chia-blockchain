@@ -55,7 +55,8 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def two_nodes():
-    async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 0}):
+    constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+    async for _ in setup_two_nodes(constants):
         yield _
 
 

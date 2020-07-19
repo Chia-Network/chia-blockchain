@@ -32,7 +32,7 @@ def event_loop():
 class TestSimulation:
     @pytest.fixture(scope="function")
     async def simulation(self):
-        async for _ in setup_full_system():
+        async for _ in setup_full_system(test_constants):
             yield _
 
     @pytest.mark.asyncio

@@ -31,12 +31,14 @@ def event_loop():
 class TestMempool:
     @pytest.fixture(scope="function")
     async def two_nodes(self):
-        async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 0}):
+        constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+        async for _ in setup_two_nodes(constants):
             yield _
 
     @pytest.fixture(scope="function")
     async def two_nodes_small_freeze(self):
-        async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 30}):
+        constants = test_constants.replace(COINBASE_FREEZE_PERIOD=30)
+        async for _ in setup_two_nodes(constants):
             yield _
 
     @pytest.mark.asyncio
