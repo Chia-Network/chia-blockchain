@@ -63,7 +63,12 @@ class TestCCWallet:
         admin_pubkey = rl_admin.rl_info.admin_pubkey
 
         await rl_user.set_user_info(
-            interval, limit, origin.parent_coin_info.hex(), origin.puzzle_hash.hex(), origin.amount, admin_pubkey.hex()
+            interval,
+            limit,
+            origin.parent_coin_info.hex(),
+            origin.puzzle_hash.hex(),
+            origin.amount,
+            admin_pubkey.hex(),
         )
 
         for i in range(0, num_blocks):
@@ -75,13 +80,13 @@ class TestCCWallet:
         await time_out_assert(15, rl_user.get_confirmed_balance, 100)
         balance = await rl_user.rl_available_balance()
 
-        spend_bundle = await rl_user.rl_generate_signed_transaction(1, 32 * b'\0')
+        spend_bundle = await rl_user.rl_generate_signed_transaction(1, 32 * b"\0")
         now = uint64(int(time.time()))
 
         tx_record = TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=now,
-            to_puzzle_hash=32 * b'\0',
+            to_puzzle_hash=32 * b"\0",
             amount=uint64(amount),
             fee_amount=uint64(0),
             incoming=False,
@@ -100,5 +105,6 @@ class TestCCWallet:
             await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
 
         balance = await rl_user.get_confirmed_balance()
+        print(balance)
         breakpoint()
         await time_out_assert(15, rl_user.get_confirmed_balance, 99)
