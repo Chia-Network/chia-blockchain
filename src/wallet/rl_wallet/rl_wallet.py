@@ -11,7 +11,6 @@ import json
 from blspy import PrivateKey, AugSchemeMPL, G1Element
 from clvm_tools import binutils
 from src.types.coin import Coin
-from src.types.coin_record import CoinRecord
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
@@ -51,7 +50,6 @@ class RLInfo(Streamable):
     initialized: bool
 
 
-
 class RLWallet(AbstractWallet):
     wallet_state_manager: Any
     wallet_info: WalletInfo
@@ -70,7 +68,6 @@ class RLWallet(AbstractWallet):
             await wallet_state_manager.create_more_puzzle_hashes()
         unused = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
         assert unused is not None
-
 
         private_key = wallet_state_manager.private_key
         pubkey_bytes: bytes = bytes(private_key.derive_child(unused).get_g1())
@@ -153,9 +150,7 @@ class RLWallet(AbstractWallet):
             return self
 
     @staticmethod
-    async def create(
-        wallet_state_manager: Any, info: WalletInfo
-    ):
+    async def create(wallet_state_manager: Any, info: WalletInfo):
         self = RLWallet()
 
         self.private_key = wallet_state_manager.private_key
@@ -235,13 +230,23 @@ class RLWallet(AbstractWallet):
         return True
 
     async def set_user_info(
-        self, interval: uint64, limit: uint64, origin_parent_id: str, origin_puzzle_hash: str, origin_amount: uint64,  admin_pubkey: str
+        self,
+        interval: uint64,
+        limit: uint64,
+        origin_parent_id: str,
+        origin_puzzle_hash: str,
+        origin_amount: uint64,
+        admin_pubkey: str,
     ):
 
         admin_pubkey_bytes = hexstr_to_bytes(admin_pubkey)
 
         assert self.rl_info.user_pubkey is not None
-        origin = Coin(hexstr_to_bytes(origin_parent_id), hexstr_to_bytes(origin_puzzle_hash), origin_amount)
+        origin = Coin(
+            hexstr_to_bytes(origin_parent_id),
+            hexstr_to_bytes(origin_puzzle_hash),
+            origin_amount,
+        )
         rl_puzzle = rl_puzzle_for_pk(
             pubkey=self.rl_info.user_pubkey,
             rate_amount=limit,
@@ -466,7 +471,9 @@ class RLWallet(AbstractWallet):
         sigs = []
         for puzzle, solution in spends:
             pubkey, secretkey = await self.get_keys(solution.coin.puzzle_hash)
-            signature = AugSchemeMPL.sign(secretkey, Program(solution.solution).get_tree_hash())
+            signature = AugSchemeMPL.sign(
+                secretkey, Program(solution.solution).get_tree_hash()
+            )
             sigs.append(signature)
 
         aggsig = AugSchemeMPL.aggregate(sigs)
