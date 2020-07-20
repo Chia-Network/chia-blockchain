@@ -608,6 +608,11 @@ class WalletRpcApi:
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
         self.service.keychain.delete_key_by_fingerprint(fingerprint)
+        path = path_from_root(
+            self.service.root_path, f"{self.service.config['database_path']}-{fingerprint}"
+        )
+        if path.exists():
+            path.unlink()
         return {"success": True}
 
     async def clean_all_state(self):
