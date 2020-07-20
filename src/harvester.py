@@ -195,14 +195,14 @@ class Harvester:
                 quality_strings = prover.get_qualities_for_challenge(
                     new_challenge.challenge_hash
                 )
-            except RuntimeError:
+            except Exception:
                 log.error("Error using prover object. Reinitializing prover object.")
                 try:
                     self.prover = DiskProver(str(filename))
                     quality_strings = self.prover.get_qualities_for_challenge(
                         new_challenge.challenge_hash
                     )
-                except RuntimeError:
+                except Exception:
                     log.error(
                         f"Retry-Error using prover object on {filename}. Giving up."
                     )
@@ -231,7 +231,7 @@ class Harvester:
 
         awaitables = []
         for filename, plot_info in self.provers.items():
-            if ProofOfSpace.can_create_proof(
+            if filename.exists() and ProofOfSpace.can_create_proof(
                 plot_info.prover.get_id(),
                 new_challenge.challenge_hash,
                 self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,

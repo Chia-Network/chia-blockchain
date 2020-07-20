@@ -94,12 +94,10 @@ class BlockTools:
             temp_dir = plot_dir / "tmp"
             mkdir(temp_dir)
             args = Namespace()
-            args.sk_seed = std_hash(b"").hex()
             # Can't go much lower than 18, since plots start having no solutions
             args.size = 18
             # Uses many plots for testing, in order to guarantee proofs of space at every height
             args.num = 40
-            args.index = 0
             args.buffer = 32
             args.farmer_public_key = bytes(self.farmer_pk).hex()
             args.pool_public_key = bytes(self.pool_pk).hex()

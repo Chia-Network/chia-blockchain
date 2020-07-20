@@ -35,9 +35,6 @@ def make_parser(parser):
         "-n", "--num", help="Number of plots or challenges", type=int, default=None
     )
     parser.add_argument(
-        "-i", "--index", help="First plot index", type=int, default=None
-    )
-    parser.add_argument(
         "-b", "--buffer", help="Megabytes for sort/plot buffer", type=int, default=2048
     )
     parser.add_argument(
@@ -49,9 +46,6 @@ def make_parser(parser):
     )
     parser.add_argument(
         "-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None
-    )
-    parser.add_argument(
-        "-s", "--sk_seed", help="Secret key seed in hex", type=str, default=None
     )
     parser.add_argument(
         "-t",

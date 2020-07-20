@@ -769,6 +769,7 @@ class Blockchain:
                     # This coin is not in the current heaviest chain, so it must be in the fork
                     if rem not in additions_since_fork:
                         # This coin does not exist in the fork
+                        # TODO: fix this, there is a consensus bug here
                         return Err.UNKNOWN_UNSPENT
                     if rem in coinbases_since_fork:
                         # This coin is a coinbase coin
