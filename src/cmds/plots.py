@@ -21,7 +21,7 @@ def help_message():
     print(f"command can be any of {command_list}")
     print("")
     print(
-        "chia plots create -k [size] -n [number of plots] -s [sk_seed] -i [index] -b [memory buffer size MB]"
+        "chia plots create -k [size] -n [number of plots] -b [memory buffer size MB]"
         + " -f [farmer pk] -p [pool pk] -t [tmp dir] -2 [tmp dir 2] -d [final dir]  (creates plots)"
     )
     print("chia plots check -n [num checks]  (checks plots)")
@@ -32,9 +32,6 @@ def make_parser(parser):
     parser.add_argument("-k", "--size", help="Plot size", type=int, default=26)
     parser.add_argument(
         "-n", "--num", help="Number of plots or challenges", type=int, default=None
-    )
-    parser.add_argument(
-        "-i", "--index", help="First plot index", type=int, default=None
     )
     parser.add_argument(
         "-b", "--buffer", help="Megabytes for sort/plot buffer", type=int, default=2048
@@ -48,9 +45,6 @@ def make_parser(parser):
     )
     parser.add_argument(
         "-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None
-    )
-    parser.add_argument(
-        "-s", "--sk_seed", help="Secret key seed in hex", type=str, default=None
     )
     parser.add_argument(
         "-t",

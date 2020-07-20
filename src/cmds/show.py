@@ -262,7 +262,7 @@ async def show_async(args, parser):
                 if block.header.data.aggregated_signature is None:
                     aggregated_signature = block.header.data.aggregated_signature
                 else:
-                    aggregated_signature = block.header.data.aggregated_signature.sig
+                    aggregated_signature = block.header.data.aggregated_signature
                 print("Block", block.header.data.height, ":")
                 print(
                     f"Header Hash            0x{args.block_by_header_hash}\n"
