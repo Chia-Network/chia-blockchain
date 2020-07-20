@@ -11,10 +11,10 @@ import {
   presentSelectKeys
 } from "../../modules/entranceMenu";
 import {
-  log_in_and_skip_import,
   add_new_key_action,
   log_in_and_import_backup,
-  add_and_restore_from_backup
+  add_and_restore_from_backup,
+  login_and_skip_action
 } from "../../modules/message";
 import { Paper } from "@material-ui/core";
 
@@ -36,7 +36,7 @@ const UIPart = props => {
 
   function skip() {
     if (fingerprint !== null) {
-      dispatch(log_in_and_skip_import(fingerprint));
+      dispatch(login_and_skip_action(fingerprint));
     } else if (words !== null) {
       dispatch(add_new_key_action(words));
     }
