@@ -111,6 +111,19 @@ const SelectKey = () => {
     };
   };
 
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleCloseDelete = () => {
+    handleClose();
+    dispatch(delete_all_keys());
+  };
+
   const showKey = fingerprint => {
     return () => dispatch(get_private_key(fingerprint));
   };
