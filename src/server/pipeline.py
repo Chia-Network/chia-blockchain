@@ -23,6 +23,9 @@ from src.util.ints import uint16
 import traceback
 
 
+log = logging.getLogger(__name__)
+
+
 async def initialize_pipeline(
     srwt_aiter,
     api: Any,

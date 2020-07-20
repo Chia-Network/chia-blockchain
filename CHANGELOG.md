@@ -11,9 +11,10 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 ### Changed
 * chia start wallet-server changed to chia start wallet, for consistency.
+* All data size units are displayed in GiB instead of GB (powers of 1024 instead of 1000)
 ### Fixed
 * Fixed open_connection not being cancelled when node exits
-* Increase the robustness of node shutdown
+* Increase the robustness of node and wallet shutdown
 ### Deprecated
 * Removed legacy scripts such as chia-stop-server, chia-restart-harvester, etc.
 

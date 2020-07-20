@@ -76,9 +76,8 @@ def generate_and_print():
     """
 
     mnemonic = generate_mnemonic()
-    mnemonics_string = mnemonic_to_string(mnemonic)
-    print("Generating private key. Mnemonic:")
-    print(mnemonics_string)
+    print("Generating private key. Mnemonic (24 secret words):")
+    print(mnemonic)
     print(
         "Note that this key has not been added to the keychain. Run chia keys add_seed -m [MNEMONICS] to add"
     )
@@ -107,28 +106,11 @@ def add_private_key_seed(mnemonic):
         print(
             f"Added private key with public key fingerprint {fingerprint} and mnemonic"
         )
-        print(f"{mnemonic_to_string(mnemonic)}")
+        print(mnemonic)
 
     except ValueError as e:
         print(e)
         return
-
-
-def mnemonic_to_string(mnemonic_str):
-    """
-    Converts a menmonic to a user readable string in the terminal.
-    """
-    mnemonic = mnemonic_str.split()
-    mnemonics_string = ""
-
-    for i in range(0, len(mnemonic)):
-        mnemonics_string += f"{i + 1}) {mnemonic[i]}"
-        if i != len(mnemonic) - 1:
-            mnemonics_string += ", "
-        if (i + 1) % 6 == 0:
-            mnemonics_string += "\n"
-
-    return mnemonics_string
 
 
 def show_all_keys():
@@ -163,9 +145,8 @@ def show_all_keys():
         )
         assert seed is not None
         mnemonic = bytes_to_mnemonic(seed)
-        mnemonic_string = mnemonic_to_string(mnemonic)
-        print("  Mnemonic seed:")
-        print(mnemonic_string)
+        print("  Mnemonic seed (24 secret words):")
+        print(mnemonic)
 
 
 def delete(args):
