@@ -1,4 +1,4 @@
-import { service_wallet_server } from "../util/service_names";
+import { service_wallet } from "../util/service_names";
 
 export const addTrade = trade => ({ type: "TRADE_ADDED", trade });
 export const resetTrades = () => ({ type: "RESET_TRADE" });
@@ -53,7 +53,7 @@ export const tradeReducer = (state = { ...initial_state }, action) => {
   let trade;
   switch (action.type) {
     case "INCOMING_MESSAGE":
-      if (action.message.origin !== service_wallet_server) {
+      if (action.message.origin !== service_wallet) {
         return state;
       }
 

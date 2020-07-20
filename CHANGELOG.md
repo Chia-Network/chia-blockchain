@@ -9,6 +9,15 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
+### Changed
+* chia start wallet-server changed to chia start wallet, for consistency.
+### Fixed
+* Fixed open_connection not being cancelled when node exits
+* Increase the robustness of node shutdown
+### Deprecated
+* Removed legacy scripts such as chia-stop-server, chia-restart-harvester, etc.
+
+### Added
 
 - We have released a new plot file format. We believe that plots made in this
 format and with these IETF BLS keys will work without significant changes on

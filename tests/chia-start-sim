@@ -1,4 +1,26 @@
-. _chia-common
+_kill_servers() {
+  PROCS=`ps -e | grep -E 'chia|vdf_client' -v "chia-start-sim" | awk '!/grep/' | awk '{print $1}'`
+  if [ -n "$PROCS" ]; then
+    echo "$PROCS" | xargs -L1 kill -KILL
+  fi
+}
+
+_kill_servers
+
+BG_PIDS=""
+_run_bg_cmd() {
+  "$@" &
+  BG_PIDS="$BG_PIDS $!"
+}
+
+
+_term() {
+  echo "Caught TERM or INT signal, killing all servers."
+  for PID in $BG_PIDS; do
+    kill -TERM "$PID"
+  done
+  _kill_servers
+}
 
 echo "Starting local blockchain simulation. Runs a local introducer and chia system."
 echo "Note that this simulation will not work if connected to external nodes."

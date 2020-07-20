@@ -146,7 +146,7 @@ class TestCCTrades:
 
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 30)
-        trade: TradeStatus = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
+        trade = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
         assert TradeStatus(trade.status) is TradeStatus.CONFIRMED
 
     @pytest.mark.asyncio
@@ -271,13 +271,15 @@ class TestCCTrades:
             wallet_node_b.wallet_state_manager, wallet_b, colour
         )
 
-        offer = {1: -30, 4: 60}
+        offer_dict = {1: -30, 4: 60}
         file = "test_offer_file.offer"
         file_path = Path(file)
         if file_path.exists():
             file_path.unlink()
 
-        success, offer, error = await trade_manager_b.create_offer_for_ids(offer, file)
+        success, offer, error = await trade_manager_b.create_offer_for_ids(
+            offer_dict, file
+        )
 
         success, trade_a, reason = await trade_manager_a.respond_to_offer(file_path)
 
@@ -288,11 +290,15 @@ class TestCCTrades:
         await time_out_assert(15, cc_b_4.get_confirmed_balance, 60)
 
         async def assert_func():
+            assert trade_a is not None
             trade = await trade_manager_a.get_trade_by_id(trade_a.trade_id)
+            assert trade is not None
             return trade.status
 
         async def assert_func_b():
+            assert offer is not None
             trade = await trade_manager_b.get_trade_by_id(offer.trade_id)
+            assert trade is not None
             return trade.status
 
         await time_out_assert(15, assert_func, TradeStatus.CONFIRMED.value)
@@ -342,6 +348,7 @@ class TestCCTrades:
         assert spendable_chia == spendable_after_cancel_1
 
         trade_a = await trade_manager_a.get_trade_by_id(trade_offer.trade_id)
+        assert trade_a is not None
         assert trade_a.status == TradeStatus.CANCELED.value
 
     @pytest.mark.asyncio
@@ -392,7 +399,9 @@ class TestCCTrades:
         # Spendable should be the same as it was before making offer 1
 
         async def get_status():
+            assert trade_offer is not None
             trade_a = await trade_manager_a.get_trade_by_id(trade_offer.trade_id)
+            assert trade_a is not None
             return trade_a.status
 
         await time_out_assert(15, get_status, TradeStatus.CANCELED.value)

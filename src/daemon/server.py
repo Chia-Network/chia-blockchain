@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 if getattr(sys, "frozen", False):
     name_map = {
         "chia": "chia",
-        "chia-wallet": "wallet_server",
+        "chia_wallet": "start_wallet",
         "chia_full_node": "start_full_node",
         "chia_harvester": "start_harvester",
         "chia_farmer": "start_farmer",

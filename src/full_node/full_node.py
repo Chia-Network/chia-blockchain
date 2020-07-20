@@ -649,7 +649,9 @@ class FullNode:
                 [new_proof_of_time.height]
             )
             if new_proof_of_time.height not in self.blockchain.height_to_hash:
-                self.log.error(f"Height {new_proof_of_time.height} not found in height_to_hash.")
+                self.log.error(
+                    f"Height {new_proof_of_time.height} not found in height_to_hash."
+                )
                 return
             header_hash = self.blockchain.height_to_hash[new_proof_of_time.height]
             for block in blocks:

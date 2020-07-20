@@ -69,18 +69,10 @@ kwargs = dict(
         "src.wallet.trading",
         "src.ssl",
     ],
-    scripts=[
-        "scripts/_chia-common",
-        "scripts/_chia-stop-wallet",
-        "scripts/chia-drop-db",
-        "scripts/chia-restart-harvester",
-        "scripts/chia-start-sim",
-        "scripts/chia-stop-all",
-    ],
     entry_points={
         "console_scripts": [
             "chia = src.cmds.chia:main",
-            "chia-wallet = src.server.start_wallet:main",
+            "chia_wallet = src.server.start_wallet:main",
             "chia_full_node = src.server.start_full_node:main",
             "chia_harvester = src.server.start_harvester:main",
             "chia_farmer = src.server.start_farmer:main",

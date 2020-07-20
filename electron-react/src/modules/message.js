@@ -1,4 +1,4 @@
-import { service_wallet_server } from "../util/service_names";
+import { service_wallet } from "../util/service_names";
 import { openProgress } from "./progressReducer";
 
 export const clearSend = () => {
@@ -12,7 +12,7 @@ export const clearSend = () => {
 export const walletMessage = () => ({
   type: "OUTGOING_MESSAGE",
   message: {
-    destination: service_wallet_server
+    destination: service_wallet
   }
 });
 

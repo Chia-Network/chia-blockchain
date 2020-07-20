@@ -90,6 +90,7 @@ class Service:
         assert network_id is not None
 
         self._node_type = node_type
+        self._service_name = service_name
 
         proctitle_name = f"chia_{service_name}"
         setproctitle(proctitle_name)
@@ -186,41 +187,51 @@ class Service:
             except NotImplementedError:
                 self._log.info("signal handlers unsupported")
 
-            for _ in self._server_sockets:
-                await _.wait_closed()
-
-            await self._server.await_closed()
-            if self._stop_callback:
-                self._stop_callback()
-            if self._await_closed_callback:
-                await self._await_closed_callback()
-
         self._task = asyncio.create_task(_run())
 
     async def run(self):
         self.start()
         await self.wait_closed()
-        self._log.info("Closed all node servers.")
         return 0
 
     def stop(self):
         if not self._is_stopping:
             self._is_stopping = True
+            self._log.info("Calling service stop callback")
+            if self._stop_callback:
+                self._stop_callback()
+            self._log.info("Closing server sockets")
             for _ in self._server_sockets:
                 _.close()
+            self._log.info("Cancelling reconnect task")
             for _ in self._reconnect_tasks:
                 _.cancel()
+            self._log.info("Closing connections")
             self._server.close_all()
             self._api._shut_down = True
+            self._log.info("Stopping introducer task")
             if self._introducer_poll_task:
                 self._introducer_poll_task.cancel()
 
     async def wait_closed(self):
-        await self._task
+        self._log.info("Waiting for socket to be closed (if opened)")
+        for _ in self._server_sockets:
+            await _.wait_closed()
+
+        self._log.info("Waiting for ChiaServer to be closed")
+        await self._server.await_closed()
         if self._rpc_task:
+
+            self._log.info("Waiting for RPC server")
             await (await self._rpc_task)()
             self._log.info("Closed RPC server.")
-        self._log.info(f"Service at port {self._advertised_port} fully closed")
+
+        if self._await_closed_callback:
+            self._log.info("Waiting for service _await_closed callback")
+            await self._await_closed_callback()
+        self._log.info(
+            f"Service {self._service_name} at port {self._advertised_port} fully closed"
+        )
 
 
 async def async_run_service(*args, **kwargs):

@@ -216,7 +216,7 @@ class WalletNode:
             self.server.push_message(msg)
 
     async def _messages_to_resend(self) -> List[OutboundMessage]:
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self._shut_down:
             return []
         messages: List[OutboundMessage] = []
 

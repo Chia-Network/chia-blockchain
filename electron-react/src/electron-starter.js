@@ -145,7 +145,7 @@ const closeDaemon = callback => {
     if (!called_cb) {
       callback();
     }
-  }, 15000);
+  }, 20000);
 };
 
 const exitPyProc = e => {};
@@ -214,18 +214,6 @@ const createWindow = () => {
   // }
   mainWindow.on("close", e => {
     if (decidedToClose) {
-      if (pyProc != null) {
-        if (process.platform === "win32") {
-          process.stdout.write("Killing daemon on windows");
-          var cp = require("child_process");
-          cp.execSync("taskkill /PID " + pyProc.pid + " /T /F");
-        } else {
-          process.stdout.write("Killing daemon on other platforms");
-          pyProc.kill();
-          pyProc = null;
-          pyPort = null;
-        }
-      }
       return;
     }
     e.preventDefault();

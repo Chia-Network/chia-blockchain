@@ -160,7 +160,7 @@ wallet_exe = EXE(wallet_pyz,
           wallet.scripts,
           [],
           exclude_binaries=True,
-          name='wallet_server',
+          name='start_wallet',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False)

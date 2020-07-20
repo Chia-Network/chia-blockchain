@@ -7,7 +7,7 @@ import {
 } from "../modules/daemon_messages";
 import { handle_message } from "./middleware_api";
 import {
-  service_wallet_server,
+  service_wallet,
   service_full_node,
   service_simulator,
   service_plotter
@@ -38,10 +38,10 @@ const socketMiddleware = () => {
 
     let start_wallet, start_node;
     if (config.local_test) {
-      start_wallet = startServiceTest(service_wallet_server);
+      start_wallet = startServiceTest(service_wallet);
       start_node = startService(service_simulator);
     } else {
-      start_wallet = startService(service_wallet_server);
+      start_wallet = startService(service_wallet);
       start_node = startService(service_full_node);
     }
     store.dispatch(isServiceRunning(service_plotter));
