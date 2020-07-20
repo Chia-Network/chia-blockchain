@@ -798,7 +798,7 @@ class TestWalletProtocol:
             100, wallet_a.get_new_puzzlehash(), blocks_new[-1].get_coinbase(),
         )
         spend_bundle_bad = wallet_a.generate_signed_transaction(
-            uint64.from_bytes(constants.MAX_COIN_AMOUNT),
+            constants.MAX_COIN_AMOUNT,
             wallet_a.get_new_puzzlehash(),
             blocks_new[-1].get_coinbase(),
         )

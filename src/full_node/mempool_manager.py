@@ -143,7 +143,7 @@ class MempoolManager:
 
         # Check additions for max coin amount
         for coin in additions:
-            if coin.amount >= uint64.from_bytes(self.constants.MAX_COIN_AMOUNT):
+            if coin.amount >= self.constants.MAX_COIN_AMOUNT:
                 return (
                     None,
                     MempoolInclusionStatus.FAILED,
