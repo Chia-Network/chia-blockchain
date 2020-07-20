@@ -1,5 +1,7 @@
 import dataclasses
 
+from src.util.ints import uint64
+
 
 @dataclasses.dataclass(frozen=True)
 class ConsensusConstants:
@@ -18,7 +20,7 @@ class ConsensusConstants:
     # will be contant and required for all blocks.
     MIN_ITERS_PROPORTION: int
     # For the first epoch, since we have no previous blocks, we can't estimate vdf iterations per second
-    MIN_ITERS_STARTING: int
+    MIN_ITERS_STARTING: uint64
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBEBR_OF_TIMESTAMPS blocks
     # If an unfinished block is more than these many seconds slower than the best unfinished block,

@@ -550,8 +550,8 @@ class TestBlockValidation:
 
         assert diff_6 == diff_7
         assert diff_8 > diff_7
-        assert (diff_8 / diff_7) <= test_constants["DIFFICULTY_FACTOR"]
-        assert (b.get_next_min_iters(blocks[1])) == test_constants["MIN_ITERS_STARTING"]
+        assert (diff_8 / diff_7) <= test_constants.DIFFICULTY_FACTOR
+        assert (b.get_next_min_iters(blocks[1])) == test_constants.MIN_ITERS_STARTING
         assert (b.get_next_min_iters(blocks[6])) == (b.get_next_min_iters(blocks[5]))
         assert (b.get_next_min_iters(blocks[7])) > (b.get_next_min_iters(blocks[6]))
         assert (b.get_next_min_iters(blocks[8])) == (b.get_next_min_iters(blocks[7]))

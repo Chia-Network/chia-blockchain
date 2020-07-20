@@ -19,7 +19,7 @@ def service_kwargs_for_timelord(root_path):
         PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
     ]
 
-    api = Timelord(config, constants["DISCRIMINANT_SIZE_BITS"])
+    api = Timelord(config, constants.DISCRIMINANT_SIZE_BITS)
 
     async def start_callback():
         await api._start()

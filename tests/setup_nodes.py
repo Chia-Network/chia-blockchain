@@ -363,7 +363,7 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
     if sanitizer:
         config["vdf_server"]["port"] = 7999
 
-    api = Timelord(config, consensus_constants["DISCRIMINANT_SIZE_BITS"])
+    api = Timelord(config, consensus_constants.DISCRIMINANT_SIZE_BITS)
 
     started = asyncio.Event()
 

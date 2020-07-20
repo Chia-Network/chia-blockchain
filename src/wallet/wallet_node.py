@@ -361,7 +361,7 @@ class WalletNode:
         self.header_hashes_error = False
         self.proof_hashes = []
         self.potential_header_hashes = {}
-        genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
+        genesis = FullBlock.from_bytes(self.constants.GENESIS_BLOCK)
         genesis_challenge = genesis.proof_of_space.challenge_hash
         request_header_hashes = wallet_protocol.RequestAllHeaderHashesAfter(
             uint32(0), genesis_challenge
@@ -542,7 +542,7 @@ class WalletNode:
                 tip_height + 1,
             )
             if fork_point_height == 0:
-                difficulty = self.constants["DIFFICULTY_STARTING"]
+                difficulty = self.constants.DIFFICULTY_STARTING
             else:
                 fork_point_parent_hash = self.wallet_state_manager.block_records[
                     fork_point_hash

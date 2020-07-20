@@ -108,8 +108,8 @@ class Blockchain:
         self.coin_store = coin_store
         self.block_store = block_store
         self._shut_down = False
-        self.genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
-        self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
+        self.genesis = FullBlock.from_bytes(self.constants.GENESIS_BLOCK)
+        self.coinbase_freeze = self.constants.COINBASE_FREEZE_PERIOD
         await self._load_chain_from_store()
         return self
 
@@ -221,9 +221,7 @@ class Blockchain:
         prev_challenge_hash = block.proof_of_space.challenge_hash
 
         new_difficulty: Optional[uint64]
-        if (block.height + 1) % self.constants["DIFFICULTY_EPOCH"] == self.constants[
-            "DIFFICULTY_DELAY"
-        ]:
+        if (block.height + 1) % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
             new_difficulty = get_next_difficulty(
                 self.constants, self.headers, self.height_to_hash, block.header
             )
@@ -366,7 +364,7 @@ class Blockchain:
         removed: Optional[Header] = None
         if len(self.tips) == 0 or block.weight > min([b.weight for b in self.tips]):
             self.tips.append(block)
-            while len(self.tips) > self.constants["NUMBER_OF_HEADS"]:
+            while len(self.tips) > self.constants.NUMBER_OF_HEADS:
                 self.tips.sort(key=lambda b: b.weight, reverse=True)
                 # This will loop only once
                 removed = self.tips.pop()
@@ -643,11 +641,11 @@ class Blockchain:
             return Err.UNKNOWN
         # Get List of names removed, puzzles hashes for removed coins and conditions crated
         error, npc_list, cost = calculate_cost_of_program(
-            block.transactions_generator, self.constants["CLVM_COST_RATIO_CONSTANT"]
+            block.transactions_generator, self.constants.CLVM_COST_RATIO_CONSTANT
         )
 
         # 2. Check that cost <= MAX_BLOCK_COST_CLVM
-        if cost > self.constants["MAX_BLOCK_COST_CLVM"]:
+        if cost > self.constants.MAX_BLOCK_COST_CLVM:
             return Err.BLOCK_COST_EXCEEDS_MAX
         if error:
             return error
@@ -669,7 +667,7 @@ class Blockchain:
         # Check additions for max coin amount
         for coin in additions:
             additions_dic[coin.name()] = coin
-            if coin.amount >= uint64.from_bytes(self.constants["MAX_COIN_AMOUNT"]):
+            if coin.amount >= uint64.from_bytes(self.constants.MAX_COIN_AMOUNT):
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         # Validate addition and removal roots
