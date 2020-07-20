@@ -667,7 +667,7 @@ class Blockchain:
         # Check additions for max coin amount
         for coin in additions:
             additions_dic[coin.name()] = coin
-            if coin.amount >= uint64.from_bytes(self.constants.MAX_COIN_AMOUNT):
+            if coin.amount >= self.constants.MAX_COIN_AMOUNT:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         # Validate addition and removal roots

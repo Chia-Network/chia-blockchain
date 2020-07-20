@@ -39,7 +39,7 @@ class ConsensusConstants:
     # Coinbase rewards are not spendable for 200 blocks
     COINBASE_FREEZE_PERIOD: int
     # Max coin amount uint(1 << 64)
-    MAX_COIN_AMOUNT: bytes
+    MAX_COIN_AMOUNT: int
     # Raw size per block target = 1,000,000 bytes
     # Rax TX (single in, single out) = 219 bytes (not compressed)
     # TX = 457 vBytes
@@ -56,17 +56,6 @@ class ConsensusConstants:
         assert (
             self.DIFFICULTY_EPOCH == self.DIFFICULTY_DELAY * self.DIFFICULTY_WARP_FACTOR
         )
-
-    def __getitem__(self, key):
-        # TODO: remove this
-        # temporary, for compatibility
-        v = getattr(self, key, None)
-        return v
-
-    def copy(self):
-        # TODO: remove this
-        # temporary, for compatibility
-        return dataclasses.asdict(self)
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
@@ -110,7 +99,7 @@ testnet_kwargs = {
     # Coinbase rewards are not spendable for 200 blocks
     "COINBASE_FREEZE_PERIOD": 200,
     # Max coin amount uint(1 << 64)
-    "MAX_COIN_AMOUNT": b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF",
+    "MAX_COIN_AMOUNT": 0xffffffffffffffff,
     # Raw size per block target = 1,000,000 bytes
     # Rax TX (single in, single out) = 219 bytes (not compressed)
     # TX = 457 vBytes
