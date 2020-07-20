@@ -464,10 +464,10 @@ class FullNode:
         assert max([h.height for h in current_tips]) == tip_height
 
         self.full_node_store.set_proof_of_time_estimate_ips(
-            self.blockchain.get_next_min_iters(tip_block)
-            // (
-                self.constants["BLOCK_TIME_TARGET"]
-                / self.constants["MIN_ITERS_PROPORTION"]
+            (
+                self.blockchain.get_next_min_iters(tip_block)
+                * self.constants.MIN_ITERS_PROPORTION
+                // self.constants.BLOCK_TIME_TARGET
             )
         )
 
@@ -1595,9 +1595,10 @@ class FullNode:
                 self.blockchain.headers[respond_block.block.prev_header_hash]
             )
             next_vdf_min_iters = self.blockchain.get_next_min_iters(respond_block.block)
-            next_vdf_ips = next_vdf_min_iters // (
-                self.constants["BLOCK_TIME_TARGET"]
-                / self.constants["MIN_ITERS_PROPORTION"]
+            next_vdf_ips = uint64(
+                next_vdf_min_iters
+                * self.constants.MIN_ITERS_PROPORTION
+                // self.constants.BLOCK_TIME_TARGET
             )
             self.log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
             if next_vdf_ips != self.full_node_store.get_proof_of_time_estimate_ips():

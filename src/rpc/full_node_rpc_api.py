@@ -62,9 +62,10 @@ class FullNodeRpcApi:
         if lca_block is None:
             return None
         min_iters: uint64 = self.service.blockchain.get_next_min_iters(lca_block)
-        ips: uint64 = min_iters // (
-            self.service.constants["BLOCK_TIME_TARGET"]
-            / self.service.constants["MIN_ITERS_PROPORTION"]
+        ips: uint64 = (
+            min_iters
+            * self.service.constants.MIN_ITERS_PROPORTION
+            // self.service.constants.BLOCK_TIME_TARGET
         )
 
         tip_hashes = []
