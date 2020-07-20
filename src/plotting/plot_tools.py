@@ -162,6 +162,6 @@ def load_plots(
             )
 
     log.info(
-        f"Loaded a total of {len(provers)} plots of size {total_size / (1024 ** 4)} TB"
+        f"Loaded a total of {len(provers)} plots of size {total_size / (1024 ** 4)} TiB"
     )
     return (changed, provers, failed_to_open_filenames, no_key_filenames)

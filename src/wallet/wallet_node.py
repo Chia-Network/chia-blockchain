@@ -139,6 +139,7 @@ class WalletNode:
             self.root_path, f"{self.config['database_path']}-{db_path_key_suffix}"
         )
         mkdir(path.parent)
+
         self.wallet_state_manager = await WalletStateManager.create(
             private_key, self.config, path, self.constants
         )
@@ -160,7 +161,8 @@ class WalletNode:
 
     async def _await_closed(self):
         if self.sync_generator_task is not None:
-            await self.sync_generator_task.aclose()
+            async for _ in self.sync_generator_task:
+                pass
         if self.wallet_state_manager is None:
             return
         await self.wsm_close_task

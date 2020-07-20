@@ -190,18 +190,18 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const plot_size_options = [
-  // { label: "60MB", value: 16, workspace: "3.5GB" },
-  { label: "600MB", value: 25, workspace: "3.5GB" },
-  { label: "1.3GB", value: 26, workspace: "7GB" },
-  { label: "2.7GB", value: 27, workspace: "14.5GB" },
-  { label: "5.6GB", value: 28, workspace: "30.3GB" },
-  { label: "11.5GB", value: 29, workspace: "61GB" },
-  { label: "23.8GB", value: 30, workspace: "128GB" },
-  { label: "49.1GB", value: 31, workspace: "262GB" },
-  { label: "101.4GB", value: 32, workspace: "566GB" },
-  { label: "208.8GB", value: 33, workspace: "1095GB" },
-  { label: "429.8GB", value: 34, workspace: "2287GB" },
-  { label: "884.1GB", value: 35, workspace: "4672GB" }
+  // { label: "60MiB", value: 16, workspace: "3.5GiB" },
+  { label: "600MiB", value: 25, workspace: "3.5GiB" },
+  { label: "1.3GiB", value: 26, workspace: "7GiB" },
+  { label: "2.7GiB", value: 27, workspace: "14.5GiB" },
+  { label: "5.6GiB", value: 28, workspace: "30.3GiB" },
+  { label: "11.5GiB", value: 29, workspace: "61GiB" },
+  { label: "23.8GiB", value: 30, workspace: "128GiB" },
+  { label: "49.1GiB", value: 31, workspace: "262GiB" },
+  { label: "101.4GiB", value: 32, workspace: "566GiB" },
+  { label: "208.8GiB", value: 33, workspace: "1095GiB" },
+  { label: "429.8GiB", value: 34, workspace: "2287GiB" },
+  { label: "884.1GiB", value: 35, workspace: "4672GiB" }
 ];
 
 const WorkLocation = () => {

@@ -135,7 +135,7 @@ const getStatusItems = (
 
   status_items.push({
     label: "Total size of local plots",
-    value: Math.floor(farmerSpace / Math.pow(1024, 3)).toString() + " GB",
+    value: Math.floor(farmerSpace / Math.pow(1024, 3)).toString() + " GiB",
     tooltip:
       "You have " +
       (proportion * 100).toFixed(6) +
@@ -401,7 +401,7 @@ const Plots = props => {
                         {Math.round(
                           (item.file_size * 1000) / (1024 * 1024 * 1024)
                         ) / 1000}
-                        GB)
+                        GiB)
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title={item["plot-seed"]} interactive>
