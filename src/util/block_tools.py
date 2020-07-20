@@ -250,8 +250,7 @@ class BlockTools:
                 else:
                     block1 = block_list[0]
                     timestamp1 = uint64(
-                        block1.header.data.timestamp
-                        - test_constants.BLOCK_TIME_TARGET
+                        block1.header.data.timestamp - test_constants.BLOCK_TIME_TARGET
                     )
                     iters1 = uint64(0)
                 timestamp2 = block_list[height2].header.data.timestamp

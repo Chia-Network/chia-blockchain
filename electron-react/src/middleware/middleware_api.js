@@ -15,7 +15,7 @@ import {
 import { offerParsed, resetTrades } from "../modules/TradeReducer";
 import { openDialog } from "../modules/dialogReducer";
 import {
-  service_wallet_server,
+  service_wallet,
   service_full_node,
   service_simulator,
   service_farmer,
@@ -152,7 +152,7 @@ export const refreshAllState = dispatch => {
 export const handle_message = (store, payload) => {
   store.dispatch(incomingMessage(payload));
   if (payload.command === "ping") {
-    if (payload.origin === service_wallet_server) {
+    if (payload.origin === service_wallet) {
       store.dispatch(get_connection_info());
       store.dispatch(format_message("get_public_keys", {}));
     } else if (payload.origin === service_full_node) {
@@ -244,7 +244,7 @@ export const handle_message = (store, payload) => {
   } else if (payload.command === "start_service") {
     const service = payload.data.service;
     if (payload.data.success) {
-      if (service === service_wallet_server) {
+      if (service === service_wallet) {
         ping_wallet(store);
       } else if (service === service_full_node) {
         ping_full_node(store);
@@ -258,7 +258,7 @@ export const handle_message = (store, payload) => {
         track_progress(store, payload.data.out_file);
       }
     } else if (payload.data.error === "already running") {
-      if (service === service_wallet_server) {
+      if (service === service_wallet) {
         ping_wallet(store);
       } else if (service === service_full_node) {
         ping_full_node(store);

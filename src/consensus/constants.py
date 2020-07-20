@@ -99,7 +99,7 @@ testnet_kwargs = {
     # Coinbase rewards are not spendable for 200 blocks
     "COINBASE_FREEZE_PERIOD": 200,
     # Max coin amount uint(1 << 64)
-    "MAX_COIN_AMOUNT": 0xffffffffffffffff,
+    "MAX_COIN_AMOUNT": 0xFFFFFFFFFFFFFFFF,
     # Raw size per block target = 1,000,000 bytes
     # Rax TX (single in, single out) = 219 bytes (not compressed)
     # TX = 457 vBytes

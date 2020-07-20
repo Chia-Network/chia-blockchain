@@ -1,4 +1,4 @@
-import { service_wallet_server } from "../util/service_names";
+import { service_wallet } from "../util/service_names";
 import { openProgress, closeProgress } from "./progressReducer";
 import { refreshAllState } from "../middleware/middleware_api";
 import { changeEntranceMenu, presentRestoreBackup } from "./entranceMenu";
@@ -16,7 +16,7 @@ export const clearSend = () => {
 export const walletMessage = () => ({
   type: "OUTGOING_MESSAGE",
   message: {
-    destination: service_wallet_server
+    destination: service_wallet
   }
 });
 

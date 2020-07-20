@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 class WalletRpcApi:
     def __init__(self, wallet_node: WalletNode):
         self.service = wallet_node
-        self.service_name = "chia-wallet"
+        self.service_name = "chia_wallet"
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
@@ -137,7 +137,7 @@ class WalletRpcApi:
         }
         if wallet_id is not None:
             data["wallet_id"] = wallet_id
-        return [create_payload("state_changed", data, "chia-wallet", "wallet_ui")]
+        return [create_payload("state_changed", data, "chia_wallet", "wallet_ui")]
 
     async def get_next_puzzle_hash(self, request: Dict) -> Dict:
         """
@@ -609,7 +609,8 @@ class WalletRpcApi:
         fingerprint = request["fingerprint"]
         self.service.keychain.delete_key_by_fingerprint(fingerprint)
         path = path_from_root(
-            self.service.root_path, f"{self.service.config['database_path']}-{fingerprint}"
+            self.service.root_path,
+            f"{self.service.config['database_path']}-{fingerprint}",
         )
         if path.exists():
             path.unlink()

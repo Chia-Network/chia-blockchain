@@ -221,7 +221,9 @@ class Blockchain:
         prev_challenge_hash = block.proof_of_space.challenge_hash
 
         new_difficulty: Optional[uint64]
-        if (block.height + 1) % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
+        if (
+            block.height + 1
+        ) % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
             new_difficulty = get_next_difficulty(
                 self.constants, self.headers, self.height_to_hash, block.header
             )
