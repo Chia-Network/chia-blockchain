@@ -32,7 +32,7 @@ class TestCostCalculation:
         assert spend_bundle is not None
         program = best_solution_program(spend_bundle)
 
-        ratio = test_constants["CLVM_COST_RATIO_CONSTANT"]
+        ratio = test_constants.CLVM_COST_RATIO_CONSTANT
 
         error, npc_list, clvm_cost = calculate_cost_of_program(program, ratio)
 

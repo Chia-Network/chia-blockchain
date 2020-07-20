@@ -650,7 +650,9 @@ class FullNode:
                 [new_proof_of_time.height]
             )
             if new_proof_of_time.height not in self.blockchain.height_to_hash:
-                self.log.error(f"Height {new_proof_of_time.height} not found in height_to_hash.")
+                self.log.error(
+                    f"Height {new_proof_of_time.height} not found in height_to_hash."
+                )
                 return
             header_hash = self.blockchain.height_to_hash[new_proof_of_time.height]
             for block in blocks:
@@ -813,7 +815,7 @@ class FullNode:
         if height is None:
             self.log.info("No block for compact proof of time.")
             return
-        if not proof.is_valid(self.constants["DISCRIMINANT_SIZE_BITS"]):
+        if not proof.is_valid(self.constants.DISCRIMINANT_SIZE_BITS):
             self.log.error("Invalid compact proof of time.")
             return
 
@@ -1063,7 +1065,7 @@ class FullNode:
             )
         )
 
-        if expected_time > self.constants["PROPAGATION_DELAY_THRESHOLD"]:
+        if expected_time > self.constants.PROPAGATION_DELAY_THRESHOLD:
             self.log.info(f"Block is slow, expected {expected_time} seconds, waiting")
             # If this block is slow, sleep to allow faster blocks to come out first
             await asyncio.sleep(5)
@@ -1080,7 +1082,7 @@ class FullNode:
                 (block.height, expected_time)
             )
         elif block.height == leader[0]:
-            if expected_time > leader[1] + self.constants["PROPAGATION_THRESHOLD"]:
+            if expected_time > leader[1] + self.constants.PROPAGATION_THRESHOLD:
                 # If VDF is expected to finish X seconds later than the best, don't propagate
                 self.log.info(
                     f"VDF will finish too late {expected_time} seconds, so don't propagate"
@@ -1303,7 +1305,7 @@ class FullNode:
             request.proof_of_space,
             difficulty,
             vdf_min_iters,
-            self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
+            self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
         )
 
         removal_merkle_set = MerkleSet()
@@ -1835,13 +1837,13 @@ class FullNode:
             difficulty_update: Optional[uint64] = None
             iters_update: Optional[uint64] = None
             if (
-                curr.height % self.constants["DIFFICULTY_EPOCH"]
-                == self.constants["DIFFICULTY_DELAY"]
+                curr.height % self.constants.DIFFICULTY_EPOCH
+                == self.constants.DIFFICULTY_DELAY
             ):
                 difficulty_update = self.blockchain.get_next_difficulty(
                     self.blockchain.headers[curr.prev_header_hash]
                 )
-            if (curr.height + 1) % self.constants["DIFFICULTY_EPOCH"] == 0:
+            if (curr.height + 1) % self.constants.DIFFICULTY_EPOCH == 0:
                 iters_update = curr.data.total_iters
             hashes.append(
                 (proof_hashes_map[curr.header_hash], difficulty_update, iters_update)

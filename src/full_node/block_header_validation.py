@@ -64,19 +64,19 @@ async def validate_unfinished_block_header(
     if prev_header_block is not None:
         last_timestamps: List[uint64] = []
         curr = prev_header_block.header
-        while len(last_timestamps) < constants["NUMBER_OF_TIMESTAMPS"]:
+        while len(last_timestamps) < constants.NUMBER_OF_TIMESTAMPS:
             last_timestamps.append(curr.data.timestamp)
             fetched = headers.get(curr.prev_header_hash, None)
             if not fetched:
                 break
             curr = fetched
-        if len(last_timestamps) != constants["NUMBER_OF_TIMESTAMPS"]:
+        if len(last_timestamps) != constants.NUMBER_OF_TIMESTAMPS:
             # For blocks 1 to 10, average timestamps of all previous blocks
             assert curr.height == 0
         prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
         if block_header.data.timestamp < prev_time:
             return (Err.TIMESTAMP_TOO_FAR_IN_PAST, None)
-        if block_header.data.timestamp > time.time() + constants["MAX_FUTURE_TIME"]:
+        if block_header.data.timestamp > time.time() + constants.MAX_FUTURE_TIME:
             return (Err.TIMESTAMP_TOO_FAR_IN_FUTURE, None)
 
     # 7. Extension data must be valid, if any is present
@@ -93,7 +93,7 @@ async def validate_unfinished_block_header(
     # 10. The proof of space must be valid on the challenge
     if pos_quality_string is None:
         pos_quality_string = proof_of_space.verify_and_get_quality_string(
-            constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+            constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
         )
         if not pos_quality_string:
             return (Err.INVALID_POSPACE, None)
@@ -123,15 +123,15 @@ async def validate_unfinished_block_header(
             constants, headers, height_to_hash, prev_header_block
         )
     else:
-        difficulty = uint64(constants["DIFFICULTY_STARTING"])
-        min_iters = uint64(constants["MIN_ITERS_STARTING"])
+        difficulty = uint64(constants.DIFFICULTY_STARTING)
+        min_iters = uint64(constants.MIN_ITERS_STARTING)
 
     number_of_iters: uint64 = calculate_iterations_quality(
         pos_quality_string, proof_of_space.size, difficulty, min_iters,
     )
 
-    assert count_significant_bits(difficulty) <= constants["SIGNIFICANT_BITS"]
-    assert count_significant_bits(min_iters) <= constants["SIGNIFICANT_BITS"]
+    assert count_significant_bits(difficulty) <= constants.SIGNIFICANT_BITS
+    assert count_significant_bits(min_iters) <= constants.SIGNIFICANT_BITS
 
     if prev_header_block is not None:
         # 17. If not genesis, the total weight must be the parent weight + difficulty
@@ -203,7 +203,7 @@ async def validate_finished_block_header(
 
     # 2. the PoT must be valid, on a discriminant of size 1024, and the challenge_hash
     if not pre_validated:
-        if not block.proof_of_time.is_valid(constants["DISCRIMINANT_SIZE_BITS"]):
+        if not block.proof_of_time.is_valid(constants.DISCRIMINANT_SIZE_BITS):
             return Err.INVALID_POT
     # 3. If not genesis, the challenge_hash in the proof of time must match the challenge on the previous block
     if not genesis:
@@ -234,7 +234,7 @@ def pre_validate_finished_block_header(constants: ConsensusConstants, data: byte
         return False, None
 
     # 4. Check PoT
-    if not block.proof_of_time.is_valid(constants["DISCRIMINANT_SIZE_BITS"]):
+    if not block.proof_of_time.is_valid(constants.DISCRIMINANT_SIZE_BITS):
         return False, None
 
     # 9. Check harvester signature of header data is valid based on harvester key
@@ -248,7 +248,7 @@ def pre_validate_finished_block_header(constants: ConsensusConstants, data: byte
 
     # 10. Check proof of space based on challenge
     pos_quality_string = block.proof_of_space.verify_and_get_quality_string(
-        constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+        constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
     )
 
     if not pos_quality_string:

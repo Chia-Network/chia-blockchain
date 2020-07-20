@@ -49,15 +49,15 @@ class MempoolManager:
         ] = SortedDict()  # pylint: disable=E1136
         self.coin_store = coin_store
 
-        tx_per_sec = self.constants["TX_PER_SEC"]
-        sec_per_block = self.constants["BLOCK_TIME_TARGET"]
-        block_buffer_count = self.constants["MEMPOOL_BLOCK_BUFFER"]
+        tx_per_sec = self.constants.TX_PER_SEC
+        sec_per_block = self.constants.BLOCK_TIME_TARGET
+        block_buffer_count = self.constants.MEMPOOL_BLOCK_BUFFER
 
         # MEMPOOL_SIZE = 60000
         self.mempool_size = tx_per_sec * sec_per_block * block_buffer_count
         self.potential_cache_size = 300
         self.seen_cache_size = 10000
-        self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
+        self.coinbase_freeze = self.constants.COINBASE_FREEZE_PERIOD
 
     async def create_bundle_for_tip(self, header: Header) -> Optional[SpendBundle]:
         """
@@ -69,7 +69,7 @@ class MempoolManager:
             spend_bundles: List[SpendBundle] = []
             for dic in mempool.sorted_spends.values():
                 for item in dic.values():
-                    if item.cost + cost_sum <= self.constants["MAX_BLOCK_COST_CLVM"]:
+                    if item.cost + cost_sum <= self.constants.MAX_BLOCK_COST_CLVM:
                         spend_bundles.append(item.spend_bundle)
                         cost_sum += item.cost
                     else:
@@ -143,7 +143,7 @@ class MempoolManager:
 
         # Check additions for max coin amount
         for coin in additions:
-            if coin.amount >= uint64.from_bytes(self.constants["MAX_COIN_AMOUNT"]):
+            if coin.amount >= uint64.from_bytes(self.constants.MAX_COIN_AMOUNT):
                 return (
                     None,
                     MempoolInclusionStatus.FAILED,

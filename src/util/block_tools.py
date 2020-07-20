@@ -197,54 +197,54 @@ class BlockTools:
         if transaction_data_at_height is None:
             transaction_data_at_height = {}
         if seconds_per_block is None:
-            seconds_per_block = test_constants["BLOCK_TIME_TARGET"]
+            seconds_per_block = test_constants.BLOCK_TIME_TARGET
 
         if len(block_list) == 0:
-            block_list.append(FullBlock.from_bytes(test_constants["GENESIS_BLOCK"]))
-            prev_difficulty = test_constants["DIFFICULTY_STARTING"]
+            block_list.append(FullBlock.from_bytes(test_constants.GENESIS_BLOCK))
+            prev_difficulty = test_constants.DIFFICULTY_STARTING
             curr_difficulty = prev_difficulty
-            curr_min_iters = test_constants["MIN_ITERS_STARTING"]
+            curr_min_iters = test_constants.MIN_ITERS_STARTING
         elif len(block_list) < (
-            test_constants["DIFFICULTY_EPOCH"] + test_constants["DIFFICULTY_DELAY"]
+            test_constants.DIFFICULTY_EPOCH + test_constants.DIFFICULTY_DELAY
         ):
             # First epoch (+delay), so just get first difficulty
             prev_difficulty = block_list[0].weight
             curr_difficulty = block_list[0].weight
-            assert test_constants["DIFFICULTY_STARTING"] == prev_difficulty
-            curr_min_iters = test_constants["MIN_ITERS_STARTING"]
+            assert test_constants.DIFFICULTY_STARTING == prev_difficulty
+            curr_min_iters = test_constants.MIN_ITERS_STARTING
         else:
             curr_difficulty = block_list[-1].weight - block_list[-2].weight
             prev_difficulty = (
-                block_list[-1 - test_constants["DIFFICULTY_EPOCH"]].weight
-                - block_list[-2 - test_constants["DIFFICULTY_EPOCH"]].weight
+                block_list[-1 - test_constants.DIFFICULTY_EPOCH].weight
+                - block_list[-2 - test_constants.DIFFICULTY_EPOCH].weight
             )
             assert block_list[-1].proof_of_time is not None
             curr_min_iters = calculate_min_iters_from_iterations(
                 block_list[-1].proof_of_space,
                 curr_difficulty,
                 block_list[-1].proof_of_time.number_of_iterations,
-                test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
+                test_constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
             )
 
         starting_height = block_list[-1].height + 1
         timestamp = block_list[-1].header.data.timestamp
         for next_height in range(starting_height, starting_height + num_blocks):
             if (
-                next_height > test_constants["DIFFICULTY_EPOCH"]
-                and next_height % test_constants["DIFFICULTY_EPOCH"]
-                == test_constants["DIFFICULTY_DELAY"]
+                next_height > test_constants.DIFFICULTY_EPOCH
+                and next_height % test_constants.DIFFICULTY_EPOCH
+                == test_constants.DIFFICULTY_DELAY
             ):
                 # Calculates new difficulty
                 height1 = uint64(
                     next_height
                     - (
-                        test_constants["DIFFICULTY_EPOCH"]
-                        + test_constants["DIFFICULTY_DELAY"]
+                        test_constants.DIFFICULTY_EPOCH
+                        + test_constants.DIFFICULTY_DELAY
                     )
                     - 1
                 )
-                height2 = uint64(next_height - (test_constants["DIFFICULTY_EPOCH"]) - 1)
-                height3 = uint64(next_height - (test_constants["DIFFICULTY_DELAY"]) - 1)
+                height2 = uint64(next_height - (test_constants.DIFFICULTY_EPOCH) - 1)
+                height3 = uint64(next_height - (test_constants.DIFFICULTY_DELAY) - 1)
                 if height1 >= 0:
                     block1 = block_list[height1]
                     iters1 = block1.header.data.total_iters
@@ -253,7 +253,7 @@ class BlockTools:
                     block1 = block_list[0]
                     timestamp1 = uint64(
                         block1.header.data.timestamp
-                        - test_constants["BLOCK_TIME_TARGET"]
+                        - test_constants.BLOCK_TIME_TARGET
                     )
                     iters1 = uint64(0)
                 timestamp2 = block_list[height2].header.data.timestamp
@@ -262,47 +262,47 @@ class BlockTools:
                 block3 = block_list[height3]
                 iters3 = block3.header.data.total_iters
                 term1 = (
-                    test_constants["DIFFICULTY_DELAY"]
+                    test_constants.DIFFICULTY_DELAY
                     * prev_difficulty
                     * (timestamp3 - timestamp2)
-                    * test_constants["BLOCK_TIME_TARGET"]
+                    * test_constants.BLOCK_TIME_TARGET
                 )
 
                 term2 = (
-                    (test_constants["DIFFICULTY_WARP_FACTOR"] - 1)
+                    (test_constants.DIFFICULTY_WARP_FACTOR - 1)
                     * (
-                        test_constants["DIFFICULTY_EPOCH"]
-                        - test_constants["DIFFICULTY_DELAY"]
+                        test_constants.DIFFICULTY_EPOCH
+                        - test_constants.DIFFICULTY_DELAY
                     )
                     * curr_difficulty
                     * (timestamp2 - timestamp1)
-                    * test_constants["BLOCK_TIME_TARGET"]
+                    * test_constants.BLOCK_TIME_TARGET
                 )
 
                 # Round down after the division
                 new_difficulty_precise: uint64 = uint64(
                     (term1 + term2)
                     // (
-                        test_constants["DIFFICULTY_WARP_FACTOR"]
+                        test_constants.DIFFICULTY_WARP_FACTOR
                         * (timestamp3 - timestamp2)
                         * (timestamp2 - timestamp1)
                     )
                 )
                 new_difficulty = uint64(
                     truncate_to_significant_bits(
-                        new_difficulty_precise, test_constants["SIGNIFICANT_BITS"]
+                        new_difficulty_precise, test_constants.SIGNIFICANT_BITS
                     )
                 )
                 max_diff = uint64(
                     truncate_to_significant_bits(
-                        test_constants["DIFFICULTY_FACTOR"] * curr_difficulty,
-                        test_constants["SIGNIFICANT_BITS"],
+                        test_constants.DIFFICULTY_FACTOR * curr_difficulty,
+                        test_constants.SIGNIFICANT_BITS,
                     )
                 )
                 min_diff = uint64(
                     truncate_to_significant_bits(
-                        curr_difficulty // test_constants["DIFFICULTY_FACTOR"],
-                        test_constants["SIGNIFICANT_BITS"],
+                        curr_difficulty // test_constants.DIFFICULTY_FACTOR,
+                        test_constants.SIGNIFICANT_BITS,
                     )
                 )
                 if new_difficulty >= curr_difficulty:
@@ -313,13 +313,13 @@ class BlockTools:
                 min_iters_precise = uint64(
                     (iters3 - iters1)
                     // (
-                        test_constants["DIFFICULTY_EPOCH"]
-                        * test_constants["MIN_ITERS_PROPORTION"]
+                        test_constants.DIFFICULTY_EPOCH
+                        * test_constants.MIN_ITERS_PROPORTION
                     )
                 )
                 curr_min_iters = uint64(
                     truncate_to_significant_bits(
-                        min_iters_precise, test_constants["SIGNIFICANT_BITS"]
+                        min_iters_precise, test_constants.SIGNIFICANT_BITS
                     )
                 )
                 prev_difficulty = curr_difficulty
@@ -333,8 +333,8 @@ class BlockTools:
                 transactions, aggsig = transaction_data_at_height[next_height]
 
             update_difficulty = (
-                next_height % test_constants["DIFFICULTY_EPOCH"]
-                == test_constants["DIFFICULTY_DELAY"]
+                next_height % test_constants.DIFFICULTY_EPOCH
+                == test_constants.DIFFICULTY_DELAY
             )
             block_list.append(
                 self.create_next_block(
@@ -371,8 +371,8 @@ class BlockTools:
             uint64(0),
             uint128(0),
             uint64(int(time.time())),
-            uint64(test_constants["DIFFICULTY_STARTING"]),
-            uint64(test_constants["MIN_ITERS_STARTING"]),
+            uint64(test_constants.DIFFICULTY_STARTING),
+            uint64(test_constants.MIN_ITERS_STARTING),
             seed,
             True,
             reward_puzzlehash,
@@ -473,7 +473,7 @@ class BlockTools:
                 ccp = ProofOfSpace.can_create_proof(
                     plot_id,
                     challenge_hash,
-                    test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
+                    test_constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
                 )
                 if not ccp:
                     continue
@@ -490,7 +490,7 @@ class BlockTools:
                 ccp = ProofOfSpace.can_create_proof(
                     plot_id,
                     challenge_hash,
-                    test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
+                    test_constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
                 )
                 if not ccp:
                     continue
@@ -527,15 +527,15 @@ class BlockTools:
             proof_of_space,
             difficulty,
             min_iters,
-            test_constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
+            test_constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
         )
         if self.real_plots:
             print(f"Performing {number_iters} VDF iterations")
 
-        int_size = (test_constants["DISCRIMINANT_SIZE_BITS"] + 16) >> 4
+        int_size = (test_constants.DISCRIMINANT_SIZE_BITS + 16) >> 4
 
         result = prove(
-            challenge_hash, test_constants["DISCRIMINANT_SIZE_BITS"], number_iters
+            challenge_hash, test_constants.DISCRIMINANT_SIZE_BITS, number_iters
         )
 
         output = ClassgroupElement(

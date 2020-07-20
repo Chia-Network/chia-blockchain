@@ -62,7 +62,7 @@ class FullNodeRpcApi:
         if lca_block is None:
             return None
         min_iters: uint64 = self.service.blockchain.get_next_min_iters(lca_block)
-        ips: uint64 = (
+        ips: uint64 = uint64(
             min_iters
             * self.service.constants.MIN_ITERS_PROPORTION
             // self.service.constants.BLOCK_TIME_TARGET
@@ -257,14 +257,14 @@ class FullNodeRpcApi:
             older_block.proof_of_space,
             older_diff,
             older_block.proof_of_time.number_of_iterations,
-            self.service.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
+            self.service.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
         )
         # We do not count the min iters in the old block, since it's not included in the range
         total_mi: uint64 = uint64(0)
         for curr_h in range(older_block.height + 1, newer_block.height + 1):
             if (
-                curr_h % self.service.constants["DIFFICULTY_EPOCH"]
-            ) == self.service.constants["DIFFICULTY_DELAY"]:
+                curr_h % self.service.constants.DIFFICULTY_EPOCH
+            ) == self.service.constants.DIFFICULTY_DELAY:
                 curr_b_header_hash = self.service.blockchain.height_to_hash.get(
                     uint32(int(curr_h))
                 )
@@ -285,7 +285,7 @@ class FullNodeRpcApi:
                     curr_b_block.proof_of_space,
                     uint64(curr_diff),
                     curr_b_block.proof_of_time.number_of_iterations,
-                    self.service.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
+                    self.service.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
                 )
                 if curr_mi is None:
                     raise web.HTTPBadRequest()
@@ -330,7 +330,7 @@ class FullNodeRpcApi:
         tips_adjustment_constant = 0.65
         network_space_constant = 2 ** 32  # 2^32
         eligible_plots_filter_mult = (
-            2 ** self.service.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+            2 ** self.service.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
         )
         network_space_bytes_estimate = (
             weight_div_iters
