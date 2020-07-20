@@ -80,25 +80,9 @@ class TestCCWallet:
         await time_out_assert(15, rl_user.get_confirmed_balance, 100)
         balance = await rl_user.rl_available_balance()
 
-        spend_bundle = await rl_user.rl_generate_signed_transaction(1, 32 * b"\0")
+        tx_record = await rl_user.rl_generate_signed_transaction(1, 32 * b"\0")
         now = uint64(int(time.time()))
 
-        tx_record = TransactionRecord(
-            confirmed_at_index=uint32(0),
-            created_at_time=now,
-            to_puzzle_hash=32 * b"\0",
-            amount=uint64(amount),
-            fee_amount=uint64(0),
-            incoming=False,
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=rl_user.wallet_info.id,
-            sent_to=[],
-            trade_id=None,
-        )
         wallet_node_1.wallet_state_manager.main_wallet.push_transaction(tx_record)
 
         for i in range(0, num_blocks):
