@@ -285,7 +285,6 @@ class DIDWallet:
             if coin.parent_coin_info == name:
                 search_for_parent = False
                 break
-        # breakpoint()
 
         if search_for_parent:
             data: Dict[str, Any] = {
