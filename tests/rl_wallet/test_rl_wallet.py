@@ -90,5 +90,5 @@ class TestCCWallet:
 
         balance = await rl_user.get_confirmed_balance()
         print(balance)
-        breakpoint()
+
         await time_out_assert(15, rl_user.get_confirmed_balance, 99)

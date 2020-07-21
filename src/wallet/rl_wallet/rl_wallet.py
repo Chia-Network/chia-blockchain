@@ -291,6 +291,7 @@ class RLWallet(AbstractWallet):
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
+        return True
 
     async def rl_available_balance(self):
         self.rl_coin_record = await self.get_rl_coin_record()
