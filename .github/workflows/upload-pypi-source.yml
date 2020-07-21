@@ -1,10 +1,10 @@
-name: Upload source distribution to PyPI
+name: Lint and upload source distribution to PyPI
 
 on: [push, pull_request]
 
 jobs:
   upload_source_dist:
-    name: Upload source distribution
+    name: Lint and Upload source distribution
     runs-on: [ubuntu-latest]
 
     steps:
