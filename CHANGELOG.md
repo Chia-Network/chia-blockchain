@@ -9,12 +9,15 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
+* See wallet balances in command line: chia show -w
+* Retry opening invalid plots every 20 minutes (so you can cp a large plot)
 ### Changed
 * chia start wallet-server changed to chia start wallet, for consistency.
 * All data size units are displayed in GiB instead of GB (powers of 1024 instead of 1000)
 ### Fixed
 * Fixed open_connection not being cancelled when node exits
 * Increase the robustness of node and wallet shutdown
+* Handle disconnection and reconnection of hard drives properly
 ### Deprecated
 * Removed legacy scripts such as chia-stop-server, chia-restart-harvester, etc.
 
