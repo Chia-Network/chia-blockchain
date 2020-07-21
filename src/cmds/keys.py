@@ -1,4 +1,8 @@
 from pathlib import Path
+from typing import List
+
+from blspy import AugSchemeMPL, G1Element, G2Element
+
 from src.cmds.init import check_keys
 from src.util.keychain import (
     generate_mnemonic,
@@ -20,6 +24,8 @@ command_list = [
     "add",
     "delete",
     "delete_all",
+    "sign",
+    "verify",
 ]
 
 
@@ -35,6 +41,12 @@ def help_message():
         "chia keys delete -f [fingerprint] (delete a key by it's pk fingerprint in hex form)"
     )
     print("chia keys delete_all (delete all private keys in keychain)")
+    print(
+        "chia keys sign -f [fingerprint] -t [hd_path] -d [message] (sign a message with a private key)"
+    )
+    print(
+        "chia keys verify -p [public_key] -d [message] -s [signature] (verify a signature with a pk)"
+    )
 
 
 def make_parser(parser):
@@ -54,7 +66,31 @@ def make_parser(parser):
         "--fingerprint",
         type=int,
         default=None,
-        help="Enter the fingerprint of the key you want to delete",
+        help="Enter the fingerprint of the key you want to use",
+    )
+
+    parser.add_argument(
+        "-t",
+        "--hd_path",
+        type=str,
+        default=None,
+        help="Enter the HD path in the form 'm/12381/8444/n/n'",
+    )
+
+    parser.add_argument(
+        "-d",
+        "--message",
+        type=str,
+        default=None,
+        help="Enter the message to sign in UTF-8",
+    )
+
+    parser.add_argument(
+        "-p", "--public_key", type=str, default=None, help="Enter the pk in hex",
+    )
+
+    parser.add_argument(
+        "-s", "--signature", type=str, default=None, help="Enter the signature in hex",
     )
 
     parser.add_argument(
@@ -163,6 +199,54 @@ def delete(args):
     keychain.delete_key_by_fingerprint(fingerprint)
 
 
+def sign(args):
+    if args.message is None:
+        print("Please specify the message argument -d")
+        quit()
+
+    if args.fingerprint is None or args.hd_path is None:
+        print("Please specify the fingerprint argument -f and hd_path argument -p")
+        quit()
+
+    message = args.message
+    assert message is not None
+
+    k = Keychain()
+    private_keys = k.get_all_private_keys()
+
+    fingerprint = args.fingerprint
+    assert fingerprint is not None
+    hd_path = args.hd_path
+    assert hd_path is not None
+    path: List[uint32] = [uint32(int(i)) for i in hd_path.split("/") if i != "m"]
+    for sk, _ in private_keys:
+        if sk.get_g1().get_fingerprint() == fingerprint:
+            for c in path:
+                sk = sk.derive_child(c)
+            print(AugSchemeMPL.sign(sk, bytes(message, "utf-8")))
+            return
+    print(f"Fingerprint {fingerprint} not found in keychain")
+
+
+def verify(args):
+    if args.message is None:
+        print("Please specify the message argument -d")
+        quit()
+    if args.public_key is None:
+        print("Please specify the public_key argument -p")
+        quit()
+    if args.signature is None:
+        print("Please specify the signature argument -s")
+        quit()
+    assert args.message is not None
+    assert args.public_key is not None
+    assert args.signature is not None
+    message = bytes(args.message, "utf-8")
+    public_key = G1Element.from_bytes(bytes.fromhex(args.public_key))
+    signature = G2Element.from_bytes(bytes.fromhex(args.signature))
+    print(AugSchemeMPL.verify(public_key, message, signature))
+
+
 def handler(args, parser):
     if args.command is None or len(args.command) < 1:
         help_message()
@@ -194,3 +278,7 @@ def handler(args, parser):
         keychain.delete_all_keys()
     if command == "generate_and_print":
         generate_and_print()
+    if command == "sign":
+        sign(args)
+    if command == "verify":
+        verify(args)
