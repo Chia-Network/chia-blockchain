@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   upload_source_dist:
-    name: Upload source distribution
+    name: Lint and Upload source distribution
     runs-on: [ubuntu-latest]
 
     steps:
