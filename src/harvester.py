@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 class Harvester:
     config: Dict
     provers: Dict[Path, PlotInfo]
-    failed_to_open_filenames: Set[Path]
+    failed_to_open_filenames: Dict[Path, int]
     no_key_filenames: Set[Path]
     farmer_public_keys: List[G1Element]
     pool_public_keys: List[G1Element]
@@ -41,7 +41,7 @@ class Harvester:
 
         # From filename to prover
         self.provers = {}
-        self.failed_to_open_filenames = set()
+        self.failed_to_open_filenames = {}
         self.no_key_filenames = set()
 
         self._is_shutdown = False
@@ -95,24 +95,28 @@ class Harvester:
 
         return (
             response_plots,
-            [str(s) for s in self.failed_to_open_filenames],
+            [str(s) for s, _ in self.failed_to_open_filenames.items()],
             [str(s) for s in self.no_key_filenames],
         )
 
     async def _refresh_plots(self):
+        locked: bool = self._refresh_lock.locked()
+        changed: bool = False
         async with self._refresh_lock:
-            (
-                changed,
-                self.provers,
-                self.failed_to_open_filenames,
-                self.no_key_filenames,
-            ) = load_plots(
-                self.provers,
-                self.failed_to_open_filenames,
-                self.farmer_public_keys,
-                self.pool_public_keys,
-                self.root_path,
-            )
+            if not locked:
+                # Avoid double refreshing of plots
+                (
+                    changed,
+                    self.provers,
+                    self.failed_to_open_filenames,
+                    self.no_key_filenames,
+                ) = load_plots(
+                    self.provers,
+                    self.failed_to_open_filenames,
+                    self.farmer_public_keys,
+                    self.pool_public_keys,
+                    self.root_path,
+                )
         if changed:
             self._state_changed("plots")
 

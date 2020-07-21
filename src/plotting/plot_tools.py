@@ -3,6 +3,7 @@ from pathlib import Path
 from blspy import PrivateKey, G1Element
 from chiapos import DiskProver
 from dataclasses import dataclass
+import time
 import logging
 import traceback
 from src.types.proof_of_space import ProofOfSpace
@@ -80,12 +81,12 @@ def add_plot_directory(str_path, root_path):
 
 def load_plots(
     provers: Dict[Path, PlotInfo],
-    failed_to_open_filenames: Set[Path],
+    failed_to_open_filenames: Dict[Path, int],
     farmer_public_keys: Optional[List[G1Element]],
     pool_public_keys: Optional[List[G1Element]],
     root_path: Path,
     open_no_key_filenames=False,
-) -> Tuple[bool, Dict[Path, PlotInfo], Set[Path], Set[Path]]:
+) -> Tuple[bool, Dict[Path, PlotInfo], Dict[Path, int], Set[Path]]:
     config_file = load_config(root_path, "config.yaml", "harvester")
     changed = False
     no_key_filenames: Set[Path] = set()
@@ -96,16 +97,22 @@ def load_plots(
     for paths in plot_filenames.values():
         all_filenames += paths
     total_size = 0
+    new_provers: Dict[Path, PlotInfo] = {}
 
     for filename in all_filenames:
-        if filename in provers:
-            stat_info = filename.stat()
-            if stat_info.st_mtime == provers[filename].time_modified:
-                total_size += stat_info.st_size
-                continue
-        if filename in failed_to_open_filenames:
-            continue
         if filename.exists():
+            if (
+                filename in failed_to_open_filenames
+                and (time.time() - failed_to_open_filenames[filename]) < 1200
+            ):
+                # Try once every 20 minutes to open the file
+                continue
+            if filename in provers:
+                stat_info = filename.stat()
+                if stat_info.st_mtime == provers[filename].time_modified:
+                    total_size += stat_info.st_size
+                    new_provers[filename] = provers[filename]
+                    continue
             try:
                 prover = DiskProver(str(filename))
                 (
@@ -141,7 +148,7 @@ def load_plots(
                 plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
                     local_sk.get_g1(), farmer_public_key
                 )
-                provers[filename] = PlotInfo(
+                new_provers[filename] = PlotInfo(
                     prover,
                     pool_public_key,
                     farmer_public_key,
@@ -155,13 +162,13 @@ def load_plots(
             except Exception as e:
                 tb = traceback.format_exc()
                 log.error(f"Failed to open file {filename}. {e} {tb}")
-                failed_to_open_filenames.add(filename)
+                failed_to_open_filenames[filename] = int(time.time())
                 continue
             log.info(
-                f"Found plot {filename} of size {provers[filename].prover.get_size()}"
+                f"Found plot {filename} of size {new_provers[filename].prover.get_size()}"
             )
 
     log.info(
-        f"Loaded a total of {len(provers)} plots of size {total_size / (1024 ** 4)} TiB"
+        f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB"
     )
-    return (changed, provers, failed_to_open_filenames, no_key_filenames)
+    return (changed, new_provers, failed_to_open_filenames, no_key_filenames)
