@@ -56,7 +56,6 @@ class TestWalletSimulator:
             await asyncio.sleep(1)
         assert False
 
-    """
     @pytest.mark.asyncio
     async def test_identity_creation(self, two_wallet_nodes):
         num_blocks = 10
@@ -320,8 +319,6 @@ class TestWalletSimulator:
 
         await self.time_out_assert(15, wallet.get_confirmed_balance, 400000000000000)
         await self.time_out_assert(15, wallet.get_unconfirmed_balance, 400000000000000)
-
-    """
 
     @pytest.mark.asyncio
     async def test_did_attest_after_recovery(self, two_wallet_nodes):

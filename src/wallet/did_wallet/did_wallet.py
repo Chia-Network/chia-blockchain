@@ -291,7 +291,6 @@ class DIDWallet:
             if coin.parent_coin_info == name:
                 search_for_parent = False
                 break
-        # breakpoint()
 
         if search_for_parent:
             data: Dict[str, Any] = {
@@ -449,7 +448,6 @@ class DIDWallet:
         fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
 (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount})\
 {coin.amount} {innerpuz_str} {innersol})"
-        # breakpoint()
         list_of_solutions = [
             CoinSolution(
                 coin,
@@ -509,7 +507,6 @@ class DIDWallet:
         fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
 (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) \
 {coin.amount} {innerpuz_str} {innersol})"
-        # breakpoint()
         list_of_solutions = [
             CoinSolution(
                 coin,
@@ -589,7 +586,6 @@ class DIDWallet:
         fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
 (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount}) \
 {coin.amount} {innerpuz_str} {innersol})"
-        # breakpoint()
         list_of_solutions = [
             CoinSolution(
                 coin,
@@ -729,7 +725,6 @@ class DIDWallet:
         innerpuz_str = binutils.disassemble(innerpuz)
         fullsol = f"(0x{Program(binutils.assemble(self.did_info.my_core)).get_tree_hash()} \
 0x{coin.parent_coin_info} {coin.amount} {innerpuz_str} {innersol})"
-        # breakpoint()
         list_of_solutions = [
             CoinSolution(
                 coin,
