@@ -127,9 +127,12 @@ export const CreateRLAdminWallet = () => {
       return;
     }
     dispatch(createState(true, true));
-    var amount = chia_to_mojo(amount_input.value);
+    const interval = interval_input.value
+    const chiaper = chiaper_input.value
+    const userpubkey = userpubkey_input.value
+    const amount = chia_to_mojo(amount_input.value);
     var fee = chia_to_mojo(fee_input.value);
-    dispatch(create_rl_admin(interval_input, chiaper_input, userpubkey_input, amount));
+    dispatch(create_rl_admin(interval, chiaper, userpubkey, amount));
   }
 
   return (
