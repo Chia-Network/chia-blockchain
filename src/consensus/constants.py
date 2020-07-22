@@ -1,5 +1,7 @@
 import dataclasses
 
+from src.util.ints import uint64
+
 
 @dataclasses.dataclass(frozen=True)
 class ConsensusConstants:
@@ -18,7 +20,7 @@ class ConsensusConstants:
     # will be contant and required for all blocks.
     MIN_ITERS_PROPORTION: int
     # For the first epoch, since we have no previous blocks, we can't estimate vdf iterations per second
-    MIN_ITERS_STARTING: int
+    MIN_ITERS_STARTING: uint64
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBEBR_OF_TIMESTAMPS blocks
     # If an unfinished block is more than these many seconds slower than the best unfinished block,
@@ -37,7 +39,7 @@ class ConsensusConstants:
     # Coinbase rewards are not spendable for 200 blocks
     COINBASE_FREEZE_PERIOD: int
     # Max coin amount uint(1 << 64)
-    MAX_COIN_AMOUNT: bytes
+    MAX_COIN_AMOUNT: int
     # Raw size per block target = 1,000,000 bytes
     # Rax TX (single in, single out) = 219 bytes (not compressed)
     # TX = 457 vBytes
@@ -54,17 +56,6 @@ class ConsensusConstants:
         assert (
             self.DIFFICULTY_EPOCH == self.DIFFICULTY_DELAY * self.DIFFICULTY_WARP_FACTOR
         )
-
-    def __getitem__(self, key):
-        # TODO: remove this
-        # temporary, for compatibility
-        v = getattr(self, key, None)
-        return v
-
-    def copy(self):
-        # TODO: remove this
-        # temporary, for compatibility
-        return dataclasses.asdict(self)
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
@@ -108,7 +99,7 @@ testnet_kwargs = {
     # Coinbase rewards are not spendable for 200 blocks
     "COINBASE_FREEZE_PERIOD": 200,
     # Max coin amount uint(1 << 64)
-    "MAX_COIN_AMOUNT": b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF",
+    "MAX_COIN_AMOUNT": 0xFFFFFFFFFFFFFFFF,
     # Raw size per block target = 1,000,000 bytes
     # Rax TX (single in, single out) = 219 bytes (not compressed)
     # TX = 457 vBytes

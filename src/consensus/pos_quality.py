@@ -1,8 +1,8 @@
-from src.util.ints import uint8, uint64
+from src.util.ints import uint64
 from src.types.sized_bytes import bytes32
 
 
-def _expected_plot_size(k: uint8) -> uint64:
+def _expected_plot_size(k: int) -> uint64:
     """
     Given the plot size parameter k (which is between 30 and 59), computes the
     expected size of the plot in bytes. This is based on efficient encoding
@@ -16,7 +16,7 @@ def _expected_plot_size(k: uint8) -> uint64:
     return 780 * k * pow(2, k - 10)
 
 
-def quality_str_to_quality(quality_str: bytes32, k: uint8) -> uint64:
+def quality_str_to_quality(quality_str: bytes32, k: int) -> uint64:
     """
     Takes a 256 bit quality string, converts it to an integer between 0 and 2**256,
     representing a decimal d=0.xxxxx..., where x are the bits of the quality.

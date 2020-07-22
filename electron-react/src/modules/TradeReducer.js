@@ -82,10 +82,6 @@ export const tradeReducer = (state = { ...initial_state }, action) => {
           pending_trades: pending_trades
         };
       }
-      if (data.success === false) {
-        console.log("Error: " + data.error + "Command: " + command);
-        return state;
-      }
       return state;
     case "LOG_OUT":
       return { ...initial_state };

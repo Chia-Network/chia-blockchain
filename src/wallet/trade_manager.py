@@ -12,6 +12,7 @@ from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
+from src.util.byte_types import hexstr_to_bytes
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.wallet.cc_wallet import cc_wallet_puzzles
@@ -390,7 +391,7 @@ class TradeManager:
             return False, None, "Unknown Error"
         trade_offer_hex = file_path.read_text()
         trade_offer: TradeRecord = TradeRecord.from_bytes(
-            bytes.fromhex(trade_offer_hex)
+            hexstr_to_bytes(trade_offer_hex)
         )
         offer_spend_bundle = trade_offer.spend_bundle
 

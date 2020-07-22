@@ -68,6 +68,7 @@ class WalletRpcApi:
             "/get_trade": self.get_trade,
             "/get_all_trades": self.get_all_trades,
             "/cancel_trade": self.cancel_trade,
+            "/create_backup": self.create_backup,
         }
 
     async def get_trade(self, request: Dict):
@@ -150,9 +151,9 @@ class WalletRpcApi:
             return {"success": False}
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        if wallet.wallet_info.type == WalletType.STANDARD_WALLET:
+        if wallet.wallet_info.type == WalletType.STANDARD_WALLET.value:
             puzzle_hash = (await wallet.get_new_puzzlehash()).hex()
-        elif wallet.wallet_info.type == WalletType.COLOURED_COIN:
+        elif wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
             puzzle_hash = await wallet.get_new_inner_hash()
 
         response = {
@@ -250,7 +251,7 @@ class WalletRpcApi:
         pending_balance = await wallet.get_unconfirmed_balance()
         spendable_balance = await wallet.get_spendable_balance()
         pending_change = await wallet.get_pending_change_balance()
-        if wallet.wallet_info.type == WalletType.COLOURED_COIN:
+        if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
             frozen_balance = 0
         else:
             frozen_balance = await wallet.get_frozen_amount()
@@ -293,7 +294,7 @@ class WalletRpcApi:
                     cc_wallet: CCWallet = await CCWallet.create_new_cc(
                         wallet_state_manager, main_wallet, request["amount"]
                     )
-                    return {"success": True, "type": cc_wallet.wallet_info.type.name}
+                    return {"success": True, "type": cc_wallet.wallet_info.type}
                 except Exception as e:
                     log.error("FAILED {e}")
                     return {"success": False, "reason": str(e)}
@@ -302,7 +303,7 @@ class WalletRpcApi:
                     cc_wallet = await CCWallet.create_wallet_for_cc(
                         wallet_state_manager, main_wallet, request["colour"]
                     )
-                    return {"success": True, "type": cc_wallet.wallet_info.type.name}
+                    return {"success": True, "type": cc_wallet.wallet_info.type}
                 except Exception as e:
                     log.error("FAILED2 {e}")
                     return {"success": False, "reason": str(e)}
@@ -447,7 +448,7 @@ class WalletRpcApi:
             wallet = self.service.wallet_state_manager.wallets[wallet_id]
             balance = await wallet.get_confirmed_balance()
             type = wallet.wallet_info.type
-            if type == WalletType.COLOURED_COIN:
+            if type == WalletType.COLOURED_COIN.value:
                 name = wallet.cc_info.my_colour_name
                 colour = await wallet.get_colour()
                 response[wallet_id] = {
@@ -498,6 +499,12 @@ class WalletRpcApi:
 
         return response
 
+    async def create_backup(self, request):
+        file_path = Path(request["file_path"])
+        await self.service.wallet_state_manager.create_wallet_backup(file_path)
+        response = {"success": True}
+        return response
+
     async def respond_to_offer(self, request):
         file_path = Path(request["filename"])
         (
@@ -540,10 +547,27 @@ class WalletRpcApi:
     async def log_in(self, request):
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
+        type = request["type"]
 
-        await self.service._start(fingerprint)
+        if type == "skip":
+            started = await self.service._start(
+                fingerprint=fingerprint, skip_backup_import=True
+            )
+        elif type == "restore_backup":
+            file_path = Path(request["file_path"])
+            started = await self.service._start(
+                fingerprint=fingerprint, backup_file=file_path
+            )
+        else:
+            started = await self.service._start(fingerprint)
 
-        return {"success": True}
+        if started is True:
+            return {"success": True}
+        else:
+            if self.service.backup_initialized is False:
+                return {"success": False, "error": "not_initialized"}
+
+        return {"success": False, "error": "Unknown Error"}
 
     async def add_key(self, request):
         if "mnemonic" in request:
@@ -551,9 +575,15 @@ class WalletRpcApi:
             mnemonic = request["mnemonic"]
             passphrase = ""
             try:
-                sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
+                sk = self.service.keychain.add_private_key(
+                    " ".join(mnemonic), passphrase
+                )
             except KeyError as e:
-                return {"success": False, "reason": f"The word '{e.args[0]}' is incorrect.'", "word": e.args[0]}
+                return {
+                    "success": False,
+                    "reason": f"The word '{e.args[0]}' is incorrect.'",
+                    "word": e.args[0],
+                }
             except ValueError as e:
                 return {"success": False, "reason": e.args[0]}
 
@@ -564,17 +594,38 @@ class WalletRpcApi:
         await self.stop_wallet()
 
         # Makes sure the new key is added to config properly
+        started = False
         check_keys(self.service.root_path)
+        type = request["type"]
+        if type == "new_wallet":
+            started = await self.service._start(
+                fingerprint=fingerprint, new_wallet=True
+            )
+        elif type == "skip":
+            started = await self.service._start(
+                fingerprint=fingerprint, skip_backup_import=True
+            )
+        elif type == "restore_backup":
+            file_path = Path(request["file_path"])
+            started = await self.service._start(
+                fingerprint=fingerprint, backup_file=file_path
+            )
 
-        # Starts the wallet with the new key selected
-        await self.service._start(fingerprint)
-
-        return {"success": True}
+        if started is True:
+            return {"success": True}
+        else:
+            return {"success": False}
 
     async def delete_key(self, request):
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
         self.service.keychain.delete_key_by_fingerprint(fingerprint)
+        path = path_from_root(
+            self.service.root_path,
+            f"{self.service.config['database_path']}-{fingerprint}",
+        )
+        if path.exists():
+            path.unlink()
         return {"success": True}
 
     async def clean_all_state(self):

@@ -44,7 +44,7 @@ class TestBlockStore:
         await BlockStore.create(connection_2)
         db_3 = await BlockStore.create(connection_3)
         try:
-            genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
+            genesis = FullBlock.from_bytes(test_constants.GENESIS_BLOCK)
 
             # Save/get block
             for block in blocks:

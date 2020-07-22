@@ -12,7 +12,6 @@ import {
   pingWallet
 } from "../modules/message";
 
-import { createState } from "../modules/createWalletReducer";
 import { offerParsed, resetTrades } from "../modules/TradeReducer";
 import { openDialog } from "../modules/dialogReducer";
 import {
@@ -131,24 +130,24 @@ async function track_progress(store, location) {
   }
 }
 
-function refreshAllState(store) {
-  store.dispatch(format_message("get_wallets", {}));
+export const refreshAllState = dispatch => {
+  dispatch(format_message("get_wallets", {}));
   let start_farmer = startService(service_farmer);
   let start_harvester = startService(service_harvester);
-  store.dispatch(start_farmer);
-  store.dispatch(start_harvester);
-  store.dispatch(get_height_info());
-  store.dispatch(get_sync_status());
-  store.dispatch(get_connection_info());
-  store.dispatch(getBlockChainState());
-  store.dispatch(getLatestBlocks());
-  store.dispatch(getFullNodeConnections());
-  store.dispatch(getLatestChallenges());
-  store.dispatch(getFarmerConnections());
-  store.dispatch(getPlots());
-  store.dispatch(isServiceRunning(service_plotter));
-  store.dispatch(get_all_trades());
-}
+  dispatch(start_farmer);
+  dispatch(start_harvester);
+  dispatch(get_height_info());
+  dispatch(get_sync_status());
+  dispatch(get_connection_info());
+  dispatch(getBlockChainState());
+  dispatch(getLatestBlocks());
+  dispatch(getFullNodeConnections());
+  dispatch(getLatestChallenges());
+  dispatch(getFarmerConnections());
+  dispatch(getPlots());
+  dispatch(isServiceRunning(service_plotter));
+  dispatch(get_all_trades());
+};
 
 export const handle_message = (store, payload) => {
   store.dispatch(incomingMessage(payload));
@@ -165,15 +164,6 @@ export const handle_message = (store, payload) => {
       store.dispatch(getFarmerConnections());
     } else if (payload.origin === service_harvester) {
       store.dispatch(getPlots());
-    }
-  } else if (payload.command === "log_in") {
-    if (payload.data.success) {
-      refreshAllState(store);
-    }
-  } else if (payload.command === "add_key") {
-    if (payload.data.success) {
-      store.dispatch(format_message("get_public_keys", {}));
-      refreshAllState(store);
     }
   } else if (payload.command === "delete_key") {
     if (payload.data.success) {
@@ -232,11 +222,6 @@ export const handle_message = (store, payload) => {
       wallet_id = payload.data.wallet_id;
       store.dispatch(get_balance_for_wallet(wallet_id));
       store.dispatch(get_transactions(wallet_id));
-    }
-  } else if (payload.command === "create_new_wallet") {
-    if (payload.data.success) {
-      store.dispatch(format_message("get_wallets", {}));
-      store.dispatch(createState(true, false));
     }
   } else if (payload.command === "cc_set_name") {
     if (payload.data.success) {

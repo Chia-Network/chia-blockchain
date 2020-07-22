@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 class FullNodeStore:
     db: aiosqlite.Connection
     # Current estimate of the speed of the network timelords
-    proof_of_time_estimate_ips: uint64
+    proof_of_time_estimate_ips: int
     # Proof of time heights
     proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
     # Our best unfinished block
@@ -37,7 +37,7 @@ class FullNodeStore:
 
         await self.db.commit()
 
-        self.proof_of_time_estimate_ips = uint64(100000)
+        self.proof_of_time_estimate_ips = 100000
         self.proof_of_time_heights = {}
         self.unfinished_blocks_leader = (
             uint32(0),
@@ -166,10 +166,10 @@ class FullNodeStore:
     def get_unfinished_block_leader(self) -> Tuple[uint32, uint64]:
         return self.unfinished_blocks_leader
 
-    def set_proof_of_time_estimate_ips(self, estimate: uint64):
+    def set_proof_of_time_estimate_ips(self, estimate: int):
         self.proof_of_time_estimate_ips = estimate
 
-    def get_proof_of_time_estimate_ips(self) -> uint64:
+    def get_proof_of_time_estimate_ips(self) -> int:
         return self.proof_of_time_estimate_ips
 
     def add_proof_of_time_heights(

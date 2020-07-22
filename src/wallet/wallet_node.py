@@ -27,6 +27,7 @@ from src.util.ints import uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
 from src.wallet.derivation_record import DerivationRecord
+from src.wallet.settings.settings_objects import BackupInitialized
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_action import WalletAction
@@ -110,11 +111,17 @@ class WalletNode:
         self.potential_header_hashes = {}
         self.state_changed_callback = None
         self.wallet_state_manager = None
+        self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
         self.sync_generator_task = None
         self.server = None
 
-    async def _start(self, public_key_fingerprint: Optional[int] = None) -> bool:
-        self._shut_down = False
+    async def _start(
+        self,
+        fingerprint: Optional[int] = None,
+        new_wallet: bool = False,
+        backup_file: Optional[Path] = None,
+        skip_backup_import: bool = False,
+    ) -> bool:
         private_keys = self.keychain.get_all_private_keys()
         if len(private_keys) == 0:
             self.log.warning(
@@ -123,9 +130,9 @@ class WalletNode:
             return False
 
         private_key: Optional[PrivateKey] = None
-        if public_key_fingerprint is not None:
+        if fingerprint is not None:
             for sk, _ in private_keys:
-                if sk.get_g1().get_fingerprint() == public_key_fingerprint:
+                if sk.get_g1().get_fingerprint() == fingerprint:
                     private_key = sk
                     break
         else:
@@ -142,11 +149,30 @@ class WalletNode:
         self.wallet_state_manager = await WalletStateManager.create(
             private_key, self.config, path, self.constants
         )
+
         assert self.wallet_state_manager is not None
+
+        backup_settings: BackupInitialized = self.wallet_state_manager.user_settings.get_backup_settings()
+        if backup_settings.user_initialized is False:
+            if new_wallet is True:
+                await self.wallet_state_manager.user_settings.user_created_new_wallet()
+            elif skip_backup_import is True:
+                await self.wallet_state_manager.user_settings.user_skipped_backup_import()
+            elif backup_file is not None:
+                await self.wallet_state_manager.import_backup_info(backup_file)
+            else:
+                self.backup_initialized = False
+                await self.wallet_state_manager.close_all_stores()
+                self.wallet_state_manager = None
+                return False
+
+        self.backup_initialized = True
+
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
+        self._shut_down = False
         return True
 
     def _close(self):
@@ -162,7 +188,7 @@ class WalletNode:
         if self.sync_generator_task is not None:
             async for _ in self.sync_generator_task:
                 pass
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         await self.wsm_close_task
 
@@ -176,12 +202,12 @@ class WalletNode:
             self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
 
     def _pending_tx_handler(self):
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         asyncio.ensure_future(self._resend_queue())
 
     async def _action_messages(self) -> List[OutboundMessage]:
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return []
         actions: List[
             WalletAction
@@ -203,7 +229,7 @@ class WalletNode:
         return result
 
     async def _resend_queue(self):
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         if self._shut_down:
             return
@@ -217,7 +243,7 @@ class WalletNode:
             self.server.push_message(msg)
 
     async def _messages_to_resend(self) -> List[OutboundMessage]:
-        if self.wallet_state_manager is None or self._shut_down:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return []
         messages: List[OutboundMessage] = []
 
@@ -247,7 +273,7 @@ class WalletNode:
         self.server = server
 
     async def _on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         messages = await self._messages_to_resend()
 
@@ -255,7 +281,7 @@ class WalletNode:
             yield msg
 
     def _num_needed_peers(self) -> int:
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return 0
         assert self.server is not None
         diff = self.config["target_peer_count"] - len(
@@ -328,7 +354,7 @@ class WalletNode:
         Wallet has fallen far behind (or is starting up for the first time), and must be synced
         up to the LCA of the blockchain.
         """
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
 
         # 1. Get all header hashes
@@ -336,7 +362,7 @@ class WalletNode:
         self.header_hashes_error = False
         self.proof_hashes = []
         self.potential_header_hashes = {}
-        genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
+        genesis = FullBlock.from_bytes(self.constants.GENESIS_BLOCK)
         genesis_challenge = genesis.proof_of_space.challenge_hash
         request_header_hashes = wallet_protocol.RequestAllHeaderHashesAfter(
             uint32(0), genesis_challenge
@@ -517,7 +543,7 @@ class WalletNode:
                 tip_height + 1,
             )
             if fork_point_height == 0:
-                difficulty = self.constants["DIFFICULTY_STARTING"]
+                difficulty = self.constants.DIFFICULTY_STARTING
             else:
                 fork_point_parent_hash = self.wallet_state_manager.block_records[
                     fork_point_hash
@@ -649,7 +675,7 @@ class WalletNode:
         This is called when we have finished a block (which means we have downloaded the header,
         as well as the relevant additions and removals for the wallets).
         """
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return None
         self.log.info(
             f"Finishing block {block_record.header_hash} at height {block_record.height}"
@@ -704,7 +730,7 @@ class WalletNode:
         This is an ack for our previous SendTransaction call. This removes the transaction from
         the send queue if we have sent it to enough nodes.
         """
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         if ack.status == MempoolInclusionStatus.SUCCESS:
             self.log.info(
@@ -732,7 +758,7 @@ class WalletNode:
         """
         Receipt of proof hashes, used during sync for interactive weight verification protocol.
         """
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         if not self.wallet_state_manager.sync_mode:
             self.log.warning("Receiving proof hashes while not syncing.")
@@ -747,7 +773,7 @@ class WalletNode:
         Response containing all header hashes after a point. This is used to find the fork
         point between our current blockchain, and the current heaviest tip.
         """
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         if not self.wallet_state_manager.sync_mode:
             self.log.warning("Receiving header hashes while not syncing.")
@@ -762,7 +788,7 @@ class WalletNode:
         Error in requesting all header hashes.
         """
         self.log.error("All header hashes after request rejected")
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         self.header_hashes_error = True
 
@@ -772,7 +798,7 @@ class WalletNode:
         Notification from full node that a new LCA (Least common ancestor of the three blockchain
         tips) has been added to the full node.
         """
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         if self._shut_down:
             return
@@ -818,7 +844,7 @@ class WalletNode:
         The full node responds to our RequestHeader call. We cannot finish this block
         until we have the required additions / removals for our wallets.
         """
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         while True:
             if self._shut_down:
@@ -928,7 +954,7 @@ class WalletNode:
         The full node has rejected our request for a header.
         """
         # TODO(mariano): implement
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         self.log.error("Header request rejected")
 
@@ -938,7 +964,7 @@ class WalletNode:
         The full node has responded with the additions for a block. We will use this
         to try to finish the block, and add it to the state.
         """
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         if self._shut_down:
             return
@@ -1081,7 +1107,7 @@ class WalletNode:
         The full node has responded with the removals for a block. We will use this
         to try to finish the block, and add it to the state.
         """
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         if self._shut_down:
             return
@@ -1173,7 +1199,7 @@ class WalletNode:
         The full node has rejected our request for removals.
         """
         # TODO(mariano): implement
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         self.log.error("Removals request rejected")
 
@@ -1185,7 +1211,7 @@ class WalletNode:
         The full node has rejected our request for additions.
         """
         # TODO(mariano): implement
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         self.log.error("Additions request rejected")
 
@@ -1194,7 +1220,7 @@ class WalletNode:
         """
         The full node respond with transaction generator
         """
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         wrapper = response.generatorResponse
         if wrapper.generator is not None:
@@ -1211,6 +1237,6 @@ class WalletNode:
         The full node rejected our request for generator
         """
         # TODO (Straya): implement
-        if self.wallet_state_manager is None:
+        if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         self.log.info("generator rejected")

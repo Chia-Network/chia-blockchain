@@ -34,6 +34,7 @@ const initial_state = {
   ]
 };
 */
+
 export const mnemonic_word_added = data => {
   var action = wordChanged();
   action.data = data;

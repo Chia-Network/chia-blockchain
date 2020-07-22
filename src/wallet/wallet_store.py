@@ -197,7 +197,7 @@ class WalletStore:
         return coins
 
     async def get_spendable_for_index(
-        self, index: uint32, wallet_id: int
+        self, index: int, wallet_id: int
     ) -> Set[WalletCoinRecord]:
         """
         Returns set of unspent coin records that are not coinbases, or if they are coinbases,

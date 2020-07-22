@@ -23,13 +23,14 @@ from src.util.hash import std_hash
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.key_val_store import KeyValStore
+from src.wallet.settings.user_settings import UserSettings
 from src.wallet.trade_manager import TradeManager
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_action_store import WalletActionStore
 from src.wallet.wallet_coin_record import WalletCoinRecord
-from src.wallet.wallet_info import WalletInfo
+from src.wallet.wallet_info import WalletInfo, WalletInfoBackup
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
@@ -86,6 +87,7 @@ class WalletStateManager:
 
     trade_manager: TradeManager
     generate_count: int
+    user_settings: UserSettings
 
     @staticmethod
     async def create(
@@ -115,11 +117,12 @@ class WalletStateManager:
         self.basic_store = await KeyValStore.create(self.db_connection)
         self.trade_manager = await TradeManager.create(self, self.db_connection)
 
+        self.user_settings = await UserSettings.create(self.basic_store)
         self.lca = None
         self.sync_mode = False
         self.height_to_hash = {}
         self.block_records = await self.wallet_store.get_lca_path()
-        genesis = FullBlock.from_bytes(self.constants["GENESIS_BLOCK"])
+        genesis = FullBlock.from_bytes(self.constants.GENESIS_BLOCK)
         self.genesis = genesis
         self.state_changed_callback = None
         self.pending_tx_callback = None
@@ -139,16 +142,7 @@ class WalletStateManager:
         self.wallets = {}
         self.wallets[main_wallet_info.id] = self.main_wallet
 
-        for wallet_info in await self.get_all_wallets():
-            # self.log.info(f"wallet_info {wallet_info}")
-            if wallet_info.type == WalletType.STANDARD_WALLET:
-                if wallet_info.id == 1:
-                    continue
-                wallet = await Wallet.create(config, wallet_info)
-                self.wallets[wallet_info.id] = wallet
-            elif wallet_info.type == WalletType.COLOURED_COIN:
-                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
-                self.wallets[wallet_info.id] = wallet
+        await self.load_wallets()
 
         async with self.puzzle_store.lock:
             index = await self.puzzle_store.get_last_derivation_path()
@@ -201,6 +195,19 @@ class WalletStateManager:
 
     def get_public_key(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
+
+    async def load_wallets(self):
+        for wallet_info in await self.get_all_wallets():
+            if wallet_info.id in self.wallets:
+                continue
+            if wallet_info.type == WalletType.STANDARD_WALLET.value:
+                if wallet_info.id == 1:
+                    continue
+                wallet = await Wallet.create(self.config, wallet_info)
+                self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.COLOURED_COIN.value:
+                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
+                self.wallets[wallet_info.id] = wallet
 
     async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
         index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(hash)
@@ -398,7 +405,7 @@ class WalletStateManager:
     async def get_frozen_balance(self, wallet_id: int) -> uint64:
         current_index = self.block_records[self.lca].height
 
-        coinbase_freeze_period = self.constants["COINBASE_FREEZE_PERIOD"]
+        coinbase_freeze_period = self.constants.COINBASE_FREEZE_PERIOD
 
         valid_index = current_index - coinbase_freeze_period
 
@@ -702,15 +709,16 @@ class WalletStateManager:
             if header_block is not None:
                 if not await self.validate_header_block(block, header_block):
                     return ReceiveBlockResult.INVALID_BLOCK
-                if (block.height + 1) % self.constants[
-                    "DIFFICULTY_EPOCH"
-                ] == self.constants["DIFFICULTY_DELAY"]:
+                if (
+                    (block.height + 1) % self.constants.DIFFICULTY_EPOCH
+                    == self.constants.DIFFICULTY_DELAY
+                ):
                     assert header_block.challenge.new_work_difficulty is not None
                     self.difficulty_resets_prev[
                         block.header_hash
                     ] = header_block.challenge.new_work_difficulty
 
-            if (block.height + 1) % self.constants["DIFFICULTY_EPOCH"] == 0:
+            if (block.height + 1) % self.constants.DIFFICULTY_EPOCH == 0:
                 assert block.total_iters is not None
 
             # Block is valid, so add it to the blockchain
@@ -785,26 +793,24 @@ class WalletStateManager:
         curr = block_record
         if (
             curr.height
-            < self.constants["DIFFICULTY_EPOCH"] + self.constants["DIFFICULTY_DELAY"]
+            < self.constants.DIFFICULTY_EPOCH + self.constants.DIFFICULTY_DELAY
         ):
-            return self.constants["MIN_ITERS_STARTING"]
+            return self.constants.MIN_ITERS_STARTING
         if (
-            curr.height % self.constants["DIFFICULTY_EPOCH"]
-            < self.constants["DIFFICULTY_DELAY"]
+            curr.height % self.constants.DIFFICULTY_EPOCH
+            < self.constants.DIFFICULTY_DELAY
         ):
             # First few blocks of epoch (using old difficulty and min_iters)
             height2 = (
                 curr.height
-                - (curr.height % self.constants["DIFFICULTY_EPOCH"])
-                - self.constants["DIFFICULTY_EPOCH"]
+                - (curr.height % self.constants.DIFFICULTY_EPOCH)
+                - self.constants.DIFFICULTY_EPOCH
                 - 1
             )
         else:
             # The rest of the blocks of epoch (using new difficulty and min iters)
-            height2 = (
-                curr.height - (curr.height % self.constants["DIFFICULTY_EPOCH"]) - 1
-            )
-        height1 = height2 - self.constants["DIFFICULTY_EPOCH"]
+            height2 = curr.height - (curr.height % self.constants.DIFFICULTY_EPOCH) - 1
+        height1 = height2 - self.constants.DIFFICULTY_EPOCH
         assert height2 > 0
 
         iters1: Optional[uint64] = uint64(0)
@@ -819,15 +825,12 @@ class WalletStateManager:
         assert iters2 is not None
         min_iters_precise = uint64(
             (iters2 - iters1)
-            // (
-                self.constants["DIFFICULTY_EPOCH"]
-                * self.constants["MIN_ITERS_PROPORTION"]
-            )
+            // (self.constants.DIFFICULTY_EPOCH * self.constants.MIN_ITERS_PROPORTION)
         )
         # Truncates to only 12 bits plus 0s. This prevents grinding attacks.
         return uint64(
             truncate_to_significant_bits(
-                min_iters_precise, self.constants["SIGNIFICANT_BITS"]
+                min_iters_precise, self.constants.SIGNIFICANT_BITS
             )
         )
 
@@ -864,7 +867,7 @@ class WalletStateManager:
         quality_str: Optional[
             bytes32
         ] = header_block.proof_of_space.verify_and_get_quality_string(
-            self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+            self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
         )
         if quality_str is None:
             return False
@@ -873,8 +876,8 @@ class WalletStateManager:
         min_iters: uint64 = self.get_min_iters(br)
         prev_block: Optional[BlockRecord]
         if (
-            br.height % self.constants["DIFFICULTY_EPOCH"]
-            != self.constants["DIFFICULTY_DELAY"]
+            br.height % self.constants.DIFFICULTY_EPOCH
+            != self.constants.DIFFICULTY_DELAY
         ):
             # Only allow difficulty changes once per epoch
             if br.height > 1:
@@ -891,7 +894,7 @@ class WalletStateManager:
                 assert difficulty == prev_block.weight
             else:
                 difficulty = uint64(br.weight)
-                assert difficulty == self.constants["DIFFICULTY_STARTING"]
+                assert difficulty == self.constants.DIFFICULTY_STARTING
         else:
             # This is a difficulty change, so check whether it's within the allowed range.
             # (But don't check whether it's the right amount).
@@ -909,14 +912,14 @@ class WalletStateManager:
 
             max_diff = uint64(
                 truncate_to_significant_bits(
-                    prev_difficulty * self.constants["DIFFICULTY_FACTOR"],
-                    self.constants["SIGNIFICANT_BITS"],
+                    prev_difficulty * self.constants.DIFFICULTY_FACTOR,
+                    self.constants.SIGNIFICANT_BITS,
                 )
             )
             min_diff = uint64(
                 truncate_to_significant_bits(
-                    prev_difficulty // self.constants["DIFFICULTY_FACTOR"],
-                    self.constants["SIGNIFICANT_BITS"],
+                    prev_difficulty // self.constants.DIFFICULTY_FACTOR,
+                    self.constants.SIGNIFICANT_BITS,
                 )
             )
 
@@ -935,7 +938,7 @@ class WalletStateManager:
 
         # Check PoT
         if not header_block.proof_of_time.is_valid(
-            self.constants["DISCRIMINANT_SIZE_BITS"]
+            self.constants.DISCRIMINANT_SIZE_BITS
         ):
             return False
 
@@ -976,7 +979,7 @@ class WalletStateManager:
         # Check that block is not far in the future
         if (
             header_block.header.data.timestamp
-            > time.time() + self.constants["MAX_FUTURE_TIME"]
+            > time.time() + self.constants.MAX_FUTURE_TIME
         ):
             return False
 
@@ -991,7 +994,7 @@ class WalletStateManager:
 
     def validate_select_proofs(
         self,
-        all_proof_hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]],
+        all_proof_hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]],
         heights: List[uint32],
         cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock, Optional[bytes]]],
         potential_header_hashes: Dict[uint32, bytes32],
@@ -1037,8 +1040,8 @@ class WalletStateManager:
             ):
                 return False
             if (
-                height % self.constants["DIFFICULTY_EPOCH"]
-                == self.constants["DIFFICULTY_DELAY"]
+                height % self.constants.DIFFICULTY_EPOCH
+                == self.constants.DIFFICULTY_DELAY
             ):
                 diff_change = all_proof_hashes[height][1]
                 assert diff_change is not None
@@ -1071,22 +1074,22 @@ class WalletStateManager:
 
             # Get difficulty
             if (
-                height % self.constants["DIFFICULTY_EPOCH"]
-                < self.constants["DIFFICULTY_DELAY"]
+                height % self.constants.DIFFICULTY_EPOCH
+                < self.constants.DIFFICULTY_DELAY
             ):
                 diff_height = (
                     height
-                    - (height % self.constants["DIFFICULTY_EPOCH"])
+                    - (height % self.constants.DIFFICULTY_EPOCH)
                     - (
-                        self.constants["DIFFICULTY_EPOCH"]
-                        - self.constants["DIFFICULTY_DELAY"]
+                        self.constants.DIFFICULTY_EPOCH
+                        - self.constants.DIFFICULTY_DELAY
                     )
                 )
             else:
                 diff_height = (
                     height
-                    - (height % self.constants["DIFFICULTY_EPOCH"])
-                    + self.constants["DIFFICULTY_DELAY"]
+                    - (height % self.constants.DIFFICULTY_EPOCH)
+                    + self.constants.DIFFICULTY_DELAY
                 )
 
             difficulty = all_proof_hashes[diff_height][1]
@@ -1094,44 +1097,44 @@ class WalletStateManager:
 
             # Validate pospace to get iters
             quality_str = header_block.proof_of_space.verify_and_get_quality_string(
-                self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"]
+                self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
             )
             assert quality_str is not None
 
             if (
                 height
-                < self.constants["DIFFICULTY_EPOCH"]
-                + self.constants["DIFFICULTY_DELAY"]
+                < self.constants.DIFFICULTY_EPOCH + self.constants.DIFFICULTY_DELAY
             ):
-                min_iters = self.constants["MIN_ITERS_STARTING"]
+                min_iters = self.constants.MIN_ITERS_STARTING
             else:
                 if (
-                    height % self.constants["DIFFICULTY_EPOCH"]
-                    < self.constants["DIFFICULTY_DELAY"]
+                    height % self.constants.DIFFICULTY_EPOCH
+                    < self.constants.DIFFICULTY_DELAY
                 ):
                     height2 = (
                         height
-                        - (height % self.constants["DIFFICULTY_EPOCH"])
-                        - self.constants["DIFFICULTY_EPOCH"]
+                        - (height % self.constants.DIFFICULTY_EPOCH)
+                        - self.constants.DIFFICULTY_EPOCH
                         - 1
                     )
                 else:
-                    height2 = height - (height % self.constants["DIFFICULTY_EPOCH"]) - 1
+                    height2 = height - (height % self.constants.DIFFICULTY_EPOCH) - 1
 
-                height1 = height2 - self.constants["DIFFICULTY_EPOCH"]
+                height1 = height2 - self.constants.DIFFICULTY_EPOCH
                 if height1 == -1:
-                    iters1 = uint64(0)
+                    iters1: Optional[uint64] = uint64(0)
                 else:
                     iters1 = all_proof_hashes[height1][2]
-                    assert iters1 is not None
+
                 iters2 = all_proof_hashes[height2][2]
+                assert iters1 is not None
                 assert iters2 is not None
 
                 min_iters = uint64(
                     (iters2 - iters1)
                     // (
-                        self.constants["DIFFICULTY_EPOCH"]
-                        * self.constants["MIN_ITERS_PROPORTION"]
+                        self.constants.DIFFICULTY_EPOCH
+                        * self.constants.MIN_ITERS_PROPORTION
                     )
                 )
 
@@ -1144,7 +1147,7 @@ class WalletStateManager:
                 return False
 
             if not header_block.proof_of_time.is_valid(
-                self.constants["DISCRIMINANT_SIZE_BITS"]
+                self.constants.DISCRIMINANT_SIZE_BITS
             ):
                 return False
 
@@ -1308,6 +1311,7 @@ class WalletStateManager:
             await self.tx_store._clear_database()
             await self.puzzle_store._clear_database()
             await self.user_store._clear_database()
+            await self.basic_store._clear_database()
 
     def unlink_db(self):
         Path(self.db_path).unlink()
@@ -1315,10 +1319,34 @@ class WalletStateManager:
     async def get_all_wallets(self) -> List[WalletInfo]:
         return await self.user_store.get_all_wallets()
 
+    async def create_wallet_backup(self, file_path: Path):
+        all_wallets = await self.get_all_wallets()
+        for wallet in all_wallets:
+            if wallet.id == 1:
+                all_wallets.remove(wallet)
+                break
+
+        backup = WalletInfoBackup(all_wallets)
+        file_path.write_text(bytes(backup).hex())
+
+    async def import_backup_info(self, file_path):
+        backup_text = file_path.read_text()
+        backup: WalletInfoBackup = WalletInfoBackup.from_bytes(
+            hexstr_to_bytes(backup_text)
+        )
+
+        for wallet_info in backup.wallet_list:
+            await self.user_store.create_wallet(
+                wallet_info.name, wallet_info.type, wallet_info.data
+            )
+
+        await self.load_wallets()
+        await self.user_settings.user_imported_backup()
+
     async def get_wallet_for_colour(self, colour):
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
-            if wallet.wallet_info.type == WalletType.COLOURED_COIN:
+            if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
                 if wallet.cc_info.my_core == cc_wallet_puzzles.cc_make_core(colour):
                     return wallet
         return None
@@ -1335,7 +1363,7 @@ class WalletStateManager:
 
         current_index = self.block_records[self.lca].height
 
-        coinbase_freeze_period = self.constants["COINBASE_FREEZE_PERIOD"]
+        coinbase_freeze_period = self.constants.COINBASE_FREEZE_PERIOD
 
         if current_index <= coinbase_freeze_period:
             return set()
@@ -1376,7 +1404,7 @@ class WalletStateManager:
         self,
         name: str,
         wallet_id: int,
-        type: WalletType,
+        type: int,
         callback: str,
         done: bool,
         data: str,

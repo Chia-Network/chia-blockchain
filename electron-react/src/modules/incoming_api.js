@@ -48,6 +48,7 @@ export const Transaction = (
 const initial_state = {
   mnemonic: [],
   public_key_fingerprints: [],
+  selected_fingerprint: null,
   logged_in_received: false,
   logged_in: false,
   wallets: [],
@@ -57,11 +58,27 @@ const initial_state = {
     syncing: false
   },
   sending_transaction: false,
-  send_transaction_result: null
+  send_transaction_result: null,
+  show_create_backup: false
 };
 
 export const incomingReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "SHOW_CREATE_BACKUP":
+      return {
+        ...state,
+        show_create_backup: action.show
+      };
+    case "SELECT_FINGERPRINT":
+      return {
+        ...state,
+        selected_fingerprint: action.fingerprint
+      };
+    case "UNSELECT_FINGERPRINT":
+      return {
+        ...state,
+        selected_fingerprint: null
+      };
     case "LOG_OUT":
       return {
         ...initial_state,

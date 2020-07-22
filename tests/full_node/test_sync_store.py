@@ -28,7 +28,7 @@ class TestStore:
         for sync_mode in (False, True):
             db.set_sync_mode(sync_mode)
             assert sync_mode == db.get_sync_mode()
-        FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
+        FullBlock.from_bytes(test_constants.GENESIS_BLOCK)
 
         # clear sync info
         await db.clear_sync_info()

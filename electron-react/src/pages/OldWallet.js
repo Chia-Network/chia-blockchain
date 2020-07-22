@@ -11,7 +11,7 @@ import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
 import { useStore, useDispatch } from "react-redux";
 import { mnemonic_word_added, resetMnemonic } from "../modules/mnemonic_input";
-import { add_key } from "../modules/message";
+import { add_and_skip_backup } from "../modules/message";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 import { makeStyles } from "@material-ui/core/styles";
 import logo from "../assets/img/chia_logo.svg";
@@ -148,8 +148,8 @@ const UIPart = () => {
     dispatch(resetMnemonic());
     dispatch(changeEntranceMenu(presentSelectKeys));
   }
-  const store = useStore();
   const dispatch = useDispatch();
+  const store = useStore();
   const [submitted, setSubmitted] = React.useState(false);
   const classes = useStyles();
 
@@ -162,7 +162,7 @@ const UIPart = () => {
         return;
       }
     }
-    dispatch(add_key(mnemonic));
+    dispatch(add_and_skip_backup(mnemonic));
   }
 
   return (

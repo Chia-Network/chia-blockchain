@@ -55,7 +55,8 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def two_nodes():
-    async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 0}):
+    constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+    async for _ in setup_two_nodes(constants):
         yield _
 
 
@@ -797,7 +798,7 @@ class TestWalletProtocol:
             100, wallet_a.get_new_puzzlehash(), blocks_new[-1].get_coinbase(),
         )
         spend_bundle_bad = wallet_a.generate_signed_transaction(
-            uint64.from_bytes(constants["MAX_COIN_AMOUNT"]),
+            constants.MAX_COIN_AMOUNT,
             wallet_a.get_new_puzzlehash(),
             blocks_new[-1].get_coinbase(),
         )
@@ -864,16 +865,13 @@ class TestWalletProtocol:
         hashes = msgs[0].message.data.hashes
         assert len(hashes) >= len(blocks_list) - 2
         for i in range(len(hashes)):
-            if (
-                i % test_constants["DIFFICULTY_EPOCH"]
-                == test_constants["DIFFICULTY_DELAY"]
-            ):
+            if i % test_constants.DIFFICULTY_EPOCH == test_constants.DIFFICULTY_DELAY:
                 assert hashes[i][1] is not None
             elif i > 0:
                 assert hashes[i][1] is None
             if (
-                i % test_constants["DIFFICULTY_EPOCH"]
-                == test_constants["DIFFICULTY_EPOCH"] - 1
+                i % test_constants.DIFFICULTY_EPOCH
+                == test_constants.DIFFICULTY_EPOCH - 1
             ):
                 assert hashes[i][2] is not None
             else:

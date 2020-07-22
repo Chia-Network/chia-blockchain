@@ -12,7 +12,12 @@ import Container from "@material-ui/core/Container";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import { withRouter } from "react-router-dom";
 import { connect, useSelector, useDispatch } from "react-redux";
-import { log_in, delete_key, get_private_key } from "../modules/message";
+import {
+  login_action,
+  delete_key,
+  get_private_key,
+  selectFingerprint
+} from "../modules/message";
 import Link from "@material-ui/core/Link";
 import Button from "@material-ui/core/Button";
 import VisibilityIcon from "@material-ui/icons/Visibility";
@@ -27,6 +32,7 @@ import {
   presentOldWallet,
   presentNewWallet
 } from "../modules/entranceMenu";
+import { resetMnemonic } from "../modules/mnemonic_input";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -98,15 +104,10 @@ const SelectKey = () => {
   const [open, setOpen] = React.useState(false);
 
   const handleClick = fingerprint => {
-    return () => dispatch(log_in(fingerprint));
-  };
-  const showKey = fingerprint => {
-    return () => dispatch(get_private_key(fingerprint));
-  };
-
-  const handleDelete = fingerprint => {
     return () => {
-      dispatch(delete_key(fingerprint));
+      dispatch(resetMnemonic());
+      dispatch(selectFingerprint(fingerprint));
+      dispatch(login_action(fingerprint));
     };
   };
 
@@ -123,9 +124,18 @@ const SelectKey = () => {
     dispatch(delete_all_keys());
   };
 
+  const showKey = fingerprint => {
+    return () => dispatch(get_private_key(fingerprint));
+  };
+
+  const handleDelete = fingerprint => {
+    return () => dispatch(delete_key(fingerprint));
+  };
+
   const goToMnemonics = () => {
     dispatch(changeEntranceMenu(presentOldWallet));
   };
+
   const goToNewWallet = () => {
     dispatch(changeEntranceMenu(presentNewWallet));
   };

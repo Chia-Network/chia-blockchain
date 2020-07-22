@@ -184,9 +184,10 @@ class FullNode:
             proof_of_time_min_iters: uint64 = self.blockchain.get_next_min_iters(
                 full_block
             )
-            proof_of_time_rate: uint64 = proof_of_time_min_iters // (
-                self.constants["BLOCK_TIME_TARGET"]
-                / self.constants["MIN_ITERS_PROPORTION"]
+            proof_of_time_rate: uint64 = uint64(
+                proof_of_time_min_iters
+                * self.constants.MIN_ITERS_PROPORTION
+                // (self.constants.BLOCK_TIME_TARGET)
             )
         rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
         yield OutboundMessage(
@@ -463,10 +464,10 @@ class FullNode:
         assert max([h.height for h in current_tips]) == tip_height
 
         self.full_node_store.set_proof_of_time_estimate_ips(
-            self.blockchain.get_next_min_iters(tip_block)
-            // (
-                self.constants["BLOCK_TIME_TARGET"]
-                / self.constants["MIN_ITERS_PROPORTION"]
+            (
+                self.blockchain.get_next_min_iters(tip_block)
+                * self.constants.MIN_ITERS_PROPORTION
+                // self.constants.BLOCK_TIME_TARGET
             )
         )
 
@@ -814,7 +815,7 @@ class FullNode:
         if height is None:
             self.log.info("No block for compact proof of time.")
             return
-        if not proof.is_valid(self.constants["DISCRIMINANT_SIZE_BITS"]):
+        if not proof.is_valid(self.constants.DISCRIMINANT_SIZE_BITS):
             self.log.error("Invalid compact proof of time.")
             return
 
@@ -1064,7 +1065,7 @@ class FullNode:
             )
         )
 
-        if expected_time > self.constants["PROPAGATION_DELAY_THRESHOLD"]:
+        if expected_time > self.constants.PROPAGATION_DELAY_THRESHOLD:
             self.log.info(f"Block is slow, expected {expected_time} seconds, waiting")
             # If this block is slow, sleep to allow faster blocks to come out first
             await asyncio.sleep(5)
@@ -1081,7 +1082,7 @@ class FullNode:
                 (block.height, expected_time)
             )
         elif block.height == leader[0]:
-            if expected_time > leader[1] + self.constants["PROPAGATION_THRESHOLD"]:
+            if expected_time > leader[1] + self.constants.PROPAGATION_THRESHOLD:
                 # If VDF is expected to finish X seconds later than the best, don't propagate
                 self.log.info(
                     f"VDF will finish too late {expected_time} seconds, so don't propagate"
@@ -1304,7 +1305,7 @@ class FullNode:
             request.proof_of_space,
             difficulty,
             vdf_min_iters,
-            self.constants["NUMBER_ZERO_BITS_CHALLENGE_SIG"],
+            self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
         )
 
         removal_merkle_set = MerkleSet()
@@ -1596,9 +1597,10 @@ class FullNode:
                 self.blockchain.headers[respond_block.block.prev_header_hash]
             )
             next_vdf_min_iters = self.blockchain.get_next_min_iters(respond_block.block)
-            next_vdf_ips = next_vdf_min_iters // (
-                self.constants["BLOCK_TIME_TARGET"]
-                / self.constants["MIN_ITERS_PROPORTION"]
+            next_vdf_ips = uint64(
+                next_vdf_min_iters
+                * self.constants.MIN_ITERS_PROPORTION
+                // self.constants.BLOCK_TIME_TARGET
             )
             self.log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
             if next_vdf_ips != self.full_node_store.get_proof_of_time_estimate_ips():
@@ -1835,13 +1837,13 @@ class FullNode:
             difficulty_update: Optional[uint64] = None
             iters_update: Optional[uint64] = None
             if (
-                curr.height % self.constants["DIFFICULTY_EPOCH"]
-                == self.constants["DIFFICULTY_DELAY"]
+                curr.height % self.constants.DIFFICULTY_EPOCH
+                == self.constants.DIFFICULTY_DELAY
             ):
                 difficulty_update = self.blockchain.get_next_difficulty(
                     self.blockchain.headers[curr.prev_header_hash]
                 )
-            if (curr.height + 1) % self.constants["DIFFICULTY_EPOCH"] == 0:
+            if (curr.height + 1) % self.constants.DIFFICULTY_EPOCH == 0:
                 iters_update = curr.data.total_iters
             hashes.append(
                 (proof_hashes_map[curr.header_hash], difficulty_update, iters_update)
