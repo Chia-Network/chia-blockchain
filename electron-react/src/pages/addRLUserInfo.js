@@ -68,6 +68,10 @@ export const CreateRLUserWallet = () => {
     navigator.clipboard.writeText(puzzle_hash);
   }
 
+  function finish_setup() {
+    dispatch(rl_set_user_info(wallet_id, interval, limit, origin_id, admin_pubkey))
+  }
+
   return (
     <div>
       <div className={classes.cardTitle}>
@@ -86,6 +90,9 @@ export const CreateRLUserWallet = () => {
       </div>
       <div className={custom.card}>
         <Box display="flex">
+          <Box flexGrow={1}>
+            <Typography variant="subtitle1">Initialize a Rate Limited User Wallet:</Typography>
+          </Box>
           <Box flexGrow={1}>
             <TextField
               disabled

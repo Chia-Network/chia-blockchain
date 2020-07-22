@@ -105,7 +105,7 @@ export const CreateRLAdminWallet = () => {
       return;
     }
     if (
-      userpubkey_input.value == ""
+      userpubkey_input.value === ""
     ) {
       dispatch(openDialog("Please enter a valid pubkey"));
       return;
@@ -129,7 +129,7 @@ export const CreateRLAdminWallet = () => {
     dispatch(createState(true, true));
     var amount = chia_to_mojo(amount_input.value);
     var fee = chia_to_mojo(fee_input.value);
-    dispatch(create_rl_admin(interval_input, chiaper_input, userpubkey_input, amount, fee));
+    dispatch(create_rl_admin(interval_input, chiaper_input, userpubkey_input, amount));
   }
 
   return (
