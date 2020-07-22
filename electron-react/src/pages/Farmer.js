@@ -22,6 +22,11 @@ import TableHead from "@material-ui/core/TableHead";
 import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
 import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import IconButton from "@material-ui/core/IconButton";
+import Dialog from "@material-ui/core/Dialog";
+import DialogActions from "@material-ui/core/DialogActions";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogContentText from "@material-ui/core/DialogContentText";
+import DialogTitle from "@material-ui/core/DialogTitle";
 
 import { closeConnection, openConnection } from "../modules/farmerMessages";
 import {
@@ -305,7 +310,9 @@ const Plots = props => {
   plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
-  const [open, setOpen] = React.useState(false);
+  const [addDirectoryOpen, addDirectorySetOpen] = React.useState(false);
+  const [deletePlotName, deletePlotSetName] = React.useState("");
+  const [deletePlotOpen, deletePlotSetOpen] = React.useState(false);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -316,20 +323,24 @@ const Plots = props => {
     setPage(0);
   };
 
-  const deletePlotClick = filename => {
-    return () => {
-      dispatch(deletePlot(filename));
-    };
-  };
-
   const refreshPlotsClick = () => {
     dispatch(refreshPlots());
   };
-  const handleClose = response => {
-    setOpen(false);
+  const addDirectoryHandleClose = response => {
+    addDirectorySetOpen(false);
     if (response) {
       dispatch(addPlotDirectory(response));
     }
+  };
+
+  const handleCloseDeletePlot = () => {
+    deletePlotSetOpen(false);
+  };
+
+  const handleCloseDeletePlotYes = () => {
+    handleCloseDeletePlot();
+    console.log("deleting plot", deletePlotName);
+    dispatch(deletePlot(deletePlotName));
   };
 
   return (
@@ -353,7 +364,7 @@ const Plots = props => {
                 color="primary"
                 className={classes.addPlotButton}
                 onClick={() => {
-                  setOpen(true);
+                  addDirectorySetOpen(true);
                 }}
               >
                 Add plots
@@ -364,8 +375,8 @@ const Plots = props => {
                 }}
                 id="ringtone-menu"
                 keepMounted
-                open={open}
-                onClose={handleClose}
+                open={addDirectoryOpen}
+                onClose={addDirectoryHandleClose}
               />
             </Typography>
           </div>
@@ -424,7 +435,10 @@ const Plots = props => {
                       </TableCell>
                       <TableCell
                         className={classes.clickable}
-                        onClick={deletePlotClick(item.filename)}
+                        onClick={() => {
+                          deletePlotSetName(item.filename);
+                          deletePlotSetOpen(true);
+                        }}
                         align="right"
                       >
                         <DeleteForeverIcon fontSize="small"></DeleteForeverIcon>
@@ -463,7 +477,10 @@ const Plots = props => {
                       <IconButton
                         edge="end"
                         aria-label="delete"
-                        onClick={deletePlotClick(filename)}
+                        onClick={() => {
+                          deletePlotSetName(filename);
+                          deletePlotSetOpen(true);
+                        }}
                       >
                         <DeleteForeverIcon />
                       </IconButton>
@@ -493,7 +510,10 @@ const Plots = props => {
                       <IconButton
                         edge="end"
                         aria-label="delete"
-                        onClick={deletePlotClick(filename)}
+                        onClick={() => {
+                          deletePlotSetName(filename);
+                          deletePlotSetOpen(true);
+                        }}
                       >
                         <DeleteForeverIcon />
                       </IconButton>
@@ -507,6 +527,32 @@ const Plots = props => {
           )}
         </Grid>
       </Grid>
+      <Dialog
+        open={deletePlotOpen}
+        onClose={handleCloseDeletePlot}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Delete all keys"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Are you sure you want to delete the plot? The plot cannot be
+            recovered.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeletePlot} color="secondary">
+            Back
+          </Button>
+          <Button
+            onClick={handleCloseDeletePlotYes}
+            color="secondary"
+            autoFocus
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
