@@ -120,6 +120,12 @@ const WalletItem = props => {
       name = name.substring(0, 18);
       name = name.concat("...");
     }
+  } else if (wallet.type === "RATE_LIMITED") {
+    mainLabel = "RL Wallet";
+    if (name.length > 18) {
+      name = name.substring(0, 18);
+      name = name.concat("...");
+    }
   }
 
   function presentWallet() {

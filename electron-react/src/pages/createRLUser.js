@@ -4,7 +4,6 @@ import {
   Typography,
   Button,
   Box,
-  TextField,
   Backdrop,
   CircularProgress
 } from "@material-ui/core";
@@ -18,13 +17,12 @@ import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./CreateWallet";
 import { create_rl_user } from "../modules/message";
-import { chia_to_mojo } from "../util/chia";
-import { openDialog } from "../modules/dialogReducer";
 
 export const customStyles = makeStyles(theme => ({
   topTitleCard: {
     paddingTop: theme.spacing(6),
-    paddingBottom: theme.spacing(1)
+    paddingBottom: theme.spacing(1),
+
   },
   input: {
     marginLeft: theme.spacing(3),
@@ -34,6 +32,7 @@ export const customStyles = makeStyles(theme => ({
   },
   inputTitleLeft: {
     marginLeft: theme.spacing(3),
+    paddingBottom: theme.spacing(3),
     width: 400
   },
   send: {
@@ -52,7 +51,6 @@ export const CreateRLUserWallet = () => {
   const classes = useStyles();
   const custom = customStyles();
   const dispatch = useDispatch();
-  // var name_input = null;
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
 
@@ -60,12 +58,8 @@ export const CreateRLUserWallet = () => {
     dispatch(changeCreateWallet(CREATE_RL_WALLET_OPTIONS));
   }
 
-  // TODO: ABOVE IS DONE; BELOW IS A WORK-IN-PROGRESS
-
   function create() {
     dispatch(createState(true, true));
-    // var name = name_input.value;
-    // TODO: dispatch needs to include the other inputs
     dispatch(create_rl_user());
   }
 
@@ -85,9 +79,14 @@ export const CreateRLUserWallet = () => {
           </Box>
         </Box>
       </div>
-      <div className={custom.card}>
+      <div className={custom.topTitleCard}>
         <Box display="flex">
-          <Box>
+          <Box flexGrow={1} className={custom.inputTitleLeft}>
+            <Typography variant="subtitle1">Initialize a Rate Limited User Wallet:</Typography>
+          </Box>
+        </Box>
+        <Box display="flex">
+          <Box flexGrow={1} className={custom.inputTitleLeft}>
             <Button
               onClick={create}
               className={custom.send}

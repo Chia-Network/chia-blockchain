@@ -16,7 +16,9 @@ import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 
 import {
-  send_transaction
+  send_transaction,
+  rl_set_user_info,
+  clawback_rl_coin
 } from "../modules/message";
 import ExpansionPanel from "@material-ui/core/ExpansionPanel";
 import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
@@ -32,8 +34,6 @@ import {
 import { unix_to_short_date } from "../util/utils";
 
 import { openDialog } from "../modules/dialogReducer";
-
-const config = require("../config");
 
 const drawerWidth = 240;
 
@@ -157,6 +157,12 @@ const useStyles = makeStyles(theme => ({
     paddingRight: theme.spacing(3),
     paddingTop: theme.spacing(1)
   },
+  setupSection: {
+    paddingLeft: theme.spacing(3),
+    paddingRight: theme.spacing(3),
+    paddingTop: theme.spacing(3),
+    paddingBottom: theme.spacing(1)
+  },
   walletContainer: {
     marginBottom: theme.spacing(5)
   },
@@ -193,12 +199,28 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-const RLDetailsCard = props => {
+const IncompleteCard = props => {
   var id = props.wallet_id;
 
   const dispatch = useDispatch();
-  const interval = useSelector(state => state.wallet_state.wallets[id].interval);
-  const limit = useSelector(state => state.wallet_state.wallets[id].limit);
+  const data = useSelector(state => state.wallet_state.wallets[id].data);
+  const data_parsed = JSON.parse(data);
+  const pubkey = data_parsed["user_pubkey"]
+
+  console.log(pubkey)
+
+  function copy() {
+    navigator.clipboard.writeText(pubkey);
+  }
+
+  var interval_input = null;
+  var chiaper_input = null;
+  var origin_id = null;
+  var admin_pubkey = null;
+
+  function submit() {
+    dispatch(rl_set_user_info(id, interval_input, chiaper_input, origin_id, admin_pubkey))
+  }
 
   const classes = useStyles();
   return (
@@ -207,24 +229,15 @@ const RLDetailsCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Rate Limited Info
+              Rate Limited User Wallet Setup
             </Typography>
           </div>
         </Grid>
         <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
+          <div className={classes.setupSection}>
             <Box display="flex">
-              <Box flexGrow={1} style={{ marginBottom: 20 }}>
-                <Typography variant="subtitle1">Spending interval:</Typography>
-              </Box>
-              <Box
-                style={{
-                  paddingLeft: 20,
-                  width: "80%",
-                  overflowWrap: "break-word"
-                }}
-              >
-                <Typography variant="subtitle1">{interval}</Typography>
+              <Box flexGrow={1}>
+                <Typography variant="subtitle1">Send your pubkey to your Rate Limited Wallet admin:</Typography>
               </Box>
             </Box>
           </div>
@@ -232,17 +245,129 @@ const RLDetailsCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
-              <Box flexGrow={1} style={{ marginBottom: 20 }}>
-                <Typography variant="subtitle1">Spending limit:</Typography>
+              <Box flexGrow={1}>
+                <TextField
+                  disabled
+                  fullWidth
+                  label="User Pubkey"
+                  value={pubkey}
+                  variant="outlined"
+                />
               </Box>
-              <Box
-                style={{
-                  paddingLeft: 20,
-                  width: "80%",
-                  overflowWrap: "break-word"
-                }}
-              >
-                <Typography variant="subtitle1">{limit}</Typography>
+              <Box>
+                <Button
+                  onClick={copy}
+                  className={classes.copyButton}
+                  variant="contained"
+                  color="secondary"
+                  disableElevation
+                >
+                  Copy
+                </Button>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.setupSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <Typography variant="subtitle1">When you you receive your admin's information, enter it below to complete your Rate Limited Wallet setup:</Typography>
+              </Box>
+            </Box>
+          </div>
+          <div className={classes.setupSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <Typography variant="subtitle1">
+                  Spending Interval Length
+                </Typography>
+              </Box>
+              <Box flexGrow={1}>
+                <Typography variant="subtitle1">
+                  Spendable Amount Per Interval
+                </Typography>
+              </Box>
+            </Box>
+          </div>
+          <div className={classes.setupSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  color="secondary"
+                  fullWidth
+                  inputRef={input => {
+                    interval_input = input;
+                  }}
+                  label="Interval"
+                />
+              </Box>
+              <Box flexGrow={1}>
+                <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  color="secondary"
+                  fullWidth
+                  inputRef={input => {
+                    chiaper_input = input;
+                  }}
+                  label="Spendable Amount"
+                />
+              </Box>
+            </Box>
+          </div>
+          <div className={classes.setupSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <Typography variant="subtitle1">
+                  Coin Origin ID
+                </Typography>
+              </Box>
+              <Box flexGrow={1}>
+                <Typography variant="subtitle1">
+                  Admin Pubkey
+                </Typography>
+              </Box>
+            </Box>
+          </div>
+          <div className={classes.setupSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  color="secondary"
+                  fullWidth
+                  inputRef={input => {
+                    origin_id = input;
+                  }}
+                  label="Origin ID"
+                />
+              </Box>
+              <Box flexGrow={1}>
+                <TextField
+                  id="filled-secondary"
+                  variant="filled"
+                  color="secondary"
+                  fullWidth
+                  inputRef={input => {
+                    admin_pubkey = input;
+                  }}
+                  label="Admin Pubkey"
+                />
+              </Box>
+              <Box>
+                <Button
+                  onClick={submit}
+                  className={classes.copyButton}
+                  variant="contained"
+                  color="secondary"
+                  disableElevation
+                >
+                  Submit
+                </Button>
               </Box>
             </Box>
           </div>
@@ -250,6 +375,182 @@ const RLDetailsCard = props => {
       </Grid>
     </Paper>
   );
+};
+
+const RLDetailsCard = props => {
+  var id = props.wallet_id;
+
+  const interval = useSelector(state => state.wallet_state.wallets[id].interval);
+  const limit = useSelector(state => state.wallet_state.wallets[id].limit);
+  const data = useSelector(state => state.wallet_state.wallets[id].data);
+  const data_parsed = JSON.parse(data);
+  const type = data_parsed["type"]
+  const user_pubkey = data_parsed["user_pubkey"]
+  const admin_pubkey = data_parsed["admin_pubkey"]
+
+  function user_copy() {
+    navigator.clipboard.writeText(user_pubkey);
+  }
+
+  function admin_copy() {
+    navigator.clipboard.writeText(admin_pubkey);
+  }
+
+  const classes = useStyles();
+  if (type === "user") {
+    return (
+      <Paper className={classes.paper}>
+        <Grid container spacing={0}>
+          <Grid item xs={12}>
+            <div className={classes.cardTitle}>
+              <Typography component="h6" variant="h6">
+                Rate Limited Info
+              </Typography>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex">
+                <Box flexGrow={1} style={{ marginBottom: 20 }}>
+                  <Typography variant="subtitle1">Spending interval:</Typography>
+                </Box>
+                <Box
+                  style={{
+                    paddingLeft: 20,
+                    width: "80%",
+                    overflowWrap: "break-word"
+                  }}
+                >
+                  <Typography variant="subtitle1">{interval}</Typography>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex">
+                <Box flexGrow={1} style={{ marginBottom: 20 }}>
+                  <Typography variant="subtitle1">Spending limit:</Typography>
+                </Box>
+                <Box
+                  style={{
+                    paddingLeft: 20,
+                    width: "80%",
+                    overflowWrap: "break-word"
+                  }}
+                >
+                  <Typography variant="subtitle1">{limit}</Typography>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex">
+                <Box flexGrow={1}>
+                  <TextField
+                    disabled
+                    fullWidth
+                    label="My Pubkey"
+                    value={user_pubkey}
+                    variant="outlined"
+                  />
+                </Box>
+                <Box>
+                  <Button
+                    onClick={user_copy}
+                    className={classes.copyButton}
+                    variant="contained"
+                    color="secondary"
+                    disableElevation
+                  >
+                    Copy
+                  </Button>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+        </Grid>
+      </Paper>
+    );
+  }
+  else if (type === "admin") {
+    return (
+      <Paper className={classes.paper}>
+        <Grid container spacing={0}>
+          <Grid item xs={12}>
+            <div className={classes.cardTitle}>
+              <Typography component="h6" variant="h6">
+                Rate Limited Info
+              </Typography>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex">
+                <Box flexGrow={1} style={{ marginBottom: 20 }}>
+                  <Typography variant="subtitle1">Spending interval:</Typography>
+                </Box>
+                <Box
+                  style={{
+                    paddingLeft: 20,
+                    width: "80%",
+                    overflowWrap: "break-word"
+                  }}
+                >
+                  <Typography variant="subtitle1">{interval}</Typography>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex">
+                <Box flexGrow={1} style={{ marginBottom: 20 }}>
+                  <Typography variant="subtitle1">Spending limit:</Typography>
+                </Box>
+                <Box
+                  style={{
+                    paddingLeft: 20,
+                    width: "80%",
+                    overflowWrap: "break-word"
+                  }}
+                >
+                  <Typography variant="subtitle1">{limit}</Typography>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex">
+                <Box flexGrow={1}>
+                  <TextField
+                    disabled
+                    fullWidth
+                    label="My Pubkey"
+                    value={admin_pubkey}
+                    variant="outlined"
+                  />
+                </Box>
+                <Box>
+                  <Button
+                    onClick={admin_copy}
+                    className={classes.copyButton}
+                    variant="contained"
+                    color="secondary"
+                    disableElevation
+                  >
+                    Copy
+                  </Button>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+        </Grid>
+      </Paper>
+    );
+  }
 };
 
 const BalanceCardSubSection = props => {
@@ -544,6 +845,46 @@ const SendCard = props => {
   );
 };
 
+const ClawbackCard = props => {
+  var id = props.wallet_id;
+  const classes = useStyles();
+  var amount_input = null;
+  const dispatch = useDispatch();
+
+  function clawback() {
+    dispatch(clawback_rl_coin(id));
+  }
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              Clawback Rate Limited Coin
+            </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box>
+                <Button
+                  onClick={clawback}
+                  className={classes.sendButton}
+                  variant="contained"
+                  color="primary"
+                >
+                  Clawback Coin
+                </Button>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+};
+
 const HistoryCard = props => {
   var id = props.wallet_id;
   const classes = useStyles();
@@ -639,16 +980,46 @@ const RateLimitedWallet = props => {
   const classes = useStyles();
   const id = useSelector(state => state.wallet_menu.id);
   const wallets = useSelector(state => state.wallet_state.wallets);
+  const data = useSelector(state => state.wallet_state.wallets[id].data);
+  const data_parsed = JSON.parse(data);
+  const type = data_parsed["type"]
+  const init_status = useSelector(state => state.wallet_state.wallets[id].initialized);
 
-  return wallets.length > props.wallet_id ? (
-    <Grid className={classes.walletContainer} item xs={12}>
-      <BalanceCard wallet_id={id}></BalanceCard>
-      <SendCard wallet_id={id}></SendCard>
-      <HistoryCard wallet_id={id}></HistoryCard>
-    </Grid>
-  ) : (
-    ""
-  );
+  if (type === "user") {
+    if (init_status) {
+      return wallets.length > props.wallet_id ? (
+        <Grid className={classes.walletContainer} item xs={12}>
+          <RLDetailsCard wallet_id={id}></RLDetailsCard>
+          <BalanceCard wallet_id={id}></BalanceCard>
+          <SendCard wallet_id={id}></SendCard>
+          <HistoryCard wallet_id={id}></HistoryCard>
+        </Grid>
+      ) : (
+        ""
+      );
+    }
+
+    else {
+      return wallets.length > props.wallet_id ? (
+        <Grid className={classes.walletContainer} item xs={12}>
+          <IncompleteCard wallet_id={id}></IncompleteCard>
+        </Grid>
+      ) : (
+        ""
+      );
+    }
+  }
+
+  else if (type === "admin") {
+    return wallets.length > props.wallet_id ? (
+      <Grid className={classes.walletContainer} item xs={12}>
+        <RLDetailsCard wallet_id={id}></RLDetailsCard>
+        <ClawbackCard wallet_id={id}></ClawbackCard>
+      </Grid>
+    ) : (
+      ""
+    );
+  }
 };
 
 export default withRouter(connect()(RateLimitedWallet));
