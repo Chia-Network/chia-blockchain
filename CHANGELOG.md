@@ -9,13 +9,18 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
+- Windows BLS Signature library now uses libsodium for additional security.
+- Wheels for ARM64/aarch64 also build for python 3.7.
 
 ### Changed
 
 ### Fixed
 - Addressed pre-Haswell Windows signatures failing.
+- MacOS, Linux x64, and Linux aarch64 were not correctly compiling libsodium in
+the blspy/bls-signatures library.
 - Removed outdated "200 plots" language from Plot tab.
 - Fixed spelling error for "folder" on Plot tab.
+- Various node dependency security vulnerabilities have been fixed.
 
 ## [1.0beta8] aka Beta 1.8 - 2020-07-16
 
