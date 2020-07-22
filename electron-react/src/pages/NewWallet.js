@@ -1,8 +1,7 @@
-import React, { Component, useEffect } from "react";
+import React, { Component } from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
-import Typography from "@material-ui/core/Typography";
 import { withTheme } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
@@ -10,10 +9,83 @@ import { connect, useSelector, useDispatch } from "react-redux";
 import { genereate_mnemonics } from "../modules/message";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
-import myStyle from "./style";
 import { add_key } from "../modules/message";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
-import { openDialog } from "../modules/dialogReducer";
+import { makeStyles } from "@material-ui/core/styles";
+import logo from "../assets/img/chia_logo.svg";
+
+const useStyles = makeStyles(theme => ({
+  root: {
+    background: "linear-gradient(45deg, #181818 30%, #333333 90%)",
+    height: "100%"
+  },
+  paper: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: theme.spacing(0)
+  },
+  avatar: {
+    marginTop: theme.spacing(8),
+    backgroundColor: theme.palette.secondary.main
+  },
+  form: {
+    width: "100%", // Fix IE 11 issue.
+    marginTop: theme.spacing(5)
+  },
+  textField: {
+    borderColor: "#ffffff"
+  },
+  submit: {
+    marginTop: theme.spacing(8),
+    marginBottom: theme.spacing(3)
+  },
+  grid_wrap: {
+    paddingLeft: theme.spacing(10),
+    paddingRight: theme.spacing(10),
+    textAlign: "center"
+  },
+  grid: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center"
+  },
+  grid_item: {
+    padding: theme.spacing(1),
+    paddingTop: 0,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    backgroundColor: "#444444",
+    color: "#ffffff",
+    height: 60
+  },
+  title: {
+    color: "#ffffff",
+    marginTop: theme.spacing(4),
+    marginBottom: theme.spacing(2)
+  },
+  navigator: {
+    color: "#ffffff",
+    marginTop: theme.spacing(4),
+    marginLeft: theme.spacing(4),
+    fontSize: 35,
+    flex: 1,
+    align: "right"
+  },
+  instructions: {
+    color: "#ffffff",
+    fontSize: 18
+  },
+  logo: {
+    marginTop: theme.spacing(0),
+    marginBottom: theme.spacing(1)
+  },
+  whiteP: {
+    color: "white",
+    fontSize: "18px"
+  }
+}));
 
 const MnemonicField = props => {
   return (
@@ -44,21 +116,10 @@ const Iterator = props => {
 const UIPart = props => {
   var words = useSelector(state => state.wallet_state.mnemonic);
   const dispatch = useDispatch();
-  const classes = myStyle();
+  const classes = useStyles();
   if (!words) {
     words = [];
   }
-
-  useEffect(() => {
-    dispatch(
-      openDialog(
-        "Welcome!",
-        `The following words are used for your wallet backup.
-        Without them, you will lose access to your wallet, keep them safe!!!
-        Write down each word along with the order number next to them. (Order is important) `
-      )
-    );
-  }, [dispatch]);
 
   function goBack() {
     dispatch(changeEntranceMenu(presentSelectKeys));
@@ -74,10 +135,15 @@ const UIPart = props => {
         {" "}
       </ArrowBackIosIcon>
       <div className={classes.grid_wrap}>
+        <img className={classes.logo} src={logo} alt="Logo" />
         <Container className={classes.grid} maxWidth="lg">
-          <Typography className={classes.title} component="h4" variant="h4">
-            New Wallet
-          </Typography>
+          <h1 className={classes.title}>New Wallet</h1>
+          <p className={classes.whiteP}>
+            Welcome! The following words are used for your wallet backup.
+            Without them, you will lose access to your wallet, keep them safe!
+            Write down each word along with the order number next to them.
+            (Order is important)
+          </p>
           <Grid container spacing={2}>
             <Iterator mnemonic={words}></Iterator>
           </Grid>

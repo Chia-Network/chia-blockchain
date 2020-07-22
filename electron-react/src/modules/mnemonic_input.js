@@ -52,13 +52,15 @@ export const mnemonicReducer = (state = { ...initial_state }, action) => {
     case "RESET_MNEMONIC":
       return { ...initial_state };
     case "INCOMING_MESSAGE":
+      const command = action.message.command;
+      const data = action.message.data;
       if (command === "add_key") {
-        success = data.success;
-        if (!success) {
-          incorrect_word = data.reason;
+        const success = data.success;
+        if (!success && data.word) {
+          state.incorrect_word = data.word;
         }
       }
-
+      return state;
     default:
       return state;
   }
