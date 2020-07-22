@@ -2,8 +2,8 @@ export const wordChanged = msg => ({ type: "MNEMONIC_TYPING" });
 export const resetMnemonic = msg => ({ type: "RESET_MNEMONIC" });
 
 const initial_state = {
-  mnemonic_input: new Array("24"),
-  selected_mnemonic: null
+  mnemonic_input: new Array(24).fill(""),
+  incorrect_word: null
 };
 
 export const mnemonic_word_added = data => {
@@ -23,8 +23,14 @@ export const mnemonicReducer = (state = { ...initial_state }, action) => {
       return { ...state, mnemonic_input: current_input };
     case "RESET_MNEMONIC":
       return { ...initial_state };
-    case "SELECT_MNEMONIC":
-      return { ...state, selected_mnemonic: action.mnemonic };
+    case "INCOMING_MESSAGE":
+      if (command === "add_key") {
+        success = data.success;
+        if (!success) {
+          incorrect_word = data.reason;
+        }
+      }
+
     default:
       return state;
   }

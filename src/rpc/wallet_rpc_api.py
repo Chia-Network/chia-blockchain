@@ -574,7 +574,10 @@ class WalletRpcApi:
             # Adding a key from 24 word mnemonic
             mnemonic = request["mnemonic"]
             passphrase = ""
-            sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
+            try:
+                sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
+            except KeyError as e:
+                return {"success": False, "reason": e.args[0]}
         else:
             return {"success": False}
 

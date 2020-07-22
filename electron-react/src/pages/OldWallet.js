@@ -32,6 +32,7 @@ const MnemonicField = props => {
         color="primary"
         id={props.id}
         label={props.index}
+        error={props.error}
         autoFocus={props.autofocus}
         defaultValue=""
         onChange={props.onChange}
@@ -41,12 +42,12 @@ const MnemonicField = props => {
 };
 
 const Iterator = props => {
-  const store = useStore();
   const dispatch = useDispatch();
+  const store = useStore();
+  var mnemonic = store.getState().state.mnemonic_state.mnemonic_input;
 
   function handleTextFieldChange(e) {
     console.log(e.target);
-    console.log(store);
     var id = e.target.id + "";
     var clean_id = id.replace("id_", "");
     var int_val = parseInt(clean_id) - 1;
@@ -60,6 +61,10 @@ const Iterator = props => {
       <MnemonicField
         onChange={handleTextFieldChange}
         key={i}
+        error={
+          (props.submitted && mnemonic[i] === "") ||
+          mnemonic[i] == incorrect_word
+        }
         autofocus={focus}
         id={"id_" + (i + 1)}
         index={i + 1}
@@ -75,10 +80,21 @@ const UIPart = props => {
     dispatch(changeEntranceMenu(presentSelectKeys));
   }
   const dispatch = useDispatch();
+  const [submitted, setSubmitted] = React.useState(false);
+  const incorrect_word = state.mnemonic_state.incorrect_word;
 
   function enterMnemonic() {
     dispatch(unselectFingerprint());
     dispatch(changeEntranceMenu(presentRestoreBackup));
+    // setSubmitted(true);
+    // var state = store.getState();
+    // var mnemonic = state.mnemonic_state.mnemonic_input;
+    // for (var i = 0; i < mnemonic.length; i++) {
+    //   if (mnemonic[i] === "") {
+    //     return;
+    //   }
+    // }
+    // dispatch(add_key(mnemonic));
   }
 
   useEffect(() => {
@@ -90,7 +106,7 @@ const UIPart = props => {
     );
   }, [dispatch]);
 
-  const words = useSelector(state => state.wallet_state.mnemonic);
+  const words = useSelector(state => state.mnemonic_state.mnemonic_input);
   const classes = myStyle();
 
   return (
@@ -104,7 +120,10 @@ const UIPart = props => {
             Import Wallet from Mnemonics
           </Typography>
           <Grid container spacing={2}>
-            <Iterator mnemonic={words}></Iterator>
+            <Iterator
+              submitted={submitted}
+              incorrect_word={incorrect_word}
+            ></Iterator>
           </Grid>
         </Container>
       </div>
