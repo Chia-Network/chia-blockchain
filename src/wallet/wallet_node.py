@@ -139,7 +139,6 @@ class WalletNode:
             self.root_path, f"{self.config['database_path']}-{db_path_key_suffix}"
         )
         mkdir(path.parent)
-
         self.wallet_state_manager = await WalletStateManager.create(
             private_key, self.config, path, self.constants
         )

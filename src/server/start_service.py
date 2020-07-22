@@ -221,7 +221,6 @@ class Service:
         self._log.info("Waiting for ChiaServer to be closed")
         await self._server.await_closed()
         if self._rpc_task:
-
             self._log.info("Waiting for RPC server")
             await (await self._rpc_task)()
             self._log.info("Closed RPC server.")
