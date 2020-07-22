@@ -449,7 +449,7 @@ async def kill_service(root_path, services, service_name, delay_before_kill=10) 
             await asyncio.sleep(1)
             count += 1
         else:
-            process.kill()
+            # process.kill()
             log.info("sending kill signal to %s", service_name)
     r = process.wait()
     log.info("process %s returned %d", service_name, r)

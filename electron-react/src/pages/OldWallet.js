@@ -1,16 +1,14 @@
-import React, { Component, useEffect } from "react";
+import React, { Component } from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Link from "@material-ui/core/Link";
 import Grid from "@material-ui/core/Grid";
-import Typography from "@material-ui/core/Typography";
 import { withTheme } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { connect, useSelector } from "react-redux";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
-import myStyle from "./style";
 import { useStore, useDispatch } from "react-redux";
 import { mnemonic_word_added, resetMnemonic } from "../modules/mnemonic_input";
 import { unselectFingerprint } from "../modules/message";
@@ -20,6 +18,83 @@ import {
   presentRestoreBackup
 } from "../modules/entranceMenu";
 import { openDialog } from "../modules/dialogReducer";
+import { add_key } from "../modules/message";
+import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
+import { makeStyles } from "@material-ui/core/styles";
+import logo from "../assets/img/chia_logo.svg";
+
+const useStyles = makeStyles(theme => ({
+  root: {
+    background: "linear-gradient(45deg, #181818 30%, #333333 90%)",
+    height: "100%"
+  },
+  paper: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: theme.spacing(0)
+  },
+  avatar: {
+    marginTop: theme.spacing(8),
+    backgroundColor: theme.palette.secondary.main
+  },
+  form: {
+    width: "100%", // Fix IE 11 issue.
+    marginTop: theme.spacing(5)
+  },
+  textField: {
+    borderColor: "#ffffff"
+  },
+  submit: {
+    marginTop: theme.spacing(8),
+    marginBottom: theme.spacing(3)
+  },
+  grid_wrap: {
+    paddingLeft: theme.spacing(10),
+    paddingRight: theme.spacing(10),
+    textAlign: "center"
+  },
+  grid: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center"
+  },
+  grid_item: {
+    padding: theme.spacing(1),
+    paddingTop: 0,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    backgroundColor: "#444444",
+    color: "#ffffff",
+    height: 60
+  },
+  title: {
+    color: "#ffffff",
+    marginTop: theme.spacing(4),
+    marginBottom: theme.spacing(2)
+  },
+  navigator: {
+    color: "#ffffff",
+    marginTop: theme.spacing(4),
+    marginLeft: theme.spacing(4),
+    fontSize: 35,
+    flex: 1,
+    align: "right"
+  },
+  instructions: {
+    color: "#ffffff",
+    fontSize: 18
+  },
+  logo: {
+    marginTop: theme.spacing(0),
+    marginBottom: theme.spacing(1)
+  },
+  whiteP: {
+    color: "white",
+    fontSize: "18px"
+  }
+}));
 
 const MnemonicField = props => {
   return (
@@ -43,11 +118,12 @@ const MnemonicField = props => {
 
 const Iterator = props => {
   const dispatch = useDispatch();
-  const store = useStore();
-  var mnemonic = store.getState().state.mnemonic_state.mnemonic_input;
+  const mnemonic_state = useSelector(state => state.mnemonic_state);
+  const incorrect_word = useSelector(
+    state => state.mnemonic_state.incorrect_word
+  );
 
   function handleTextFieldChange(e) {
-    console.log(e.target);
     var id = e.target.id + "";
     var clean_id = id.replace("id_", "");
     var int_val = parseInt(clean_id) - 1;
@@ -62,8 +138,8 @@ const Iterator = props => {
         onChange={handleTextFieldChange}
         key={i}
         error={
-          (props.submitted && mnemonic[i] === "") ||
-          mnemonic[i] == incorrect_word
+          (props.submitted && mnemonic_state.mnemonic_input[i] === "") ||
+          mnemonic_state.mnemonic_input[i] === incorrect_word
         }
         autofocus={focus}
         id={"id_" + (i + 1)}
@@ -74,14 +150,14 @@ const Iterator = props => {
   return indents;
 };
 
-const UIPart = props => {
+const UIPart = () => {
   function goBack() {
     dispatch(resetMnemonic());
     dispatch(changeEntranceMenu(presentSelectKeys));
   }
   const dispatch = useDispatch();
   const [submitted, setSubmitted] = React.useState(false);
-  const incorrect_word = state.mnemonic_state.incorrect_word;
+  const classes = useStyles();
 
   function enterMnemonic() {
     dispatch(unselectFingerprint());
@@ -97,33 +173,21 @@ const UIPart = props => {
     // dispatch(add_key(mnemonic));
   }
 
-  useEffect(() => {
-    dispatch(
-      openDialog(
-        "Welcome!",
-        `Enter the 24 word mmemonic that you have saved in order to restore your Chia wallet. `
-      )
-    );
-  }, [dispatch]);
-
-  const words = useSelector(state => state.mnemonic_state.mnemonic_input);
-  const classes = myStyle();
-
   return (
     <div className={classes.root}>
       <Link onClick={goBack} href="#">
         <ArrowBackIosIcon className={classes.navigator}> </ArrowBackIosIcon>
       </Link>
       <div className={classes.grid_wrap}>
+        <img className={classes.logo} src={logo} alt="Logo" />
         <Container className={classes.grid} maxWidth="lg">
-          <Typography className={classes.title} component="h4" variant="h4">
-            Import Wallet from Mnemonics
-          </Typography>
+          <h1 className={classes.title}>Import Wallet from Mnemonics</h1>
+          <p className={classes.whiteP}>
+            Enter the 24 word mmemonic that you have saved in order to restore
+            your Chia wallet.
+          </p>
           <Grid container spacing={2}>
-            <Iterator
-              submitted={submitted}
-              incorrect_word={incorrect_word}
-            ></Iterator>
+            <Iterator submitted={submitted}></Iterator>
           </Grid>
         </Container>
       </div>
