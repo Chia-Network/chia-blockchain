@@ -478,47 +478,15 @@ class TestWalletSimulator:
         # innerpuz is our desired output
         innersol = f"((51 0x{coin.puzzle_hash} 45) (51 0x{coin.puzzle_hash} 55)))"
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz_str = did_wallet.did_info.current_inner
         full_puzzle: str = puz
         parent_info = await did_wallet.get_parent_for_coin(coin)
 
         fullsol = f"(0x{Program(binutils.assemble(did_wallet.did_info.my_core)).get_tree_hash()} \
 (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount})\
-{coin.amount} {innerpuz_str} {innersol})"
-        list_of_solutions = [
-            CoinSolution(
-                coin,
-                clvm.to_sexp_f(
-                    [
-                        Program(binutils.assemble(full_puzzle)),
-                        Program(binutils.assemble(fullsol)),
-                    ]
-                ),
-            )
-        ]
-        sigs = []
-        aggsig = BLSSignature.aggregate(sigs)
-        spend_bundle = SpendBundle(list_of_solutions, aggsig)
-
-        did_record = TransactionRecord(
-            confirmed_at_index=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=compiled_puz.get_tree_hash(),
-            amount=uint64(coin.amount),
-            fee_amount=uint64(0),
-            incoming=False,
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            wallet_id=did_wallet.wallet_info.id,
-            sent_to=[],
-        )
-        await did_wallet.standard_wallet.push_transaction(did_record)
-
-        for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
-
-        coins = await did_wallet.select_coins(99)
-        assert len(coins) == 1
+{coin.amount} {innerpuz} {innersol})"
+        try:
+            cost, result = clvm.run_program(binutils.assemble(full_puzzle), binutils.assemble(fullsol))
+        except Exception as e:
+            assert e.args == ('clvm raise',)
+        else:
+            assert False
