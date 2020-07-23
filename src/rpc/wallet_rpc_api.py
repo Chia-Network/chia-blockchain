@@ -575,11 +575,20 @@ class WalletRpcApi:
             mnemonic = request["mnemonic"]
             passphrase = ""
             try:
-                sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
+                sk = self.service.keychain.add_private_key(
+                    " ".join(mnemonic), passphrase
+                )
             except KeyError as e:
-                return {"success": False, "reason": f"The word '{e.args[0]}' is incorrect.'", "word": e.args[0]}
+                return {
+                    "success": False,
+                    "error": f"The word '{e.args[0]}' is incorrect.'",
+                    "word": e.args[0],
+                }
             except ValueError as e:
-                return {"success": False, "reason": e.args[0]}
+                return {
+                    "success": False,
+                    "error": e.args[0],
+                }
 
         else:
             return {"success": False}

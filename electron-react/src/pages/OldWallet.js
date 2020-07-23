@@ -19,7 +19,6 @@ import {
 } from "../modules/entranceMenu";
 import { openDialog } from "../modules/dialogReducer";
 import { add_key } from "../modules/message";
-import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 import { makeStyles } from "@material-ui/core/styles";
 import logo from "../assets/img/chia_logo.svg";
 
@@ -109,7 +108,7 @@ const MnemonicField = props => {
         label={props.index}
         error={props.error}
         autoFocus={props.autofocus}
-        defaultValue=""
+        defaultValue={props.value}
         onChange={props.onChange}
       />
     </Grid>
@@ -141,6 +140,7 @@ const Iterator = props => {
           (props.submitted && mnemonic_state.mnemonic_input[i] === "") ||
           mnemonic_state.mnemonic_input[i] === incorrect_word
         }
+        value={mnemonic_state.mnemonic_input[i]}
         autofocus={focus}
         id={"id_" + (i + 1)}
         index={i + 1}
@@ -157,20 +157,18 @@ const UIPart = () => {
   }
   const dispatch = useDispatch();
   const [submitted, setSubmitted] = React.useState(false);
+  const mnemonic = useSelector(state => state.mnemonic_state.mnemonic_input);
   const classes = useStyles();
 
   function enterMnemonic() {
+    setSubmitted(true);
+    for (var i = 0; i < mnemonic.length; i++) {
+      if (mnemonic[i] === "") {
+        return;
+      }
+    }
     dispatch(unselectFingerprint());
     dispatch(changeEntranceMenu(presentRestoreBackup));
-    // setSubmitted(true);
-    // var state = store.getState();
-    // var mnemonic = state.mnemonic_state.mnemonic_input;
-    // for (var i = 0; i < mnemonic.length; i++) {
-    //   if (mnemonic[i] === "") {
-    //     return;
-    //   }
-    // }
-    // dispatch(add_key(mnemonic));
   }
 
   return (
@@ -215,10 +213,6 @@ class OldWallet extends Component {
     super(props);
     this.words = [];
     this.classes = props.theme;
-  }
-
-  componentDidMount(props) {
-    console.log("Input Mnemonic");
   }
 
   render() {
