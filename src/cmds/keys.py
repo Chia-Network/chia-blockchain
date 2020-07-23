@@ -205,7 +205,7 @@ def sign(args):
         quit()
 
     if args.fingerprint is None or args.hd_path is None:
-        print("Please specify the fingerprint argument -f and hd_path argument -p")
+        print("Please specify the fingerprint argument -f and hd_path argument -t")
         quit()
 
     message = args.message
