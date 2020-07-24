@@ -9,7 +9,7 @@ import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { connect, useSelector } from "react-redux";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
-import { useStore, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import { mnemonic_word_added, resetMnemonic } from "../modules/mnemonic_input";
 import { unselectFingerprint } from "../modules/message";
 import {
@@ -17,83 +17,8 @@ import {
   presentSelectKeys,
   presentRestoreBackup
 } from "../modules/entranceMenu";
-import { openDialog } from "../modules/dialogReducer";
-import { add_key } from "../modules/message";
-import { makeStyles } from "@material-ui/core/styles";
 import logo from "../assets/img/chia_logo.svg";
-
-const useStyles = makeStyles(theme => ({
-  root: {
-    background: "linear-gradient(45deg, #181818 30%, #333333 90%)",
-    height: "100%"
-  },
-  paper: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: theme.spacing(0)
-  },
-  avatar: {
-    marginTop: theme.spacing(8),
-    backgroundColor: theme.palette.secondary.main
-  },
-  form: {
-    width: "100%", // Fix IE 11 issue.
-    marginTop: theme.spacing(5)
-  },
-  textField: {
-    borderColor: "#ffffff"
-  },
-  submit: {
-    marginTop: theme.spacing(8),
-    marginBottom: theme.spacing(3)
-  },
-  grid_wrap: {
-    paddingLeft: theme.spacing(10),
-    paddingRight: theme.spacing(10),
-    textAlign: "center"
-  },
-  grid: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center"
-  },
-  grid_item: {
-    padding: theme.spacing(1),
-    paddingTop: 0,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    backgroundColor: "#444444",
-    color: "#ffffff",
-    height: 60
-  },
-  title: {
-    color: "#ffffff",
-    marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2)
-  },
-  navigator: {
-    color: "#ffffff",
-    marginTop: theme.spacing(4),
-    marginLeft: theme.spacing(4),
-    fontSize: 35,
-    flex: 1,
-    align: "right"
-  },
-  instructions: {
-    color: "#ffffff",
-    fontSize: 18
-  },
-  logo: {
-    marginTop: theme.spacing(0),
-    marginBottom: theme.spacing(1)
-  },
-  whiteP: {
-    color: "white",
-    fontSize: "18px"
-  }
-}));
+import myStyle from "./style";
 
 const MnemonicField = props => {
   return (
@@ -158,7 +83,7 @@ const UIPart = () => {
   const dispatch = useDispatch();
   const [submitted, setSubmitted] = React.useState(false);
   const mnemonic = useSelector(state => state.mnemonic_state.mnemonic_input);
-  const classes = useStyles();
+  const classes = myStyle();
 
   function enterMnemonic() {
     setSubmitted(true);
@@ -179,7 +104,9 @@ const UIPart = () => {
       <div className={classes.grid_wrap}>
         <img className={classes.logo} src={logo} alt="Logo" />
         <Container className={classes.grid} maxWidth="lg">
-          <h1 className={classes.title}>Import Wallet from Mnemonics</h1>
+          <h1 className={classes.titleSmallMargin}>
+            Import Wallet from Mnemonics
+          </h1>
           <p className={classes.whiteP}>
             Enter the 24 word mmemonic that you have saved in order to restore
             your Chia wallet.
