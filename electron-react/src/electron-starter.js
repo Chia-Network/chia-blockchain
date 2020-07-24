@@ -219,12 +219,12 @@ const createWindow = () => {
     e.preventDefault();
     var choice = require("electron").dialog.showMessageBoxSync({
       type: "question",
-      buttons: ["Yes", "No"],
+      buttons: ["No", "Yes"],
       title: "Confirm",
       message:
         "Are you sure you want to quit? GUI Plotting and farming will stop."
     });
-    if (choice == 1) {
+    if (choice == 0) {
       return;
     }
     mainWindow.loadURL(closingUrl);
