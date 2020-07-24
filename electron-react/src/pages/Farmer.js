@@ -32,7 +32,7 @@ import { closeConnection, openConnection } from "../modules/farmerMessages";
 import {
   refreshPlots,
   deletePlot,
-  addPlotDirectory
+  getPlotDirectories
 } from "../modules/harvesterMessages";
 
 import TablePagination from "@material-ui/core/TablePagination";
@@ -326,11 +326,8 @@ const Plots = props => {
   const refreshPlotsClick = () => {
     dispatch(refreshPlots());
   };
-  const addDirectoryHandleClose = response => {
+  const addDirectoryHandleClose = () => {
     addDirectorySetOpen(false);
-    if (response) {
-      dispatch(addPlotDirectory(response));
-    }
   };
 
   const handleCloseDeletePlot = () => {
@@ -364,10 +361,11 @@ const Plots = props => {
                 color="primary"
                 className={classes.addPlotButton}
                 onClick={() => {
+                  dispatch(getPlotDirectories());
                   addDirectorySetOpen(true);
                 }}
               >
-                Add plots
+                Manage plot directories
               </Button>
               <AddPlotDialog
                 classes={{

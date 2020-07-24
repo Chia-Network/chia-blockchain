@@ -35,6 +35,7 @@ import {
 } from "../modules/farmerMessages";
 import {
   getPlots,
+  getPlotDirectories,
   pingHarvester,
   refreshPlots
 } from "../modules/harvesterMessages";
@@ -55,7 +56,7 @@ function sleep(ms) {
 
 async function ping_wallet(store) {
   store.dispatch(pingWallet());
-  await sleep(300);
+  await sleep(1000);
   const state = store.getState();
   const wallet_connected = state.daemon_state.wallet_connected;
   if (!wallet_connected) {
@@ -65,7 +66,7 @@ async function ping_wallet(store) {
 
 async function ping_full_node(store) {
   store.dispatch(pingFullNode());
-  await sleep(300);
+  await sleep(1000);
   const state = store.getState();
   const node_connected = state.daemon_state.full_node_connected;
   if (!node_connected) {
@@ -75,7 +76,7 @@ async function ping_full_node(store) {
 
 async function ping_farmer(store) {
   store.dispatch(pingFarmer());
-  await sleep(300);
+  await sleep(1000);
   const state = store.getState();
   const farmer_connected = state.daemon_state.farmer_connected;
   if (!farmer_connected) {
@@ -85,7 +86,7 @@ async function ping_farmer(store) {
 
 async function ping_harvester(store) {
   store.dispatch(pingHarvester());
-  await sleep(300);
+  await sleep(1000);
   const state = store.getState();
   const harvester_connected = state.daemon_state.harvester_connected;
   if (!harvester_connected) {
@@ -145,6 +146,7 @@ export const refreshAllState = dispatch => {
   dispatch(getLatestChallenges());
   dispatch(getFarmerConnections());
   dispatch(getPlots());
+  dispatch(getPlotDirectories());
   dispatch(isServiceRunning(service_plotter));
   dispatch(get_all_trades());
 };
@@ -163,7 +165,6 @@ export const handle_message = (store, payload) => {
       store.dispatch(getLatestChallenges());
       store.dispatch(getFarmerConnections());
     } else if (payload.origin === service_harvester) {
-      store.dispatch(getPlots());
     }
   } else if (payload.command === "delete_key") {
     if (payload.data.success) {

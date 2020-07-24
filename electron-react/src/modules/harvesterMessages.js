@@ -21,6 +21,13 @@ export const getPlots = () => {
   return action;
 };
 
+export const getPlotDirectories = () => {
+  var action = harvesterMessage();
+  action.message.command = "get_plot_directories";
+  action.message.data = {};
+  return action;
+};
+
 export const deletePlot = filename => {
   var action = harvesterMessage();
   action.message.command = "delete_plot";
@@ -38,6 +45,13 @@ export const refreshPlots = () => {
 export const addPlotDirectory = dirname => {
   var action = harvesterMessage();
   action.message.command = "add_plot_directory";
+  action.message.data = { dirname };
+  return action;
+};
+
+export const removePlotDirectory = dirname => {
+  var action = harvesterMessage();
+  action.message.command = "remove_plot_directory";
   action.message.data = { dirname };
   return action;
 };

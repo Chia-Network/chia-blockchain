@@ -14,7 +14,8 @@ import {
 } from "@material-ui/core";
 import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
-
+import InputAdornment from "@material-ui/core/InputAdornment";
+import FormHelperText from "@material-ui/core/FormHelperText";
 import { openDialog } from "../modules/dialogReducer";
 import isElectron from "is-electron";
 import {
@@ -25,6 +26,8 @@ import {
 } from "../modules/plotter_messages";
 import { stopService } from "../modules/daemon_messages";
 import { service_plotter } from "../util/service_names";
+import Input from "@material-ui/core/Input";
+
 const drawerWidth = 180;
 
 const useStyles = makeStyles(theme => ({
@@ -322,17 +325,22 @@ const CreatePlot = () => {
   const work_location = useSelector(
     state => state.plot_control.workspace_location
   );
+  let t2 = useSelector(state => state.plot_control.t2);
   const final_location = useSelector(
     state => state.plot_control.final_location
   );
   const [plotSize, setPlotSize] = React.useState(25);
   const [plotCount, setPlotCount] = React.useState(1);
+  const [maxRam, setMaxRam] = React.useState(2000);
 
   const changePlotSize = event => {
     setPlotSize(event.target.value);
   };
   const changePlotCount = event => {
     setPlotCount(event.target.value);
+  };
+  const handleSetMaxRam = event => {
+    setMaxRam(event.target.value);
   };
 
   function create() {
@@ -342,7 +350,10 @@ const CreatePlot = () => {
     }
     const N = plotCount;
     const K = plotSize;
-    dispatch(startPlotting(K, N, work_location, final_location));
+    if (!t2 || t2 === "") {
+      t2 = final_location;
+    }
+    dispatch(startPlotting(K, N, work_location, t2, final_location, maxRam));
   }
 
   var plot_count_options = [];
@@ -374,7 +385,7 @@ const CreatePlot = () => {
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid item xs={4}>
                 <FormControl
                   fullWidth
                   variant="outlined"
@@ -398,7 +409,7 @@ const CreatePlot = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={4}>
                 <FormControl
                   fullWidth
                   variant="outlined"
@@ -416,6 +427,27 @@ const CreatePlot = () => {
                       </MenuItem>
                     ))}
                   </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={4}>
+                <FormControl
+                  fullWidth
+                  variant="outlined"
+                  className={classes.formControl}
+                >
+                  <InputLabel>RAM max usage</InputLabel>
+                  <Input
+                    value={maxRam}
+                    endAdornment={
+                      <InputAdornment position="end">MiB</InputAdornment>
+                    }
+                    onChange={handleSetMaxRam}
+                    label="Colour"
+                    type="number"
+                  />
+                  <FormHelperText id="standard-weight-helper-text">
+                    More memory slightly increases speed
+                  </FormHelperText>
                 </FormControl>
               </Grid>
             </Grid>

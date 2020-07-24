@@ -71,12 +71,36 @@ def stream_plot_info(
     return data
 
 
-def add_plot_directory(str_path, root_path):
+def add_plot_directory(str_path: str, root_path: Path) -> Dict:
     config = load_config(root_path, "config.yaml")
     if str(Path(str_path).resolve()) not in config["harvester"]["plot_directories"]:
         config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
     save_config(root_path, "config.yaml", config)
     return config
+
+
+def get_plot_directories(root_path: Path) -> List[str]:
+    config = load_config(root_path, "config.yaml")
+    return [
+        str(Path(str_path).resolve())
+        for str_path in config["harvester"]["plot_directories"]
+    ]
+
+
+def remove_plot_directory(str_path: str, root_path: Path) -> None:
+    config = load_config(root_path, "config.yaml")
+    str_paths: List[str] = config["harvester"]["plot_directories"]
+    # If path str matches exactly, remove
+    if str_path in str_paths:
+        str_paths.remove(str_path)
+
+    # If path matcehs full path, remove
+    new_paths = [Path(sp).resolve() for sp in str_paths]
+    if Path(str_path).resolve() in new_paths:
+        new_paths.remove(Path(str_path).resolve())
+
+    config["harvester"]["plot_directories"] = [str(np) for np in new_paths]
+    save_config(root_path, "config.yaml", config)
 
 
 def load_plots(

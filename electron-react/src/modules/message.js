@@ -9,6 +9,13 @@ import {
 } from "./entranceMenu";
 import { openDialog } from "./dialogReducer";
 import { createState } from "./createWalletReducer";
+import {
+  addPlotDirectory,
+  getPlotDirectories,
+  removePlotDirectory,
+  getPlots,
+  refreshPlots
+} from "./harvesterMessages";
 
 export const clearSend = () => {
   var action = {
@@ -451,3 +458,41 @@ export const incomingMessage = message => ({
   type: "INCOMING_MESSAGE",
   message: message
 });
+
+export const add_plot_directory_and_refresh = dir => {
+  return dispatch => {
+    return async_api(dispatch, addPlotDirectory(dir), true).then(response => {
+      if (response.data.success) {
+        dispatch(getPlotDirectories());
+        return async_api(dispatch, refreshPlots(dir), false).then(response => {
+          dispatch(closeProgress());
+          dispatch(getPlots());
+        });
+      } else {
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
+};
+
+export const remove_plot_directory_and_refresh = dir => {
+  return dispatch => {
+    return async_api(dispatch, removePlotDirectory(dir), true).then(
+      response => {
+        if (response.data.success) {
+          dispatch(getPlotDirectories());
+          return async_api(dispatch, refreshPlots(dir), false).then(
+            response => {
+              dispatch(closeProgress());
+              dispatch(getPlots());
+            }
+          );
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
+};

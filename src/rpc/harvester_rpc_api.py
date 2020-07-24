@@ -15,6 +15,8 @@ class HarvesterRpcApi:
             "/refresh_plots": self.refresh_plots,
             "/delete_plot": self.delete_plot,
             "/add_plot_directory": self.add_plot_directory,
+            "/get_plot_directories": self.get_plot_directories,
+            "/remove_plot_directory": self.remove_plot_directory,
         }
 
     async def _state_changed(self, change: str) -> List[str]:
@@ -45,4 +47,13 @@ class HarvesterRpcApi:
     async def add_plot_directory(self, request: Dict) -> Dict:
         dirname = request["dirname"]
         success = await self.service._add_plot_directory(dirname)
+        return {"success": success}
+
+    async def get_plot_directories(self, request: Dict) -> Dict:
+        plot_dirs = await self.service._get_plot_directories()
+        return {"success": True, "directories": plot_dirs}
+
+    async def remove_plot_directory(self, request: Dict) -> Dict:
+        dirname = request["dirname"]
+        success = await self.service._remove_plot_directory(dirname)
         return {"success": success}

@@ -14,6 +14,8 @@ for setuptools_scm/PEP 440 reasons.
 - "chia keys sign" and "chia keys verify"
 - Windows BLS Signature library now uses libsodium for additional security.
 - Wheels for ARM64/aarch64 also build for python 3.7.
+- See and remove plot directories from UI and command line
+- Specify memory buffer in UI
 
 ### Changed
 - chia start wallet-server changed to chia start wallet, for consistency.
@@ -30,6 +32,7 @@ the blspy/bls-signatures library.
 - Removed outdated "200 plots" language from Plot tab.
 - Fixed spelling error for "folder" on Plot tab.
 - Various node dependency security vulnerabilities have been fixed.
+- Request peers was not returning currently connected peers older than 1 day
 
 ### Deprecated
 - Removed legacy scripts such as chia-stop-server, chia-restart-harvester, etc.

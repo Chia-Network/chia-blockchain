@@ -16,7 +16,13 @@ from src.types.proof_of_space import ProofOfSpace
 from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
-from src.plotting.plot_tools import load_plots, PlotInfo
+from src.plotting.plot_tools import (
+    load_plots,
+    PlotInfo,
+    remove_plot_directory,
+    add_plot_directory,
+    get_plot_directories,
+)
 
 log = logging.getLogger(__name__)
 
@@ -131,13 +137,15 @@ class Harvester:
         return True
 
     async def _add_plot_directory(self, str_path: str) -> bool:
-        config = load_config(self.root_path, "config.yaml")
-        if str(Path(str_path).resolve()) not in config["harvester"]["plot_directories"]:
-            config["harvester"]["plot_directories"].append(
-                str(Path(str_path).resolve())
-            )
-            save_config(self.root_path, "config.yaml", config)
-            await self._refresh_plots()
+        add_plot_directory(str_path, self.root_path)
+        await self._refresh_plots()
+        return True
+
+    async def _get_plot_directories(self) -> List[str]:
+        return get_plot_directories(self.root_path)
+
+    async def _remove_plot_directory(self, str_path: str) -> bool:
+        remove_plot_directory(str_path, self.root_path)
         return True
 
     def _set_global_connections(self, global_connections: Optional[PeerConnections]):
