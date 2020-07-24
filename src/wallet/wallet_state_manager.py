@@ -1326,17 +1326,20 @@ class WalletStateManager:
                 break
 
         backup = WalletInfoBackup(all_wallets)
-        file_path.write_text(bytes(backup).hex())
+        json_dict = backup.to_json_dict()
+        file_path.write_text(json.dumps(json_dict))
 
     async def import_backup_info(self, file_path):
         backup_text = file_path.read_text()
-        backup: WalletInfoBackup = WalletInfoBackup.from_bytes(
-            hexstr_to_bytes(backup_text)
-        )
+        json_dict = json.loads(backup_text)
+        wallet_list_json = json_dict["wallet_list"]
 
-        for wallet_info in backup.wallet_list:
+        for wallet_info in wallet_list_json:
             await self.user_store.create_wallet(
-                wallet_info.name, wallet_info.type, wallet_info.data
+                wallet_info["name"],
+                wallet_info["type"],
+                wallet_info["data"],
+                wallet_info["id"],
             )
 
         await self.load_wallets()
