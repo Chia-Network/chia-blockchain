@@ -7,6 +7,7 @@ jobs:
   build:
     name: Ubuntu-latest on Python 3.7 + 3.8
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       max-parallel: 4
