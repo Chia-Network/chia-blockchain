@@ -13,7 +13,6 @@ from src.protocols import harvester_protocol
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace
-from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
 from src.plotting.plot_tools import (

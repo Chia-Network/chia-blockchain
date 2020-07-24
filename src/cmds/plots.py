@@ -85,7 +85,9 @@ def show(root_path):
     print("Directories where plots are being searched for:")
     print("Note that subdirectories must be added manually.")
     print(
-        "Add with 'chia plots add -d [dir]' and remove with 'chia plots remove -d [dir]'. Scan and check plots with 'chia plots check'"
+        "Add with 'chia plots add -d [dir]' and remove with"
+        + " 'chia plots remove -d [dir]'."
+        + " Scan and check plots with 'chia plots check'"
     )
     print()
     for str_path in get_plot_directories(root_path):
