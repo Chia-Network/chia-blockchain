@@ -6,6 +6,7 @@ jobs:
   upload_source_dist:
     name: Lint and Upload source distribution
     runs-on: [ubuntu-latest]
+    timeout-minutes: 60
 
     steps:
     - name: Cancel previous runs on the same branch
