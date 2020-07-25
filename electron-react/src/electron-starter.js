@@ -145,7 +145,7 @@ const closeDaemon = callback => {
     if (!called_cb) {
       callback();
     }
-  }, 15000);
+  }, 20000);
 };
 
 const exitPyProc = e => {};
@@ -214,29 +214,17 @@ const createWindow = () => {
   // }
   mainWindow.on("close", e => {
     if (decidedToClose) {
-      if (pyProc != null) {
-        if (process.platform === "win32") {
-          process.stdout.write("Killing daemon on windows");
-          var cp = require("child_process");
-          cp.execSync("taskkill /PID " + pyProc.pid + " /T /F");
-        } else {
-          process.stdout.write("Killing daemon on other platforms");
-          pyProc.kill();
-          pyProc = null;
-          pyPort = null;
-        }
-      }
       return;
     }
     e.preventDefault();
     var choice = require("electron").dialog.showMessageBoxSync({
       type: "question",
-      buttons: ["Yes", "No"],
+      buttons: ["No", "Yes"],
       title: "Confirm",
       message:
         "Are you sure you want to quit? GUI Plotting and farming will stop."
     });
-    if (choice == 1) {
+    if (choice == 0) {
       return;
     }
     mainWindow.loadURL(closingUrl);

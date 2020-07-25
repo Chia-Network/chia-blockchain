@@ -94,12 +94,10 @@ class BlockTools:
             temp_dir = plot_dir / "tmp"
             mkdir(temp_dir)
             args = Namespace()
-            args.sk_seed = std_hash(b"").hex()
             # Can't go much lower than 18, since plots start having no solutions
             args.size = 18
             # Uses many plots for testing, in order to guarantee proofs of space at every height
             args.num = 40
-            args.index = 0
             args.buffer = 32
             args.farmer_public_key = bytes(self.farmer_pk).hex()
             args.pool_public_key = bytes(self.pool_pk).hex()
@@ -146,7 +144,7 @@ class BlockTools:
         if len(self.pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
         _, self.plots, _, _ = load_plots(
-            {}, set(), farmer_pubkeys, self.pool_pubkeys, root_path
+            {}, {}, farmer_pubkeys, self.pool_pubkeys, root_path
         )
 
     def get_plot_signature(
@@ -252,8 +250,7 @@ class BlockTools:
                 else:
                     block1 = block_list[0]
                     timestamp1 = uint64(
-                        block1.header.data.timestamp
-                        - test_constants.BLOCK_TIME_TARGET
+                        block1.header.data.timestamp - test_constants.BLOCK_TIME_TARGET
                     )
                     iters1 = uint64(0)
                 timestamp2 = block_list[height2].header.data.timestamp

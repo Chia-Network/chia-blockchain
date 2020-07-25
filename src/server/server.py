@@ -79,6 +79,9 @@ class ChiaServer:
         # Aiter used to broadcase messages
         self._outbound_aiter: push_aiter = push_aiter()
 
+        # Open connection tasks. These will be cancelled if
+        self._oc_tasks: List[asyncio.Task] = []
+
         # Taks list to keep references to tasks, so they don'y get GCd
         self._tasks: List[asyncio.Task] = []
         if local_type != NodeType.INTRODUCER:
@@ -130,9 +133,16 @@ class ChiaServer:
 
         ssl_context = ssl_context_for_client(self.root_path, self.config, auth=auth)
         try:
-            reader, writer = await asyncio.open_connection(
-                target_node.host, int(target_node.port), ssl=ssl_context
+            # Sometimes open_connection takes a long time, so we add it as a task, and cancel
+            # the task in the event of closing the node.
+            oc_task: asyncio.Task = asyncio.create_task(
+                asyncio.open_connection(
+                    target_node.host, int(target_node.port), ssl=ssl_context
+                )
             )
+            self._oc_tasks.append(oc_task)
+            reader, writer = await oc_task
+            self._oc_tasks.remove(oc_task)
         except Exception as e:
             self.log.warning(
                 f"Could not connect to {target_node}. {type(e)}{str(e)}. Aborting and removing peer."
@@ -170,6 +180,8 @@ class ChiaServer:
             self._outbound_aiter.stop()
         if not self._srwt_aiter.is_stopped():
             self._srwt_aiter.stop()
+        for task in self._oc_tasks:
+            task.cancel()
 
     def _initialize_ping_task(self):
         async def ping():

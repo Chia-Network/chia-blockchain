@@ -709,7 +709,10 @@ class WalletStateManager:
             if header_block is not None:
                 if not await self.validate_header_block(block, header_block):
                     return ReceiveBlockResult.INVALID_BLOCK
-                if (block.height + 1) % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
+                if (
+                    (block.height + 1) % self.constants.DIFFICULTY_EPOCH
+                    == self.constants.DIFFICULTY_DELAY
+                ):
                     assert header_block.challenge.new_work_difficulty is not None
                     self.difficulty_resets_prev[
                         block.header_hash
@@ -806,9 +809,7 @@ class WalletStateManager:
             )
         else:
             # The rest of the blocks of epoch (using new difficulty and min iters)
-            height2 = (
-                curr.height - (curr.height % self.constants.DIFFICULTY_EPOCH) - 1
-            )
+            height2 = curr.height - (curr.height % self.constants.DIFFICULTY_EPOCH) - 1
         height1 = height2 - self.constants.DIFFICULTY_EPOCH
         assert height2 > 0
 
@@ -824,10 +825,7 @@ class WalletStateManager:
         assert iters2 is not None
         min_iters_precise = uint64(
             (iters2 - iters1)
-            // (
-                self.constants.DIFFICULTY_EPOCH
-                * self.constants.MIN_ITERS_PROPORTION
-            )
+            // (self.constants.DIFFICULTY_EPOCH * self.constants.MIN_ITERS_PROPORTION)
         )
         # Truncates to only 12 bits plus 0s. This prevents grinding attacks.
         return uint64(
@@ -996,7 +994,7 @@ class WalletStateManager:
 
     def validate_select_proofs(
         self,
-        all_proof_hashes: List[Tuple[bytes32, Optional[Tuple[uint64, uint64]]]],
+        all_proof_hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]],
         heights: List[uint32],
         cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock, Optional[bytes]]],
         potential_header_hashes: Dict[uint32, bytes32],
@@ -1105,8 +1103,7 @@ class WalletStateManager:
 
             if (
                 height
-                < self.constants.DIFFICULTY_EPOCH
-                + self.constants.DIFFICULTY_DELAY
+                < self.constants.DIFFICULTY_EPOCH + self.constants.DIFFICULTY_DELAY
             ):
                 min_iters = self.constants.MIN_ITERS_STARTING
             else:
@@ -1125,11 +1122,11 @@ class WalletStateManager:
 
                 height1 = height2 - self.constants.DIFFICULTY_EPOCH
                 if height1 == -1:
-                    iters1 = uint64(0)
+                    iters1: Optional[uint64] = uint64(0)
                 else:
                     iters1 = all_proof_hashes[height1][2]
-                    assert iters1 is not None
                 iters2 = all_proof_hashes[height2][2]
+                assert iters1 is not None
                 assert iters2 is not None
 
                 min_iters = uint64(

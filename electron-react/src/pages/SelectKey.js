@@ -191,7 +191,7 @@ const SelectKey = () => {
         <div className={classes.paper}>
           <img className={classes.logo} src={logo} alt="Logo" />
           {public_key_fingerprints && public_key_fingerprints.length > 0 ? (
-            <h2 className={classes.whiteText}>Select Key</h2>
+            <h1 className={classes.whiteText}>Select Key</h1>
           ) : (
             <span className={classes.centeredSpan}>
               <h2 className={classes.whiteText}>Sign In</h2>

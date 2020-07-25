@@ -28,7 +28,7 @@ def check_plots(args, root_path):
         for pk in config["farmer"]["pool_public_keys"]
     ]
     _, provers, failed_to_open_filenames, no_key_filenames = load_plots(
-        {}, set(), pks, pool_public_keys, root_path, open_no_key_filenames=True,
+        {}, {}, pks, pool_public_keys, root_path, open_no_key_filenames=True,
     )
     if len(provers) > 0:
         log.info("")
@@ -78,7 +78,7 @@ def check_plots(args, root_path):
     log.info("Summary")
     total_plots: int = sum(list(total_good_plots.values()))
     log.info(
-        f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TB"
+        f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB"
     )
     for (k, count) in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")

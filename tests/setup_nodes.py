@@ -260,7 +260,11 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
     await run_task
 
 
-async def setup_farmer(port, consensus_constants: ConsensusConstants, full_node_port: Optional[uint16] = None):
+async def setup_farmer(
+    port,
+    consensus_constants: ConsensusConstants,
+    full_node_port: Optional[uint16] = None,
+):
     config = load_config(bt.root_path, "config.yaml", "farmer")
     config_pool = load_config(bt.root_path, "config.yaml", "pool")
 
@@ -357,7 +361,9 @@ async def setup_vdf_clients(port):
     await kill_processes()
 
 
-async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: ConsensusConstants):
+async def setup_timelord(
+    port, full_node_port, sanitizer, consensus_constants: ConsensusConstants
+):
     config = load_config(bt.root_path, "config.yaml", "timelord")
     config["sanitizer_mode"] = sanitizer
     if sanitizer:
@@ -424,12 +430,16 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
     await _teardown_nodes(node_iters)
 
 
-async def setup_node_and_wallet(consensus_constants: ConsensusConstants, starting_height=None):
+async def setup_node_and_wallet(
+    consensus_constants: ConsensusConstants, starting_height=None
+):
     node_iters = [
         setup_full_node(
             consensus_constants, "blockchain_test.db", 21234, simulator=False
         ),
-        setup_wallet_node(21235, consensus_constants, None, starting_height=starting_height),
+        setup_wallet_node(
+            21235, consensus_constants, None, starting_height=starting_height
+        ),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()
@@ -459,7 +469,11 @@ async def setup_simulators_and_wallets(
         seed = bytes(uint32(index))
         port = 55000 + index
         wlt = setup_wallet_node(
-            port, consensus_constants, None, key_seed=seed, starting_height=starting_height
+            port,
+            consensus_constants,
+            None,
+            key_seed=seed,
+            starting_height=starting_height,
         )
         wallets.append(await wlt.__anext__())
         node_iters.append(wlt)

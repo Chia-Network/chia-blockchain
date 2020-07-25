@@ -146,6 +146,7 @@ class WalletNode:
             self.root_path, f"{self.config['database_path']}-{db_path_key_suffix}"
         )
         mkdir(path.parent)
+
         self.wallet_state_manager = await WalletStateManager.create(
             private_key, self.config, path, self.constants
         )
@@ -186,7 +187,8 @@ class WalletNode:
 
     async def _await_closed(self):
         if self.sync_generator_task is not None:
-            await self.sync_generator_task.aclose()
+            async for _ in self.sync_generator_task:
+                pass
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         await self.wsm_close_task
@@ -242,7 +244,11 @@ class WalletNode:
             self.server.push_message(msg)
 
     async def _messages_to_resend(self) -> List[OutboundMessage]:
-        if self.wallet_state_manager is None or self.backup_initialized is False:
+        if (
+            self.wallet_state_manager is None
+            or self.backup_initialized is False
+            or self._shut_down
+        ):
             return []
         messages: List[OutboundMessage] = []
 

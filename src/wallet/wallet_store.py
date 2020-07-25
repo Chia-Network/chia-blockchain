@@ -221,7 +221,7 @@ class WalletStore:
         regular_rows = await cursor_regular_coins.fetchall()
         await cursor_regular_coins.close()
 
-        for row in coinbase_rows + regular_rows:
+        for row in list(coinbase_rows) + list(regular_rows):
             coin = Coin(
                 bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
             )
@@ -334,7 +334,7 @@ class WalletStore:
             if br.height > max_height:
                 max_height = br.height
         # Makes sure there's exactly one block per height
-        assert max_height == len(rows) - 1
+        assert max_height == len(list(rows)) - 1
         return hash_to_br
 
     async def add_block_record(self, block_record: BlockRecord, in_lca_path: bool):

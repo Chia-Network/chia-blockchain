@@ -13,10 +13,15 @@ from src.protocols import harvester_protocol
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace
-from src.util.config import load_config, save_config
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
-from src.plotting.plot_tools import load_plots, PlotInfo
+from src.plotting.plot_tools import (
+    load_plots,
+    PlotInfo,
+    remove_plot_directory,
+    add_plot_directory,
+    get_plot_directories,
+)
 
 log = logging.getLogger(__name__)
 
@@ -24,7 +29,7 @@ log = logging.getLogger(__name__)
 class Harvester:
     config: Dict
     provers: Dict[Path, PlotInfo]
-    failed_to_open_filenames: Set[Path]
+    failed_to_open_filenames: Dict[Path, int]
     no_key_filenames: Set[Path]
     farmer_public_keys: List[G1Element]
     pool_public_keys: List[G1Element]
@@ -41,7 +46,7 @@ class Harvester:
 
         # From filename to prover
         self.provers = {}
-        self.failed_to_open_filenames = set()
+        self.failed_to_open_filenames = {}
         self.no_key_filenames = set()
 
         self._is_shutdown = False
@@ -93,24 +98,28 @@ class Harvester:
 
         return (
             response_plots,
-            [str(s) for s in self.failed_to_open_filenames],
+            [str(s) for s, _ in self.failed_to_open_filenames.items()],
             [str(s) for s in self.no_key_filenames],
         )
 
     async def _refresh_plots(self):
+        locked: bool = self._refresh_lock.locked()
+        changed: bool = False
         async with self._refresh_lock:
-            (
-                changed,
-                self.provers,
-                self.failed_to_open_filenames,
-                self.no_key_filenames,
-            ) = load_plots(
-                self.provers,
-                self.failed_to_open_filenames,
-                self.farmer_public_keys,
-                self.pool_public_keys,
-                self.root_path,
-            )
+            if not locked:
+                # Avoid double refreshing of plots
+                (
+                    changed,
+                    self.provers,
+                    self.failed_to_open_filenames,
+                    self.no_key_filenames,
+                ) = load_plots(
+                    self.provers,
+                    self.failed_to_open_filenames,
+                    self.farmer_public_keys,
+                    self.pool_public_keys,
+                    self.root_path,
+                )
         if changed:
             self._state_changed("plots")
 
@@ -127,13 +136,15 @@ class Harvester:
         return True
 
     async def _add_plot_directory(self, str_path: str) -> bool:
-        config = load_config(self.root_path, "config.yaml")
-        if str(Path(str_path).resolve()) not in config["harvester"]["plot_directories"]:
-            config["harvester"]["plot_directories"].append(
-                str(Path(str_path).resolve())
-            )
-            save_config(self.root_path, "config.yaml", config)
-            await self._refresh_plots()
+        add_plot_directory(str_path, self.root_path)
+        await self._refresh_plots()
+        return True
+
+    async def _get_plot_directories(self) -> List[str]:
+        return get_plot_directories(self.root_path)
+
+    async def _remove_plot_directory(self, str_path: str) -> bool:
+        remove_plot_directory(str_path, self.root_path)
         return True
 
     def _set_global_connections(self, global_connections: Optional[PeerConnections]):
@@ -195,14 +206,14 @@ class Harvester:
                 quality_strings = prover.get_qualities_for_challenge(
                     new_challenge.challenge_hash
                 )
-            except RuntimeError:
+            except Exception:
                 log.error("Error using prover object. Reinitializing prover object.")
                 try:
                     self.prover = DiskProver(str(filename))
                     quality_strings = self.prover.get_qualities_for_challenge(
                         new_challenge.challenge_hash
                     )
-                except RuntimeError:
+                except Exception:
                     log.error(
                         f"Retry-Error using prover object on {filename}. Giving up."
                     )
@@ -231,7 +242,7 @@ class Harvester:
 
         awaitables = []
         for filename, plot_info in self.provers.items():
-            if ProofOfSpace.can_create_proof(
+            if filename.exists() and ProofOfSpace.can_create_proof(
                 plot_info.prover.get_id(),
                 new_challenge.challenge_hash,
                 self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,

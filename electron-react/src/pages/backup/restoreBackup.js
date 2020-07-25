@@ -26,8 +26,11 @@ const UIPart = props => {
 
   const dispatch = useDispatch();
   const classes = myStyle();
-  if (words.length === 0) {
-    words = null;
+
+  for (let word of words) {
+    if (word === "") {
+      words = null;
+    }
   }
 
   function goBack() {
@@ -60,10 +63,8 @@ const UIPart = props => {
 
     const file_path = e.dataTransfer.files[0].path;
     if (fingerprint !== null) {
-      debugger;
       dispatch(log_in_and_import_backup(fingerprint, file_path));
     } else if (words !== null) {
-      debugger;
       dispatch(add_and_restore_from_backup(words, file_path));
     }
   };

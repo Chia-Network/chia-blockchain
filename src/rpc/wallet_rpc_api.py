@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 class WalletRpcApi:
     def __init__(self, wallet_node: WalletNode):
         self.service = wallet_node
-        self.service_name = "chia-wallet"
+        self.service_name = "chia_wallet"
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
@@ -137,7 +137,7 @@ class WalletRpcApi:
         }
         if wallet_id is not None:
             data["wallet_id"] = wallet_id
-        return [create_payload("state_changed", data, "chia-wallet", "wallet_ui")]
+        return [create_payload("state_changed", data, "chia_wallet", "wallet_ui")]
 
     async def get_next_puzzle_hash(self, request: Dict) -> Dict:
         """
@@ -574,7 +574,22 @@ class WalletRpcApi:
             # Adding a key from 24 word mnemonic
             mnemonic = request["mnemonic"]
             passphrase = ""
-            sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
+            try:
+                sk = self.service.keychain.add_private_key(
+                    " ".join(mnemonic), passphrase
+                )
+            except KeyError as e:
+                return {
+                    "success": False,
+                    "error": f"The word '{e.args[0]}' is incorrect.'",
+                    "word": e.args[0],
+                }
+            except ValueError as e:
+                return {
+                    "success": False,
+                    "error": e.args[0],
+                }
+
         else:
             return {"success": False}
 
@@ -609,7 +624,8 @@ class WalletRpcApi:
         fingerprint = request["fingerprint"]
         self.service.keychain.delete_key_by_fingerprint(fingerprint)
         path = path_from_root(
-            self.service.root_path, f"{self.service.config['database_path']}-{fingerprint}"
+            self.service.root_path,
+            f"{self.service.config['database_path']}-{fingerprint}",
         )
         if path.exists():
             path.unlink()

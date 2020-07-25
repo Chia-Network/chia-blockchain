@@ -1,5 +1,5 @@
 import {
-  service_wallet_server,
+  service_wallet,
   service_full_node,
   service_simulator,
   service_daemon,
@@ -43,7 +43,7 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
           state.full_node_running = true;
         } else if (service === service_simulator) {
           state.full_node_running = true;
-        } else if (service === service_wallet_server) {
+        } else if (service === service_wallet) {
           state.wallet_running = true;
         } else if (service === service_farmer) {
           state.farmer_running = true;
@@ -56,7 +56,7 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
           state.full_node_connected = true;
         } else if (origin === service_simulator) {
           state.full_node_connected = true;
-        } else if (origin === service_wallet_server) {
+        } else if (origin === service_wallet) {
           state.wallet_connected = true;
         } else if (origin === service_farmer) {
           state.farmer_connected = true;
@@ -70,7 +70,7 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
             state.plotter_running = data.is_running;
           } else if (service === service_full_node) {
             state.full_node_running = data.is_running;
-          } else if (service === service_wallet_server) {
+          } else if (service === service_wallet) {
             state.wallet_running = data.is_running;
           } else if (service === service_farmer) {
             state.farmer_running = data.is_running;

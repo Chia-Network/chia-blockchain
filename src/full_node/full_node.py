@@ -1722,7 +1722,11 @@ class FullNode:
     ) -> OutboundMessageGenerator:
         if self.global_connections is None:
             return
-        peers = self.global_connections.peers.get_peers(recent_threshold=24 * 60 * 60)
+        connected_peers = self.global_connections.get_full_node_peerinfos()
+        unconnected_peers = self.global_connections.peers.get_peers(
+            recent_threshold=24 * 60 * 60
+        )
+        peers = list(set(connected_peers + unconnected_peers))
 
         yield OutboundMessage(
             NodeType.FULL_NODE,

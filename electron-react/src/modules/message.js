@@ -1,9 +1,21 @@
-import { service_wallet_server } from "../util/service_names";
+import { service_wallet } from "../util/service_names";
 import { openProgress, closeProgress } from "./progressReducer";
 import { refreshAllState } from "../middleware/middleware_api";
-import { changeEntranceMenu, presentRestoreBackup } from "./entranceMenu";
+import { setIncorrectWord, resetMnemonic } from "./mnemonic_input";
+import {
+  changeEntranceMenu,
+  presentRestoreBackup,
+  presentOldWallet
+} from "./entranceMenu";
 import { openDialog } from "./dialogReducer";
 import { createState } from "./createWalletReducer";
+import {
+  addPlotDirectory,
+  getPlotDirectories,
+  removePlotDirectory,
+  getPlots,
+  refreshPlots
+} from "./harvesterMessages";
 
 export const clearSend = () => {
   var action = {
@@ -16,7 +28,7 @@ export const clearSend = () => {
 export const walletMessage = () => ({
   type: "OUTGOING_MESSAGE",
   message: {
-    destination: service_wallet_server
+    destination: service_wallet
   }
 });
 
@@ -116,9 +128,16 @@ export const add_new_key_action = mnemonic => {
       dispatch(closeProgress());
       if (response.data.success) {
         // Go to wallet
+        dispatch(resetMnemonic());
         dispatch(format_message("get_public_keys", {}));
         refreshAllState(dispatch);
       } else {
+        if (response.data.word) {
+          dispatch(setIncorrectWord(response.data.word));
+          dispatch(changeEntranceMenu(presentOldWallet));
+        } else if (response.data.error === "Invalid order of mnemonic words") {
+          dispatch(changeEntranceMenu(presentOldWallet));
+        }
         const error = response.data.error;
         dispatch(openDialog("Error", error));
       }
@@ -133,9 +152,18 @@ export const add_and_skip_backup = mnemonic => {
         dispatch(closeProgress());
         if (response.data.success) {
           // Go to wallet
+          dispatch(resetMnemonic());
           dispatch(format_message("get_public_keys", {}));
           refreshAllState(dispatch);
         } else {
+          if (response.data.word) {
+            dispatch(setIncorrectWord(response.data.word));
+            dispatch(changeEntranceMenu(presentOldWallet));
+          } else if (
+            response.data.error === "Invalid order of mnemonic words"
+          ) {
+            dispatch(changeEntranceMenu(presentOldWallet));
+          }
           const error = response.data.error;
           dispatch(openDialog("Error", error));
         }
@@ -154,9 +182,16 @@ export const add_and_restore_from_backup = (mnemonic, file_path) => {
       dispatch(closeProgress());
       if (response.data.success) {
         // Go to wallet
+        dispatch(resetMnemonic());
         dispatch(format_message("get_public_keys", {}));
         refreshAllState(dispatch);
       } else {
+        if (response.data.word) {
+          dispatch(setIncorrectWord(response.data.word));
+          dispatch(changeEntranceMenu(presentOldWallet));
+        } else if (response.data.error === "Invalid order of mnemonic words") {
+          dispatch(changeEntranceMenu(presentOldWallet));
+        }
         const error = response.data.error;
         dispatch(openDialog("Error", error));
       }
@@ -423,3 +458,41 @@ export const incomingMessage = message => ({
   type: "INCOMING_MESSAGE",
   message: message
 });
+
+export const add_plot_directory_and_refresh = dir => {
+  return dispatch => {
+    return async_api(dispatch, addPlotDirectory(dir), true).then(response => {
+      if (response.data.success) {
+        dispatch(getPlotDirectories());
+        return async_api(dispatch, refreshPlots(dir), false).then(response => {
+          dispatch(closeProgress());
+          dispatch(getPlots());
+        });
+      } else {
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
+};
+
+export const remove_plot_directory_and_refresh = dir => {
+  return dispatch => {
+    return async_api(dispatch, removePlotDirectory(dir), true).then(
+      response => {
+        if (response.data.success) {
+          dispatch(getPlotDirectories());
+          return async_api(dispatch, refreshPlots(dir), false).then(
+            response => {
+              dispatch(closeProgress());
+              dispatch(getPlots());
+            }
+          );
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
+};

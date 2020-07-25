@@ -1,17 +1,15 @@
-import React, { Component, useEffect } from "react";
+import React, { Component } from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Link from "@material-ui/core/Link";
 import Grid from "@material-ui/core/Grid";
-import Typography from "@material-ui/core/Typography";
 import { withTheme } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { connect, useSelector } from "react-redux";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
-import myStyle from "./style";
-import { useStore, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import { mnemonic_word_added, resetMnemonic } from "../modules/mnemonic_input";
 import { unselectFingerprint } from "../modules/message";
 import {
@@ -19,7 +17,8 @@ import {
   presentSelectKeys,
   presentRestoreBackup
 } from "../modules/entranceMenu";
-import { openDialog } from "../modules/dialogReducer";
+import logo from "../assets/img/chia_logo.svg";
+import myStyle from "./style";
 
 const MnemonicField = props => {
   return (
@@ -32,8 +31,9 @@ const MnemonicField = props => {
         color="primary"
         id={props.id}
         label={props.index}
+        error={props.error}
         autoFocus={props.autofocus}
-        defaultValue=""
+        defaultValue={props.value}
         onChange={props.onChange}
       />
     </Grid>
@@ -41,12 +41,13 @@ const MnemonicField = props => {
 };
 
 const Iterator = props => {
-  const store = useStore();
   const dispatch = useDispatch();
+  const mnemonic_state = useSelector(state => state.mnemonic_state);
+  const incorrect_word = useSelector(
+    state => state.mnemonic_state.incorrect_word
+  );
 
   function handleTextFieldChange(e) {
-    console.log(e.target);
-    console.log(store);
     var id = e.target.id + "";
     var clean_id = id.replace("id_", "");
     var int_val = parseInt(clean_id) - 1;
@@ -60,6 +61,11 @@ const Iterator = props => {
       <MnemonicField
         onChange={handleTextFieldChange}
         key={i}
+        error={
+          (props.submitted && mnemonic_state.mnemonic_input[i] === "") ||
+          mnemonic_state.mnemonic_input[i] === incorrect_word
+        }
+        value={mnemonic_state.mnemonic_input[i]}
         autofocus={focus}
         id={"id_" + (i + 1)}
         index={i + 1}
@@ -69,29 +75,26 @@ const Iterator = props => {
   return indents;
 };
 
-const UIPart = props => {
+const UIPart = () => {
   function goBack() {
     dispatch(resetMnemonic());
     dispatch(changeEntranceMenu(presentSelectKeys));
   }
   const dispatch = useDispatch();
+  const [submitted, setSubmitted] = React.useState(false);
+  const mnemonic = useSelector(state => state.mnemonic_state.mnemonic_input);
+  const classes = myStyle();
 
   function enterMnemonic() {
+    setSubmitted(true);
+    for (var i = 0; i < mnemonic.length; i++) {
+      if (mnemonic[i] === "") {
+        return;
+      }
+    }
     dispatch(unselectFingerprint());
     dispatch(changeEntranceMenu(presentRestoreBackup));
   }
-
-  useEffect(() => {
-    dispatch(
-      openDialog(
-        "Welcome!",
-        `Enter the 24 word mmemonic that you have saved in order to restore your Chia wallet. `
-      )
-    );
-  }, [dispatch]);
-
-  const words = useSelector(state => state.wallet_state.mnemonic);
-  const classes = myStyle();
 
   return (
     <div className={classes.root}>
@@ -99,12 +102,17 @@ const UIPart = props => {
         <ArrowBackIosIcon className={classes.navigator}> </ArrowBackIosIcon>
       </Link>
       <div className={classes.grid_wrap}>
+        <img className={classes.logo} src={logo} alt="Logo" />
         <Container className={classes.grid} maxWidth="lg">
-          <Typography className={classes.title} component="h4" variant="h4">
+          <h1 className={classes.titleSmallMargin}>
             Import Wallet from Mnemonics
-          </Typography>
+          </h1>
+          <p className={classes.whiteP}>
+            Enter the 24 word mmemonic that you have saved in order to restore
+            your Chia wallet.
+          </p>
           <Grid container spacing={2}>
-            <Iterator mnemonic={words}></Iterator>
+            <Iterator submitted={submitted}></Iterator>
           </Grid>
         </Container>
       </div>
@@ -132,10 +140,6 @@ class OldWallet extends Component {
     super(props);
     this.words = [];
     this.classes = props.theme;
-  }
-
-  componentDidMount(props) {
-    console.log("Input Mnemonic");
   }
 
   render() {

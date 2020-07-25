@@ -28,7 +28,8 @@ const myStyle = makeStyles(theme => ({
   },
   grid_wrap: {
     paddingLeft: theme.spacing(10),
-    paddingRight: theme.spacing(10)
+    paddingRight: theme.spacing(10),
+    textAlign: "center"
   },
   grid: {
     display: "flex",
@@ -49,6 +50,11 @@ const myStyle = makeStyles(theme => ({
     color: "#ffffff",
     marginTop: theme.spacing(4),
     marginBottom: theme.spacing(8)
+  },
+  titleSmallMargin: {
+    color: "#ffffff",
+    marginTop: theme.spacing(4),
+    marginBottom: theme.spacing(2)
   },
   navigator: {
     color: "#ffffff",
@@ -84,6 +90,14 @@ const myStyle = makeStyles(theme => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "center"
+  },
+  logo: {
+    marginTop: theme.spacing(0),
+    marginBottom: theme.spacing(1)
+  },
+  whiteP: {
+    color: "white",
+    fontSize: "18px"
   }
 }));
 

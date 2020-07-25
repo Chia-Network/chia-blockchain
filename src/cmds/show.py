@@ -3,15 +3,17 @@ import asyncio
 import time
 from time import struct_time, localtime
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from src.server.connection import NodeType
 from src.types.header_block import HeaderBlock
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
+from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.cmds.units import units
 
 
 def make_parser(parser):
@@ -85,6 +87,26 @@ def make_parser(parser):
         + "Defaults to 8555",
         type=int,
         default=8555,
+    )
+
+    parser.add_argument(
+        "-wp",
+        "--wallet-rpc-port",
+        help="Set the port where the Wallet is hosting the RPC interface."
+        + " See the rpc_port under wallet in config.yaml."
+        + "Defaults to 9256",
+        type=int,
+        default=9256,
+    )
+
+    parser.add_argument(
+        "-w",
+        "--wallet-balances",
+        help="Display wallet balances.",
+        type=str2bool,
+        nargs="?",
+        const=True,
+        default=False,
     )
     parser.set_defaults(function=show)
 
@@ -178,7 +200,7 @@ async def show_async(args, parser):
             print("Connections")
             print(
                 "Type      IP                                      Ports      NodeID        Last Connect"
-                + "       MB Up|Dwn"
+                + "       MiB Up|Dwn"
             )
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
@@ -262,7 +284,7 @@ async def show_async(args, parser):
                 if block.header.data.aggregated_signature is None:
                     aggregated_signature = block.header.data.aggregated_signature
                 else:
-                    aggregated_signature = block.header.data.aggregated_signature.sig
+                    aggregated_signature = block.header.data.aggregated_signature
                 print("Block", block.header.data.height, ":")
                 print(
                     f"Header Hash            0x{args.block_by_header_hash}\n"
@@ -288,6 +310,55 @@ async def show_async(args, parser):
                 )
             else:
                 print("Block with header hash", args.block_by_header_hash, "not found.")
+
+        if args.wallet_balances:
+            if "wallet_rpc_port" not in args or args.wallet_rpc_port is None:
+                wallet_rpc_port = config["wallet"]["rpc_port"]
+            else:
+                wallet_rpc_port = args.wallet_rpc_port
+            wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port)
+            summaries: Dict = await wallet_client.get_wallet_summaries()
+            print("Balances")
+            for wallet_id, summary in summaries.items():
+                balances = await wallet_client.get_wallet_balance(wallet_id)
+                if "name" in summary:
+                    print(
+                        f"Wallet ID {wallet_id} type {summary['type']} {summary['name']}"
+                    )
+                    print(
+                        f"   -Confirmed: {balances['confirmed_wallet_balance']/units['colouredcoin']}"
+                    )
+                    print(
+                        f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}"
+                    )
+                    print(
+                        f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}"
+                    )
+                    print(
+                        f"   -Frozen: {balances['frozen_balance']/units['colouredcoin']}"
+                    )
+                    print(
+                        f"   -Pending change: {balances['pending_change']/units['colouredcoin']}"
+                    )
+                else:
+                    print(f"Wallet ID {wallet_id} type {summary['type']}")
+                    print(
+                        f"   -Confirmed: {balances['confirmed_wallet_balance']/units['chia']} TXCH"
+                    )
+                    print(
+                        f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['chia']} TXCH"
+                    )
+                    print(
+                        f"   -Spendable: {balances['spendable_balance']/units['chia']} TXCH"
+                    )
+                    print(
+                        f"   -Frozen: {balances['frozen_balance']/units['chia']} TXCH"
+                    )
+                    print(
+                        f"   -Pending change: {balances['pending_change']/units['chia']} TXCH"
+                    )
+            wallet_client.close()
+            await wallet_client.await_closed()
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):

@@ -221,7 +221,9 @@ class Blockchain:
         prev_challenge_hash = block.proof_of_space.challenge_hash
 
         new_difficulty: Optional[uint64]
-        if (block.height + 1) % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
+        if (
+            block.height + 1
+        ) % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
             new_difficulty = get_next_difficulty(
                 self.constants, self.headers, self.height_to_hash, block.header
             )
@@ -769,6 +771,7 @@ class Blockchain:
                     # This coin is not in the current heaviest chain, so it must be in the fork
                     if rem not in additions_since_fork:
                         # This coin does not exist in the fork
+                        # TODO: fix this, there is a consensus bug here
                         return Err.UNKNOWN_UNSPENT
                     if rem in coinbases_since_fork:
                         # This coin is a coinbase coin

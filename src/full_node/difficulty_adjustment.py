@@ -128,9 +128,7 @@ def get_next_difficulty(
     )
     # Take only DIFFICULTY_SIGNIFICANT_BITS significant bits
     new_difficulty = uint64(
-        truncate_to_significant_bits(
-            new_difficulty_precise, constants.SIGNIFICANT_BITS
-        )
+        truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS)
     )
     assert count_significant_bits(new_difficulty) <= constants.SIGNIFICANT_BITS
 

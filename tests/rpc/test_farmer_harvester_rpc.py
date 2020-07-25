@@ -111,7 +111,12 @@ class TestRpc:
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) == num_plots
 
+            print(await client_2.get_plot_directories())
+            assert len(await client_2.get_plot_directories()) == 1
+
             await client_2.add_plot_directory(str(plot_dir))
+
+            assert len(await client_2.get_plot_directories()) == 2
 
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) == num_plots + 1
@@ -119,6 +124,10 @@ class TestRpc:
             await client_2.delete_plot(str(plot_dir / filename))
             res_3 = await client_2.get_plots()
             assert len(res_3["plots"]) == num_plots
+
+            await client_2.remove_plot_directory(str(plot_dir))
+            print(await client_2.get_plot_directories())
+            assert len(await client_2.get_plot_directories()) == 1
 
         except AssertionError:
             # Checks that the RPC manages to stop the node
