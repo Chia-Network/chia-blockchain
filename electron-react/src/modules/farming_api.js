@@ -9,7 +9,8 @@ const initial_state = {
   harvester: {
     plots: [],
     not_found_filenames: [],
-    failed_to_open_filenames: []
+    failed_to_open_filenames: [],
+    plot_directories: []
   }
 };
 
@@ -66,6 +67,14 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
         state.harvester.failed_to_open_filenames =
           data.failed_to_open_filenames;
         state.harvester.not_found_filenames = data.not_found_filenames;
+        return state;
+      }
+
+      if (command === "get_plot_directories") {
+        if (data.success !== true) {
+          return state;
+        }
+        state.harvester.plot_directories = data.directories;
         return state;
       }
 

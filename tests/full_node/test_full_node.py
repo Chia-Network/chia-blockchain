@@ -865,10 +865,7 @@ class TestWalletProtocol:
         hashes = msgs[0].message.data.hashes
         assert len(hashes) >= len(blocks_list) - 2
         for i in range(len(hashes)):
-            if (
-                i % test_constants.DIFFICULTY_EPOCH
-                == test_constants.DIFFICULTY_DELAY
-            ):
+            if i % test_constants.DIFFICULTY_EPOCH == test_constants.DIFFICULTY_DELAY:
                 assert hashes[i][1] is not None
             elif i > 0:
                 assert hashes[i][1] is None

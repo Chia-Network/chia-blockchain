@@ -1,8 +1,7 @@
-import React, { Component, useEffect } from "react";
+import React, { Component } from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
-import Typography from "@material-ui/core/Typography";
 import { withTheme } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
@@ -10,9 +9,9 @@ import { connect, useSelector, useDispatch } from "react-redux";
 import { genereate_mnemonics, add_new_key_action } from "../modules/message";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
-import myStyle from "./style";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
-import { openDialog } from "../modules/dialogReducer";
+import logo from "../assets/img/chia_logo.svg";
+import myStyle from "./style";
 
 const MnemonicField = props => {
   return (
@@ -48,17 +47,6 @@ const UIPart = props => {
     words = [];
   }
 
-  useEffect(() => {
-    dispatch(
-      openDialog(
-        "Welcome!",
-        `The following words are used for your wallet backup.
-        Without them, you will lose access to your wallet, keep them safe!!!
-        Write down each word along with the order number next to them. (Order is important) `
-      )
-    );
-  }, [dispatch]);
-
   function goBack() {
     dispatch(changeEntranceMenu(presentSelectKeys));
   }
@@ -73,10 +61,15 @@ const UIPart = props => {
         {" "}
       </ArrowBackIosIcon>
       <div className={classes.grid_wrap}>
+        <img className={classes.logo} src={logo} alt="Logo" />
         <Container className={classes.grid} maxWidth="lg">
-          <Typography className={classes.title} component="h4" variant="h4">
-            New Wallet
-          </Typography>
+          <h1 className={classes.titleSmallMargin}>New Wallet</h1>
+          <p className={classes.whiteP}>
+            Welcome! The following words are used for your wallet backup.
+            Without them, you will lose access to your wallet, keep them safe!
+            Write down each word along with the order number next to them.
+            (Order is important)
+          </p>
           <Grid container spacing={2}>
             <Iterator mnemonic={words}></Iterator>
           </Grid>

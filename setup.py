@@ -3,10 +3,10 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.2.0",  # Signature library
-    "chiavdf==0.12.22",  # timelord and vdf verification
+    "blspy==0.2.1",  # Signature library
+    "chiavdf==0.12.23",  # timelord and vdf verification
     "chiabip158==0.16",  # bip158-style wallet filters
-    "chiapos==0.12.23",  # proof of space
+    "chiapos==0.12.24",  # proof of space
     "clvm==0.4",  # contract language
     "clvm-tools==0.1.1",  # clvm compiler tools
     "aiohttp==3.6.2",  # HTTP server for full node rpc
@@ -69,18 +69,10 @@ kwargs = dict(
         "src.wallet.trading",
         "src.ssl",
     ],
-    scripts=[
-        "scripts/_chia-common",
-        "scripts/_chia-stop-wallet",
-        "scripts/chia-drop-db",
-        "scripts/chia-restart-harvester",
-        "scripts/chia-start-sim",
-        "scripts/chia-stop-all",
-    ],
     entry_points={
         "console_scripts": [
             "chia = src.cmds.chia:main",
-            "chia-wallet = src.server.start_wallet:main",
+            "chia_wallet = src.server.start_wallet:main",
             "chia_full_node = src.server.start_full_node:main",
             "chia_harvester = src.server.start_harvester:main",
             "chia_farmer = src.server.start_farmer:main",

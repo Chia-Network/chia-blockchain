@@ -23,6 +23,9 @@ from src.util.ints import uint16
 import traceback
 
 
+log = logging.getLogger(__name__)
+
+
 async def initialize_pipeline(
     srwt_aiter,
     api: Any,
@@ -161,8 +164,11 @@ async def connection_to_outbound(
     """
     connection, global_connections = pair
     if connection.on_connect:
-        async for outbound_message in connection.on_connect():
-            yield connection, outbound_message, global_connections
+        try:
+            async for outbound_message in connection.on_connect():
+                yield connection, outbound_message, global_connections
+        except Exception as e:
+            connection.log.warning(f"Exception in on_connect: {e}")
 
 
 async def perform_handshake(
@@ -228,7 +234,7 @@ async def perform_handshake(
         )
         # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
         yield connection, global_connections
-    except (ProtocolError, asyncio.IncompleteReadError, OSError, Exception,) as e:
+    except Exception as e:
         connection.log.warning(f"{e}, handshake not completed. Connection not created.")
         # Make sure to close the connection even if it's not in global connections
         connection.close()

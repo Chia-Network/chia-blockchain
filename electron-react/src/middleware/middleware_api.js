@@ -15,7 +15,7 @@ import {
 import { offerParsed, resetTrades } from "../modules/TradeReducer";
 import { openDialog } from "../modules/dialogReducer";
 import {
-  service_wallet_server,
+  service_wallet,
   service_full_node,
   service_simulator,
   service_farmer,
@@ -35,6 +35,7 @@ import {
 } from "../modules/farmerMessages";
 import {
   getPlots,
+  getPlotDirectories,
   pingHarvester,
   refreshPlots
 } from "../modules/harvesterMessages";
@@ -55,7 +56,7 @@ function sleep(ms) {
 
 async function ping_wallet(store) {
   store.dispatch(pingWallet());
-  await sleep(300);
+  await sleep(1000);
   const state = store.getState();
   const wallet_connected = state.daemon_state.wallet_connected;
   if (!wallet_connected) {
@@ -65,7 +66,7 @@ async function ping_wallet(store) {
 
 async function ping_full_node(store) {
   store.dispatch(pingFullNode());
-  await sleep(300);
+  await sleep(1000);
   const state = store.getState();
   const node_connected = state.daemon_state.full_node_connected;
   if (!node_connected) {
@@ -75,7 +76,7 @@ async function ping_full_node(store) {
 
 async function ping_farmer(store) {
   store.dispatch(pingFarmer());
-  await sleep(300);
+  await sleep(1000);
   const state = store.getState();
   const farmer_connected = state.daemon_state.farmer_connected;
   if (!farmer_connected) {
@@ -85,7 +86,7 @@ async function ping_farmer(store) {
 
 async function ping_harvester(store) {
   store.dispatch(pingHarvester());
-  await sleep(300);
+  await sleep(1000);
   const state = store.getState();
   const harvester_connected = state.daemon_state.harvester_connected;
   if (!harvester_connected) {
@@ -145,6 +146,7 @@ export const refreshAllState = dispatch => {
   dispatch(getLatestChallenges());
   dispatch(getFarmerConnections());
   dispatch(getPlots());
+  dispatch(getPlotDirectories());
   dispatch(isServiceRunning(service_plotter));
   dispatch(get_all_trades());
 };
@@ -152,7 +154,7 @@ export const refreshAllState = dispatch => {
 export const handle_message = (store, payload) => {
   store.dispatch(incomingMessage(payload));
   if (payload.command === "ping") {
-    if (payload.origin === service_wallet_server) {
+    if (payload.origin === service_wallet) {
       store.dispatch(get_connection_info());
       store.dispatch(format_message("get_public_keys", {}));
     } else if (payload.origin === service_full_node) {
@@ -163,7 +165,6 @@ export const handle_message = (store, payload) => {
       store.dispatch(getLatestChallenges());
       store.dispatch(getFarmerConnections());
     } else if (payload.origin === service_harvester) {
-      store.dispatch(getPlots());
     }
   } else if (payload.command === "delete_key") {
     if (payload.data.success) {
@@ -244,7 +245,7 @@ export const handle_message = (store, payload) => {
   } else if (payload.command === "start_service") {
     const service = payload.data.service;
     if (payload.data.success) {
-      if (service === service_wallet_server) {
+      if (service === service_wallet) {
         ping_wallet(store);
       } else if (service === service_full_node) {
         ping_full_node(store);
@@ -258,7 +259,7 @@ export const handle_message = (store, payload) => {
         track_progress(store, payload.data.out_file);
       }
     } else if (payload.data.error === "already running") {
-      if (service === service_wallet_server) {
+      if (service === service_wallet) {
         ping_wallet(store);
       } else if (service === service_full_node) {
         ping_full_node(store);

@@ -1,6 +1,10 @@
 from pathlib import Path
 import logging
-from src.plotting.plot_tools import add_plot_directory
+from src.plotting.plot_tools import (
+    add_plot_directory,
+    remove_plot_directory,
+    get_plot_directories,
+)
 from src.plotting.create_plots import create_plots
 from src.plotting.check_plots import check_plots
 from src.util.logging import initialize_logging
@@ -9,11 +13,7 @@ from src.util.logging import initialize_logging
 log = logging.getLogger(__name__)
 
 
-command_list = [
-    "create",
-    "check",
-    "add",
-]
+command_list = ["create", "check", "add", "remove", "show"]
 
 
 def help_message():
@@ -21,12 +21,14 @@ def help_message():
     print(f"command can be any of {command_list}")
     print("")
     print(
-        "chia plots create -k [size] -n [number of plots] -b [memory buffer size MB]"
+        "chia plots create -k [size] -n [number of plots] -b [memory buffer size MiB]"
         + " -f [farmer pk] -p [pool pk] -t [tmp dir] -2 [tmp dir 2] -d [final dir]  (creates plots)"
     )
     print("-s [sk_seed] -i [index] are available for debugging")
     print("chia plots check -n [num checks]  (checks plots)")
     print("chia plots add -d [directory] (adds a directory of plots)")
+    print("chia plots remove -d [directory] (removes a directory of plots from config)")
+    print("chia plots show (shows the directory of current plots)")
 
 
 def make_parser(parser):
@@ -35,10 +37,7 @@ def make_parser(parser):
         "-n", "--num", help="Number of plots or challenges", type=int, default=None
     )
     parser.add_argument(
-        "-i", "--index", help="First plot index", type=int, default=None
-    )
-    parser.add_argument(
-        "-b", "--buffer", help="Megabytes for sort/plot buffer", type=int, default=2048
+        "-b", "--buffer", help="Mebibytes for sort/plot buffer", type=int, default=2000
     )
     parser.add_argument(
         "-f",
@@ -49,9 +48,6 @@ def make_parser(parser):
     )
     parser.add_argument(
         "-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None
-    )
-    parser.add_argument(
-        "-s", "--sk_seed", help="Secret key seed in hex", type=str, default=None
     )
     parser.add_argument(
         "-t",
@@ -85,6 +81,19 @@ def make_parser(parser):
     parser.print_help = lambda self=parser: help_message()
 
 
+def show(root_path):
+    print("Directories where plots are being searched for:")
+    print("Note that subdirectories must be added manually.")
+    print(
+        "Add with 'chia plots add -d [dir]' and remove with"
+        + " 'chia plots remove -d [dir]'."
+        + " Scan and check plots with 'chia plots check'"
+    )
+    print()
+    for str_path in get_plot_directories(root_path):
+        print(f"{str_path}")
+
+
 def handler(args, parser):
     if args.command is None or len(args.command) < 1:
         help_message()
@@ -109,3 +118,8 @@ def handler(args, parser):
     elif command == "add":
         str_path = args.final_dir
         add_plot_directory(str_path, root_path)
+    elif command == "remove":
+        str_path = args.final_dir
+        remove_plot_directory(str_path, root_path)
+    elif command == "show":
+        show(root_path)

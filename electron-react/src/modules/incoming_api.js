@@ -1,4 +1,4 @@
-import { service_wallet_server } from "../util/service_names";
+import { service_wallet } from "../util/service_names";
 
 export const Wallet = (id, name, type, data) => ({
   id: id,
@@ -101,7 +101,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       }
       return state;
     case "INCOMING_MESSAGE":
-      if (action.message.origin !== service_wallet_server) {
+      if (action.message.origin !== service_wallet) {
         return state;
       }
 

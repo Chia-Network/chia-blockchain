@@ -101,7 +101,7 @@ async def netstorge_async(args, parser):
             network_space_terrabytes_estimate = network_space_bytes_estimate / 1024 ** 4
             print(
                 f"The elapsed time between blocks is reported as {time_delta}.\n"
-                f"The network has an estimated {network_space_terrabytes_estimate:.2f}TB"
+                f"The network has an estimated {network_space_terrabytes_estimate:.2f}TiB"
             )
 
     except Exception as e:

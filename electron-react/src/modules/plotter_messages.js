@@ -5,16 +5,17 @@ export const plotControl = () => ({
   type: "PLOTTER_CONTROL"
 });
 
-export const startPlotting = (size, count, workspace, final) => {
+export const startPlotting = (k, n, t, t2, d, b) => {
   var action = daemonMessage();
   action.message.command = "start_plotting";
   action.message.data = {
     service: service_plotter,
-    k: size,
-    n: count,
-    t: workspace,
-    t2: workspace,
-    d: final
+    k,
+    n,
+    t,
+    t2,
+    d,
+    b
   };
   return action;
 };
