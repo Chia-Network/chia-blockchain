@@ -69,6 +69,7 @@ class WalletRpcApi:
             "/get_all_trades": self.get_all_trades,
             "/cancel_trade": self.cancel_trade,
             "/create_backup": self.create_backup,
+            "/get_backup_info": self.get_backup_info
         }
 
     async def get_trade(self, request: Dict):
@@ -504,6 +505,12 @@ class WalletRpcApi:
         file_path = Path(request["file_path"])
         await self.service.wallet_state_manager.create_wallet_backup(file_path)
         response = {"success": True}
+        return response
+
+    async def get_backup_info(self, request: Dict):
+        file_path = Path(request["file_path"])
+        backup_info = await self.service.wallet_state_manager.get_backup_info(file_path)
+        response = {"success": True, "backup_info": backup_info}
         return response
 
     async def respond_to_offer(self, request):
