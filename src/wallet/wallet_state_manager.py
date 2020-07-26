@@ -46,6 +46,7 @@ from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.wallet.derive_keys import master_sk_to_wallet_sk
+from src import __version__
 
 
 class WalletStateManager:
@@ -1327,6 +1328,9 @@ class WalletStateManager:
 
         backup = WalletInfoBackup(all_wallets)
         json_dict = backup.to_json_dict()
+        json_dict["version"] = __version__
+        json_dict["fingerprint"] = self.private_key.get_g1().get_fingerprint()
+        json_dict["timestamp"] = uint64(int(time.time()))
         file_path.write_text(json.dumps(json_dict))
 
     async def import_backup_info(self, file_path):
@@ -1344,6 +1348,31 @@ class WalletStateManager:
 
         await self.load_wallets()
         await self.user_settings.user_imported_backup()
+
+    async def get_backup_info(self, file_path):
+        info_dict = {}
+        wallets = []
+
+        backup_text = file_path.read_text
+        json_dict = json.loads(backup_text)
+
+        wallet_list_json = json_dict["wallet_list"]
+
+        for wallet_info in wallet_list_json:
+            wallet = {}
+            wallet["name"] = wallet_info["name"]
+            wallet["type"] = wallet_info["type"]
+            wallet["type_name"] = WalletType(wallet_info["type"]).name
+            wallet["id"] = wallet_info["id"]
+            wallet["data"] = wallet_info["data"]
+            wallets.append(wallet)
+
+        info_dict["version"] = json_dict["version"]
+        info_dict["fingerprint"] = json_dict["fingerprint"]
+        info_dict["timestamp"] = json_dict["timestamp"]
+        info_dict["wallets"] = wallets
+
+        return info_dict
 
     async def get_wallet_for_colour(self, colour):
         for wallet_id in self.wallets:
