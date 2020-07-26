@@ -18,6 +18,7 @@ from src.server.outbound_message import NodeType, OutboundMessage, Message, Deli
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
 from src.wallet.trade_record import TradeRecord
+from src.wallet.util.backup_utils import get_backup_info
 from src.wallet.util.cc_utils import trade_record_to_dict
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
@@ -509,7 +510,7 @@ class WalletRpcApi:
 
     async def get_backup_info(self, request: Dict):
         file_path = Path(request["file_path"])
-        backup_info = await self.service.wallet_state_manager.get_backup_info(file_path)
+        backup_info = get_backup_info(file_path)
         response = {"success": True, "backup_info": backup_info}
         return response
 
