@@ -85,6 +85,3 @@ class TestCCWalletBackup:
         await time_out_assert(15, cc_wallet_from_backup.get_confirmed_balance, 100)
         if file_path.exists():
             file_path.unlink()
-
-        # wallet_node._close()
-        # await wallet_node._await_closed()
