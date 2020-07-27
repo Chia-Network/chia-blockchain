@@ -39,7 +39,6 @@ from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.did_wallet.did_wallet import DIDWallet
-from src.wallet.did_wallet import did_wallet_puzzles
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -376,7 +375,7 @@ class WebSocketServer:
                 response = {"success": True, "type": cc_wallet.wallet_info.type.name}
                 return response
         elif request["wallet_type"] == "did_wallet":
-            did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+            await DIDWallet.create_new_did_wallet(
                 wallet_state_manager, main_wallet, request["amount"], request["backup_ids"]
             )
             response = {"success": True}
