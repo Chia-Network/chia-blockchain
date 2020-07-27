@@ -27,6 +27,7 @@ import {
 import { openDialog } from "../../modules/dialogReducer";
 import isElectron from "is-electron";
 import { create_trade_action } from "../../modules/trade_messages";
+import { COLOURED_COIN } from "../../util/wallet_types";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -209,7 +210,7 @@ export const CreateOffer = () => {
       return;
     }
     let mojo = chia_to_mojo(amount_input.value);
-    if (wallets[wallet_id.value].type === "COLOURED_COIN") {
+    if (wallets[wallet_id.value].type === COLOURED_COIN) {
       mojo = colouredcoin_to_mojo(amount_input.value);
     }
     var trade = null;
