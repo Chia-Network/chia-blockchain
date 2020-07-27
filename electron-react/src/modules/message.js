@@ -16,6 +16,12 @@ import {
   getPlots,
   refreshPlots
 } from "./harvesterMessages";
+import {
+  setBackupInfo,
+  changeBackupView,
+  presentBackupInfo,
+  selectFilePath
+} from "./backup_state";
 
 export const clearSend = () => {
   var action = {
@@ -279,6 +285,33 @@ export const login_action = fingerprint => {
         }
       }
     });
+  };
+};
+
+export const get_backup_info = file_path => {
+  var action = walletMessage();
+  action.message.command = "get_backup_info";
+  action.message.data = {
+    file_path: file_path
+  };
+  return action;
+};
+
+export const get_backup_info_action = file_path => {
+  return dispatch => {
+    dispatch(selectFilePath(file_path));
+    return async_api(dispatch, get_backup_info(file_path), true).then(
+      response => {
+        dispatch(closeProgress());
+        if (response.data.success) {
+          dispatch(setBackupInfo(response.data.backup_info));
+          dispatch(changeBackupView(presentBackupInfo));
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
   };
 };
 
