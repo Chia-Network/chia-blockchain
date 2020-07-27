@@ -8,36 +8,37 @@ for setuptools_scm/PEP 440 reasons.
 
 ## [Unreleased]
 
+## [1.0beta9] aka Beta 1.9 - 2020-07-27
+
 ### Added
-- See wallet balances in command line: chia show -w
-- Retry opening invalid plots every 20 minutes (so you can cp a large plot)
-- "chia keys sign" and "chia keys verify"
+- See wallet balances in command line: `chia show -w`
+- Retry opening invalid plots every 20 minutes (so you can copy a large plot into a plot directory.)
+- We've added `chia keys sign` and `chia keys verify` to allow farmers to certify their ownership of keys.
 - Windows BLS Signature library now uses libsodium for additional security.
-- Wheels for ARM64/aarch64 also build for python 3.7.
-- See and remove plot directories from UI and command line
-- Specify memory buffer in UI
+- You can now backup and restore Smart Wallet metadata.
+- Binary wheels for ARM64/aarch64 also build for python 3.7.
+- See and remove plot directories from the UI and command line.
+- You can now specify the memory buffer in UI.
 
 ### Changed
-- chia start wallet-server changed to chia start wallet, for consistency.
-- All data size units are displayed in GiB instead of GB (powers of 1024 instead of 1000)
-- Better error messages for restoring wallet from mnemonic
+- `chia start wallet-server` changed to `chia start wallet`, for consistency.
+- All data size units are clarified to displayed in GiB instead of GB (powers of 1024 instead of 1000.)
+- Better error messages for restoring wallet from mnemonic.
 
 ### Fixed
-- Fixed open_connection not being cancelled when node exits
-- Increase the robustness of node and wallet shutdown
-- Handle disconnection and reconnection of hard drives properly
+- Fixed open_connection not being cancelled when node exits.
+- Increase the robustness of node and wallet shutdown.
+- Handle disconnection and reconnection of hard drives properly.
 - Addressed pre-Haswell Windows signatures failing.
 - MacOS, Linux x64, and Linux aarch64 were not correctly compiling libsodium in
 the blspy/bls-signatures library.
 - Removed outdated "200 plots" language from Plot tab.
 - Fixed spelling error for "folder" on Plot tab.
 - Various node dependency security vulnerabilities have been fixed.
-- Request peers was not returning currently connected peers older than 1 day
+- Request peers was not returning currently connected peers older than 1 day.
 
 ### Deprecated
 - Removed legacy scripts such as chia-stop-server, chia-restart-harvester, etc.
-
-
 
 ## [1.0beta8] aka Beta 1.8 - 2020-07-16
 
