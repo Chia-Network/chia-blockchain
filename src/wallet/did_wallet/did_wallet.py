@@ -518,10 +518,12 @@ class DIDWallet:
                 ),
             )
         ]
-        # spend the message coin
-        list_of_solutions.append(
-            did_wallet_puzzles.create_spend_for_mesasage(coin.name(), identity, newpuz)
-        )
+        message_spend = did_wallet_puzzles.create_spend_for_mesasage(coin.name(), identity, newpuz)
+        # # spend the message coin
+        # list_of_solutions.append(
+        #     message_spend
+        # )
+        message_spend_bundle = SpendBundle([message_spend], BLSSignature.aggregate([]))
         # sign for AGG_SIG_ME
         message = std_hash(bytes(newpuz) + bytes(coin.name()))
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
@@ -535,14 +537,13 @@ class DIDWallet:
         sigs = [signature]
         aggsig = BLSSignature.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
-        """
         did_record = TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=coin.puzzle_hash,
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
-            incoming=False,
+            incoming=True,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
@@ -552,8 +553,7 @@ class DIDWallet:
             sent_to=[],
         )
         await self.standard_wallet.push_transaction(did_record)
-        """
-        return spend_bundle
+        return message_spend_bundle
 
     async def get_info_for_recovery(self):
         coins = await self.select_coins(1)
@@ -622,7 +622,7 @@ class DIDWallet:
             sent_to=[],
         )
         await self.standard_wallet.push_transaction(did_record)
-        return spend_bundle
+        return True
 
     async def get_new_innerpuz(self) -> Program:
         devrec = await self.wallet_state_manager.get_unused_derivation_record(

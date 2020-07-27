@@ -38,6 +38,8 @@ from src.util.logging import initialize_logging
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
+from src.wallet.did_wallet.did_wallet import DIDWallet
+from src.wallet.did_wallet import did_wallet_puzzles
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -373,6 +375,11 @@ class WebSocketServer:
                 )
                 response = {"success": True, "type": cc_wallet.wallet_info.type.name}
                 return response
+        elif request["wallet_type"] == "did_wallet":
+            did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_state_manager, main_wallet, request["amount"], request["backup_ids"]
+            )
+            response = {"success": True}
 
         response = {"success": False}
         return response
@@ -392,6 +399,51 @@ class WebSocketServer:
         response = {"wallets": wallets, "success": True}
 
         return response
+
+    async def did_update_recovery_ids(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        recovery_list = request["new_list"]
+        await wallet.update_recovery_list(recovery_list)
+        # Update coin with new ID info
+        updated_puz = await wallet.get_new_puzzle()
+        spend_bundle = await wallet.create_spend(updated_puz.get_tree_hash())
+        if spend_bundle is not None:
+            return {"success": True}
+        return {"success": False}
+
+    async def did_spend(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        spend_bundle = await wallet.create_spend(request["puzzlehash"])
+        if spend_bundle is not None:
+            return {"success": True}
+        return {"success": False}
+
+    async def did_get_id(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        id = wallet.get_my_ID()
+        return {"success": True, "id": id}
+
+    async def did_recovery_spend(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        spend_bundle_list = request["spend_bundle_list"]
+        message_spend_bundle = spend_bundle_list.aggregate(spend_bundle_list)
+        info = "("
+        for i in request["info_list"]:
+            info = info + i
+        info = info + ")"
+        success = await wallet.recovery_spend(request["coin"], request["puzhash"], info, message_spend_bundle)
+        return {"success": success}
+
+    async def did_create_attest(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        info = await wallet.get_info_for_recovery()
+        spend_bundle = await wallet.create_attestment(request["coin_name"], request["puzhash"])
+        return {"success": True, "message_spend_bundle": spend_bundle, "info": info}
 
     async def rl_set_admin_info(self, request):
         wallet_id = int(request["wallet_id"])
