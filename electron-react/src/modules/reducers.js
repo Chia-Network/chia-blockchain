@@ -15,6 +15,7 @@ import { plotControlReducer } from "./plotter_control";
 import { farmerMenuReducer } from "./farmer_menu";
 import { tradeMenuReducer } from "./tradeMenu";
 import { progressReducer } from "./progressReducer";
+import { backupReducer } from "./backup_state";
 
 const rootReducer = combineReducers({
   daemon_state: daemonReducer,
@@ -32,7 +33,8 @@ const rootReducer = combineReducers({
   plot_control: plotControlReducer,
   farmer_menu: farmerMenuReducer,
   trade_menu: tradeMenuReducer,
-  progress: progressReducer
+  progress: progressReducer,
+  backup_state: backupReducer
 });
 
 export default rootReducer;
