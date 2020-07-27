@@ -23,6 +23,8 @@ import {
   presentMain,
   presentBackupInfo
 } from "../../modules/backup_state";
+import { unix_to_short_date } from "../../util/utils";
+import { Box } from "@material-ui/core";
 
 const UIPart = props => {
   const dispatch = useDispatch();
@@ -43,6 +45,8 @@ const UIPart = props => {
   }
 
   function skip() {
+    dispatch(get_backup_info_action("/Users/yostra/Desktop/tri"));
+    return;
     if (fingerprint !== null) {
       dispatch(login_and_skip_action(fingerprint));
     } else if (words !== null) {
@@ -67,6 +71,7 @@ const UIPart = props => {
     e.stopPropagation();
 
     const file_path = e.dataTransfer.files[0].path;
+    debugger;
     dispatch(get_backup_info_action(file_path));
   };
 
@@ -120,6 +125,11 @@ const BackupDetails = () => {
   const dispatch = useDispatch();
   const file_path = useSelector(state => state.backup_state.selected_file_path);
   const backup_info = useSelector(state => state.backup_state.backup_info);
+  const date = unix_to_short_date(backup_info["timestamp"]);
+  const backup_fingerprint = backup_info["fingerprint"];
+  const version = backup_info["version"];
+  const wallets = backup_info["wallets"];
+
   var words = useSelector(state => state.mnemonic_state.mnemonic_input);
   var fingerprint = useSelector(
     state => state.wallet_state.selected_fingerprint
@@ -161,7 +171,22 @@ const BackupDetails = () => {
           className={classes.drag}
           style={{ position: "relative", width: "80%", margin: "auto" }}
         >
-          <div className={classes.dragText}>Drag and drop your backup file</div>
+          <Box display="flex" style={{ minWidth: "100%" }}>
+            <Box>Date: </Box>
+            <Box>{date}</Box>
+          </Box>
+          <Box display="flex" style={{ minWidth: "100%" }}>
+            <Box>Version: </Box>
+            <Box>{version}</Box>
+          </Box>
+          <Box display="flex" style={{ minWidth: "100%" }}>
+            <Box>Fingerprint: </Box>
+            <Box>{backup_fingerprint}</Box>
+          </Box>
+          <WalletHeader></WalletHeader>
+          {wallets.map(wallet => (
+            <WalletRow wallet={wallet}></WalletRow>
+          ))}
         </Paper>
       </div>
       <Container component="main" maxWidth="xs">
@@ -180,6 +205,31 @@ const BackupDetails = () => {
         </div>
       </Container>
     </div>
+  );
+};
+
+const WalletRow = props => {
+  const wallet = props.wallet;
+  const id = wallet.id;
+  const name = wallet.name;
+  const type = wallet.type_name;
+
+  return (
+    <Box display="flex" style={{ minWidth: "100%" }}>
+      <Box flexGrow={1}>{id}</Box>
+      <Box flexGrow={1}>{name}</Box>
+      <Box flexGrow={1}>{type}</Box>
+    </Box>
+  );
+};
+
+const WalletHeader = () => {
+  return (
+    <Box display="flex" style={{ minWidth: "100%" }}>
+      <Box flexGrow={1}>id</Box>
+      <Box flexGrow={1}>name</Box>
+      <Box flexGrow={1}>type</Box>
+    </Box>
   );
 };
 

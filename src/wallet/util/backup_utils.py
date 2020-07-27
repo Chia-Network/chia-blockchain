@@ -7,7 +7,7 @@ def get_backup_info(file_path):
     info_dict = {}
     wallets = []
 
-    backup_text = file_path.read_text
+    backup_text = file_path.read_text()
     json_dict = json.loads(backup_text)
 
     wallet_list_json = json_dict["wallet_list"]
