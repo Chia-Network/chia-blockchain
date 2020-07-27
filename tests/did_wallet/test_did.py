@@ -62,7 +62,7 @@ class TestWalletSimulator:
                 return
             await asyncio.sleep(1)
         assert False
-    """
+
     @pytest.mark.asyncio
     async def test_identity_creation(self, two_wallet_nodes):
         num_blocks = 10
@@ -148,12 +148,12 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
 
-        ph = await wallet.get_new_puzzlehash()
+        ph2 = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
 
         funds = sum(
             [
@@ -187,10 +187,12 @@ class TestWalletSimulator:
         assert did_wallet_2.did_info.backup_ids == recovery_list
         coins = await did_wallet_2.select_coins(1)
         coin = coins.pop()
-        spend_bundle = await did_wallet.create_attestment(coin.name(), ph)
         info = await did_wallet.get_info_for_recovery()
+        message_spend_bundle = await did_wallet.create_attestment(coin.name(), ph)
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
         info = "(" + info + ")"
-        await did_wallet_2.recovery_spend(coin, ph, info, spend_bundle)
+        await did_wallet_2.recovery_spend(coin, ph, info, message_spend_bundle)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -255,7 +257,6 @@ class TestWalletSimulator:
 
         # Update coin with new ID info
         updated_puz = await did_wallet.get_new_puzzle()
-        # breakpoint()
         await did_wallet.create_spend(updated_puz.get_tree_hash())
 
         for i in range(1, num_blocks):
@@ -267,8 +268,10 @@ class TestWalletSimulator:
         # Recovery spend with new info
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
-        spend_bundle = await did_wallet_2.create_attestment(coin.name(), ph)
         info = await did_wallet_2.get_info_for_recovery()
+        spend_bundle = await did_wallet_2.create_attestment(coin.name(), ph)
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
         info = "(" + info + ")"
 
         await did_wallet.recovery_spend(coin, ph, info, spend_bundle)
@@ -392,10 +395,13 @@ class TestWalletSimulator:
         new_ph = new_puz.get_tree_hash()
         coins = await did_wallet_2.select_coins(1)
         coin = coins.pop()
-        spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph)
         info = await did_wallet.get_info_for_recovery()
+        message_spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph)
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
+
         info = "(" + info + ")"
-        await did_wallet_2.recovery_spend(coin, new_ph, info, spend_bundle)
+        await did_wallet_2.recovery_spend(coin, new_ph, info, message_spend_bundle)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -406,11 +412,13 @@ class TestWalletSimulator:
         # Recovery spend
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
-        spend_bundle = await did_wallet_2.create_attestment(coin.name(), ph)
         info = await did_wallet_2.get_info_for_recovery()
+        message_spend_bundle = await did_wallet_2.create_attestment(coin.name(), ph)
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
         info = "(" + info + ")"
 
-        await did_wallet.recovery_spend(coin, ph, info, spend_bundle)
+        await did_wallet.recovery_spend(coin, ph, info, message_spend_bundle)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -419,7 +427,6 @@ class TestWalletSimulator:
         await self.time_out_assert(15, wallet.get_unconfirmed_balance, 544000000000000)
         await self.time_out_assert(15, did_wallet.get_confirmed_balance, 0)
         await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 0)
-    """
 
     @pytest.mark.asyncio
     async def test_make_double_output(self, two_wallet_nodes):
