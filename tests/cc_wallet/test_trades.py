@@ -146,8 +146,8 @@ class TestCCTrades:
 
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 30)
-        trade = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
-        assert TradeStatus(trade.status) is TradeStatus.CONFIRMED
+        trade_2 = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
+        assert TradeStatus(trade_2.status) is TradeStatus.CONFIRMED
 
     @pytest.mark.asyncio
     async def test_cc_trade_with_multiple_colours(self, wallets_prefarm):

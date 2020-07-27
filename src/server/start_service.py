@@ -191,6 +191,7 @@ class Service:
 
     async def run(self):
         self.start()
+        await self._task
         await self.wait_closed()
         return 0
 
