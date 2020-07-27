@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from secrets import token_bytes
 
 import pytest
 
@@ -60,7 +61,8 @@ class TestCCWalletBackup:
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
         # Write backup to file
-        file_path = Path("backup_file")
+        filename = f"test-backup-{token_bytes(16).hex()}"
+        file_path = Path(filename)
         await wallet_node.wallet_state_manager.create_wallet_backup(file_path)
 
         # Close wallet and restart
@@ -81,3 +83,5 @@ class TestCCWalletBackup:
         cc_wallet_from_backup = wallet_node.wallet_state_manager.wallets[2]
 
         await time_out_assert(15, cc_wallet_from_backup.get_confirmed_balance, 100)
+        if file_path.exists():
+            file_path.unlink()
