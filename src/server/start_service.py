@@ -198,9 +198,6 @@ class Service:
     def stop(self):
         if not self._is_stopping:
             self._is_stopping = True
-            self._log.info("Calling service stop callback")
-            if self._stop_callback:
-                self._stop_callback()
             self._log.info("Closing server sockets")
             for _ in self._server_sockets:
                 _.close()
@@ -221,6 +218,11 @@ class Service:
 
         self._log.info("Waiting for ChiaServer to be closed")
         await self._server.await_closed()
+
+        self._log.info("Calling service stop callback")
+        if self._stop_callback:
+            self._stop_callback()
+
         if self._rpc_task:
 
             self._log.info("Waiting for RPC server")
