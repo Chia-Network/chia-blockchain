@@ -77,7 +77,7 @@ const UIPart = props => {
       <div className={classes.grid_wrap}>
         <Container className={classes.grid} maxWidth="lg">
           <Typography className={classes.title} component="h4" variant="h4">
-            Restore From Backup
+            Restore Smart Wallets From Backup
           </Typography>
         </Container>
       </div>
