@@ -526,7 +526,7 @@ class WalletNode:
                         await asyncio.wait_for(aw, timeout=sleep_interval)
                         break
                     # https://github.com/python/cpython/pull/13528
-                    except (concurrent.futures.TimeoutError,asyncio.TimeoutError):
+                    except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
                         total_time_slept += sleep_interval
                         self.log.info("Did not receive desired headers")
 
@@ -637,7 +637,7 @@ class WalletNode:
                 try:
                     await asyncio.wait_for(future, timeout=sleep_interval)
                 # https://github.com/python/cpython/pull/13528
-                except (concurrent.futures.TimeoutError,asyncio.TimeoutError):
+                except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
                     try:
                         await future
                     except asyncio.CancelledError:
