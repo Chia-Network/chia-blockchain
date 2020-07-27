@@ -464,7 +464,7 @@ export const add_plot_directory_and_refresh = dir => {
     return async_api(dispatch, addPlotDirectory(dir), true).then(response => {
       if (response.data.success) {
         dispatch(getPlotDirectories());
-        return async_api(dispatch, refreshPlots(dir), false).then(response => {
+        return async_api(dispatch, refreshPlots(), false).then(response => {
           dispatch(closeProgress());
           dispatch(getPlots());
         });
@@ -482,12 +482,10 @@ export const remove_plot_directory_and_refresh = dir => {
       response => {
         if (response.data.success) {
           dispatch(getPlotDirectories());
-          return async_api(dispatch, refreshPlots(dir), false).then(
-            response => {
-              dispatch(closeProgress());
-              dispatch(getPlots());
-            }
-          );
+          return async_api(dispatch, refreshPlots(), false).then(response => {
+            dispatch(closeProgress());
+            dispatch(getPlots());
+          });
         } else {
           const error = response.data.error;
           dispatch(openDialog("Error", error));
