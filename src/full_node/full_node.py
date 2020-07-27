@@ -379,7 +379,8 @@ class FullNode:
                     phr.wait(), timeout=sleep_interval,
                 )
                 break
-            except concurrent.futures.TimeoutError:
+            # https://github.com/python/cpython/pull/13528
+            except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
                 total_time_slept += sleep_interval
                 self.log.warning("Did not receive desired header hashes")
 

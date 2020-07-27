@@ -19,6 +19,7 @@ for setuptools_scm/PEP 440 reasons.
 - Binary wheels for ARM64/aarch64 also build for python 3.7.
 - See and remove plot directories from the UI and command line.
 - You can now specify the memory buffer in UI.
+- Optimized MPIR for Sandybridge and Ivybridge CPUs under Windows
 
 ### Changed
 - `chia start wallet-server` changed to `chia start wallet`, for consistency.
@@ -36,6 +37,7 @@ the blspy/bls-signatures library.
 - Fixed spelling error for "folder" on Plot tab.
 - Various node dependency security vulnerabilities have been fixed.
 - Request peers was not returning currently connected peers older than 1 day.
+- Fixed timeout exception inheritance changes under python 3.8 (pull 13528)
 
 ### Deprecated
 - Removed legacy scripts such as chia-stop-server, chia-restart-harvester, etc.
@@ -85,7 +87,6 @@ Graphical installer. Try `./chia -h` from
 `~\AppData\Local\Chia-Blockchain\app-0.1.8\resources\app.asar.unpacked\daemon\`
 in Windows or
 `/Applications/Chia.app/Contents/Resources/app.asar.unpacked/daemon` on MacOS.
-
 
 ### Changed
 - Minor changes have been made across the repositories to better support

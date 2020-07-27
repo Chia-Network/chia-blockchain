@@ -64,7 +64,8 @@ class SyncBlocksProcessor:
                 try:
                     await asyncio.wait_for(future, timeout=self.SLEEP_INTERVAL)
                     break
-                except concurrent.futures.TimeoutError:
+                # https://github.com/python/cpython/pull/13528
+                except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
                     try:
                         await future
                     except asyncio.CancelledError:
