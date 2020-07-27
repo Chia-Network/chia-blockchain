@@ -127,16 +127,25 @@ def migrate_from(
     print(f"\n{old_root} found")
     print(f"Copying files from {old_root} to {new_root}\n")
     not_found = []
-    for f in manifest:
-        old_path = old_root / f
-        new_path = new_root / f
+
+    def copy_files_rec(old_path: Path, new_path: Path):
         if old_path.is_file():
             print(f"{new_path}")
             mkdir(new_path.parent)
             shutil.copy(old_path, new_path)
+        elif old_path.is_dir():
+            for old_path_child in old_path.iterdir():
+                new_path_child = new_path / old_path_child.name
+                copy_files_rec(old_path_child, new_path_child)
         else:
             not_found.append(f)
             print(f"{old_path} not found, skipping")
+
+    for f in manifest:
+        old_path = old_root / f
+        new_path = new_root / f
+        copy_files_rec(old_path, new_path)
+
     # update config yaml with new keys
     config: Dict = load_config(new_root, "config.yaml")
     config_str: str = initial_config_file("config.yaml")
@@ -146,9 +155,6 @@ def migrate_from(
 
     save_config(new_root, "config.yaml", config)
 
-    # migrate plots
-    # for now, we simply leave them where they are
-    # and make what may have been relative paths absolute
     if "config/trusted.key" in not_found or "config/trusted.key" in not_found:
         initialize_ssl(new_root)
 
@@ -196,16 +202,13 @@ def chia_init(root_path: Path):
 
     # These are the files that will be migrated
     MANIFEST: List[str] = [
-        "config/config.yaml",
-        "config/trusted.crt",
-        "config/trusted.key",
+        "config",
+        "db",
+        "wallet",
     ]
 
     PATH_MANIFEST_LIST: List[Tuple[Path, List[str]]] = [
-        (Path(os.path.expanduser("~/.chia/beta-%s" % _)), MANIFEST)
-        for _ in [
-            # "1.0b8",
-        ]
+        (Path(os.path.expanduser("~/.chia/beta-%s" % _)), MANIFEST) for _ in ["1.0b8"]
     ]
 
     for old_path, manifest in PATH_MANIFEST_LIST:
