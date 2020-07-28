@@ -428,6 +428,12 @@ class WebSocketServer:
         id = wallet.get_my_ID()
         return {"success": True, "id": id}
 
+    async def did_get_recovery_list(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        recovery_list = wallet.did_info.backup_ids
+        return {"success": True, "recover_list": recovery_list}
+
     async def did_recovery_spend(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
