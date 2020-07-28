@@ -440,6 +440,7 @@ class RLWallet(AbstractWallet):
         return spends
 
     async def rl_generate_signed_transaction(self, amount, to_puzzle_hash):
+        self.rl_coin_record = await self.get_rl_coin_record()
         if amount > self.rl_coin_record.coin.amount:
             return None
         transaction = await self.rl_generate_unsigned_transaction(
@@ -629,3 +630,7 @@ class RLWallet(AbstractWallet):
         amount = uint64(data["amount"])
         puzzle_hash = bytes32(bytes.fromhex(data["puzzle_hash"]))
         return await self.rl_generate_signed_transaction(amount, puzzle_hash)
+
+    async def push_transaction(self, tx: TransactionRecord) -> None:
+        """ Use this API to send transactions. """
+        await self.wallet_state_manager.add_pending_transaction(tx)

@@ -50,10 +50,10 @@ class TestCCWallet:
         api_admin = WalletRpcApi(wallet_node)
         val = await api_admin.create_new_wallet({'wallet_type': 'rl_wallet',
                                                  'rl_type': 'admin',
-                                                 'interval': 3,
-                                                 'limit': 100,
+                                                 'interval': 2,
+                                                 'limit': 1,
                                                  'pubkey': pubkey,      
-                                                 'amount': 1000})
+                                                 'amount': 100})
         assert isinstance(val, dict)
         assert val['success']
         assert val['type'] == 'RATE_LIMITED'
@@ -63,15 +63,18 @@ class TestCCWallet:
         origin = val['origin']
 
         val = await api_user.rl_set_user_info({'wallet_id': 2,
-                                               'interval': 3,
-                                               'limit': 100,
+                                               'interval': 2,
+                                               'limit': 1,
                                                'origin': origin,
                                                'admin_pubkey': admin_pubkey})
         assert val['success']
+
+        for i in range(0, 2*num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
 
         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
         puzzle_hash = await receiving_wallet.get_new_puzzlehash()
         val = await api_user.send_transaction({'wallet_id': 2,
                                                'amount': 1,
                                                'puzzle_hash': puzzle_hash.hex()})
-        assert val['success']
+        assert val['status'] == 'SUCCESS'
