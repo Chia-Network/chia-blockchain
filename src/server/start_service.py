@@ -76,7 +76,7 @@ def create_periodic_introducer_poll_task(
             if connection.connection_type == NodeType.INTRODUCER:
                 global_connections.close(connection)
 
-        await asyncio.sleep(5)
+        await asyncio.sleep(peer_connect_interval)
 
     async def connect_to_peers():
         next_feeler = poisson_next_send(time.time() * 1000 * 1000, 120)
@@ -107,13 +107,11 @@ def create_periodic_introducer_poll_task(
             # * Only make a feeler connection once every few minutes.
 
             is_feeler = False
-
-            if _num_needed_peers() > 0:
+            has_collision = False
+            if _num_needed_peers() == 0:
                 if time.time() * 1000 * 1000 > next_feeler:
                     next_feeler = poisson_next_send(time.time() * 1000 * 1000, 120)
                     is_feeler = True
-                else:
-                    continue
 
             address_manager = global_connections.address_manager
             await address_manager.resolve_tried_collisions()
@@ -122,11 +120,10 @@ def create_periodic_introducer_poll_task(
             got_peer = False
             while not got_peer:
                 info: Optional[ExtendedPeerInfo] = await address_manager.select_tried_collision()
-                if (
-                    not is_feeler
-                    or info is None
-                ):
+                if info is None:
                     info = await address_manager.select_peer(is_feeler)
+                else:
+                    has_collision = True
                 if info is None:
                     break
                 # Require outbound connections, other than feelers, to be to distinct network groups.
@@ -148,9 +145,17 @@ def create_periodic_introducer_poll_task(
                 got_peer = True
 
             disconnect_after_handshake = is_feeler
-            if _num_needed_peers() > 0:
+            if _num_needed_peers() == 0:
                 disconnect_after_handshake = True
-            if addr is not None:
+            initiate_connection = (
+                _num_needed_peers() > 0
+                or has_collision
+                or is_feeler
+            )
+            if (
+                addr is not None
+                and initiate_connection
+            ):
                 asyncio.create_task(server.start_client(addr, None, None, disconnect_after_handshake))
             await asyncio.sleep(peer_connect_interval)
 
