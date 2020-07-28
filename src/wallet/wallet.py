@@ -349,7 +349,6 @@ class Wallet:
             fee = uint64(0)
 
         puzzle_hash = bytes32(bytes.fromhex(data["puzzle_hash"]))
-
         return await self.generate_signed_transaction(amount, puzzle_hash, fee)
 
     async def generate_signed_transaction(

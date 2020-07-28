@@ -18,6 +18,8 @@ from src.types.BLSSignature import BLSSignature
 from src.types.spend_bundle import SpendBundle
 from src.wallet.transaction_record import TransactionRecord
 from clvm import EvalError
+from src.wallet.BLSPrivateKey import BLSPrivateKey
+from src.util.hash import std_hash
 
 
 @pytest.fixture(scope="module")
@@ -499,3 +501,130 @@ class TestWalletSimulator:
             assert e.args == ('clvm raise',)
         else:
             assert False
+
+    @pytest.mark.asyncio
+    async def test_make_fake_coin(self, two_wallet_nodes):
+        num_blocks = 10
+        full_nodes, wallets = two_wallet_nodes
+        full_node_1, server_1 = full_nodes[0]
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
+                for i in range(1, num_blocks - 2)
+            ]
+        )
+
+        await self.time_out_assert(15, wallet.get_confirmed_balance, funds)
+
+        did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
+            wallet_node.wallet_state_manager, wallet, uint64(100)
+        )
+        ph2 = await wallet2.get_new_puzzlehash()
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
+        coins = await did_wallet.select_coins(1)
+        coin = coins.pop()
+
+        # copy info for later
+        parent_info = await did_wallet.get_parent_for_coin(coin)
+        id_puzhash = coin.puzzle_hash
+
+        await did_wallet.create_spend(ph)
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+        await self.time_out_assert(15, did_wallet.get_confirmed_balance, 0)
+        await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 0)
+
+        tx_record = await wallet.generate_signed_transaction(100, id_puzhash)
+        await wallet.push_transaction(tx_record)
+
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+
+        await self.time_out_assert(15, wallet.get_confirmed_balance, 399999999999900)
+        await self.time_out_assert(15, wallet.get_unconfirmed_balance, 399999999999900)
+
+        coins = await did_wallet.select_coins(1)
+        assert len(coins) >= 1
+
+        coin = coins.pop()
+
+        # Write spend by hand
+        # innerpuz solution is (mode amount new_puz identity my_puz)
+        innersol = f"(0 {coin.amount} 0x{ph} 0x{coin.name()} 0x{coin.puzzle_hash})"
+        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
+        innerpuz_str = did_wallet.did_info.current_inner
+        full_puzzle: str = did_wallet_puzzles.create_fullpuz(
+            Program(binutils.assemble(innerpuz_str)).get_tree_hash(),
+            did_wallet.did_info.my_core,
+        )
+
+        fullsol = f"(0x{Program(binutils.assemble(did_wallet.did_info.my_core)).get_tree_hash()} \
+(0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount})\
+{coin.amount} {innerpuz_str} {innersol})"
+
+        list_of_solutions = [
+            CoinSolution(
+                coin,
+                clvm.to_sexp_f(
+                    [
+                        Program(binutils.assemble(full_puzzle)),
+                        Program(binutils.assemble(fullsol)),
+                    ]
+                ),
+            )
+        ]
+        # sign for AGG_SIG_ME
+        message = std_hash(bytes(ph) + bytes(coin.name()))
+        pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
+        index = await did_wallet.wallet_state_manager.puzzle_store.index_for_pubkey(
+            pubkey
+        )
+        private = did_wallet.wallet_state_manager.private_key.private_child(
+            index
+        ).get_private_key()
+        pk = BLSPrivateKey(private)
+        signature = pk.sign(message)
+        assert signature.validate([signature.PkMessagePair(pubkey, message)])
+        sigs = [signature]
+        aggsig = BLSSignature.aggregate(sigs)
+        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+
+        did_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=ph,
+            amount=uint64(coin.amount),
+            fee_amount=uint64(0),
+            incoming=False,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=did_wallet.wallet_info.id,
+            sent_to=[],
+        )
+
+        await did_wallet.standard_wallet.push_transaction(did_record)
+
+        await self.time_out_assert(15, wallet.get_confirmed_balance, 399999999999900)
+        await self.time_out_assert(15, wallet.get_unconfirmed_balance, 399999999999900)
+        ph2 = Program(binutils.assemble("(q ())")).get_tree_hash()
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
+        # It ends in 900 so it's not gone through
+        # Assert coin ID is failing
+        await self.time_out_assert(15, wallet.get_confirmed_balance, 431999999999900)
+        await self.time_out_assert(15, wallet.get_unconfirmed_balance, 431999999999900)

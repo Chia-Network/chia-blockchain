@@ -376,7 +376,10 @@ class WebSocketServer:
                 return response
         elif request["wallet_type"] == "did_wallet":
             did_wallet = await DIDWallet.create_new_did_wallet(
-                wallet_state_manager, main_wallet, request["amount"], request["backup_ids"]
+                wallet_state_manager,
+                main_wallet,
+                request["amount"],
+                request["backup_ids"],
             )
             response = {"success": True, "type": did_wallet.wallet_info.type.name}
 
@@ -434,14 +437,18 @@ class WebSocketServer:
         for i in request["info_list"]:
             info = info + i
         info = info + ")"
-        success = await wallet.recovery_spend(request["coin"], request["puzhash"], info, message_spend_bundle)
+        success = await wallet.recovery_spend(
+            request["coin"], request["puzhash"], info, message_spend_bundle
+        )
         return {"success": success}
 
     async def did_create_attest(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         info = await wallet.get_info_for_recovery()
-        spend_bundle = await wallet.create_attestment(request["coin_name"], request["puzhash"])
+        spend_bundle = await wallet.create_attestment(
+            request["coin_name"], request["puzhash"]
+        )
         return {"success": True, "message_spend_bundle": spend_bundle, "info": info}
 
     async def rl_set_admin_info(self, request):
