@@ -8,8 +8,6 @@ from secrets import token_bytes
 from typing import Optional, List, Tuple, Any, Dict
 
 import json
-
-import clvm
 from blspy import PrivateKey, AugSchemeMPL, G1Element
 from clvm_tools import binutils
 from src.types.coin import Coin
@@ -439,8 +437,6 @@ class RLWallet(AbstractWallet):
         )
 
         spends.append((puzzle, CoinSolution(coin, solution)))
-        #breakpoint()
-        #o = clvm.run_program(puzzle, solution)
         return spends
 
     async def rl_generate_signed_transaction(self, amount, to_puzzle_hash):
