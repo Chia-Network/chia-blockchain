@@ -83,7 +83,7 @@ class TestCCWallet:
         tx_record = await rl_user.rl_generate_signed_transaction(1, 32 * b"\0")
         now = uint64(int(time.time()))
 
-        wallet_node_1.wallet_state_manager.main_wallet.push_transaction(tx_record)
+        await wallet_node_1.wallet_state_manager.main_wallet.push_transaction(tx_record)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
