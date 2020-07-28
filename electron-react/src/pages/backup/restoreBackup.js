@@ -216,9 +216,15 @@ const WalletRow = props => {
 
   return (
     <Box display="flex" style={{ minWidth: "100%" }}>
-      <Box flexGrow={1}>{id}</Box>
-      <Box flexGrow={1}>{name}</Box>
-      <Box flexGrow={1}>{type}</Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        {id}
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        {name}
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        {type}
+      </Box>
     </Box>
   );
 };
@@ -226,9 +232,15 @@ const WalletRow = props => {
 const WalletHeader = () => {
   return (
     <Box display="flex" style={{ minWidth: "100%" }}>
-      <Box flexGrow={1}>id</Box>
-      <Box flexGrow={1}>name</Box>
-      <Box flexGrow={1}>type</Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        id
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        name
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        type
+      </Box>
     </Box>
   );
 };

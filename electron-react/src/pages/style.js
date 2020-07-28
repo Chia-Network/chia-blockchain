@@ -98,6 +98,9 @@ const myStyle = makeStyles(theme => ({
   whiteP: {
     color: "white",
     fontSize: "18px"
+  },
+  column_three: {
+    width: "33%"
   }
 }));
 
