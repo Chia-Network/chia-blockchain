@@ -52,8 +52,8 @@ class PeerInfo(Streamable):
                 self.host
             )
             ipv4 = 0
-        if ipv4 == 0:
-            group = bytes([0]) + ip.packed[:2]
+        if ipv4:
+            group = bytes([1]) + ip.packed[:2]
         else:
-            group = bytes([1]) + ip.packed[:4]
+            group = bytes([0]) + ip.packed[:4]
         return group
