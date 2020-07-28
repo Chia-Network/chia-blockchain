@@ -63,7 +63,6 @@ def rl_puzzle_for_pk(
     WHOLE_PUZZLE_WITH_CLAWBACK = (
         f"((c (i (= (f (a)) (q 3)) (q {CLAWBACK}) (q {WHOLE_PUZZLE})) (a)))"
     )
-    print(f"PUZZLE: {WHOLE_PUZZLE_WITH_CLAWBACK}")
     return Program(binutils.assemble(WHOLE_PUZZLE_WITH_CLAWBACK))
 
 
@@ -122,7 +121,6 @@ def solution_for_rl(
         f"(1 0x{my_parent_id.hex()} 0x{my_puzzlehash.hex()} {my_amount} 0x{out_puzzlehash.hex()} {out_amount}"
         f" {min_block_count} 0x{my_parent_parent_id.hex()} {parent_amount})"
     )
-    print(f"SOLUTION: {solution}")
     return Program(binutils.assemble(solution))
 
 
