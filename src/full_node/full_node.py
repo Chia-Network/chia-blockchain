@@ -124,6 +124,9 @@ class FullNode:
             self.broadcast_uncompact_task = asyncio.create_task(
                 self.broadcast_uncompact_blocks(uncompact_interval)
             )
+        self.peer_gossip_task = asyncio.create_task(
+            self.periodically_peer_gossip()
+        )
 
         for ((_, _), block) in (
             await self.full_node_store.get_unfinished_blocks()
@@ -286,6 +289,24 @@ class FullNode:
             yield msg
         async for msg in self._send_tips_to_farmers(Delivery.RESPOND):
             yield msg
+        yield OutboundMessage(
+            NodeType.FULL_NODE,
+            Message("request_peers", full_node_protocol.RequestPeers()),
+            Delivery.RESPOND,
+        )
+
+    async def periodically_peer_gossip(self):
+        while True:
+            # Randomly choose to get peers from 12 to 24 hours.
+            sleep_interval = random.randint(3600 * 12, 3600 * 24)
+            await asyncio.sleep(sleep_interval)
+            outbound_message = OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("request_peers", full_node_protocol.RequestPeers()),
+                Delivery.BROADCAST,
+            )
+            if self.server is not None:
+                self.server.push_message(outbound_message)
 
     def _num_needed_peers(self) -> int:
         assert self.global_connections is not None

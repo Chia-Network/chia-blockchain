@@ -8,7 +8,7 @@ from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint8, uint32, uint64, uint128
-
+from src.types.peer_info import PeerInfo
 
 """
 Protocol between full nodes.
@@ -168,3 +168,17 @@ class RejectHeaderBlockRequest:
 @cbor_message
 class RequestMempoolTransactions:
     filter: bytes
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestPeers:
+    """
+    Return full list of peers
+    """
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondPeers:
+    peer_list: List[PeerInfo]

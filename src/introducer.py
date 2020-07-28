@@ -8,7 +8,7 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.types.sized_bytes import bytes32
 from src.server.server import ChiaServer
 from src.util.api_decorators import api_request
-
+from src.types.peer_info import PeerInfo
 log = logging.getLogger(__name__)
 
 
@@ -85,7 +85,11 @@ class Introducer:
             if peer.get_hash() not in self.vetted:
                 continue
             if self.vetted[peer.get_hash()]:
-                peers.append(peer)
+                peer_without_timestamp = PeerInfo(
+                    peer.host,
+                    peer.port,
+                )
+                peers.append(peer_without_timestamp)
 
             if len(peers) >= max_peers:
                 break
