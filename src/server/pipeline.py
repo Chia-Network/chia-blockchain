@@ -4,7 +4,6 @@ import logging
 import random
 import ssl
 import time
-from src.protocols.full_node_protocol import full_node_protocol
 from typing import Any, AsyncGenerator, List, Optional, Tuple
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 from src.types.peer_info import PeerInfo
@@ -22,6 +21,7 @@ from src.types.sized_bytes import bytes32
 from src.util import partial_func
 from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
+from src.protocols import full_node_protocol
 import traceback
 
 
