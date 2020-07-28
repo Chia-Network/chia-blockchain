@@ -517,7 +517,9 @@ class DIDWallet:
                 ),
             )
         ]
-        message_spend = did_wallet_puzzles.create_spend_for_mesasage(coin.name(), identity, newpuz)
+        message_spend = did_wallet_puzzles.create_spend_for_mesasage(
+            coin.name(), identity, newpuz
+        )
         # # spend the message coin
         # list_of_solutions.append(
         #     message_spend
