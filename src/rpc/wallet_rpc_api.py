@@ -79,8 +79,8 @@ class WalletRpcApi:
         rl_user = self.service.wallet_state_manager.wallets[wallet_id]
         origin: Coin = request["origin"];
         success = await rl_user.set_user_info(
-            request["interval"],
-            request["limit"],
+            uint64(request["interval"]),
+            uint64(request["limit"]),
             origin.parent_coin_info.hex(),
             origin.puzzle_hash.hex(),
             origin.amount,
