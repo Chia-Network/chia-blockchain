@@ -449,7 +449,7 @@ class WebSocketServer:
             info = info + i
         info = info + ")"
         success = await wallet.recovery_spend(
-            request["coin"], request["puzhash"], info, message_spend_bundle
+            request["coin_name"], request["puzhash"], info, message_spend_bundle
         )
         return {"success": success}
 
