@@ -6,7 +6,7 @@ import string
 from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
-from src.util.clvm import run_program
+from src.util.clvm import run_program, SExp
 
 
 # This is for spending an existing coloured coin
@@ -37,11 +37,29 @@ def cc_make_core(originID):
 
 
 def cc_make_eve_solution(parent_id: bytes32, full_puzzlehash: bytes32, amount: uint64):
-    sol = f"(() 0x{parent_id} {amount} 0x{full_puzzlehash} () () ())"
-    return Program(binutils.assemble(sol))
+    sol = [0, parent_id, amount, full_puzzlehash, 0, 0, 0]
+    return Program.to(sol)
 
 
-# This is for spending a recieved coloured coin
+def solution_parts(s: SExp):
+    names = "corehash parent_info amount inner_puzzle inner_puzzle_solution auditor_info aggees".split()
+    d = dict(zip(names, s.as_iter()))
+    return d
+
+
+def inner_puzzle(solution: SExp):
+    return solution_parts(solution)["inner_puzzle"]
+
+
+def inner_puzzle_solution(solution: SExp):
+    return solution_parts(solution)["inner_puzzle_solution"]
+
+
+def is_ephemeral_solution(s: SExp):
+    return not solution_parts(s)["parent_info"].listp()
+
+
+# This is for spending a received coloured coin
 def cc_make_solution(
     core: str,
     parent_info: Tuple[bytes32, bytes32, uint64],
@@ -83,16 +101,27 @@ def cc_make_solution(
     return Program(binutils.assemble(sol))
 
 
-def get_genesis_from_puzzle(puzzle: str):
-    return puzzle[-2687:].split(")")[0]
+def extract_hex_64(s: str, idx: int = -1):
+    try:
+        items = [_.split(")")[0] for _ in s.split() if _.startswith("0x")]
+        r = items[idx][2:]
+        if len(r) == 64:
+            return r
+    except Exception:
+        pass
+    return None
+
+
+def get_genesis_from_puzzle(puzzle: SExp):
+    return extract_hex_64(binutils.disassemble(puzzle))
 
 
 def get_genesis_from_core(core: str):
-    return core[-2678:].split(")")[0]
+    return extract_hex_64(core)
 
 
 def get_innerpuzzle_from_puzzle(puzzle: str):
-    return puzzle[9:75]
+    return extract_hex_64(puzzle, idx=0)
 
 
 # Make sure that a generated E lock is spent in the spendbundle
@@ -136,7 +165,7 @@ def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
 
 
 def get_output_amount_for_puzzle_and_solution(puzzle, solution):
-    conditions = run_program(puzzle, solution)[1]
+    cost, conditions = run_program(puzzle, solution)
     amount = 0
     while conditions != b"":
         opcode = conditions.first().first()
@@ -156,15 +185,21 @@ def get_output_amount_for_puzzle_and_solution(puzzle, solution):
 # inspect puzzle and check it is a CC puzzle
 def check_is_cc_puzzle(puzzle: Program):
     puzzle_string = binutils.disassemble(puzzle)
-    if len(puzzle_string) < 4000:
+    inner_puzzle = extract_hex_64(puzzle_string, idx=0)
+    if inner_puzzle is None:
         return False
-    inner_puzzle = puzzle_string[11:75]
     if all(c in string.hexdigits for c in inner_puzzle) is not True:
         return False
-    genesisCoin = get_genesis_from_puzzle(puzzle_string)
+    genesisCoin = get_genesis_from_puzzle(puzzle)
     if all(c in string.hexdigits for c in genesisCoin) is not True:
         return False
-    if cc_make_puzzle(inner_puzzle, cc_make_core(genesisCoin)) == puzzle:
-        return True
-    else:
-        return False
+    return cc_make_puzzle(inner_puzzle, cc_make_core(genesisCoin)) == puzzle
+
+
+def update_auditors_in_solution(solution: SExp, auditor_info):
+    old_solution = binutils.disassemble(solution)
+    # auditor is (primary_input, innerpuzzlehash, amount)
+    new_solution = old_solution.replace(
+        "))) ()) () ()))", f"))) ()) (0x{auditor_info[0]} 0x{auditor_info[1]} {auditor_info[2]}) ()))"
+    )
+    return binutils.assemble(new_solution)

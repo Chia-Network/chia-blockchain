@@ -1,7 +1,5 @@
 from typing import Tuple, Optional, Dict
 
-from clvm_tools import binutils
-
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.wallet.cc_wallet import cc_wallet_puzzles
@@ -52,14 +50,11 @@ def get_discrepancies_for_spend_bundle(
 
             # work out the deficits between coin amount and expected output for each
             if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
-                parent_info = binutils.disassemble(solution.rest().first()).split(" ")
-                if len(parent_info) > 1:
-                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(
-                        binutils.disassemble(puzzle)
-                    )
+                if not cc_wallet_puzzles.is_ephemeral_solution(solution):
+                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(puzzle)
                     # get puzzle and solution
-                    innerpuzzlereveal = solution.rest().rest().rest().first()
-                    innersol = solution.rest().rest().rest().rest().first()
+                    innerpuzzlereveal = cc_wallet_puzzles.inner_puzzle(solution)
+                    innersol = cc_wallet_puzzles.inner_puzzle_solution(solution)
                     # Get output amounts by running innerpuzzle and solution
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
                         innerpuzzlereveal, innersol
