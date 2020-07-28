@@ -410,13 +410,10 @@ class TradeManager:
 
             # work out the deficits between coin amount and expected output for each
             if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
-                parent_info = binutils.disassemble(solution.rest().first()).split(" ")
 
-                if len(parent_info) > 1:
+                if not cc_wallet_puzzles.is_ephemeral_solution(solution):
                     # Calculate output amounts
-                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(
-                        binutils.disassemble(puzzle)
-                    )
+                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(puzzle)
                     if colour not in wallets:
                         wallets[
                             colour
@@ -428,8 +425,8 @@ class TradeManager:
                     )
                     if coinsol.coin in [record.coin for record in unspent]:
                         return False, None, "can't respond to own offer"
-                    innerpuzzlereveal = solution.rest().rest().rest().first()
-                    innersol = solution.rest().rest().rest().rest().first()
+                    innerpuzzlereveal = cc_wallet_puzzles.inner_puzzle(solution)
+                    innersol = cc_wallet_puzzles.inner_puzzle_solution(solution)
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
                         innerpuzzlereveal, innersol
                     )
@@ -536,9 +533,6 @@ class TradeManager:
                 inner_hash,
                 auditor.amount,
             )
-            auditor_formatted = (
-                f"(0x{auditor.parent_coin_info} 0x{inner_hash} {auditor.amount})"
-            )
             core = cc_wallet_puzzles.cc_make_core(colour)
             parent_info = await wallets[colour].get_parent_for_coin(auditor)
 
@@ -606,13 +600,9 @@ class TradeManager:
             # Tweak the offer's solution to include the new auditor
             for cc_coinsol_out in cc_coinsol_outamounts[colour]:
                 cc_coinsol = cc_coinsol_out[0]
-                offer_sol = binutils.disassemble(cc_coinsol.solution)
-                # auditor is (primary_input, innerpuzzlehash, amount)
-                offer_sol = offer_sol.replace(
-                    "))) ()) () ()))", f"))) ()) {auditor_formatted} ()))"
-                )
+                new_solution = cc_wallet_puzzles.update_auditors_in_solution(cc_coinsol.solution, auditor_info)
                 new_coinsol = CoinSolution(
-                    cc_coinsol.coin, binutils.assemble(offer_sol)
+                    cc_coinsol.coin, new_solution
                 )
                 coinsols.append(new_coinsol)
 
