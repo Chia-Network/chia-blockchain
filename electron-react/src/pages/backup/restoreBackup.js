@@ -17,7 +17,7 @@ import {
   login_and_skip_action,
   get_backup_info_action
 } from "../../modules/message";
-import { Paper } from "@material-ui/core";
+import { Paper, Grid } from "@material-ui/core";
 import {
   changeBackupView,
   presentMain,
@@ -169,20 +169,37 @@ const BackupDetails = () => {
       <div className={classes.dragContainer}>
         <Paper
           className={classes.drag}
-          style={{ position: "relative", width: "80%", margin: "auto" }}
+          style={{
+            position: "relative",
+            width: "80%",
+            margin: "auto",
+            padding: "20px"
+          }}
         >
-          <Box display="flex" style={{ minWidth: "100%" }}>
-            <Box>Date: </Box>
-            <Box>{date}</Box>
-          </Box>
-          <Box display="flex" style={{ minWidth: "100%" }}>
-            <Box>Version: </Box>
-            <Box>{version}</Box>
-          </Box>
-          <Box display="flex" style={{ minWidth: "100%" }}>
-            <Box>Fingerprint: </Box>
-            <Box>{backup_fingerprint}</Box>
-          </Box>
+          <Grid container spacing={0} style={{ marginBottom: 10 }}>
+            <Grid item xs={6}>
+              <Typography variant="subtitle1">Backup info:</Typography>
+              <Box display="flex" style={{ minWidth: "100%" }}>
+                <Box flexGrow={1}>Date: </Box>
+                <Box className={classes.align_right} flexGrow={1}>
+                  {date}
+                </Box>
+              </Box>
+              <Box display="flex" style={{ minWidth: "100%" }}>
+                <Box flexGrow={1}>Version: </Box>
+                <Box className={classes.align_right} flexGrow={1}>
+                  {version}
+                </Box>
+              </Box>
+              <Box display="flex" style={{ minWidth: "100%" }}>
+                <Box flexGrow={1}>Fingerprint: </Box>
+                <Box className={classes.align_right} flexGrow={1}>
+                  {backup_fingerprint}
+                </Box>
+              </Box>
+            </Grid>
+          </Grid>
+          <Typography variant="subtitle1">Smart wallets</Typography>
           <WalletHeader></WalletHeader>
           {wallets.map(wallet => (
             <WalletRow wallet={wallet}></WalletRow>
@@ -213,6 +230,7 @@ const WalletRow = props => {
   const id = wallet.id;
   const name = wallet.name;
   const type = wallet.type_name;
+  const classes = myStyle();
 
   return (
     <Box display="flex" style={{ minWidth: "100%" }}>
@@ -220,26 +238,34 @@ const WalletRow = props => {
         {id}
       </Box>
       <Box className={classes.column_three} flexGrow={1}>
-        {name}
+        <div className={classes.align_center}> {name}</div>
       </Box>
       <Box className={classes.column_three} flexGrow={1}>
-        {type}
+        <div className={classes.align_right}> {type}</div>
       </Box>
     </Box>
   );
 };
 
 const WalletHeader = () => {
+  const classes = myStyle();
+
   return (
     <Box display="flex" style={{ minWidth: "100%" }}>
       <Box className={classes.column_three} flexGrow={1}>
-        id
+        <Typography variant="subtitle2"> id</Typography>
       </Box>
       <Box className={classes.column_three} flexGrow={1}>
-        name
+        <div className={classes.align_center}>
+          {" "}
+          <Typography variant="subtitle2"> name</Typography>
+        </div>
       </Box>
       <Box className={classes.column_three} flexGrow={1}>
-        type
+        <div className={classes.align_right}>
+          {" "}
+          <Typography variant="subtitle2"> type</Typography>
+        </div>
       </Box>
     </Box>
   );
