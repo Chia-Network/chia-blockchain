@@ -375,10 +375,10 @@ class WebSocketServer:
                 response = {"success": True, "type": cc_wallet.wallet_info.type.name}
                 return response
         elif request["wallet_type"] == "did_wallet":
-            await DIDWallet.create_new_did_wallet(
+            did_wallet = await DIDWallet.create_new_did_wallet(
                 wallet_state_manager, main_wallet, request["amount"], request["backup_ids"]
             )
-            response = {"success": True}
+            response = {"success": True, "type": did_wallet.wallet_info.type.name}
 
         response = {"success": False}
         return response
@@ -773,6 +773,16 @@ class WebSocketServer:
             return await self.rl_set_admin_info(data)
         elif command == "rl_set_user_info":
             return await self.rl_set_user_info(data)
+        elif command == "did_update_recovery_ids":
+            return await self.did_update_recovery_ids(data)
+        elif command == "did_spend":
+            return await self.did_spend(data)
+        elif command == "did_get_id":
+            return await self.did_get_id(data)
+        elif command == "did_recovery_spend":
+            return await self.did_recovery_spend(data)
+        elif command == "did_create_attest":
+            return await self.did_create_attest(data)
         elif command == "cc_set_name":
             return await self.cc_set_name(data)
         elif command == "cc_get_name":
