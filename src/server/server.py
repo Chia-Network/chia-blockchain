@@ -37,11 +37,12 @@ async def start_server(
 
     def add_connection_type(
         srw: Tuple[asyncio.StreamReader, asyncio.StreamWriter]
-    ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc]:
+    ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc, bool, bool]:
         ssl_object = srw[1].get_extra_info(name="ssl_object")
         peer_cert = ssl_object.getpeercert()
         self.log.info(f"Client authed as {peer_cert}")
-        return (srw[0], srw[1], on_connect)
+        # Inbound peer, not a feeler.
+        return (srw[0], srw[1], on_connect, False, False)
 
     srwt_aiter = map_aiter(add_connection_type, aiter)
 
@@ -122,6 +123,7 @@ class ChiaServer:
         target_node: PeerInfo,
         on_connect: OnConnectFunc = None,
         auth: bool = False,
+        is_feeler: bool = False,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
@@ -150,7 +152,7 @@ class ChiaServer:
             self.global_connections.peers.remove(target_node)
             return False
         if not self._srwt_aiter.is_stopped():
-            self._srwt_aiter.push(iter_to_aiter([(reader, writer, on_connect)]))
+            self._srwt_aiter.push(iter_to_aiter([(reader, writer, on_connect, True, is_feeler)]))
 
         ssl_object = writer.get_extra_info(name="ssl_object")
         peer_cert = ssl_object.getpeercert()
