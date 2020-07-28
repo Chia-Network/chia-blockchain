@@ -42,6 +42,7 @@ from src.wallet.did_wallet.did_wallet import DIDWallet
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.types.spend_bundle import SpendBundle
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -442,12 +443,13 @@ class WebSocketServer:
     async def did_recovery_spend(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
-        spend_bundle_list = request["spend_bundle_list"]
-        message_spend_bundle = spend_bundle_list.aggregate(spend_bundle_list)
+        spend_bundle_list = []
         info = "("
-        for i in request["info_list"]:
-            info = info + i
+        for i in request["spend_bundle_and_info_list"]:
+            spend_bundle_list.append(SpendBundle.from_bytes(bytes.fromhex(i[0])))
+            info = info + i[1]
         info = info + ")"
+        message_spend_bundle = spend_bundle_list.aggregate(spend_bundle_list)
         success = await wallet.recovery_spend(
             request["coin_name"], request["puzhash"], info, message_spend_bundle
         )
@@ -460,7 +462,7 @@ class WebSocketServer:
         spend_bundle = await wallet.create_attestment(
             request["coin_name"], request["puzhash"]
         )
-        return {"success": True, "message_spend_bundle": spend_bundle, "info": info}
+        return {"success": True, "message_spend_bundle": bytes(spend_bundle).hex(), "info": info}
 
     async def rl_set_admin_info(self, request):
         wallet_id = int(request["wallet_id"])
