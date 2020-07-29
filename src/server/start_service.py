@@ -5,6 +5,7 @@ import signal
 import math
 import random
 import time
+import sys, traceback
 
 from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 
@@ -149,8 +150,14 @@ def create_periodic_introducer_poll_task(
             ):
                 asyncio.create_task(server.start_client(addr, None, None, disconnect_after_handshake))
             await asyncio.sleep(peer_connect_interval)
+    
+    async def connect_to_peers_exception():
+        try:
+            await connect_to_peers()
+        except Exception as e:
+            traceback.print_exc(file=sys.stderr)
 
-    return asyncio.create_task(connect_to_peers())
+    return asyncio.create_task(connect_to_peers_exception())
 
 
 class Service:
