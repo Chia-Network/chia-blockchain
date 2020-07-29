@@ -34,6 +34,7 @@ from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from clvm_tools import binutils
+from dataclasses import replace
 
 # TODO: write tests based on wallet tests
 # TODO: {Matt} compatibility based on deriving innerpuzzle from derivation record
@@ -220,17 +221,15 @@ class CCWallet:
         return uint64(result)
 
     async def get_name(self):
-        return self.cc_info.my_colour_name
+        return self.wallet_info.name
 
     async def set_name(self, new_name: str):
-        cc_info: CCInfo = CCInfo(
-            self.cc_info.my_core, self.cc_info.parent_info, new_name,
-        )
-        await self.save_info(cc_info)
+        new_info = replace(self.wallet_info, name=new_name)
+        self.wallet_info = new_info
+        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
     async def get_colour(self):
-        colour = cc_wallet_puzzles.get_genesis_from_core(self.cc_info.my_core)
-        return colour
+        return self.cc_info.my_colour_name
 
     async def coin_added(
         self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin]
