@@ -307,6 +307,10 @@ class FullNode:
             )
             if self.server is not None:
                 self.server.push_message(outbound_message)
+            if self.global_connections is not None:
+                serialize_interval = random.randint(1800, 3600)
+                await asyncio.sleep(serialize_interval)
+                await self.global_connections.serialize()
 
     def _num_needed_peers(self) -> int:
         assert self.global_connections is not None
