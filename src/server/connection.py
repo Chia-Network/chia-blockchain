@@ -136,9 +136,9 @@ class PeerConnections:
             self.address_manager = None
         else:
             self.address_manager = AddressManager()
-            peer_table_path = config["peer_table_path"]
-            if os.path.exists(DEFAULT_ROOT_PATH / peer_table_path):
-                self.address_manager.unserialize(peer_table_path)
+            self.peer_table_path = config["peer_table_path"]
+            if os.path.exists(DEFAULT_ROOT_PATH / self.peer_table_path):
+                self.address_manager.unserialize(DEFAULT_ROOT_PATH / self.peer_table_path)
         for c in all_connections:
             if c.connection_type == NodeType.FULL_NODE:
                 self.peers.add(c.get_peer_info())
@@ -247,6 +247,11 @@ class PeerConnections:
         if self.address_manager is None:
             return 0
         return await self.address_manager.size()
+
+    async def serialize(self):
+        if os.path.exists(DEFAULT_ROOT_PATH / self.peer_table_path):
+            os.remove(DEFAULT_ROOT_PATH / self.peer_table_path)
+        await self.address_manager.serialize(DEFAULT_ROOT_PATH / self.peer_table_path)
 
     # Functions related to outbound and inbound connections for the full node.
     def count_outbound_connections(self):
