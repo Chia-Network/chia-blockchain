@@ -71,8 +71,9 @@ class Introducer:
         self.global_connections: PeerConnections = global_connections
 
     @api_request
-    async def request_peers(
-        self, request: RequestPeers
+    async def request_peers_with_peer_info(
+        self, request: RequestPeers,
+        peer_info: PeerInfo,
     ) -> AsyncGenerator[OutboundMessage, None]:
         max_peers = self.max_peers_to_send
         rawpeers = self.global_connections.peers.get_peers(
@@ -80,11 +81,15 @@ class Introducer:
         )
 
         peers = []
-
         for peer in rawpeers:
             if peer.get_hash() not in self.vetted:
                 continue
             if self.vetted[peer.get_hash()]:
+                if (
+                    peer.host == peer_info.host
+                    and peer.port == peer_info.port
+                ):
+                    continue
                 peer_without_timestamp = PeerInfo(
                     peer.host,
                     peer.port,
