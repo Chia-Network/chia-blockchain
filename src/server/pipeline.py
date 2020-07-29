@@ -435,7 +435,7 @@ async def handle_message(
                 return
 
         f_with_peer_name = getattr(api, full_message.function + "_with_peer_name", None)
-        f_with_peer_info =  getattr(api, full_message.function + "_with_peer_info", None)
+        f_with_peer_info = getattr(api, full_message.function + "_with_peer_info", None)
         if f_with_peer_name is not None:
             result = f_with_peer_name(full_message.data, connection.get_peername())
         elif f_with_peer_info is not None:
