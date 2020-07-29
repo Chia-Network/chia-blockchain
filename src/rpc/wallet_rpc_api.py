@@ -294,7 +294,8 @@ class WalletRpcApi:
                     cc_wallet: CCWallet = await CCWallet.create_new_cc(
                         wallet_state_manager, main_wallet, request["amount"]
                     )
-                    return {"success": True, "type": cc_wallet.wallet_info.type}
+                    colour = cc_wallet.get_colour()
+                    return {"success": True, "type": cc_wallet.wallet_info.type, "colour": colour}
                 except Exception as e:
                     log.error("FAILED {e}")
                     return {"success": False, "reason": str(e)}
