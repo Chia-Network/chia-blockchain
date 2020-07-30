@@ -72,7 +72,11 @@ async def setup_full_node(
     config = load_config(bt.root_path, "config.yaml", "full_node")
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
-    config["introducer_connect_interval"] = 10
+    if port == 21237:
+        config["introducer_connect_interval"] = 10
+    if port == 21238:
+        config["introducer_connect_interval"] = 17
+
     periodic_introducer_poll = None
     if introducer_port is not None:
         periodic_introducer_poll = (
