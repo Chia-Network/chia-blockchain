@@ -163,6 +163,15 @@ const useStyles = makeStyles(theme => ({
     paddingTop: theme.spacing(3),
     paddingBottom: theme.spacing(1)
   },
+  inputLeft: {
+    marginLeft: theme.spacing(3),
+    height: 56
+  },
+  inputRight: {
+    marginRight: theme.spacing(3),
+    marginLeft: theme.spacing(6),
+    height: 56
+  },
   walletContainer: {
     marginBottom: theme.spacing(5)
   },
@@ -194,7 +203,7 @@ const useStyles = makeStyles(theme => ({
     width: 50,
     overflowWrap: "break-word" /* Renamed property in CSS3 draft spec */
   },
-  amountField: {
+  leftField: {
     paddingRight: 20
   }
 }));
@@ -207,19 +216,24 @@ const IncompleteCard = props => {
   const data_parsed = JSON.parse(data);
   const pubkey = data_parsed["user_pubkey"]
 
-  console.log(pubkey)
-
   function copy() {
     navigator.clipboard.writeText(pubkey);
   }
 
   var interval_input = null;
   var chiaper_input = null;
-  var origin_id = null;
-  var admin_pubkey = null;
+  var origin_id_input = null;
+  var admin_pubkey_input = null;
 
   function submit() {
-    dispatch(rl_set_user_info(id, interval_input, chiaper_input, origin_id, admin_pubkey))
+    const user_sub_interval = interval_input.value;
+    const interval_value = parseInt(Number(user_sub_interval));
+    const user_sub_chiaper = chiaper_input.value;
+    const chiaper_value = parseInt(Number(user_sub_chiaper));
+    const user_sub_origin_id = origin_id_input.value;
+    const user_sub_admin_pubkey = admin_pubkey_input.value
+    console.log(id, interval_value, chiaper_value, user_sub_origin_id, user_sub_admin_pubkey)
+    dispatch(rl_set_user_info(id, interval_value, chiaper_value, user_sub_origin_id, user_sub_admin_pubkey))
   }
 
   const classes = useStyles();
@@ -278,21 +292,21 @@ const IncompleteCard = props => {
           </div>
           <div className={classes.setupSection}>
             <Box display="flex">
-              <Box flexGrow={1}>
+              <Box flexGrow={6}>
                 <Typography variant="subtitle1">
                   Spending Interval Length
                 </Typography>
               </Box>
-              <Box flexGrow={1}>
+              <Box flexGrow={6}>
                 <Typography variant="subtitle1">
                   Spendable Amount Per Interval
                 </Typography>
               </Box>
             </Box>
           </div>
-          <div className={classes.setupSection}>
+          <div className={classes.cardSubSection}>
             <Box display="flex">
-              <Box flexGrow={1}>
+              <Box flexGrow={6}>
                 <TextField
                   id="filled-secondary"
                   variant="filled"
@@ -301,14 +315,17 @@ const IncompleteCard = props => {
                   inputRef={input => {
                     interval_input = input;
                   }}
+                  className={classes.leftField}
+                  margin="normal"
                   label="Interval"
                 />
               </Box>
-              <Box flexGrow={1}>
+              <Box flexGrow={6}>
                 <TextField
                   id="filled-secondary"
                   variant="filled"
                   color="secondary"
+                  margin="normal"
                   fullWidth
                   inputRef={input => {
                     chiaper_input = input;
@@ -341,7 +358,7 @@ const IncompleteCard = props => {
                   color="secondary"
                   fullWidth
                   inputRef={input => {
-                    origin_id = input;
+                    origin_id_input = input;
                   }}
                   label="Origin ID"
                 />
@@ -353,7 +370,7 @@ const IncompleteCard = props => {
                   color="secondary"
                   fullWidth
                   inputRef={input => {
-                    admin_pubkey = input;
+                    admin_pubkey_input = input;
                   }}
                   label="Admin Pubkey"
                 />
@@ -380,13 +397,14 @@ const IncompleteCard = props => {
 const RLDetailsCard = props => {
   var id = props.wallet_id;
 
-  const interval = useSelector(state => state.wallet_state.wallets[id].interval);
-  const limit = useSelector(state => state.wallet_state.wallets[id].limit);
   const data = useSelector(state => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
   const type = data_parsed["type"]
   const user_pubkey = data_parsed["user_pubkey"]
   const admin_pubkey = data_parsed["admin_pubkey"]
+  const interval = data_parsed["interval"]
+  const limit = data_parsed["limit"]
+  const origin_id = data_parsed["rl_origin_id"]
 
   function user_copy() {
     navigator.clipboard.writeText(user_pubkey);
@@ -394,6 +412,10 @@ const RLDetailsCard = props => {
 
   function admin_copy() {
     navigator.clipboard.writeText(admin_pubkey);
+  }
+
+  function origin_copy() {
+    navigator.clipboard.writeText(origin_id);
   }
 
   const classes = useStyles();
@@ -517,6 +539,32 @@ const RLDetailsCard = props => {
                   }}
                 >
                   <Typography variant="subtitle1">{limit}</Typography>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex">
+                <Box flexGrow={1}>
+                  <TextField
+                    disabled
+                    fullWidth
+                    label="Coin Origin ID"
+                    value={origin_id}
+                    variant="outlined"
+                  />
+                </Box>
+                <Box>
+                  <Button
+                    onClick={origin_copy}
+                    className={classes.copyButton}
+                    variant="contained"
+                    color="secondary"
+                    disableElevation
+                  >
+                    Copy
+                  </Button>
                 </Box>
               </Box>
             </div>
@@ -798,7 +846,7 @@ const SendCard = props => {
                   color="secondary"
                   fullWidth
                   disabled={sending_transaction}
-                  className={classes.amountField}
+                  className={classes.leftField}
                   margin="normal"
                   inputRef={input => {
                     amount_input = input;

@@ -242,6 +242,16 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         state["send_transaction_result"] = message.data;
         return state;
       }
+      else if (command === "rl_set_user_info") {
+        const success = data.success;
+        console.log("RL SET USER INFO SUCCESS")
+        console.log(success)
+      }
+      else if (command === "create_new_wallet") {
+        const success = data.success;
+        console.log("RL CREATE WALLET SUCCESS")
+        console.log(success)
+      }
       return state;
     default:
       return state;

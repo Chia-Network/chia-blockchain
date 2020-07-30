@@ -513,6 +513,7 @@ export const create_rl_admin = (interval, limit, pubkey, amount) => {
     pubkey: pubkey,
     amount: amount
   };
+  console.log("CREATE RL ADMIN ACTION: ", action)
   return action;
 };
 
@@ -523,6 +524,7 @@ export const create_rl_user = () => {
     wallet_type: "rl_wallet",
     rl_type: "user"
   };
+  console.log("CREATE RL USER ACTION: ", action)
   return action;
 };
 
@@ -572,6 +574,7 @@ export const rl_set_user_info = (wallet_id, interval, limit, origin_id, admin_pu
     origin_id: origin_id,
     admin_pubkey: admin_pubkey
   };
+  console.log("RL SET USER INFO ACTION: ", action)
   return action;
 };
 
