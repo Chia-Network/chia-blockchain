@@ -11,6 +11,8 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 
 ### Changed
+- `chia show -b` now returns plot public key and pool public key for each block.
+- Improvements to coloured coin wallet.
 
 ### Fixed
 
