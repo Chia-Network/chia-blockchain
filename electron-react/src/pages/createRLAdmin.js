@@ -128,11 +128,16 @@ export const CreateRLAdminWallet = () => {
     }
     dispatch(createState(true, true));
     const interval = interval_input.value
+    const interval_value = parseInt(Number(interval));
     const chiaper = chiaper_input.value
+    const chiaper_value = parseInt(Number(chiaper));
     const userpubkey = userpubkey_input.value
     const amount = chia_to_mojo(amount_input.value);
+    const amount_value = parseInt(Number(amount));
     var fee = chia_to_mojo(fee_input.value);
-    dispatch(create_rl_admin(interval, chiaper, userpubkey, amount));
+    const fee_value = parseInt(Number(fee));
+    console.log(interval_value, chiaper_value, userpubkey, amount_value)
+    dispatch(create_rl_admin(interval_value, chiaper_value, userpubkey, amount_value));
   }
 
   return (

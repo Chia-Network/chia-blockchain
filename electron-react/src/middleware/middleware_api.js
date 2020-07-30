@@ -225,6 +225,16 @@ export const handle_message = (store, payload) => {
       store.dispatch(get_balance_for_wallet(wallet_id));
       store.dispatch(get_transactions(wallet_id));
     }
+  } else if (payload.command === "create_new_wallet") {
+    if (payload.data.success) {
+      store.dispatch(format_message("get_wallets", {}));
+      store.dispatch(createState(true, false));
+    }
+  } else if (payload.command == "rl_set_user_info") {
+    if (payload.data.success) {
+      store.dispatch(format_message("get_wallets", {}));
+      store.dispatch(createState(true, false));
+    }
   } else if (payload.command === "cc_set_name") {
     if (payload.data.success) {
       const wallet_id = payload.data.wallet_id;
