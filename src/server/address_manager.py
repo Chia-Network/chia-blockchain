@@ -504,9 +504,9 @@ class AddressManager:
 
     def get_peers_(self):
         addr = []
-        num_nodes = 23 * len(self.random_pos) // 100
-        if num_nodes > 2500:
-            num_nodes = 2500
+        num_nodes = math.ceil(23 * len(self.random_pos) / 100)
+        if num_nodes > 1000:
+            num_nodes = 1000
         for n in range(len(self.random_pos)):
             if len(addr) >= num_nodes:
                 return addr
