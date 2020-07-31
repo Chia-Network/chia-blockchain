@@ -158,7 +158,6 @@ class PeerConnections:
     def add(self, connection: ChiaConnection) -> bool:
         for c in self._all_connections:
             if c.node_id == connection.node_id:
-                connection.log.warning(f"DEBUG Outbound values: {c.is_outbound} {connection.is_outbound}")
                 return False
         self._all_connections.append(connection)
 
