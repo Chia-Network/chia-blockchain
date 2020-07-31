@@ -290,11 +290,6 @@ class FullNode:
             yield msg
         async for msg in self._send_tips_to_farmers(Delivery.RESPOND):
             yield msg
-        yield OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("request_peers", full_node_protocol.RequestPeers()),
-            Delivery.RESPOND,
-        )
 
     async def periodically_peer_gossip(self):
         while True:
@@ -1764,60 +1759,6 @@ class FullNode:
             yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
         for _ in []:
             yield _
-
-    @api_request
-    async def request_peers(
-        self, request: full_node_protocol.RequestPeers
-    ) -> OutboundMessageGenerator:
-        if self.global_connections is None:
-            return
-        tmp_connected_peers = self.global_connections.get_full_node_peerinfos()
-        connected_peers = [
-            TimestampedPeerInfo(peer.host, peer.port, uint64(0))
-            for peer in tmp_connected_peers
-        ]
-        unconnected_peers = self.global_connections.peers.get_peers(
-            recent_threshold=24 * 60 * 60
-        )
-        peers = list(set(connected_peers + unconnected_peers))
-
-        yield OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("respond_peers_full_node", full_node_protocol.RespondPeers(peers)),
-            Delivery.RESPOND,
-        )
-
-    @api_request
-    async def respond_peers(
-        self, request: introducer_protocol.RespondPeers
-    ) -> OutboundMessageGenerator:
-        if self.server is None or self.global_connections is None:
-            return
-        conns = self.global_connections
-        for peer in request.peer_list:
-            conns.peers.add(
-                PeerInfo(peer.host, peer.port)
-            )
-
-        # Pseudo-message to close the connection
-        yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
-
-        unconnected = conns.get_unconnected_peers(
-            recent_threshold=self.config["recent_peer_threshold"]
-        )
-        to_connect = unconnected[: self._num_needed_peers()]
-        if not len(to_connect):
-            return
-
-        self.log.info(f"Trying to connect to peers: {to_connect}")
-        for target in to_connect:
-            asyncio.create_task(self.server.start_client(target, self._on_connect))
-
-    @api_request
-    async def respond_peers_full_node(
-        self, request: full_node_protocol.RespondPeers
-    ):
-        pass
 
     @api_request
     async def request_mempool_transactions(

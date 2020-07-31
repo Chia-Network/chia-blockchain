@@ -266,6 +266,10 @@ async def perform_handshake(
                 if connection.is_feeler:
                     connection.close()
                     global_connections.close(connection)
+                    return
+                # Request peers after handshake.
+                if connection.local_type == NodeType.FULL_NODE:
+                    await connection.send(Message("request_peers", ""))
 
         # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
         yield connection, global_connections

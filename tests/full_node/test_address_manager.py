@@ -1,6 +1,7 @@
 import asyncio
 import pytest
 import time
+import math
 import os
 from src.types.peer_info import PeerInfo
 from src.server.address_manager import ExtendedPeerInfo, AddressManager
@@ -275,15 +276,15 @@ class TestPeerManager:
         assert await addrman.add_to_new_table([peer4], source1)
         assert await addrman.add_to_new_table([peer5], source1)
 
-        # GetPeers returns 23% of addresses, 23% of 5 is 1 rounded down.
+        # GetPeers returns 23% of addresses, 23% of 5 is 2 rounded up.
         peers2 = await addrman.get_peers()
-        assert len(peers2) == 1
+        assert len(peers2) == 2
 
         # Test: Ensure GetPeers works with new and tried addresses.
         await addrman.mark_good(peer1)
         await addrman.mark_good(peer2)
         peers3 = await addrman.get_peers()
-        assert len(peers3) == 1
+        assert len(peers3) == 2
 
         # Test: Ensure GetPeers still returns 23% when addrman has many addrs.
         for i in range(1, 8 * 256):
@@ -296,9 +297,8 @@ class TestPeerManager:
 
         peers4 = await addrman.get_peers()
         percent = await addrman.size()
-        percent = percent * 23 // 100
+        percent = math.ceil(percent * 23 / 100)
         assert len(peers4) == percent
-        assert percent == 466
 
     @pytest.mark.asyncio
     async def test_addrman_tried_bucket(self):
