@@ -2,6 +2,7 @@ import asyncio
 import pytest
 from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
+from src.types.coin import Coin
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -60,12 +61,14 @@ class TestCCWallet:
         assert val['origin']
         assert val['pubkey']
         admin_pubkey = val['pubkey']
-        origin = val['origin']
+        origin: Coin = val['origin']
 
         val = await api_user.rl_set_user_info({'wallet_id': 2,
                                                'interval': 2,
                                                'limit': 1,
-                                               'origin': origin,
+                                               'origin': {"parent_coin_info": origin.parent_coin_info,
+                                                          "puzzle_hash": origin.puzzle_hash,
+                                                          "amount": origin.amount},
                                                'admin_pubkey': admin_pubkey})
         assert val['success']
 
