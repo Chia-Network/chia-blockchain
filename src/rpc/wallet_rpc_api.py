@@ -72,7 +72,7 @@ class WalletRpcApi:
             "/get_all_trades": self.get_all_trades,
             "/cancel_trade": self.cancel_trade,
             "/create_backup": self.create_backup,
-            "/get_backup_info": self.get_backup_info
+            "/get_backup_info": self.get_backup_info,
         }
 
     async def get_trade(self, request: Dict):
@@ -299,7 +299,11 @@ class WalletRpcApi:
                         wallet_state_manager, main_wallet, request["amount"]
                     )
                     colour = cc_wallet.get_colour()
-                    return {"success": True, "type": cc_wallet.wallet_info.type, "colour": colour}
+                    return {
+                        "success": True,
+                        "type": cc_wallet.wallet_info.type,
+                        "colour": colour,
+                    }
                 except Exception as e:
                     log.error("FAILED {e}")
                     return {"success": False, "reason": str(e)}
@@ -537,7 +541,7 @@ class WalletRpcApi:
         if sk is None:
             return {
                 "success": False,
-                "error": "Unable to decrypt the backup file, no such key."
+                "error": "Unable to decrypt the backup file, no such key.",
             }
         backup_info = get_backup_info(file_path, sk)
         response = {"success": True, "backup_info": backup_info}
@@ -566,7 +570,9 @@ class WalletRpcApi:
         response = {"success": True, "public_key_fingerprints": fingerprints}
         return response
 
-    async def _get_private_key(self, fingerprint) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
+    async def _get_private_key(
+        self, fingerprint
+    ) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
         for sk, seed in self.service.keychain.get_all_private_keys():
             if sk.get_g1().get_fingerprint() == fingerprint:
                 return sk, seed
