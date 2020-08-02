@@ -200,6 +200,7 @@ def update_auditors_in_solution(solution: SExp, auditor_info):
     old_solution = binutils.disassemble(solution)
     # auditor is (primary_input, innerpuzzlehash, amount)
     new_solution = old_solution.replace(
-        "))) ()) () ()))", f"))) ()) (0x{auditor_info[0]} 0x{auditor_info[1]} {auditor_info[2]}) ()))"
+        "))) ()) () ()))",
+        f"))) ()) (0x{auditor_info[0]} 0x{auditor_info[1]} {auditor_info[2]}) ()))",
     )
     return binutils.assemble(new_solution)
