@@ -541,7 +541,7 @@ class WalletRpcApi:
         if sk is None:
             return {
                 "success": False,
-                "error": "Unable to decrypt the backup file, no such key.",
+                "error": "Unable to decrypt the backup file.",
             }
         backup_info = get_backup_info(file_path, sk)
         response = {"success": True, "backup_info": backup_info}
