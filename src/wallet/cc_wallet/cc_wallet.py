@@ -228,7 +228,7 @@ class CCWallet:
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
-    async def get_colour(self):
+    def get_colour(self):
         return self.cc_info.my_colour_name
 
     async def coin_added(
@@ -516,7 +516,7 @@ class CCWallet:
             our_spend = False
             for coin in record.removals:
                 # Don't count eve spend as change
-                if coin.parent_coin_info.hex() == await self.get_colour():
+                if coin.parent_coin_info.hex() == self.get_colour():
                     continue
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(
                     coin, self.wallet_info.id

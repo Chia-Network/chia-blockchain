@@ -45,8 +45,6 @@ const UIPart = props => {
   }
 
   function skip() {
-    dispatch(get_backup_info_action("/Users/yostra/Desktop/tri"));
-    return;
     if (fingerprint !== null) {
       dispatch(login_and_skip_action(fingerprint));
     } else if (words !== null) {
@@ -72,7 +70,11 @@ const UIPart = props => {
 
     const file_path = e.dataTransfer.files[0].path;
     debugger;
-    dispatch(get_backup_info_action(file_path));
+    if (fingerprint !== null) {
+      dispatch(get_backup_info_action(file_path, fingerprint, null));
+    } else if (words !== null) {
+      dispatch(get_backup_info_action(file_path, null, words));
+    }
   };
 
   return (
