@@ -1,3 +1,4 @@
+import base64
 import json
 import time
 from pathlib import Path
@@ -9,6 +10,7 @@ import asyncio
 import aiosqlite
 from chiabip158 import PyBIP158
 from blspy import PrivateKey, G1Element
+from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
 from src.types.coin import Coin
@@ -45,7 +47,7 @@ from src.types.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.wallet.derive_keys import master_sk_to_wallet_sk
+from src.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_backup_sk
 from src import __version__
 
 
@@ -1331,10 +1333,23 @@ class WalletStateManager:
         json_dict["version"] = __version__
         json_dict["fingerprint"] = self.private_key.get_g1().get_fingerprint()
         json_dict["timestamp"] = uint64(int(time.time()))
-        file_path.write_text(json.dumps(json_dict))
+
+        backup_pk = master_sk_to_backup_sk(self.private_key)
+        key_base_64 = base64.b64encode(bytes(backup_pk))
+        f = Fernet(key_base_64)
+
+        backup_data = json.dumps(json_dict).encode()
+        encrypted = f.encrypt(backup_data)
+        file_path.write_text(encrypted.decode())
 
     async def import_backup_info(self, file_path):
-        backup_text = file_path.read_text()
+        encrypted_backup_text = file_path.read_text()
+        backup_pk = master_sk_to_backup_sk(self.private_key)
+        key_base_64 = base64.b64encode(bytes(backup_pk))
+        f = Fernet(key_base_64)
+        backup_text_data = f.decrypt(encrypted_backup_text.encode())
+        backup_text = backup_text_data.decode()
+
         json_dict = json.loads(backup_text)
         wallet_list_json = json_dict["wallet_list"]
 

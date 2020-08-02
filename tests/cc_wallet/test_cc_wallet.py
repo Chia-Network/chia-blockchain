@@ -180,7 +180,7 @@ class TestCCWallet:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        colour = await cc_wallet.get_colour()
+        colour = cc_wallet.get_colour()
         assert (
             await wallet_node.wallet_state_manager.get_wallet_for_colour(colour)
             == cc_wallet
