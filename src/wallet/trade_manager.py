@@ -600,10 +600,10 @@ class TradeManager:
             # Tweak the offer's solution to include the new auditor
             for cc_coinsol_out in cc_coinsol_outamounts[colour]:
                 cc_coinsol = cc_coinsol_out[0]
-                new_solution = cc_wallet_puzzles.update_auditors_in_solution(cc_coinsol.solution, auditor_info)
-                new_coinsol = CoinSolution(
-                    cc_coinsol.coin, new_solution
+                new_solution = cc_wallet_puzzles.update_auditors_in_solution(
+                    cc_coinsol.solution, auditor_info
                 )
+                new_coinsol = CoinSolution(cc_coinsol.coin, new_solution)
                 coinsols.append(new_coinsol)
 
                 eph = cc_wallet_puzzles.create_spend_for_ephemeral(
