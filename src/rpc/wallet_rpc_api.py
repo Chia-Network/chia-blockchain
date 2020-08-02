@@ -5,6 +5,8 @@ from pathlib import Path
 
 from typing import List, Optional, Tuple, Dict, Callable
 
+from blspy import PrivateKey
+
 from src.util.byte_types import hexstr_to_bytes
 from src.util.keychain import (
     generate_mnemonic,
@@ -439,7 +441,7 @@ class WalletRpcApi:
     async def cc_get_colour(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        colour: str = await wallet.get_colour()
+        colour: str = wallet.get_colour()
         response = {"colour": colour, "wallet_id": wallet_id}
         return response
 
@@ -453,7 +455,7 @@ class WalletRpcApi:
             type = wallet.wallet_info.type
             if type == WalletType.COLOURED_COIN.value:
                 name = wallet.cc_info.my_colour_name
-                colour = await wallet.get_colour()
+                colour = wallet.get_colour()
                 response[wallet_id] = {
                     "type": type,
                     "balance": balance,
@@ -510,7 +512,34 @@ class WalletRpcApi:
 
     async def get_backup_info(self, request: Dict):
         file_path = Path(request["file_path"])
-        backup_info = get_backup_info(file_path)
+        sk = None
+        if "words" in request:
+            mnemonic = request["words"]
+            passphrase = ""
+            try:
+                sk = self.service.keychain.add_private_key(
+                    " ".join(mnemonic), passphrase
+                )
+            except KeyError as e:
+                return {
+                    "success": False,
+                    "error": f"The word '{e.args[0]}' is incorrect.'",
+                    "word": e.args[0],
+                }
+            except ValueError as e:
+                return {
+                    "success": False,
+                    "error": e.args[0],
+                }
+        elif "fingerprint" in request:
+            sk, seed = await self._get_private_key(request["fingerprint"])
+
+        if sk is None:
+            return {
+                "success": False,
+                "error": "Unable to decrypt the backup file, no such key."
+            }
+        backup_info = get_backup_info(file_path, sk)
         response = {"success": True, "backup_info": backup_info}
         return response
 
@@ -537,20 +566,26 @@ class WalletRpcApi:
         response = {"success": True, "public_key_fingerprints": fingerprints}
         return response
 
-    async def get_private_key(self, request):
-        fingerprint = request["fingerprint"]
+    async def _get_private_key(self, fingerprint) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
         for sk, seed in self.service.keychain.get_all_private_keys():
             if sk.get_g1().get_fingerprint() == fingerprint:
-                s = bytes_to_mnemonic(seed) if seed is not None else None
-                return {
-                    "success": True,
-                    "private_key": {
-                        "fingerprint": fingerprint,
-                        "sk": bytes(sk).hex(),
-                        "pk": bytes(sk.get_g1()).hex(),
-                        "seed": s,
-                    },
-                }
+                return sk, seed
+        return None, None
+
+    async def get_private_key(self, request):
+        fingerprint = request["fingerprint"]
+        sk, seed = await self._get_private_key(fingerprint)
+        if sk is not None:
+            s = bytes_to_mnemonic(seed) if seed is not None else None
+            return {
+                "success": True,
+                "private_key": {
+                    "fingerprint": fingerprint,
+                    "sk": bytes(sk).hex(),
+                    "pk": bytes(sk.get_g1()).hex(),
+                    "seed": s,
+                },
+            }
         return {"success": False, "private_key": {"fingerprint": fingerprint}}
 
     async def log_in(self, request):

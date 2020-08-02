@@ -288,30 +288,40 @@ export const login_action = fingerprint => {
   };
 };
 
-export const get_backup_info = file_path => {
+export const get_backup_info = (file_path, fingerprint, words) => {
   var action = walletMessage();
   action.message.command = "get_backup_info";
-  action.message.data = {
-    file_path: file_path
-  };
+  if (fingerprint === null) {
+    action.message.data = {
+      file_path: file_path,
+      words: words
+    };
+  } else if (words === null) {
+    action.message.data = {
+      file_path: file_path,
+      fingerprint: fingerprint
+    };
+  }
   return action;
 };
 
-export const get_backup_info_action = file_path => {
+export const get_backup_info_action = (file_path, fingerprint, words) => {
   return dispatch => {
     dispatch(selectFilePath(file_path));
-    return async_api(dispatch, get_backup_info(file_path), true).then(
-      response => {
-        dispatch(closeProgress());
-        if (response.data.success) {
-          dispatch(setBackupInfo(response.data.backup_info));
-          dispatch(changeBackupView(presentBackupInfo));
-        } else {
-          const error = response.data.error;
-          dispatch(openDialog("Error", error));
-        }
+    return async_api(
+      dispatch,
+      get_backup_info(file_path, fingerprint, words),
+      true
+    ).then(response => {
+      dispatch(closeProgress());
+      if (response.data.success) {
+        dispatch(setBackupInfo(response.data.backup_info));
+        dispatch(changeBackupView(presentBackupInfo));
+      } else {
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
       }
-    );
+    });
   };
 };
 
