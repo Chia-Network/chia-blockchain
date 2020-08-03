@@ -564,14 +564,14 @@ export const remove_plot_directory_and_refresh = dir => {
   };
 };
 
-export const rl_set_user_info = (wallet_id, interval, limit, origin_id, admin_pubkey) => {
+export const rl_set_user_info = (wallet_id, interval, limit, origin, admin_pubkey) => {
   var action = walletMessage();
   action.message.command = "rl_set_user_info";
   action.message.data = {
     wallet_id: wallet_id,
     interval: interval,
     limit: limit,
-    origin_id: origin_id,
+    origin: origin,
     admin_pubkey: admin_pubkey
   };
   console.log("RL SET USER INFO ACTION: ", action)
