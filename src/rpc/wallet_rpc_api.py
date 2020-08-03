@@ -161,6 +161,7 @@ class WalletRpcApi:
             puzzle_hash = await wallet.get_new_inner_hash()
 
         response = {
+            "success": True,
             "wallet_id": wallet_id,
             "puzzle_hash": puzzle_hash,
         }
