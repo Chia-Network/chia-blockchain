@@ -304,6 +304,7 @@ class WalletRpcApi:
                         "success": True,
                         "type": cc_wallet.wallet_info.type,
                         "colour": colour,
+                        "wallet_id": cc_wallet.wallet_info.id
                     }
                 except Exception as e:
                     log.error("FAILED {e}")
