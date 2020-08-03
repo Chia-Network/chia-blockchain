@@ -81,9 +81,9 @@ class WalletRpcApi:
         success = await rl_user.set_user_info(
             uint64(request["interval"]),
             uint64(request["limit"]),
-            origin["parent_coin_info"].hex(),
-            origin["puzzle_hash"].hex(),
-            origin["    amount"],
+            origin["parent_coin_info"],
+            origin["puzzle_hash"],
+            origin["amount"],
             request["admin_pubkey"]
         )
         return {"success": success}

@@ -66,8 +66,8 @@ class TestCCWallet:
         val = await api_user.rl_set_user_info({'wallet_id': 2,
                                                'interval': 2,
                                                'limit': 1,
-                                               'origin': {"parent_coin_info": origin.parent_coin_info,
-                                                          "puzzle_hash": origin.puzzle_hash,
+                                               'origin': {"parent_coin_info": origin.parent_coin_info.hex(),
+                                                          "puzzle_hash": origin.puzzle_hash.hex(),
                                                           "amount": origin.amount},
                                                'admin_pubkey': admin_pubkey})
         assert val['success']
