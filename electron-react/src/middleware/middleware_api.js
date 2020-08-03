@@ -230,10 +230,9 @@ export const handle_message = (store, payload) => {
       store.dispatch(format_message("get_wallets", {}));
       store.dispatch(createState(true, false));
     }
-  } else if (payload.command == "rl_set_user_info") {
+  } else if (payload.command === "rl_set_user_info") {
     if (payload.data.success) {
       store.dispatch(format_message("get_wallets", {}));
-      store.dispatch(createState(true, false));
     }
   } else if (payload.command === "cc_set_name") {
     if (payload.data.success) {

@@ -243,14 +243,12 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         return state;
       }
       else if (command === "rl_set_user_info") {
-        const success = data.success;
-        console.log("RL SET USER INFO SUCCESS")
-        console.log(success)
+        const success = data;
+        console.log("RL SET USER INFO SUCCESS: ", success)
       }
       else if (command === "create_new_wallet") {
-        const success = data.success;
-        console.log("RL CREATE WALLET SUCCESS")
-        console.log(success)
+        const success = data;
+        console.log("RL CREATE WALLET SUCCESS: ", success)
       }
       return state;
     default:

@@ -141,6 +141,12 @@ const useStyles = makeStyles(theme => ({
     width: 150,
     height: 50
   },
+  clawbackButton: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    width: 200,
+    height: 50
+  },
   copyButton: {
     marginTop: theme.spacing(0),
     marginBottom: theme.spacing(0),
@@ -163,6 +169,12 @@ const useStyles = makeStyles(theme => ({
     paddingTop: theme.spacing(3),
     paddingBottom: theme.spacing(1)
   },
+  setupTitle: {
+    paddingLeft: theme.spacing(3),
+    paddingRight: theme.spacing(3),
+    paddingTop: theme.spacing(2),
+    paddingBottom: theme.spacing(0)
+  },
   inputLeft: {
     marginLeft: theme.spacing(3),
     height: 56
@@ -171,6 +183,14 @@ const useStyles = makeStyles(theme => ({
     marginRight: theme.spacing(3),
     marginLeft: theme.spacing(6),
     height: 56
+  },
+  inputTitleLeft: {
+    marginLeft: theme.spacing(0),
+    width: 400
+  },
+  inputTitleRight: {
+    marginLeft: theme.spacing(3),
+    width: 400
   },
   walletContainer: {
     marginBottom: theme.spacing(5)
@@ -205,6 +225,12 @@ const useStyles = makeStyles(theme => ({
   },
   leftField: {
     paddingRight: 20
+  },
+  submit: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    width: 150,
+    height: 50
   }
 }));
 
@@ -222,7 +248,7 @@ const IncompleteCard = props => {
 
   var interval_input = null;
   var chiaper_input = null;
-  var origin_id_input = null;
+  var origin_input = null;
   var admin_pubkey_input = null;
 
   function submit() {
@@ -230,10 +256,10 @@ const IncompleteCard = props => {
     const interval_value = parseInt(Number(user_sub_interval));
     const user_sub_chiaper = chiaper_input.value;
     const chiaper_value = parseInt(Number(user_sub_chiaper));
-    const user_sub_origin_id = origin_id_input.value;
+    const origin = origin_input.value;
+    const origin_parsed = JSON.parse(origin)
     const user_sub_admin_pubkey = admin_pubkey_input.value
-    console.log(id, interval_value, chiaper_value, user_sub_origin_id, user_sub_admin_pubkey)
-    dispatch(rl_set_user_info(id, interval_value, chiaper_value, user_sub_origin_id, user_sub_admin_pubkey))
+    dispatch(rl_set_user_info(id, interval_value, chiaper_value, origin_parsed, user_sub_admin_pubkey))
   }
 
   const classes = useStyles();
@@ -290,14 +316,14 @@ const IncompleteCard = props => {
               </Box>
             </Box>
           </div>
-          <div className={classes.setupSection}>
+          <div className={classes.setupTitle}>
             <Box display="flex">
-              <Box flexGrow={6}>
+              <Box flexGrow={1} className={classes.inputTitleLeft}>
                 <Typography variant="subtitle1">
                   Spending Interval Length
                 </Typography>
               </Box>
-              <Box flexGrow={6}>
+              <Box flexGrow={1} className={classes.inputTitleRight}>
                 <Typography variant="subtitle1">
                   Spendable Amount Per Interval
                 </Typography>
@@ -306,7 +332,7 @@ const IncompleteCard = props => {
           </div>
           <div className={classes.cardSubSection}>
             <Box display="flex">
-              <Box flexGrow={6}>
+              <Box flexGrow={1}>
                 <TextField
                   id="filled-secondary"
                   variant="filled"
@@ -320,7 +346,7 @@ const IncompleteCard = props => {
                   label="Interval"
                 />
               </Box>
-              <Box flexGrow={6}>
+              <Box flexGrow={1}>
                 <TextField
                   id="filled-secondary"
                   variant="filled"
@@ -335,21 +361,21 @@ const IncompleteCard = props => {
               </Box>
             </Box>
           </div>
-          <div className={classes.setupSection}>
+          <div className={classes.setupTitle}>
             <Box display="flex">
-              <Box flexGrow={1}>
+              <Box flexGrow={1} className={classes.inputTitleLeft}>
                 <Typography variant="subtitle1">
-                  Coin Origin ID
+                  Coin Origin
                 </Typography>
               </Box>
-              <Box flexGrow={1}>
+              <Box flexGrow={1} className={classes.inputTitleRight}>
                 <Typography variant="subtitle1">
                   Admin Pubkey
                 </Typography>
               </Box>
             </Box>
           </div>
-          <div className={classes.setupSection}>
+          <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
                 <TextField
@@ -358,9 +384,10 @@ const IncompleteCard = props => {
                   color="secondary"
                   fullWidth
                   inputRef={input => {
-                    origin_id_input = input;
+                    origin_input = input;
                   }}
-                  label="Origin ID"
+                  className={classes.leftField}
+                  label="Origin"
                 />
               </Box>
               <Box flexGrow={1}>
@@ -375,13 +402,16 @@ const IncompleteCard = props => {
                   label="Admin Pubkey"
                 />
               </Box>
+            </Box>
+          </div>
+          <div className={classes.setupSection}>
+            <Box display="flex">
               <Box>
                 <Button
                   onClick={submit}
                   className={classes.copyButton}
                   variant="contained"
-                  color="secondary"
-                  disableElevation
+                  color="primary"
                 >
                   Submit
                 </Button>
@@ -404,7 +434,8 @@ const RLDetailsCard = props => {
   const admin_pubkey = data_parsed["admin_pubkey"]
   const interval = data_parsed["interval"]
   const limit = data_parsed["limit"]
-  const origin_id = data_parsed["rl_origin_id"]
+  const origin = data_parsed["rl_origin"]
+  const origin_string = JSON.stringify(origin)
 
   function user_copy() {
     navigator.clipboard.writeText(user_pubkey);
@@ -415,7 +446,7 @@ const RLDetailsCard = props => {
   }
 
   function origin_copy() {
-    navigator.clipboard.writeText(origin_id);
+    navigator.clipboard.writeText(origin_string);
   }
 
   const classes = useStyles();
@@ -509,49 +540,25 @@ const RLDetailsCard = props => {
           </Grid>
           <Grid item xs={12}>
             <div className={classes.cardSubSection}>
-              <Box display="flex">
-                <Box flexGrow={1} style={{ marginBottom: 20 }}>
-                  <Typography variant="subtitle1">Spending interval:</Typography>
+              <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
+                <Box flexGrow={1}>
+                  <Typography variant="subtitle1">Spending interval: {interval}</Typography>
                 </Box>
-                <Box
-                  style={{
-                    paddingLeft: 20,
-                    width: "80%",
-                    overflowWrap: "break-word"
-                  }}
-                >
-                  <Typography variant="subtitle1">{interval}</Typography>
+                <Box flexGrow={1}>
+                  <Typography variant="subtitle1">Spending limit: {limit}</Typography>
                 </Box>
               </Box>
             </div>
           </Grid>
           <Grid item xs={12}>
             <div className={classes.cardSubSection}>
-              <Box display="flex">
-                <Box flexGrow={1} style={{ marginBottom: 20 }}>
-                  <Typography variant="subtitle1">Spending limit:</Typography>
-                </Box>
-                <Box
-                  style={{
-                    paddingLeft: 20,
-                    width: "80%",
-                    overflowWrap: "break-word"
-                  }}
-                >
-                  <Typography variant="subtitle1">{limit}</Typography>
-                </Box>
-              </Box>
-            </div>
-          </Grid>
-          <Grid item xs={12}>
-            <div className={classes.cardSubSection}>
-              <Box display="flex">
+              <Box display="flex" style={{ marginBottom: 20 }}>
                 <Box flexGrow={1}>
                   <TextField
                     disabled
                     fullWidth
-                    label="Coin Origin ID"
-                    value={origin_id}
+                    label="Coin Origin"
+                    value={origin_string}
                     variant="outlined"
                   />
                 </Box>
@@ -571,7 +578,7 @@ const RLDetailsCard = props => {
           </Grid>
           <Grid item xs={12}>
             <div className={classes.cardSubSection}>
-              <Box display="flex">
+              <Box display="flex" style={{ marginBottom: 20 }}>
                 <Box flexGrow={1}>
                   <TextField
                     disabled
@@ -914,11 +921,20 @@ const ClawbackCard = props => {
         </Grid>
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
+            <Box display="flex" style={{ marginTop: 20 }}>
+              <Box flexGrow={1}>
+                <Typography variant="subtitle1">You may use the clawback feature to retrieve your coin at any time. If you do so, your Rate Limited User will no longer be able to spend the coin.</Typography>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box>
                 <Button
                   onClick={clawback}
-                  className={classes.sendButton}
+                  className={classes.clawbackButton}
                   variant="contained"
                   color="primary"
                 >

@@ -35,12 +35,10 @@ export const customStyles = makeStyles(theme => ({
     paddingBottom: theme.spacing(3),
     width: 400
   },
-  send: {
-    paddingLeft: "0px",
-    marginLeft: theme.spacing(6),
-    marginRight: theme.spacing(2),
-    height: 56,
-    width: 150
+  createButton: {
+    marginBottom: theme.spacing(2),
+    width: 150,
+    height: 50
   },
   card: {
     height: 100
@@ -89,7 +87,7 @@ export const CreateRLUserWallet = () => {
           <Box flexGrow={1} className={custom.inputTitleLeft}>
             <Button
               onClick={create}
-              className={custom.send}
+              className={custom.createButton}
               variant="contained"
               color="primary"
             >
