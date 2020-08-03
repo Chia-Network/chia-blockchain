@@ -10,7 +10,6 @@ from src.protocols import (
     full_node_protocol as fnp,
     timelord_protocol,
     wallet_protocol,
-    introducer_protocol,
 )
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
@@ -803,6 +802,7 @@ class TestFullNodeProtocol:
             )
         ]
         assert len(msgs) == 0
+
 
 class TestWalletProtocol:
     @pytest.mark.asyncio
