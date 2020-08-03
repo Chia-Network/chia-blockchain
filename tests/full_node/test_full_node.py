@@ -86,6 +86,16 @@ async def wallet_blocks_five(two_nodes):
 
 class TestFullNodeProtocol:
     @pytest.mark.asyncio
+    async def test_request_peers(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        await server_2.global_connections.add_potential_peer(PeerInfo("::1", uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo("::1", uint16(server_1._port)), None)
+        await asyncio.sleep(10)
+        peers = await full_node_2.global_connections.get_peers()
+        assert len(peers) == 1
+        assert peers[0] == PeerInfo("::1", uint16(server_1._port))
+
+    @pytest.mark.asyncio
     async def test_new_tip(self, two_nodes, wallet_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         _, _, blocks = wallet_blocks
@@ -792,33 +802,6 @@ class TestFullNodeProtocol:
             )
         ]
         assert len(msgs) == 0
-
-    """
-    This test will be added back soon.
-    @pytest.mark.asyncio
-    async def test_request_peers(self, two_nodes, wallet_blocks):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
-        wallet_a, wallet_receiver, blocks = wallet_blocks
-
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-
-        async def num_connections():
-            return len(full_node_1.global_connections.get_connections())
-
-        await time_out_assert(10, num_connections, 1)
-
-        async def have_msgs():
-            msgs = [
-                _
-                async for _ in full_node_1.request_peers(
-                    introducer_protocol.RequestPeers()
-                )
-            ]
-            return len(msgs) > 0 and len(msgs[0].message.data.peer_list) > 0
-
-        await time_out_assert(10, have_msgs, True)
-    """
-
 
 class TestWalletProtocol:
     @pytest.mark.asyncio
