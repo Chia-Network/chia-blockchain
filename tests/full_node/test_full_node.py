@@ -803,6 +803,7 @@ class TestFullNodeProtocol:
         ]
         assert len(msgs) == 0
 
+
 class TestWalletProtocol:
     @pytest.mark.asyncio
     async def test_send_transaction(self, two_nodes, wallet_blocks):
