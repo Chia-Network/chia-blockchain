@@ -321,6 +321,41 @@ class RLWallet(AbstractWallet):
             self.wallet_info.id
         )
 
+    async def get_frozen_amount(self) -> uint64:
+        return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
+
+    async def get_spendable_balance(self) -> uint64:
+        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+            self.wallet_info.id
+        )
+        return spendable_am
+
+    async def get_pending_change_balance(self) -> uint64:
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.wallet_info.id
+        )
+        addition_amount = 0
+
+        for record in unconfirmed_tx:
+            our_spend = False
+            for coin in record.removals:
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.wallet_info.id
+                ):
+                    our_spend = True
+                    break
+
+            if our_spend is not True:
+                continue
+
+            for coin in record.additions:
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.wallet_info.id
+                ):
+                    addition_amount += coin.amount
+
+        return uint64(addition_amount)
+
     def get_new_puzzle(self):
         return rl_puzzle_for_pk(
             pubkey=self.rl_info.user_pubkey,
@@ -329,9 +364,6 @@ class RLWallet(AbstractWallet):
             origin_id=self.rl_info.rl_origin_id,
             clawback_pk=self.rl_info.admin_pubkey,
         )
-
-    def get_pending_change_balance(self):
-        return 0
 
     def get_new_puzzlehash(self):
         return self.get_new_puzzle().get_tree_hash()
