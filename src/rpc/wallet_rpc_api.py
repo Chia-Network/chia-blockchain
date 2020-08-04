@@ -184,6 +184,7 @@ class WalletRpcApi:
         return response
 
     async def send_transaction(self, request):
+        log.error("rpc_api request: " + str(request))
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:

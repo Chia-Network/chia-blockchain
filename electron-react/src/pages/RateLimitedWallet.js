@@ -38,6 +38,9 @@ import { openDialog } from "../modules/dialogReducer";
 const drawerWidth = 240;
 
 const useStyles = makeStyles(theme => ({
+  front: {
+    zIndex: "100"
+  },
   root: {
     display: "flex",
     paddingLeft: "0px"
@@ -114,10 +117,8 @@ const useStyles = makeStyles(theme => ({
     paddingRight: theme.spacing(0)
   },
   paper: {
-    padding: theme.spacing(1),
-    margin: theme.spacing(1),
-    marginBottom: theme.spacing(2),
     marginTop: theme.spacing(2),
+    padding: theme.spacing(2),
     display: "flex",
     overflow: "auto",
     flexDirection: "column"
@@ -427,9 +428,9 @@ const IncompleteCard = props => {
 const RLDetailsCard = props => {
   var id = props.wallet_id;
 
+  const name = useSelector(state => state.wallet_state.wallets[id].name);
   const data = useSelector(state => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
-  const type = data_parsed["type"]
   const user_pubkey = data_parsed["user_pubkey"]
   const admin_pubkey = data_parsed["admin_pubkey"]
   const interval = data_parsed["interval"]
@@ -450,7 +451,7 @@ const RLDetailsCard = props => {
   }
 
   const classes = useStyles();
-  if (type === "user") {
+  if (name === "RL User") {
     return (
       <Paper className={classes.paper}>
         <Grid container spacing={0}>
@@ -463,43 +464,19 @@ const RLDetailsCard = props => {
           </Grid>
           <Grid item xs={12}>
             <div className={classes.cardSubSection}>
-              <Box display="flex">
-                <Box flexGrow={1} style={{ marginBottom: 20 }}>
-                  <Typography variant="subtitle1">Spending interval:</Typography>
+              <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
+                <Box flexGrow={1}>
+                  <Typography variant="subtitle1">Spending interval: {interval}</Typography>
                 </Box>
-                <Box
-                  style={{
-                    paddingLeft: 20,
-                    width: "80%",
-                    overflowWrap: "break-word"
-                  }}
-                >
-                  <Typography variant="subtitle1">{interval}</Typography>
+                <Box flexGrow={1}>
+                  <Typography variant="subtitle1">Spending limit: {limit}</Typography>
                 </Box>
               </Box>
             </div>
           </Grid>
           <Grid item xs={12}>
             <div className={classes.cardSubSection}>
-              <Box display="flex">
-                <Box flexGrow={1} style={{ marginBottom: 20 }}>
-                  <Typography variant="subtitle1">Spending limit:</Typography>
-                </Box>
-                <Box
-                  style={{
-                    paddingLeft: 20,
-                    width: "80%",
-                    overflowWrap: "break-word"
-                  }}
-                >
-                  <Typography variant="subtitle1">{limit}</Typography>
-                </Box>
-              </Box>
-            </div>
-          </Grid>
-          <Grid item xs={12}>
-            <div className={classes.cardSubSection}>
-              <Box display="flex">
+              <Box display="flex" style={{ marginBottom: 20 }}>
                 <Box flexGrow={1}>
                   <TextField
                     disabled
@@ -527,7 +504,7 @@ const RLDetailsCard = props => {
       </Paper>
     );
   }
-  else if (type === "admin") {
+  else if (name === "RL Admin") {
     return (
       <Paper className={classes.paper}>
         <Grid container spacing={0}>
@@ -903,7 +880,6 @@ const SendCard = props => {
 const ClawbackCard = props => {
   var id = props.wallet_id;
   const classes = useStyles();
-  var amount_input = null;
   const dispatch = useDispatch();
 
   function clawback() {
@@ -1044,12 +1020,12 @@ const RateLimitedWallet = props => {
   const classes = useStyles();
   const id = useSelector(state => state.wallet_menu.id);
   const wallets = useSelector(state => state.wallet_state.wallets);
+  const name = useSelector(state => state.wallet_state.wallets[id].name);
   const data = useSelector(state => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
-  const type = data_parsed["type"]
-  const init_status = useSelector(state => state.wallet_state.wallets[id].initialized);
+  var init_status = data_parsed["initialized"];
 
-  if (type === "user") {
+  if (name === "RL User") {
     if (init_status) {
       return wallets.length > props.wallet_id ? (
         <Grid className={classes.walletContainer} item xs={12}>
@@ -1074,7 +1050,7 @@ const RateLimitedWallet = props => {
     }
   }
 
-  else if (type === "admin") {
+  else if (name === "RL Admin") {
     return wallets.length > props.wallet_id ? (
       <Grid className={classes.walletContainer} item xs={12}>
         <RLDetailsCard wallet_id={id}></RLDetailsCard>
