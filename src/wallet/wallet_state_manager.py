@@ -9,7 +9,7 @@ import asyncio
 
 import aiosqlite
 from chiabip158 import PyBIP158
-from blspy import PrivateKey, G1Element
+from blspy import PrivateKey, G1Element, AugSchemeMPL
 from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
@@ -29,6 +29,7 @@ from src.wallet.settings.user_settings import UserSettings
 from src.wallet.trade_manager import TradeManager
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
+from src.wallet.util.backup_utils import open_backup_file
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_action_store import WalletActionStore
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -1328,30 +1329,37 @@ class WalletStateManager:
                 all_wallets.remove(wallet)
                 break
 
-        backup = WalletInfoBackup(all_wallets)
-        json_dict = backup.to_json_dict()
-        json_dict["version"] = __version__
-        json_dict["fingerprint"] = self.private_key.get_g1().get_fingerprint()
-        json_dict["timestamp"] = uint64(int(time.time()))
-
         backup_pk = master_sk_to_backup_sk(self.private_key)
+        now = uint64(int(time.time()))
+        wallet_backup = WalletInfoBackup(all_wallets)
+
+        backup: Dict[str, Any] = {}
+
+        data = wallet_backup.to_json_dict()
+        data["version"] = __version__
+        data["fingerprint"] = self.private_key.get_g1().get_fingerprint()
+        data["timestamp"] = now
         key_base_64 = base64.b64encode(bytes(backup_pk))
         f = Fernet(key_base_64)
+        data_bytes = json.dumps(data).encode()
+        encrypted = f.encrypt(data_bytes)
 
-        backup_data = json.dumps(json_dict).encode()
-        encrypted = f.encrypt(backup_data)
-        file_path.write_text(encrypted.decode())
+        meta_data: Dict[str, Any] = {}
+        meta_data["timestamp"] = now
+        meta_data["signature"] = bytes(
+            AugSchemeMPL.sign(backup_pk, std_hash(encrypted))
+        ).hex()
+        meta_data["pubkey"] = bytes(backup_pk.get_g1()).hex()
+
+        backup["data"] = encrypted.decode()
+        backup["meta_data"] = meta_data
+
+        backup_file_text = json.dumps(backup)
+        file_path.write_text(backup_file_text)
 
     async def import_backup_info(self, file_path):
-        encrypted_backup_text = file_path.read_text()
-        backup_pk = master_sk_to_backup_sk(self.private_key)
-        key_base_64 = base64.b64encode(bytes(backup_pk))
-        f = Fernet(key_base_64)
-        backup_text_data = f.decrypt(encrypted_backup_text.encode())
-        backup_text = backup_text_data.decode()
-
-        json_dict = json.loads(backup_text)
-        wallet_list_json = json_dict["wallet_list"]
+        json_dict = open_backup_file(file_path, self.private_key)
+        wallet_list_json = json_dict["data"]["wallet_list"]
 
         for wallet_info in wallet_list_json:
             await self.user_store.create_wallet(
