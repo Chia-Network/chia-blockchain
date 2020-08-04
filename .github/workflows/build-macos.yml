@@ -97,7 +97,7 @@ jobs:
       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
 
     - name: Setup Node 12.x
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v2.1.1
       with:
         node-version: '12.x'
 
