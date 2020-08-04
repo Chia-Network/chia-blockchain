@@ -145,6 +145,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       } else if (command === "get_wallets") {
         if (data.success) {
           const wallets = data.wallets;
+          console.log(wallets);
           var wallets_state = [];
           for (let object of wallets) {
             id = parseInt(object.id);
@@ -241,14 +242,12 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         state["sending_transaction"] = false;
         state["send_transaction_result"] = message.data;
         return state;
-      }
-      else if (command === "rl_set_user_info") {
+      } else if (command === "rl_set_user_info") {
         const success = data;
-        console.log("RL SET USER INFO SUCCESS: ", success)
-      }
-      else if (command === "create_new_wallet") {
+        console.log("RL SET USER INFO SUCCESS: ", success);
+      } else if (command === "create_new_wallet") {
         const success = data;
-        console.log("RL CREATE WALLET SUCCESS: ", success)
+        console.log("RL CREATE WALLET SUCCESS: ", success);
       }
       return state;
     default:
