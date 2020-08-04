@@ -16,7 +16,7 @@ dependencies = [
     "colorlog==4.1.0",  # Adds color to logs
     "concurrent-log-handler==0.9.16",  # Concurrently log and rotate logs
     "cryptography==3.0", #Python cryptography library for TLS
-    "keyring==21.2.1",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "keyring==21.3.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     "PyYAML==5.3.1",  # Used for config file format
     "sortedcontainers==2.2.2",  # For maintaining sorted mempools
