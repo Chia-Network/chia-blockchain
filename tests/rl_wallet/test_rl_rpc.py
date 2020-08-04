@@ -72,8 +72,10 @@ class TestCCWallet:
                                                'admin_pubkey': admin_pubkey})
         assert val['success']
 
+        assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 0
         for i in range(0, 2*num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 100
 
         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
         puzzle_hash = await receiving_wallet.get_new_puzzlehash()
@@ -85,3 +87,4 @@ class TestCCWallet:
         for i in range(0, 2*num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         assert await receiving_wallet.get_spendable_balance() == 3
+        assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 97
