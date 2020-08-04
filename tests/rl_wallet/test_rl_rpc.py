@@ -82,6 +82,7 @@ class TestCCWallet:
         assert await receiving_wallet.get_spendable_balance() == 0
         val = await api_user.send_transaction({'wallet_id': 2,
                                                'amount': 3,
+                                               'fee': 0,
                                                'puzzle_hash': puzzle_hash.hex()})
         assert val['status'] == 'SUCCESS'
         for i in range(0, 2*num_blocks):
