@@ -77,7 +77,11 @@ class TestCCWallet:
 
         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
         puzzle_hash = await receiving_wallet.get_new_puzzlehash()
+        assert await receiving_wallet.get_spendable_balance() == 0
         val = await api_user.send_transaction({'wallet_id': 2,
-                                               'amount': 1,
+                                               'amount': 3,
                                                'puzzle_hash': puzzle_hash.hex()})
         assert val['status'] == 'SUCCESS'
+        for i in range(0, 2*num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        assert await receiving_wallet.get_spendable_balance() == 3
