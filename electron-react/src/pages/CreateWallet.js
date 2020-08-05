@@ -3,6 +3,7 @@ import {
   makeStyles,
   Typography,
   Paper,
+  Grid,
   List,
   Button,
   Box
@@ -30,6 +31,9 @@ import { CreateRLUserWallet } from "./createRLUser";
 import InvertColorsIcon from "@material-ui/icons/InvertColors";
 
 export const useStyles = makeStyles(theme => ({
+  walletContainer: {
+    marginBottom: theme.spacing(5)
+  },
   root: {
     display: "flex",
     paddingLeft: "0px",
@@ -48,7 +52,7 @@ export const useStyles = makeStyles(theme => ({
   },
   paper: {
     marginTop: theme.spacing(2),
-    padding: theme.spacing(0),
+    padding: theme.spacing(2),
     display: "flex",
     overflow: "auto",
     flexDirection: "column",
@@ -87,27 +91,33 @@ export const MainWalletList = () => {
   }
 
   return (
-    <div>
-      <div className={classes.cardTitle}>
-        <Typography component="h6" variant="h6">
-          Select Wallet Type
-        </Typography>
-      </div>
-      <List>
-        <ListItem button onClick={select_option_cc}>
-          <ListItemIcon>
-            <InvertColorsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Coloured Coin" />
-        </ListItem>
-        <ListItem button onClick={select_option_rl}>
-          <ListItemIcon>
-            <InvertColorsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Rate Limited" />
-        </ListItem>
-      </List>
-    </div>
+    <Grid container spacing={0}>
+      <Grid item xs={12}>
+        <div className={classes.cardTitle}>
+          <Box display="flex">
+            <Box flexGrow={1} className={classes.title}>
+              <Typography component="h6" variant="h6">
+                Select Wallet Type
+              </Typography>
+            </Box>
+          </Box>
+        </div>
+        <List>
+          <ListItem button onClick={select_option_cc}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Coloured Coin" />
+          </ListItem>
+          <ListItem button onClick={select_option_rl}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Rate Limited" />
+          </ListItem>
+        </List>
+      </Grid>
+    </Grid>
   );
 };
 
@@ -128,36 +138,38 @@ export const CCListItems = () => {
   }
 
   return (
-    <div>
-      <div className={classes.cardTitle}>
-        <Box display="flex">
-          <Box>
-            <Button onClick={goBack}>
-              <ArrowBackIosIcon> </ArrowBackIosIcon>
-            </Button>
+    <Grid container spacing={0}>
+      <Grid item xs={12}>
+        <div className={classes.cardTitle}>
+          <Box display="flex">
+            <Box>
+              <Button onClick={goBack}>
+                <ArrowBackIosIcon> </ArrowBackIosIcon>
+              </Button>
+            </Box>
+            <Box flexGrow={1} className={classes.title}>
+              <Typography component="h6" variant="h6">
+                Coloured Coin Options
+              </Typography>
+            </Box>
           </Box>
-          <Box flexGrow={1} className={classes.title}>
-            <Typography component="h6" variant="h6">
-              Coloured Coin Options
-            </Typography>
-          </Box>
-        </Box>
-      </div>
-      <List>
-        <ListItem button onClick={select_option_new}>
-          <ListItemIcon>
-            <InvertColorsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Create new coloured coin" />
-        </ListItem>
-        <ListItem button onClick={select_option_existing}>
-          <ListItemIcon>
-            <InvertColorsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Create wallet for existing colour" />
-        </ListItem>
-      </List>
-    </div>
+        </div>
+        <List>
+          <ListItem button onClick={select_option_new}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create new coloured coin" />
+          </ListItem>
+          <ListItem button onClick={select_option_existing}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create wallet for existing colour" />
+          </ListItem>
+        </List>
+      </Grid>
+    </Grid>
   );
 };
 
@@ -178,36 +190,38 @@ export const RLListItems = () => {
   }
 
   return (
-    <div>
-      <div className={classes.cardTitle}>
-        <Box display="flex">
-          <Box>
-            <Button onClick={goBack}>
-              <ArrowBackIosIcon> </ArrowBackIosIcon>
-            </Button>
+    <Grid container spacing={0}>
+      <Grid item xs={12}>
+        <div className={classes.cardTitle}>
+          <Box display="flex">
+            <Box>
+              <Button onClick={goBack}>
+                <ArrowBackIosIcon> </ArrowBackIosIcon>
+              </Button>
+            </Box>
+            <Box flexGrow={1} className={classes.title}>
+              <Typography component="h6" variant="h6">
+                Rate Limited Options
+              </Typography>
+            </Box>
           </Box>
-          <Box flexGrow={1} className={classes.title}>
-            <Typography component="h6" variant="h6">
-              Rate Limited Options
-            </Typography>
-          </Box>
-        </Box>
-      </div>
-      <List>
-        <ListItem button onClick={select_option_admin}>
-          <ListItemIcon>
-            <InvertColorsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Create admin wallet" />
-        </ListItem>
-        <ListItem button onClick={select_option_user}>
-          <ListItemIcon>
-            <InvertColorsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Create user wallet" />
-        </ListItem>
-      </List>
-    </div>
+        </div>
+        <List>
+          <ListItem button onClick={select_option_admin}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create admin wallet" />
+          </ListItem>
+          <ListItem button onClick={select_option_user}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create user wallet" />
+          </ListItem>
+        </List>
+      </Grid>
+    </Grid>
   );
 };
 
@@ -235,10 +249,10 @@ export const CreateWalletView = () => {
   const classes = useStyles();
 
   return (
-    <div className={classes.root}>
+    <Grid className={classes.walletContainer} item xs={12}>
       <Paper className={classes.paper}>
         <CreateViewSwitch></CreateViewSwitch>
       </Paper>
-    </div>
+    </Grid>
   );
 };
