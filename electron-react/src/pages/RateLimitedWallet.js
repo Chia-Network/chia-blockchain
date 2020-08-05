@@ -35,6 +35,7 @@ import { unix_to_short_date } from "../util/utils";
 
 import { openDialog } from "../modules/dialogReducer";
 
+var cbor = require('cbor');
 const drawerWidth = 240;
 
 const useStyles = makeStyles(theme => ({
@@ -247,20 +248,21 @@ const IncompleteCard = props => {
     navigator.clipboard.writeText(pubkey);
   }
 
-  var interval_input = null;
-  var chiaper_input = null;
-  var origin_input = null;
-  var admin_pubkey_input = null;
+  var ip_input = null;
 
   function submit() {
-    const user_sub_interval = interval_input.value;
-    const interval_value = parseInt(Number(user_sub_interval));
-    const user_sub_chiaper = chiaper_input.value;
-    const chiaper_value = parseInt(Number(user_sub_chiaper));
-    const origin = origin_input.value;
-    const origin_parsed = JSON.parse(origin)
-    const user_sub_admin_pubkey = admin_pubkey_input.value
-    dispatch(rl_set_user_info(id, interval_value, chiaper_value, origin_parsed, user_sub_admin_pubkey))
+    const ip_val = ip_input.value
+    const ip_unhex = Buffer.from(ip_val, 'hex')
+    const ip_debuf = ip_unhex.toString('utf8')
+    const ip_parsed = JSON.parse(ip_debuf)
+    const interval_input = ip_parsed["interval"];
+    const chiaper_input = ip_parsed["limit"];
+    const origin_input = ip_parsed["origin_string"];
+    const admin_pubkey_input = ip_parsed["admin_pubkey"];
+    const interval_value = parseInt(Number(interval_input));
+    const chiaper_value = parseInt(Number(chiaper_input));
+    const origin_parsed = JSON.parse(origin_input)
+    dispatch(rl_set_user_info(id, interval_value, chiaper_value, origin_parsed, admin_pubkey_input))
   }
 
   const classes = useStyles();
@@ -321,12 +323,7 @@ const IncompleteCard = props => {
             <Box display="flex">
               <Box flexGrow={1} className={classes.inputTitleLeft}>
                 <Typography variant="subtitle1">
-                  Spending Interval Length
-                </Typography>
-              </Box>
-              <Box flexGrow={1} className={classes.inputTitleRight}>
-                <Typography variant="subtitle1">
-                  Spendable Amount Per Interval
+                  Info Packet
                 </Typography>
               </Box>
             </Box>
@@ -340,67 +337,11 @@ const IncompleteCard = props => {
                   color="secondary"
                   fullWidth
                   inputRef={input => {
-                    interval_input = input;
+                    ip_input = input;
                   }}
                   className={classes.leftField}
                   margin="normal"
-                  label="Interval"
-                />
-              </Box>
-              <Box flexGrow={1}>
-                <TextField
-                  id="filled-secondary"
-                  variant="filled"
-                  color="secondary"
-                  margin="normal"
-                  fullWidth
-                  inputRef={input => {
-                    chiaper_input = input;
-                  }}
-                  label="Spendable Amount"
-                />
-              </Box>
-            </Box>
-          </div>
-          <div className={classes.setupTitle}>
-            <Box display="flex">
-              <Box flexGrow={1} className={classes.inputTitleLeft}>
-                <Typography variant="subtitle1">
-                  Coin Origin
-                </Typography>
-              </Box>
-              <Box flexGrow={1} className={classes.inputTitleRight}>
-                <Typography variant="subtitle1">
-                  Admin Pubkey
-                </Typography>
-              </Box>
-            </Box>
-          </div>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  id="filled-secondary"
-                  variant="filled"
-                  color="secondary"
-                  fullWidth
-                  inputRef={input => {
-                    origin_input = input;
-                  }}
-                  className={classes.leftField}
-                  label="Origin"
-                />
-              </Box>
-              <Box flexGrow={1}>
-                <TextField
-                  id="filled-secondary"
-                  variant="filled"
-                  color="secondary"
-                  fullWidth
-                  inputRef={input => {
-                    admin_pubkey_input = input;
-                  }}
-                  label="Admin Pubkey"
+                  label="Info Packet"
                 />
               </Box>
             </Box>
@@ -437,6 +378,11 @@ const RLDetailsCard = props => {
   const limit = data_parsed["limit"]
   const origin = data_parsed["rl_origin"]
   const origin_string = JSON.stringify(origin)
+  const infopacket = { "interval": interval, "limit": limit, "origin_string": origin_string, "admin_pubkey": admin_pubkey }
+
+  const ip_string = JSON.stringify(infopacket)
+  const ip_buf = Buffer.from(ip_string, 'utf8');
+  const ip_hex = ip_buf.toString('hex');
 
   function user_copy() {
     navigator.clipboard.writeText(user_pubkey);
@@ -448,6 +394,10 @@ const RLDetailsCard = props => {
 
   function origin_copy() {
     navigator.clipboard.writeText(origin_string);
+  }
+
+  function ip_hex_copy() {
+    navigator.clipboard.writeText(ip_hex);
   }
 
   const classes = useStyles();
@@ -534,40 +484,14 @@ const RLDetailsCard = props => {
                   <TextField
                     disabled
                     fullWidth
-                    label="Coin Origin"
-                    value={origin_string}
+                    label="Info Packet"
+                    value={ip_hex}
                     variant="outlined"
                   />
                 </Box>
                 <Box>
                   <Button
-                    onClick={origin_copy}
-                    className={classes.copyButton}
-                    variant="contained"
-                    color="secondary"
-                    disableElevation
-                  >
-                    Copy
-                  </Button>
-                </Box>
-              </Box>
-            </div>
-          </Grid>
-          <Grid item xs={12}>
-            <div className={classes.cardSubSection}>
-              <Box display="flex" style={{ marginBottom: 20 }}>
-                <Box flexGrow={1}>
-                  <TextField
-                    disabled
-                    fullWidth
-                    label="My Pubkey"
-                    value={admin_pubkey}
-                    variant="outlined"
-                  />
-                </Box>
-                <Box>
-                  <Button
-                    onClick={admin_copy}
+                    onClick={ip_hex_copy}
                     className={classes.copyButton}
                     variant="contained"
                     color="secondary"
