@@ -214,8 +214,7 @@ export const handle_message = (store, payload) => {
     const state = payload.data.state;
     if (state === "coin_added" || state === "coin_removed") {
       var wallet_id = payload.data.wallet_id;
-      store.dispatch(get_balance_for_wallet(wallet_id));
-      store.dispatch(get_transactions(wallet_id));
+      store.dispatch(format_message("get_wallets", {}));
     } else if (state === "sync_changed") {
       store.dispatch(get_sync_status());
     } else if (state === "new_block") {
