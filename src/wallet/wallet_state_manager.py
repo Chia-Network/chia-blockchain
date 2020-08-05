@@ -256,6 +256,27 @@ class WalletStateManager:
                 start_index = 0
 
             for index in range(start_index, unused + to_generate):
+                if target_wallet.wallet_info.type == WalletType.RATE_LIMITED.value:
+                    type = target_wallet.rl_info.type
+                    if type == "user":
+                        pubkey = target_wallet.rl_info.user_pubkey
+                    else:
+                        pubkey = target_wallet.rl_info.admin_pubkey
+                    puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+                    if puzzle is None:
+                        break
+                    puzzlehash: bytes32 = puzzle.get_tree_hash()
+                    rl_index = await self.puzzle_store.index_for_pubkey(G1Element.from_bytes(pubkey))
+                    derivation_paths.append(
+                        DerivationRecord(
+                            uint32(rl_index),
+                            puzzlehash,
+                            pubkey,
+                            target_wallet.wallet_info.type,
+                            uint32(target_wallet.wallet_info.id),
+                        )
+                    )
+                    break
                 pubkey: G1Element = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 if puzzle is None:
