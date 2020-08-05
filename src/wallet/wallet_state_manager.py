@@ -256,7 +256,7 @@ class WalletStateManager:
                 start_index = 0
 
             for index in range(start_index, unused + to_generate):
-                if target_wallet.wallet_info.type == WalletType.RATE_LIMITED.value:
+                if target_wallet.wallet_info.type == WalletType.RATE_LIMITED:
                     type = target_wallet.rl_info.type
                     if type == "user":
                         pubkey = target_wallet.rl_info.user_pubkey
