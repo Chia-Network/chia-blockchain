@@ -445,7 +445,7 @@ class RLWallet(AbstractWallet):
         spends = []
         coin = self.rl_coin_record.coin
         puzzle_hash = coin.puzzle_hash
-        pubkey, secretkey = await self.get_keys(puzzle_hash)
+        pubkey = self.rl_info.user_pubkey
         rl_parent: Coin = await self.get_rl_parent()
 
         puzzle = rl_puzzle_for_pk(
