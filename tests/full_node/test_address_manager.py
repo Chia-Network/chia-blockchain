@@ -2,9 +2,11 @@ import asyncio
 import pytest
 import time
 import math
-import os
+import aiosqlite
 from src.types.peer_info import PeerInfo
 from src.server.address_manager import ExtendedPeerInfo, AddressManager
+from src.server.address_manager_store import AddressManagerStore
+from pathlib import Path
 
 
 @pytest.fixture(scope="module")
@@ -525,12 +527,16 @@ class TestPeerManager:
         source = PeerInfo("252.5.1.1", 8333)
         await addrman.add_to_new_table([peer1, peer2, peer3], source)
         await addrman.mark_good(peer1)
-        filename = "serialize.dat"
-        if os.path.exists(filename):
-            os.remove(filename)
-        await addrman.serialize(filename)
+
+        db_filename = Path("peer_table.db")
+        if db_filename.exists():
+            db_filename.unlink()
+        connection = await aiosqlite.connect(db_filename)
+        address_manager_store = await AddressManagerStore.create(connection)
+        await address_manager_store.serialize(addrman)
         addrman2 = AddressManagerTest()
-        await addrman2.unserialize(filename)
+        await address_manager_store.unserialize(addrman2)
+
         retrieved_peers = []
         for _ in range(20):
             peer = await addrman2.select_peer()
@@ -553,3 +559,5 @@ class TestPeerManager:
                 ):
                     recovered += 1
         assert recovered == 3
+        await connection.close()
+        db_filename.unlink()

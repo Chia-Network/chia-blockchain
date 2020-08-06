@@ -114,7 +114,7 @@ full_node:
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v18.db
-  peer_table_path: db/peer_table.dat
+  peer_table_path: db/peer_table.db
   simulator_database_path: sim_db/simulator_blockchain_v18.db
 
   # If True, starts an RPC server at the following port

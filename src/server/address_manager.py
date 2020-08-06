@@ -174,29 +174,44 @@ class ExtendedPeerInfo:
 
 # This is a Python port from 'CAddrMan' class from Bitcoin core code.
 class AddressManager:
+    id_count: int
+    key: int
+    random_pos: List[int]
+    tried_matrix: List[List[int]]
+    new_matrix: List[List[int]]
+    tried_count: int
+    new_count: int
+    map_addr: Dict[str, int]
+    map_info: Dict[int, ExtendedPeerInfo]
+    last_good: int
+    tried_collisions: List[int]
+
     def __init__(self):
-        self.id_count: int = 0
-        self.key: int = randbits(256)
-        self.random_pos: List[int] = []
-        self.tried_matrix: List[List[int]] = [
+        self.clear()
+        self.lock: Lock = Lock()
+
+    def clear(self):
+        self.id_count = 0
+        self.key = randbits(256)
+        self.random_pos = []
+        self.tried_matrix = [
             [
                 -1 for x in range(BUCKET_SIZE)
             ]
             for y in range(TRIED_BUCKET_COUNT)
         ]
-        self.new_matrix: List[List[int]] = [
+        self.new_matrix = [
             [
                 -1 for x in range(BUCKET_SIZE)
             ]
             for y in range(NEW_BUCKET_COUNT)
         ]
-        self.tried_count: int = 0
-        self.new_count: int = 0
-        self.map_addr: Dict[str, int] = {}
-        self.map_info: Dict[int, ExtendedPeerInfo] = {}
-        self.last_good: int = 1
-        self.tried_collisions: List[int] = []
-        self.lock: Lock = Lock()
+        self.tried_count = 0
+        self.new_count = 0
+        self.map_addr = {}
+        self.map_info = {}
+        self.last_good = 1
+        self.tried_collisions = []
 
     def create_(self, addr: PeerInfo, addr_src: Optional[PeerInfo]):
         self.id_count += 1
@@ -595,115 +610,3 @@ class AddressManager:
     async def connect(self, addr: PeerInfo, timestamp: int = math.floor(time.time())):
         async with self.lock:
             return self.connect_(addr, timestamp)
-
-    # Serialized format:
-    # * key
-    # * new_count
-    # * tried_count
-    # * number of "new" buckets
-    # * all new_count addrinfos in new_matrix
-    # * all tried_count addrinfos in tried_matrix
-    # * for each bucket:
-    # * * number of elements
-    # * * for each element: index
-
-    # Notice that tried_matrix, map_addr and vVector are never encoded explicitly;
-    # they are instead reconstructed from the other information.
-    #
-    # new_matrix is serialized, but only used if ADDRMAN_UNKNOWN_BUCKET_COUNT didn't change,
-    # otherwise it is reconstructed as well.
-    #
-    # This format is more complex, but significantly smaller (at most 1.5 MiB), and supports
-    # changes to the ADDRMAN_ parameters without breaking the on-disk structure.
-
-    async def serialize(self, filename):
-        async with self.lock:
-            with open(filename, 'w') as writer:
-                writer.write(str(self.key) + "\n")
-                writer.write(str(self.new_count) + "\n")
-                writer.write(str(self.tried_count) + "\n")
-                writer.write(str(NEW_BUCKET_COUNT) + "\n")
-                unique_ids = {}
-                count_ids = 0
-
-                for node_id, info in self.map_info.items():
-                    unique_ids[node_id] = count_ids
-                    if info.ref_count > 0:
-                        assert count_ids != self.new_count
-                        writer.write(info.to_string() + "\n")
-                        count_ids += 1
-
-                count_ids = 0
-                for node_id, info in self.map_info.items():
-                    if info.is_tried:
-                        assert info is not None
-                        assert count_ids != self.tried_count
-                        writer.write(info.to_string() + "\n")
-                        count_ids += 1
-
-                for bucket in range(NEW_BUCKET_COUNT):
-                    bucket_size = 0
-                    for i in range(BUCKET_SIZE):
-                        if self.new_matrix[bucket][i] != -1:
-                            bucket_size += 1
-                    writer.write(str(bucket_size) + "\n")
-                    for i in range(BUCKET_SIZE):
-                        if self.new_matrix[bucket][i] != -1:
-                            index = unique_ids[self.new_matrix[bucket][i]]
-                            writer.write(str(index) + "\n")
-
-    async def unserialize(self, filename):
-        # async with self.lock:
-        if filename is not None:
-            with open(filename, 'r') as reader:
-                self.key = int(reader.readline())
-                self.new_count = int(reader.readline())
-                self.tried_count = int(reader.readline())
-                buckets = int(reader.readline())
-                assert buckets == NEW_BUCKET_COUNT
-                assert self.new_count <= NEW_BUCKET_COUNT * BUCKET_SIZE
-                assert self.tried_count <= TRIED_BUCKET_COUNT * BUCKET_SIZE
-                for n in range(self.new_count):
-                    info = ExtendedPeerInfo.from_string(reader.readline())
-                    self.map_addr[info.peer_info.host] = n
-                    self.map_info[n] = info
-                    info.random_pos = len(self.random_pos)
-                    self.random_pos.append(n)
-                lost_count = 0
-                id_count = self.new_count
-
-                for n in range(self.tried_count):
-                    info = ExtendedPeerInfo.from_string(reader.readline())
-                    tried_bucket = info.get_tried_bucket(self.key)
-                    tried_bucket_pos = info.get_bucket_position(self.key, False, tried_bucket)
-                    if self.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
-                        info.random_pos = len(self.random_pos)
-                        info.is_tried = True
-                        self.random_pos.append(id_count)
-                        self.map_info[id_count] = info
-                        self.map_addr[info.peer_info.host] = id_count
-                        self.tried_matrix[tried_bucket][tried_bucket_pos] = id_count
-                        id_count += 1
-                    else:
-                        lost_count += 1
-                self.tried_count -= lost_count
-
-                for bucket in range(NEW_BUCKET_COUNT):
-                    bucket_size = int(reader.readline())
-                    for n in range(bucket_size):
-                        index = int(reader.readline())
-                        if (index >= 0 and index < self.new_count):
-                            info = self.map_info[index]
-                            bucket_pos = info.get_bucket_position(self.key, True, bucket)
-                            if (
-                                self.new_matrix[bucket][bucket_pos] == -1
-                                and info.ref_count < NEW_BUCKETS_PER_ADDRESS
-                            ):
-                                info.ref_count += 1
-                                self.new_matrix[bucket][bucket_pos] = index
-                for node_id, info in self.map_info.items():
-                    if (
-                        not info.is_tried
-                        and info.ref_count == 0
-                    ):
-                        self.delete_new_entry_(node_id)
