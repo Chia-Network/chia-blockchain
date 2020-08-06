@@ -35,7 +35,6 @@ import { unix_to_short_date } from "../util/utils";
 
 import { openDialog } from "../modules/dialogReducer";
 
-var cbor = require('cbor');
 const drawerWidth = 240;
 
 const useStyles = makeStyles(theme => ({
