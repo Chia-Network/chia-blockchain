@@ -2,7 +2,7 @@ import logging
 import random
 import time
 import asyncio
-import os
+import aiosqlite
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
@@ -11,7 +11,8 @@ from src.types.sized_bytes import bytes32
 from src.util import cbor
 from src.util.ints import uint16, uint64
 from src.server.address_manager import AddressManager
-from src.util.default_root import DEFAULT_ROOT_PATH
+from src.server.address_manager_store import AddressManagerStore
+from src.util.path import mkdir, path_from_root
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 4
@@ -127,7 +128,13 @@ class ChiaConnection:
 
 
 class PeerConnections:
-    def __init__(self, local_type: NodeType, config: Dict, all_connections: List[ChiaConnection] = []):
+    def __init__(
+        self,
+        local_type: NodeType,
+        root_path,
+        config: Dict,
+        all_connections: List[ChiaConnection] = []
+    ):
         self._all_connections = all_connections
         # Only full node peers are added to `peers`
         self.peers = Peers()
@@ -136,9 +143,9 @@ class PeerConnections:
             self.address_manager = None
         else:
             self.address_manager = AddressManager()
-            self.peer_table_path = config["peer_table_path"]
-            if os.path.exists(DEFAULT_ROOT_PATH / self.peer_table_path):
-                self.address_manager.unserialize(DEFAULT_ROOT_PATH / self.peer_table_path)
+            self.peer_table_path = path_from_root(root_path, config["peer_table_path"])
+            asyncio.create_task(self.initialize_address_manager())
+
         for c in all_connections:
             if c.connection_type == NodeType.FULL_NODE:
                 self.peers.add(c.get_peer_info())
@@ -249,9 +256,16 @@ class PeerConnections:
         return await self.address_manager.size()
 
     async def serialize(self):
-        if os.path.exists(DEFAULT_ROOT_PATH / self.peer_table_path):
-            os.remove(DEFAULT_ROOT_PATH / self.peer_table_path)
-        await self.address_manager.serialize(DEFAULT_ROOT_PATH / self.peer_table_path)
+        async with self.address_manager.lock:
+            self.address_manager_store.serialize(self.address_manager)
+
+    async def initialize_address_manager(self):
+        mkdir(self.peer_table_path.parent)
+        self.peer_db_connection = await aiosqlite.connect(self.peer_table_path)
+        self.address_manager_store = await AddressManagerStore.create(self.peer_db_connection)
+        if not await self.address_manager_store.is_empty():
+            async with self.address_manager.lock:
+                self.address_manager_store.unserialize(self.address_manager)
 
     # Functions related to outbound and inbound connections for the full node.
     def count_outbound_connections(self):

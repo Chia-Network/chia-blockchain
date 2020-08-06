@@ -67,7 +67,7 @@ class ChiaServer:
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
-        self.global_connections: PeerConnections = PeerConnections(local_type, config, [])
+        self.global_connections: PeerConnections = PeerConnections(local_type, root_path, config, [])
 
         self._port = port  # TCP port to identify our node
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
