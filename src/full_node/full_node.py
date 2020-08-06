@@ -127,6 +127,9 @@ class FullNode:
         self.peer_gossip_task = asyncio.create_task(
             self.periodically_peer_gossip()
         )
+        self.peer_serialize_task = asyncio.create_task(
+            self.periodically_store_peer_table()
+        )
 
         for ((_, _), block) in (
             await self.full_node_store.get_unfinished_blocks()
@@ -302,9 +305,12 @@ class FullNode:
             )
             if self.server is not None:
                 self.server.push_message(outbound_message)
+
+    async def periodically_store_peer_table(self):
+        while True:
+            serialize_interval = random.randint(15 * 60, 30 * 60)
+            await asyncio.sleep(serialize_interval)
             if self.global_connections is not None:
-                serialize_interval = random.randint(1800, 3600)
-                await asyncio.sleep(serialize_interval)
                 await self.global_connections.serialize()
 
     def _num_needed_peers(self) -> int:
@@ -320,6 +326,9 @@ class FullNode:
 
     async def _await_closed(self):
         await self.connection.close()
+        if self.global_connections is not None:
+            if self.global_connections.peer_db_connection is not None:
+                await self.global_connections.peer_db_connection.close()
 
     async def _sync(self) -> OutboundMessageGenerator:
         """
