@@ -187,6 +187,7 @@ const useStyles = makeStyles(theme => ({
   },
   inputTitleLeft: {
     marginLeft: theme.spacing(0),
+    marginBottom: theme.spacing(0),
     width: 400
   },
   inputTitleRight: {
@@ -227,7 +228,7 @@ const useStyles = makeStyles(theme => ({
   leftField: {
     paddingRight: 20
   },
-  submit: {
+  submitButton: {
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
     width: 150,
@@ -313,23 +314,12 @@ const IncompleteCard = props => {
         <Grid item xs={12}>
           <div className={classes.setupSection}>
             <Box display="flex">
-              <Box flexGrow={1}>
-                <Typography variant="subtitle1">When you you receive your admin's information, enter it below to complete your Rate Limited Wallet setup:</Typography>
+              <Box flexGrow={1} style={{ marginTop: 10, marginBottom: 0 }}>
+                <Typography variant="subtitle1">When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:</Typography>
               </Box>
             </Box>
-          </div>
-          <div className={classes.setupTitle}>
             <Box display="flex">
-              <Box flexGrow={1} className={classes.inputTitleLeft}>
-                <Typography variant="subtitle1">
-                  Info Packet
-                </Typography>
-              </Box>
-            </Box>
-          </div>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
+              <Box flexGrow={1} style={{ marginTop: 0 }}>
                 <TextField
                   id="filled-secondary"
                   variant="filled"
@@ -338,7 +328,6 @@ const IncompleteCard = props => {
                   inputRef={input => {
                     ip_input = input;
                   }}
-                  className={classes.leftField}
                   margin="normal"
                   label="Info Packet"
                 />
@@ -350,7 +339,7 @@ const IncompleteCard = props => {
               <Box>
                 <Button
                   onClick={submit}
-                  className={classes.copyButton}
+                  className={classes.submitButton}
                   variant="contained"
                   color="primary"
                 >
@@ -385,14 +374,6 @@ const RLDetailsCard = props => {
 
   function user_copy() {
     navigator.clipboard.writeText(user_pubkey);
-  }
-
-  function admin_copy() {
-    navigator.clipboard.writeText(admin_pubkey);
-  }
-
-  function origin_copy() {
-    navigator.clipboard.writeText(origin_string);
   }
 
   function ip_hex_copy() {
@@ -471,13 +452,18 @@ const RLDetailsCard = props => {
                   <Typography variant="subtitle1">Spending interval: {interval}</Typography>
                 </Box>
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1">Spending limit: {limit}</Typography>
+                  <Typography variant="subtitle1">Spending limit: {mojo_to_chia_string(limit)}</Typography>
                 </Box>
               </Box>
             </div>
           </Grid>
           <Grid item xs={12}>
             <div className={classes.cardSubSection}>
+              <Box display="flex">
+                <Box flexGrow={1} style={{ marginTop: 5, marginBottom: 20 }}>
+                  <Typography variant="subtitle1">Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:</Typography>
+                </Box>
+              </Box>
               <Box display="flex" style={{ marginBottom: 20 }}>
                 <Box flexGrow={1}>
                   <TextField

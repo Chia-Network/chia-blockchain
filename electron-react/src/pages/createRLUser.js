@@ -2,7 +2,6 @@ import React from "react";
 import {
   makeStyles,
   Typography,
-  Paper,
   Grid,
   Button,
   Box,
@@ -23,13 +22,6 @@ import { create_rl_user } from "../modules/message";
 export const customStyles = makeStyles(theme => ({
   walletContainer: {
     marginBottom: theme.spacing(5)
-  },
-  paper: {
-    marginTop: theme.spacing(2),
-    padding: theme.spacing(2),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column"
   },
   topTitleCard: {
     paddingTop: theme.spacing(6),

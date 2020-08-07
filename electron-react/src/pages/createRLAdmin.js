@@ -2,7 +2,6 @@ import React from "react";
 import {
   makeStyles,
   Typography,
-  Paper,
   Grid,
   Button,
   Box,
@@ -26,13 +25,6 @@ import { openDialog } from "../modules/dialogReducer";
 export const customStyles = makeStyles(theme => ({
   walletContainer: {
     marginBottom: theme.spacing(5)
-  },
-  paper: {
-    marginTop: theme.spacing(2),
-    padding: theme.spacing(2),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column"
   },
   input: {
     marginLeft: theme.spacing(3),
@@ -141,7 +133,7 @@ export const CreateRLAdminWallet = () => {
     dispatch(createState(true, true));
     const interval = interval_input.value
     const interval_value = parseInt(Number(interval));
-    const chiaper = chiaper_input.value
+    const chiaper = chia_to_mojo(chiaper_input.value);
     const chiaper_value = parseInt(Number(chiaper));
     const userpubkey = userpubkey_input.value
     const amount = chia_to_mojo(amount_input.value);
