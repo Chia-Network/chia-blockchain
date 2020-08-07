@@ -94,4 +94,4 @@ class TestCCWallet:
         await time_out_assert(15, rl_user.get_confirmed_balance, 99)
 
         rl_user.rl_get_aggregation_puzzlehash(rl_user.get_new_puzzle())
-        rl_admin.rl_generate_signed_aggregation_transaction()
+        # rl_admin.rl_generate_signed_aggregation_transaction()
