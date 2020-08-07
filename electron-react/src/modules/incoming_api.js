@@ -145,7 +145,10 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       } else if (command === "get_wallets") {
         if (data.success) {
           const wallets = data.wallets;
+<<<<<<< HEAD
           console.log(wallets);
+=======
+>>>>>>> fixed rl interval limit setup; style and text edits; cleanup
           var wallets_state = [];
           for (let object of wallets) {
             id = parseInt(object.id);
@@ -197,7 +200,6 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         if (!wallet) {
           return state;
         }
-        // console.log("wallet_id here: " + id);
         wallet.puzzle_hash = puzzle_hash;
         return { ...state };
       } else if (command === "get_connections") {
@@ -244,10 +246,17 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         return state;
       } else if (command === "rl_set_user_info") {
         const success = data;
+<<<<<<< HEAD
         console.log("RL SET USER INFO SUCCESS: ", success);
       } else if (command === "create_new_wallet") {
         const success = data;
         console.log("RL CREATE WALLET SUCCESS: ", success);
+=======
+        console.log("RL SET USER INFO SUCCESS: ", success)
+      }
+      else if (command === "create_new_wallet") {
+        const success = data["success"];
+>>>>>>> fixed rl interval limit setup; style and text edits; cleanup
       }
       return state;
     default:
