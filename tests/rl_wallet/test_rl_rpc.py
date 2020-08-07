@@ -6,6 +6,7 @@ from src.types.coin import Coin
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
 from tests.setup_nodes import setup_simulators_and_wallets
+from tests.time_out_assert import time_out_assert
 
 
 @pytest.fixture(scope="module")
@@ -35,6 +36,9 @@ class TestCCWallet:
         ph = await wallet.get_new_puzzlehash()
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await wallet_server_1.start_client(
+            PeerInfo("localhost", uint16(server_1._port)), None
+        )
+        await wallet_server_2.start_client(
             PeerInfo("localhost", uint16(server_1._port)), None
         )
         for i in range(0, num_blocks):
@@ -75,6 +79,14 @@ class TestCCWallet:
         assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 0
         for i in range(0, 2*num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+
+        async def check_balance(api, wallet_id):
+            balance_response = await api.get_wallet_balance({'wallet_id': wallet_id})
+            balance = balance_response["confirmed_wallet_balance"]
+            return balance
+
+        await time_out_assert(15, check_balance, 100, api_user, 2)
+
         assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 100
 
         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
@@ -84,8 +96,11 @@ class TestCCWallet:
                                                'amount': 3,
                                                'fee': 0,
                                                'puzzle_hash': puzzle_hash.hex()})
+
         assert val['status'] == 'SUCCESS'
         for i in range(0, 2*num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
-        assert await receiving_wallet.get_spendable_balance() == 3
+        await time_out_assert(15, check_balance, 97, api_user, 2)
+
+        await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
         assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 97
