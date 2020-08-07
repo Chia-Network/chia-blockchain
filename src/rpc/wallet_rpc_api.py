@@ -77,7 +77,7 @@ class WalletRpcApi:
     async def rl_set_user_info(self, request):
         wallet_id = uint32(int(request["wallet_id"]))
         rl_user = self.service.wallet_state_manager.wallets[wallet_id]
-        origin = request["origin"];
+        origin = request["origin"]
         success = await rl_user.set_user_info(
             uint64(request["interval"]),
             uint64(request["limit"]),
