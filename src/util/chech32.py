@@ -41,14 +41,16 @@ def bech32_hrp_expand(hrp):
     return [ord(x) >> 5 for x in hrp] + [0] + [ord(x) & 31 for x in hrp]
 
 
+M = 0x3FFFFFFF
+
 
 def bech32_verify_checksum(hrp, data):
-  return bech32_polymod(bech32_hrp_expand(hrp) + data) == M
+    return bech32_polymod(bech32_hrp_expand(hrp) + data) == M
+
 
 def bech32_create_checksum(hrp, data):
-    """Compute the checksum values given HRP and data."""
     values = bech32_hrp_expand(hrp) + data
-    polymod = bech32_polymod(values + [0, 0, 0, 0, 0, 0]) ^ 1
+    polymod = bech32_polymod(values + [0,0,0,0,0,0]) ^ M
     return [(polymod >> 5 * (5 - i)) & 31 for i in range(6)]
 
 
