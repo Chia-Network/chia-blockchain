@@ -7,6 +7,7 @@ from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
+from src.util.chech32 import decode_puzzle_hash
 from src.util.condition_tools import (
     conditions_for_solution,
     conditions_dict_for_solution,
@@ -334,7 +335,7 @@ class Wallet(AbstractWallet):
         else:
             fee = uint64(0)
 
-        puzzle_hash = bytes32(bytes.fromhex(data["puzzle_hash"]))
+        puzzle_hash = decode_puzzle_hash(data["puzzle_hash"])
 
         return await self.generate_signed_transaction(amount, puzzle_hash, fee)
 
