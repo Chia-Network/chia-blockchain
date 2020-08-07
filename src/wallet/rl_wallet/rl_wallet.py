@@ -386,8 +386,8 @@ class RLWallet(AbstractWallet):
         """
         Returns keys for puzzle_hash.
         """
-        index_for_puzzlehash = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash(
-            puzzle_hash
+        index_for_puzzlehash = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash_and_wallet(
+            puzzle_hash, self.wallet_info.id
         )
         if index_for_puzzlehash is None:
             raise Exception("index_for_puzzlehash is None")
