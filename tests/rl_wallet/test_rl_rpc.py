@@ -29,7 +29,7 @@ class TestCCWallet:
         full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         wallet_node_1, wallet_server_1 = wallets[1]
-        wallet_node_2, wallet_server_1 = wallets[1]
+        wallet_node_2, wallet_server_2 = wallets[2]
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()

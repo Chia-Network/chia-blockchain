@@ -197,6 +197,13 @@ class WalletStateManager:
 
         return self
 
+    def get_derivation_index(self, pubkey: G1Element, max_depth: int = 1000) -> int:
+        for i in range(0, max_depth):
+            derived = self.get_public_key(uint32(i))
+            if derived == pubkey:
+                return i
+        return -1
+
     def get_public_key(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
 
@@ -257,26 +264,31 @@ class WalletStateManager:
 
             for index in range(start_index, unused + to_generate):
                 if target_wallet.wallet_info.type == WalletType.RATE_LIMITED:
+                    if target_wallet.rl_info.initialized is False:
+                        break
                     type = target_wallet.rl_info.type
                     if type == "user":
-                        pubkey = target_wallet.rl_info.user_pubkey
+                        pubkey = G1Element.from_bytes(target_wallet.rl_info.user_pubkey)
                     else:
-                        pubkey = target_wallet.rl_info.admin_pubkey
-                    puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
-                    if puzzle is None:
+                        pubkey = G1Element.from_bytes(target_wallet.rl_info.admin_pubkey)
+                    puzzle: Program = target_wallet.puzzle_for_pk(pubkey)
+                    puzzle_hash: bytes32 = puzzle.get_tree_hash()
+
+                    rl_index = self.get_derivation_index(pubkey)
+                    if rl_index == -1:
                         break
-                    puzzlehash: bytes32 = puzzle.get_tree_hash()
-                    rl_index = await self.puzzle_store.index_for_pubkey(G1Element.from_bytes(pubkey))
+
                     derivation_paths.append(
                         DerivationRecord(
                             uint32(rl_index),
-                            puzzlehash,
+                            puzzle_hash,
                             pubkey,
                             target_wallet.wallet_info.type,
                             uint32(target_wallet.wallet_info.id),
                         )
                     )
                     break
+
                 pubkey: G1Element = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 if puzzle is None:

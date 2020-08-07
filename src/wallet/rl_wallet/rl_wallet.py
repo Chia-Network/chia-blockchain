@@ -69,8 +69,8 @@ class RLWallet(AbstractWallet):
         unused = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
         assert unused is not None
 
-        private_key = wallet_state_manager.private_key
-        pubkey_bytes: bytes = bytes(private_key.derive_child(unused).get_g1())
+        private_key = master_sk_to_wallet_sk(wallet_state_manager.private_key, unused)
+        pubkey_bytes: bytes = bytes(private_key.get_g1())
 
         rl_info = RLInfo(
             "admin", pubkey_bytes, None, None, None, None, None, None, False
