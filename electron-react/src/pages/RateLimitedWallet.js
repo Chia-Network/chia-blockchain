@@ -399,7 +399,7 @@ const RLDetailsCard = props => {
                   <Typography variant="subtitle1">Spending interval: {interval}</Typography>
                 </Box>
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1">Spending limit: {limit}</Typography>
+                  <Typography variant="subtitle1">Spending limit: {mojo_to_chia_string(limit)}</Typography>
                 </Box>
               </Box>
             </div>
