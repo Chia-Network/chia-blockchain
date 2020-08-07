@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple, Dict, Callable
 from blspy import PrivateKey
 
 from src.util.byte_types import hexstr_to_bytes
+from src.util.chech32 import encode_puzzle_hash, decode_puzzle_hash
 from src.util.keychain import (
     generate_mnemonic,
     bytes_to_mnemonic,
@@ -156,9 +157,11 @@ class WalletRpcApi:
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         if wallet.wallet_info.type == WalletType.STANDARD_WALLET.value:
-            puzzle_hash = (await wallet.get_new_puzzlehash()).hex()
+            raw_puzzle_hash = await wallet.get_new_puzzlehash()
+            puzzle_hash = encode_puzzle_hash(raw_puzzle_hash)
         elif wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
-            puzzle_hash = await wallet.get_new_inner_hash()
+            raw_puzzle_hash = await wallet.get_new_inner_hash()
+            puzzle_hash = encode_puzzle_hash(raw_puzzle_hash)
 
         response = {
             "success": True,
@@ -176,7 +179,7 @@ class WalletRpcApi:
         except Exception as e:
             data = {
                 "status": "FAILED",
-                "reason": f"Failed to generate signed transaction {e}",
+                "reason": f"Failed to generate signed transaction. Error: {e}",
             }
             return data
         if tx is None:
@@ -233,13 +236,24 @@ class WalletRpcApi:
         transactions = await self.service.wallet_state_manager.get_all_transactions(
             wallet_id
         )
+        formatted_transactions = []
 
-        response = {"success": True, "txs": transactions, "wallet_id": wallet_id}
+        for tx in transactions:
+            formatted = tx.to_json_dict()
+            formatted["to_puzzle_hash"] = encode_puzzle_hash(tx.to_puzzle_hash)
+            formatted_transactions.append(formatted)
+
+        response = {
+            "success": True,
+            "txs": formatted_transactions,
+            "wallet_id": wallet_id,
+        }
         return response
 
     async def farm_block(self, request):
-        puzzle_hash = bytes.fromhex(request["puzzle_hash"])
-        request = FarmNewBlockProtocol(puzzle_hash)
+        puzzle_hash = request["puzzle_hash"]
+        raw_puzzle_hash = decode_puzzle_hash(puzzle_hash)
+        request = FarmNewBlockProtocol(raw_puzzle_hash)
         msg = OutboundMessage(
             NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
         )
@@ -304,7 +318,7 @@ class WalletRpcApi:
                         "success": True,
                         "type": cc_wallet.wallet_info.type,
                         "colour": colour,
-                        "wallet_id": cc_wallet.wallet_info.id
+                        "wallet_id": cc_wallet.wallet_info.id,
                     }
                 except Exception as e:
                     log.error("FAILED {e}")
@@ -382,7 +396,9 @@ class WalletRpcApi:
     async def cc_spend(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        puzzle_hash = hexstr_to_bytes(request["innerpuzhash"])
+        encoded_puzzle_hash = request["innerpuzhash"]
+        puzzle_hash = decode_puzzle_hash(encoded_puzzle_hash)
+
         try:
             tx = await wallet.generate_signed_transaction(
                 request["amount"], puzzle_hash
