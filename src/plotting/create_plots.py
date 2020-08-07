@@ -73,9 +73,18 @@ def create_plots(
         f"{bytes(pool_public_key).hex()} farmer public key: {bytes(farmer_public_key).hex()}"
     )
 
-    mkdir(args.tmp_dir)
-    mkdir(args.tmp2_dir)
+    tmp_dir_created = False
+    if not args.tmp_dir.exists():
+        mkdir(args.tmp_dir)
+        tmp_dir_created = True
+
+    tmp2_dir_created = False
+    if not args.tmp2_dir.exists():
+        mkdir(args.tmp2_dir)
+        tmp2_dir_created = True
+
     mkdir(args.final_dir)
+
     finished_filenames = []
     config = load_config(root_path, config_filename)
     plot_filenames = get_plot_filenames(config["harvester"])
@@ -131,18 +140,23 @@ def create_plots(
             log.info(f"Plot {filename} already exists")
 
     log.info("Summary:")
-    try:
-        args.tmp_dir.rmdir()
-    except Exception:
-        log.info(
-            f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty."
-        )
-    try:
-        args.tmp2_dir.rmdir()
-    except Exception:
-        log.info(
-            f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty."
-        )
+
+    if tmp_dir_created:
+        try:
+            args.tmp_dir.rmdir()
+        except Exception:
+            log.info(
+                f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty."
+            )
+
+    if tmp2_dir_created:
+        try:
+            args.tmp2_dir.rmdir()
+        except Exception:
+            log.info(
+                f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty."
+            )
+
     log.info(f"Created a total of {len(finished_filenames)} new plots")
     for filename in finished_filenames:
         log.info(filename)
