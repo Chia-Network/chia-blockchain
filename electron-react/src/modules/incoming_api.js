@@ -13,7 +13,8 @@ export const Wallet = (id, name, type, data) => ({
   balance_change: 0,
   transactions: [],
   puzzle_hash: "",
-  colour: ""
+  colour: "",
+  send_transaction_result: ""
 });
 
 export const Transaction = (
@@ -59,7 +60,6 @@ const initial_state = {
     syncing: false
   },
   sending_transaction: false,
-  send_transaction_result: null,
   show_create_backup: false
 };
 
@@ -242,7 +242,11 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       }
       if (command === "send_transaction" || command === "cc_spend") {
         state["sending_transaction"] = false;
-        state["send_transaction_result"] = message.data;
+        const id = data.id;
+        const name = data.name;
+        wallets = state.wallets;
+        wallet = wallets[parseInt(id)];
+        wallet.send_transaction_result = message.data;
         return state;
       } else if (command === "rl_set_user_info") {
         const success = data;
