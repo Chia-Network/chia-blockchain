@@ -319,44 +319,45 @@ async def show_async(args, parser):
             wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port)
             summaries: Dict = await wallet_client.get_wallet_summaries()
             print("Balances")
-            for wallet_id, summary in summaries.items():
-                balances = await wallet_client.get_wallet_balance(wallet_id)
-                if "name" in summary:
-                    print(
-                        f"Wallet ID {wallet_id} type {summary['type']} {summary['name']}"
-                    )
-                    print(
-                        f"   -Confirmed: {balances['confirmed_wallet_balance']/units['colouredcoin']}"
-                    )
-                    print(
-                        f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}"
-                    )
-                    print(
-                        f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}"
-                    )
-                    print(
-                        f"   -Frozen: {balances['frozen_balance']/units['colouredcoin']}"
-                    )
-                    print(
-                        f"   -Pending change: {balances['pending_change']/units['colouredcoin']}"
-                    )
-                else:
-                    print(f"Wallet ID {wallet_id} type {summary['type']}")
-                    print(
-                        f"   -Confirmed: {balances['confirmed_wallet_balance']/units['chia']} TXCH"
-                    )
-                    print(
-                        f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['chia']} TXCH"
-                    )
-                    print(
-                        f"   -Spendable: {balances['spendable_balance']/units['chia']} TXCH"
-                    )
-                    print(
-                        f"   -Frozen: {balances['frozen_balance']/units['chia']} TXCH"
-                    )
-                    print(
-                        f"   -Pending change: {balances['pending_change']/units['chia']} TXCH"
-                    )
+            if summaries is not None:
+                for wallet_id, summary in summaries.items():
+                    balances = await wallet_client.get_wallet_balance(wallet_id)
+                    if "name" in summary:
+                        print(
+                            f"Wallet ID {wallet_id} type {summary['type']} {summary['name']}"
+                        )
+                        print(
+                            f"   -Confirmed: {balances['confirmed_wallet_balance']/units['colouredcoin']}"
+                        )
+                        print(
+                            f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}"
+                        )
+                        print(
+                            f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}"
+                        )
+                        print(
+                            f"   -Frozen: {balances['frozen_balance']/units['colouredcoin']}"
+                        )
+                        print(
+                            f"   -Pending change: {balances['pending_change']/units['colouredcoin']}"
+                        )
+                    else:
+                        print(f"Wallet ID {wallet_id} type {summary['type']}")
+                        print(
+                            f"   -Confirmed: {balances['confirmed_wallet_balance']/units['chia']} TXCH"
+                        )
+                        print(
+                            f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['chia']} TXCH"
+                        )
+                        print(
+                            f"   -Spendable: {balances['spendable_balance']/units['chia']} TXCH"
+                        )
+                        print(
+                            f"   -Frozen: {balances['frozen_balance']/units['chia']} TXCH"
+                        )
+                        print(
+                            f"   -Pending change: {balances['pending_change']/units['chia']} TXCH"
+                        )
             wallet_client.close()
             await wallet_client.await_closed()
 

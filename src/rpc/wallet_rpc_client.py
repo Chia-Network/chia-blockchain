@@ -12,7 +12,10 @@ class WalletRpcClient(RpcClient):
     """
 
     async def get_wallet_summaries(self) -> Dict:
-        return await self.fetch("get_wallet_summaries", {})
+        response await self.fetch("get_wallet_summaries", {})
+        return response["wallet_summaries"]
+
 
     async def get_wallet_balance(self, wallet_id: str) -> Dict:
-        return await self.fetch("get_wallet_balance", {"wallet_id": wallet_id})
+        response await self.fetch("get_wallet_balance", {"wallet_id": wallet_id})
+        return response["wallet_balance"]
