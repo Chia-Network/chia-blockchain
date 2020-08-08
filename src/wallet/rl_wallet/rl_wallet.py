@@ -269,7 +269,9 @@ class RLWallet(AbstractWallet):
             True,
         )
         rl_puzzle_hash = rl_puzzle.get_tree_hash()
-
+        breakpoint()
+        if self.wallet_state_manager.puzzle_store.puzzle_hash_exists(rl_puzzle_hash):
+            raise Exception("Cannot create multiple Rate Limited wallets under the same keys. This will change in a future release.")
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
             G1Element.from_bytes(self.rl_info.user_pubkey)
         )
@@ -576,6 +578,31 @@ class RLWallet(AbstractWallet):
         if transaction is None:
             return None
         return self.sign_clawback_transaction(transaction, self.rl_info.admin_pubkey)
+
+    async def clawback_rl_coin_transaction(self):
+        to_puzzle_hash = self.get_new_puzzlehash()
+        spend_bundle = await self.clawback_rl_coin(to_puzzle_hash)
+        if spend_bundle is None:
+            return None
+
+        tx_record = TransactionRecord(
+            confirmed_at_index=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=to_puzzle_hash,
+            amount=uint64(0),
+            fee_amount=uint64(0),
+            incoming=False,
+            confirmed=False,
+            sent=uint32(0),
+            spend_bundle=spend_bundle,
+            additions=spend_bundle.additions(),
+            removals=spend_bundle.removals(),
+            wallet_id=self.wallet_info.id,
+            sent_to=[],
+            trade_id=None,
+        )
+
+        return tx_record
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2
     async def rl_generate_signed_aggregation_transaction(
