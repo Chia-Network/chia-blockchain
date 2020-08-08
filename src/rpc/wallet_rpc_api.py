@@ -275,7 +275,7 @@ class WalletRpcApi:
         else:
             frozen_balance = await wallet.get_frozen_amount()
 
-        balance = {
+        wallet_balance = {
             "wallet_id": wallet_id,
             "confirmed_wallet_balance": balance,
             "unconfirmed_wallet_balance": pending_balance,
@@ -284,7 +284,7 @@ class WalletRpcApi:
             "pending_change": pending_change,
         }
 
-        return {"success": True, "wallet_balance": balance}
+        return {"success": True, "wallet_balance": wallet_balance}
 
     async def get_sync_status(self, request: Dict):
         if self.service.wallet_state_manager is None:
