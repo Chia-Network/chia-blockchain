@@ -14,6 +14,8 @@ def open_backup_file(file_path, private_key):
     backup_file_text = file_path.read_text()
     backup_file_json = json.loads(backup_file_text)
     meta_data = backup_file_json["meta_data"]
+    meta_data_bytes = json.dumps(meta_data).encode()
+    sig = backup_file_json["signature"]
 
     backup_pk = master_sk_to_backup_sk(private_key)
     my_pubkey = backup_pk.get_g1()
@@ -21,9 +23,9 @@ def open_backup_file(file_path, private_key):
     f = Fernet(key_base_64)
 
     encrypted_data = backup_file_json["data"].encode()
-    msg = std_hash(encrypted_data)
+    msg = std_hash(encrypted_data) + std_hash(meta_data_bytes)
 
-    signature = SignatureMPL.from_bytes(hexstr_to_bytes(meta_data["signature"]))
+    signature = SignatureMPL.from_bytes(hexstr_to_bytes(sig))
     pubkey = PublicKeyMPL.from_bytes(hexstr_to_bytes(meta_data["pubkey"]))
 
     sig_match_my = AugSchemeMPL.verify(my_pubkey, msg, signature)
