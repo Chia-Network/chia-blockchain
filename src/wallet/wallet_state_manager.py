@@ -26,6 +26,7 @@ from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.key_val_store import KeyValStore
 from src.wallet.settings.user_settings import UserSettings
+from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.trade_manager import TradeManager
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
@@ -146,7 +147,19 @@ class WalletStateManager:
         self.wallets = {}
         self.wallets[main_wallet_info.id] = self.main_wallet
 
-        await self.load_wallets()
+        for wallet_info in await self.get_all_wallets():
+            # self.log.info(f"wallet_info {wallet_info}")
+            if wallet_info.type == WalletType.STANDARD_WALLET:
+                if wallet_info.id == 1:
+                    continue
+                wallet = await Wallet.create(config, wallet_info)
+                self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.COLOURED_COIN:
+                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
+                self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.RATE_LIMITED:
+                wallet = await RLWallet.create(self, wallet_info)
+                self.wallets[wallet_info.id] = wallet
 
         async with self.puzzle_store.lock:
             index = await self.puzzle_store.get_last_derivation_path()
