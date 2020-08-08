@@ -12,13 +12,7 @@ class WalletRpcClient(RpcClient):
     """
 
     async def get_wallet_summaries(self) -> Dict:
-        response = await self.fetch("get_wallet_summaries", {})
-        if "wallet_summaries" not in response:
-            return None
-        return response["wallet_summaries"]
+        return await self.fetch("get_wallet_summaries", {})
 
     async def get_wallet_balance(self, wallet_id: str) -> Dict:
-        response = await self.fetch("get_wallet_balance", {"wallet_id": wallet_id})
-        if "wallet_balance" not in response:
-            return None
-        return response["wallet_balance"]
+        return await self.fetch("get_wallet_balance", {"wallet_id": wallet_id})
