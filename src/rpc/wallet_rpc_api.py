@@ -275,9 +275,8 @@ class WalletRpcApi:
         else:
             frozen_balance = await wallet.get_frozen_amount()
 
-        response = {
+        wallet_balance = {
             "wallet_id": wallet_id,
-            "success": True,
             "confirmed_wallet_balance": balance,
             "unconfirmed_wallet_balance": pending_balance,
             "spendable_balance": spendable_balance,
@@ -285,7 +284,7 @@ class WalletRpcApi:
             "pending_change": pending_change,
         }
 
-        return response
+        return {"success": True, "wallet_balance": wallet_balance}
 
     async def get_sync_status(self, request: Dict):
         if self.service.wallet_state_manager is None:
@@ -470,7 +469,7 @@ class WalletRpcApi:
     async def get_wallet_summaries(self, request: Dict):
         if self.service.wallet_state_manager is None:
             return {"success": False}
-        response = {}
+        wallet_summaries = {}
         for wallet_id in self.service.wallet_state_manager.wallets:
             wallet = self.service.wallet_state_manager.wallets[wallet_id]
             balance = await wallet.get_confirmed_balance()
@@ -478,15 +477,15 @@ class WalletRpcApi:
             if type == WalletType.COLOURED_COIN.value:
                 name = wallet.cc_info.my_colour_name
                 colour = wallet.get_colour()
-                response[wallet_id] = {
+                wallet_summaries[wallet_id] = {
                     "type": type,
                     "balance": balance,
                     "name": name,
                     "colour": colour,
                 }
             else:
-                response[wallet_id] = {"type": type, "balance": balance}
-        return response
+                wallet_summaries[wallet_id] = {"type": type, "balance": balance}
+        return {"success": True, "wallet_summaries": wallet_summaries}
 
     async def get_discrepancies_for_offer(self, request):
         file_name = request["filename"]
