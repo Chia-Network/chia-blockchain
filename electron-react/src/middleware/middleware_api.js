@@ -12,6 +12,7 @@ import {
   pingWallet
 } from "../modules/message";
 
+import { createState } from "../modules/createWalletReducer";
 import { offerParsed, resetTrades } from "../modules/TradeReducer";
 import { openDialog } from "../modules/dialogReducer";
 import {
