@@ -330,7 +330,7 @@ const SendCard = props => {
   );
 
   const send_transaction_result = useSelector(
-    state => state.wallet_state.send_transaction_result
+    state => state.wallet_state.wallets[id].send_transaction_result
   );
   let result_message = "";
   let result_class = classes.resultSuccess;
