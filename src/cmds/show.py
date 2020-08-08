@@ -3,7 +3,7 @@ import asyncio
 import time
 from time import struct_time, localtime
 
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 from src.server.connection import NodeType
 from src.types.header_block import HeaderBlock
