@@ -1346,13 +1346,16 @@ class WalletStateManager:
 
         meta_data: Dict[str, Any] = {}
         meta_data["timestamp"] = now
-        meta_data["signature"] = bytes(
-            AugSchemeMPL.sign(backup_pk, std_hash(encrypted))
-        ).hex()
         meta_data["pubkey"] = bytes(backup_pk.get_g1()).hex()
+
+        meta_data_bytes = json.dumps(meta_data).encode()
+        signature = bytes(
+            AugSchemeMPL.sign(backup_pk, std_hash(encrypted) + std_hash(meta_data_bytes))
+        ).hex()
 
         backup["data"] = encrypted.decode()
         backup["meta_data"] = meta_data
+        backup["signature"] = signature
 
         backup_file_text = json.dumps(backup)
         file_path.write_text(backup_file_text)
