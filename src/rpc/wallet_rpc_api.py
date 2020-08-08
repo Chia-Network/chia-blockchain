@@ -201,12 +201,14 @@ class WalletRpcApi:
             data = {
                 "status": "FAILED",
                 "reason": f"Failed to generate signed transaction. Error: {e}",
+                "id": wallet_id
             }
             return data
         if tx is None:
             data = {
                 "status": "FAILED",
                 "reason": "Failed to generate signed transaction",
+                "id": wallet_id
             }
             return data
         try:
@@ -215,6 +217,7 @@ class WalletRpcApi:
             data = {
                 "status": "FAILED",
                 "reason": f"Failed to push transaction {e}",
+                "id": wallet_id
             }
             return data
         sent = False
@@ -231,23 +234,24 @@ class WalletRpcApi:
                 continue
             status, err = sent_to[0][1], sent_to[0][2]
             if status == MempoolInclusionStatus.SUCCESS:
-                data = {"status": "SUCCESS"}
+                data = {"status": "SUCCESS", "id": wallet_id}
                 sent = True
                 break
             elif status == MempoolInclusionStatus.PENDING:
                 assert err is not None
-                data = {"status": "PENDING", "reason": err}
+                data = {"status": "PENDING", "reason": err, "id": wallet_id}
                 sent = True
                 break
             elif status == MempoolInclusionStatus.FAILED:
                 assert err is not None
-                data = {"status": "FAILED", "reason": err}
+                data = {"status": "FAILED", "reason": err, "id": wallet_id}
                 sent = True
                 break
         if not sent:
             data = {
                 "status": "FAILED",
                 "reason": "Timed out. Transaction may or may not have been sent.",
+                "id": wallet_id,
             }
 
         return data
@@ -432,6 +436,7 @@ class WalletRpcApi:
             data = {
                 "status": "FAILED",
                 "reason": f"{e}",
+                "id": wallet_id
             }
             return data
 
@@ -439,6 +444,7 @@ class WalletRpcApi:
             data = {
                 "status": "FAILED",
                 "reason": "Failed to generate signed transaction",
+                "id": wallet_id
             }
             return data
         try:
@@ -464,23 +470,25 @@ class WalletRpcApi:
                 continue
             status, err = sent_to[0][1], sent_to[0][2]
             if status == MempoolInclusionStatus.SUCCESS:
-                data = {"status": "SUCCESS"}
+                data = {"status": "SUCCESS",
+                        "id": wallet_id}
                 sent = True
                 break
             elif status == MempoolInclusionStatus.PENDING:
                 assert err is not None
-                data = {"status": "PENDING", "reason": err}
+                data = {"status": "PENDING", "reason": err, "id": wallet_id}
                 sent = True
                 break
             elif status == MempoolInclusionStatus.FAILED:
                 assert err is not None
-                data = {"status": "FAILED", "reason": err}
+                data = {"status": "FAILED", "reason": err, "id": wallet_id}
                 sent = True
                 break
         if not sent:
             data = {
                 "status": "FAILED",
                 "reason": "Timed out. Transaction may or may not have been sent.",
+                "id": wallet_id
             }
 
         return data
