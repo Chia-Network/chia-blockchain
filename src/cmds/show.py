@@ -317,7 +317,7 @@ async def show_async(args, parser):
             else:
                 wallet_rpc_port = args.wallet_rpc_port
             wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port)
-            summaries: Dict = await wallet_client.get_wallet_summaries()
+            summaries = await wallet_client.get_wallet_summaries()
             if summaries is None:
                 print("Balances cannot be displayed at this time")
             else:
