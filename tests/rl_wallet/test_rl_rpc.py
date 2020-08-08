@@ -49,7 +49,9 @@ class TestCCWallet:
                                                 'rl_type': 'user'})
         assert isinstance(val, dict)
         assert val['success']
+        assert val['id']
         assert val['type'] == 'RATE_LIMITED'
+        user_wallet_id = val['id']
         pubkey = val['pubkey']
 
         api_admin = WalletRpcApi(wallet_node)
@@ -61,9 +63,11 @@ class TestCCWallet:
                                                  'amount': 100})
         assert isinstance(val, dict)
         assert val['success']
+        assert val['id']
         assert val['type'] == 'RATE_LIMITED'
         assert val['origin']
         assert val['pubkey']
+        admin_wallet_id = val['id']
         admin_pubkey = val['pubkey']
         origin: Coin = val['origin']
 
@@ -104,3 +108,10 @@ class TestCCWallet:
 
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
         assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 97
+
+        val = await api_admin.send_clawback_transaction({'wallet_id': admin_wallet_id})
+        assert val['status'] == 'SUCCESS'
+        for i in range(0, 2*num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        assert (await api_admin.get_wallet_balance({'wallet_id': admin_wallet_id}))['confirmed_wallet_balance'] == 97
+        assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 0

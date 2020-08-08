@@ -401,7 +401,7 @@ class RLWallet(AbstractWallet):
         Return keys for pubkey
         """
         index_for_pubkey = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
-            clawback_pubkey.hex()
+            G1Element.from_bytes(clawback_pubkey)
         )
         if index_for_pubkey is None:
             raise Exception("index_for_pubkey is None")
@@ -540,7 +540,7 @@ class RLWallet(AbstractWallet):
             self.rl_info.user_pubkey,
             self.rl_info.limit,
             self.rl_info.interval,
-            self.rl_info.rl_origin,
+            self.rl_info.rl_origin.name(),
             self.rl_info.admin_pubkey,
         )
         solution = make_clawback_solution(clawback_puzzle_hash, clawback_coin.amount)
@@ -553,7 +553,9 @@ class RLWallet(AbstractWallet):
         sigs = []
         for puzzle, solution in spends:
             pubkey, secretkey = await self.get_keys_pk(clawback_pubkey)
-            signature = secretkey.sign(Program(solution.solution).get_tree_hash())
+            signature = AugSchemeMPL.sign(
+                secretkey, Program(solution.solution).get_tree_hash()
+            )
             sigs.append(signature)
         aggsig = AugSchemeMPL.aggregate(sigs)
         solution_list = []
@@ -576,7 +578,7 @@ class RLWallet(AbstractWallet):
         )
         if transaction is None:
             return None
-        return self.sign_clawback_transaction(transaction, self.rl_info.admin_pubkey)
+        return await self.sign_clawback_transaction(transaction, self.rl_info.admin_pubkey)
 
     async def clawback_rl_coin_transaction(self):
         to_puzzle_hash = self.get_new_puzzlehash()

@@ -72,21 +72,29 @@ class WalletRpcApi:
             "/get_all_trades": self.get_all_trades,
             "/cancel_trade": self.cancel_trade,
             "/rl_set_user_info": self.rl_set_user_info,
+            "/send_clawback_transaction:": self.send_clawback_transaction,
         }
 
     async def rl_set_user_info(self, request):
         wallet_id = uint32(int(request["wallet_id"]))
         rl_user = self.service.wallet_state_manager.wallets[wallet_id]
         origin = request["origin"]
-        success = await rl_user.set_user_info(
-            uint64(request["interval"]),
-            uint64(request["limit"]),
-            origin["parent_coin_info"],
-            origin["puzzle_hash"],
-            origin["amount"],
-            request["admin_pubkey"]
-        )
-        return {"success": success}
+        try:
+            success = await rl_user.set_user_info(
+                uint64(request["interval"]),
+                uint64(request["limit"]),
+                origin["parent_coin_info"],
+                origin["puzzle_hash"],
+                origin["amount"],
+                request["admin_pubkey"]
+            )
+            return {"success": success}
+        except Exception as e:
+            data = {
+                "success": False,
+                "reason": str(e),
+            }
+            return data
 
     async def get_trade(self, request: Dict):
         if self.service is None:
@@ -358,6 +366,7 @@ class WalletRpcApi:
                         uint64(int(request["amount"]))
                     )
                     return {"success": success,
+                            "id": rl_admin.wallet_info.id,
                             "type": rl_admin.wallet_info.type.name,
                             "origin": rl_admin.rl_info.rl_origin,
                             "pubkey": rl_admin.rl_info.admin_pubkey.hex()}
@@ -370,6 +379,7 @@ class WalletRpcApi:
                     rl_user: RLWallet = await RLWallet.create_rl_user(wallet_state_manager)
 
                     return {"success": True,
+                            "id": rl_user.wallet_info.id,
                             "type": rl_user.wallet_info.type.name,
                             "pubkey": rl_user.rl_info.user_pubkey.hex()}
                 except Exception as e:
@@ -737,3 +747,64 @@ class WalletRpcApi:
         mnemonic = generate_mnemonic()
         response = {"success": True, "mnemonic": mnemonic}
         return response
+
+    async def send_clawback_transaction(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        tx = await wallet.clawback_rl_coin_transaction()
+        try:
+            tx = await wallet.clawback_rl_coin_transaction()
+        except Exception as e:
+            data = {
+                "status": "FAILED",
+                "reason": f"Failed to generate signed transaction {e}",
+            }
+            return data
+        if tx is None:
+            data = {
+                "status": "FAILED",
+                "reason": "Failed to generate signed transaction",
+            }
+            return data
+        try:
+            await wallet.push_transaction(tx)
+        except Exception as e:
+            data = {
+                "status": "FAILED",
+                "reason": f"Failed to push transaction {e}",
+            }
+            return data
+        sent = False
+        start = time.time()
+        while time.time() - start < TIMEOUT:
+            sent_to: List[
+                Tuple[str, MempoolInclusionStatus, Optional[str]]
+            ] = await self.service.wallet_state_manager.get_transaction_status(
+                tx.name()
+            )
+
+            if len(sent_to) == 0:
+                await asyncio.sleep(1)
+                continue
+            status, err = sent_to[0][1], sent_to[0][2]
+            if status == MempoolInclusionStatus.SUCCESS:
+                data = {"status": "SUCCESS"}
+                sent = True
+                break
+            elif status == MempoolInclusionStatus.PENDING:
+                assert err is not None
+                data = {"status": "PENDING", "reason": err}
+                sent = True
+                break
+            elif status == MempoolInclusionStatus.FAILED:
+                assert err is not None
+                data = {"status": "FAILED", "reason": err}
+                sent = True
+                break
+        if not sent:
+            data = {
+                "status": "FAILED",
+                "reason": "Timed out. Transaction may or may not have been sent.",
+            }
+
+        return data
