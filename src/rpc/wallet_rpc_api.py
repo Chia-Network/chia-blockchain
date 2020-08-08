@@ -299,8 +299,6 @@ class WalletRpcApi:
             frozen_balance = 0
         else:
             frozen_balance = await wallet.get_frozen_amount()
-        else:
-            frozen_balance = 0
 
         wallet_balance = {
             "wallet_id": wallet_id,
