@@ -318,8 +318,10 @@ async def show_async(args, parser):
                 wallet_rpc_port = args.wallet_rpc_port
             wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port)
             summaries: Dict = await wallet_client.get_wallet_summaries()
-            print("Balances")
-            if summaries is not None:
+            if summaries is None:
+                print("Balances cannot be displayed at this time")
+            else:
+                print("Balances")
                 for wallet_id, summary in summaries.items():
                     balances = await wallet_client.get_wallet_balance(wallet_id)
                     if "name" in summary:

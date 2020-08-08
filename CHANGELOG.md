@@ -15,7 +15,7 @@ for setuptools_scm/PEP 440 reasons.
 - Improvements to coloured coin wallet.
 
 ### Fixed
-
+- `chia show -w` now displays a message when balances cannot be displayed instead of throwing an error
 
 ## [1.0beta9] aka Beta 1.9 - 2020-07-27
 
