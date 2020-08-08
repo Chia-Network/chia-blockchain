@@ -269,7 +269,7 @@ class RLWallet(AbstractWallet):
             True,
         )
         rl_puzzle_hash = rl_puzzle.get_tree_hash()
-        if self.wallet_state_manager.puzzle_store.puzzle_hash_exists(rl_puzzle_hash):
+        if await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(rl_puzzle_hash):
             raise Exception("Cannot create multiple Rate Limited wallets under the same keys. This will change in a future release.")
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
             G1Element.from_bytes(self.rl_info.user_pubkey)
