@@ -963,7 +963,7 @@ const RateLimitedWallet = props => {
     return wallets.length > props.wallet_id ? (
       <Grid className={classes.walletContainer} item xs={12}>
         <RLDetailsCard wallet_id={id}></RLDetailsCard>
-        <ClawbackCard wallet_id={id}></ClawbackCard>
+        <BalanceCard wallet_id={id}></BalanceCard>
       </Grid>
     ) : (
       ""
