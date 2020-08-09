@@ -125,7 +125,7 @@ class RLWallet(AbstractWallet):
             )
             info_as_string = json.dumps(rl_info.to_json_dict())
             await wallet_state_manager.user_store.create_wallet(
-                "RL User", WalletType.RATE_LIMITED, info_as_string
+                "RL User", WalletType.RATE_LIMITED.value, info_as_string
             )
             wallet_info = await wallet_state_manager.user_store.get_last_wallet()
             if wallet_info is None:

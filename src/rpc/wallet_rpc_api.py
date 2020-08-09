@@ -382,7 +382,7 @@ class WalletRpcApi:
 
                     return {"success": True,
                             "id": rl_user.wallet_info.id,
-                            "type": rl_user.wallet_info.type.name,
+                            "type": rl_user.wallet_info.type,
                             "pubkey": rl_user.rl_info.user_pubkey.hex()}
                 except Exception as e:
                     log.error("FAILED {e}")
