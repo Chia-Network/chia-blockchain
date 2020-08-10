@@ -79,7 +79,7 @@ class RLWallet(AbstractWallet):
         wallet_info: Optional[
             WalletInfo
         ] = await wallet_state_manager.user_store.create_wallet(
-            "RL Admin", WalletType.RATE_LIMITED, info_as_string
+            "RL Admin", WalletType.RATE_LIMITED.value, info_as_string
         )
         if wallet_info is None:
             raise Exception("wallet_info is None")
@@ -90,7 +90,7 @@ class RLWallet(AbstractWallet):
                     unused,
                     token_bytes(),
                     pubkey_bytes,
-                    WalletType.RATE_LIMITED,
+                    WalletType.RATE_LIMITED.value,
                     wallet_info.id,
                 )
             ]

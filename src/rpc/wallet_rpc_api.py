@@ -369,7 +369,7 @@ class WalletRpcApi:
                     )
                     return {"success": success,
                             "id": rl_admin.wallet_info.id,
-                            "type": rl_admin.wallet_info.type.name,
+                            "type": rl_admin.wallet_info.type,
                             "origin": rl_admin.rl_info.rl_origin,
                             "pubkey": rl_admin.rl_info.admin_pubkey.hex()}
                 except Exception as e:
