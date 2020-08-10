@@ -16,6 +16,7 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
+from src.util.chech32 import decode_puzzle_hash
 from src.util.ints import uint64, uint32
 from src.util.streamable import streamable, Streamable
 from src.wallet.abstract_wallet import AbstractWallet
@@ -688,7 +689,7 @@ class RLWallet(AbstractWallet):
         if not isinstance(data["amount"], int) or not isinstance(data["amount"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount = uint64(data["amount"])
-        puzzle_hash = bytes32(bytes.fromhex(data["puzzle_hash"]))
+        puzzle_hash = decode_puzzle_hash(data["puzzle_hash"])
         return await self.rl_generate_signed_transaction(amount, puzzle_hash)
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
