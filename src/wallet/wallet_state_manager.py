@@ -149,7 +149,6 @@ class WalletStateManager:
 
         for wallet_info in await self.get_all_wallets():
             # self.log.info(f"wallet_info {wallet_info}")
-            breakpoint()
             if wallet_info.type == WalletType.STANDARD_WALLET.value:
                 if wallet_info.id == 1:
                     continue
@@ -160,7 +159,6 @@ class WalletStateManager:
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.RATE_LIMITED.value:
                 wallet = await RLWallet.create(self, wallet_info)
-                breakpoint()
                 self.wallets[wallet_info.id] = wallet
 
         async with self.puzzle_store.lock:
