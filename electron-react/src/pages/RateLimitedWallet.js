@@ -666,25 +666,10 @@ const SendCard = props => {
     const amount = chia_to_mojo(amount_input.value);
     const fee = chia_to_mojo(fee_input.value);
 
-    if (puzzle_hash.includes("colour")) {
-      dispatch(
-        openDialog(
-          "Error: Cannot send chia to coloured address. Please enter a chia address."
-        )
-      );
-      return;
-    } else if (puzzle_hash.substring(0, 12) === "chia_addr://") {
-      puzzle_hash = puzzle_hash.substring(12);
-    }
     if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
       puzzle_hash = puzzle_hash.substring(2);
     }
-    if (puzzle_hash.length !== 64) {
-      dispatch(
-        openDialog("Please enter a 32 byte puzzle hash in hexadecimal format")
-      );
-      return;
-    }
+
     const amount_value = parseFloat(Number(amount));
     const fee_value = parseFloat(Number(fee));
 
