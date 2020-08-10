@@ -444,11 +444,12 @@ class WebSocketServer:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
         spend_bundle_list = []
-        info = "("
-        for i in request["spend_bundle_and_info_list"]:
-            spend_bundle_list.append(SpendBundle.from_bytes(bytes.fromhex(i[0])))
-            info = info + i[1]
-        info = info + ")"
+        # INFO LIST MUST BE SAME ORDER AS RECOVERY LIST
+        # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
+        for i in request["spend_bundles"]:
+            spend_bundle_list.append(SpendBundle.from_bytes(bytes.fromhex(i)))
+
+        info = wallet.format_info_list_json(request["info_dict"])
         message_spend_bundle = spend_bundle_list.aggregate(spend_bundle_list)
         success = await wallet.recovery_spend(
             request["coin_name"], request["puzhash"], info, message_spend_bundle
