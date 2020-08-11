@@ -272,7 +272,7 @@ class PeerConnections:
             and conn.connection_type == NodeType.FULL_NODE
         ]
 
-    def accept_inbound_connections(self):
+    def accept_inbound_connections(self, node_type: NodeType):
         if not self.local_type == NodeType.FULL_NODE:
             return True
         inbound_count = len(
@@ -280,7 +280,11 @@ class PeerConnections:
                 conn
                 for conn in self._all_connections
                 if not conn.is_outbound
-                and conn.connection_type == NodeType.FULL_NODE
+                and conn.connection_type == node_type
             ]
         )
-        return inbound_count < self.max_inbound_count
+        if node_type == NodeType.FULL_NODE:
+            return inbound_count < self.max_inbound_count
+        if node_type == NodeType.WALLET:
+            return inbound_count < 20
+        return inbound_count < 10
