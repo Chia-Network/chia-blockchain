@@ -1,11 +1,10 @@
 import asyncio
 import logging
 from typing import AsyncGenerator, Dict, Optional
-
+from src.types.sized_bytes import bytes32
 from src.protocols.introducer_protocol import RespondPeers, RequestPeers
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
-from src.types.sized_bytes import bytes32
 from src.server.server import ChiaServer
 from src.util.api_decorators import api_request
 from src.types.peer_info import PeerInfo
@@ -38,7 +37,10 @@ class Introducer:
                 return
             try:
                 log.info("Vetting random peers.")
-                rawpeers = self.global_connections.peers.get_peers(
+                if self.global_connections.introducer_peers is None:
+                    await asyncio.sleep(3)
+                    continue
+                rawpeers = self.global_connections.introducer_peers.get_peers(
                     100, True, self.recent_peer_threshold
                 )
 
@@ -76,7 +78,9 @@ class Introducer:
         peer_info: PeerInfo,
     ) -> AsyncGenerator[OutboundMessage, None]:
         max_peers = self.max_peers_to_send
-        rawpeers = self.global_connections.peers.get_peers(
+        if self.global_connections.introducer_peers is None:
+            return
+        rawpeers = self.global_connections.introducer_peers.get_peers(
             max_peers * 5, True, self.recent_peer_threshold
         )
 
