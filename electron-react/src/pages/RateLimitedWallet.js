@@ -357,9 +357,9 @@ const IncompleteCard = props => {
 const RLDetailsCard = props => {
   var id = props.wallet_id;
 
-  const name = useSelector(state => state.wallet_state.wallets[id].name);
   const data = useSelector(state => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
+  const type = data_parsed["type"]
   const user_pubkey = data_parsed["user_pubkey"]
   const admin_pubkey = data_parsed["admin_pubkey"]
   const interval = data_parsed["interval"]
@@ -381,7 +381,7 @@ const RLDetailsCard = props => {
   }
 
   const classes = useStyles();
-  if (name === "RL User") {
+  if (type === "user") {
     return (
       <Paper className={classes.paper}>
         <Grid container spacing={0}>
@@ -434,7 +434,7 @@ const RLDetailsCard = props => {
       </Paper>
     );
   }
-  else if (name === "RL Admin") {
+  else if (type === "admin") {
     return (
       <Paper className={classes.paper}>
         <Grid container spacing={0}>
@@ -914,12 +914,12 @@ const RateLimitedWallet = props => {
   const classes = useStyles();
   const id = useSelector(state => state.wallet_menu.id);
   const wallets = useSelector(state => state.wallet_state.wallets);
-  const name = useSelector(state => state.wallet_state.wallets[id].name);
   const data = useSelector(state => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
+  const type = data_parsed["type"]
   var init_status = data_parsed["initialized"];
 
-  if (name === "RL User") {
+  if (type === "user") {
     if (init_status) {
       return wallets.length > props.wallet_id ? (
         <Grid className={classes.walletContainer} item xs={12}>
@@ -944,7 +944,7 @@ const RateLimitedWallet = props => {
     }
   }
 
-  else if (name === "RL Admin") {
+  else if (type === "admin") {
     return wallets.length > props.wallet_id ? (
       <Grid className={classes.walletContainer} item xs={12}>
         <RLDetailsCard wallet_id={id}></RLDetailsCard>

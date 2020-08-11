@@ -244,11 +244,6 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         wallet = wallets[parseInt(id)];
         wallet.send_transaction_result = message.data;
         return state;
-      } else if (command === "rl_set_user_info") {
-        const success = data;
-        console.log("RL SET USER INFO SUCCESS: ", success);
-      } else if (command === "create_new_wallet") {
-        const success = data["success"];
       }
       return state;
     default:
