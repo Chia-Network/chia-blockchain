@@ -339,19 +339,17 @@ class WalletNode:
         """
         if self.server is None or self.wallet_state_manager is None:
             return
-        conns = self.global_connections
-        for peer in request.peer_list:
-            conns.peers.add(
-                PeerInfo(peer.host, uint16(peer.port))
-            )
-
         # Pseudo-message to close the connection
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
+        connected = self.global_connections.get_full_node_peerinfos()
+        to_connect = []
+        for peer in request.peer_list:
+            if peer in connected:
+                continue
+            to_connect.append(peer)
+            if len(to_connect) >= self._num_needed_peers():
+                break
 
-        unconnected = conns.get_unconnected_peers(
-            recent_threshold=self.config["recent_peer_threshold"]
-        )
-        to_connect = unconnected[: self._num_needed_peers()]
         if not len(to_connect):
             return
 
