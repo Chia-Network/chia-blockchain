@@ -106,6 +106,7 @@ class FullNode:
         self.full_node_store = await FullNodeStore.create(self.connection)
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.connection)
+        self.global_connections.connection = self.connection
 
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(
@@ -325,9 +326,6 @@ class FullNode:
 
     async def _await_closed(self):
         await self.connection.close()
-        if self.global_connections is not None:
-            if self.global_connections.peer_db_connection is not None:
-                await self.global_connections.peer_db_connection.close()
 
     async def _sync(self) -> OutboundMessageGenerator:
         """

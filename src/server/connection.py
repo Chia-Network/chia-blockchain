@@ -1,18 +1,16 @@
 import logging
-import random
 import time
 import asyncio
-import aiosqlite
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.peer_info import PeerInfo
-from src.types.sized_bytes import bytes32
 from src.util import cbor
-from src.util.ints import uint16, uint64
+from src.util.ints import uint16
 from src.server.address_manager import AddressManager
-from src.server.address_manager_store import AddressManagerStore
-from src.util.path import mkdir, path_from_root
+from src.full_node.address_manager_store import AddressManagerStore
+from src.util.path import path_from_root
+from src.server.introducer_peers import IntroducerPeers
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 4
@@ -136,24 +134,23 @@ class PeerConnections:
         all_connections: List[ChiaConnection] = []
     ):
         self._all_connections = all_connections
-        # Only full node peers are added to `peers`
-        self.peers = Peers()
         self.local_type = local_type
-        if not local_type == NodeType.FULL_NODE:
-            self.address_manager = None
-        else:
-            self.address_manager = AddressManager()
-            self.peer_table_path = path_from_root(root_path, config["peer_table_path"])
-            asyncio.create_task(self.initialize_address_manager())
-
-        for c in all_connections:
-            if c.connection_type == NodeType.FULL_NODE:
-                self.peers.add(c.get_peer_info())
-        self.state_changed_callback: Optional[Callable] = None
+        self.address_manager = None
+        self.introducer_peers = None
+        self.connection = None
 
         if local_type == NodeType.FULL_NODE:
+            self.db_path = path_from_root(root_path, config["database_path"])
+            asyncio.create_task(self.initialize_address_manager())
             self.max_inbound_count = config["target_peer_count"] - config["target_outbound_peer_count"]
             self.target_outbound_count = config["target_outbound_peer_count"]
+
+        if local_type == NodeType.INTRODUCER:
+            self.introducer_peers = IntroducerPeers()
+            for c in all_connections:
+                if c.connection_type == NodeType.FULL_NODE:
+                    self.introducer_peers.add(c.get_peer_info())
+        self.state_changed_callback: Optional[Callable] = None
 
     def set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -170,7 +167,8 @@ class PeerConnections:
 
         if connection.connection_type == NodeType.FULL_NODE:
             self._state_changed("add_connection")
-            return self.peers.add(connection.get_peer_info())
+            if self.introducer_peers is not None:
+                return self.introducer_peers.add(connection.get_peer_info())
         self._state_changed("add_connection")
         return True
 
@@ -181,14 +179,16 @@ class PeerConnections:
             connection.close()
             self._state_changed("close_connection")
             if not keep_peer:
-                self.peers.remove(info)
+                if self.introducer_peers is not None:
+                    self.introducer_peers.remove(info)
 
     def close_all_connections(self):
         for connection in self._all_connections:
             connection.close()
             self._state_changed("close_connection")
         self._all_connections = []
-        self.peers = Peers()
+        if self.local_type == NodeType.INTRODUCER:
+            self.introducer_peers = IntroducerPeers()
 
     def get_connections(self):
         return self._all_connections
@@ -201,13 +201,14 @@ class PeerConnections:
             filter(None, map(ChiaConnection.get_peer_info, self._all_connections))
         )
 
-    def get_unconnected_peers(self, max_peers=0, recent_threshold=9999999):
+    """def get_unconnected_peers(self, max_peers=0, recent_threshold=9999999):
         connected = self.get_full_node_peerinfos()
         peers = self.peers.get_peers(recent_threshold=recent_threshold)
         unconnected = list(filter(lambda peer: peer not in connected, peers))
         if not max_peers:
             max_peers = len(unconnected)
         return unconnected[:max_peers]
+    """
 
     # Functions related to AddressManager calls.
     async def add_potential_peer(self, peer: PeerInfo, peer_source: Optional[PeerInfo], penalty=0):
@@ -256,16 +257,19 @@ class PeerConnections:
         return await self.address_manager.size()
 
     async def serialize(self):
-        async with self.address_manager.lock:
-            self.address_manager_store.serialize(self.address_manager)
+        if self.address_manager is not None:
+            async with self.address_manager.lock:
+                self.address_manager_store.serialize(self.address_manager)
 
     async def initialize_address_manager(self):
-        mkdir(self.peer_table_path.parent)
-        self.peer_db_connection = await aiosqlite.connect(self.peer_table_path)
-        self.address_manager_store = await AddressManagerStore.create(self.peer_db_connection)
+        while self.connection is None:
+            await asyncio.sleep(3)
+        self.address_manager_store = await AddressManagerStore.create(self.connection)
         if not await self.address_manager_store.is_empty():
-            async with self.address_manager.lock:
-                self.address_manager_store.unserialize(self.address_manager)
+            self.address_manager = self.address_manager_store.unserialize()
+        else:
+            await self.address_manager_store.clear()
+            self.address_manager = AddressManager()
 
     # Functions related to outbound and inbound connections for the full node.
     def count_outbound_connections(self):
@@ -291,49 +295,3 @@ class PeerConnections:
             ]
         )
         return inbound_count < self.max_inbound_count
-
-# This class is kept only for the introducer, to provide high quality peers.
-# It might get removed in the future. The full node provides 'get_peers' call
-# using AddressManager.
-
-
-class Peers:
-    """
-    Has the list of known full node peers that are already connected or may be
-    connected to, and the time that they were last added.
-    """
-
-    def __init__(self):
-        self._peers: List[PeerInfo] = []
-        self.time_added: Dict[bytes32, uint64] = {}
-
-    def add(self, peer: Optional[PeerInfo]) -> bool:
-        if peer is None or not peer.port:
-            return False
-        if peer not in self._peers:
-            self._peers.append(peer)
-        self.time_added[peer.get_hash()] = uint64(int(time.time()))
-        return True
-
-    def remove(self, peer: Optional[PeerInfo]) -> bool:
-        if peer is None or not peer.port:
-            return False
-        try:
-            self._peers.remove(peer)
-            return True
-        except ValueError:
-            return False
-
-    def get_peers(
-        self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999
-    ) -> List[PeerInfo]:
-        target_peers = [
-            peer
-            for peer in self._peers
-            if time.time() - self.time_added[peer.get_hash()] < recent_threshold
-        ]
-        if not max_peers or max_peers > len(target_peers):
-            max_peers = len(target_peers)
-        if randomize:
-            random.shuffle(target_peers)
-        return target_peers[:max_peers]

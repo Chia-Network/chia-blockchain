@@ -5,7 +5,7 @@ import math
 import aiosqlite
 from src.types.peer_info import PeerInfo
 from src.server.address_manager import ExtendedPeerInfo, AddressManager
-from src.server.address_manager_store import AddressManagerStore
+from src.full_node.address_manager_store import AddressManagerStore
 from pathlib import Path
 
 
@@ -534,8 +534,7 @@ class TestPeerManager:
         connection = await aiosqlite.connect(db_filename)
         address_manager_store = await AddressManagerStore.create(connection)
         await address_manager_store.serialize(addrman)
-        addrman2 = AddressManagerTest()
-        await address_manager_store.unserialize(addrman2)
+        addrman2 = await address_manager_store.unserialize()
 
         retrieved_peers = []
         for _ in range(20):

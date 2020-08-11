@@ -13,6 +13,21 @@ log = logging.getLogger(__name__)
 
 
 class AddressManagerStore:
+    """
+    Metadata table:
+    - private key
+    - new table count
+    - tried table count
+    Nodes table:
+    * Maps entries from new/tried table to unique node ids.
+    - node_id
+    - IP, port, together with the IP, port of the source peer.
+    New table:
+    * Stores node_id, bucket for each occurrence in the new table of an entry.
+    * Once we know the buckets, we can also deduce the bucket positions.
+    Every other information, such as tried_matrix, map_addr, map_info, random_pos,
+    be deduced and it is not explicitly stored, instead it is recalculated.
+    """
     db: aiosqlite.Connection
 
     @classmethod
@@ -22,21 +37,21 @@ class AddressManagerStore:
         await self.db.commit()
 
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS metadata("
+            "CREATE TABLE IF NOT EXISTS peer_metadata("
             "key text,"
             "value text)"
         )
         await self.db.commit()
 
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS nodes("
+            "CREATE TABLE IF NOT EXISTS peer_nodes("
             "node_id int,"
             "value text)"
         )
         await self.db.commit()
 
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS new_table("
+            "CREATE TABLE IF NOT EXISTS peer_new_table("
             "node_id int,"
             "bucket int)"
         )
@@ -44,18 +59,18 @@ class AddressManagerStore:
         return self
 
     async def clear(self):
-        cursor = await self.db.execute("DELETE from metadata")
+        cursor = await self.db.execute("DELETE from peer_metadata")
         await cursor.close()
         await self.db.commit()
-        cursor = await self.db.execute("DELETE from nodes")
+        cursor = await self.db.execute("DELETE from peer_nodes")
         await cursor.close()
         await self.db.commit()
-        cursor = await self.db.execute("DELETE from new_table")
+        cursor = await self.db.execute("DELETE from peer_new_table")
         await cursor.close()
         await self.db.commit()
 
     async def get_metadata(self):
-        cursor = await self.db.execute("SELECT key, value from metadata")
+        cursor = await self.db.execute("SELECT key, value from peer_metadata")
         metadata = await cursor.fetchall()
         await cursor.close()
         return {key: value for key, value in metadata}
@@ -77,7 +92,7 @@ class AddressManagerStore:
         return True
 
     async def get_nodes(self):
-        cursor = await self.db.execute("SELECT node_id, value from nodes")
+        cursor = await self.db.execute("SELECT node_id, value from peer_nodes")
         nodes_id = await cursor.fetchall()
         await cursor.close()
         return [
@@ -86,7 +101,7 @@ class AddressManagerStore:
         ]
 
     async def get_new_table(self):
-        cursor = await self.db.execute("SELECT node_id, bucket from new_table")
+        cursor = await self.db.execute("SELECT node_id, bucket from peer_new_table")
         entries = await cursor.fetchall()
         await cursor.close()
         return [(node_id, bucket) for node_id, bucket in entries]
@@ -94,7 +109,7 @@ class AddressManagerStore:
     async def set_metadata(self, metadata):
         for key, value in metadata:
             cursor = await self.db.execute(
-                "INSERT OR REPLACE INTO metadata VALUES(?, ?)",
+                "INSERT OR REPLACE INTO peer_metadata VALUES(?, ?)",
                 (key, value),
             )
             await cursor.close()
@@ -103,7 +118,7 @@ class AddressManagerStore:
     async def set_nodes(self, node_list):
         for node_id, peer_info in node_list:
             cursor = await self.db.execute(
-                "INSERT OR REPLACE INTO nodes VALUES(?, ?)",
+                "INSERT OR REPLACE INTO peer_nodes VALUES(?, ?)",
                 (node_id, peer_info.to_string())
             )
             await cursor.close()
@@ -112,7 +127,7 @@ class AddressManagerStore:
     async def set_new_table(self, entries):
         for node_id, bucket in entries:
             cursor = await self.db.execute(
-                "INSERT OR REPLACE INTO new_table VALUES(?, ?)",
+                "INSERT OR REPLACE INTO peer_new_table VALUES(?, ?)",
                 (node_id, bucket),
             )
             await cursor.close()
@@ -157,7 +172,8 @@ class AddressManagerStore:
         await self.set_nodes(nodes)
         await self.set_new_table(new_table_entries)
 
-    async def unserialize(self, address_manager: AddressManager):
+    async def unserialize(self) -> AddressManager:
+        address_manager = AddressManager()
         metadata = await self.get_metadata()
         nodes = await self.get_nodes()
         new_table_entries = await self.get_new_table()
@@ -212,3 +228,4 @@ class AddressManagerStore:
         for node_id, info in address_manager.map_info.items():
             if (not info.is_tried and info.ref_count == 0):
                 address_manager.delete_new_entry_(node_id)
+        return address_manager

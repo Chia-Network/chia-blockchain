@@ -114,7 +114,6 @@ full_node:
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v18.db
-  peer_table_path: db/peer_table.db
   simulator_database_path: sim_db/simulator_blockchain_v18.db
 
   # If True, starts an RPC server at the following port
@@ -134,7 +133,7 @@ full_node:
   # How often to connect to introducer if we need to learn more peers
   introducer_connect_interval: 500
   # Accept peers until this number of connections
-  target_peer_count: 25
+  target_peer_count: 60
   # Initiate outbound connections until this number is hit.
   target_outbound_peer_count: 10
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
