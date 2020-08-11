@@ -1,5 +1,5 @@
 const config = {
-  local_test: true
+  local_test: false
 };
 
 module.exports = config;
