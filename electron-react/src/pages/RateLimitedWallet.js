@@ -17,7 +17,7 @@ import TableRow from "@material-ui/core/TableRow";
 
 import {
   send_transaction,
-  rl_set_user_info,
+  rl_set_user_info_action,
   clawback_rl_coin
 } from "../modules/message";
 import ExpansionPanel from "@material-ui/core/ExpansionPanel";
@@ -262,7 +262,7 @@ const IncompleteCard = props => {
     const interval_value = parseInt(Number(interval_input));
     const chiaper_value = parseInt(Number(chiaper_input));
     const origin_parsed = JSON.parse(origin_input)
-    dispatch(rl_set_user_info(id, interval_value, chiaper_value, origin_parsed, admin_pubkey_input))
+    dispatch(rl_set_user_info_action(id, interval_value, chiaper_value, origin_parsed, admin_pubkey_input))
   }
 
   const classes = useStyles();

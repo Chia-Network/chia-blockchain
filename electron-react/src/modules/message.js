@@ -517,6 +517,26 @@ export const create_rl_admin = (interval, limit, pubkey, amount) => {
   return action;
 };
 
+export const create_rl_admin_action = (interval, limit, pubkey, amount) => {
+  return dispatch => {
+    return async_api(dispatch, create_rl_admin(interval, limit, pubkey, amount), true).then(
+      response => {
+        dispatch(closeProgress());
+        dispatch(createState(true, false));
+        if (response.data.success) {
+          // Go to wallet
+          dispatch(format_message("get_wallets", {}));
+          dispatch(showCreateBackup(true));
+          dispatch(createState(true, false));
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
+};
+
 export const create_rl_user = () => {
   var action = walletMessage();
   action.message.command = "create_new_wallet";
@@ -526,6 +546,25 @@ export const create_rl_user = () => {
   };
   console.log("CREATE RL USER ACTION: ", action)
   return action;
+};
+
+export const create_rl_user_action = () => {
+  return dispatch => {
+    return async_api(dispatch, create_rl_user(), true).then(
+      response => {
+        dispatch(closeProgress());
+        dispatch(createState(true, false));
+        if (response.data.success) {
+          // Go to wallet
+          dispatch(format_message("get_wallets", {}));
+          dispatch(createState(true, false));
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
 };
 
 export const add_plot_directory_and_refresh = dir => {
@@ -576,6 +615,26 @@ export const rl_set_user_info = (wallet_id, interval, limit, origin, admin_pubke
   };
   console.log("RL SET USER INFO ACTION: ", action)
   return action;
+};
+
+export const rl_set_user_info_action = (wallet_id, interval, limit, origin, admin_pubkey) => {
+  return dispatch => {
+    return async_api(dispatch, rl_set_user_info(wallet_id, interval, limit, origin, admin_pubkey), true).then(
+      response => {
+        dispatch(closeProgress());
+        dispatch(createState(true, false));
+        if (response.data.success) {
+          // Go to wallet
+          dispatch(format_message("get_wallets", {}));
+          dispatch(showCreateBackup(false));
+          dispatch(createState(true, false));
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
 };
 
 export const clawback_rl_coin = (wallet_id) => {
