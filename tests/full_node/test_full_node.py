@@ -88,6 +88,7 @@ class TestFullNodeProtocol:
     @pytest.mark.asyncio
     async def test_request_peers(self, two_nodes, wallet_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
+        await asyncio.sleep(5)
         await server_2.global_connections.add_potential_peer(PeerInfo("::1", uint16(server_1._port)), None)
         await server_2.start_client(PeerInfo("::1", uint16(server_1._port)), None)
         await asyncio.sleep(10)
