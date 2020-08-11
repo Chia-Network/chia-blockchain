@@ -259,7 +259,7 @@ class RLWallet(AbstractWallet):
         rl_puzzle_hash = rl_puzzle.get_tree_hash()
 
         new_rl_info = RLInfo(
-            "admin",
+            "user",
             admin_pubkey_bytes,
             self.rl_info.user_pubkey,
             limit,
