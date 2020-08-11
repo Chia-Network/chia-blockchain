@@ -2,7 +2,6 @@ import React from "react";
 import {
   makeStyles,
   Typography,
-  Grid,
   Button,
   Box,
   TextField,
@@ -65,11 +64,11 @@ export const customStyles = makeStyles(theme => ({
   },
   inputTitleLeft: {
     marginLeft: theme.spacing(3),
-    width: 400
+    width: "50%"
   },
   inputTitleRight: {
     marginLeft: theme.spacing(3),
-    width: 400
+    width: "50%"
   }
 }));
 
@@ -144,150 +143,148 @@ export const CreateRLAdminWallet = () => {
   }
 
   return (
-    <Grid container spacing={0}>
-      <Grid item xs={12}>
-        <div className={classes.cardTitle}>
-          <Box display="flex">
-            <Box>
-              <Button onClick={goBack}>
-                <ArrowBackIosIcon> </ArrowBackIosIcon>
-              </Button>
-            </Box>
-            <Box flexGrow={1} className={classes.title}>
-              <Typography component="h6" variant="h6">
-                Create Rate Limited Admin Wallet
-              </Typography>
-            </Box>
+    <div>
+      <div className={classes.cardTitle}>
+        <Box display="flex">
+          <Box>
+            <Button onClick={goBack}>
+              <ArrowBackIosIcon> </ArrowBackIosIcon>
+            </Button>
           </Box>
-        </div>
-        <div className={custom.topTitleCard}>
-          <Box display="flex">
-            <Box flexGrow={1} className={custom.inputTitleLeft}>
-              <Typography variant="subtitle1">
-                Spending Interval Length
-              </Typography>
-            </Box>
-            <Box flexGrow={1} className={custom.inputTitleRight}>
-              <Typography variant="subtitle1">
-                Spendable Amount Per Interval
-              </Typography>
-            </Box>
+          <Box flexGrow={1} className={classes.title}>
+            <Typography component="h6" variant="h6">
+              Create Rate Limited Admin Wallet
+            </Typography>
           </Box>
-        </div>
-        <div className={custom.topCard}>
-          <Box display="flex">
-            <Box flexGrow={1}>
-              <TextField
-                className={custom.inputLeft}
-                id="filled-secondary"
-                variant="filled"
-                color="secondary"
-                fullWidth
-                inputRef={input => {
-                  interval_input = input;
-                }}
-                label="Interval"
-              />
-            </Box>
-            <Box flexGrow={1}>
-              <TextField
-                className={custom.inputRight}
-                id="filled-secondary"
-                variant="filled"
-                color="secondary"
-                fullWidth
-                inputRef={input => {
-                  chiaper_input = input;
-                }}
-                label="Spendable Amount"
-              />
-            </Box>
+        </Box>
+      </div>
+      <div className={custom.topTitleCard}>
+        <Box display="flex">
+          <Box flexGrow={6} className={custom.inputTitleLeft}>
+            <Typography variant="subtitle1">
+              Spending Interval Length
+            </Typography>
           </Box>
-        </div>
-        <div className={custom.titleCard}>
-          <Box display="flex">
-            <Box flexGrow={1} className={custom.inputTitleLeft}>
-              <Typography variant="subtitle1">
-                Amount For Initial Coin
-              </Typography>
-            </Box>
-            <Box flexGrow={1} className={custom.inputTitleRight}>
-              <Typography variant="subtitle1">
-                Fee
-              </Typography>
-            </Box>
+          <Box flexGrow={6} className={custom.inputTitleRight}>
+            <Typography variant="subtitle1">
+              Spendable Amount Per Interval
+            </Typography>
           </Box>
-        </div>
-        <div className={custom.subCard}>
-          <Box display="flex">
-            <Box flexGrow={1}>
-              <TextField
-                className={custom.inputLeft}
-                id="filled-secondary"
-                variant="filled"
-                color="secondary"
-                fullWidth
-                inputRef={input => {
-                  amount_input = input;
-                }}
-                label="Initial Amount"
-              />
-            </Box>
-            <Box flexGrow={1}>
-              <TextField
-                className={custom.inputRight}
-                id="filled-secondary"
-                variant="filled"
-                color="secondary"
-                fullWidth
-                inputRef={input => {
-                  fee_input = input;
-                }}
-                label="Fee"
-              />
-            </Box>
+        </Box>
+      </div>
+      <div className={custom.topCard}>
+        <Box display="flex">
+          <Box flexGrow={6}>
+            <TextField
+              className={custom.inputLeft}
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              inputRef={input => {
+                interval_input = input;
+              }}
+              label="Interval"
+            />
           </Box>
-        </div>
-        <div className={custom.titleCard}>
-          <Box display="flex">
-            <Box flexGrow={1} className={custom.inputTitleLeft}>
-              <Typography variant="subtitle1">
-                User Pubkey
-              </Typography>
-            </Box>
+          <Box flexGrow={6}>
+            <TextField
+              className={custom.inputRight}
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              inputRef={input => {
+                chiaper_input = input;
+              }}
+              label="Spendable Amount"
+            />
           </Box>
-        </div>
-        <div className={custom.subCard}>
-          <Box display="flex">
-            <Box flexGrow={1}>
-              <TextField
-                className={custom.input}
-                id="filled-secondary"
-                variant="filled"
-                color="secondary"
-                fullWidth
-                inputRef={input => {
-                  userpubkey_input = input;
-                }}
-                label="Pubkey"
-              />
-            </Box>
-            <Box>
-              <Button
-                onClick={create}
-                className={custom.send}
-                variant="contained"
-                color="primary"
-              >
-                Create
-              </Button>
-            </Box>
+        </Box>
+      </div>
+      <div className={custom.titleCard}>
+        <Box display="flex">
+          <Box flexGrow={6} className={custom.inputTitleLeft}>
+            <Typography variant="subtitle1">
+              Amount For Initial Coin
+            </Typography>
           </Box>
-        </div>
-        <Backdrop className={classes.backdrop} open={pending && created}>
-          <CircularProgress color="inherit" />
-        </Backdrop>
-      </Grid>
-    </Grid>
+          <Box flexGrow={6} className={custom.inputTitleRight}>
+            <Typography variant="subtitle1">
+              Fee
+            </Typography>
+          </Box>
+        </Box>
+      </div>
+      <div className={custom.subCard}>
+        <Box display="flex">
+          <Box flexGrow={6}>
+            <TextField
+              className={custom.inputLeft}
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              inputRef={input => {
+                amount_input = input;
+              }}
+              label="Initial Amount"
+            />
+          </Box>
+          <Box flexGrow={6}>
+            <TextField
+              className={custom.inputRight}
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              inputRef={input => {
+                fee_input = input;
+              }}
+              label="Fee"
+            />
+          </Box>
+        </Box>
+      </div>
+      <div className={custom.titleCard}>
+        <Box display="flex">
+          <Box flexGrow={6} className={custom.inputTitleLeft}>
+            <Typography variant="subtitle1">
+              User Pubkey
+            </Typography>
+          </Box>
+        </Box>
+      </div>
+      <div className={custom.subCard}>
+        <Box display="flex">
+          <Box flexGrow={6}>
+            <TextField
+              className={custom.input}
+              id="filled-secondary"
+              variant="filled"
+              color="secondary"
+              fullWidth
+              inputRef={input => {
+                userpubkey_input = input;
+              }}
+              label="Pubkey"
+            />
+          </Box>
+          <Box>
+            <Button
+              onClick={create}
+              className={custom.send}
+              variant="contained"
+              color="primary"
+            >
+              Create
+            </Button>
+          </Box>
+        </Box>
+      </div>
+      <Backdrop className={classes.backdrop} open={pending && created}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
+    </div>
   );
 };
