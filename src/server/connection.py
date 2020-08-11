@@ -140,7 +140,6 @@ class PeerConnections:
         self.connection = None
 
         if local_type == NodeType.FULL_NODE:
-            self.db_path = path_from_root(root_path, config["database_path"])
             asyncio.create_task(self.initialize_address_manager())
             self.max_inbound_count = config["target_peer_count"] - config["target_outbound_peer_count"]
             self.target_outbound_count = config["target_outbound_peer_count"]
@@ -200,15 +199,6 @@ class PeerConnections:
         return list(
             filter(None, map(ChiaConnection.get_peer_info, self._all_connections))
         )
-
-    """def get_unconnected_peers(self, max_peers=0, recent_threshold=9999999):
-        connected = self.get_full_node_peerinfos()
-        peers = self.peers.get_peers(recent_threshold=recent_threshold)
-        unconnected = list(filter(lambda peer: peer not in connected, peers))
-        if not max_peers:
-            max_peers = len(unconnected)
-        return unconnected[:max_peers]
-    """
 
     # Functions related to AddressManager calls.
     async def add_potential_peer(self, peer: PeerInfo, peer_source: Optional[PeerInfo], penalty=0):
