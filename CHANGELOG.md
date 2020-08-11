@@ -13,6 +13,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 - `chia show -b` now returns plot public key and pool public key for each block.
 - Improvements to coloured coin wallet.
+- blspy has been upgraded to 0.2.3. It includes HD un-hardened keys for special wallet use cases, a new derive child API, and now relies on the native upstream Relic repository.
 
 ### Fixed
 - `chia show -w` now displays a message when balances cannot be displayed instead of throwing an error
