@@ -1,4 +1,5 @@
 import { service_wallet } from "../util/service_names";
+import { DEFAULT_ECDH_CURVE } from "tls";
 
 export const Wallet = (id, name, type, data) => ({
   id: id,
@@ -155,18 +156,19 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         }
       } else if (command === "get_wallet_balance") {
         if (data.success) {
-          id = data.wallet_id;
+          const wallet_balance = data.wallet_balance;
+          id = wallet_balance.wallet_id;
           wallets = state.wallets;
           wallet = wallets[parseInt(id)];
           if (!wallet) {
             return state;
           }
-          var balance = data.confirmed_wallet_balance;
-          var unconfirmed_balance = data.unconfirmed_wallet_balance;
+          var balance = wallet_balance.confirmed_wallet_balance;
+          var unconfirmed_balance = wallet_balance.unconfirmed_wallet_balance;
           var pending_balance = unconfirmed_balance - balance;
-          var frozen_balance = data.frozen_balance;
-          var spendable_balance = data.spendable_balance;
-          var change_balance = data.pending_change;
+          var frozen_balance = wallet_balance.frozen_balance;
+          var spendable_balance = wallet_balance.spendable_balance;
+          var change_balance = wallet_balance.pending_change;
           wallet.balance_total = balance;
           wallet.balance_pending = pending_balance;
           wallet.balance_frozen = frozen_balance;
