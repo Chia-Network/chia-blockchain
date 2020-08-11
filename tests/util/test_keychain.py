@@ -1,7 +1,7 @@
 import unittest
 import json
 from secrets import token_bytes
-from blspy import PrivateKey
+from blspy import PrivateKey, AugSchemeMPL
 from src.util.keychain import (
     Keychain,
     generate_mnemonic,
@@ -44,7 +44,7 @@ class TesKeychain(unittest.TestCase):
         assert len(kc.get_all_private_keys()) == 2
 
         seed_2 = mnemonic_to_seed(mnemonic, "")
-        seed_key_2 = PrivateKey.from_seed(seed_2)
+        seed_key_2 = AugSchemeMPL.key_gen(seed_2)
         kc.delete_key_by_fingerprint(seed_key_2.get_g1().get_fingerprint())
         assert kc._get_free_private_key_index() == 0
         assert len(kc.get_all_private_keys()) == 1
@@ -91,7 +91,7 @@ class TesKeychain(unittest.TestCase):
         )
         tv_child_int = 11812940737387919040225825939013910852517748782307378293770044673328955938106
         assert master_sk == PrivateKey.from_bytes(tv_master_int.to_bytes(32, "big"))
-        child_sk = master_sk.derive_child(0)
+        child_sk = AugSchemeMPL.derive_child_sk(master_sk, 0)
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
     def test_bip39_test_vectors_trezor(self):

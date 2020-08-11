@@ -9,7 +9,7 @@ import keyring as keyring_main
 import pkg_resources
 
 from bitstring import BitArray
-from blspy import PrivateKey, G1Element
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
 from src.util.hash import std_hash
 
@@ -180,7 +180,7 @@ class Keychain:
         seed = mnemonic_to_seed(mnemonic, passphrase)
         entropy = bytes_from_mnemonic(mnemonic)
         index = self._get_free_private_key_index()
-        key = PrivateKey.from_seed(seed)
+        key = AugSchemeMPL.key_gen(seed)
         fingerprint = key.get_g1().get_fingerprint()
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
@@ -208,7 +208,7 @@ class Keychain:
                 for pp in passphrases:
                     mnemonic = bytes_to_mnemonic(ent)
                     seed = mnemonic_to_seed(mnemonic, pp)
-                    key = PrivateKey.from_seed(seed)
+                    key = AugSchemeMPL.key_gen(seed)
                     if key.get_g1() == pk:
                         return (key, ent)
             index += 1
@@ -232,7 +232,7 @@ class Keychain:
                 for pp in passphrases:
                     mnemonic = bytes_to_mnemonic(ent)
                     seed = mnemonic_to_seed(mnemonic, pp)
-                    key = PrivateKey.from_seed(seed)
+                    key = AugSchemeMPL.key_gen(seed)
                     if key.get_g1() == pk:
                         all_keys.append((key, ent))
             index += 1
