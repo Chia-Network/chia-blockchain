@@ -626,7 +626,7 @@ export const rl_set_user_info_action = (wallet_id, interval, limit, origin, admi
         if (response.data.success) {
           // Go to wallet
           dispatch(format_message("get_wallets", {}));
-          dispatch(showCreateBackup(false));
+          dispatch(showCreateBackup(true));
           dispatch(createState(true, false));
         } else {
           const error = response.data.error;
