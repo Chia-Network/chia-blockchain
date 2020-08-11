@@ -227,11 +227,8 @@ async def perform_handshake(
             mark_attempted = False
             raise ProtocolError(Err.DUPLICATE_CONNECTION, [False])
 
-        if (
-            not connection.is_outbound
-            and connection.connection_type == NodeType.FULL_NODE
-        ):
-            if not global_connections.accept_inbound_connections():
+        if not connection.is_outbound:
+            if not global_connections.accept_inbound_connections(connection.connection_type):
                 connection.close()
                 raise ProtocolError(Err.MAX_INBOUND_CONNECTIONS_REACHED)
 
