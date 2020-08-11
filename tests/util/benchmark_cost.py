@@ -128,7 +128,7 @@ if __name__ == "__main__":
     """
     wallet_tool = WalletTool()
     benchmark_all_operators()
-    secret_key: PrivateKey = PrivateKey.from_seed(bytes([2] * 32))
+    secret_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
     puzzles = []
     solutions = []
     private_keys = []

@@ -2,7 +2,7 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import Optional, List
 import logging
-from blspy import AugSchemeMPL, G1Element
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 from datetime import datetime
 from src.types.proof_of_space import ProofOfSpace

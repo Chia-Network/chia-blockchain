@@ -9,7 +9,7 @@ import keyring as keyring_main
 import pkg_resources
 
 from bitstring import BitArray
-from blspy import AugSchemeMPL, G1Element
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 from keyrings.cryptfile.cryptfile import CryptFileKeyring
 from src.util.hash import std_hash
 

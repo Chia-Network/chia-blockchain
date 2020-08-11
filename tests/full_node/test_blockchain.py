@@ -5,7 +5,7 @@ from secrets import token_bytes
 
 import aiosqlite
 import pytest
-from blspy import PrivateKey, AugSchemeMPL
+from blspy import AugSchemeMPL
 
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.types.full_block import FullBlock
@@ -246,7 +246,7 @@ class TestBlockValidation:
             Header(
                 blocks[9].header.data,
                 AugSchemeMPL.sign(
-                    PrivateKey.from_seed(bytes([5] * 32)), token_bytes(32)
+                    AugSchemeMPL.key_gen(bytes([5] * 32)), token_bytes(32)
                 ),
             ),
             blocks[9].transactions_generator,
