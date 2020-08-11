@@ -9,7 +9,6 @@ from src.util import cbor
 from src.util.ints import uint16
 from src.server.address_manager import AddressManager
 from src.full_node.address_manager_store import AddressManagerStore
-from src.util.path import path_from_root
 from src.server.introducer_peers import IntroducerPeers
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
