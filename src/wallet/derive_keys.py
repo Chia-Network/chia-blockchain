@@ -1,4 +1,4 @@
-from blspy import PrivateKey
+from blspy import AugSchemeMPL
 from src.util.ints import uint32
 
 # EIP 2334 bls key derivation
