@@ -162,7 +162,7 @@ export const CreateRLAdminWallet = () => {
         <Box display="flex">
           <Box flexGrow={6} className={custom.inputTitleLeft}>
             <Typography variant="subtitle1">
-              Spending Interval Length
+              Spending Interval Length (number of blocks)
             </Typography>
           </Box>
           <Box flexGrow={6} className={custom.inputTitleRight}>

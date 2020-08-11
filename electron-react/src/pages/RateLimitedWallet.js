@@ -396,10 +396,10 @@ const RLDetailsCard = props => {
             <div className={classes.cardSubSection}>
               <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1">Spending interval: {interval}</Typography>
+                  <Typography variant="subtitle1">Spending Interval (number of blocks): {interval}</Typography>
                 </Box>
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1">Spending limit: {mojo_to_chia_string(limit)}</Typography>
+                  <Typography variant="subtitle1">Spending Limit (chia per interval): {mojo_to_chia_string(limit)}</Typography>
                 </Box>
               </Box>
             </div>
@@ -449,10 +449,10 @@ const RLDetailsCard = props => {
             <div className={classes.cardSubSection}>
               <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1">Spending interval: {interval}</Typography>
+                  <Typography variant="subtitle1">Spending Interval (number of blocks): {interval}</Typography>
                 </Box>
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1">Spending limit: {mojo_to_chia_string(limit)}</Typography>
+                  <Typography variant="subtitle1">Spending Limit (chia per interval): {mojo_to_chia_string(limit)}</Typography>
                 </Box>
               </Box>
             </div>
