@@ -66,45 +66,43 @@ export const CreateRLUserWallet = () => {
   }
 
   return (
-    <Grid container spacing={0}>
-      <Grid item xs={12}>
-        <div className={classes.cardTitle}>
-          <Box display="flex">
-            <Box>
-              <Button onClick={goBack}>
-                <ArrowBackIosIcon> </ArrowBackIosIcon>
-              </Button>
-            </Box>
-            <Box flexGrow={1} className={classes.title}>
-              <Typography component="h6" variant="h6">
-                Create Rate Limited User Wallet
-              </Typography>
-            </Box>
+    <div>
+      <div className={classes.cardTitle}>
+        <Box display="flex">
+          <Box>
+            <Button onClick={goBack}>
+              <ArrowBackIosIcon> </ArrowBackIosIcon>
+            </Button>
           </Box>
-        </div>
-        <div className={custom.topTitleCard}>
-          <Box display="flex">
-            <Box flexGrow={1} className={custom.inputTitleLeft}>
-              <Typography variant="subtitle1">Initialize a Rate Limited User Wallet:</Typography>
-            </Box>
+          <Box flexGrow={1} className={classes.title}>
+            <Typography component="h6" variant="h6">
+              Create Rate Limited User Wallet
+            </Typography>
           </Box>
-          <Box display="flex">
-            <Box flexGrow={1} className={custom.inputTitleLeft}>
-              <Button
-                onClick={create}
-                className={custom.createButton}
-                variant="contained"
-                color="primary"
-              >
-                Create
-              </Button>
-            </Box>
+        </Box>
+      </div>
+      <div className={custom.topTitleCard}>
+        <Box display="flex">
+          <Box flexGrow={1} className={custom.inputTitleLeft}>
+            <Typography variant="subtitle1">Initialize a Rate Limited User Wallet:</Typography>
           </Box>
-        </div>
-        <Backdrop className={classes.backdrop} open={pending && created}>
-          <CircularProgress color="inherit" />
-        </Backdrop>
-      </Grid>
-    </Grid>
+        </Box>
+        <Box display="flex">
+          <Box flexGrow={1} className={custom.inputTitleLeft}>
+            <Button
+              onClick={create}
+              className={custom.createButton}
+              variant="contained"
+              color="primary"
+            >
+              Create
+            </Button>
+          </Box>
+        </Box>
+      </div>
+      <Backdrop className={classes.backdrop} open={pending && created}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
+    </div>
   );
 };
