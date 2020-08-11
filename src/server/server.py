@@ -149,7 +149,8 @@ class ChiaServer:
             self.log.warning(
                 f"Could not connect to {target_node}. {type(e)}{str(e)}. Aborting and removing peer."
             )
-            self.global_connections.peers.remove(target_node)
+            if self.global_connection.introducer_peers is not None:
+                self.global_connections.introducer_peers.remove(target_node)
             return False
         if not self._srwt_aiter.is_stopped():
             self._srwt_aiter.push(iter_to_aiter([(reader, writer, on_connect, True, is_feeler)]))
