@@ -17,7 +17,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./CreateWallet";
-import { create_rl_user } from "../modules/message";
+import { create_rl_user_action } from "../modules/message";
 
 export const customStyles = makeStyles(theme => ({
   walletContainer: {
@@ -62,7 +62,7 @@ export const CreateRLUserWallet = () => {
 
   function create() {
     dispatch(createState(true, true));
-    dispatch(create_rl_user());
+    dispatch(create_rl_user_action());
   }
 
   return (

@@ -18,7 +18,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./CreateWallet";
-import { create_rl_admin } from "../modules/message";
+import { create_rl_admin_action } from "../modules/message";
 import { chia_to_mojo } from "../util/chia";
 import { openDialog } from "../modules/dialogReducer";
 
@@ -140,7 +140,7 @@ export const CreateRLAdminWallet = () => {
     const amount_value = parseInt(Number(amount));
     var fee = chia_to_mojo(fee_input.value);
     const fee_value = parseInt(Number(fee));
-    dispatch(create_rl_admin(interval_value, chiaper_value, userpubkey, amount_value));
+    dispatch(create_rl_admin_action(interval_value, chiaper_value, userpubkey, amount_value));
   }
 
   return (
