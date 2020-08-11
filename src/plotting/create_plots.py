@@ -2,7 +2,7 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import Optional, List
 import logging
-from blspy import PrivateKey, G1Element
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 from datetime import datetime
 from src.types.proof_of_space import ProofOfSpace
@@ -94,7 +94,7 @@ def create_plots(
             assert len(test_private_keys) == num
             sk: PrivateKey = test_private_keys[i]
         else:
-            sk = PrivateKey.from_seed(token_bytes(32))
+            sk = AugSchemeMPL.key_gen(token_bytes(32))
 
         # The plot public key is the combination of the harvester and farmer keys
         plot_public_key = ProofOfSpace.generate_plot_public_key(

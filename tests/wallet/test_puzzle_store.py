@@ -3,7 +3,7 @@ from secrets import token_bytes
 from pathlib import Path
 import pytest
 import aiosqlite
-from blspy import PrivateKey
+from blspy import AugSchemeMPL
 from src.util.ints import uint32
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.derivation_record import DerivationRecord
@@ -36,7 +36,7 @@ class TestPuzzleStore:
                     DerivationRecord(
                         uint32(i),
                         token_bytes(32),
-                        PrivateKey.from_seed(token_bytes(32)).get_g1(),
+                        AugSchemeMPL.key_gen(token_bytes(32)).get_g1(),
                         WalletType.STANDARD_WALLET,
                         uint32(1),
                     )
@@ -45,7 +45,7 @@ class TestPuzzleStore:
                     DerivationRecord(
                         uint32(i),
                         token_bytes(32),
-                        PrivateKey.from_seed(token_bytes(32)).get_g1(),
+                        AugSchemeMPL.key_gen(token_bytes(32)).get_g1(),
                         WalletType.RATE_LIMITED,
                         uint32(2),
                     )

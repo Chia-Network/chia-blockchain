@@ -316,7 +316,7 @@ class MempoolManager:
                 continue
 
             # Verify aggregated signature
-            validates = AugSchemeMPL.agg_verify(
+            validates = AugSchemeMPL.aggregate_verify(
                 pks, msgs, new_spend.aggregated_signature
             )
             if not validates:

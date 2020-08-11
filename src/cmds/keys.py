@@ -222,7 +222,7 @@ def sign(args):
     for sk, _ in private_keys:
         if sk.get_g1().get_fingerprint() == fingerprint:
             for c in path:
-                sk = sk.derive_child(c)
+                sk = AugSchemeMPL.derive_child_sk(sk, c)
             print("Public key:", sk.get_g1())
             print("Signature:", AugSchemeMPL.sign(sk, bytes(message, "utf-8")))
             return

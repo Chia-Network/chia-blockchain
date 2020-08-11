@@ -42,7 +42,7 @@ class WalletTool:
         if sk is not None:
             self.private_key = sk
         else:
-            self.private_key = PrivateKey.from_seed(token_bytes(32))
+            self.private_key = AugSchemeMPL.key_gen(token_bytes(32))
         self.generator_lookups: Dict = {}
         self.name = "MyChiaWallet"
         self.puzzle_pk_cache: Dict = {}

@@ -857,7 +857,7 @@ class Blockchain:
         if not block.header.data.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
 
-        validates = AugSchemeMPL.agg_verify(
+        validates = AugSchemeMPL.aggregate_verify(
             pairs_pks, pairs_msgs, block.header.data.aggregated_signature
         )
         if not validates:

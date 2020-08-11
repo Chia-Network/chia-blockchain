@@ -281,7 +281,9 @@ class WalletStateManager:
                         break
                     type = target_wallet.rl_info.type
                     if type == "user":
-                        rl_pubkey = G1Element.from_bytes(target_wallet.rl_info.user_pubkey)
+                        rl_pubkey = G1Element.from_bytes(
+                            target_wallet.rl_info.user_pubkey
+                        )
                     else:
                         rl_pubkey = G1Element.from_bytes(
                             target_wallet.rl_info.admin_pubkey
