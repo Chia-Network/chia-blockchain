@@ -19,7 +19,7 @@ class TestCCWallet:
     @pytest.fixture(scope="function")
     async def three_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(
-                1, 3, {"COINBASE_FREEZE_PERIOD": 0}
+            1, 3, {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
 
@@ -45,67 +45,80 @@ class TestCCWallet:
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         api_user = WalletRpcApi(wallet_node_1)
-        val = await api_user.create_new_wallet({'wallet_type': 'rl_wallet',
-                                                'rl_type': 'user'})
+        val = await api_user.create_new_wallet(
+            {"wallet_type": "rl_wallet", "rl_type": "user"}
+        )
         assert isinstance(val, dict)
-        assert val['success']
-        assert val['id']
-        assert val['type'] == 'RATE_LIMITED'
-        user_wallet_id = val['id']
-        pubkey = val['pubkey']
+        assert val["success"]
+        assert val["id"]
+        assert val["type"] == "RATE_LIMITED"
+        pubkey = val["pubkey"]
 
         api_admin = WalletRpcApi(wallet_node)
-        val = await api_admin.create_new_wallet({'wallet_type': 'rl_wallet',
-                                                 'rl_type': 'admin',
-                                                 'interval': 2,
-                                                 'limit': 1,
-                                                 'pubkey': pubkey,      
-                                                 'amount': 100})
+        val = await api_admin.create_new_wallet(
+            {
+                "wallet_type": "rl_wallet",
+                "rl_type": "admin",
+                "interval": 2,
+                "limit": 1,
+                "pubkey": pubkey,
+                "amount": 100,
+            }
+        )
         assert isinstance(val, dict)
-        assert val['success']
-        assert val['id']
-        assert val['type'] == 'RATE_LIMITED'
-        assert val['origin']
-        assert val['pubkey']
-        admin_wallet_id = val['id']
-        admin_pubkey = val['pubkey']
-        origin: Coin = val['origin']
+        assert val["success"]
+        assert val["id"]
+        assert val["type"] == "RATE_LIMITED"
+        assert val["origin"]
+        assert val["pubkey"]
+        admin_pubkey = val["pubkey"]
+        origin: Coin = val["origin"]
 
-        val = await api_user.rl_set_user_info({'wallet_id': 2,
-                                               'interval': 2,
-                                               'limit': 1,
-                                               'origin': {"parent_coin_info": origin.parent_coin_info.hex(),
-                                                          "puzzle_hash": origin.puzzle_hash.hex(),
-                                                          "amount": origin.amount},
-                                               'admin_pubkey': admin_pubkey})
-        assert val['success']
+        val = await api_user.rl_set_user_info(
+            {
+                "wallet_id": 2,
+                "interval": 2,
+                "limit": 1,
+                "origin": {
+                    "parent_coin_info": origin.parent_coin_info.hex(),
+                    "puzzle_hash": origin.puzzle_hash.hex(),
+                    "amount": origin.amount,
+                },
+                "admin_pubkey": admin_pubkey,
+            }
+        )
+        assert val["success"]
 
-        assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 0
-        for i in range(0, 2*num_blocks):
+        assert (await api_user.get_wallet_balance({"wallet_id": 2}))[
+            "confirmed_wallet_balance"
+        ] == 0
+        for i in range(0, 2 * num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
 
         async def check_balance(api, wallet_id):
-            balance_response = await api.get_wallet_balance({'wallet_id': wallet_id})
+            balance_response = await api.get_wallet_balance({"wallet_id": wallet_id})
             balance = balance_response["confirmed_wallet_balance"]
             return balance
 
         await time_out_assert(15, check_balance, 100, api_user, 2)
 
-        assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 100
+        assert (await api_user.get_wallet_balance({"wallet_id": 2}))[
+            "confirmed_wallet_balance"
+        ] == 100
 
         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
         puzzle_hash = await receiving_wallet.get_new_puzzlehash()
         assert await receiving_wallet.get_spendable_balance() == 0
-        val = await api_user.send_transaction({'wallet_id': 2,
-                                               'amount': 3,
-                                               'fee': 0,
-                                               'puzzle_hash': puzzle_hash.hex()})
+        val = await api_user.send_transaction(
+            {"wallet_id": 2, "amount": 3, "fee": 0, "puzzle_hash": puzzle_hash.hex()}
+        )
 
-        assert val['status'] == 'SUCCESS'
-        for i in range(0, 2*num_blocks):
+        assert val["status"] == "SUCCESS"
+        for i in range(0, 2 * num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 97, api_user, 2)
 
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
-        assert (await api_user.get_wallet_balance({'wallet_id': 2}))['confirmed_wallet_balance'] == 97
-
+        assert (await api_user.get_wallet_balance({"wallet_id": 2}))[
+            "confirmed_wallet_balance"
+        ] == 97

@@ -281,13 +281,15 @@ class WalletStateManager:
                         break
                     type = target_wallet.rl_info.type
                     if type == "user":
-                        pubkey = G1Element.from_bytes(target_wallet.rl_info.user_pubkey)
+                        rl_pubkey = G1Element.from_bytes(target_wallet.rl_info.user_pubkey)
                     else:
-                        pubkey = G1Element.from_bytes(target_wallet.rl_info.admin_pubkey)
-                    puzzle: Program = target_wallet.puzzle_for_pk(pubkey)
-                    puzzle_hash: bytes32 = puzzle.get_tree_hash()
+                        rl_pubkey = G1Element.from_bytes(
+                            target_wallet.rl_info.admin_pubkey
+                        )
+                    rl_puzzle: Program = target_wallet.puzzle_for_pk(rl_pubkey)
+                    puzzle_hash: bytes32 = rl_puzzle.get_tree_hash()
 
-                    rl_index = self.get_derivation_index(pubkey)
+                    rl_index = self.get_derivation_index(rl_pubkey)
                     if rl_index == -1:
                         break
 
@@ -295,7 +297,7 @@ class WalletStateManager:
                         DerivationRecord(
                             uint32(rl_index),
                             puzzle_hash,
-                            pubkey,
+                            rl_pubkey,
                             target_wallet.wallet_info.type,
                             uint32(target_wallet.wallet_info.id),
                         )
@@ -1398,7 +1400,9 @@ class WalletStateManager:
 
         meta_data_bytes = json.dumps(meta_data).encode()
         signature = bytes(
-            AugSchemeMPL.sign(backup_pk, std_hash(encrypted) + std_hash(meta_data_bytes))
+            AugSchemeMPL.sign(
+                backup_pk, std_hash(encrypted) + std_hash(meta_data_bytes)
+            )
         ).hex()
 
         backup["data"] = encrypted.decode()

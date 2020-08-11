@@ -322,8 +322,12 @@ async def show_async(args, parser):
                 print("Wallet summary cannot be displayed")
             else:
                 print("Balances")
-                for wallet_id, summary in summaries_response["wallet_summaries"].items():
-                    balances_response = await wallet_client.get_wallet_balance(wallet_id)
+                for wallet_id, summary in summaries_response[
+                    "wallet_summaries"
+                ].items():
+                    balances_response = await wallet_client.get_wallet_balance(
+                        wallet_id
+                    )
                     if "balances" not in balances_response:
                         print("Balances cannot be displayed")
                         continue

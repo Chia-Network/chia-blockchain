@@ -210,13 +210,16 @@ class WalletPuzzleStore:
 
         return None
 
-    async def index_for_puzzle_hash_and_wallet(self, puzzle_hash: bytes32, wallet_id: uint32) -> Optional[uint32]:
+    async def index_for_puzzle_hash_and_wallet(
+        self, puzzle_hash: bytes32, wallet_id: uint32
+    ) -> Optional[uint32]:
         """
         Returns the derivation path for the puzzle_hash.
         Returns None if not present.
         """
         cursor = await self.db_connection.execute(
-            "SELECT * from derivation_paths WHERE puzzle_hash=? and wallet_id=?;", (puzzle_hash.hex(), wallet_id,)
+            "SELECT * from derivation_paths WHERE puzzle_hash=? and wallet_id=?;",
+            (puzzle_hash.hex(), wallet_id,),
         )
         row = await cursor.fetchone()
         await cursor.close()
