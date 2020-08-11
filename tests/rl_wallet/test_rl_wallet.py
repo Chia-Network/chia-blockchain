@@ -1,13 +1,11 @@
 import asyncio
-import time
 
 import pytest
 
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint64, uint32
+from src.util.ints import uint16, uint64
 from src.wallet.rl_wallet.rl_wallet import RLWallet
-from src.wallet.transaction_record import TransactionRecord
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 
@@ -81,7 +79,6 @@ class TestCCWallet:
         balance = await rl_user.rl_available_balance()
 
         tx_record = await rl_user.rl_generate_signed_transaction(1, 32 * b"\0")
-        now = uint64(int(time.time()))
 
         await wallet_node_1.wallet_state_manager.main_wallet.push_transaction(tx_record)
 

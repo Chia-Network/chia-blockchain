@@ -7,7 +7,6 @@ from typing import List, Optional, Tuple, Dict, Callable
 
 from blspy import PrivateKey
 
-from src.types.coin import Coin
 from src.util.byte_types import hexstr_to_bytes
 from src.util.chech32 import encode_puzzle_hash, decode_puzzle_hash
 from src.util.keychain import (
@@ -87,7 +86,7 @@ class WalletRpcApi:
                 origin["parent_coin_info"],
                 origin["puzzle_hash"],
                 origin["amount"],
-                request["admin_pubkey"]
+                request["admin_pubkey"],
             )
             return {"success": success}
         except Exception as e:
@@ -202,14 +201,14 @@ class WalletRpcApi:
             data = {
                 "status": "FAILED",
                 "reason": f"Failed to generate signed transaction. Error: {e}",
-                "id": wallet_id
+                "id": wallet_id,
             }
             return data
         if tx is None:
             data = {
                 "status": "FAILED",
                 "reason": "Failed to generate signed transaction",
-                "id": wallet_id
+                "id": wallet_id,
             }
             return data
         try:
@@ -218,7 +217,7 @@ class WalletRpcApi:
             data = {
                 "status": "FAILED",
                 "reason": f"Failed to push transaction {e}",
-                "id": wallet_id
+                "id": wallet_id,
             }
             return data
         sent = False
@@ -361,30 +360,38 @@ class WalletRpcApi:
             if request["rl_type"] == "admin":
                 log.info("Create rl admin wallet")
                 try:
-                    rl_admin: RLWallet = await RLWallet.create_rl_admin(wallet_state_manager)
+                    rl_admin: RLWallet = await RLWallet.create_rl_admin(
+                        wallet_state_manager
+                    )
                     success = await rl_admin.admin_create_coin(
                         uint64(int(request["interval"])),
                         uint64(int(request["limit"])),
                         request["pubkey"],
-                        uint64(int(request["amount"]))
+                        uint64(int(request["amount"])),
                     )
-                    return {"success": success,
-                            "id": rl_admin.wallet_info.id,
-                            "type": rl_admin.wallet_info.type,
-                            "origin": rl_admin.rl_info.rl_origin,
-                            "pubkey": rl_admin.rl_info.admin_pubkey.hex()}
+                    return {
+                        "success": success,
+                        "id": rl_admin.wallet_info.id,
+                        "type": rl_admin.wallet_info.type,
+                        "origin": rl_admin.rl_info.rl_origin,
+                        "pubkey": rl_admin.rl_info.admin_pubkey.hex(),
+                    }
                 except Exception as e:
                     log.error("FAILED {e}")
                     return {"success": False, "reason": str(e)}
             elif request["rl_type"] == "user":
                 log.info("Create rl user wallet")
                 try:
-                    rl_user: RLWallet = await RLWallet.create_rl_user(wallet_state_manager)
+                    rl_user: RLWallet = await RLWallet.create_rl_user(
+                        wallet_state_manager
+                    )
 
-                    return {"success": True,
-                            "id": rl_user.wallet_info.id,
-                            "type": rl_user.wallet_info.type,
-                            "pubkey": rl_user.rl_info.user_pubkey.hex()}
+                    return {
+                        "success": True,
+                        "id": rl_user.wallet_info.id,
+                        "type": rl_user.wallet_info.type,
+                        "pubkey": rl_user.rl_info.user_pubkey.hex(),
+                    }
                 except Exception as e:
                     log.error("FAILED {e}")
                     return {"success": False, "reason": str(e)}
@@ -432,18 +439,14 @@ class WalletRpcApi:
                 request["amount"], puzzle_hash
             )
         except Exception as e:
-            data = {
-                "status": "FAILED",
-                "reason": f"{e}",
-                "id": wallet_id
-            }
+            data = {"status": "FAILED", "reason": f"{e}", "id": wallet_id}
             return data
 
         if tx is None:
             data = {
                 "status": "FAILED",
                 "reason": "Failed to generate signed transaction",
-                "id": wallet_id
+                "id": wallet_id,
             }
             return data
         try:
@@ -469,8 +472,7 @@ class WalletRpcApi:
                 continue
             status, err = sent_to[0][1], sent_to[0][2]
             if status == MempoolInclusionStatus.SUCCESS:
-                data = {"status": "SUCCESS",
-                        "id": wallet_id}
+                data = {"status": "SUCCESS", "id": wallet_id}
                 sent = True
                 break
             elif status == MempoolInclusionStatus.PENDING:
@@ -487,7 +489,7 @@ class WalletRpcApi:
             data = {
                 "status": "FAILED",
                 "reason": "Timed out. Transaction may or may not have been sent.",
-                "id": wallet_id
+                "id": wallet_id,
             }
 
         return data
