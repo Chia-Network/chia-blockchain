@@ -1,11 +1,28 @@
+import pathlib
 import pkg_resources
+
+from clvm_tools.clvmc import compile_clvm
 
 from src.types.program import Program
 
 
-def load_clvm(filename):
-    clvm_hex = pkg_resources.resource_string(__name__, "%s.hex" % filename).decode(
-        "utf8"
-    )
+def load_clvm(clvm_filename, package_or_requirement=__name__):
+    """
+    This function takes a .clvm file in the given package and compiles it to a
+    .clvm.hex file if the .hex file is missing or older than the .clvm file, then
+    returns the contents of the .hex file as a `Program`.
+
+    clvm_filename: file name
+    package_or_requirement: usually `__name__` if the clvm file is in the same package
+    """
+
+    hex_filename = f"{clvm_filename}.hex"
+
+    if pkg_resources.resource_exists(package_or_requirement, clvm_filename):
+        full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
+        output = full_path.parent / hex_filename
+        compile_clvm(full_path, output)
+
+    clvm_hex = pkg_resources.resource_string(package_or_requirement, hex_filename).decode("utf8")
     clvm_blob = bytes.fromhex(clvm_hex)
     return Program.from_bytes(clvm_blob)
