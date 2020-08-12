@@ -196,7 +196,7 @@ class CCWallet:
             if parent is not None:
                 amount = uint64(amount + record.coin.amount)
 
-        self.log.info(f"Confirmed balance for cc wallet is {amount}")
+        self.log.info(f"Confirmed balance for cc wallet {self.wallet_info.id} is {amount}")
         return uint64(amount)
 
     async def get_unconfirmed_balance(self) -> uint64:
@@ -217,7 +217,7 @@ class CCWallet:
 
         result = confirmed - removal_amount + addition_amount
 
-        self.log.info(f"Unconfirmed balance for cc wallet is {result}")
+        self.log.info(f"Unconfirmed balance for cc wallet {self.wallet_info.id} is {result}")
         return uint64(result)
 
     async def get_name(self):
@@ -235,7 +235,7 @@ class CCWallet:
         self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin]
     ):
         """ Notification from wallet state manager that wallet has been received. """
-        self.log.info("CC wallet has been notified that coin was added")
+        self.log.info(f"CC wallet has been notified that {coin} was added")
 
         search_for_parent: bool = True
 
@@ -363,6 +363,7 @@ class CCWallet:
         assert block is not None
         if block.removals is not None:
             parent_found = await self.search_for_parent_info(generator, block.removals)
+            self.log.info(f"search_for_parent_info returned {parent_found}")
             if parent_found:
                 await self.wallet_state_manager.set_action_done(action_id)
 
