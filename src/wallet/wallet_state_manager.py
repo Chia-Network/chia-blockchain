@@ -312,7 +312,7 @@ class WalletStateManager:
                     continue
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
                 self.log.info(
-                    f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}"
+                    f"Puzzle at index {index} wid {wallet_id} puzzle hash {puzzlehash.hex()}"
                 )
                 derivation_paths.append(
                     DerivationRecord(
