@@ -1,9 +1,5 @@
 from setuptools import setup
 
-"""
-This is a temporary comment
-to bust the pip cache on GH Actions
-"""
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools

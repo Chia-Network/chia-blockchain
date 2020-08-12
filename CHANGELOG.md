@@ -9,8 +9,10 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
+- Meet our new Rate Limited wallet. You can now fund a wallet from an Admin wallet that will set how many coins can be spent over a given range of blocks. Once combined with on chain wallet recovery, this makes it much easier to secure your "spending money" wallet so that if it sis compromised you have time to get most of the funds back before an attacker can steal them all.
 
 ### Changed
+- Wallet addresses and other key related elements are now in chech32.
 - `chia show -b` now returns plot public key and pool public key for each block.
 - Improvements to coloured coin wallet.
 
