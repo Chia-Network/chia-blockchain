@@ -4,6 +4,7 @@ from typing import List
 from blspy import AugSchemeMPL, G1Element, G2Element
 
 from src.cmds.init import check_keys
+from src.util.chech32 import encode_puzzle_hash
 from src.util.keychain import (
     generate_mnemonic,
     bytes_to_mnemonic,
@@ -175,9 +176,9 @@ def show_all_keys():
         )
         print(
             "First wallet address:",
-            create_puzzlehash_for_pk(
+            encode_puzzle_hash(create_puzzlehash_for_pk(
                 master_sk_to_wallet_sk(sk, uint32(0)).get_g1()
-            ).hex(),
+            )),
         )
         assert seed is not None
         mnemonic = bytes_to_mnemonic(seed)
