@@ -27,7 +27,6 @@ from src.wallet.trading.trade_store import TradeStore
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.cc_utils import get_discrepancies_for_spend_bundle
 from src.wallet.wallet import Wallet
-from clvm_tools import binutils
 
 from src.wallet.wallet_coin_record import WalletCoinRecord
 
@@ -413,7 +412,7 @@ class TradeManager:
 
                 if not cc_wallet_puzzles.is_ephemeral_solution(solution):
                     # Calculate output amounts
-                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(puzzle)
+                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(puzzle).hex()
                     if colour not in wallets:
                         wallets[
                             colour
@@ -425,7 +424,7 @@ class TradeManager:
                     )
                     if coinsol.coin in [record.coin for record in unspent]:
                         return False, None, "can't respond to own offer"
-                    innerpuzzlereveal = cc_wallet_puzzles.inner_puzzle(solution)
+                    innerpuzzlereveal = cc_wallet_puzzles.get_inner_puzzle_from_puzzle(puzzle)
                     innersol = cc_wallet_puzzles.inner_puzzle_solution(solution)
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
                         innerpuzzlereveal, innersol
@@ -533,7 +532,6 @@ class TradeManager:
                 inner_hash,
                 auditor.amount,
             )
-            core = cc_wallet_puzzles.cc_make_core(colour)
             parent_info = await wallets[colour].get_parent_for_coin(auditor)
 
             for coloured_coin in my_cc_spends:
@@ -562,15 +560,15 @@ class TradeManager:
                 )
 
                 solution = cc_wallet_puzzles.cc_make_solution(
-                    core,
+                    colour,
                     (
                         parent_info.parent_name,
                         parent_info.inner_puzzle_hash,
                         parent_info.amount,
                     ),
                     coloured_coin.amount,
-                    binutils.disassemble(inner_puzzle),
-                    binutils.disassemble(inner_solution),
+                    inner_puzzle,
+                    inner_solution,
                     auditor_info,
                     None,
                 )
@@ -578,8 +576,8 @@ class TradeManager:
                     coloured_coin,
                     Program.to(
                         [
-                            cc_wallet_puzzles.cc_make_puzzle(
-                                inner_puzzle.get_tree_hash(), core,
+                            cc_wallet_puzzles.puzzle_for_inner_puzzle(
+                                inner_puzzle, colour,
                             ),
                             solution,
                         ]
@@ -643,15 +641,15 @@ class TradeManager:
             aggsig = AugSchemeMPL.aggregate(sigs + [aggsig])
 
             solution = cc_wallet_puzzles.cc_make_solution(
-                core,
+                colour,
                 (
                     parent_info.parent_name,
                     parent_info.inner_puzzle_hash,
                     parent_info.amount,
                 ),
                 auditor.amount,
-                binutils.disassemble(auditor_inner_puzzle),
-                binutils.disassemble(innersol),
+                auditor_inner_puzzle,
+                innersol,
                 auditor_info,
                 auditees[colour],
             )
@@ -660,10 +658,10 @@ class TradeManager:
                 auditor,
                 Program.to(
                     [
-                        cc_wallet_puzzles.cc_make_puzzle(
-                            auditor_inner_puzzle.get_tree_hash(), core
+                        cc_wallet_puzzles.puzzle_for_inner_puzzle(
+                            auditor_inner_puzzle, bytes.fromhex(colour),
                         ),
-                        solution,
+                        solution
                     ]
                 ),
             )
