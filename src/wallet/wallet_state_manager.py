@@ -23,7 +23,6 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
 from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.key_val_store import KeyValStore
 from src.wallet.settings.user_settings import UserSettings
 from src.wallet.rl_wallet.rl_wallet import RLWallet
@@ -1433,7 +1432,7 @@ class WalletStateManager:
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
             if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
-                if wallet.cc_info.my_core == cc_wallet_puzzles.cc_make_core(colour):
+                if wallet.cc_info.genesis_id() == colour:
                     return wallet
         return None
 

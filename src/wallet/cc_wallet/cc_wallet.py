@@ -20,7 +20,7 @@ from src.util.ints import uint64, uint32
 from src.wallet.block_record import BlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
 from src.wallet.cc_wallet.cc_wallet_puzzles import (
-    get_innerpuzzle_from_puzzle,
+    get_inner_puzzle_hash_from_puzzle,
     cc_generate_eve_spend,
     create_spend_for_auditor,
     create_spend_for_ephemeral,
@@ -33,7 +33,6 @@ from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.cc_wallet import cc_wallet_puzzles
-from clvm_tools import binutils
 from dataclasses import replace
 
 # TODO: write tests based on wallet tests
@@ -67,7 +66,7 @@ class CCWallet:
 
         self.wallet_state_manager = wallet_state_manager
 
-        self.cc_info = CCInfo(None, [], None)
+        self.cc_info = CCInfo([], "")
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "CC Wallet", WalletType.COLOURED_COIN.value, info_as_string
@@ -150,7 +149,7 @@ class CCWallet:
 
         self.wallet_state_manager = wallet_state_manager
 
-        self.cc_info = CCInfo(cc_wallet_puzzles.cc_make_core(colour), [], colour)
+        self.cc_info = CCInfo([], colour)
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "CC Wallet", WalletType.COLOURED_COIN.value, info_as_string
@@ -338,10 +337,8 @@ class CCWallet:
 
                 if coin is not None:
                     if cc_wallet_puzzles.check_is_cc_puzzle(puzzle_program):
-                        puzzle_string = binutils.disassemble(puzzle_program)
-                        inner_puzzle_hash = hexstr_to_bytes(
-                            get_innerpuzzle_from_puzzle(puzzle_string)
-                        )
+                        inner_puzzle_hash = get_inner_puzzle_hash_from_puzzle(puzzle_program)
+
                         self.log.info(
                             f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle_hash.hex()}"
                         )
@@ -374,6 +371,9 @@ class CCWallet:
     async def get_new_inner_hash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
 
+    async def get_new_inner_puzzle(self) -> Program:
+        return await self.standard_wallet.get_new_puzzle()
+
     async def get_new_puzzlehash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
 
@@ -392,25 +392,14 @@ class CCWallet:
         new = old.replace(magic, magic_replacement)
         return new
 
-    def fast_cc_puzzle(self, inner_puzzle_hash) -> Program:
-        new_sexp = self.specific_replace(
-            self.base_puzzle_program, self.base_inner_puzzle_hash, inner_puzzle_hash
-        )
-        program = Program.from_bytes(new_sexp)
-        return program
-
     def puzzle_for_pk(self, pubkey) -> Program:
-        inner_puzzle_hash = self.standard_wallet.puzzle_for_pk(
+        inner_puzzle = self.standard_wallet.puzzle_for_pk(
             bytes(pubkey)
-        ).get_tree_hash()
-        if self.base_puzzle_program is None:
-            cc_puzzle: Program = cc_wallet_puzzles.cc_make_puzzle(
-                inner_puzzle_hash, self.cc_info.my_core
-            )
-            self.base_puzzle_program = bytes(cc_puzzle)
-            self.base_inner_puzzle_hash = inner_puzzle_hash
-        else:
-            cc_puzzle = self.fast_cc_puzzle(inner_puzzle_hash)
+        )
+        inner_puzzle_hash = inner_puzzle.get_tree_hash()
+        cc_puzzle: Program = self.cc_info.puzzle_for_inner_puzzle(inner_puzzle)
+        self.base_puzzle_program = bytes(cc_puzzle)
+        self.base_inner_puzzle_hash = inner_puzzle_hash
         return cc_puzzle
 
     async def get_new_cc_puzzle_hash(self):
@@ -424,8 +413,6 @@ class CCWallet:
     async def generate_zero_val_coin(
         self, send=True, exclude: List[Coin] = None
     ) -> Optional[SpendBundle]:
-        if self.cc_info.my_core is None:
-            return None
         if exclude is None:
             exclude = []
         coins = await self.standard_wallet.select_coins(0, exclude)
@@ -435,15 +422,10 @@ class CCWallet:
         origin = coins.copy().pop()
         origin_id = origin.name()
 
-        parent_info = {}
-        parent_info[origin_id] = (
-            origin.parent_coin_info,
-            origin.puzzle_hash,
-            origin.amount,
-        )
+        cc_inner_puzzle = await self.get_new_inner_puzzle()
+        cc_inner_puzzle_hash = cc_inner_puzzle.get_tree_hash()
 
-        cc_inner = await self.get_new_inner_hash()
-        cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(cc_inner, self.cc_info.my_core)
+        cc_puzzle = self.cc_info.puzzle_for_inner_puzzle(cc_inner_puzzle)
         cc_puzzle_hash = cc_puzzle.get_tree_hash()
 
         tx = await self.standard_wallet.generate_signed_transaction(
@@ -454,10 +436,11 @@ class CCWallet:
         if tx is None or tx.spend_bundle is None:
             return None
 
-        eve_spend = cc_generate_eve_spend(eve_coin, cc_puzzle)
+        genesis_id = bytes.fromhex(self.cc_info.my_colour_name)
+        eve_spend = cc_generate_eve_spend(eve_coin, cc_inner_puzzle, genesis_id)
         full_spend = SpendBundle.aggregate([tx.spend_bundle, eve_spend])
 
-        future_parent = CCParent(eve_coin.parent_coin_info, cc_inner, eve_coin.amount)
+        future_parent = CCParent(eve_coin.parent_coin_info, cc_inner_puzzle_hash, eve_coin.amount)
         eve_parent = CCParent(
             origin.parent_coin_info, origin.puzzle_hash, origin.amount
         )
@@ -691,34 +674,25 @@ class CCWallet:
         sigs = sigs + await self.get_sigs(inner_puzzle, innersol)
         parent_info = await self.get_parent_for_coin(auditor)
         assert parent_info is not None
-        assert self.cc_info.my_core is not None
 
         solution = cc_wallet_puzzles.cc_make_solution(
-            self.cc_info.my_core,
+            self.cc_info.my_colour_name,
             (
                 parent_info.parent_name,
                 parent_info.inner_puzzle_hash,
                 parent_info.amount,
             ),
             auditor.amount,
-            binutils.disassemble(inner_puzzle),
-            binutils.disassemble(innersol),
+            inner_puzzle,
+            innersol,
             auditor_info,
             auditees,
             False,
         )
 
-        main_coin_solution = CoinSolution(
-            auditor,
-            Program.to(
-                [
-                    cc_wallet_puzzles.cc_make_puzzle(
-                        inner_puzzle.get_tree_hash(), self.cc_info.my_core,
-                    ),
-                    solution,
-                ]
-            ),
-        )
+        puzzle = self.cc_info.puzzle_for_inner_puzzle(inner_puzzle)
+
+        main_coin_solution = CoinSolution(auditor, Program.to([puzzle, solution]),)
         list_of_solutions.append(main_coin_solution)
         # main = SpendBundle([main_coin_solution], ZERO96)
 
@@ -741,15 +715,15 @@ class CCWallet:
             sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol)
 
             solution = cc_wallet_puzzles.cc_make_solution(
-                self.cc_info.my_core,
+                self.cc_info.my_colour_name,
                 (
                     parent_info.parent_name,
                     parent_info.inner_puzzle_hash,
                     parent_info.amount,
                 ),
                 coin.amount,
-                binutils.disassemble(coin_inner_puzzle),
-                binutils.disassemble(innersol),
+                coin_inner_puzzle,
+                innersol,
                 auditor_info,
                 None,
             )
@@ -758,9 +732,7 @@ class CCWallet:
                     coin,
                     Program.to(
                         [
-                            cc_wallet_puzzles.cc_make_puzzle(
-                                coin_inner_puzzle.get_tree_hash(), self.cc_info.my_core,
-                            ),
+                            self.cc_info.puzzle_for_inner_puzzle(coin_inner_puzzle),
                             solution,
                         ]
                     ),
@@ -795,9 +767,7 @@ class CCWallet:
         self.log.info(f"Adding parent {name}: {parent}")
         current_list = self.cc_info.parent_info.copy()
         current_list.append((name, parent))
-        cc_info: CCInfo = CCInfo(
-            self.cc_info.my_core, current_list, self.cc_info.my_colour_name,
-        )
+        cc_info: CCInfo = CCInfo(current_list, self.cc_info.my_colour_name)
         await self.save_info(cc_info)
 
     async def save_info(self, cc_info: CCInfo):
@@ -819,19 +789,12 @@ class CCWallet:
         origin = coins.copy().pop()
         origin_id = origin.name()
         # self.add_parent(origin_id, origin_id)
-        cc_core = cc_wallet_puzzles.cc_make_core(origin_id)
-        parent_info = {}
-        parent_info[origin_id] = (
-            origin.parent_coin_info,
-            origin.puzzle_hash,
-            origin.amount,
-        )
 
-        cc_info: CCInfo = CCInfo(cc_core, [], origin_id.hex())
+        cc_info: CCInfo = CCInfo([], origin_id.hex())
         await self.save_info(cc_info)
 
-        cc_inner = await self.get_new_inner_hash()
-        cc_puzzle = cc_wallet_puzzles.cc_make_puzzle(cc_inner, cc_core)
+        cc_inner_puzzle = await self.get_new_inner_puzzle()
+        cc_puzzle = cc_wallet_puzzles.puzzle_for_inner_puzzle(cc_inner_puzzle, origin_id)
         cc_puzzle_hash = cc_puzzle.get_tree_hash()
 
         tx_record: Optional[
@@ -844,7 +807,7 @@ class CCWallet:
         if tx_record is None or tx_record.spend_bundle is None:
             return None
 
-        eve_spend = cc_generate_eve_spend(eve_coin, cc_puzzle)
+        eve_spend = cc_generate_eve_spend(eve_coin, cc_inner_puzzle, origin_id)
 
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
         return full_spend
@@ -886,18 +849,17 @@ class CCWallet:
 
             parent_info = await self.get_parent_for_coin(coin)
             assert parent_info is not None
-            assert self.cc_info.my_core is not None
             # Use coin info to create solution and add coin and solution to list of CoinSolutions
             solution = cc_wallet_puzzles.cc_make_solution(
-                self.cc_info.my_core,
+                self.cc_info.my_colour_name,
                 (
                     parent_info.parent_name,
                     parent_info.inner_puzzle_hash,
                     parent_info.amount,
                 ),
                 coin.amount,
-                binutils.disassemble(innerpuz),
-                binutils.disassemble(innersol),
+                innerpuz,
+                innersol,
                 None,
                 None,
             )
@@ -906,9 +868,7 @@ class CCWallet:
                     coin,
                     Program.to(
                         [
-                            cc_wallet_puzzles.cc_make_puzzle(
-                                innerpuz.get_tree_hash(), self.cc_info.my_core
-                            ),
+                            self.cc_info.puzzle_for_inner_puzzle(innerpuz),
                             solution,
                         ]
                     ),
