@@ -1,13 +1,11 @@
 from typing import Optional, Tuple
 
-from clvm_tools import binutils
 from clvm_tools.curry import curry, uncurry
 from blspy import AugSchemeMPL
 from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.condition_opcodes import ConditionOpcode
-from src.util.clvm import SExp
 from src.util.condition_tools import conditions_dict_for_solution
 from src.wallet.puzzles.load_clvm import load_clvm
 
@@ -21,7 +19,7 @@ from src.util.ints import uint64
 MOD = load_clvm("coloured_coins.clvm")
 MOD_HASH = MOD.get_tree_hash()
 
-NULL_F = binutils.assemble("(q ())")
+NULL_F = Program.from_bytes(bytes.fromhex("ff01ff8080"))  # (q ())
 
 
 def puzzle_for_inner_puzzle(inner_puzzle: Program, genesis_id: bytes32):
@@ -29,17 +27,17 @@ def puzzle_for_inner_puzzle(inner_puzzle: Program, genesis_id: bytes32):
     return Program.to(curried_mod)
 
 
-def solution_parts(s: SExp):
+def solution_parts(s: Program):
     names = "parent_info amount inner_puzzle_solution auditor_info aggees".split()
     d = dict(zip(names, s.as_iter()))
     return d
 
 
-def inner_puzzle_solution(solution: SExp):
+def inner_puzzle_solution(solution: Program):
     return solution_parts(solution)["inner_puzzle_solution"]
 
 
-def is_ephemeral_solution(s: SExp):
+def is_ephemeral_solution(s: Program):
     return not solution_parts(s)["parent_info"].listp()
 
 
@@ -74,13 +72,13 @@ def cc_make_solution(
 
     auditor_list = [] if auditor is None else list(auditor)
 
-    aggees_sexp = Program.to([] if auditees is None else [list(_) for _ in auditees])
+    aggees_Program = Program.to([] if auditees is None else [list(_) for _ in auditees])
 
-    solution = Program.to([parent, amount, inner_solution, auditor_list, aggees_sexp])
+    solution = Program.to([parent, amount, inner_solution, auditor_list, aggees_Program])
     return solution
 
 
-def get_uncurried_binding(puzzle: SExp, idx: int) -> Optional[Program]:
+def get_uncurried_binding(puzzle: Program, idx: int) -> Optional[Program]:
     r = uncurry(puzzle)
     if r is None:
         return r
@@ -93,14 +91,14 @@ def get_uncurried_binding(puzzle: SExp, idx: int) -> Optional[Program]:
     return v
 
 
-def get_uncurried_binding_as_atom(puzzle: SExp, idx: int) -> Optional[bytes32]:
+def get_uncurried_binding_as_atom(puzzle: Program, idx: int) -> Optional[bytes32]:
     r = get_uncurried_binding(puzzle, idx)
     if r is None:
         return r
     return r.as_atom()
 
 
-def get_genesis_from_puzzle(puzzle: SExp) -> bytes32:
+def get_genesis_from_puzzle(puzzle: Program) -> bytes32:
     return get_uncurried_binding_as_atom(puzzle, 1)
 
 
@@ -165,11 +163,10 @@ def check_is_cc_puzzle(puzzle: Program):
     return core.get_tree_hash() == MOD_HASH
 
 
-def update_auditors_in_solution(solution: SExp, auditor_info):
-    old_solution = binutils.disassemble(solution)
-    # auditor is (primary_input, innerpuzzlehash, amount)
-    new_solution = old_solution.replace(
-        "))) ()) () ()))",
-        f"))) ()) (0x{auditor_info[0]} 0x{auditor_info[1]} {auditor_info[2]}) ()))",
-    )
-    return binutils.assemble(new_solution)
+def update_auditors_in_solution(solution: Program, auditor_info):
+    puzzle, solution_to_puzzle = list(solution.as_iter())
+    solution_entries = list(solution_to_puzzle.as_iter())
+    if len(solution_entries) >= 4:
+        solution_entries[3] = list(auditor_info)
+    ns = Program.to([puzzle, solution_entries])
+    return ns
