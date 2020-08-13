@@ -101,9 +101,6 @@
     (list CREATE_COIN (calculate_puzzle_hash mod_hash genesis_id inner_puzzle_hash) amount))
 
   ; creates the puzzle for the lock which lets the auditor confirm how much value we are outputting
-  ; (defun-inline puzzle_for_e_coin (auditor_id output_sum)
-  ;   (qq (r (r (c (q (unquote auditor_id)) (c (q (unquote output_sum)) (q ())))))))
-  ; seems like qq inside a defun-inline doesn't work
 
   (defun-inline puzzle_for_e_coin (auditor_id output_sum)
     (curry (lambda ARGS ()) auditor_id output_sum)
@@ -120,10 +117,6 @@
    (defun-inline create_a_puz_for_cn (my_id)
      (curry (lambda ARGS ()) my_id)
    )
-
-  (defun-inline create_a_puz_for_cn_CURRY (my_id)
-    (curry (lambda args ()) my_id)
-  )
 
   ; creates the coin for the lock which lets us confirm the auditor is including us
   (defun-inline generate_assert_consumed_a_condition (my_id auditor_id)
