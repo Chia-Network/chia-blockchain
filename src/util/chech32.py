@@ -103,7 +103,7 @@ def convertbits(data, frombits, tobits, pad=True):
 
 
 def encode_puzzle_hash(puzzle_hash: bytes32) -> str:
-    encoded = bech32_encode("xch", convertbits(puzzle_hash, 8, 5))
+    encoded = bech32_encode("txch", convertbits(puzzle_hash, 8, 5))
     return encoded
 
 
