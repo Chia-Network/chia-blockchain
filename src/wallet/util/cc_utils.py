@@ -51,9 +51,9 @@ def get_discrepancies_for_spend_bundle(
             # work out the deficits between coin amount and expected output for each
             if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
                 if not cc_wallet_puzzles.is_ephemeral_solution(solution):
-                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(puzzle)
+                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(puzzle).hex()
                     # get puzzle and solution
-                    innerpuzzlereveal = cc_wallet_puzzles.inner_puzzle(solution)
+                    innerpuzzlereveal = cc_wallet_puzzles.get_inner_puzzle_from_puzzle(puzzle)
                     innersol = cc_wallet_puzzles.inner_puzzle_solution(solution)
                     # Get output amounts by running innerpuzzle and solution
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(

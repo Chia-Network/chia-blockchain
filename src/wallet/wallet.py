@@ -101,13 +101,10 @@ class Wallet(AbstractWallet):
         return puzzle_for_pk(pubkey)
 
     async def get_new_puzzle(self) -> Program:
-        return puzzle_for_pk(
-            bytes(
-                self.wallet_state_manager.get_unused_derivation_record(
-                    self.wallet_info.id
-                ).pubkey
-            )
+        dr = await self.wallet_state_manager.get_unused_derivation_record(
+            self.wallet_info.id
         )
+        return puzzle_for_pk(bytes(dr.pubkey))
 
     async def get_new_puzzlehash(self) -> bytes32:
         return (

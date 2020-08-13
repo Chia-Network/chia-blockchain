@@ -1,12 +1,13 @@
 from typing import Optional, Tuple
 
 from clvm_tools import binutils
+from clvm_tools.curry import curry, uncurry
 from blspy import AugSchemeMPL
-import string
 from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.util.clvm import run_program, SExp
+from src.wallet.puzzles.load_clvm import load_clvm
 
 
 # This is for spending an existing coloured coin
@@ -15,40 +16,21 @@ from src.types.spend_bundle import SpendBundle
 from src.util.ints import uint64
 
 
-def cc_make_puzzle(innerpuzhash, core):
-    # Puzzle runs the core, but stores innerpuzhash commitment
-    puzstring = f"(r (c (q 0x{innerpuzhash}) ((c (q {core}) (a)))))"
-    result = Program.to(binutils.assemble(puzstring))
-    return result
+MOD = load_clvm("coloured_coins.clvm")
+MOD_HASH = MOD.get_tree_hash()
+
+NULL_F = binutils.assemble("(q ())")
 
 
-# Makes a core given a genesisID (aka the "colour")
-def cc_make_core(originID):
-    # solution is f"({core} {parent_str} {my_amount} {innerpuzreveal} {innersol} {auditor_info} {aggees})"
-    # parent_str is either an atom or list depending on the type of spend
-    # auditor is (primary_input, innerpuzzlehash, amount)
-    # aggees is left blank if you aren't the auditor otherwise it is a list of
-    # (primary_input, innerpuzhash, coin_amount, output_amount) for every coin in the spend
-    # Compiled from coloured_coins.clvm
-
-    core = f"((c (q ((c (i (l (f (r (r (a))))) (q ((c (f (f (r (f (a))))) (c (f (a)) (c ((c (f (r (r (r (r (a)))))) (f (r (r (r (r (r (a))))))))) (c (q ()) (c (f (r (a))) (c (q ()) (c (sha256 (sha256 (f (f (r (r (a))))) ((c (f (r (f (f (a))))) (c (f (a)) (c (f (r (f (r (r (a)))))) (c (f (r (a))) (q ())))))) (f (r (r (f (r (r (a)))))))) ((c (f (r (f (f (a))))) (c (f (a)) (c ((c (r (r (r (r (f (a)))))) (c (f (a)) (c (f (r (r (r (r (a)))))) (q ()))))) (c (f (r (a))) (q ())))))) (f (r (r (r (a)))))) (c (sha256 (f (f (r (r (r (r (r (r (a))))))))) ((c (f (r (f (f (a))))) (c (f (a)) (c (f (r (f (r (r (r (r (r (r (a)))))))))) (c (f (r (a))) (q ())))))) (f (r (r (f (r (r (r (r (r (r (a)))))))))))) (c (f (r (r (r (r (r (r (r (a))))))))) (q ())))))))))))) (q (c (c (q 51) (c (f (r (r (r (r (a)))))) (c (f (r (r (r (a))))) (q ())))) (c ((c (r (r (f (f (a))))) (c (f (a)) (c (f (r (r (a)))) (c (f (r (r (r (r (a)))))) (c (f (r (r (r (a))))) (q ()))))))) (q ()))))) (a)))) (c (q (((((c (i (l (f (r (a)))) (q ((c (f (f (f (f (a))))) (c (f (a)) (c (r (f (r (a)))) (c (f (r (r (a)))) (c (f (r (r (r (a))))) (c ((c (r (f (f (f (a))))) (c (f (a)) (c (sha256 (f (f (f (r (a))))) ((c (f (r (f (f (a))))) (c (f (a)) (c (f (r (f (f (r (a)))))) (c (f (r (r (r (a))))) (q ())))))) (f (r (r (f (f (r (a)))))))) (c (f (r (r (a)))) (c (f (r (r (r (f (f (r (a)))))))) (c (f (r (r (r (r (a)))))) (q ())))))))) (c (+ (f (r (r (f (f (r (a))))))) (f (r (r (r (r (r (a)))))))) (c (+ (f (r (r (r (f (f (r (a)))))))) (f (r (r (r (r (r (r (a))))))))) (q ()))))))))))) (q ((c (i (= (f (r (r (r (r (r (a))))))) (f (r (r (r (r (r (r (a))))))))) (q (f (r (r (r (r (a))))))) (q (x))) (a))))) (a))) 5 (c (q 52) (c (sha256 (f (r (a))) ((c (r (r (r (r (f (a)))))) (c (f (a)) (c (c (q 7) (c (c (q 7) (c (c (q 5) (c (c (q 1) (c (f (r (r (a)))) (q ()))) (c (c (q 5) (c (c (q 1) (c (f (r (r (r (a))))) (q ()))) (q ((q ()))))) (q ())))) (q ()))) (q ()))) (q ()))))) (q ())) (q ()))) (c (c (q 51) (c ((c (r (r (r (r (f (a)))))) (c (f (a)) (c (c (q 7) (c (c (q 5) (c (c (q 1) (c (f (r (a))) (q ()))) (q ((q ()))))) (q ()))) (q ()))))) (q (())))) (f (r (r (r (r (a)))))))) ((c (f (r (r (r (f (a)))))) (c (f (a)) (c (c (q 7) (c (c (q 5) (c (c (q 1) (c (f (r (a))) (q ()))) (c (c (c (q 5) (c (c (q 1) (c (c (q 97) (c (f (r (r (a)))) (q ()))) (q ()))) (q ((a))))) (q ())) (q ())))) (q ()))) (q ()))))) (c (i (= (f (r (a))) (q 0x{originID})) (q (c (q 53) (c (sha256 (f (r (a))) (f (r (r (a)))) (f (r (r (r (a)))))) (q ())))) (q (c (q 53) (c (sha256 (f (r (a))) (f (r (r (a)))) (q ())) (q ()))))) (a))) (((c (r (f (r (f (a))))) (c (f (a)) (c (f (r (r (r (a))))) (c (f (r (r (r (r (r (a))))))) (c (f (r (r (r (r (r (r (r (a))))))))) (c ((c (f (r (r (f (a))))) (c (f (a)) (c (f (r (a))) (c (f (r (r (a)))) (c (f (r (r (r (a))))) (c (f (r (r (r (r (a)))))) (c (f (r (r (r (r (r (a))))))) (c (f (r (r (r (r (r (r (a)))))))) (q ())))))))))) (q ())))))))) (c (i (f (r (r (r (a))))) (q ((c (f (f (f (f (a))))) (c (f (a)) (c (f (r (r (r (a))))) (c (f (r (r (a)))) (c (f (r (a))) (c (f (r (r (r (r (a)))))) (q (() ())))))))))) (q (f (r (r (r (r (a)))))))) (a))) ((c (i (f (r (a))) (q ((c (i (= (f (f (f (r (a))))) (q 51)) (q ((c (f (r (r (f (a))))) (c (f (a)) (c (r (f (r (a)))) (c (c (c (q 51) (c ((c (f (r (f (f (a))))) (c (f (a)) (c (f (r (f (f (r (a)))))) (c (f (r (r (r (a))))) (q ())))))) (c (f (r (r (f (f (r (a))))))) (q ())))) (f (r (r (a))))) (c (f (r (r (r (a))))) (c (+ (f (r (r (f (f (r (a))))))) (f (r (r (r (r (a))))))) (c (f (r (r (r (r (r (a))))))) (c (f (r (r (r (r (r (r (a)))))))) (q ()))))))))))) (q ((c (f (r (r (f (a))))) (c (f (a)) (c (r (f (r (a)))) (c (c (f (f (r (a)))) (f (r (r (a))))) (c (f (r (r (r (a))))) (c (f (r (r (r (r (a)))))) (c (f (r (r (r (r (r (a))))))) (c (f (r (r (r (r (r (r (a)))))))) (q ())))))))))))) (a)))) (q (c (c (q 53) (c (f (r (r (r (r (r (a))))))) (q ()))) (c (c (q 52) (c (sha256 (f (r (r (r (r (r (r (a)))))))) ((c (r (r (r (r (f (a)))))) (c (f (a)) (c (c (q 7) (c (c (q 5) (c (c (q 1) (c (f (r (r (r (r (r (a))))))) (q ()))) (q ((q ()))))) (q ()))) (q ()))))) (q ())) (q ()))) (c (c (q 51) (c ((c (r (r (r (r (f (a)))))) (c (f (a)) (c (c (q 7) (c (c (q 7) (c (c (q 5) (c (c (q 1) (c (f (r (r (r (r (r (r (a)))))))) (q ()))) (c (c (q 5) (c (c (q 1) (c (f (r (r (r (r (a)))))) (q ()))) (q ((q ()))))) (q ())))) (q ()))) (q ()))) (q ()))))) (q (())))) (f (r (r (a))))))))) (a))) ((c (i (l (f (r (a)))) (q ((c (i ((c (i ((c (i (l (f (f (r (a))))) (q (q ())) (q (q 1))) (a))) (q ((c (i (= (f (f (r (a)))) (q 97)) (q (q 1)) (q (q ()))) (a)))) (q (q ()))) (a))) (q (f (r (f (r (a)))))) (q (sha256 (q 2) ((c (f (r (r (r (f (a)))))) (c (f (a)) (c (f (f (r (a)))) (q ()))))) ((c (f (r (r (r (f (a)))))) (c (f (a)) (c (r (f (r (a)))) (q ())))))))) (a)))) (q (sha256 (q 1) (f (r (a)))))) (a))) (c (i (l (f (r (a)))) (q (sha256 (q 2) ((c (r (r (r (r (f (a)))))) (c (f (a)) (c (f (f (r (a)))) (q ()))))) ((c (r (r (r (r (f (a)))))) (c (f (a)) (c (r (f (r (a)))) (q ()))))))) (q (sha256 (q 1) (f (r (a)))))) (a)))) (a))))"  # type: ignore # noqa
-
-    return core
-
-
-def cc_make_eve_solution(parent_id: bytes32, full_puzzlehash: bytes32, amount: uint64):
-    sol = [0, parent_id, amount, full_puzzlehash, 0, 0, 0]
-    return Program.to(sol)
+def puzzle_for_inner_puzzle(inner_puzzle: Program, genesis_id: bytes32):
+    cost, curried_mod = curry(MOD, [MOD_HASH, genesis_id, inner_puzzle])
+    return Program.to(curried_mod)
 
 
 def solution_parts(s: SExp):
-    names = "corehash parent_info amount inner_puzzle inner_puzzle_solution auditor_info aggees".split()
+    names = "parent_info amount inner_puzzle_solution auditor_info aggees".split()
     d = dict(zip(names, s.as_iter()))
     return d
-
-
-def inner_puzzle(solution: SExp):
-    return solution_parts(solution)["inner_puzzle"]
 
 
 def inner_puzzle_solution(solution: SExp):
@@ -59,99 +41,93 @@ def is_ephemeral_solution(s: SExp):
     return not solution_parts(s)["parent_info"].listp()
 
 
+def cc_generate_eve_spend(coin: Coin, inner_puzzle: Program, genesis_id: bytes32):
+    full_puzzle = puzzle_for_inner_puzzle(inner_puzzle, genesis_id)
+    solution = Program.to([coin.parent_coin_info, coin.amount, 0, 0, 0])
+    list_of_solutions = [CoinSolution(coin, Program.to([full_puzzle, solution]),)]
+    aggsig = AugSchemeMPL.aggregate([])
+    spend_bundle = SpendBundle(list_of_solutions, aggsig)
+    return spend_bundle
+
+
 # This is for spending a received coloured coin
 def cc_make_solution(
-    core: str,
+    colour_hex: str,
     parent_info: Tuple[bytes32, bytes32, uint64],
     amount: uint64,
-    innerpuzreveal: str,
-    innersol: str,
+    inner_puzzle: Program,
+    inner_solution: Program,
     auditor: Optional[Tuple[bytes32, bytes32, uint64]],
     auditees=None,
     genesis=False,
 ):
-    parent_str = ""
     # parent_info is a triplet if parent was coloured or an atom if parent was genesis coin or we're a printed 0 val
     # genesis coin isn't coloured, child of genesis uses originID, all subsequent children use triplets
     # auditor is (primary_input, innerpuzzlehash, amount)
     # aggees should be (primary_input, innerpuzhash, coin_amount, output_amount)
-    if not genesis:
-        #  (parent primary input, parent inner puzzle hash, parent amount)
-        if parent_info[1][0:2] == "0x":
-            parent_str = f"(0x{parent_info[0]} {parent_info[1]} {parent_info[2]})"
-        else:
-            parent_str = f"(0x{parent_info[0]} 0x{parent_info[1]} {parent_info[2]})"
-    else:
-        parent_str = f"0x{parent_info[0].hex()}"
 
-    auditor_formatted = "()"
-    if auditor is not None:
-        auditor_formatted = f"(0x{auditor[0]} 0x{auditor[1]} {auditor[2]})"
+    #  (parent primary input, parent inner puzzle hash, parent amount)
 
-    aggees = "("
-    if auditees is not None:
-        for auditee in auditees:
-            aggees = (
-                aggees + f"(0x{auditee[0]} 0x{auditee[1]} {auditee[2]} {auditee[3]})"
-            )
+    parent = Program.to(parent_info[0] if genesis else list(parent_info))
 
-    aggees = aggees + ")"
+    auditor_list = [] if auditor is None else list(auditor)
 
-    sol = f"(0x{Program(binutils.assemble(core)).get_tree_hash()} {parent_str} {amount} {innerpuzreveal} {innersol} {auditor_formatted} {aggees})"  # type: ignore # noqa
-    return Program(binutils.assemble(sol))
+    aggees_sexp = Program.to([] if auditees is None else [list(_) for _ in auditees])
+
+    solution = Program.to([parent, amount, inner_solution, auditor_list, aggees_sexp])
+    return solution
 
 
-def extract_hex_64(s: str, idx: int = -1):
-    try:
-        items = [_.split(")")[0] for _ in s.split() if _.startswith("0x")]
-        r = items[idx][2:]
-        if len(r) == 64:
-            return r
-    except Exception:
-        pass
-    return None
+def get_uncurried_binding(puzzle: SExp, idx: int) -> Optional[Program]:
+    r = uncurry(puzzle)
+    if r is None:
+        return r
+    core, bindings = r
+    v = bindings
+    while idx > 0:
+        v = v.rest()
+        idx -= 1
+    v = v.first()
+    return v
 
 
-def get_genesis_from_puzzle(puzzle: SExp):
-    return extract_hex_64(binutils.disassemble(puzzle))
+def get_uncurried_binding_as_atom(puzzle: SExp, idx: int) -> Optional[bytes32]:
+    r = get_uncurried_binding(puzzle, idx)
+    if r is None:
+        return r
+    return r.as_atom()
 
 
-def get_genesis_from_core(core: str):
-    return extract_hex_64(core)
+def get_genesis_from_puzzle(puzzle: SExp) -> bytes32:
+    return get_uncurried_binding_as_atom(puzzle, 1)
 
 
-def get_innerpuzzle_from_puzzle(puzzle: str):
-    return extract_hex_64(puzzle, idx=0)
+def get_inner_puzzle_from_puzzle(puzzle: Program) -> bytes32:
+    return get_uncurried_binding(puzzle, 2)
+
+
+def get_inner_puzzle_hash_from_puzzle(puzzle: Program) -> bytes32:
+    return get_inner_puzzle_from_puzzle(puzzle).get_tree_hash()
 
 
 # Make sure that a generated E lock is spent in the spendbundle
 def create_spend_for_ephemeral(parent_of_e, auditor_coin, spend_amount):
-    puzstring = f"(r (r (c (q 0x{auditor_coin.name()}) (c (q {spend_amount}) (q ())))))"
-    puzzle = Program(binutils.assemble(puzstring))
+    cost, puzzle = curry(NULL_F, [auditor_coin.name(), spend_amount])
+    puzzle = Program.to(puzzle)
     coin = Coin(parent_of_e.name(), puzzle.get_tree_hash(), uint64(0))
-    solution = Program(binutils.assemble("()"))
+    solution = Program.to(0)
     coinsol = CoinSolution(coin, Program.to([puzzle, solution]))
     return coinsol
 
 
 # Make sure that a generated A lock is spent in the spendbundle
 def create_spend_for_auditor(parent_of_a, auditee):
-    puzstring = f"(r (c (q 0x{auditee.name()}) (q ())))"
-    puzzle = Program(binutils.assemble(puzstring))
+    cost, puzzle = curry(NULL_F, [auditee.name()])
+    puzzle = Program.to(puzzle)
     coin = Coin(parent_of_a.name(), puzzle.get_tree_hash(), uint64(0))
-    solution = Program(binutils.assemble("()"))
+    solution = Program.to([])
     coinsol = CoinSolution(coin, Program.to([puzzle, solution]))
     return coinsol
-
-
-def cc_generate_eve_spend(coin: Coin, full_puzzle: Program):
-    solution = cc_make_eve_solution(
-        coin.parent_coin_info, coin.puzzle_hash, coin.amount
-    )
-    list_of_solutions = [CoinSolution(coin, Program.to([full_puzzle, solution]),)]
-    aggsig = AugSchemeMPL.aggregate([])
-    spend_bundle = SpendBundle(list_of_solutions, aggsig)
-    return spend_bundle
 
 
 # Returns the relative difference in value between the amount outputted by a puzzle and solution and a coin's amount
@@ -184,16 +160,11 @@ def get_output_amount_for_puzzle_and_solution(puzzle, solution):
 
 # inspect puzzle and check it is a CC puzzle
 def check_is_cc_puzzle(puzzle: Program):
-    puzzle_string = binutils.disassemble(puzzle)
-    inner_puzzle = extract_hex_64(puzzle_string, idx=0)
-    if inner_puzzle is None:
+    r = uncurry(puzzle)
+    if r is None:
         return False
-    if all(c in string.hexdigits for c in inner_puzzle) is not True:
-        return False
-    genesisCoin = get_genesis_from_puzzle(puzzle)
-    if all(c in string.hexdigits for c in genesisCoin) is not True:
-        return False
-    return cc_make_puzzle(inner_puzzle, cc_make_core(genesisCoin)) == puzzle
+    core, bindings = r
+    return core.get_tree_hash() == MOD_HASH
 
 
 def update_auditors_in_solution(solution: SExp, auditor_info):
