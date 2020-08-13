@@ -97,8 +97,9 @@
 
   ; replaces one of the generated create coin conditions with a coloured coin
   ; which uses the created puzzlehash as the inner puzzlehash
-  (defun-inline transform_create_coin_condition (genesis_id inner_puzzle_hash mod_hash amount)
-    (list CREATE_COIN (calculate_puzzle_hash mod_hash genesis_id inner_puzzle_hash) amount))
+  (defun-inline transform_create_coin_condition (mod_hash genesis_id condition)
+    (list CREATE_COIN (calculate_puzzle_hash mod_hash genesis_id (f (r condition))) (f (r (r condition))))
+  )
 
   ; creates the puzzle for the lock which lets the auditor confirm how much value we are outputting
 
@@ -133,7 +134,7 @@
             auditor_amount))
 
   ; assembles information from the solution to create our own full ID including asserting our parent is a coloured coin
-  (defun-inline calculate_my_id (genesis_id parent_parent parent_inner_puzzle_hash parent_amount inner_puzzle_hash my_amount mod_hash)
+  (defun-inline calculate_my_id (mod_hash genesis_id parent_parent parent_inner_puzzle_hash parent_amount inner_puzzle_hash my_amount)
     (sha256 (sha256 parent_parent
                     (calculate_puzzle_hash mod_hash genesis_id parent_inner_puzzle_hash)
                     parent_amount)
@@ -153,33 +154,33 @@
 
   ; this function loops through the created outputs from running the puzzle reveal with the solution and replaces the
   ; CREATE_COIN conditions with a create coloured coin it then adds the locks and assertions about itself at the end
-  (defun normal_case_everybody (genesis_id conditions transformed_conditions_acc mod_hash running_sum my_id auditor_id)
+  (defun normal_case_everybody (mod_hash genesis_id conditions transformed_conditions_acc running_sum my_id auditor_id)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)
-        (normal_case_everybody genesis_id
+        (normal_case_everybody mod_hash
+                               genesis_id
                                (r conditions)
-                               (c (transform_create_coin_condition genesis_id
-                                                                   (f (r (f conditions)))
-                                                                   mod_hash
-                                                                   (f (r (r (f conditions)))))
+                               (c (transform_create_coin_condition mod_hash
+                                                                   genesis_id
+                                                                   (f conditions)
+                                                                 )
                                   transformed_conditions_acc)
-                               mod_hash
                                (+ (f (r (r (f conditions))))
                                   running_sum)
                                my_id
                                auditor_id)
-        (normal_case_everybody genesis_id
+        (normal_case_everybody mod_hash
+                               genesis_id
                                (r conditions)
                                (c (f conditions)
                                   transformed_conditions_acc)
-                               mod_hash
                                running_sum
                                my_id
                                auditor_id))
       (prepend_additional_conditions my_id auditor_id running_sum transformed_conditions_acc)))
 
   ; this macro takes a list of auditees and returns the ID of the first one from the list
-  (defun-inline get_first_aggee_id (genesis_id aggee_list mod_hash)
+  (defun-inline get_first_aggee_id (mod_hash genesis_id aggee_list)
     (sha256 (f (f aggee_list))
                 (calculate_puzzle_hash mod_hash
                                        genesis_id
@@ -209,13 +210,13 @@
   ; this loops through a list of coins to be audited and creates the relevant conditions for each
   ; it also compares the total value of coins being spent with total output amount of the transaction,
   ; and if they aren't equal it will fail
-  (defun consume_es_generate_as (genesis_id aggee_list my_id mod_hash output running_actual running_e)
+  (defun consume_es_generate_as (mod_hash genesis_id aggee_list my_id output running_actual running_e)
     (if (l aggee_list)
-      (consume_es_generate_as genesis_id
+      (consume_es_generate_as mod_hash
+                              genesis_id
                               (r aggee_list)
                               my_id
-                              mod_hash
-                              (create_a_and_consume_e (get_first_aggee_id genesis_id aggee_list mod_hash)
+                              (create_a_and_consume_e (get_first_aggee_id mod_hash genesis_id aggee_list)
                                                       my_id
                                                       (f (r (r (r (f aggee_list)))))
                                                       output)
@@ -226,18 +227,18 @@
         (x))))
 
   ; this checks if our coin is the auditor and if so runs the auditor code, otherwise outputs the standard output
-  (defun normal_case_aggee_checker (genesis_id mod_hash my_id aggee_list normal_output)
+  (defun-inline normal_case_aggee_checker (mod_hash genesis_id my_id aggee_list normal_output)
     (if aggee_list
-      (consume_es_generate_as genesis_id aggee_list my_id mod_hash normal_output 0 0)
+      (consume_es_generate_as mod_hash genesis_id aggee_list my_id normal_output 0 0)
       normal_output))
 
   ; this calculates the standard output and passes it to the auditor route checker
-  (defun normal_case (genesis_id conditions mod_hash my_id auditor_id aggee_list)
-      (normal_case_aggee_checker genesis_id
-                                 mod_hash
+  (defun normal_case (mod_hash genesis_id conditions my_id auditor_id aggee_list)
+      (normal_case_aggee_checker mod_hash
+                                 genesis_id
                                  my_id
                                  aggee_list
-                                 (normal_case_everybody genesis_id conditions () mod_hash 0 my_id auditor_id)))
+                                 (normal_case_everybody mod_hash genesis_id conditions () 0 my_id auditor_id)))
 
   ; this returns a conditions which asserts that our parent is the actual parent to stop us lying about our heritage
   (defun-inline generate_condition_proving_my_parent_is_genesis (parent_id my_puzzle_hash my_amount)
@@ -276,16 +277,16 @@
   ; it checks if our parent is a coloured coin, and then calls the normal case if so, otherwise it calls the eve case
   ; in eve case puzzlereveal is just actually just your full puzzlehash
   (if (l parent_info)
-      (normal_case genesis_id
+      (normal_case mod_hash
+                   genesis_id
                    (conditions_from_inner_puzzle inner_puzzle solution)
-                   mod_hash
-                   (calculate_my_id genesis_id
+                   (calculate_my_id mod_hash
+                                    genesis_id
                                     (f parent_info)
                                     (f (r parent_info))
                                     (f (r (r parent_info)))
                                     (sha256tree1 inner_puzzle)
-                                    my_amount
-                                    mod_hash)
+                                    my_amount)
                    (calculate_auditor_id mod_hash
                                          genesis_id
                                          auditor_parent
