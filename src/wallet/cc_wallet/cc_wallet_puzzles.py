@@ -6,7 +6,9 @@ from blspy import AugSchemeMPL
 from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
-from src.util.clvm import run_program, SExp
+from src.types.condition_opcodes import ConditionOpcode
+from src.util.clvm import SExp
+from src.util.condition_tools import conditions_dict_for_solution
 from src.wallet.puzzles.load_clvm import load_clvm
 
 
@@ -141,20 +143,16 @@ def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
 
 
 def get_output_amount_for_puzzle_and_solution(puzzle, solution):
-    cost, conditions = run_program(puzzle, solution)
+    puzzle_solution = puzzle.to([puzzle, solution])
+
+    error, conditions, cost = conditions_dict_for_solution(puzzle_solution)
+    if conditions is None:
+        return 0
+
+    creations = conditions.get(ConditionOpcode.CREATE_COIN)
     amount = 0
-    while conditions != b"":
-        opcode = conditions.first().first()
-        if opcode == b"3":  # Check if CREATE_COIN
-            amount_str = binutils.disassemble(conditions.first().rest().rest().first())
-            if amount_str == "()":
-                conditions = conditions.rest()
-                continue
-            elif amount_str[0:2] == "0x":  # Check for wonky decompilation
-                amount += int(amount_str, 16)
-            else:
-                amount += int(amount_str, 10)
-        conditions = conditions.rest()
+    for create_coin in creations:
+        amount += Program.to(create_coin.var2).as_int()
     return amount
 
 
