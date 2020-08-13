@@ -7,13 +7,13 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.coin import Coin
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
-from src.util.clvm import BaseSExp, EvalError, int_from_bytes, run_program
+from src.util.clvm import EvalError, int_from_bytes, run_program
 from src.util.ints import uint64
 from src.util.errors import Err, ConsensusError
 
 
 def parse_sexp_to_condition(
-    sexp: BaseSExp,
+    sexp: Program,
 ) -> Tuple[Optional[Err], Optional[ConditionVarPair]]:
     """
     Takes a ChiaLisp sexp and returns a ConditionVarPair.
@@ -34,7 +34,7 @@ def parse_sexp_to_condition(
 
 
 def parse_sexp_to_conditions(
-    sexp: BaseSExp,
+    sexp: Program,
 ) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
     """
     Takes a ChiaLisp sexp (list) and returns the list of ConditionVarPairs
