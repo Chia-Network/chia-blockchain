@@ -196,7 +196,9 @@ class CCWallet:
             if parent is not None:
                 amount = uint64(amount + record.coin.amount)
 
-        self.log.info(f"Confirmed balance for cc wallet {self.wallet_info.id} is {amount}")
+        self.log.info(
+            f"Confirmed balance for cc wallet {self.wallet_info.id} is {amount}"
+        )
         return uint64(amount)
 
     async def get_unconfirmed_balance(self) -> uint64:
@@ -217,7 +219,9 @@ class CCWallet:
 
         result = confirmed - removal_amount + addition_amount
 
-        self.log.info(f"Unconfirmed balance for cc wallet {self.wallet_info.id} is {result}")
+        self.log.info(
+            f"Unconfirmed balance for cc wallet {self.wallet_info.id} is {result}"
+        )
         return uint64(result)
 
     async def get_name(self):
