@@ -9,15 +9,28 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
-- Meet our new Rate Limited wallet. You can now fund a wallet from an Admin wallet that will set how many coins can be spent over a given range of blocks. Once combined with on chain wallet recovery, this makes it much easier to secure your "spending money" wallet so that if it sis compromised you have time to get most of the funds back before an attacker can steal them all.
+- Meet our new Rate Limited wallet. You can now fund a wallet from an Admin wallet that will set how many coins can be spent over a given range of blocks. Once combined with on chain wallet recovery, this makes it much easier to secure your "spending money" wallet so that if it is compromised you have time to get most of the funds back before an attacker can steal them all. This wallet should be considered alpha in this release as additional fixes and functionality will be in subsequent releases.
+- We've added unhardened HD keys to bls-signatures for the smart wallets that need them. We've added significant cross project testing to our BLS implementation.
+- The python implementation of bls-signatures is now current to the new specification.
+- `chia show -b` now returns plot public key and pool public key for each block.
+- Added cbor2 binary wheels for ARM64 to the Chia simple site. Raspberry Pi should be just a little easier to install.
 
 ### Changed
-- Wallet addresses and other key related elements are now in chech32.
-- `chia show -b` now returns plot public key and pool public key for each block.
+- Wallet addresses and other key related elements are now expressed in Chech32 which is the Chia implementation of [Bech32](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki). All of your old wallet addresses will be replaced with the new Chech32 addresses. The only thing you can't do is send test chia between 1.8/1.9 and 1.10 software. Anyone who upgrades to 1.10 will keep their transactions and balances of test chia from the earlier two releases however.
+- We added a first few enhancements to plotting speed. For a k=30 it results in an X% speedup in overall plotting speed. Many more significant increases in plotting speed are underway.
+- The proof of space document in chiapos has been updated to the new format and edited for clarity. Additionally GitHub actions now has the on demand ability to create the PDF version.
+- Relic has upstreamed our changes required for the IETF BLS standard. We now build directly from the Relic repository for all but Windows and will be migrating Windows in the next release.
 - Improvements to coloured coin wallet.
+- Minor improvements to the Coloured Coin wallet were integrated in advance of an upcoming re-factor.
+- Smart wallet backup was upgraded to encrypt and sign the contents of the backup.
 
 ### Fixed
-- `chia show -w` now displays a message when balances cannot be displayed instead of throwing an error
+- Proof of space plotting now correctly calculates the total working space used in the `-t` directory.
+- `chia show -w` now displays a message when balances cannot be displayed instead of throwing an error. Thanks to @freddiecoleman for this fix!
+- Various code review alerts for comparing to a wider type in chiapos were fixed. Additionally, unused code was removed from chiapos
+- Benchmarking has been re-enabled in bls-signatures.
+- Various node security vulnerabilities were addressed.
+- Updated keyring, various GitHub actions, colorlog, cbor2, and clvm_tools.
 
 ## [1.0beta9] aka Beta 1.9 - 2020-07-27
 
