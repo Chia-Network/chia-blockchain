@@ -193,14 +193,6 @@ const createWindow = () => {
       protocol: "file:",
       slashes: true
     });
-  var closingUrl =
-    process.env.ELECTRON_START_URL ||
-    url.format({
-      pathname: path.join(__dirname, "/../src/closing.html"),
-      protocol: "file:",
-      slashes: true
-    });
-  console.log(startUrl);
 
   mainWindow.loadURL(startUrl);
 
@@ -227,11 +219,10 @@ const createWindow = () => {
     if (choice == 0) {
       return;
     }
-    mainWindow.loadURL(closingUrl);
-    mainWindow.setBounds({ height: 500, width: 500 });
-
     decidedToClose = true;
-    closeDaemon(() => {
+    mainWindow.webContents.send("exit-daemon");
+    mainWindow.setBounds({ height: 500, width: 500 });
+    ipcMain.on("daemon-exited", (event, args) => {
       mainWindow.close();
     });
   });

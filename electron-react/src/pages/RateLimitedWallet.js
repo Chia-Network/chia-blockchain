@@ -15,21 +15,14 @@ import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 
-import {
-  send_transaction,
-  rl_set_user_info_action,
-  clawback_rl_coin
-} from "../modules/message";
+import { send_transaction, rl_set_user_info_action } from "../modules/message";
 import ExpansionPanel from "@material-ui/core/ExpansionPanel";
 import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
 import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import { Tooltip } from "@material-ui/core";
 import HelpIcon from "@material-ui/icons/Help";
-import {
-  mojo_to_chia_string,
-  chia_to_mojo
-} from "../util/chia";
+import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 
 import { unix_to_short_date } from "../util/utils";
 
@@ -242,7 +235,7 @@ const IncompleteCard = props => {
   const dispatch = useDispatch();
   const data = useSelector(state => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
-  const pubkey = data_parsed["user_pubkey"]
+  const pubkey = data_parsed["user_pubkey"];
 
   function copy() {
     navigator.clipboard.writeText(pubkey);
@@ -251,18 +244,26 @@ const IncompleteCard = props => {
   var ip_input = null;
 
   function submit() {
-    const ip_val = ip_input.value
-    const ip_unhex = Buffer.from(ip_val, 'hex')
-    const ip_debuf = ip_unhex.toString('utf8')
-    const ip_parsed = JSON.parse(ip_debuf)
+    const ip_val = ip_input.value;
+    const ip_unhex = Buffer.from(ip_val, "hex");
+    const ip_debuf = ip_unhex.toString("utf8");
+    const ip_parsed = JSON.parse(ip_debuf);
     const interval_input = ip_parsed["interval"];
     const chiaper_input = ip_parsed["limit"];
     const origin_input = ip_parsed["origin_string"];
     const admin_pubkey_input = ip_parsed["admin_pubkey"];
     const interval_value = parseInt(Number(interval_input));
     const chiaper_value = parseInt(Number(chiaper_input));
-    const origin_parsed = JSON.parse(origin_input)
-    dispatch(rl_set_user_info_action(id, interval_value, chiaper_value, origin_parsed, admin_pubkey_input))
+    const origin_parsed = JSON.parse(origin_input);
+    dispatch(
+      rl_set_user_info_action(
+        id,
+        interval_value,
+        chiaper_value,
+        origin_parsed,
+        admin_pubkey_input
+      )
+    );
   }
 
   const classes = useStyles();
@@ -280,7 +281,9 @@ const IncompleteCard = props => {
           <div className={classes.setupSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <Typography variant="subtitle1">Send your pubkey to your Rate Limited Wallet admin:</Typography>
+                <Typography variant="subtitle1">
+                  Send your pubkey to your Rate Limited Wallet admin:
+                </Typography>
               </Box>
             </Box>
           </div>
@@ -315,7 +318,10 @@ const IncompleteCard = props => {
           <div className={classes.setupSection}>
             <Box display="flex">
               <Box flexGrow={1} style={{ marginTop: 10, marginBottom: 0 }}>
-                <Typography variant="subtitle1">When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:</Typography>
+                <Typography variant="subtitle1">
+                  When you receive the setup info packet from your admin, enter
+                  it below to complete your Rate Limited Wallet setup:
+                </Typography>
               </Box>
             </Box>
             <Box display="flex">
@@ -359,18 +365,23 @@ const RLDetailsCard = props => {
 
   const data = useSelector(state => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
-  const type = data_parsed["type"]
-  const user_pubkey = data_parsed["user_pubkey"]
-  const admin_pubkey = data_parsed["admin_pubkey"]
-  const interval = data_parsed["interval"]
-  const limit = data_parsed["limit"]
-  const origin = data_parsed["rl_origin"]
-  const origin_string = JSON.stringify(origin)
-  const infopacket = { "interval": interval, "limit": limit, "origin_string": origin_string, "admin_pubkey": admin_pubkey }
+  const type = data_parsed["type"];
+  const user_pubkey = data_parsed["user_pubkey"];
+  const admin_pubkey = data_parsed["admin_pubkey"];
+  const interval = data_parsed["interval"];
+  const limit = data_parsed["limit"];
+  const origin = data_parsed["rl_origin"];
+  const origin_string = JSON.stringify(origin);
+  const infopacket = {
+    interval: interval,
+    limit: limit,
+    origin_string: origin_string,
+    admin_pubkey: admin_pubkey
+  };
 
-  const ip_string = JSON.stringify(infopacket)
-  const ip_buf = Buffer.from(ip_string, 'utf8');
-  const ip_hex = ip_buf.toString('hex');
+  const ip_string = JSON.stringify(infopacket);
+  const ip_buf = Buffer.from(ip_string, "utf8");
+  const ip_hex = ip_buf.toString("hex");
 
   function user_copy() {
     navigator.clipboard.writeText(user_pubkey);
@@ -396,10 +407,15 @@ const RLDetailsCard = props => {
             <div className={classes.cardSubSection}>
               <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1">Spending Interval (number of blocks): {interval}</Typography>
+                  <Typography variant="subtitle1">
+                    Spending Interval (number of blocks): {interval}
+                  </Typography>
                 </Box>
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1">Spending Limit (chia per interval): {mojo_to_chia_string(limit)}</Typography>
+                  <Typography variant="subtitle1">
+                    Spending Limit (chia per interval):{" "}
+                    {mojo_to_chia_string(limit)}
+                  </Typography>
                 </Box>
               </Box>
             </div>
@@ -433,8 +449,7 @@ const RLDetailsCard = props => {
         </Grid>
       </Paper>
     );
-  }
-  else if (type === "admin") {
+  } else if (type === "admin") {
     return (
       <Paper className={classes.paper}>
         <Grid container spacing={0}>
@@ -449,10 +464,15 @@ const RLDetailsCard = props => {
             <div className={classes.cardSubSection}>
               <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1">Spending Interval (number of blocks): {interval}</Typography>
+                  <Typography variant="subtitle1">
+                    Spending Interval (number of blocks): {interval}
+                  </Typography>
                 </Box>
                 <Box flexGrow={1}>
-                  <Typography variant="subtitle1">Spending Limit (chia per interval): {mojo_to_chia_string(limit)}</Typography>
+                  <Typography variant="subtitle1">
+                    Spending Limit (chia per interval):{" "}
+                    {mojo_to_chia_string(limit)}
+                  </Typography>
                 </Box>
               </Box>
             </div>
@@ -461,7 +481,10 @@ const RLDetailsCard = props => {
             <div className={classes.cardSubSection}>
               <Box display="flex">
                 <Box flexGrow={1} style={{ marginTop: 5, marginBottom: 20 }}>
-                  <Typography variant="subtitle1">Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:</Typography>
+                  <Typography variant="subtitle1">
+                    Send this info packet to your Rate Limited Wallet user who
+                    must use it to complete setup of their wallet:
+                  </Typography>
                 </Box>
               </Box>
               <Box display="flex" style={{ marginBottom: 20 }}>
@@ -560,9 +583,7 @@ const BalanceCard = props => {
         <BalanceCardSubSection
           title="Spendable Balance"
           balance={balance_spendable}
-          tooltip={
-            ""
-          }
+          tooltip={""}
         />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
@@ -583,23 +604,17 @@ const BalanceCard = props => {
                       <BalanceCardSubSection
                         title="Pending Total Balance"
                         balance={balance_ptotal}
-                        tooltip={
-                          ""
-                        }
+                        tooltip={""}
                       />
                       <BalanceCardSubSection
                         title="Pending Balance"
                         balance={balance_pending}
-                        tooltip={
-                          ""
-                        }
+                        tooltip={""}
                       />
                       <BalanceCardSubSection
                         title="Pending Change"
                         balance={balance_change}
-                        tooltip={
-                          ""
-                        }
+                        tooltip={""}
                       />
                     </Grid>
                   </ExpansionPanelDetails>
@@ -771,53 +786,54 @@ const SendCard = props => {
   );
 };
 
-const ClawbackCard = props => {
-  var id = props.wallet_id;
-  const classes = useStyles();
-  const dispatch = useDispatch();
+// TODO(lipa): use this / clean up
+// const ClawbackCard = props => {
+//   var id = props.wallet_id;
+//   const classes = useStyles();
+//   const dispatch = useDispatch();
 
-  function clawback() {
-    dispatch(clawback_rl_coin(id));
-  }
-  return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              Clawback Rate Limited Coin
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex" style={{ marginTop: 20 }}>
-              <Box flexGrow={1}>
-                <Typography variant="subtitle1">You may use the clawback feature to retrieve your coin at any time. If you do so, your Rate Limited User will no longer be able to spend the coin.</Typography>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box>
-                <Button
-                  onClick={clawback}
-                  className={classes.clawbackButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  Clawback Coin
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-};
+//   function clawback() {
+//     dispatch(clawback_rl_coin(id));
+//   }
+//   return (
+//     <Paper className={classes.paper}>
+//       <Grid container spacing={0}>
+//         <Grid item xs={12}>
+//           <div className={classes.cardTitle}>
+//             <Typography component="h6" variant="h6">
+//               Clawback Rate Limited Coin
+//             </Typography>
+//           </div>
+//         </Grid>
+//         <Grid item xs={12}>
+//           <div className={classes.cardSubSection}>
+//             <Box display="flex" style={{ marginTop: 20 }}>
+//               <Box flexGrow={1}>
+//                 <Typography variant="subtitle1">You may use the clawback feature to retrieve your coin at any time. If you do so, your Rate Limited User will no longer be able to spend the coin.</Typography>
+//               </Box>
+//             </Box>
+//           </div>
+//         </Grid>
+//         <Grid item xs={12}>
+//           <div className={classes.cardSubSection}>
+//             <Box display="flex">
+//               <Box>
+//                 <Button
+//                   onClick={clawback}
+//                   className={classes.clawbackButton}
+//                   variant="contained"
+//                   color="primary"
+//                 >
+//                   Clawback Coin
+//                 </Button>
+//               </Box>
+//             </Box>
+//           </div>
+//         </Grid>
+//       </Grid>
+//     </Paper>
+//   );
+// };
 
 const HistoryCard = props => {
   var id = props.wallet_id;
@@ -916,7 +932,7 @@ const RateLimitedWallet = props => {
   const wallets = useSelector(state => state.wallet_state.wallets);
   const data = useSelector(state => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
-  const type = data_parsed["type"]
+  const type = data_parsed["type"];
   var init_status = data_parsed["initialized"];
 
   if (type === "user") {
@@ -931,9 +947,7 @@ const RateLimitedWallet = props => {
       ) : (
         ""
       );
-    }
-
-    else {
+    } else {
       return wallets.length > props.wallet_id ? (
         <Grid className={classes.walletContainer} item xs={12}>
           <IncompleteCard wallet_id={id}></IncompleteCard>
@@ -942,9 +956,7 @@ const RateLimitedWallet = props => {
         ""
       );
     }
-  }
-
-  else if (type === "admin") {
+  } else if (type === "admin") {
     return wallets.length > props.wallet_id ? (
       <Grid className={classes.walletContainer} item xs={12}>
         <RLDetailsCard wallet_id={id}></RLDetailsCard>

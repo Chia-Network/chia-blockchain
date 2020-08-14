@@ -4,7 +4,10 @@ export const wsConnected = host => ({ type: "WS_CONNECTED", host });
 export const wsDisconnect = host => ({ type: "WS_DISCONNECT", host });
 export const wsDisconnected = host => ({ type: "WS_DISCONNECTED", host });
 
-const websocketInitialState = { connected: false, connecting: false };
+const websocketInitialState = {
+  connected: false,
+  connecting: false
+};
 
 export const websocketReducer = (
   state = { ...websocketInitialState },

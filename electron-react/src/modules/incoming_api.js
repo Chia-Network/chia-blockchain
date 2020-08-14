@@ -1,5 +1,4 @@
 import { service_wallet } from "../util/service_names";
-import { DEFAULT_ECDH_CURVE } from "tls";
 
 export const Wallet = (id, name, type, data) => ({
   id: id,
@@ -239,7 +238,6 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       if (command === "send_transaction" || command === "cc_spend") {
         state["sending_transaction"] = false;
         const id = data.id;
-        const name = data.name;
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
         wallet.send_transaction_result = message.data;

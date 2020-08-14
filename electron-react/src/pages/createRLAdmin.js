@@ -107,9 +107,7 @@ export const CreateRLAdminWallet = () => {
       dispatch(openDialog("Please enter a valid numeric spendable amount"));
       return;
     }
-    if (
-      userpubkey_input.value === ""
-    ) {
+    if (userpubkey_input.value === "") {
       dispatch(openDialog("Please enter a valid pubkey"));
       return;
     }
@@ -122,24 +120,29 @@ export const CreateRLAdminWallet = () => {
       dispatch(openDialog("Please enter a valid initial coin amount"));
       return;
     }
-    if (
-      fee_input.value === "" ||
-      isNaN(Number(fee_input.value))
-    ) {
+    if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
       dispatch(openDialog("Please enter a valid numeric fee"));
       return;
     }
     dispatch(createState(true, true));
-    const interval = interval_input.value
+    const interval = interval_input.value;
     const interval_value = parseInt(Number(interval));
     const chiaper = chia_to_mojo(chiaper_input.value);
     const chiaper_value = parseInt(Number(chiaper));
-    const userpubkey = userpubkey_input.value
+    const userpubkey = userpubkey_input.value;
     const amount = chia_to_mojo(amount_input.value);
     const amount_value = parseInt(Number(amount));
-    var fee = chia_to_mojo(fee_input.value);
-    const fee_value = parseInt(Number(fee));
-    dispatch(create_rl_admin_action(interval_value, chiaper_value, userpubkey, amount_value));
+    // var fee = chia_to_mojo(fee_input.value);
+    // TODO(lipa): send fee to server
+    // const fee_value = parseInt(Number(fee));
+    dispatch(
+      create_rl_admin_action(
+        interval_value,
+        chiaper_value,
+        userpubkey,
+        amount_value
+      )
+    );
   }
 
   return (
@@ -205,14 +208,10 @@ export const CreateRLAdminWallet = () => {
       <div className={custom.titleCard}>
         <Box display="flex">
           <Box flexGrow={6} className={custom.inputTitleLeft}>
-            <Typography variant="subtitle1">
-              Amount For Initial Coin
-            </Typography>
+            <Typography variant="subtitle1">Amount For Initial Coin</Typography>
           </Box>
           <Box flexGrow={6} className={custom.inputTitleRight}>
-            <Typography variant="subtitle1">
-              Fee
-            </Typography>
+            <Typography variant="subtitle1">Fee</Typography>
           </Box>
         </Box>
       </div>
@@ -249,9 +248,7 @@ export const CreateRLAdminWallet = () => {
       <div className={custom.titleCard}>
         <Box display="flex">
           <Box flexGrow={6} className={custom.inputTitleLeft}>
-            <Typography variant="subtitle1">
-              User Pubkey
-            </Typography>
+            <Typography variant="subtitle1">User Pubkey</Typography>
           </Box>
         </Box>
       </div>

@@ -2,7 +2,6 @@ import React from "react";
 import {
   makeStyles,
   Typography,
-  Grid,
   Button,
   Box,
   Backdrop,
@@ -25,8 +24,7 @@ export const customStyles = makeStyles(theme => ({
   },
   topTitleCard: {
     paddingTop: theme.spacing(6),
-    paddingBottom: theme.spacing(1),
-
+    paddingBottom: theme.spacing(1)
   },
   input: {
     marginLeft: theme.spacing(3),
@@ -84,7 +82,9 @@ export const CreateRLUserWallet = () => {
       <div className={custom.topTitleCard}>
         <Box display="flex">
           <Box flexGrow={1} className={custom.inputTitleLeft}>
-            <Typography variant="subtitle1">Initialize a Rate Limited User Wallet:</Typography>
+            <Typography variant="subtitle1">
+              Initialize a Rate Limited User Wallet:
+            </Typography>
           </Box>
         </Box>
         <Box display="flex">
