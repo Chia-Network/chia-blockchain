@@ -176,9 +176,9 @@ def show_all_keys():
         )
         print(
             "First wallet address:",
-            encode_puzzle_hash(create_puzzlehash_for_pk(
-                master_sk_to_wallet_sk(sk, uint32(0)).get_g1()
-            )),
+            encode_puzzle_hash(
+                create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
+            ),
         )
         assert seed is not None
         mnemonic = bytes_to_mnemonic(seed)
