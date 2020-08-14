@@ -105,6 +105,15 @@ def create_plots(
         plot_id: bytes32 = ProofOfSpace.calculate_plot_id(
             pool_public_key, plot_public_key
         )
+        if args.plotid is not None:
+            log.info(f"Debug plot ID: {args.plotid}")
+            plot_id: bytes32 = bytes32(bytes.fromhex(args.plotid))
+
+        plot_memo: bytes32 = stream_plot_info(pool_public_key, farmer_public_key, sk)
+        if args.memo is not None:
+            log.info(f"Debug memo: {args.memo}")
+            plot_memo: bytes32 = bytes.fromhex(args.memo)
+
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
         if use_datetime:
@@ -131,7 +140,7 @@ def create_plots(
                 str(args.final_dir),
                 filename,
                 args.size,
-                stream_plot_info(pool_public_key, farmer_public_key, sk),
+                plot_memo,
                 plot_id,
                 args.buffer,
             )

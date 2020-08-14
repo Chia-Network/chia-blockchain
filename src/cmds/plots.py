@@ -24,7 +24,7 @@ def help_message():
         "chia plots create -k [size] -n [number of plots] -b [memory buffer size MiB]"
         + " -f [farmer pk] -p [pool pk] -t [tmp dir] -2 [tmp dir 2] -d [final dir]  (creates plots)"
     )
-    print("-s [sk_seed] -i [index] are available for debugging")
+    print("-i [plotid] [-m memo] are available for debugging")
     print("chia plots check -n [num checks]  (checks plots)")
     print("chia plots add -d [directory] (adds a directory of plots)")
     print("chia plots remove -d [directory] (removes a directory of plots from config)")
@@ -69,6 +69,20 @@ def make_parser(parser):
         help="Final directory for plots (relative or absolute)",
         type=Path,
         default=Path("."),
+    )
+    parser.add_argument(
+        "-i",
+        "--plotid",
+        help="PlotID in hex for reproducing plots (debugging only)",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "-m",
+        "--memo",
+        help="Memo in hex for reproducing plots (debugging only)",
+        type=str,
+        default=None,
     )
     parser.add_argument(
         "command",
