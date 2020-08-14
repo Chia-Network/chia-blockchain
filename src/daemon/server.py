@@ -108,6 +108,7 @@ class WebSocketServer:
     async def stop(self):
         await self.exit()
         self.websocket_server.close()
+        return {"success": True}
 
     async def safe_handle(self, websocket, path):
         service_name = ""
@@ -328,9 +329,8 @@ class WebSocketServer:
         return response
 
     async def register_service(self, websocket, request):
-        self.log.info(request)
+        self.log.info(f"Register service {request}")
         service = request["service"]
-        self.log.info(service)
         if service in self.connections:
             ws = self.connections[service]
             self.connections.pop(service)

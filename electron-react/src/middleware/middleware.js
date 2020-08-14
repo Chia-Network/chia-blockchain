@@ -15,6 +15,7 @@ import {
 const config = require("../config");
 
 const crypto = require("crypto");
+
 const callback_map = {};
 
 const outgoing_message = (command, data, destination) => ({
@@ -50,6 +51,7 @@ const socketMiddleware = () => {
   };
 
   const onClose = store => () => {
+    connected = false;
     store.dispatch(actions.wsDisconnected());
   };
 

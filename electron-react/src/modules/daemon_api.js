@@ -19,7 +19,8 @@ const initial_state = {
   farmer_connected: false,
   harvester_running: false,
   harvester_connected: false,
-  plotter_running: false
+  plotter_running: false,
+  exiting: false
 };
 
 export const daemonReducer = (state = { ...initial_state }, action) => {
@@ -86,6 +87,17 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
         }
       }
       return state;
+    case "OUTGOING_MESSAGE":
+      if (
+        action.message.command === "exit" &&
+        action.message.destination === "daemon"
+      ) {
+        state.exiting = true;
+        return state;
+      }
+      return state;
+    case "WS_DISCONNECTED":
+      return initial_state;
     default:
       return state;
   }
