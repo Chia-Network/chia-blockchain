@@ -183,7 +183,10 @@ class WalletRpcApi:
             raw_puzzle_hash = await wallet.get_new_inner_hash()
             puzzle_hash = encode_puzzle_hash(raw_puzzle_hash)
         else:
-            return {"success": False, reason: "Wallet type cannnot create puzzle hashes"}
+            return {
+                "success": False,
+                "reason": "Wallet type cannnot create puzzle hashes",
+            }
 
         response = {
             "success": True,
