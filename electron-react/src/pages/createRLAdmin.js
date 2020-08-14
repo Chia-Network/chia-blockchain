@@ -22,9 +22,6 @@ import { chia_to_mojo } from "../util/chia";
 import { openDialog } from "../modules/dialogReducer";
 
 export const customStyles = makeStyles(theme => ({
-  walletContainer: {
-    marginBottom: theme.spacing(5)
-  },
   input: {
     marginLeft: theme.spacing(3),
     height: 56

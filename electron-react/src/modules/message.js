@@ -24,6 +24,10 @@ import {
 } from "./backup_state";
 import { exitDaemon } from "./daemon_messages";
 import { wsDisconnect } from "./websocket";
+import {
+  changeCreateWallet,
+  ALL_OPTIONS
+} from "../modules/createWalletReducer";
 
 export const clearSend = () => {
   var action = {
@@ -436,6 +440,7 @@ export const create_cc_action = (amount, fee) => {
           dispatch(format_message("get_wallets", {}));
           dispatch(showCreateBackup(true));
           dispatch(createState(true, false));
+          dispatch(changeCreateWallet(ALL_OPTIONS))
         } else {
           const error = response.data.error;
           dispatch(openDialog("Error", error));
@@ -455,6 +460,7 @@ export const create_cc_for_colour_action = (colour, fee) => {
           // Go to wallet
           dispatch(showCreateBackup(true));
           dispatch(format_message("get_wallets", {}));
+          dispatch(changeCreateWallet(ALL_OPTIONS))
         } else {
           const error = response.data.error;
           dispatch(openDialog("Error", error));
@@ -532,6 +538,7 @@ export const create_rl_admin_action = (interval, limit, pubkey, amount) => {
         dispatch(format_message("get_wallets", {}));
         dispatch(showCreateBackup(true));
         dispatch(createState(true, false));
+        dispatch(changeCreateWallet(ALL_OPTIONS));
       } else {
         const error = response.data.error;
         dispatch(openDialog("Error", error));
@@ -559,6 +566,7 @@ export const create_rl_user_action = () => {
         // Go to wallet
         dispatch(format_message("get_wallets", {}));
         dispatch(createState(true, false));
+        dispatch(changeCreateWallet(ALL_OPTIONS));
       } else {
         const error = response.data.error;
         dispatch(openDialog("Error", error));

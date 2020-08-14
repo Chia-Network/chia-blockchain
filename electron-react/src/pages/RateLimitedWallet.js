@@ -245,8 +245,18 @@ const IncompleteCard = props => {
 
   function submit() {
     const ip_val = ip_input.value;
-    const ip_unhex = Buffer.from(ip_val, "hex");
-    const ip_debuf = ip_unhex.toString("utf8");
+    const hexcheck = /[0-9a-f]+$/ig;
+
+    if (
+      !hexcheck.test(ip_val) ||
+      ip_val.value === ""
+    ) {
+      dispatch(openDialog("Please enter a valid info packet"));
+      return;
+    }
+
+    const ip_unhex = Buffer.from(ip_val, 'hex');
+    const ip_debuf = ip_unhex.toString('utf8');
     const ip_parsed = JSON.parse(ip_debuf);
     const interval_input = ip_parsed["interval"];
     const chiaper_input = ip_parsed["limit"];
