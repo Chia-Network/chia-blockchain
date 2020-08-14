@@ -765,7 +765,6 @@ class WalletRpcApi:
     async def send_clawback_transaction(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        tx = await wallet.clawback_rl_coin_transaction()
         try:
             tx = await wallet.clawback_rl_coin_transaction()
         except Exception as e:
