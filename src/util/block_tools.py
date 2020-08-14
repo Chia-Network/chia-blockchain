@@ -104,6 +104,8 @@ class BlockTools:
             args.tmp_dir = temp_dir
             args.tmp2_dir = plot_dir
             args.final_dir = plot_dir
+            args.plotid = None
+            args.memo = None
             test_private_keys = [
                 AugSchemeMPL.key_gen(std_hash(bytes([i]))) for i in range(args.num)
             ]
