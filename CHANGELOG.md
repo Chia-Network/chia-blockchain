@@ -17,7 +17,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Changed
 - Wallet addresses and other key related elements are now expressed in Chech32 which is the Chia implementation of [Bech32](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki). All of your old wallet addresses will be replaced with the new Chech32 addresses. The only thing you can't do is send test chia between 1.8/1.9 and 1.10 software. Anyone who upgrades to 1.10 will keep their transactions and balances of test chia from the earlier two releases however.
-- We added a first few enhancements to plotting speed. For a k=30 it results in an X% speedup in overall plotting speed. Many more significant increases in plotting speed are underway.
+- We added a first few enhancements to plotting speed. For a k=30 on a ramdisk with `-b 64 GiB` it results in an 11% speedup in overall plotting speed and a 23% improvement in phase 1 speed. Many more significant increases in plotting speed are in the works.
 - The proof of space document in chiapos has been updated to the new format and edited for clarity. Additionally GitHub actions now has the on demand ability to create the PDF version.
 - Relic has upstreamed our changes required for the IETF BLS standard. We now build directly from the Relic repository for all but Windows and will be migrating Windows in the next release.
 - Improvements to coloured coin wallet.
