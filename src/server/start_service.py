@@ -159,6 +159,7 @@ class Service:
                 )
 
             self._rpc_task = None
+            self._rpc_close_task = None
             if self._rpc_info:
                 rpc_api, rpc_port = self._rpc_info
                 self._rpc_task = asyncio.create_task(
@@ -226,6 +227,14 @@ class Service:
             if self._stop_callback:
                 self._stop_callback()
 
+            if self._rpc_task:
+                self._log.info("Closing RPC server")
+
+                async def close_rpc_server():
+                    await (await self._rpc_task)()
+
+                self._rpc_close_task = asyncio.create_task(close_rpc_server())
+
     async def wait_closed(self):
         self._log.info("Waiting for socket to be closed (if opened)")
         for _ in self._server_sockets:
@@ -234,11 +243,10 @@ class Service:
         self._log.info("Waiting for ChiaServer to be closed")
         await self._server.await_closed()
 
-        if self._rpc_task:
-
+        if self._rpc_close_task:
             self._log.info("Waiting for RPC server")
-            await (await self._rpc_task)()
-            self._log.info("Closed RPC server.")
+            await self._rpc_close_task
+            self._log.info("Closed RPC server")
 
         if self._await_closed_callback:
             self._log.info("Waiting for service _await_closed callback")
