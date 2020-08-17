@@ -720,7 +720,6 @@ const SendCard = props => {
             <Box display="flex">
               <Box flexGrow={1}>
                 <TextField
-                  id="filled-secondary"
                   variant="filled"
                   color="secondary"
                   fullWidth
@@ -740,7 +739,6 @@ const SendCard = props => {
             <Box display="flex">
               <Box flexGrow={6}>
                 <TextField
-                  id="filled-secondary"
                   variant="filled"
                   color="secondary"
                   fullWidth
