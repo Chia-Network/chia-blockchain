@@ -2,6 +2,7 @@ import asyncio
 import logging
 import logging.config
 import signal
+from sys import platform
 
 from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 
@@ -184,6 +185,16 @@ class Service:
             try:
                 asyncio.get_running_loop().add_signal_handler(signal.SIGINT, self.stop)
                 asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self.stop)
+                if platform == "win32" or platform == "cygwin":
+                    asyncio.get_running_loop().add_signal_handler(
+                        signal.SIGBREAK, self.stop
+                    )
+                    asyncio.get_running_loop().add_signal_handler(
+                        signal.CTRL_C_EVENT, self.stop
+                    )
+                    asyncio.get_running_loop().add_signal_handler(
+                        signal.CTRL_BREAK_EVENT, self.stop
+                    )
             except NotImplementedError:
                 self._log.info("signal handlers unsupported")
 
@@ -211,6 +222,10 @@ class Service:
             if self._introducer_poll_task:
                 self._introducer_poll_task.cancel()
 
+            self._log.info("Calling service stop callback")
+            if self._stop_callback:
+                self._stop_callback()
+
     async def wait_closed(self):
         self._log.info("Waiting for socket to be closed (if opened)")
         for _ in self._server_sockets:
@@ -218,10 +233,6 @@ class Service:
 
         self._log.info("Waiting for ChiaServer to be closed")
         await self._server.await_closed()
-
-        self._log.info("Calling service stop callback")
-        if self._stop_callback:
-            self._stop_callback()
 
         if self._rpc_task:
 
