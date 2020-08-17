@@ -134,6 +134,7 @@ class Service:
         self._api = api
         self._task = None
         self._is_stopping = False
+        self._stopped_by_rpc = False
 
         self._periodic_introducer_poll = periodic_introducer_poll
         self._on_connect_callback = on_connect_callback
@@ -170,6 +171,11 @@ class Service:
             self._rpc_close_task = None
             if self._rpc_info:
                 rpc_api, rpc_port = self._rpc_info
+
+                def rpc_stop():
+                    self._stopped_by_rpc = True
+                    self.stop()
+
                 self._rpc_task = asyncio.create_task(
                     start_rpc_server(
                         rpc_api(self._api),
@@ -202,7 +208,9 @@ class Service:
     async def run(self):
         self.start()
         await self._task
-        while not stopped_by_signal:
+        while (
+            not stopped_by_signal and not self._stopped_by_rpc and not self._is_stopping
+        ):
             await asyncio.sleep(1)
 
         self.stop()
@@ -212,8 +220,6 @@ class Service:
     def stop(self):
         if not self._is_stopping:
             self._is_stopping = True
-            global stopped_by_signal
-            stopped_by_signal = True
             self._log.info("Closing server sockets")
             for _ in self._server_sockets:
                 _.close()
