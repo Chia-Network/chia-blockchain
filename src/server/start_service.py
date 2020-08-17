@@ -188,13 +188,13 @@ class Service:
                 asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self.stop)
                 if platform == "win32" or platform == "cygwin":
                     asyncio.get_running_loop().add_signal_handler(
-                        signal.SIGBREAK, self.stop
+                        signal.SIGBREAK, self.stop  # pylint: disable=E1101
                     )
                     asyncio.get_running_loop().add_signal_handler(
-                        signal.CTRL_C_EVENT, self.stop
+                        signal.CTRL_C_EVENT, self.stop  # pylint: disable=E1101
                     )
                     asyncio.get_running_loop().add_signal_handler(
-                        signal.CTRL_BREAK_EVENT, self.stop
+                        signal.CTRL_BREAK_EVENT, self.stop  # pylint: disable=E1101
                     )
             except NotImplementedError:
                 self._log.info("signal handlers unsupported")
