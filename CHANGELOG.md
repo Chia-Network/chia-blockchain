@@ -27,6 +27,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 - Proof of space plotting now correctly calculates the total working space used in the `-t` directory.
 - `chia show -w` now displays a message when balances cannot be displayed instead of throwing an error. Thanks to @freddiecoleman for this fix!
+- Fix issue with shutting down full node (full node processes remained open, and caused a spinner when launching Chia)
 - Various code review alerts for comparing to a wider type in chiapos were fixed. Additionally, unused code was removed from chiapos
 - Benchmarking has been re-enabled in bls-signatures.
 - Various node security vulnerabilities were addressed.
