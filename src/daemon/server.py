@@ -431,7 +431,7 @@ def launch_service(root_path, service_command):
 
     # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
     if platform == "win32" or platform == "cygwin":
-        creationflags = (subprocess.CREATE_NEW_PROCESS_GROUP,)
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
     else:
         creationflags = 0
     process = subprocess.Popen(
