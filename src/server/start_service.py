@@ -172,10 +172,6 @@ class Service:
             if self._rpc_info:
                 rpc_api, rpc_port = self._rpc_info
 
-                def rpc_stop():
-                    self._stopped_by_rpc = True
-                    self.stop()
-
                 self._rpc_task = asyncio.create_task(
                     start_rpc_server(
                         rpc_api(self._api),
@@ -208,9 +204,7 @@ class Service:
     async def run(self):
         self.start()
         await self._task
-        while (
-            not stopped_by_signal and not self._stopped_by_rpc and not self._is_stopping
-        ):
+        while not stopped_by_signal and not self._is_stopping:
             await asyncio.sleep(1)
 
         self.stop()
