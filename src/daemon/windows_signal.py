@@ -5,12 +5,10 @@ https://stackoverflow.com/questions/35772001/how-to-handle-the-signal-in-python-
 
 import os
 import sys
-import time
 import signal
 
 if sys.platform != "win32" and sys.platform != "cygwin":
     kill = os.kill
-    sleep = time.sleep
 else:
     # adapt the conflated API on Windows.
     import threading
@@ -53,25 +51,3 @@ else:
                 signal.signal(signum, handler)
         else:
             os.kill(pid, sigmap.get(signum, signum))
-
-    if sys.version_info[0] > 2:
-        sleep = time.sleep
-    else:
-        import errno
-
-        # If the signal handler doesn't raise an exception,
-        # time.sleep in Python 2 raises an EINTR IOError, but
-        # Python 3 just resumes the sleep.
-
-        def sleep(interval):
-            """sleep that ignores EINTR in 2.x on Windows"""
-            while True:
-                try:
-                    t = time.time()
-                    time.sleep(interval)
-                except IOError as e:
-                    if e.errno != errno.EINTR:
-                        raise
-                interval -= time.time() - t
-                if interval <= 0:
-                    break

@@ -3,6 +3,7 @@ import logging
 import logging.config
 import signal
 
+from sys import platform
 from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 
 try:
@@ -192,6 +193,9 @@ class Service:
 
             signal.signal(signal.SIGINT, global_signal_handler)
             signal.signal(signal.SIGTERM, global_signal_handler)
+            if platform == "win32" or platform == "cygwin":
+                # pylint: disable=E1101
+                signal.signal(signal.SIGBREAK, global_signal_handler)  # type: ignore
 
         self._task = asyncio.create_task(_run())
 
