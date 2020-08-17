@@ -459,7 +459,9 @@ async def kill_service(root_path, services, service_name, delay_before_kill=15) 
 
     if platform == "win32" or platform == "cygwin":
         log.info("sending CTRL_BREAK_EVENT signal to %s", service_name)
+        # pylint: disable=E1101
         kill(process.pid, signal.SIGBREAK)  # type: ignore
+
     else:
         log.info("sending term signal to %s", service_name)
         process.terminate()
