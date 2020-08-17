@@ -245,18 +245,15 @@ const IncompleteCard = props => {
 
   function submit() {
     const ip_val = ip_input.value;
-    const hexcheck = /[0-9a-f]+$/ig;
+    const hexcheck = /[0-9a-f]+$/gi;
 
-    if (
-      !hexcheck.test(ip_val) ||
-      ip_val.value === ""
-    ) {
+    if (!hexcheck.test(ip_val) || ip_val.value === "") {
       dispatch(openDialog("Please enter a valid info packet"));
       return;
     }
 
-    const ip_unhex = Buffer.from(ip_val, 'hex');
-    const ip_debuf = ip_unhex.toString('utf8');
+    const ip_unhex = Buffer.from(ip_val, "hex");
+    const ip_debuf = ip_unhex.toString("utf8");
     const ip_parsed = JSON.parse(ip_debuf);
     const interval_input = ip_parsed["interval"];
     const chiaper_input = ip_parsed["limit"];
@@ -337,7 +334,6 @@ const IncompleteCard = props => {
             <Box display="flex">
               <Box flexGrow={1} style={{ marginTop: 0 }}>
                 <TextField
-                  id="filled-secondary"
                   variant="filled"
                   color="secondary"
                   fullWidth
@@ -759,7 +755,6 @@ const SendCard = props => {
               </Box>
               <Box flexGrow={6}>
                 <TextField
-                  id="filled-secondary"
                   variant="filled"
                   fullWidth
                   color="secondary"

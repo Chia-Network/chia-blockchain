@@ -177,7 +177,6 @@ export const CreateRLAdminWallet = () => {
           <Box flexGrow={6}>
             <TextField
               className={custom.inputLeft}
-              id="filled-secondary"
               variant="filled"
               color="secondary"
               fullWidth
@@ -190,7 +189,6 @@ export const CreateRLAdminWallet = () => {
           <Box flexGrow={6}>
             <TextField
               className={custom.inputRight}
-              id="filled-secondary"
               variant="filled"
               color="secondary"
               fullWidth
@@ -217,7 +215,6 @@ export const CreateRLAdminWallet = () => {
           <Box flexGrow={6}>
             <TextField
               className={custom.inputLeft}
-              id="filled-secondary"
               variant="filled"
               color="secondary"
               fullWidth
@@ -230,7 +227,6 @@ export const CreateRLAdminWallet = () => {
           <Box flexGrow={6}>
             <TextField
               className={custom.inputRight}
-              id="filled-secondary"
               variant="filled"
               color="secondary"
               fullWidth
@@ -254,7 +250,6 @@ export const CreateRLAdminWallet = () => {
           <Box flexGrow={6}>
             <TextField
               className={custom.input}
-              id="filled-secondary"
               variant="filled"
               color="secondary"
               fullWidth
