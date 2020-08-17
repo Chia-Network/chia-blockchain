@@ -16,12 +16,12 @@ except ModuleNotFoundError:
         "Error: Make sure to run . ./activate from the project folder before starting Chia."
     )
     quit()
-from windows_signal import kill
 
 
 import websockets
-from src.cmds.init import chia_init
 
+from src.cmds.init import chia_init
+from src.daemon.windows_signal import kill
 from src.util.ws_message import format_response
 from src.util.json_util import dict_to_json_str
 
