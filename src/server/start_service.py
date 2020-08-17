@@ -2,7 +2,6 @@ import asyncio
 import logging
 import logging.config
 import signal
-from sys import platform
 
 from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 
@@ -24,6 +23,14 @@ from src.server.connection import OnConnectFunc
 from .reconnect_task import start_reconnect_task
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
+
+
+stopped_by_signal = False
+
+
+def global_signal_handler(*args):
+    global stopped_by_signal
+    stopped_by_signal = True
 
 
 def create_periodic_introducer_poll_task(
@@ -183,33 +190,26 @@ class Service:
                 for _ in self._server_listen_ports
             ]
 
-            try:
-                asyncio.get_running_loop().add_signal_handler(signal.SIGINT, self.stop)
-                asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self.stop)
-                if platform == "win32" or platform == "cygwin":
-                    asyncio.get_running_loop().add_signal_handler(
-                        signal.SIGBREAK, self.stop  # pylint: disable=E1101
-                    )
-                    asyncio.get_running_loop().add_signal_handler(
-                        signal.CTRL_C_EVENT, self.stop  # pylint: disable=E1101
-                    )
-                    asyncio.get_running_loop().add_signal_handler(
-                        signal.CTRL_BREAK_EVENT, self.stop  # pylint: disable=E1101
-                    )
-            except NotImplementedError:
-                self._log.info("signal handlers unsupported")
+            signal.signal(signal.SIGINT, global_signal_handler)
+            signal.signal(signal.SIGTERM, global_signal_handler)
 
         self._task = asyncio.create_task(_run())
 
     async def run(self):
         self.start()
         await self._task
+        while not stopped_by_signal:
+            await asyncio.sleep(1)
+
+        self.stop()
         await self.wait_closed()
         return 0
 
     def stop(self):
         if not self._is_stopping:
             self._is_stopping = True
+            global stopped_by_signal
+            stopped_by_signal = True
             self._log.info("Closing server sockets")
             for _ in self._server_sockets:
                 _.close()
