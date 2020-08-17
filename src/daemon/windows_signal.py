@@ -16,8 +16,8 @@ else:
     import threading
 
     sigmap = {
-        signal.SIGINT: signal.CTRL_C_EVENT,
-        signal.SIGBREAK: signal.CTRL_BREAK_EVENT,
+        signal.SIGINT: signal.CTRL_C_EVENT,  # pylint: disable=E1101
+        signal.SIGBREAK: signal.CTRL_BREAK_EVENT,  # pylint: disable=E1101
     }
 
     def kill(pid, signum):
