@@ -292,7 +292,6 @@ class TestWalletSimulator:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
-        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
 
@@ -469,7 +468,8 @@ class TestWalletSimulator:
 
         # Add the hacked puzzle to the puzzle store so that it is recognised as "our" puzzle
         old_devrec = await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)
-        devrec = DerivationRecord(old_devrec.index, compiled_puz.get_tree_hash(), old_devrec.pubkey, old_devrec.wallet_type, old_devrec.wallet_id)
+        devrec = DerivationRecord(old_devrec.index, compiled_puz.get_tree_hash(), old_devrec.pubkey,
+                                  old_devrec.wallet_type, old_devrec.wallet_id)
         await did_wallet.wallet_state_manager.puzzle_store.add_derivation_paths([devrec])
         await did_wallet.create_spend(Program(compiled_puz).get_tree_hash())
 
