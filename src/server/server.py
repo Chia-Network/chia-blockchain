@@ -162,7 +162,7 @@ class ChiaServer:
         """
         Await until the pipeline is done, after which the server and all clients are closed.
         """
-        await self._pipeline_task
+        self._pipeline_task.cancel()
 
     def push_message(self, message: OutboundMessage):
         """
