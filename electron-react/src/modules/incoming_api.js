@@ -176,7 +176,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           wallet.balance_frozen = frozen_balance;
           wallet.balance_spendable = spendable_balance;
           wallet.balance_change = change_balance;
-          return state;
+          return { ...state };
         }
       } else if (command === "get_transactions") {
         if (data.success) {
@@ -188,7 +188,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
             return state;
           }
           wallet.transactions = transactions.reverse();
-          return state;
+          return { ...state };
         }
       } else if (command === "get_next_puzzle_hash") {
         id = data.wallet_id;
