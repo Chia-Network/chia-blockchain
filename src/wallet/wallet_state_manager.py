@@ -254,7 +254,7 @@ class WalletStateManager:
                 # This handles the case where the database is empty
                 unused = uint32(0)
         for index in range(unused, last):
-            pubkey: PublicKey = self.get_public_key(uint32(index))
+            pubkey: G1Element = self.get_public_key(uint32(index))
             puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
             puzzlehash: bytes32 = puzzle.get_tree_hash()
             self.log.info(
