@@ -13,8 +13,8 @@ export const plotControlReducer = (state = { ...initial_state }, action) => {
     case "LOG_OUT":
       return { ...initial_state };
     case "PLOTTER_CONTROL":
-      if (action.command === "workplace_location") {
-        return { ...state, workplace_location: action.location };
+      if (action.command === "workspace_location") {
+        return { ...state, workspace_location: action.location };
       } else if (action.command === "final_location") {
         return { ...state, final_location: action.location };
       } else if (action.command === "reset_progress") {
