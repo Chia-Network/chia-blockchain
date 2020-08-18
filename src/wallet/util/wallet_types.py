@@ -13,3 +13,4 @@ class WalletType(Enum):
     CUSTODY = uint8(5)
     COLOURED_COIN = uint8(6)
     RECOVERABLE = uint8(7)
+    DISTRIBUTED_ID = uint8(8)
