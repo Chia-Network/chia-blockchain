@@ -18,7 +18,6 @@ from src.util.condition_tools import (
 )
 from src.util.json_util import dict_to_json_str
 from src.util.ints import uint64, uint32
-from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.block_record import BlockRecord
 from src.wallet.did_wallet.did_info import DIDInfo
 from src.wallet.cc_wallet.ccparent import CCParent
@@ -63,7 +62,7 @@ class DIDWallet:
         self.did_info = DIDInfo(None, backups_ids, [], None)
         info_as_string = bytes(self.did_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "DID Wallet", WalletType.DISTRIBUTED_ID, info_as_string
+            "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
         )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
@@ -99,6 +98,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_state_manager.main_wallet.wallet_info.id,
             sent_to=[],
+            trade_id=None
         )
         did_record = TransactionRecord(
             confirmed_at_index=uint32(0),
@@ -114,6 +114,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
+            trade_id=None
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(did_record)
@@ -188,13 +189,11 @@ class DIDWallet:
             if exclude is None:
                 exclude = []
 
-            spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
-                self.wallet_info.id
-            )
+            spendable_amount = await self.get_spendable_balance()
 
-            if amount > spendable_am:
+            if amount > spendable_amount:
                 self.log.warning(
-                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
+                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_amount}"
                 )
                 return None
 
@@ -204,7 +203,7 @@ class DIDWallet:
                     self.wallet_info.id
                 )
             )
-            sum = 0
+            sum_value = 0
             used_coins: Set = set()
 
             # Use older coins first
@@ -218,13 +217,13 @@ class DIDWallet:
                 self.wallet_info.id
             )
             for coinrecord in unspent:
-                if sum >= amount and len(used_coins) > 0:
+                if sum_value >= amount and len(used_coins) > 0:
                     break
                 if coinrecord.coin.name() in unconfirmed_removals:
                     continue
                 if coinrecord.coin in exclude:
                     continue
-                sum += coinrecord.coin.amount
+                sum_value += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
                 self.log.info(
                     f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!"
@@ -232,36 +231,14 @@ class DIDWallet:
 
             # This happens when we couldn't use one of the coins because it's already used
             # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-            unconfirmed_additions = None
-            if sum < amount:
+            if sum_value < amount:
                 raise ValueError(
                     "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
                 )
-                unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
-                    self.wallet_info.id
-                )
-                for coin in unconfirmed_additions.values():
-                    if sum > amount:
-                        break
-                    if coin.name() in unconfirmed_removals:
-                        continue
 
-                    sum += coin.amount
-                    used_coins.add(coin)
-                    self.log.info(f"Selected used coin: {coin.name()}")
+        self.log.info(f"Successfully selected coins: {used_coins}")
+        return used_coins
 
-        if sum >= amount:
-            self.log.info(f"Successfully selected coins: {used_coins}")
-            return used_coins
-        else:
-            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
-            self.log.error(
-                f"Wasn't able to select coins for amount: {amount}"
-                f"unspent: {unspent}"
-                f"unconfirmed_removals: {unconfirmed_removals}"
-                f"unconfirmed_additions: {unconfirmed_additions}"
-            )
-            return None
 
     # This will be used in the recovery case where we don't have the parent info already
     async def coin_added(
@@ -461,11 +438,8 @@ class DIDWallet:
         message = std_hash(bytes(puzhash) + bytes(coin.name()))
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = self.wallet_state_manager.private_key.private_child(
-            index
-        ).get_private_key()
-        pk = BLSPrivateKey(private)
-        signature = pk.sign(message)
+        private = self.wallet_state_manager.private_key.derive_child(index)
+        signature = AugSchemeMPL.sign(private, message)
         assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
@@ -485,6 +459,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
+            trade_id=None
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -529,11 +504,8 @@ class DIDWallet:
         message = std_hash(bytes(newpuz) + bytes(coin.name()))
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = self.wallet_state_manager.private_key.private_child(
-            index
-        ).get_private_key()
-        pk = BLSPrivateKey(private)
-        signature = pk.sign(message)
+        private = self.wallet_state_manager.private_key.derive_child(index)
+        signature = AugSchemeMPL.sign(private, message)
         assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
@@ -552,6 +524,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
+            trade_id=None
         )
         await self.standard_wallet.push_transaction(did_record)
         return message_spend_bundle
@@ -634,6 +607,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
+            trade_id=None
         )
         await self.standard_wallet.push_transaction(did_record)
         return True
@@ -755,16 +729,21 @@ class DIDWallet:
         message = std_hash(bytes(coin.puzzle_hash) + bytes(coin.name()))
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = self.wallet_state_manager.private_key.private_child(
-            index
-        ).get_private_key()
-        pk = BLSPrivateKey(private)
-        signature = pk.sign(message)
-        assert signature.validate([signature.PkMessagePair(pubkey, message)])
+        private = self.wallet_state_manager.private_key.derive_child(index)
+        signature = AugSchemeMPL.sign(private, message)
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
+
+    async def get_frozen_amount(self) -> uint64:
+        return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
+
+    async def get_spendable_balance(self) -> uint64:
+        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+            self.wallet_info.id
+        )
+        return spendable_am
 
     async def add_parent(self, name: bytes32, parent: Optional[CCParent]):
         self.log.info(f"Adding parent {name}: {parent}")
