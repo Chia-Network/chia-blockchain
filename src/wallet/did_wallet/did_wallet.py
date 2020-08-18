@@ -28,6 +28,7 @@ from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.did_wallet import did_wallet_puzzles
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 from clvm import run_program
 from src.util.hash import std_hash
 
@@ -438,7 +439,7 @@ class DIDWallet:
         message = std_hash(bytes(puzhash) + bytes(coin.name()))
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = self.wallet_state_manager.private_key.derive_child(index)
+        private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
@@ -504,7 +505,7 @@ class DIDWallet:
         message = std_hash(bytes(newpuz) + bytes(coin.name()))
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = self.wallet_state_manager.private_key.derive_child(index)
+        private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
         # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
@@ -729,8 +730,9 @@ class DIDWallet:
         message = std_hash(bytes(coin.puzzle_hash) + bytes(coin.name()))
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = self.wallet_state_manager.private_key.derive_child(index)
+        private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)
+        breakpoint()
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
