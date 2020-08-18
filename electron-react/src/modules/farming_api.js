@@ -65,7 +65,6 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
             farmer: { ...state.farmer, open_connection_error: data.error }
           };
         }
-        return state;
       }
 
       // Harvester API
