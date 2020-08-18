@@ -5,7 +5,7 @@ import clvm
 from typing import Dict, Optional, List, Any, Set
 from clvm_tools import binutils
 from clvm.EvalError import EvalError
-from src.types.BLSSignature import BLSSignature
+from blspy import AugSchemeMPL
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.condition_opcodes import ConditionOpcode
@@ -468,7 +468,7 @@ class DIDWallet:
         signature = pk.sign(message)
         assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
         did_record = TransactionRecord(
@@ -524,7 +524,7 @@ class DIDWallet:
         # list_of_solutions.append(
         #     message_spend
         # )
-        message_spend_bundle = SpendBundle([message_spend], BLSSignature.aggregate([]))
+        message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
         message = std_hash(bytes(newpuz) + bytes(coin.name()))
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
@@ -536,7 +536,7 @@ class DIDWallet:
         signature = pk.sign(message)
         assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         did_record = TransactionRecord(
             confirmed_at_index=uint32(0),
@@ -612,7 +612,7 @@ class DIDWallet:
             )
         ]
         sigs = []
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         if spend_bundle is None:
             spend_bundle = SpendBundle(list_of_solutions, aggsig)
         else:
@@ -762,7 +762,7 @@ class DIDWallet:
         signature = pk.sign(message)
         assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
 

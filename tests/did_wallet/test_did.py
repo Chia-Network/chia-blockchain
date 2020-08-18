@@ -594,7 +594,7 @@ class TestWalletSimulator:
         signature = pk.sign(message)
         assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
         did_record = TransactionRecord(
