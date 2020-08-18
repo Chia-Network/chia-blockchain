@@ -1,7 +1,7 @@
 from clvm_tools import binutils
 from src.types.program import Program
 from typing import List
-from blspy import PublicKey
+from blspy import G1Element
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.util.ints import uint64
@@ -30,7 +30,7 @@ def create_fullpuz(innerpuzhash, core) -> str:
 
 
 def get_pubkey_from_innerpuz(innerpuz: str):
-    pubkey = PublicKey.from_bytes(bytes.fromhex(innerpuz[601:697]))
+    pubkey = G1Element.from_bytes(bytes.fromhex(innerpuz[601:697]))
     return pubkey
 
 

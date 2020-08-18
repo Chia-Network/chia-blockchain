@@ -17,7 +17,6 @@ from src.types.coin_solution import CoinSolution
 from blspy import AugSchemeMPL
 from src.types.spend_bundle import SpendBundle
 from src.wallet.transaction_record import TransactionRecord
-from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.util.hash import std_hash
 
 
@@ -593,8 +592,8 @@ class TestWalletSimulator:
         private = did_wallet.wallet_state_manager.private_key.private_child(
             index
         ).get_private_key()
-        pk = BLSPrivateKey(private)
-        signature = pk.sign(message)
+        # pk = BLSPrivateKey(private)
+        signature = private.sign(message)
         assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)

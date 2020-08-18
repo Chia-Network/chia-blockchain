@@ -26,6 +26,7 @@ from src.wallet.util.cc_utils import trade_record_to_dict
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
+from src.wallet.did_wallet.did_wallet import DIDWallet
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -56,6 +57,11 @@ class WalletRpcApi:
             "/cc_get_name": self.cc_get_name,
             "/cc_spend": self.cc_spend,
             "/cc_get_colour": self.cc_get_colour,
+            "did_update_recovery_ids": self.did_update_recovery_ids,
+            "did_spend": self.did_spend,
+            "did_get_id": self.did_get_id,
+            "did_recovery_spend": self.did_recovery_spend,
+            "did_create_attest": self.did_create_attest,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
             "/respond_to_offer": self.respond_to_offer,
@@ -400,6 +406,14 @@ class WalletRpcApi:
                 except Exception as e:
                     log.error("FAILED {e}")
                     return {"success": False, "reason": str(e)}
+        elif request["wallet_type"] == "did_wallet":
+            did_wallet = await DIDWallet.create_new_did_wallet(
+                wallet_state_manager,
+                main_wallet,
+                request["amount"],
+                request["backup_ids"],
+            )
+            return {"success": True, "type": did_wallet.wallet_info.type.name}
 
     def get_wallet_config(self):
         return (
@@ -419,6 +433,99 @@ class WalletRpcApi:
 
         return response
 
+<<<<<<< HEAD
+=======
+    async def rl_set_admin_info(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        user_pubkey = request["user_pubkey"]
+        limit = uint64(int(request["limit"]))
+        interval = uint64(int(request["interval"]))
+        amount = uint64(int(request["amount"]))
+
+        success = await wallet.admin_create_coin(interval, limit, user_pubkey, amount)
+
+        response = {"success": success}
+
+        return response
+
+    async def rl_set_user_info(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        admin_pubkey = request["admin_pubkey"]
+        limit = uint64(int(request["limit"]))
+        interval = uint64(int(request["interval"]))
+        origin_id = request["origin_id"]
+
+        success = await wallet.set_user_info(interval, limit, origin_id, admin_pubkey)
+
+        response = {"success": success}
+
+        return response
+
+    async def did_update_recovery_ids(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        recovery_list = request["new_list"]
+        await wallet.update_recovery_list(recovery_list)
+        # Update coin with new ID info
+        updated_puz = await wallet.get_new_puzzle()
+        spend_bundle = await wallet.create_spend(updated_puz.get_tree_hash())
+        if spend_bundle is not None:
+            return {"success": True}
+        return {"success": False}
+
+    async def did_spend(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        spend_bundle = await wallet.create_spend(request["puzzlehash"])
+        if spend_bundle is not None:
+            return {"success": True}
+        return {"success": False}
+
+    async def did_get_id(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        id = wallet.get_my_ID()
+        try:
+            coins = wallet.select_coins(1)
+            coin = coins.pop()
+            return {"success": True, "id": id, "coin_id": coin.name()}
+        except Exception:
+            return {"success": False}
+
+    async def did_get_recovery_list(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        recovery_list = wallet.did_info.backup_ids
+        return {"success": True, "recover_list": recovery_list}
+
+    async def did_recovery_spend(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        spend_bundle_list = []
+        # INFO LIST MUST BE SAME ORDER AS RECOVERY LIST
+        # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
+        for i in request["spend_bundles"]:
+            spend_bundle_list.append(SpendBundle.from_bytes(bytes.fromhex(i)))
+
+        info = wallet.format_info_list_json(request["info_dict"])
+        message_spend_bundle = spend_bundle_list.aggregate(spend_bundle_list)
+        success = await wallet.recovery_spend(
+            request["coin_name"], request["puzhash"], info, message_spend_bundle
+        )
+        return {"success": success}
+
+    async def did_create_attest(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        info = await wallet.get_info_for_recovery()
+        spend_bundle = await wallet.create_attestment(
+            request["coin_name"], request["puzhash"]
+        )
+        return {"success": True, "message_spend_bundle": bytes(spend_bundle).hex(), "info": info}
+
+>>>>>>> f822ffc2... runs, but with bad aggsigs
     async def cc_set_name(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
