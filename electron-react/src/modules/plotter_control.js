@@ -14,20 +14,23 @@ export const plotControlReducer = (state = { ...initial_state }, action) => {
       return { ...initial_state };
     case "PLOTTER_CONTROL":
       if (action.command === "workplace_location") {
-        state.workspace_location = action.location;
+        return { ...state, workplace_location: action.location };
       } else if (action.command === "final_location") {
-        state.final_location = action.location;
+        return { ...state, final_location: action.location };
       } else if (action.command === "reset_progress") {
-        state.progress = "";
+        return { ...state, progress: "" };
       } else if (action.command === "add_progress") {
-        state.progress += "\n" + action.progress;
+        return { ...state, progress: state.progress + "\n" + action.progress };
       } else if (action.command === "plotting_started") {
-        state.plotting_in_proggress = true;
-        state.plotting_stopped = false;
+        return {
+          ...state,
+          plotting_in_proggress: true,
+          plotting_stopped: false
+        };
       } else if (action.command === "progress_location") {
-        state.progress_location = action.location;
+        return { ...state, progress_location: action.location };
       } else if (action.command === "plotting_stopped") {
-        state.plotting_stopped = true;
+        return { ...state, plotting_stopped: true };
       }
       return state;
     default:
