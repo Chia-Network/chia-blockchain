@@ -34,16 +34,20 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
         if (data.success === false) {
           return state;
         }
-        state.farmer.latest_challenges = data.latest_challenges;
-        return state;
+        return {
+          ...state,
+          farmer: { ...state.farmer, latest_challenges: data.latest_challenges }
+        };
       }
       if (
         command === "get_connections" &&
         action.message.origin === service_farmer
       ) {
         if (data.success) {
-          state.farmer.connections = data.connections;
-          return state;
+          return {
+            ...state,
+            farmer: { ...state.farmer, connections: data.connections }
+          };
         }
       }
       if (
@@ -51,9 +55,15 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
         action.message.origin === service_farmer
       ) {
         if (data.success) {
-          state.farmer.open_connection_error = "";
+          return {
+            ...state,
+            farmer: { ...state.farmer, open_connection_error: "" }
+          };
         } else {
-          state.farmer.open_connection_error = data.error;
+          return {
+            ...state,
+            farmer: { ...state.farmer, open_connection_error: data.error }
+          };
         }
         return state;
       }
@@ -63,19 +73,28 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
         if (data.success !== true) {
           return state;
         }
-        state.harvester.plots = data.plots;
-        state.harvester.failed_to_open_filenames =
-          data.failed_to_open_filenames;
-        state.harvester.not_found_filenames = data.not_found_filenames;
-        return state;
+        return {
+          ...state,
+          harvester: {
+            ...state.harvester,
+            plots: data.plots,
+            failed_to_open_filenames: data.failed_to_open_filenames,
+            not_found_filenames: data.not_found_filenames
+          }
+        };
       }
 
       if (command === "get_plot_directories") {
         if (data.success !== true) {
           return state;
         }
-        state.harvester.plot_directories = data.directories;
-        return state;
+        return {
+          ...state,
+          harvester: {
+            ...state.harvester,
+            plot_directories: data.directories
+          }
+        };
       }
 
       return state;
