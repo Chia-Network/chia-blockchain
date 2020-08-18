@@ -14,7 +14,7 @@ from clvm_tools import binutils
 from src.types.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.types.coin_solution import CoinSolution
-from src.types.BLSSignature import BLSSignature
+from blspy import AugSchemeMPL
 from src.types.spend_bundle import SpendBundle
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.BLSPrivateKey import BLSPrivateKey
@@ -597,7 +597,7 @@ class TestWalletSimulator:
         signature = pk.sign(message)
         assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
         did_record = TransactionRecord(
