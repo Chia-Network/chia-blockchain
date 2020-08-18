@@ -1,4 +1,4 @@
-import { service_wallet_server } from "../util/service_names";
+import { service_wallet } from "../util/service_names";
 
 export const Wallet = (id, name, type, data) => ({
   id: id,
@@ -48,6 +48,7 @@ export const Transaction = (
 const initial_state = {
   mnemonic: [],
   public_key_fingerprints: [],
+  selected_fingerprint: null,
   logged_in_received: false,
   logged_in: false,
   wallets: [],
@@ -57,11 +58,27 @@ const initial_state = {
     syncing: false
   },
   sending_transaction: false,
-  send_transaction_result: null
+  send_transaction_result: null,
+  show_create_backup: false
 };
 
 export const incomingReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "SHOW_CREATE_BACKUP":
+      return {
+        ...state,
+        show_create_backup: action.show
+      };
+    case "SELECT_FINGERPRINT":
+      return {
+        ...state,
+        selected_fingerprint: action.fingerprint
+      };
+    case "UNSELECT_FINGERPRINT":
+      return {
+        ...state,
+        selected_fingerprint: null
+      };
     case "LOG_OUT":
       return {
         ...initial_state,
@@ -84,7 +101,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       }
       return state;
     case "INCOMING_MESSAGE":
-      if (action.message.origin !== service_wallet_server) {
+      if (action.message.origin !== service_wallet) {
         return state;
       }
 
@@ -94,7 +111,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       let success, id, wallet, wallets;
       if (command === "generate_mnemonic") {
         var mnemonic_data = message.data.mnemonic;
-        return { ...state, mnemonic: mnemonic_data };
+        return { ...state, mnemonic: mnemonic_data.split(" ") };
       } else if (command === "add_key") {
         success = data.success;
         return { ...state, logged_in: success };
@@ -112,12 +129,15 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           };
         }
       } else if (command === "get_public_keys") {
-        var public_key_fingerprints = data.public_key_fingerprints;
-        return {
-          ...state,
-          public_key_fingerprints: public_key_fingerprints,
-          logged_in_received: true
-        };
+        success = data.success;
+        if (success) {
+          var public_key_fingerprints = data.public_key_fingerprints;
+          return {
+            ...state,
+            public_key_fingerprints: public_key_fingerprints,
+            logged_in_received: true
+          };
+        }
       } else if (command === "ping") {
         var started = data.success;
         return { ...state, server_started: started };
@@ -177,7 +197,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         // console.log("wallet_id here: " + id);
         wallet.puzzle_hash = puzzle_hash;
         return { ...state };
-      } else if (command === "get_connection_info") {
+      } else if (command === "get_connections") {
         if (data.success || data.connections) {
           const connections = data.connections;
           state.status["connections"] = connections;
@@ -189,7 +209,6 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         state.status["height"] = height;
         return { ...state };
       } else if (command === "get_sync_status") {
-        // console.log("command get_sync_status");
         if (data.success) {
           const syncing = data.syncing;
           state.status["syncing"] = syncing;

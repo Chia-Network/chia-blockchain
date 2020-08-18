@@ -15,15 +15,14 @@ log = logging.getLogger(__name__)
 class FullNodeStore:
     db: aiosqlite.Connection
     # Current estimate of the speed of the network timelords
-    proof_of_time_estimate_ips: uint64
+    proof_of_time_estimate_ips: int
     # Proof of time heights
     proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
     # Our best unfinished block
     unfinished_blocks_leader: Tuple[uint32, uint64]
     # Blocks which we have created, but don't have proof of space yet, old ones are cleared
     candidate_blocks: Dict[
-        bytes32,
-        Tuple[Optional[Program], Optional[bytes], HeaderData, ProofOfSpace, uint32],
+        bytes32, Tuple[Optional[Program], bytes, HeaderData, ProofOfSpace, uint32],
     ]
     # Header hashes of unfinished blocks that we have seen recently
     seen_unfinished_blocks: set
@@ -38,7 +37,7 @@ class FullNodeStore:
 
         await self.db.commit()
 
-        self.proof_of_time_estimate_ips = uint64(10000)
+        self.proof_of_time_estimate_ips = 100000
         self.proof_of_time_heights = {}
         self.unfinished_blocks_leader = (
             uint32(0),
@@ -82,7 +81,7 @@ class FullNodeStore:
         self,
         pos_hash: bytes32,
         transactions_generator: Optional[Program],
-        transactions_filter: Optional[bytes],
+        transactions_filter: bytes,
         header: HeaderData,
         pos: ProofOfSpace,
         height: uint32 = uint32(0),
@@ -97,7 +96,7 @@ class FullNodeStore:
 
     def get_candidate_block(
         self, pos_hash: bytes32
-    ) -> Optional[Tuple[Optional[Program], Optional[bytes], HeaderData, ProofOfSpace]]:
+    ) -> Optional[Tuple[Optional[Program], bytes, HeaderData, ProofOfSpace]]:
         res = self.candidate_blocks.get(pos_hash, None)
         if res is None:
             return None
@@ -161,16 +160,16 @@ class FullNodeStore:
         await cursor.close()
         await self.db.commit()
 
-    def set_unfinished_block_leader(self, key: Tuple[bytes32, uint64]) -> None:
+    def set_unfinished_block_leader(self, key: Tuple[uint32, uint64]) -> None:
         self.unfinished_blocks_leader = key
 
-    def get_unfinished_block_leader(self) -> Tuple[bytes32, uint64]:
+    def get_unfinished_block_leader(self) -> Tuple[uint32, uint64]:
         return self.unfinished_blocks_leader
 
-    def set_proof_of_time_estimate_ips(self, estimate: uint64):
+    def set_proof_of_time_estimate_ips(self, estimate: int):
         self.proof_of_time_estimate_ips = estimate
 
-    def get_proof_of_time_estimate_ips(self) -> uint64:
+    def get_proof_of_time_estimate_ips(self) -> int:
         return self.proof_of_time_estimate_ips
 
     def add_proof_of_time_heights(

@@ -1,5 +1,6 @@
 from typing import Dict, Optional, Union
 
+from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.types.full_block import FullBlock
 from src.types.header import Header
@@ -13,7 +14,7 @@ from src.util.significant_bits import (
 
 
 def get_next_difficulty(
-    constants: Dict,
+    constants: ConsensusConstants,
     headers: Dict[bytes32, Header],
     height_to_hash: Dict[uint32, bytes32],
     block: Header,
@@ -25,14 +26,14 @@ def get_next_difficulty(
     """
 
     next_height: uint32 = uint32(block.height + 1)
-    if next_height < constants["DIFFICULTY_EPOCH"]:
+    if next_height < constants.DIFFICULTY_EPOCH:
         # We are in the first epoch
-        return uint64(constants["DIFFICULTY_STARTING"])
+        return uint64(constants.DIFFICULTY_STARTING)
 
     # Epochs are diffined as intervals of DIFFICULTY_EPOCH blocks, inclusive and indexed at 0.
     # For example, [0-2047], [2048-4095], etc. The difficulty changes DIFFICULTY_DELAY into the
     # epoch, as opposed to the first block (as in Bitcoin).
-    elif next_height % constants["DIFFICULTY_EPOCH"] != constants["DIFFICULTY_DELAY"]:
+    elif next_height % constants.DIFFICULTY_EPOCH != constants.DIFFICULTY_DELAY:
         # Not at a point where difficulty would change
         prev_block: Header = headers[block.prev_header_hash]
         return uint64(block.weight - prev_block.weight)
@@ -42,12 +43,12 @@ def get_next_difficulty(
     #           h1    h2                     h3   i-1
     # Height1 is the last block 2 epochs ago, so we can include the time to mine 1st block in previous epoch
     height1 = uint32(
-        next_height - constants["DIFFICULTY_EPOCH"] - constants["DIFFICULTY_DELAY"] - 1
+        next_height - constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY - 1
     )
     # Height2 is the DIFFICULTY DELAYth block in the previous epoch
-    height2 = uint32(next_height - constants["DIFFICULTY_EPOCH"] - 1)
+    height2 = uint32(next_height - constants.DIFFICULTY_EPOCH - 1)
     # Height3 is the last block in the previous epoch
-    height3 = uint32(next_height - constants["DIFFICULTY_DELAY"] - 1)
+    height3 = uint32(next_height - constants.DIFFICULTY_DELAY - 1)
 
     # h1 to h2 timestamps are mined on previous difficulty, while  and h2 to h3 timestamps are mined on the
     # current difficulty
@@ -91,57 +92,55 @@ def get_next_difficulty(
         constants, headers, height_to_hash, headers[block2.prev_header_hash]
     )
     if block1:
-        timestamp1 = block1.data.timestamp  # i - 512 - 1
+        timestamp1 = int(block1.data.timestamp)  # i - 512 - 1
     else:
         # In the case of height == -1, there is no timestamp here, so assume the genesis block
-        # took constants["BLOCK_TIME_TARGET"] seconds to mine.
+        # took constants.BLOCK_TIME_TARGET seconds to mine.
         genesis = headers[height_to_hash[uint32(0)]]
-        timestamp1 = genesis.data.timestamp - constants["BLOCK_TIME_TARGET"]
+        timestamp1 = genesis.data.timestamp - constants.BLOCK_TIME_TARGET
     timestamp2 = block2.data.timestamp  # i - 2048 + 512 - 1
     timestamp3 = block3.data.timestamp  # i - 512 - 1
 
     # Numerator fits in 128 bits, so big int is not necessary
     # We multiply by the denominators here, so we only have one fraction in the end (avoiding floating point)
     term1 = (
-        constants["DIFFICULTY_DELAY"]
+        constants.DIFFICULTY_DELAY
         * Tp
         * (timestamp3 - timestamp2)
-        * constants["BLOCK_TIME_TARGET"]
+        * constants.BLOCK_TIME_TARGET
     )
     term2 = (
-        (constants["DIFFICULTY_WARP_FACTOR"] - 1)
-        * (constants["DIFFICULTY_EPOCH"] - constants["DIFFICULTY_DELAY"])
+        (constants.DIFFICULTY_WARP_FACTOR - 1)
+        * (constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY)
         * Tc
         * (timestamp2 - timestamp1)
-        * constants["BLOCK_TIME_TARGET"]
+        * constants.BLOCK_TIME_TARGET
     )
 
     # Round down after the division
     new_difficulty_precise: uint64 = uint64(
         (term1 + term2)
         // (
-            constants["DIFFICULTY_WARP_FACTOR"]
+            constants.DIFFICULTY_WARP_FACTOR
             * (timestamp3 - timestamp2)
             * (timestamp2 - timestamp1)
         )
     )
     # Take only DIFFICULTY_SIGNIFICANT_BITS significant bits
     new_difficulty = uint64(
-        truncate_to_significant_bits(
-            new_difficulty_precise, constants["SIGNIFICANT_BITS"]
-        )
+        truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS)
     )
-    assert count_significant_bits(new_difficulty) <= constants["SIGNIFICANT_BITS"]
+    assert count_significant_bits(new_difficulty) <= constants.SIGNIFICANT_BITS
 
     # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
     max_diff = uint64(
         truncate_to_significant_bits(
-            constants["DIFFICULTY_FACTOR"] * Tc, constants["SIGNIFICANT_BITS"],
+            constants.DIFFICULTY_FACTOR * Tc, constants.SIGNIFICANT_BITS,
         )
     )
     min_diff = uint64(
         truncate_to_significant_bits(
-            Tc // constants["DIFFICULTY_FACTOR"], constants["SIGNIFICANT_BITS"],
+            Tc // constants.DIFFICULTY_FACTOR, constants.SIGNIFICANT_BITS,
         )
     )
     if new_difficulty >= Tc:
@@ -151,7 +150,7 @@ def get_next_difficulty(
 
 
 def get_next_min_iters(
-    constants: Dict,
+    constants: ConsensusConstants,
     headers: Dict[bytes32, Header],
     height_to_hash: Dict[uint32, bytes32],
     block: Union[FullBlock, HeaderBlock],
@@ -161,9 +160,9 @@ def get_next_min_iters(
     the number of iterations of the last epoch, and changes at the same block as the difficulty.
     """
     next_height: uint32 = uint32(block.height + 1)
-    if next_height < constants["DIFFICULTY_EPOCH"]:
+    if next_height < constants.DIFFICULTY_EPOCH:
         # First epoch has a hardcoded vdf speed
-        return constants["MIN_ITERS_STARTING"]
+        return constants.MIN_ITERS_STARTING
 
     prev_block_header: Header = headers[block.prev_header_hash]
 
@@ -175,10 +174,13 @@ def get_next_min_iters(
         block.header.data.total_iters - prev_block_header.data.total_iters
     )
     prev_min_iters = calculate_min_iters_from_iterations(
-        proof_of_space, difficulty, iterations
+        proof_of_space,
+        difficulty,
+        iterations,
+        constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
     )
 
-    if next_height % constants["DIFFICULTY_EPOCH"] != constants["DIFFICULTY_DELAY"]:
+    if next_height % constants.DIFFICULTY_EPOCH != constants.DIFFICULTY_DELAY:
         # Not at a point where ips would change, so return the previous ips
         # TODO: cache this for efficiency
         return prev_min_iters
@@ -190,10 +192,10 @@ def get_next_min_iters(
 
     # Height1 is the last block 2 epochs ago, so we can include the iterations taken for mining first block in epoch
     height1 = uint32(
-        next_height - constants["DIFFICULTY_EPOCH"] - constants["DIFFICULTY_DELAY"] - 1
+        next_height - constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY - 1
     )
     # Height2 is the last block in the previous epoch
-    height2 = uint32(next_height - constants["DIFFICULTY_DELAY"] - 1)
+    height2 = uint32(next_height - constants.DIFFICULTY_DELAY - 1)
 
     block1: Optional[Header] = None
     block2: Optional[Header] = None
@@ -231,10 +233,10 @@ def get_next_min_iters(
 
     min_iters_precise = uint64(
         (iters2 - iters1)
-        // (constants["DIFFICULTY_EPOCH"] * constants["MIN_ITERS_PROPORTION"])
+        // (constants.DIFFICULTY_EPOCH * constants.MIN_ITERS_PROPORTION)
     )
     min_iters = uint64(
-        truncate_to_significant_bits(min_iters_precise, constants["SIGNIFICANT_BITS"])
+        truncate_to_significant_bits(min_iters_precise, constants.SIGNIFICANT_BITS)
     )
-    assert count_significant_bits(min_iters) <= constants["SIGNIFICANT_BITS"]
+    assert count_significant_bits(min_iters) <= constants.SIGNIFICANT_BITS
     return min_iters

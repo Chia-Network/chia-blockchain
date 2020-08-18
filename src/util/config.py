@@ -21,9 +21,6 @@ def create_default_chia_config(root_path: Path) -> None:
         mkdir(path.parent)
         with open(path, "w") as f:
             f.write(default_config_file_data)
-    plot_yaml_path: Path = root_path / "config" / "plots.yaml"
-    if not plot_yaml_path.exists():
-        save_config(root_path, "plots.yaml", {"plots": {}})
 
 
 def config_path_for_filename(root_path: Path, filename: Union[str, Path]) -> Path:
@@ -37,7 +34,7 @@ def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
     path = config_path_for_filename(root_path, filename)
     with open(path.with_suffix("." + str(os.getpid())), "w") as f:
         yaml.safe_dump(config_data, f)
-    shutil.move(path.with_suffix("." + str(os.getpid())), path)
+    shutil.move(str(path.with_suffix("." + str(os.getpid()))), path)
 
 
 def load_config(
@@ -60,7 +57,9 @@ def load_config(
     return r
 
 
-def load_config_cli(root_path: Path, filename: str, sub_config: Optional[str]) -> Dict:
+def load_config_cli(
+    root_path: Path, filename: str, sub_config: Optional[str] = None
+) -> Dict:
     """
     Loads configuration from the specified filename, in the config directory,
     and then overrides any properties using the passed in command line arguments.

@@ -2,17 +2,17 @@ import signal
 import asyncio
 import logging
 import pathlib
+import socket
 import pkg_resources
 from src.util.logging import initialize_logging
 from src.util.config import load_config
-from asyncio import Lock
 from typing import List
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.setproctitle import setproctitle
 
 active_processes: List = []
 stopped = False
-lock = Lock()
+lock = asyncio.Lock()
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +23,10 @@ async def kill_processes():
     async with lock:
         stopped = True
         for process in active_processes:
-            process.kill()
+            try:
+                process.kill()
+            except ProcessLookupError:
+                pass
 
 
 def find_vdf_client():
@@ -41,8 +44,9 @@ async def spawn_process(host, port, counter):
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
+            resolved = socket.gethostbyname(host)
             proc = await asyncio.create_subprocess_shell(
-                f"{basename} {host} {port} {counter}",
+                f"{basename} {resolved} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env={"PATH": dirname},
@@ -64,11 +68,14 @@ async def spawn_process(host, port, counter):
         await asyncio.sleep(0.1)
 
 
-async def spawn_all_processes(config):
+async def spawn_all_processes(config, net_config):
     await asyncio.sleep(15)
     port = config["port"]
     process_count = config["process_count"]
-    awaitables = [spawn_process("127.0.0.1", port, i) for i in range(process_count)]
+    awaitables = [
+        spawn_process(net_config["self_hostname"], port, i)
+        for i in range(process_count)
+    ]
     await asyncio.gather(*awaitables)
 
 
@@ -76,7 +83,8 @@ def main():
     root_path = DEFAULT_ROOT_PATH
     setproctitle("chia_timelord_launcher")
     config = load_config(root_path, "config.yaml", "timelord_launcher")
-    initialize_logging("Launcher %(name)-23s", config["logging"], root_path)
+    net_config = load_config(root_path, "config.yaml")
+    initialize_logging("TLauncher", config["logging"], root_path)
 
     def signal_received():
         asyncio.create_task(kill_processes())
@@ -90,7 +98,7 @@ def main():
         log.info("signal handlers unsupported")
 
     try:
-        loop.run_until_complete(spawn_all_processes(config))
+        loop.run_until_complete(spawn_all_processes(config, net_config))
     finally:
         log.info("Launcher fully closed.")
         loop.close()

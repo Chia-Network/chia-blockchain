@@ -2,14 +2,10 @@ import asyncio
 from time import time
 from typing import List, Tuple
 
-import clvm
 import pytest
-from clvm.casts import int_to_bytes
-from clvm_tools import binutils
 
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
-from src.types.BLSSignature import BLSSignature
 from src.types.coin_solution import CoinSolution
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
@@ -18,11 +14,12 @@ from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import (
     conditions_for_solution,
     conditions_by_opcode,
-    hash_key_pairs_for_conditions_dict,
+    pkm_pairs_for_conditions_dict,
 )
+from src.util.clvm import int_to_bytes
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
-from tests.wallet_tools import WalletTool
+from src.util.wallet_tools import WalletTool
 
 
 @pytest.fixture(scope="module")
@@ -34,25 +31,24 @@ def event_loop():
 class TestMempool:
     @pytest.fixture(scope="function")
     async def two_nodes(self):
-        async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 0}):
+        constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+        async for _ in setup_two_nodes(constants):
             yield _
 
     @pytest.fixture(scope="function")
-    async def two_nodes_standard_freeze(self):
-        async for _ in setup_two_nodes({"COINBASE_FREEZE_PERIOD": 200}):
+    async def two_nodes_small_freeze(self):
+        constants = test_constants.replace(COINBASE_FREEZE_PERIOD=30)
+        async for _ in setup_two_nodes(constants):
             yield _
 
     @pytest.mark.asyncio
     async def test_basic_mempool(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -62,7 +58,7 @@ class TestMempool:
             pass
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase
+            1000, receiver_puzzlehash, block.get_coinbase()
         )
         assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
@@ -77,17 +73,14 @@ class TestMempool:
         assert sb is spend_bundle
 
     @pytest.mark.asyncio
-    async def test_coinbase_freeze(self, two_nodes_standard_freeze):
+    async def test_coinbase_freeze(self, two_nodes_small_freeze):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_standard_freeze
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
+        full_node_1, full_node_2, server_1, server_2 = two_nodes_small_freeze
 
         block = blocks[1]
         async for _ in full_node_1.respond_block(
@@ -96,7 +89,7 @@ class TestMempool:
             pass
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase
+            1000, receiver_puzzlehash, block.get_coinbase()
         )
         assert spend_bundle is not None
         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
@@ -111,11 +104,9 @@ class TestMempool:
         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is None
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, 200, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, 30, [], 10, b"")
 
-        for i in range(1, 201):
+        for i in range(1, 31):
             async for _ in full_node_1.respond_block(
                 full_node_protocol.RespondBlock(blocks[i])
             ):
@@ -131,14 +122,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_double_spend(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -148,7 +136,7 @@ class TestMempool:
             pass
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase
+            1000, receiver_puzzlehash, block.get_coinbase()
         )
 
         assert spend_bundle1 is not None
@@ -162,7 +150,7 @@ class TestMempool:
 
         other_receiver = WalletTool()
         spend_bundle2 = wallet_a.generate_signed_transaction(
-            1000, other_receiver.get_new_puzzlehash(), block.header.data.coinbase
+            1000, other_receiver.get_new_puzzlehash(), block.get_coinbase()
         )
         assert spend_bundle2 is not None
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
@@ -180,14 +168,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_double_spend_with_higher_fee(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -197,7 +182,7 @@ class TestMempool:
             pass
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase
+            1000, receiver_puzzlehash, block.get_coinbase()
         )
         assert spend_bundle1 is not None
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
@@ -209,7 +194,7 @@ class TestMempool:
             assert outbound.message.function == "new_transaction"
 
         spend_bundle2 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, fee=1
+            1000, receiver_puzzlehash, block.get_coinbase(), fee=1
         )
 
         assert spend_bundle2 is not None
@@ -228,14 +213,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_invalid_block_index(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -252,7 +234,7 @@ class TestMempool:
         dic = {ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+            1000, receiver_puzzlehash, block.get_coinbase(), dic
         )
 
         assert spend_bundle1 is not None
@@ -271,14 +253,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_correct_block_index(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -295,7 +274,7 @@ class TestMempool:
         dic = {ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+            1000, receiver_puzzlehash, block.get_coinbase(), dic
         )
 
         assert spend_bundle1 is not None
@@ -314,14 +293,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_invalid_block_age(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -336,7 +312,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+            1000, receiver_puzzlehash, block.get_coinbase(), dic
         )
 
         assert spend_bundle1 is not None
@@ -355,14 +331,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_correct_block_age(self, two_nodes):
         num_blocks = 4
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -379,7 +352,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+            1000, receiver_puzzlehash, block.get_coinbase(), dic
         )
 
         assert spend_bundle1 is not None
@@ -398,14 +371,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_correct_my_id(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -417,12 +387,12 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID, block.header.data.coinbase.name(), None
+            ConditionOpcode.ASSERT_MY_COIN_ID, block.get_coinbase().name(), None
         )
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+            1000, receiver_puzzlehash, block.get_coinbase(), dic
         )
 
         assert spend_bundle1 is not None
@@ -441,14 +411,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_invalid_my_id(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -460,14 +427,12 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID,
-            blocks[2].header.data.coinbase.name(),
-            None,
+            ConditionOpcode.ASSERT_MY_COIN_ID, blocks[2].get_coinbase().name(), None,
         )
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+            1000, receiver_puzzlehash, block.get_coinbase(), dic
         )
 
         assert spend_bundle1 is not None
@@ -486,14 +451,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_assert_time_exceeds(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -512,7 +474,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+            1000, receiver_puzzlehash, block.get_coinbase(), dic
         )
 
         assert spend_bundle1 is not None
@@ -531,14 +493,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_assert_time_exceeds_both_cases(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -560,7 +519,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+            1000, receiver_puzzlehash, block.get_coinbase(), dic
         )
 
         assert spend_bundle1 is not None
@@ -589,14 +548,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_correct_coin_consumed(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -609,18 +565,16 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED,
-            block2.header.data.coinbase.name(),
-            None,
+            ConditionOpcode.ASSERT_COIN_CONSUMED, block2.get_coinbase().name(), None,
         )
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+            1000, receiver_puzzlehash, block.get_coinbase(), dic
         )
 
         spend_bundle2 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block2.header.data.coinbase
+            1000, receiver_puzzlehash, block2.get_coinbase()
         )
 
         bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
@@ -640,14 +594,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_invalid_coin_consumed(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -660,14 +611,12 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED,
-            block2.header.data.coinbase.name(),
-            None,
+            ConditionOpcode.ASSERT_COIN_CONSUMED, block2.get_coinbase().name(), None,
         )
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic
+            1000, receiver_puzzlehash, block.get_coinbase(), dic
         )
 
         assert spend_bundle1 is not None
@@ -688,14 +637,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_assert_fee_condition(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -710,7 +656,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic, 10
+            1000, receiver_puzzlehash, block.get_coinbase(), dic, 10
         )
 
         assert spend_bundle1 is not None
@@ -728,7 +674,7 @@ class TestMempool:
             if msg.message.function == "new_transaction":
                 new_transaction = True
 
-        assert new_transaction == True
+        assert new_transaction
 
         mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -739,14 +685,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_assert_fee_condition_wrong_fee(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -761,7 +704,7 @@ class TestMempool:
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic, 9
+            1000, receiver_puzzlehash, block.get_coinbase(), dic, 9
         )
 
         assert spend_bundle1 is not None
@@ -779,7 +722,7 @@ class TestMempool:
             if msg.message.function == "new_transaction":
                 new_transaction = True
 
-        assert new_transaction == False
+        assert new_transaction is False
 
         mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -790,18 +733,13 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_stealing_fee(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
+        wallet_a = bt.get_pool_wallet_tool()
+        wallet_receiver = bt.get_farmer_wallet_tool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, blocks, 10, b"", receiver_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, blocks, 10, b"")
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
@@ -819,12 +757,12 @@ class TestMempool:
 
         fee = 9
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, dic, fee
+            1000, receiver_puzzlehash, block.get_coinbase(), dic, fee
         )
 
-        wallet_2_coinbase = wallet_2_block.header.data.coinbase
+        wallet_2_fees = wallet_2_block.get_fees_coin()
         steal_fee_spendbundle = wallet_receiver.generate_signed_transaction(
-            wallet_2_coinbase.amount + fee, receiver_puzzlehash, wallet_2_coinbase
+            wallet_2_fees.amount + fee - 4, receiver_puzzlehash, wallet_2_fees
         )
 
         assert spend_bundle1 is not None
@@ -832,7 +770,7 @@ class TestMempool:
 
         combined = SpendBundle.aggregate([spend_bundle1, steal_fee_spendbundle])
 
-        assert combined.fees() == 0
+        assert combined.fees() == 4
 
         tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
             spend_bundle1
@@ -847,7 +785,7 @@ class TestMempool:
             if msg.message.function == "new_transaction":
                 new_transaction = True
 
-        assert new_transaction == False
+        assert new_transaction is False
 
         mempool_bundle = full_node_1.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -858,14 +796,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_double_spend_same_bundle(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -875,14 +810,14 @@ class TestMempool:
             pass
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase
+            1000, receiver_puzzlehash, block.get_coinbase()
         )
 
         assert spend_bundle1 is not None
 
         other_receiver = WalletTool()
         spend_bundle2 = wallet_a.generate_signed_transaction(
-            1000, other_receiver.get_new_puzzlehash(), block.header.data.coinbase
+            1000, other_receiver.get_new_puzzlehash(), block.get_coinbase()
         )
 
         assert spend_bundle2 is not None
@@ -902,14 +837,11 @@ class TestMempool:
     @pytest.mark.asyncio
     async def test_agg_sig_condition(self, two_nodes):
         num_blocks = 2
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = WalletTool()
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
@@ -921,7 +853,7 @@ class TestMempool:
         unsigned: List[
             Tuple[Program, CoinSolution]
         ] = wallet_a.generate_unsigned_transaction(
-            1000, receiver_puzzlehash, block.header.data.coinbase, {}, 0
+            1000, receiver_puzzlehash, block.get_coinbase(), {}, 0
         )
         assert len(unsigned) == 1
 
@@ -933,13 +865,10 @@ class TestMempool:
         assert con is not None
 
         conditions_dict = conditions_by_opcode(con)
-        hash_key_pairs = hash_key_pairs_for_conditions_dict(
-            conditions_dict, solution.coin.name()
-        )
-        assert len(hash_key_pairs) == 1
+        pkm_pairs = pkm_pairs_for_conditions_dict(conditions_dict, solution.coin.name())
+        assert len(pkm_pairs) == 1
 
-        pk_pair: BLSSignature.PkMessagePair = hash_key_pairs[0]
-        assert pk_pair.message_hash == solution.solution.first().get_tree_hash()
+        assert pkm_pairs[0][1] == solution.solution.first().get_tree_hash()
 
         spend_bundle = wallet_a.sign_transaction(unsigned)
         assert spend_bundle is not None

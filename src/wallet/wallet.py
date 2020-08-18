@@ -1,8 +1,7 @@
 import time
 from typing import Dict, Optional, List, Tuple, Set, Any
-import clvm
 import logging
-from src.types.BLSSignature import BLSSignature
+from blspy import G2Element, AugSchemeMPL
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
@@ -12,10 +11,10 @@ from src.util.condition_tools import (
     conditions_for_solution,
     conditions_dict_for_solution,
     conditions_by_opcode,
-    hash_key_pairs_for_conditions_dict,
+    pkm_pairs_for_conditions_dict,
 )
 from src.util.ints import uint64, uint32
-from src.wallet.BLSPrivateKey import BLSPrivateKey
+from src.wallet.abstract_wallet import AbstractWallet
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 from src.wallet.puzzles.puzzle_utils import (
@@ -30,7 +29,7 @@ from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 
 
-class Wallet:
+class Wallet(AbstractWallet):
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
@@ -134,7 +133,7 @@ class Wallet:
             condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:
             condition_list.append(make_assert_fee_condition(fee))
-        return clvm.to_sexp_f([puzzle_for_conditions(condition_list), []])
+        return Program.to([puzzle_for_conditions(condition_list), []])
 
     async def select_coins(
         self, amount, exclude: List[Coin] = None
@@ -144,13 +143,11 @@ class Wallet:
             if exclude is None:
                 exclude = []
 
-            spendable_am = await self.wallet_state_manager.get_unconfirmed_spendable_for_wallet(
-                self.wallet_info.id
-            )
+            spendable_amount = await self.get_spendable_balance()
 
-            if amount > spendable_am:
+            if amount > spendable_amount:
                 self.log.warning(
-                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
+                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_amount}"
                 )
                 return None
 
@@ -160,7 +157,7 @@ class Wallet:
                     self.wallet_info.id
                 )
             )
-            sum = 0
+            sum_value = 0
             used_coins: Set = set()
 
             # Use older coins first
@@ -174,13 +171,13 @@ class Wallet:
                 self.wallet_info.id
             )
             for coinrecord in unspent:
-                if sum >= amount and len(used_coins) > 0:
+                if sum_value >= amount and len(used_coins) > 0:
                     break
                 if coinrecord.coin.name() in unconfirmed_removals:
                     continue
                 if coinrecord.coin in exclude:
                     continue
-                sum += coinrecord.coin.amount
+                sum_value += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
                 self.log.info(
                     f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!"
@@ -188,36 +185,26 @@ class Wallet:
 
             # This happens when we couldn't use one of the coins because it's already used
             # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-            unconfirmed_additions = None
-            if sum < amount:
+            if sum_value < amount:
                 raise ValueError(
                     "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
                 )
-                unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
-                    self.wallet_info.id
-                )
-                for coin in unconfirmed_additions.values():
-                    if sum > amount:
-                        break
-                    if coin.name() in unconfirmed_removals:
-                        continue
+                # TODO(straya): remove this
+                # unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
+                #     self.wallet_info.id
+                # )
+                # for coin in unconfirmed_additions.values():
+                #     if sum_value > amount:
+                #         break
+                #     if coin.name() in unconfirmed_removals:
+                #         continue
 
-                    sum += coin.amount
-                    used_coins.add(coin)
-                    self.log.info(f"Selected used coin: {coin.name()}")
+                #     sum_value += coin.amount
+                #     used_coins.add(coin)
+                #     self.log.info(f"Selected used coin: {coin.name()}")
 
-        if sum >= amount:
-            self.log.info(f"Successfully selected coins: {used_coins}")
-            return used_coins
-        else:
-            # This shouldn't happen because of: if amount > self.get_unconfirmed_balance_spendable():
-            self.log.error(
-                f"Wasn't able to select coins for amount: {amount}"
-                f"unspent: {unspent}"
-                f"unconfirmed_removals: {unconfirmed_removals}"
-                f"unconfirmed_additions: {unconfirmed_additions}"
-            )
-            return None
+        self.log.info(f"Successfully selected coins: {used_coins}")
+        return used_coins
 
     async def generate_unsigned_transaction(
         self,
@@ -303,9 +290,8 @@ class Wallet:
                 return None
 
             pubkey, secretkey = keys
-            secretkey = BLSPrivateKey(secretkey)
             code_ = [puzzle, solution.solution]
-            sexp = clvm.to_sexp_f(code_)
+            sexp = Program.to(code_)
 
             # Get AGGSIG conditions
             err, con, cost = conditions_for_solution(sexp)
@@ -316,17 +302,17 @@ class Wallet:
             conditions_dict = conditions_by_opcode(con)
 
             # Create signature
-            for pk_message in hash_key_pairs_for_conditions_dict(
+            for _, msg in pkm_pairs_for_conditions_dict(
                 conditions_dict, bytes(solution.coin)
             ):
-                signature = secretkey.sign(pk_message.message_hash)
+                signature = AugSchemeMPL.sign(secretkey, msg)
                 signatures.append(signature)
 
         # Aggregate signatures
-        aggsig = BLSSignature.aggregate(signatures)
+        aggsig = AugSchemeMPL.aggregate(signatures)
         solution_list: List[CoinSolution] = [
             CoinSolution(
-                coin_solution.coin, clvm.to_sexp_f([puzzle, coin_solution.solution])
+                coin_solution.coin, Program.to([puzzle, coin_solution.solution])
             )
             for (puzzle, coin_solution) in spends
         ]
@@ -396,6 +382,7 @@ class Wallet:
             removals=rem_list,
             wallet_id=self.wallet_info.id,
             sent_to=[],
+            trade_id=None,
         )
 
         return tx_record
@@ -408,17 +395,16 @@ class Wallet:
     # I think this should be a the default way the wallet gets signatures in sign_transaction()
     async def get_sigs_for_innerpuz_with_innersol(
         self, innerpuz: Program, innersol: Program
-    ) -> List[BLSSignature]:
+    ) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-        private = BLSPrivateKey(private)
-        sigs: List[BLSSignature] = []
+        sigs: List[G2Element] = []
         code_ = [innerpuz, innersol]
         sexp = Program.to(code_)
         error, conditions, cost = conditions_dict_for_solution(sexp)
         if conditions is not None:
-            for _ in hash_key_pairs_for_conditions_dict(conditions):
-                signature = private.sign(_.message_hash)
+            for _, msg in pkm_pairs_for_conditions_dict(conditions):
+                signature = AugSchemeMPL.sign(private, msg)
                 sigs.append(signature)
         return sigs
 
@@ -447,7 +433,7 @@ class Wallet:
 
         # Create coin solutions for each utxo
         output_created = None
-        sigs: List[BLSSignature] = []
+        sigs: List[G2Element] = []
         for coin in utxos:
             pubkey, secretkey = await self.wallet_state_manager.get_keys(
                 coin.puzzle_hash
@@ -460,12 +446,10 @@ class Wallet:
                 output_created = coin
             else:
                 solution = self.make_solution(consumed=[output_created.name()])
-            list_of_solutions.append(
-                CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
-            )
+            list_of_solutions.append(CoinSolution(coin, Program.to([puzzle, solution])))
             new_sigs = await self.get_sigs_for_innerpuz_with_innersol(puzzle, solution)
             sigs = sigs + new_sigs
 
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle

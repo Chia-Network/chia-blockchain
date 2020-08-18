@@ -1,6 +1,7 @@
 const initial_state = {
   plotting_in_proggress: false,
   workspace_location: "",
+  t2: "",
   final_location: "",
   progress_location: "",
   progress: "",

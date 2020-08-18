@@ -1,14 +1,15 @@
 # $env:path should contain a path to editbin.exe and signtool.exe
 
 mkdir build_scripts\win_build
-cd build_scripts\win_build
+Set-Location -Path ".\build_scripts\win_build" -PassThru
 
 Write-Output "   ---"
-Write-Output "curl miniupnpc, setprotitle"
+Write-Output "curl miniupnpc, setproctitle"
 Write-Output "   ---"
-curl -OL --show-error --fail https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl
-curl -OL --show-error --fail https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl
-cd ..\..
+Invoke-WebRequest -Uri "https://download.chia.net/simple/miniupnpc/miniupnpc-2.1-cp37-cp37m-win_amd64.whl" -OutFile "miniupnpc-2.1-cp37-cp37m-win_amd64.whl"
+Invoke-WebRequest -Uri "https://download.chia.net/simple/setproctitle/setproctitle-1.1.10-cp37-cp37m-win_amd64.whl" -OutFile "setproctitle-1.1.10-cp37-cp37m-win_amd64.whl"
+Write-Output "Using win_amd64 python 3.7 wheel from https://github.com/miniupnp/miniupnp/pull/475 (2.2.0-RC1)"
+Set-Location -Path - -PassThru
 
 Write-Output "   ---"
 Write-Output "Create venv - python3.7 or 3.8 is required in PATH"
@@ -42,7 +43,7 @@ Write-Output "Install chia-blockchain wheels into venv with pip"
 Write-Output "   ---"
 
 Write-Output "pip install miniupnpc"
-cd build_scripts
+Set-Location -Path ".\build_scripts" -PassThru
 pip install --no-index --find-links=.\win_build\ miniupnpc
 Write-Output "pip install setproctitle"
 pip install --no-index --find-links=.\win_build\ setproctitle
@@ -55,10 +56,10 @@ Write-Output "   ---"
 pyinstaller --log-level INFO daemon_windows.spec
 
 Write-Output "   ---"
-Write-Output "Copy chia executables to electron-react/"
+Write-Output "Copy chia executables to electron-react\"
 Write-Output "   ---"
-cp -r dist/daemon ../electron-react/
-cd ../electron-react
+Copy-Item "dist\daemon" -Destination "..\electron-react\" -Recurse
+Set-Location -Path "..\electron-react" -PassThru
 
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"
@@ -73,10 +74,9 @@ Write-Output "   ---"
 npm run build
 
 Write-Output "   ---"
-Write-Output "Increase the stack for chiapos"
+Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
 # editbin.exe needs to be in the path
-#Start-Process "editbin.exe" -ArgumentList "/STACK:8000000 daemon\create_plots.exe" -Wait
-editbin.exe /STACK:8000000 daemon\create_plots.exe
+editbin.exe /STACK:8000000 daemon\chia.exe
 Write-Output "   ---"
 
 $packageVersion = "$env:CHIA_INSTALLER_VERSION"
@@ -86,7 +86,7 @@ Write-Output "packageName is $packageName"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**/daemon/**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
 Write-Output "   ---"
 
 Write-Output "   ---"
@@ -94,7 +94,7 @@ Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
 
-If ($env:HAS_SECRETS) {
+If ($env:HAS_SECRET) {
    Write-Output "   ---"
    Write-Output "Add timestamp and verify signature"
    Write-Output "   ---"

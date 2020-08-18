@@ -4,9 +4,9 @@ from typing import Dict, Optional, Tuple, List, Set
 import logging
 
 from chiabip158 import PyBIP158
-from clvm.casts import int_from_bytes
+from blspy import G1Element, G2Element, AugSchemeMPL
 
-from src.consensus.constants import constants as consensus_constants
+from src.consensus.constants import ConsensusConstants
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.util.bundle_tools import best_solution_program
@@ -20,9 +20,10 @@ from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
 from src.util.errors import Err
+from src.util.clvm import int_from_bytes
 from src.util.cost_calculator import calculate_cost_of_program
 from src.util.mempool_check_conditions import mempool_check_conditions_dict
-from src.util.condition_tools import hash_key_pairs_for_conditions_dict
+from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from sortedcontainers import SortedDict
@@ -32,11 +33,8 @@ log = logging.getLogger(__name__)
 
 
 class MempoolManager:
-    def __init__(self, coin_store: CoinStore, override_constants: Dict = {}):
-        # Allow passing in custom overrides
-        self.constants: Dict = consensus_constants.copy()
-        for key, value in override_constants.items():
-            self.constants[key] = value
+    def __init__(self, coin_store: CoinStore, consensus_constants: ConsensusConstants):
+        self.constants: ConsensusConstants = consensus_constants
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_txs: Dict[bytes32, SpendBundle] = {}
@@ -46,18 +44,20 @@ class MempoolManager:
         self.mempools: Dict[bytes32, Mempool] = {}
 
         # old_mempools will contain transactions that were removed in the last 10 blocks
-        self.old_mempools: SortedDict[uint32, Dict[bytes32, MempoolItem]] = SortedDict()
+        self.old_mempools: SortedDict[
+            uint32, Dict[bytes32, MempoolItem]
+        ] = SortedDict()  # pylint: disable=E1136
         self.coin_store = coin_store
 
-        tx_per_sec = self.constants["TX_PER_SEC"]
-        sec_per_block = self.constants["BLOCK_TIME_TARGET"]
-        block_buffer_count = self.constants["MEMPOOL_BLOCK_BUFFER"]
+        tx_per_sec = self.constants.TX_PER_SEC
+        sec_per_block = self.constants.BLOCK_TIME_TARGET
+        block_buffer_count = self.constants.MEMPOOL_BLOCK_BUFFER
 
         # MEMPOOL_SIZE = 60000
         self.mempool_size = tx_per_sec * sec_per_block * block_buffer_count
         self.potential_cache_size = 300
         self.seen_cache_size = 10000
-        self.coinbase_freeze = self.constants["COINBASE_FREEZE_PERIOD"]
+        self.coinbase_freeze = self.constants.COINBASE_FREEZE_PERIOD
 
     async def create_bundle_for_tip(self, header: Header) -> Optional[SpendBundle]:
         """
@@ -69,7 +69,7 @@ class MempoolManager:
             spend_bundles: List[SpendBundle] = []
             for dic in mempool.sorted_spends.values():
                 for item in dic.values():
-                    if item.cost + cost_sum <= self.constants["MAX_BLOCK_COST_CLVM"]:
+                    if item.cost + cost_sum <= self.constants.MAX_BLOCK_COST_CLVM:
                         spend_bundles.append(item.spend_bundle)
                         cost_sum += item.cost
                     else:
@@ -125,7 +125,9 @@ class MempoolManager:
         # Calculate the cost and fees
         program = best_solution_program(new_spend)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        fail_reason, npc_list, cost = calculate_cost_of_program(program)
+        fail_reason, npc_list, cost = calculate_cost_of_program(
+            program, self.constants.CLVM_COST_RATIO_CONSTANT,
+        )
         if fail_reason:
             return None, MempoolInclusionStatus.FAILED, fail_reason
 
@@ -141,7 +143,7 @@ class MempoolManager:
 
         # Check additions for max coin amount
         for coin in additions:
-            if coin.amount >= uint64.from_bytes(self.constants["MAX_COIN_AMOUNT"]):
+            if coin.amount >= self.constants.MAX_COIN_AMOUNT:
                 return (
                     None,
                     MempoolInclusionStatus.FAILED,
@@ -276,7 +278,8 @@ class MempoolManager:
                 continue
 
             # Verify conditions, create hash_key list for aggsig check
-            hash_key_pairs = []
+            pks: List[G1Element] = []
+            msgs: List[G2Element] = []
             error: Optional[Err] = None
             for npc in npc_list:
                 coin_record: CoinRecord = removal_record_dict[npc.coin_name]
@@ -302,17 +305,21 @@ class MempoolManager:
                         potential_error = error
                     break
 
-                hash_key_pairs.extend(
-                    hash_key_pairs_for_conditions_dict(
-                        npc.condition_dict, npc.coin_name
-                    )
-                )
+                for pk, m in pkm_pairs_for_conditions_dict(
+                    npc.condition_dict, npc.coin_name
+                ):
+                    pks.append(pk)
+                    msgs.append(m)
+
             if error:
                 errors.append(error)
                 continue
 
             # Verify aggregated signature
-            if not new_spend.aggregated_signature.validate(hash_key_pairs):
+            validates = AugSchemeMPL.agg_verify(
+                pks, msgs, new_spend.aggregated_signature
+            )
+            if not validates:
                 return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
 
             # Remove all conflicting Coins and SpendBundles

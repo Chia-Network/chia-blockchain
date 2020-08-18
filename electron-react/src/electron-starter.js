@@ -9,18 +9,15 @@ const electron = require("electron");
 const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;
 const path = require("path");
-const WebSocket = require("ws");
 const ipcMain = require("electron").ipcMain;
 const config = require("./config");
 const dev_config = require("./dev_config");
+const WebSocket = require("ws");
+const daemon_rpc_ws = require("./util/config").daemon_rpc_ws;
 const local_test = config.local_test;
-const redux_tool = dev_config.redux_tool;
 var url = require("url");
-const Tail = require("tail").Tail;
 const os = require("os");
-
-// Only takes effect if local_test is false. Connects to a local introducer.
-var local_introducer = false;
+const crypto = require("crypto");
 
 global.sharedObj = { local_test: local_test };
 
@@ -35,8 +32,10 @@ const PY_FOLDER = "../src/daemon";
 const PY_MODULE = "server"; // without .py suffix
 
 let pyProc = null;
+let ws = null;
 
 const guessPackaged = () => {
+  let packed;
   if (process.platform === "win32") {
     const fullPath = path.join(__dirname, PY_WIN_DIST_FOLDER);
     packed = require("fs").existsSync(fullPath);
@@ -63,7 +62,7 @@ const getScriptPath = () => {
 
 const createPyProc = () => {
   let script = getScriptPath();
-  processOptions = {};
+  let processOptions = {};
   //processOptions.detached = true;
   //processOptions.stdio = "ignore";
   pyProc = null;
@@ -106,23 +105,51 @@ const createPyProc = () => {
   //pyProc.unref();
 };
 
-const exitPyProc = () => {
-  // Should be a setting
-  if (pyProc != null) {
-    if (process.platform === "win32") {
-      process.stdout.write("Killing daemon on windows");
-      var cp = require('child_process');
-      cp.execSync('taskkill /PID ' + pyProc.pid + ' /T /F')
-    } else {
-      process.stdout.write("Killing daemon on other platforms");
-      pyProc.kill();
-      pyProc = null;
-      pyPort = null;
-    }
+const closeDaemon = callback => {
+  let called_cb = false;
+  try {
+    const request_id = crypto.randomBytes(32).toString("hex");
+    ws = new WebSocket(daemon_rpc_ws, {
+      perMessageDeflate: false
+    });
+    ws.on("open", function open() {
+      console.log("Opened websocket with", daemon_rpc_ws);
+      const msg = {
+        command: "exit",
+        ack: false,
+        origin: "wallet_ui",
+        destination: "daemon",
+        request_id
+      };
+      ws.send(JSON.stringify(msg));
+    });
+    ws.on("message", function incoming(message) {
+      message = JSON.parse(message);
+      if (message["ack"] === true && message["request_id"] === request_id) {
+        called_cb = true;
+        callback();
+      }
+    });
+    ws.on("error", err => {
+      if (err.errno === "ECONNREFUSED") {
+        called_cb = true;
+        callback();
+      } else {
+        console.log("Unexpected websocket error err ", err);
+      }
+    });
+  } catch (e) {
+    console.log("Error in websocket", e);
   }
+  setTimeout(function() {
+    if (!called_cb) {
+      callback();
+    }
+  }, 20000);
 };
 
-app.on("ready", createPyProc);
+const exitPyProc = e => {};
+
 app.on("will-quit", exitPyProc);
 
 /*************************************************************
@@ -130,13 +157,15 @@ app.on("will-quit", exitPyProc);
  *************************************************************/
 
 let mainWindow = null;
+let decidedToClose = false;
 
 const createWindow = () => {
+  decidedToClose = false;
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 1200,
-    minWidth: 600,
-    minHeight: 800,
+    minWidth: 500,
+    minHeight: 500,
     backgroundColor: "#ffffff",
     show: false,
     webPreferences: {
@@ -164,6 +193,13 @@ const createWindow = () => {
       protocol: "file:",
       slashes: true
     });
+  var closingUrl =
+    process.env.ELECTRON_START_URL ||
+    url.format({
+      pathname: path.join(__dirname, "/../src/closing.html"),
+      protocol: "file:",
+      slashes: true
+    });
   console.log(startUrl);
 
   mainWindow.loadURL(startUrl);
@@ -176,13 +212,40 @@ const createWindow = () => {
   // if (!guessPackaged()) {
   //   mainWindow.webContents.openDevTools();
   // }
+  mainWindow.on("close", e => {
+    if (decidedToClose) {
+      return;
+    }
+    e.preventDefault();
+    var choice = require("electron").dialog.showMessageBoxSync({
+      type: "question",
+      buttons: ["No", "Yes"],
+      title: "Confirm",
+      message:
+        "Are you sure you want to quit? GUI Plotting and farming will stop."
+    });
+    if (choice == 0) {
+      return;
+    }
+    mainWindow.loadURL(closingUrl);
+    mainWindow.setBounds({ height: 500, width: 500 });
 
-  mainWindow.on("closed", () => {
-    mainWindow = null;
+    decidedToClose = true;
+    closeDaemon(() => {
+      mainWindow.close();
+    });
   });
 };
 
-app.on("ready", createWindow);
+const appReady = () => {
+  closeDaemon(() => {
+    createPyProc();
+    ws.terminate();
+    createWindow();
+  });
+};
+
+app.on("ready", appReady);
 
 app.on("window-all-closed", () => {
   app.quit();

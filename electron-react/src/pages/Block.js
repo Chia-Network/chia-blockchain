@@ -15,6 +15,7 @@ import { chia_formatter } from "../util/chia";
 import { hex_to_array, arr_to_hex, sha256 } from "../util/utils";
 import { hash_header } from "../util/header";
 import HelpIcon from "@material-ui/icons/Help";
+import { calculate_block_reward } from "../util/block_rewards";
 
 /* global BigInt */
 
@@ -54,7 +55,7 @@ class Block extends Component {
     super(props);
     this.state = {
       headerHash: "",
-      plotSeed: ""
+      plotId: ""
     };
   }
 
@@ -69,13 +70,15 @@ class Block extends Component {
     }
     const headerHash = await hash_header(this.props.block.header);
 
-    let buf = hex_to_array(this.props.block.proof_of_space.pool_pubkey);
-    buf = buf.concat(hex_to_array(this.props.block.proof_of_space.plot_pubkey));
+    let buf = hex_to_array(this.props.block.proof_of_space.pool_public_key);
+    buf = buf.concat(
+      hex_to_array(this.props.block.proof_of_space.plot_public_key)
+    );
     const bufHash = await sha256(buf);
-    const plotSeed = arr_to_hex(bufHash);
+    const plotId = arr_to_hex(bufHash);
     this.setState({
       headerHash,
-      plotSeed
+      plotId
     });
   }
 
@@ -106,15 +109,16 @@ class Block extends Component {
       diff = block.header.data.weight - prevHeader.data.weight;
     }
     const headerHash = "0x" + this.state.headerHash;
-    const plotSeed = "0x" + this.state.plotSeed;
+    const plotId = "0x" + this.state.plotId;
+
     const chia_cb = chia_formatter(
-      parseFloat(BigInt(block.header.data.coinbase.amount)),
+      parseFloat(calculate_block_reward(block.header.data.height)),
       "mojo"
     )
       .to("chia")
       .toString();
     const chia_fees = chia_formatter(
-      parseFloat(BigInt(block.header.data.fees_coin.amount)),
+      parseFloat(BigInt(block.header.data.total_transaction_fees)),
       "mojo"
     )
       .to("chia")
@@ -152,11 +156,11 @@ class Block extends Component {
           "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
       },
       { name: "Proof of Space Size", value: block.proof_of_space.size },
-      { name: "Plot Public Key", value: block.proof_of_space.plot_pubkey },
-      { name: "Pool Public Key", value: block.proof_of_space.pool_pubkey },
+      { name: "Plot Public Key", value: block.proof_of_space.plot_public_key },
+      { name: "Pool Public Key", value: block.proof_of_space.pool_public_key },
       {
-        name: "Plot Seed",
-        value: plotSeed,
+        name: "Plot Id",
+        value: plotId,
         tooltip:
           "The seed used to create the plot, this depends on the pool pk and plot pk"
       },
@@ -170,22 +174,22 @@ class Block extends Component {
       },
       {
         name: "Coinbase Amount",
-        value: chia_cb + " XCH",
+        value: chia_cb + " TXCH",
         tooltip:
-          "The Chia block reward, goes to the pool (or individual farmer)"
+          "The Chia block reward, goes to the pool (or farmer if not pooling)"
       },
       {
         name: "Coinbase Puzzle Hash",
-        value: block.header.data.coinbase.puzzle_hash
+        value: block.header.data.pool_target.puzzle_hash
       },
       {
         name: "Fees Amount",
-        value: chia_fees + " XCH",
+        value: chia_fees + " TXCH",
         tooltip: "The total fees in this block, goes to the farmer"
       },
       {
         name: "Fees Puzzle Hash",
-        value: block.header.data.fees_coin.puzzle_hash
+        value: block.header.data.farmer_rewards_puzzle_hash
       }
     ];
     return (

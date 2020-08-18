@@ -1,41 +1,37 @@
 import asyncio
 import time
-from typing import Any, Dict
 from pathlib import Path
+from secrets import token_bytes
 
 import aiosqlite
 import pytest
-from blspy import PrivateKey
+from blspy import PrivateKey, AugSchemeMPL
 
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.types.full_block import FullBlock
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
-from src.util.ints import uint8, uint64
-from src.consensus.constants import constants as consensus_constants
-from tests.block_tools import BlockTools
+from src.util.ints import uint8, uint64, uint32
 from src.util.errors import Err
-from src.consensus.coinbase import create_coinbase_coin_and_signature
 from src.types.sized_bytes import bytes32
+from src.types.pool_target import PoolTarget
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
+from src.consensus.find_fork_point import find_fork_point_in_chain
+from src.util.make_test_constants import make_test_constants_with_genesis
 
 
-bt = BlockTools()
-test_constants: Dict[str, Any] = consensus_constants.copy()
-test_constants.update(
+test_constants, bt = make_test_constants_with_genesis(
     {
-        "DIFFICULTY_STARTING": 5,
-        "DISCRIMINANT_SIZE_BITS": 16,
+        "DIFFICULTY_STARTING": 1,
+        "DISCRIMINANT_SIZE_BITS": 8,
         "BLOCK_TIME_TARGET": 10,
-        "MIN_BLOCK_TIME": 2,
-        "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-        "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-        "MIN_ITERS_STARTING": 50 * 2,
+        "DIFFICULTY_EPOCH": 6,  # The number of blocks per epoch
+        "DIFFICULTY_WARP_FACTOR": 3,
+        "DIFFICULTY_DELAY": 2,  # EPOCH / WARP_FACTOR
+        "MIN_ITERS_STARTING": 50 * 1,
+        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
     }
-)
-test_constants["GENESIS_BLOCK"] = bytes(
-    bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
 )
 
 
@@ -103,15 +99,15 @@ class TestBlockValidation:
                     blocks[9].header.data.total_iters,
                     blocks[9].header.data.additions_root,
                     blocks[9].header.data.removals_root,
-                    blocks[9].header.data.coinbase,
-                    blocks[9].header.data.coinbase_signature,
-                    blocks[9].header.data.fees_coin,
+                    blocks[9].header.data.farmer_rewards_puzzle_hash,
+                    blocks[9].header.data.total_transaction_fees,
+                    blocks[9].header.data.pool_target,
                     blocks[9].header.data.aggregated_signature,
                     blocks[9].header.data.cost,
                     blocks[9].header.data.extension_data,
                     blocks[9].header.data.generator_hash,
                 ),
-                blocks[9].header.harvester_signature,
+                blocks[9].header.plot_signature,
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -142,9 +138,9 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.farmer_rewards_puzzle_hash,
+            blocks[9].header.data.total_transaction_fees,
+            blocks[9].header.data.pool_target,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -156,8 +152,8 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                bt.get_plot_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_public_key
                 ),
             ),
             blocks[9].transactions_generator,
@@ -178,9 +174,9 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.farmer_rewards_puzzle_hash,
+            blocks[9].header.data.total_transaction_fees,
+            blocks[9].header.data.pool_target,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -191,8 +187,8 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                bt.get_plot_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_public_key
                 ),
             ),
             blocks[9].transactions_generator,
@@ -215,9 +211,9 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.farmer_rewards_puzzle_hash,
+            blocks[9].header.data.total_transaction_fees,
+            blocks[9].header.data.pool_target,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -229,8 +225,8 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                bt.get_plot_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_public_key
                 ),
             ),
             blocks[9].transactions_generator,
@@ -241,7 +237,7 @@ class TestBlockValidation:
         assert error_code == Err.INVALID_TRANSACTIONS_GENERATOR_HASH
 
     @pytest.mark.asyncio
-    async def test_harvester_signature(self, initial_blockchain):
+    async def test_plot_signature(self, initial_blockchain):
         blocks, b = initial_blockchain
         # Time too far in the past
         block_bad = FullBlock(
@@ -249,14 +245,16 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 blocks[9].header.data,
-                PrivateKey.from_seed(b"0").sign_prepend(b"random junk"),
+                AugSchemeMPL.sign(
+                    PrivateKey.from_seed(bytes([5] * 32)), token_bytes(32)
+                ),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
         )
         result, removed, error_code = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
-        assert error_code == Err.INVALID_HARVESTER_SIGNATURE
+        assert error_code == Err.INVALID_PLOT_SIGNATURE
 
     @pytest.mark.asyncio
     async def test_invalid_pos(self, initial_blockchain):
@@ -266,8 +264,8 @@ class TestBlockValidation:
         bad_pos_proof[0] = uint8((bad_pos_proof[0] + 1) % 256)
         bad_pos = ProofOfSpace(
             blocks[9].proof_of_space.challenge_hash,
-            blocks[9].proof_of_space.pool_pubkey,
-            blocks[9].proof_of_space.plot_pubkey,
+            blocks[9].proof_of_space.pool_public_key,
+            blocks[9].proof_of_space.plot_public_key,
             blocks[9].proof_of_space.size,
             bytes(bad_pos_proof),
         )
@@ -281,9 +279,9 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.farmer_rewards_puzzle_hash,
+            blocks[9].header.data.total_transaction_fees,
+            blocks[9].header.data.pool_target,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -296,8 +294,8 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                bt.get_plot_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_public_key
                 ),
             ),
             blocks[9].transactions_generator,
@@ -315,8 +313,8 @@ class TestBlockValidation:
         bad_pos_proof[0] = uint8((bad_pos_proof[0] + 1) % 256)
         bad_pos = ProofOfSpace(
             blocks[9].proof_of_space.challenge_hash,
-            blocks[9].proof_of_space.pool_pubkey,
-            blocks[9].proof_of_space.plot_pubkey,
+            blocks[9].proof_of_space.pool_public_key,
+            blocks[9].proof_of_space.plot_public_key,
             blocks[9].proof_of_space.size,
             bytes(bad_pos_proof),
         )
@@ -330,9 +328,9 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.farmer_rewards_puzzle_hash,
+            blocks[9].header.data.total_transaction_fees,
+            blocks[9].header.data.pool_target,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -345,8 +343,8 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                bt.get_plot_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_public_key
                 ),
             ),
             blocks[9].transactions_generator,
@@ -370,9 +368,9 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            blocks[9].header.data.coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.farmer_rewards_puzzle_hash,
+            blocks[9].header.data.total_transaction_fees,
+            blocks[9].header.data.pool_target,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -384,8 +382,8 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                bt.get_plot_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_public_key
                 ),
             ),
             blocks[9].transactions_generator,
@@ -396,17 +394,17 @@ class TestBlockValidation:
         assert error_code == Err.INVALID_TRANSACTIONS_FILTER_HASH
 
     @pytest.mark.asyncio
-    async def test_invalid_coinbase_amount(self, initial_blockchain):
+    async def test_invalid_max_height(self, initial_blockchain):
         blocks, b = initial_blockchain
-
-        coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
-            blocks[9].header.data.height,
-            blocks[9].header.data.coinbase.puzzle_hash,
-            uint64(9991),
-            PrivateKey.from_bytes(
-                bytes.fromhex(list(bt.plot_config["plots"].values())[0]["pool_sk"])
-            ),
+        print(blocks[9].header)
+        pool_target = PoolTarget(
+            blocks[9].header.data.pool_target.puzzle_hash, uint32(8)
         )
+        agg_sig = bt.get_pool_key_signature(
+            pool_target, blocks[9].proof_of_space.pool_public_key
+        )
+        assert agg_sig is not None
+
         new_header_data = HeaderData(
             blocks[9].header.data.height,
             blocks[9].header.data.prev_header_hash,
@@ -417,23 +415,22 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            coinbase_coin,
-            coinbase_signature,
-            blocks[9].header.data.fees_coin,
-            blocks[9].header.data.aggregated_signature,
+            blocks[9].header.data.farmer_rewards_puzzle_hash,
+            blocks[9].header.data.total_transaction_fees,
+            pool_target,
+            agg_sig,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
             blocks[9].header.data.generator_hash,
         )
 
-        # Coinbase amount invalid
         block_bad = FullBlock(
             blocks[9].proof_of_space,
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                bt.get_plot_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_public_key
                 ),
             ),
             blocks[9].transactions_generator,
@@ -441,20 +438,19 @@ class TestBlockValidation:
         )
         result, removed, error_code = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
-        assert error_code == Err.INVALID_COINBASE_AMOUNT
+        assert error_code == Err.INVALID_POOL_TARGET
 
     @pytest.mark.asyncio
-    async def test_invalid_coinbase_signature(self, initial_blockchain):
+    async def test_invalid_pool_sig(self, initial_blockchain):
         blocks, b = initial_blockchain
-
-        coinbase_coin, coinbase_signature = create_coinbase_coin_and_signature(
-            blocks[9].header.data.height,
-            blocks[9].header.data.coinbase.puzzle_hash,
-            uint64(9991),
-            PrivateKey.from_bytes(
-                bytes.fromhex(list(bt.plot_config["plots"].values())[0]["pool_sk"])
-            ),
+        pool_target = PoolTarget(
+            blocks[9].header.data.pool_target.puzzle_hash, uint32(10)
         )
+        agg_sig = bt.get_pool_key_signature(
+            pool_target, blocks[9].proof_of_space.pool_public_key
+        )
+        assert agg_sig is not None
+
         new_header_data = HeaderData(
             blocks[9].header.data.height,
             blocks[9].header.data.prev_header_hash,
@@ -465,9 +461,48 @@ class TestBlockValidation:
             blocks[9].header.data.total_iters,
             blocks[9].header.data.additions_root,
             blocks[9].header.data.removals_root,
-            blocks[9].header.data.coinbase,
-            coinbase_signature,
-            blocks[9].header.data.fees_coin,
+            blocks[9].header.data.farmer_rewards_puzzle_hash,
+            blocks[9].header.data.total_transaction_fees,
+            blocks[9].header.data.pool_target,
+            agg_sig,
+            blocks[9].header.data.cost,
+            blocks[9].header.data.extension_data,
+            blocks[9].header.data.generator_hash,
+        )
+
+        block_bad = FullBlock(
+            blocks[9].proof_of_space,
+            blocks[9].proof_of_time,
+            Header(
+                new_header_data,
+                bt.get_plot_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_public_key
+                ),
+            ),
+            blocks[9].transactions_generator,
+            blocks[9].transactions_filter,
+        )
+        result, removed, error_code = await b.receive_block(block_bad)
+        assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert error_code == Err.BAD_AGGREGATE_SIGNATURE
+
+    @pytest.mark.asyncio
+    async def test_invalid_fees_amount(self, initial_blockchain):
+        blocks, b = initial_blockchain
+
+        new_header_data = HeaderData(
+            blocks[9].header.data.height,
+            blocks[9].header.data.prev_header_hash,
+            blocks[9].header.data.timestamp,
+            blocks[9].header.data.filter_hash,
+            blocks[9].header.data.proof_of_space_hash,
+            blocks[9].header.data.weight,
+            blocks[9].header.data.total_iters,
+            blocks[9].header.data.additions_root,
+            blocks[9].header.data.removals_root,
+            blocks[9].header.data.farmer_rewards_puzzle_hash,
+            blocks[9].header.data.total_transaction_fees + 1,
+            blocks[9].header.data.pool_target,
             blocks[9].header.data.aggregated_signature,
             blocks[9].header.data.cost,
             blocks[9].header.data.extension_data,
@@ -480,8 +515,8 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_harvester_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_pubkey
+                bt.get_plot_signature(
+                    new_header_data, blocks[9].proof_of_space.plot_public_key
                 ),
             ),
             blocks[9].transactions_generator,
@@ -489,13 +524,13 @@ class TestBlockValidation:
         )
         result, removed, error_code = await b.receive_block(block_bad)
         assert result == ReceiveBlockResult.INVALID_BLOCK
-        assert error_code == Err.INVALID_COINBASE_SIGNATURE
+        assert error_code == Err.INVALID_BLOCK_FEE_AMOUNT
 
     @pytest.mark.asyncio
     async def test_difficulty_change(self):
-        num_blocks = 30
-        # Make it 5x faster than target time
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 2)
+        num_blocks = 10
+        # Make it much faster than target time, 1 second instead of 10 seconds, so difficulty goes up
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 1)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()
@@ -508,19 +543,18 @@ class TestBlockValidation:
             assert result == ReceiveBlockResult.ADDED_TO_HEAD
             assert error_code is None
 
-        diff_25 = b.get_next_difficulty(blocks[24].header)
-        diff_26 = b.get_next_difficulty(blocks[25].header)
-        diff_27 = b.get_next_difficulty(blocks[26].header)
+        diff_6 = b.get_next_difficulty(blocks[5].header)
+        diff_7 = b.get_next_difficulty(blocks[6].header)
+        diff_8 = b.get_next_difficulty(blocks[7].header)
+        # diff_9 = b.get_next_difficulty(blocks[8].header)
 
-        assert diff_26 == diff_25
-        assert diff_27 > diff_26
-        assert (diff_27 / diff_26) <= test_constants["DIFFICULTY_FACTOR"]
-
-        assert (b.get_next_min_iters(blocks[1])) == test_constants["MIN_ITERS_STARTING"]
-        assert (b.get_next_min_iters(blocks[24])) == (b.get_next_min_iters(blocks[23]))
-        assert (b.get_next_min_iters(blocks[25])) == (b.get_next_min_iters(blocks[24]))
-        assert (b.get_next_min_iters(blocks[26])) > (b.get_next_min_iters(blocks[25]))
-        assert (b.get_next_min_iters(blocks[27])) == (b.get_next_min_iters(blocks[26]))
+        assert diff_6 == diff_7
+        assert diff_8 > diff_7
+        assert (diff_8 / diff_7) <= test_constants.DIFFICULTY_FACTOR
+        assert (b.get_next_min_iters(blocks[1])) == test_constants.MIN_ITERS_STARTING
+        assert (b.get_next_min_iters(blocks[6])) == (b.get_next_min_iters(blocks[5]))
+        assert (b.get_next_min_iters(blocks[7])) > (b.get_next_min_iters(blocks[6]))
+        assert (b.get_next_min_iters(blocks[8])) == (b.get_next_min_iters(blocks[7]))
 
         await connection.close()
         b.shut_down()
@@ -529,7 +563,7 @@ class TestBlockValidation:
 class TestReorgs:
     @pytest.mark.asyncio
     async def test_basic_reorg(self):
-        blocks = bt.get_consecutive_blocks(test_constants, 100, [], 9)
+        blocks = bt.get_consecutive_blocks(test_constants, 15, [], 9)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()
@@ -540,22 +574,22 @@ class TestReorgs:
 
         for i in range(1, len(blocks)):
             await b.receive_block(blocks[i])
-        assert b.get_current_tips()[0].height == 100
+        assert b.get_current_tips()[0].height == 15
 
         blocks_reorg_chain = bt.get_consecutive_blocks(
-            test_constants, 30, blocks[:90], 9, b"2"
+            test_constants, 7, blocks[:10], 9, b"2"
         )
         for i in range(1, len(blocks_reorg_chain)):
             reorg_block = blocks_reorg_chain[i]
             result, removed, error_code = await b.receive_block(reorg_block)
-            if reorg_block.height < 90:
+            if reorg_block.height < 10:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
-            elif reorg_block.height < 99:
+            elif reorg_block.height < 14:
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
-            elif reorg_block.height >= 100:
+            elif reorg_block.height >= 15:
                 assert result == ReceiveBlockResult.ADDED_TO_HEAD
             assert error_code is None
-        assert b.get_current_tips()[0].height == 119
+        assert b.get_current_tips()[0].height == 16
 
         await connection.close()
         b.shut_down()
@@ -656,12 +690,18 @@ class TestReorgs:
         for i in range(1, len(blocks_2)):
             await b.receive_block(blocks_2[i])
 
-        assert b._find_fork_point_in_chain(blocks[10].header, blocks_2[10].header) == 4
+        assert (
+            find_fork_point_in_chain(b.headers, blocks[10].header, blocks_2[10].header)
+            == 4
+        )
 
         for i in range(1, len(blocks_3)):
             await b.receive_block(blocks_3[i])
 
-        assert b._find_fork_point_in_chain(blocks[10].header, blocks_3[10].header) == 2
+        assert (
+            find_fork_point_in_chain(b.headers, blocks[10].header, blocks_3[10].header)
+            == 2
+        )
 
         assert b.lca_block.data == blocks[2].header.data
 
@@ -669,10 +709,15 @@ class TestReorgs:
             await b.receive_block(blocks_reorg[i])
 
         assert (
-            b._find_fork_point_in_chain(blocks[10].header, blocks_reorg[10].header) == 8
+            find_fork_point_in_chain(
+                b.headers, blocks[10].header, blocks_reorg[10].header
+            )
+            == 8
         )
         assert (
-            b._find_fork_point_in_chain(blocks_2[10].header, blocks_reorg[10].header)
+            find_fork_point_in_chain(
+                b.headers, blocks_2[10].header, blocks_reorg[10].header
+            )
             == 4
         )
         assert b.lca_block.data == blocks[4].header.data

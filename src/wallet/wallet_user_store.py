@@ -49,7 +49,9 @@ class WalletUserStore:
     async def init_wallet(self):
         all_wallets = await self.get_all_wallets()
         if len(all_wallets) == 0:
-            await self.create_wallet("Chia Wallet", WalletType.STANDARD_WALLET, "")
+            await self.create_wallet(
+                "Chia Wallet", WalletType.STANDARD_WALLET.value, ""
+            )
 
     async def _clear_database(self):
         cursor = await self.db_connection.execute("DELETE FROM users_wallets")
@@ -57,11 +59,11 @@ class WalletUserStore:
         await self.db_connection.commit()
 
     async def create_wallet(
-        self, name: str, wallet_type: WalletType, data: str
+        self, name: str, wallet_type: int, data: str
     ) -> Optional[WalletInfo]:
         cursor = await self.db_connection.execute(
             "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
-            (None, name, wallet_type.value, data),
+            (None, name, wallet_type, data),
         )
         await cursor.close()
         await self.db_connection.commit()
@@ -77,12 +79,7 @@ class WalletUserStore:
     async def update_wallet(self, wallet_info: WalletInfo):
         cursor = await self.db_connection.execute(
             "INSERT or REPLACE INTO users_wallets VALUES(?, ?, ?, ?)",
-            (
-                wallet_info.id,
-                wallet_info.name,
-                wallet_info.type.value,
-                wallet_info.data,
-            ),
+            (wallet_info.id, wallet_info.name, wallet_info.type, wallet_info.data,),
         )
         await cursor.close()
         await self.db_connection.commit()
@@ -108,7 +105,7 @@ class WalletUserStore:
         result = []
 
         for row in rows:
-            result.append(WalletInfo(row[0], row[1], WalletType(row[2]), row[3]))
+            result.append(WalletInfo(row[0], row[1], row[2], row[3]))
 
         return result
 
@@ -126,4 +123,4 @@ class WalletUserStore:
         if row is None:
             return None
 
-        return WalletInfo(row[0], row[1], WalletType(row[2]), row[3])
+        return WalletInfo(row[0], row[1], row[2], row[3])

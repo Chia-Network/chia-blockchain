@@ -13,6 +13,7 @@ SUBCOMMANDS = [
     "start",
     "stop",
     "version",
+    "plots",
     "netspace",
     "run_daemon",
 ]

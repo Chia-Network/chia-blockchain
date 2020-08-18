@@ -40,6 +40,8 @@ class SyncBlocksProcessor:
         for batch_start_height in range(
             self.fork_height + 1, self.tip_height + 1, self.BATCH_SIZE
         ):
+            if self._shut_down:
+                return
             total_time_slept = 0
             batch_end_height = min(
                 batch_start_height + self.BATCH_SIZE - 1, self.tip_height
@@ -62,7 +64,8 @@ class SyncBlocksProcessor:
                 try:
                     await asyncio.wait_for(future, timeout=self.SLEEP_INTERVAL)
                     break
-                except concurrent.futures.TimeoutError:
+                # https://github.com/python/cpython/pull/13528
+                except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
                     try:
                         await future
                     except asyncio.CancelledError:

@@ -14,13 +14,16 @@ from src.protocols.shared_protocol import (
     Pong,
     protocol_version,
 )
-from src.server.connection import Connection, OnConnectFunc, PeerConnections
+from src.server.connection import ChiaConnection, OnConnectFunc, PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.sized_bytes import bytes32
 from src.util import partial_func
 from src.util.errors import Err, ProtocolError
 from src.util.ints import uint16
 import traceback
+
+
+log = logging.getLogger(__name__)
 
 
 async def initialize_pipeline(
@@ -38,7 +41,7 @@ async def initialize_pipeline(
     A pipeline that starts with (StreamReader, StreamWriter), maps it though to
     connections, messages, executes a local API call, and returns responses.
     """
-    # Maps a stream reader, writer and NodeType to a Connection object
+    # Maps a stream reader, writer and NodeType to a ChiaConnection object
     connections_aiter = map_aiter(
         partial_func.partial_async(
             stream_reader_writer_to_connection, server_port, local_type, log,
@@ -107,9 +110,20 @@ async def initialize_pipeline(
         map_aiter(expand_outbound_messages, responses_aiter, 100)
     )
 
+    async def send(connection: ChiaConnection, message: Message):
+        try:
+            await connection.send(message)
+        except Exception as e:
+            connection.log.warning(
+                f"Cannot write to {connection}, already closed. Error {e}."
+            )
+            global_connections.close(connection, True)
+
     # This will run forever. Sends each message through the TCP connection, using the
     # length encoding and CBOR serialization
     async for connection, message in expanded_messages_aiter:
+        if connection is None:
+            continue
         if message is None:
             # Does not ban the peer, this is just a graceful close of connection.
             global_connections.close(connection, True)
@@ -122,13 +136,7 @@ async def initialize_pipeline(
         connection.log.info(
             f"-> {message.function} to peer {connection.get_peername()}"
         )
-        try:
-            await connection.send(message)
-        except (RuntimeError, TimeoutError, OSError,) as e:
-            connection.log.warning(
-                f"Cannot write to {connection}, already closed. Error {e}."
-            )
-            global_connections.close(connection, True)
+        asyncio.create_task(send(connection, message))
 
 
 async def stream_reader_writer_to_connection(
@@ -136,35 +144,38 @@ async def stream_reader_writer_to_connection(
     server_port: int,
     local_type: NodeType,
     log: logging.Logger,
-) -> Connection:
+) -> ChiaConnection:
     """
-    Maps a tuple of (StreamReader, StreamWriter, on_connect) to a Connection object,
+    Maps a tuple of (StreamReader, StreamWriter, on_connect) to a ChiaConnection object,
     which also stores the type of connection (str). It is also added to the global list.
     """
     sr, sw, on_connect = swrt
-    con = Connection(local_type, None, sr, sw, server_port, on_connect, log)
+    con = ChiaConnection(local_type, None, sr, sw, server_port, on_connect, log)
 
     con.log.info(f"Connection with {con.get_peername()} established")
     return con
 
 
 async def connection_to_outbound(
-    pair: Tuple[Connection, PeerConnections],
-) -> AsyncGenerator[Tuple[Connection, OutboundMessage, PeerConnections], None]:
+    pair: Tuple[ChiaConnection, PeerConnections],
+) -> AsyncGenerator[Tuple[ChiaConnection, OutboundMessage, PeerConnections], None]:
     """
     Async generator which calls the on_connect async generator method, and yields any outbound messages.
     """
     connection, global_connections = pair
     if connection.on_connect:
-        async for outbound_message in connection.on_connect():
-            yield connection, outbound_message, global_connections
+        try:
+            async for outbound_message in connection.on_connect():
+                yield connection, outbound_message, global_connections
+        except Exception as e:
+            connection.log.warning(f"Exception in on_connect: {e}")
 
 
 async def perform_handshake(
-    pair: Tuple[Connection, PeerConnections],
+    pair: Tuple[ChiaConnection, PeerConnections],
     srwt_aiter: push_aiter,
     outbound_handshake: Message,
-) -> AsyncGenerator[Tuple[Connection, PeerConnections], None]:
+) -> AsyncGenerator[Tuple[ChiaConnection, PeerConnections], None]:
     """
     Performs handshake with this new connection, and yields the connection. If the handshake
     is unsuccessful, or we already have a connection with this peer, the connection is closed,
@@ -223,7 +234,7 @@ async def perform_handshake(
         )
         # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
         yield connection, global_connections
-    except (ProtocolError, asyncio.IncompleteReadError, OSError, Exception,) as e:
+    except Exception as e:
         connection.log.warning(f"{e}, handshake not completed. Connection not created.")
         # Make sure to close the connection even if it's not in global connections
         connection.close()
@@ -232,8 +243,8 @@ async def perform_handshake(
 
 
 async def connection_to_message(
-    pair: Tuple[Connection, PeerConnections],
-) -> AsyncGenerator[Tuple[Connection, Message, PeerConnections], None]:
+    pair: Tuple[ChiaConnection, PeerConnections],
+) -> AsyncGenerator[Tuple[ChiaConnection, Message, PeerConnections], None]:
     """
     Async generator which yields complete binary messages from connections,
     along with a streamwriter to send back responses. On EOF received, the connection
@@ -279,8 +290,8 @@ async def connection_to_message(
 
 
 async def handle_message(
-    triple: Tuple[Connection, Message, PeerConnections], api: Any
-) -> AsyncGenerator[Tuple[Connection, OutboundMessage, PeerConnections], None]:
+    triple: Tuple[ChiaConnection, Message, PeerConnections], api: Any
+) -> AsyncGenerator[Tuple[ChiaConnection, OutboundMessage, PeerConnections], None]:
     """
     Async generator which takes messages, parses, them, executes the right
     api function, and yields responses (to same connection, propagated, etc).
@@ -335,8 +346,8 @@ async def handle_message(
 
 
 async def expand_outbound_messages(
-    triple: Tuple[Connection, OutboundMessage, PeerConnections]
-) -> AsyncGenerator[Tuple[Connection, Optional[Message]], None]:
+    triple: Tuple[ChiaConnection, OutboundMessage, PeerConnections]
+) -> AsyncGenerator[Tuple[ChiaConnection, Optional[Message]], None]:
     """
     Expands each of the outbound messages into it's own message.
     """
@@ -349,8 +360,8 @@ async def expand_outbound_messages(
             yield connection, outbound_message.message
     elif outbound_message.delivery_method == Delivery.RANDOM:
         # Select a random peer.
-        to_yield_single: Tuple[Connection, Message]
-        typed_peers: List[Connection] = [
+        to_yield_single: Tuple[ChiaConnection, Message]
+        typed_peers: List[ChiaConnection] = [
             peer
             for peer in global_connections.get_connections()
             if peer.connection_type == outbound_message.peer_type

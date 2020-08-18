@@ -1,11 +1,8 @@
 import logging
 import time
 
-import clvm
 from typing import Dict, Optional, List, Any, Set
-from clvm_tools import binutils
-from clvm.EvalError import EvalError
-from src.types.BLSSignature import BLSSignature
+from blspy import G2Element, AugSchemeMPL
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.condition_opcodes import ConditionOpcode
@@ -13,13 +10,13 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
+from src.util.clvm import EvalError, run_program
 from src.util.condition_tools import (
     conditions_dict_for_solution,
-    hash_key_pairs_for_conditions_dict,
+    pkm_pairs_for_conditions_dict,
 )
 from src.util.json_util import dict_to_json_str
 from src.util.ints import uint64, uint32
-from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.block_record import BlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
 from src.wallet.cc_wallet.cc_wallet_puzzles import (
@@ -36,7 +33,7 @@ from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.cc_wallet import cc_wallet_puzzles
-from clvm import run_program
+from clvm_tools import binutils
 
 
 class CCWallet:
@@ -67,7 +64,7 @@ class CCWallet:
         self.cc_info = CCInfo(None, [], None)
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "CC Wallet", WalletType.COLOURED_COIN, info_as_string
+            "CC Wallet", WalletType.COLOURED_COIN.value, info_as_string
         )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
@@ -109,6 +106,7 @@ class CCWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_state_manager.main_wallet.wallet_info.id,
             sent_to=[],
+            trade_id=None,
         )
         cc_record = TransactionRecord(
             confirmed_at_index=uint32(0),
@@ -124,6 +122,7 @@ class CCWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
+            trade_id=None,
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(cc_record)
@@ -148,10 +147,10 @@ class CCWallet:
         self.cc_info = CCInfo(cc_wallet_puzzles.cc_make_core(colour), [], colour)
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "CC Wallet", WalletType.COLOURED_COIN, info_as_string
+            "CC Wallet", WalletType.COLOURED_COIN.value, info_as_string
         )
         if self.wallet_info is None:
-            raise
+            raise Exception("wallet_info is None")
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         return self
@@ -247,7 +246,6 @@ class CCWallet:
             if coin.parent_coin_info == name:
                 search_for_parent = False
                 break
-        # breakpoint()
 
         if search_for_parent:
             data: Dict[str, Any] = {
@@ -303,7 +301,7 @@ class CCWallet:
                 cost_sum += cost_run
                 if error:
                     return False
-            except clvm.EvalError:
+            except EvalError:
 
                 return False
             if conditions_dict is None:
@@ -365,6 +363,9 @@ class CCWallet:
                 await self.wallet_state_manager.set_action_done(action_id)
 
     async def get_new_inner_hash(self) -> bytes32:
+        return await self.standard_wallet.get_new_puzzlehash()
+
+    async def get_new_puzzlehash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
 
     def do_replace(self, sexp, magic, magic_replacement):
@@ -470,6 +471,7 @@ class CCWallet:
                 removals=full_spend.removals(),
                 wallet_id=uint32(1),
                 sent_to=[],
+                trade_id=None,
             )
             cc_record = TransactionRecord(
                 confirmed_at_index=uint32(0),
@@ -485,6 +487,7 @@ class CCWallet:
                 removals=full_spend.removals(),
                 wallet_id=self.wallet_info.id,
                 sent_to=[],
+                trade_id=None,
             )
             await self.wallet_state_manager.add_transaction(regular_record)
             await self.wallet_state_manager.add_pending_transaction(cc_record)
@@ -497,22 +500,7 @@ class CCWallet:
         for record in coins:
             amount += record.coin.amount
 
-        unconfirmed_removals: Dict[
-            bytes32, Coin
-        ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-            self.wallet_info.id
-        )
-        removal_amount = 0
-        for name, coin in unconfirmed_removals.items():
-            if await self.wallet_state_manager.does_coin_belong_to_wallet(
-                coin, self.wallet_info.id
-            ):
-                # Ignores eve coin
-                if coin.parent_coin_info.hex() != await self.get_colour():
-                    removal_amount += coin.amount
-        result = amount - removal_amount
-
-        return uint64(result)
+        return uint64(amount)
 
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
@@ -548,7 +536,7 @@ class CCWallet:
 
         record_list: Set[
             WalletCoinRecord
-        ] = await self.wallet_state_manager.wallet_store.get_unspent_coins_for_wallet(
+        ] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
             self.wallet_info.id
         )
 
@@ -571,13 +559,13 @@ class CCWallet:
                 return None
 
             self.log.info(f"About to select coins for amount {amount}")
-            unspent: List[WalletCoinRecord] = await self.get_cc_spendable_coins()
+            spendable: List[WalletCoinRecord] = await self.get_cc_spendable_coins()
 
             sum = 0
             used_coins: Set = set()
 
             # Use older coins first
-            unspent.sort(key=lambda r: r.confirmed_block_index)
+            spendable.sort(key=lambda r: r.confirmed_block_index)
 
             # Try to use coins from the store, if there isn't enough of "unused"
             # coins use change coins that are not confirmed yet
@@ -586,7 +574,7 @@ class CCWallet:
             ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
                 self.wallet_info.id
             )
-            for coinrecord in unspent:
+            for coinrecord in spendable:
                 if sum >= amount and len(used_coins) > 0:
                     break
                 if coinrecord.coin.name() in unconfirmed_removals:
@@ -607,19 +595,16 @@ class CCWallet:
             self.log.info(f"Successfully selected coins: {used_coins}")
             return used_coins
 
-    async def get_sigs(
-        self, innerpuz: Program, innersol: Program
-    ) -> List[BLSSignature]:
+    async def get_sigs(self, innerpuz: Program, innersol: Program) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-        private = BLSPrivateKey(private)
-        sigs: List[BLSSignature] = []
+        sigs: List[G2Element] = []
         code_ = [innerpuz, innersol]
         sexp = Program.to(code_)
         error, conditions, cost = conditions_dict_for_solution(sexp)
         if conditions is not None:
-            for _ in hash_key_pairs_for_conditions_dict(conditions):
-                signature = private.sign(_.message_hash)
+            for _, msg in pkm_pairs_for_conditions_dict(conditions):
+                signature = AugSchemeMPL.sign(private, msg)
                 sigs.append(signature)
         return sigs
 
@@ -638,13 +623,21 @@ class CCWallet:
 
         return parent_info
 
-    async def cc_spend(
-        self, amount: uint64, to_address: bytes32
-    ) -> Optional[SpendBundle]:
-        sigs: List[BLSSignature] = []
+    async def generate_signed_transaction(
+        self,
+        amount: uint64,
+        to_address: bytes32,
+        fee: uint64 = uint64(0),
+        origin_id: bytes32 = None,
+        coins: Set[Coin] = None,
+    ) -> Optional[TransactionRecord]:
+        sigs: List[G2Element] = []
 
         # Get coins and calculate amount of change required
-        selected_coins: Optional[Set[Coin]] = await self.select_coins(amount)
+        if coins is None:
+            selected_coins: Optional[Set[Coin]] = await self.select_coins(amount)
+        else:
+            selected_coins = coins
         if selected_coins is None:
             return None
 
@@ -708,7 +701,7 @@ class CCWallet:
 
         main_coin_solution = CoinSolution(
             auditor,
-            clvm.to_sexp_f(
+            Program.to(
                 [
                     cc_wallet_puzzles.cc_make_puzzle(
                         inner_puzzle.get_tree_hash(), self.cc_info.my_core,
@@ -754,7 +747,7 @@ class CCWallet:
             list_of_solutions.append(
                 CoinSolution(
                     coin,
-                    clvm.to_sexp_f(
+                    Program.to(
                         [
                             cc_wallet_puzzles.cc_make_puzzle(
                                 coin_inner_puzzle.get_tree_hash(), self.cc_info.my_core,
@@ -767,7 +760,7 @@ class CCWallet:
             list_of_solutions.append(create_spend_for_ephemeral(coin, auditor, 0))
             list_of_solutions.append(create_spend_for_auditor(auditor, coin))
 
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
 
         tx_record = TransactionRecord(
@@ -784,10 +777,10 @@ class CCWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
+            trade_id=None,
         )
-        await self.wallet_state_manager.add_pending_transaction(tx_record)
 
-        return spend_bundle
+        return tx_record
 
     async def add_parent(self, name: bytes32, parent: Optional[CCParent]):
         self.log.info(f"Adding parent {name}: {parent}")
@@ -837,7 +830,7 @@ class CCWallet:
         ] = await self.standard_wallet.generate_signed_transaction(
             amount, cc_puzzle_hash, uint64(0), origin_id, coins
         )
-        self.log.warning(f"cc_puzzle_hash is {cc_puzzle_hash}")
+        self.log.info(f"cc_puzzle_hash is {cc_puzzle_hash}")
         eve_coin = Coin(origin_id, cc_puzzle_hash, amount)
         if tx_record is None or tx_record.spend_bundle is None:
             return None
@@ -870,7 +863,7 @@ class CCWallet:
         # Loop through coins and create solution for innerpuzzle
         list_of_solutions = []
         output_created = None
-        sigs: List[BLSSignature] = []
+        sigs: List[G2Element] = []
         for coin in cc_spends:
             if output_created is None:
                 newinnerpuzhash = await self.get_new_inner_hash()
@@ -902,7 +895,7 @@ class CCWallet:
             list_of_solutions.append(
                 CoinSolution(
                     coin,
-                    clvm.to_sexp_f(
+                    Program.to(
                         [
                             cc_wallet_puzzles.cc_make_puzzle(
                                 innerpuz.get_tree_hash(), self.cc_info.my_core
@@ -914,7 +907,7 @@ class CCWallet:
             )
             sigs = sigs + await self.get_sigs(innerpuz, innersol)
 
-        aggsig = BLSSignature.aggregate(sigs)
+        aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
 

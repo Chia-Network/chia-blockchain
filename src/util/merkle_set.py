@@ -300,7 +300,7 @@ class TruncatedNode:
         p.append(TRUNCATED + self.hash)
 
 
-class SetError(BaseException):
+class SetError(Exception):
     pass
 
 

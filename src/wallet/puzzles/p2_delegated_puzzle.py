@@ -22,7 +22,7 @@ from src.types.program import Program
 from . import p2_conditions
 
 
-def puzzle_for_pk(public_key) -> Program:
+def puzzle_for_pk(public_key: bytes) -> Program:
     aggsig = ConditionOpcode.AGG_SIG[0]
     TEMPLATE = (
         f"(c (c (q {aggsig}) (c (q 0x%s) (c (sha256tree (f (a))) (q ())))) "

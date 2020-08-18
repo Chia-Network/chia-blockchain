@@ -12,16 +12,27 @@ import Container from "@material-ui/core/Container";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import { withRouter } from "react-router-dom";
 import { connect, useSelector, useDispatch } from "react-redux";
-import { log_in, delete_key, get_private_key } from "../modules/message";
+import {
+  login_action,
+  delete_key,
+  get_private_key,
+  selectFingerprint
+} from "../modules/message";
 import Link from "@material-ui/core/Link";
 import Button from "@material-ui/core/Button";
 import VisibilityIcon from "@material-ui/icons/Visibility";
+import { delete_all_keys } from "../modules/message";
+import Dialog from "@material-ui/core/Dialog";
+import DialogActions from "@material-ui/core/DialogActions";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogContentText from "@material-ui/core/DialogContentText";
+import DialogTitle from "@material-ui/core/DialogTitle";
 import {
   changeEntranceMenu,
   presentOldWallet,
-  presentNewWallet,
-  presentImportHexKey
+  presentNewWallet
 } from "../modules/entranceMenu";
+import { resetMnemonic } from "../modules/mnemonic_input";
 
 const useStyles = makeStyles(theme => ({
   root: {
@@ -54,6 +65,13 @@ const useStyles = makeStyles(theme => ({
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(1)
   },
+  bottomButtonRed: {
+    width: 400,
+    height: 45,
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(1),
+    color: "red"
+  },
   logo: {
     marginTop: theme.spacing(8),
     marginBottom: theme.spacing(3)
@@ -83,24 +101,41 @@ const SelectKey = () => {
     state => state.wallet_state.public_key_fingerprints
   );
 
+  const [open, setOpen] = React.useState(false);
+
   const handleClick = fingerprint => {
-    return () => dispatch(log_in(fingerprint));
+    return () => {
+      dispatch(resetMnemonic());
+      dispatch(selectFingerprint(fingerprint));
+      dispatch(login_action(fingerprint));
+    };
   };
+
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleCloseDelete = () => {
+    handleClose();
+    dispatch(delete_all_keys());
+  };
+
   const showKey = fingerprint => {
     return () => dispatch(get_private_key(fingerprint));
   };
 
   const handleDelete = fingerprint => {
-    return () => {
-      dispatch(delete_key(fingerprint));
-    };
+    return () => dispatch(delete_key(fingerprint));
   };
+
   const goToMnemonics = () => {
     dispatch(changeEntranceMenu(presentOldWallet));
   };
-  const goToHexKey = () => {
-    dispatch(changeEntranceMenu(presentImportHexKey));
-  };
+
   const goToNewWallet = () => {
     dispatch(changeEntranceMenu(presentNewWallet));
   };
@@ -156,7 +191,7 @@ const SelectKey = () => {
         <div className={classes.paper}>
           <img className={classes.logo} src={logo} alt="Logo" />
           {public_key_fingerprints && public_key_fingerprints.length > 0 ? (
-            <h2 className={classes.whiteText}>Select Key</h2>
+            <h1 className={classes.whiteText}>Select Key</h1>
           ) : (
             <span className={classes.centeredSpan}>
               <h2 className={classes.whiteText}>Sign In</h2>
@@ -180,17 +215,6 @@ const SelectKey = () => {
               Import from Mnemonics (24 words)
             </Button>
           </Link>
-          <Link onClick={goToHexKey}>
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              color="primary"
-              className={classes.bottomButton}
-            >
-              Import from hex private key
-            </Button>
-          </Link>
           <Link onClick={goToNewWallet}>
             <Button
               type="submit"
@@ -202,8 +226,42 @@ const SelectKey = () => {
               Create a new private key
             </Button>
           </Link>
+          <Link onClick={handleClickOpen}>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              className={classes.bottomButtonRed}
+            >
+              Delete all keys
+            </Button>
+          </Link>
         </div>
       </Container>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Delete all keys"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Deleting all keys will permanatly remove the keys from your
+            computer, make sure you have backups. Are you sure you want to
+            continue?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="secondary">
+            Back
+          </Button>
+          <Button onClick={handleCloseDelete} color="secondary" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

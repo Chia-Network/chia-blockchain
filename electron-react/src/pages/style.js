@@ -28,7 +28,8 @@ const myStyle = makeStyles(theme => ({
   },
   grid_wrap: {
     paddingLeft: theme.spacing(10),
-    paddingRight: theme.spacing(10)
+    paddingRight: theme.spacing(10),
+    textAlign: "center"
   },
   grid: {
     display: "flex",
@@ -50,6 +51,11 @@ const myStyle = makeStyles(theme => ({
     marginTop: theme.spacing(4),
     marginBottom: theme.spacing(8)
   },
+  titleSmallMargin: {
+    color: "#ffffff",
+    marginTop: theme.spacing(4),
+    marginBottom: theme.spacing(2)
+  },
   navigator: {
     color: "#ffffff",
     marginTop: theme.spacing(4),
@@ -61,6 +67,37 @@ const myStyle = makeStyles(theme => ({
   instructions: {
     color: "#ffffff",
     fontSize: 18
+  },
+  dragContainer: {
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingBottom: 20
+  },
+  drag: {
+    backgroundColor: "#888888",
+    height: 300,
+    width: "100%"
+  },
+  dragText: {
+    margin: 0,
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)"
+  },
+  circle: {
+    height: "100%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  logo: {
+    marginTop: theme.spacing(0),
+    marginBottom: theme.spacing(1)
+  },
+  whiteP: {
+    color: "white",
+    fontSize: "18px"
   }
 }));
 

@@ -1,6 +1,5 @@
 import React from "react";
 import SelectKey from "./pages/SelectKey";
-import ImportHexKey from "./pages/ImportHexKey";
 import NewWallet from "./pages/NewWallet";
 import OldWallet from "./pages/OldWallet";
 import Dashboard from "./pages/Dashboard";
@@ -12,10 +11,11 @@ import {
   presentNewWallet,
   presentDashboard,
   presentSelectKeys,
-  presentImportHexKey
+  presentRestoreBackup
 } from "./modules/entranceMenu";
 import { Backdrop, CircularProgress } from "@material-ui/core";
-import { ModalDialog } from "./pages/ModalDialog";
+import { ModalDialog, Spinner } from "./pages/ModalDialog";
+import { RestoreBackup } from "./pages/backup/restoreBackup";
 const defaultTheme = createMuiTheme();
 
 const theme = createMuiTheme({
@@ -106,14 +106,14 @@ const CustomRouter = () => {
   } else {
     if (presentView === presentSelectKeys) {
       return <SelectKey></SelectKey>;
-    } else if (presentView === presentImportHexKey) {
-      return <ImportHexKey></ImportHexKey>;
     } else if (presentView === presentOldWallet) {
       return <OldWallet></OldWallet>;
     } else if (presentView === presentNewWallet) {
       return <NewWallet></NewWallet>;
     } else if (presentView === presentDashboard) {
       return <Dashboard></Dashboard>;
+    } else if (presentView === presentRestoreBackup) {
+      return <RestoreBackup></RestoreBackup>;
     }
   }
 };
@@ -122,6 +122,7 @@ const App = () => {
     <React.Fragment>
       <ThemeProvider theme={theme}>
         <ModalDialog></ModalDialog>
+        <Spinner></Spinner>
         <CustomRouter></CustomRouter>
       </ThemeProvider>
     </React.Fragment>

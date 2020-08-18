@@ -2,10 +2,9 @@ import asyncio
 from typing import List
 
 import pytest
-from blspy import ExtendedPrivateKey
 from chiabip158 import PyBIP158
 
-from tests.setup_nodes import test_constants, bt, setup_simulators_and_wallets
+from tests.setup_nodes import test_constants, setup_simulators_and_wallets, bt
 
 
 @pytest.fixture(scope="module")
@@ -28,16 +27,14 @@ class TestFilter:
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         num_blocks = 2
-        ph = await wallet.get_new_puzzlehash()
-        blocks = bt.get_consecutive_blocks(
-            test_constants, num_blocks, [], 10, reward_puzzlehash=ph,
-        )
+        await wallet.get_new_puzzlehash()
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         for i in range(1, num_blocks):
             byte_array_tx: List[bytes] = []
             block = blocks[i]
-            coinbase = bytearray(block.header.data.coinbase.puzzle_hash)
-            fee = bytearray(block.header.data.fees_coin.puzzle_hash)
+            coinbase = bytearray(block.get_coinbase().puzzle_hash)
+            fee = bytearray(block.get_fees_coin().puzzle_hash)
             byte_array_tx.append(coinbase)
             byte_array_tx.append(fee)
 

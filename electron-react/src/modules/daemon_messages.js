@@ -19,6 +19,13 @@ export const startService = service_name => {
   return action;
 };
 
+export const startServiceTest = service_name => {
+  var action = daemonMessage();
+  action.message.command = "start_service";
+  action.message.data = { service: service_name, testing: true };
+  return action;
+};
+
 export const stopService = service_name => {
   var action = daemonMessage();
   action.message.command = "stop_service";

@@ -15,7 +15,7 @@ module.exports = {
     const updateDotExe = path.resolve(path.join(rootAtomFolder, "Update.exe"));
     const exeName = path.basename(process.execPath);
     const spawn = function(command, args) {
-      let spawnedProcess, error;
+      let spawnedProcess;
 
       try {
         spawnedProcess = ChildProcess.spawn(command, args, { detached: true });

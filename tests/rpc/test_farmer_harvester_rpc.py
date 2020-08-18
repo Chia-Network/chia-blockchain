@@ -1,16 +1,22 @@
 import asyncio
 
 import pytest
+
+from secrets import token_bytes
 from blspy import PrivateKey
 from chiapos import DiskPlotter
-from src.types.proof_of_space import ProofOfSpace
-from src.rpc.farmer_rpc_server import start_farmer_rpc_server
-from src.rpc.harvester_rpc_server import start_harvester_rpc_server
 from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
+from src.rpc.rpc_server import start_rpc_server
 from src.util.ints import uint16
-from tests.setup_nodes import setup_full_system, test_constants
-from tests.block_tools import get_plot_dir
+from src.util.config import load_config
+from src.plotting.plot_tools import stream_plot_info
+from src.rpc.farmer_rpc_api import FarmerRpcApi
+from src.rpc.harvester_rpc_api import HarvesterRpcApi
+
+from tests.setup_nodes import setup_farmer_harvester, test_constants, bt
+from src.util.block_tools import get_plot_dir
+from tests.time_out_assert import time_out_assert
 
 
 @pytest.fixture(scope="module")
@@ -22,14 +28,14 @@ def event_loop():
 class TestRpc:
     @pytest.fixture(scope="function")
     async def simulation(self):
-        async for _ in setup_full_system(test_constants):
+        async for _ in setup_farmer_harvester(test_constants):
             yield _
 
     @pytest.mark.asyncio
     async def test1(self, simulation):
         test_rpc_port = uint16(21522)
         test_rpc_port_2 = uint16(21523)
-        full_node_1, _, harvester, farmer, _, _, _ = simulation
+        harvester, farmer = simulation
 
         def stop_node_cb():
             pass
@@ -37,43 +43,80 @@ class TestRpc:
         def stop_node_cb_2():
             pass
 
-        rpc_cleanup = await start_farmer_rpc_server(farmer, stop_node_cb, test_rpc_port)
-        rpc_cleanup_2 = await start_harvester_rpc_server(
-            harvester, stop_node_cb_2, test_rpc_port_2
+        config = load_config(bt.root_path, "config.yaml")
+        hostname = config["self_hostname"]
+        daemon_port = config["daemon_port"]
+
+        farmer_rpc_api = FarmerRpcApi(farmer)
+        harvester_rpc_api = HarvesterRpcApi(harvester)
+
+        rpc_cleanup = await start_rpc_server(
+            farmer_rpc_api,
+            hostname,
+            daemon_port,
+            test_rpc_port,
+            stop_node_cb,
+            connect_to_daemon=False,
+        )
+        rpc_cleanup_2 = await start_rpc_server(
+            harvester_rpc_api,
+            hostname,
+            daemon_port,
+            test_rpc_port_2,
+            stop_node_cb_2,
+            connect_to_daemon=False,
         )
 
         try:
-            client = await FarmerRpcClient.create(test_rpc_port)
-            client_2 = await HarvesterRpcClient.create(test_rpc_port_2)
+            client = await FarmerRpcClient.create("localhost", test_rpc_port)
+            client_2 = await HarvesterRpcClient.create("localhost", test_rpc_port_2)
 
-            await asyncio.sleep(3)
-            assert len(await client.get_connections()) == 2
+            async def have_connections():
+                return len(await client.get_connections()) > 0
 
-            challenges = await client.get_latest_challenges()
-            assert len(challenges) > 0
+            await time_out_assert(5, have_connections, True)
+
+            await client.get_latest_challenges()
+
+            async def have_challenges():
+                return len(await client.get_latest_challenges()) > 0
+
+            await time_out_assert(5, have_challenges, True)
+
+            async def have_plots():
+                return len((await client_2.get_plots())["plots"]) > 0
+
+            await time_out_assert(5, have_plots, True)
 
             res = await client_2.get_plots()
             num_plots = len(res["plots"])
             assert num_plots > 0
-            plot_dir = get_plot_dir()
+            plot_dir = get_plot_dir() / "subdir"
+            plot_dir.mkdir(parents=True, exist_ok=True)
             plotter = DiskPlotter()
-            pool_pk = harvester.pool_pubkeys[0]
-            plot_sk = PrivateKey.from_seed(b"Farmer harvester rpc test seed")
-            plot_seed = ProofOfSpace.calculate_plot_seed(
-                pool_pk, plot_sk.get_public_key()
-            )
-            filename = "test_farmer_harvester_rpc_plot.dat"
+            filename = "test_farmer_harvester_rpc_plot.plot"
             plotter.create_plot_disk(
                 str(plot_dir),
                 str(plot_dir),
                 str(plot_dir),
                 filename,
                 18,
-                b"genesis",
-                plot_seed,
-                2 * 1024,
+                stream_plot_info(
+                    bt.pool_pk, bt.farmer_pk, PrivateKey.from_seed(bytes([4] * 32))
+                ),
+                token_bytes(32),
+                128,
             )
-            await client_2.add_plot(str(plot_dir / filename), plot_sk)
+
+            res_2 = await client_2.get_plots()
+            assert len(res_2["plots"]) == num_plots
+
+            print(await client_2.get_plot_directories())
+            assert len(await client_2.get_plot_directories()) == 1
+
+            await client_2.add_plot_directory(str(plot_dir))
+
+            assert len(await client_2.get_plot_directories()) == 2
 
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) == num_plots + 1
@@ -82,21 +125,9 @@ class TestRpc:
             res_3 = await client_2.get_plots()
             assert len(res_3["plots"]) == num_plots
 
-            filename = "test_farmer_harvester_rpc_plot_2.dat"
-            plotter.create_plot_disk(
-                str(plot_dir),
-                str(plot_dir),
-                str(plot_dir),
-                filename,
-                18,
-                b"genesis",
-                plot_seed,
-                2 * 1024,
-            )
-            await client_2.add_plot(str(plot_dir / filename), plot_sk, pool_pk)
-            assert len((await client_2.get_plots())["plots"]) == num_plots + 1
-            await client_2.delete_plot(str(plot_dir / filename))
-            assert len((await client_2.get_plots())["plots"]) == num_plots
+            await client_2.remove_plot_directory(str(plot_dir))
+            print(await client_2.get_plot_directories())
+            assert len(await client_2.get_plot_directories()) == 1
 
         except AssertionError:
             # Checks that the RPC manages to stop the node

@@ -66,6 +66,7 @@ async def async_start(args, parser):
         else:
             error = msg["data"]["error"]
             print(f"{service} failed to start. Error: {error}")
+    await daemon.close()
 
 
 def start(args, parser):

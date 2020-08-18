@@ -18,12 +18,10 @@ import {
   changeWalletMenu,
   createWallet,
   standardWallet,
-  tradeManager,
   CCWallet
 } from "../modules/walletMenu";
 import { CreateWalletView } from "./CreateWallet";
 import ColouredWallet from "./ColouredWallet";
-import { TradeManger } from "./TradeManager";
 
 const drawerWidth = 180;
 
@@ -110,12 +108,11 @@ const WalletItem = props => {
   if (!name) {
     name = "";
   }
-
   var mainLabel = "";
-  if (wallet.type === "STANDARD_WALLET") {
+  if (wallet.type === 0) {
     mainLabel = "Chia Wallet";
     name = "Chia";
-  } else if (wallet.type === "COLOURED_COIN") {
+  } else if (wallet.type === 6) {
     mainLabel = "CC Wallet";
     if (name.length > 18) {
       name = name.substring(0, 18);
@@ -124,9 +121,9 @@ const WalletItem = props => {
   }
 
   function presentWallet() {
-    if (wallet.type === "STANDARD_WALLET") {
+    if (wallet.type === 0) {
       dispatch(changeWalletMenu(standardWallet, wallet.id));
-    } else if (wallet.type === "COLOURED_COIN") {
+    } else if (wallet.type === 6) {
       dispatch(changeWalletMenu(CCWallet, wallet.id));
     }
   }
@@ -157,8 +154,6 @@ const WalletViewSwitch = () => {
     return <StandardWallet wallet_id={id}></StandardWallet>;
   } else if (toPresent === createWallet) {
     return <CreateWalletView></CreateWalletView>;
-  } else if (toPresent === tradeManager) {
-    return <TradeManger></TradeManger>;
   } else if (toPresent === CCWallet) {
     return <ColouredWallet wallet_id={id}> </ColouredWallet>;
   }
@@ -173,10 +168,6 @@ const CreateWallet = () => {
     dispatch(changeWalletMenu(createWallet));
   }
 
-  function presentTrade() {
-    dispatch(changeWalletMenu(tradeManager));
-  }
-
   return (
     <div className={classes.bottomOptions}>
       <Divider></Divider>
@@ -184,9 +175,6 @@ const CreateWallet = () => {
         <ListItemText primary="Add Wallet" />
       </ListItem>
       <Divider></Divider>
-      <ListItem button onClick={presentTrade}>
-        <ListItemText primary="Trade" />
-      </ListItem>
     </div>
   );
 };

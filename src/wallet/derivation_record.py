@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from blspy import PublicKey
+from blspy import G1Element
 
 from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
@@ -17,6 +17,6 @@ class DerivationRecord(Streamable):
 
     index: uint32
     puzzle_hash: bytes32
-    pubkey: PublicKey
+    pubkey: G1Element
     wallet_type: WalletType
     wallet_id: uint32

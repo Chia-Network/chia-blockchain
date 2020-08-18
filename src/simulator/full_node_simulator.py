@@ -15,14 +15,16 @@ from src.types.spend_bundle import SpendBundle
 from src.types.header import Header
 from src.util.api_decorators import api_request
 from src.util.ints import uint64
-from tests.block_tools import BlockTools
+
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
-bt = BlockTools()
-
 
 class FullNodeSimulator(FullNode):
+    def __init__(self, config, root_path, consensus_constants, name, bt):
+        super().__init__(config, root_path, consensus_constants, name)
+        self.bt = bt
+
     def _set_server(self, server: ChiaServer):
         super()._set_server(server)
 
@@ -132,7 +134,7 @@ class FullNodeSimulator(FullNode):
             dict_h[top_tip.height + 1] = (program, bundle.aggregated_signature)
             fees = bundle.fees()
 
-        more_blocks = bt.get_consecutive_blocks(
+        more_blocks = self.bt.get_consecutive_blocks(
             self.constants,
             1,
             current_block,
@@ -158,7 +160,7 @@ class FullNodeSimulator(FullNode):
         current_blocks = await self.get_current_blocks(top_tip)
         block_count = new_index - old_index
 
-        more_blocks = bt.get_consecutive_blocks(
+        more_blocks = self.bt.get_consecutive_blocks(
             self.constants,
             block_count,
             current_blocks[:old_index],

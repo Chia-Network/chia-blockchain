@@ -1,10 +1,11 @@
+# chia-blockchain
 ![Alt text](https://www.chia.net/img/chia_logo.svg)
 | Current Release/master | Development Branch/dev |
 |         :---:          |          :---:         |
 | ![Build Ubuntu and MacOS](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Ubuntu%20and%20MacOS/badge.svg) ![Build Windows Installer](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Windows%20Installer/badge.svg) |  ![Build Ubuntu and MacOS](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Ubuntu%20and%20MacOS/badge.svg?branch=dev) ![Build Windows Installer](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Windows%20Installer/badge.svg?branch=dev) |
 
 ![GitHub contributors](https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub)
-# chia-blockchain
+
 Please check out the [wiki](https://github.com/Chia-Network/chia-blockchain/wiki)
 and [FAQ](https://github.com/Chia-Network/chia-blockchain/wiki/FAQ) for
 information on this project.
@@ -24,13 +25,13 @@ Building timelords and VDFs is for sophisticated users in most environments.
 Chia Network and additional volunteers are running sufficient Timelords
 for testnet consensus.
 
-# Installing
+## Installing
 Install instructions are available in the
 [INSTALL](https://github.com/Chia-Network/chia-blockchain/wiki/INSTALL)
 section of the
 [chia-blockchain repository wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
 
-# Running
+## Running
 Once installed, a
 [Quick Start Guide](https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide)
 is available from the repository

@@ -1,7 +1,5 @@
 import asyncio
-from secrets import token_bytes
 from pathlib import Path
-from typing import Any, Dict
 import sqlite3
 import random
 
@@ -11,24 +9,7 @@ from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.blockchain import Blockchain
 from src.types.full_block import FullBlock
-from src.types.sized_bytes import bytes32
-from src.util.ints import uint32, uint64
-from tests.block_tools import BlockTools
-
-bt = BlockTools()
-
-test_constants: Dict[str, Any] = {
-    "DIFFICULTY_STARTING": 5,
-    "DISCRIMINANT_SIZE_BITS": 16,
-    "BLOCK_TIME_TARGET": 10,
-    "MIN_BLOCK_TIME": 2,
-    "MIN_ITERS_STARTING": 100,
-    "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-    "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-}
-test_constants["GENESIS_BLOCK"] = bytes(
-    bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
-)
+from tests.setup_nodes import test_constants, bt
 
 
 @pytest.fixture(scope="module")
@@ -59,10 +40,11 @@ class TestBlockStore:
         connection_3 = await aiosqlite.connect(db_filename_3)
 
         db = await BlockStore.create(connection)
-        db_2 = await BlockStore.create(connection_2)
+        # db_2 = await BlockStore.create(connection_2)
+        await BlockStore.create(connection_2)
         db_3 = await BlockStore.create(connection_3)
         try:
-            genesis = FullBlock.from_bytes(test_constants["GENESIS_BLOCK"])
+            genesis = FullBlock.from_bytes(test_constants.GENESIS_BLOCK)
 
             # Save/get block
             for block in blocks:

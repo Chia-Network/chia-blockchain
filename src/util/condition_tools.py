@@ -1,17 +1,13 @@
 from typing import Optional, Tuple, List, Dict
 
-import blspy
-import clvm
-from clvm.EvalError import EvalError
-from clvm.casts import int_from_bytes
-from clvm.subclass_sexp import BaseSExp
+from blspy import G1Element
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.BLSSignature import BLSSignature, BLSPublicKey
 from src.types.coin import Coin
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
+from src.util.clvm import BaseSExp, EvalError, int_from_bytes, run_program
 from src.util.ints import uint64
 from src.util.errors import Err, ConsensusError
 
@@ -71,27 +67,20 @@ def conditions_by_opcode(
     return d
 
 
-def hash_key_pairs_for_conditions_dict(
+def pkm_pairs_for_conditions_dict(
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     coin_name: bytes32 = None,
-) -> List[BLSSignature.PkMessagePair]:
-    pairs: List[BLSSignature.PkMessagePair] = []
+) -> List[Tuple[G1Element, bytes]]:
+    ret: List[Tuple[G1Element, bytes]] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         # TODO: check types
         # assert len(_) == 3
-        blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
-        message: bytes32 = cvp.var2
-        pairs.append(BLSSignature.PkMessagePair(blspubkey, message))
+        assert cvp.var2 is not None
+        ret.append((G1Element.from_bytes(cvp.var1), cvp.var2))
     if coin_name is not None:
         for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
-            aggsigme_blspubkey: BLSPublicKey = BLSPublicKey(cvp.var1)
-            aggsigme_message: bytes32 = bytes32(
-                blspy.Util.hash256(cvp.var2 + coin_name)
-            )
-            pairs.append(
-                BLSSignature.PkMessagePair(aggsigme_blspubkey, aggsigme_message)
-            )
-    return pairs
+            ret.append((G1Element.from_bytes(cvp.var1), cvp.var2 + coin_name))
+    return ret
 
 
 def aggsig_in_conditions_dict(
@@ -132,7 +121,7 @@ def conditions_dict_for_solution(
 
 
 def conditions_for_solution(
-    solution_program, run_program=clvm.run_program
+    solution_program, run_program=run_program
 ) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
     args = Program.to(solution_program)

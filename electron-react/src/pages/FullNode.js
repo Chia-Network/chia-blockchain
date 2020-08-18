@@ -256,7 +256,7 @@ const getStatusItems = (state, connected) => {
   status_items.push(min_item);
 
   const space =
-    (BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString() + "TB";
+    (BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString() + "TiB";
   const space_item = {
     label: "Estimated network space",
     value: space,
@@ -299,6 +299,7 @@ const StatusCell = props => {
     </Grid>
   );
 };
+
 const FullNodeStatus = props => {
   const blockchain_state = useSelector(
     state => state.full_node_state.blockchain_state

@@ -2,33 +2,28 @@ import React, { Component } from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import TextField from "@material-ui/core/TextField";
-import Link from "@material-ui/core/Link";
 import Grid from "@material-ui/core/Grid";
 import Typography from "@material-ui/core/Typography";
-import {
-  withTheme,
-  useTheme,
-  withStyles,
-  makeStyles
-} from "@material-ui/styles";
+import { withTheme, withStyles, makeStyles } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { connect, useSelector, useDispatch } from "react-redux";
 import { genereate_mnemonics } from "../modules/message";
 import { withRouter } from "react-router-dom";
 
-function Copyright() {
-  return (
-    <Typography variant="body2" color="textSecondary" align="center">
-      {"Copyright © "}
-      <Link color="inherit" href="https://chia.net">
-        Your Website
-      </Link>{" "}
-      {new Date().getFullYear()}
-      {"."}
-    </Typography>
-  );
-}
+// function Copyright() {
+//   return (
+//     <Typography variant="body2" color="textSecondary" align="center">
+//       {"Copyright © "}
+//       <Link color="inherit" href="https://chia.net">
+//         Your Website
+//       </Link>{" "}
+//       {new Date().getFullYear()}
+//       {"."}
+//     </Typography>
+//   );
+// }
+
 const CssTextField = withStyles({
   root: {
     "& MuiFormLabel-root": {
@@ -143,32 +138,9 @@ class MnemonicLabel extends Component {
   }
 }
 
-class MnemonicGrid extends Component {
-  render() {
-    return (
-      <Grid item xs={2}>
-        <CssTextField
-          variant="outlined"
-          margin="normal"
-          disabled
-          fullWidth
-          color="primary"
-          id="email"
-          label={this.props.index}
-          name="email"
-          autoComplete="email"
-          autoFocus
-          defaultValue={this.props.word}
-        />
-      </Grid>
-    );
-  }
-}
-
 const UIPart = () => {
   const words = useSelector(state => state.wallet_state.mnemonic);
   const classes = useStyles();
-  const theme = useTheme();
   return (
     <div className={classes.root}>
       <ArrowBackIosIcon className={classes.navigator}> </ArrowBackIosIcon>
@@ -209,9 +181,4 @@ const CreateMnemonics = () => {
   return UIPart();
 };
 
-const mapStateToProps = state => {
-  return {
-    mnemonic: state.wallet_state.mnemonic
-  };
-};
 export default withTheme(withRouter(connect()(CreateMnemonics)));

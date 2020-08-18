@@ -7,6 +7,7 @@ import websockets
 from src.types.sized_bytes import bytes32
 from src.util.ws_message import create_payload
 from src.util.json_util import dict_to_json_str
+from src.util.config import load_config
 
 
 class DaemonProxy:
@@ -21,11 +22,14 @@ class DaemonProxy:
         return request
 
     async def start(self):
-        self.websocket = await websockets.connect(self._uri)
+        self.websocket = await websockets.connect(self._uri, max_size=None)
 
         async def listener():
             while True:
-                message = await self.websocket.recv()
+                try:
+                    message = await self.websocket.recv()
+                except websockets.exceptions.ConnectionClosedOK:
+                    return
                 decoded = json.loads(message)
                 id = decoded["request_id"]
 
@@ -84,17 +88,20 @@ class DaemonProxy:
         response = await self._get(request)
         return response
 
+    async def close(self):
+        await self.websocket.close()
+
     async def exit(self):
         request = self.format_request("exit", {})
         return await self._get(request)
 
 
-async def connect_to_daemon():
+async def connect_to_daemon(self_hostname: str, daemon_port: int):
     """
     Connect to the local daemon.
     """
 
-    client = DaemonProxy("ws://127.0.0.1:55400")
+    client = DaemonProxy(f"ws://{self_hostname}:{daemon_port}")
     await client.start()
     return client
 
@@ -105,7 +112,10 @@ async def connect_to_daemon_and_validate(root_path):
     there and running.
     """
     try:
-        connection = await connect_to_daemon()
+        net_config = load_config(root_path, "config.yaml")
+        connection = await connect_to_daemon(
+            net_config["self_hostname"], net_config["daemon_port"]
+        )
         r = await connection.ping()
 
         if r["data"]["value"] == "pong":
@@ -113,5 +123,5 @@ async def connect_to_daemon_and_validate(root_path):
     except Exception as ex:
         # ConnectionRefusedError means that daemon is not yet running
         if not isinstance(ex, ConnectionRefusedError):
-            print("Exception connecting to daemon: {ex}")
+            print(f"Exception connecting to daemon: {ex}")
         return None

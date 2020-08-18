@@ -13,12 +13,12 @@ the doctor ordered.
 from clvm_tools import binutils
 
 from src.types.program import Program
+from src.util.clvm import run_program
 
 
 # contract:
 # generate puzzle: (() . puzzle_parameters)
 # generate solution: (1 . (puzzle_parameters . solution_parameters))
-from clvm import run_program
 
 
 def make_contract():

@@ -7,6 +7,7 @@ jobs:
   build:
     name: Ubuntu-latest on Python 3.7 + 3.8
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -20,16 +21,40 @@ jobs:
       with:
         access_token: ${{ github.token }}
 
-    - uses: actions/checkout@v1
+    - name: Checkout Code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        # we need fetch-depth 0 so setuptools_scm can resolve tags
 
     - name: Setup Python environment
-      uses: actions/setup-python@v1.1.1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Cache npm
+      uses: actions/cache@v2
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Get pip cache dir
+      id: pip-cache
+      run: |
+        echo "::set-output name=dir::$(pip cache dir)"
+
+    - name: Cache pip
+      uses: actions/cache@v2
+      with:
+        path: ${{ steps.pip-cache.outputs.dir }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Install ubuntu dependencies
       run: |
-        sudo apt-get update
         sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
         sudo apt-get install nodejs-dev node-gyp
 
@@ -50,15 +75,7 @@ jobs:
         . ./activate
         venv/bin/python -m pip install -r requirements-dev.txt
 
-    - name: Lint source with flake8
-      run: |
-        ./venv/bin/flake8 src
-
-    - name: Lint source with mypy
-      run: |
-        ./venv/bin/mypy src tests
-
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests -s -v
+        ./venv/bin/py.test tests -s -v --durations 0

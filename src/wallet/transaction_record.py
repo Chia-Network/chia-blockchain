@@ -32,6 +32,7 @@ class TransactionRecord(Streamable):
     # Represents the list of peers that we sent the transaction to, whether each one
     # included it in the mempool, and what the error message (if any) was
     sent_to: List[Tuple[str, uint8, Optional[str]]]
+    trade_id: Optional[bytes32]
 
     def name(self) -> bytes32:
         if self.spend_bundle:

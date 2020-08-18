@@ -6,6 +6,7 @@ jobs:
   build:
     name: Windows installer on 3.7
     runs-on: [windows-latest]
+    timeout-minutes: 60
 
     steps:
       - name: Cancel previous runs on the same branch
@@ -13,10 +14,37 @@ jobs:
         with:
           access_token: ${{ github.token }}
 
-      - uses: actions/checkout@v1
+      - name: Checkout Code
+        uses: actions/checkout@v2
         with:
           fetch-depth: 0
           # we need fetch-depth 0 so setuptools_scm can resolve tags
+
+      - name: Get npm cache directory
+        id: npm-cache
+        run: |
+          echo "::set-output name=dir::$(npm config get cache)"
+
+      - name: Cache npm
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.npm-cache.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Get pip cache dir
+        id: pip-cache
+        run: |
+          echo "::set-output name=dir::$(pip cache dir)"
+
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.pip-cache.outputs.dir }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Test for secrets access
         id: check_secrets
@@ -35,7 +63,7 @@ jobs:
           encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
           destination-file: .\electron-react\win_code_sign_cert.p12
 
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         name: Install Python 3.7
         with:
           python-version: "3.7"
@@ -43,7 +71,7 @@ jobs:
       - name: Build Windows installer with build_scripts\build_windows.ps1
         env:
           WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
-          HAS_SECRET: steps.check_secrets.outputs.HAS_SECRET
+          HAS_SECRET: ${{ steps.check_secrets.outputs.HAS_SECRET }}
         run: |
           $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
           $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"

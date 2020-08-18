@@ -8,15 +8,142 @@ for setuptools_scm/PEP 440 reasons.
 
 ## [Unreleased]
 
+## [1.0beta9] aka Beta 1.9 - 2020-07-27
+
 ### Added
+- See wallet balances in command line: `chia show -w`
+- Retry opening invalid plots every 20 minutes (so you can copy a large plot into a plot directory.)
+- We've added `chia keys sign` and `chia keys verify` to allow farmers to certify their ownership of keys.
+- Windows BLS Signature library now uses libsodium for additional security.
+- You can now backup and restore Smart Wallet metadata.
+- Binary wheels for ARM64/aarch64 also build for python 3.7.
+- See and remove plot directories from the UI and command line.
+- You can now specify the memory buffer in UI.
+- Optimized MPIR for Sandybridge and Ivybridge CPUs under Windows
 
 ### Changed
-- Minor changes have been made across the repositories to better support compiling on OpenBSD. HT @n1000.
-- A push to a branch will cancel all ci runs still running for that branch.
-- Ci's check to see if they have secret access and attempt to fail cleanly so that ci runs complete from PRs or forked repositories.
+- `chia start wallet-server` changed to `chia start wallet`, for consistency.
+- All data size units are clarified to displayed in GiB instead of GB (powers of 1024 instead of 1000.)
+- Better error messages for restoring wallet from mnemonic.
 
 ### Fixed
-- The version generator for new installers incorrectly handled the "dev" versions after a release tag.
+- Fixed open_connection not being cancelled when node exits.
+- Increase the robustness of node and wallet shutdown.
+- Handle disconnection and reconnection of hard drives properly.
+- Addressed pre-Haswell Windows signatures failing.
+- MacOS, Linux x64, and Linux aarch64 were not correctly compiling libsodium in
+the blspy/bls-signatures library.
+- Removed outdated "200 plots" language from Plot tab.
+- Fixed spelling error for "folder" on Plot tab.
+- Various node dependency security vulnerabilities have been fixed.
+- Request peers was not returning currently connected peers older than 1 day.
+- Fixed timeout exception inheritance changes under python 3.8 (pull 13528)
+
+### Deprecated
+- Removed legacy scripts such as chia-stop-server, chia-restart-harvester, etc.
+
+## [1.0beta8] aka Beta 1.8 - 2020-07-16
+
+### Added
+
+- We have released a new plot file format. We believe that plots made in this
+format and with these IETF BLS keys will work without significant changes on
+mainnet at launch.
+- We now use [chacha8](https://cr.yp.to/chacha.html) and
+[blake3](https://github.com/BLAKE3-team/BLAKE3) for proof of space instead of
+the now deprecated AES methods. This should increase plotting speed and support
+more processors.
+- Plot refreshing happens during all new challenges and only new/modified files
+are read.
+- Updated [blspy](https://github.com/Chia-Network/bls-signatures) to use the
+new [IETF standard for BLS signatures](https://tools.ietf.org/html/draft-irtf-cfrg-bls-signature-02).
+- Added a faster VDF process which generates n-wesolowski proofs quickly
+after the VDF result is known. This requires a high number of CPUs. To use it,
+set timelord.fast_algorithm = True in the config file.
+- Added a new type of timelord helper - blue boxes, which generate compact
+proofs of time for existing proven blocks. This helps reducing the database
+size and speeds up syncing a node for new users joining the network. Full nodes
+send 100 random un-compact blocks per hour to blue boxes, and if
+timelord.sanitizer_mode = True, the blue box timelord will work on those
+challenges. Unlike the main timelord, average machines can run blue boxes
+and contribute to the chain. Expect improvements to the install method for
+blue boxes in future releases.
+- From the UI you can add a directory that harvester will always check for
+existing and new plots. Harvester will only look in the specific directory you
+specify so you'll have to add any subfolders you want to also contain plots.
+- The UI now asks for confirmation before closing and shows shutdown progress.
+- UI now tries to shut down servers gracefully before exiting, and also closes
+the daemon before starting.
+- The various sub repositories (chiapos, chiavdf, etc.) now build ARM64 binary
+wheels for Linux with Python 3.8. This makes installing on Ubuntu 20.04 lts on
+a Raspberry Pi 3 or 4 easy.
+- Ci's check to see if they have secret access and attempt to fail cleanly so
+that ci runs successfully complete from PRs or forked repositories.
+- Farmer now sends challenges after a handshake with harvester.
+- The bls-signatures binary wheels include libsodium on all but Windows which
+we expect to add in future releases.
+- The chia executable is now available if installing from the Windows or MacOS
+Graphical installer. Try `./chia -h` from
+`~\AppData\Local\Chia-Blockchain\app-0.1.8\resources\app.asar.unpacked\daemon\`
+in Windows or
+`/Applications/Chia.app/Contents/Resources/app.asar.unpacked/daemon` on MacOS.
+
+### Changed
+- Minor changes have been made across the repositories to better support
+compiling on OpenBSD. HT @n1000.
+- Changed XCH units to TXCH units for testnet.
+- A push to a branch will cancel all ci runs still running for that branch.
+- Ci's now cache pip and npm caches between runs.
+- Improve test speed with smaller discriminants, less blocks, less keys, and
+smaller plots.
+- RPC servers and clients were refactored.
+- The keychain no longer supports old keys that don't have mnemonics.
+- The keychain uses BIP39 for seed derivation, using the "" passphrase, and
+also stores public keys.
+- Plots.yaml has been replaced.  Plot secret keys are stored in the plots,
+ and a list of directories that harvester can find plots in are in config.yaml.
+You can move plots around to any directory in config.yaml as long as the farmer
+has the correct farmer's secret key too.
+- Auto scanning of plot directories for .plot files.
+- The block header format was changed (puzzle hashes and pool signature).
+- Coinbase and fees coin are now in merkle set, and bip158 filter.
+- New harvester protocol with 2/2 harvester and farmer signatures, and modified
+farmer and full node protocols.
+- 255/256 filter which allows virtually unlimited plots per harvester or drive.
+- Improved create_plots and check_plots scripts, which are now
+"chia plots create" and "chia plots check".
+- Add plot directories to config.yaml from the cli with "chia plots add".
+- Use real plot sizes in UI instead of a formula/
+- HD keys now use EIP 2333 format instead of BIP32, for compatibility with
+other chains.
+- Keys are now derived with the EIP 2334 (m/12381/8444/a/b).
+- Removed the ability to pass in sk_seed to plotting, to increase security.
+- Linux builds of chiavdf and blspy now use a fresh build of gmp 6.2.1.
+
+### Fixed
+- uPnP now works on Windows.
+- Log rotation should now properly rotate every 20MB and keep 7 historical logs.
+- Node had a significant memory leak under load due to an extraneous fork
+in the network code.
+- Skylake processors on Windows without AVX would fail to run.
+- Harvester no longer runs into 512 maximum file handles open issue on Windows.
+- The version generator for new installers incorrectly handled the "dev"
+versions after a release tag.
+- Due to a python bug, ssl connections could randomly fail. Worked around
+[Python issue 29288](https://bugs.python.org/issue29288)
+- Removed websocket max message limit, allowing for more plots
+- Daemon was crashing when websocket gets improperly closed
+
+### Deprecated
+- All keys generated before Beta 1.8 are of an old format and no longer useful.
+- All plots generated before Beta 1.8 are no longer compatible with testnet and
+should be deleted.
+
+### Known Issues
+- For Windows users on pre Haswell CPUs there is a known issue that causes
+"Given G1 element failed g1_is_valid check" when attempting to generate
+keys. This is a regression from our previous fix when it was upstreamed into
+relic. We will make a patch available for these systems shortly.
 
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 
@@ -37,7 +164,7 @@ for setuptools_scm/PEP 440 reasons.
 - The install.sh script now discovers if it's running on Ubuntu less than 20.04 and correctly upgrades node.js to the current stable version.
 - For GitHub ci builds of the Windows installer, editbin.exe is more reliably found.
 - All installer ci builds now obtain version information automatically from setuptools_scm and convert it to an installer version number that is appropriate for the platform and type of release (dev versus release.)
-- We now codesign the Apple .dmg installer with the Chia Network developer ID on both GitHub Actins and Azure Pipelines. We will be notarizing and distributing the Azure Pipelines version as it's built on MacOS Mojave (10.14.6) for stronger cross version support.
+- We now codesign the Apple .dmg installer with the Chia Network developer ID on both GitHub Actions and Azure Pipelines. We will be notarizing and distributing the Azure Pipelines version as it's built on MacOS Mojave (10.14.6) for stronger cross version support.
 
 ### Fixed
 - Having spaces in the path to a plot or temporary directory caused plotting to fail.
@@ -142,7 +269,7 @@ for setuptools_scm/PEP 440 reasons.
 - Harvester is now asynchronous and will better be able to look up more plots spread across more physical drives.
 - Full node startup time has been sped up significantly by optimizing the loading of the blockchain from disk.
 
-# Changed
+### Changed
 
 - Most scripts have been removed in favor of chia action commands. You can run `chia version` or `chia start node` for example. Just running `chia` will show you more options. However `chia-create-plots` continues to use the hyphenated form. Also it's now `chia generate keys` as another example.
 - Chia start commands like `chia start farmer` and `chia stop node` now keep track of process IDs in a run/ directory in your configuration directory. `chia stop` is unlikely to work on Windows native for now. If `chia start -r node` doesn't work you can force the run/ directory to be reset with `chia start -f node`.
@@ -178,7 +305,7 @@ for setuptools_scm/PEP 440 reasons.
 - We've made lots of little improvements that should speed up node syncing
 - We added full block lookup to `chia show`.
 
-# Changed
+### Changed
 
 - `chia-restart-harvester` has been renamed from `chia-start-harvester` to better reflect its functionality. Use it to restart a harvester that's farming so that it will pick up newly finished plots.
 - We made the Wallet configurable to connect to a remote trusted node.
@@ -186,11 +313,11 @@ for setuptools_scm/PEP 440 reasons.
 - We updated our miniupnpc dependency to version 2.1.
 - We increase the default farmer propagate threshold to reduce chain stall probability.
 
-# Deprecated
+### Deprecated
 
 - You should not copy over any prior Wallet database as they are not compatible with Beta3. Your existing full node will not have to re-sync and its database remains compatible.
 
-#Fixed
+#### Fixed
 
 - Among a lot of bug fixes was removing a regression that slowed plotting on MacOS by 3 times and may have had smaller impacts on plotting speed on other platforms.
 - We've removed some race conditions in the Wallet
@@ -215,7 +342,7 @@ for setuptools_scm/PEP 440 reasons.
 - If you’re a farmer you can use the Wallet to keep track of your earnings. Either use the same keys.yaml on the same machine or copy the keys.yaml to another machine where you want to track of and spend your coins.
 - We have continued to make improvements to the speed of VDF squaring, creating a VDF proof, and verifying a VDF proof.
 
-# Changed
+### Changed
 
 - We have revamped the chia management command line. To start a farmer all you have to do is start the venv with `. ./activate` and then type `chia-start-farmer &`. The [README.md](https://github.com/Chia-Network/chia-blockchain/blob/master/README.md) has been updated to reflect the new commands.
 - We have moved all node to node communication to TLS 1.3 by default. For now, all TLS is unauthenticated but certain types of over the wire node to node communications will have the ability to authenticate both by certificate and by inter protocol signature. Encrypting over the wire by default stops casual snooping of transaction origination, light wallet to trusted node communication, and harvester-farmer-node communication for example. This leaves only the mempool and the chain itself open to casual observation by the public and the various entities around the world.
@@ -228,7 +355,7 @@ for setuptools_scm/PEP 440 reasons.
 - Developer requirements were separated from the actual requirements.
 - `install-timelord.sh` has been pulled out from `install.sh`. This script downloads the source python package for chiavdf and compiles it locally for timelords. vdf_client can be included or excluded to make building normal user wheels easier.
 
-# Removed
+### Removed
 
 - The Beta release is not compatible with the history of the Alpha blockchain and we will be ceasing support of the Alpha chain approximately two weeks after the release of this Beta. However, your plots and keys are fully compatible with the Beta chain. Please save your plot keys! Examples of how to save your keys and upgrade to the Beta are available on the [repo wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
 - The ssh ui and web ui are removed in favor of the cli ui and the Electron GUI. To mimic the ssh ui try `chia show -s -c` and try `chia show --help` for usage instructions.
@@ -252,7 +379,7 @@ for setuptools_scm/PEP 440 reasons.
 - You can now provide an index to create_plots using the -i flag to create an arbitrary new plot derived from an existing plot key. Thanks @xorinox.
 - There is a new restart_harvester.sh in scripts/ to easily restart a harvester when you want to add a newly completed plot to the farm without restarting farmer, fullnode, timelord, etc.
 - Harvesters now log errors if they encounter a malformed or corrupted plot file. Again thanks @xorinox.
-- New AJAX based full node UI. To access go to http://127.0.0.1:8555/index.html with any modern web browser on the same machine as the full node.
+- New AJAX based full node UI. To access go to [http://127.0.0.1:8555/index.html](http://127.0.0.1:8555/index.html) with any modern web browser on the same machine as the full node.
 - If you want to benchmark your CPU as a VDF you can use vdf_bench square_asm 500000 for the assembly optimized test or just vdf_bench square 500000 for the plain C++ code path. This tool is found in lib/chiavdf/fast_vdf/.
 - Improvements to shutting down services in all of the scripts in scripts/. Another @xorinox HT.
 
@@ -385,7 +512,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 
 - This is the first release of the Chia testnet! Blockchain consensus, proof of time, and proof of space are included.
-- More details on the release at https://www.chia.net/developer/
+- More details on the release at [https://www.chia.net/developer/](https://www.chia.net/developer/)
 
 [unreleased]: https://github.com/Chia-Network/chia-blockchain/compare/1.0beta5...dev
 [1.0beta5]: https://github.com/Chia-Network/chia-blockchain/compare/1.0beta4...1.0beta5

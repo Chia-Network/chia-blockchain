@@ -5,19 +5,21 @@ from pathlib import Path
 from typing import Dict
 
 from src.util.path import mkdir, path_from_root
-from logging.handlers import RotatingFileHandler
+from concurrent_log_handler import ConcurrentRotatingFileHandler
 
 
-def initialize_logging(prefix: str, logging_config: Dict, root_path: Path):
+def initialize_logging(service_name: str, logging_config: Dict, root_path: Path):
     log_path = path_from_root(
         root_path, logging_config.get("log_filename", "log/debug.log")
     )
     mkdir(str(log_path.parent))
+    file_name_length = 33 - len(service_name)
     if logging_config["log_stdout"]:
         handler = colorlog.StreamHandler()
         handler.setFormatter(
             colorlog.ColoredFormatter(
-                f"{prefix}: %(log_color)s%(levelname)-8s%(reset)s %(asctime)s.%(msecs)03d %(message)s",
+                f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: "
+                f"%(log_color)s%(levelname)-8s%(reset)s %(message)s",
                 datefmt="%H:%M:%S",
                 reset=True,
             )
@@ -26,15 +28,16 @@ def initialize_logging(prefix: str, logging_config: Dict, root_path: Path):
         logger = colorlog.getLogger()
         logger.addHandler(handler)
     else:
-        logging.basicConfig(
-            filename=log_path,
-            filemode="a",
-            format=f"{prefix}: %(levelname)-8s %(asctime)s.%(msecs)03d %(message)s",
-            datefmt="%H:%M:%S",
-        )
-
         logger = logging.getLogger()
-        handler = RotatingFileHandler(log_path, maxBytes=20000000, backupCount=7)
+        handler = ConcurrentRotatingFileHandler(
+            log_path, "a", maxBytes=20 * 1024 * 1024, backupCount=7
+        )
+        handler.setFormatter(
+            logging.Formatter(
+                fmt=f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s",
+                datefmt="%H:%M:%S",
+            )
+        )
         logger.addHandler(handler)
 
     if "log_level" in logging_config:

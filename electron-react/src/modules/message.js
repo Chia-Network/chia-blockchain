@@ -1,4 +1,21 @@
-import { service_wallet_server } from "../util/service_names";
+import { service_wallet } from "../util/service_names";
+import { openProgress, closeProgress } from "./progressReducer";
+import { refreshAllState } from "../middleware/middleware_api";
+import { setIncorrectWord, resetMnemonic } from "./mnemonic_input";
+import {
+  changeEntranceMenu,
+  presentRestoreBackup,
+  presentOldWallet
+} from "./entranceMenu";
+import { openDialog } from "./dialogReducer";
+import { createState } from "./createWalletReducer";
+import {
+  addPlotDirectory,
+  getPlotDirectories,
+  removePlotDirectory,
+  getPlots,
+  refreshPlots
+} from "./harvesterMessages";
 
 export const clearSend = () => {
   var action = {
@@ -11,9 +28,44 @@ export const clearSend = () => {
 export const walletMessage = () => ({
   type: "OUTGOING_MESSAGE",
   message: {
-    destination: service_wallet_server
+    destination: service_wallet
   }
 });
+
+export const selectFingerprint = fingerprint => ({
+  type: "SELECT_FINGERPRINT",
+  fingerprint: fingerprint
+});
+
+export const unselectFingerprint = () => ({
+  type: "UNSELECT_FINGERPRINT"
+});
+
+export const selectMnemonic = mnemonic => ({
+  type: "SELECT_MNEMONIC",
+  mnemonic: mnemonic
+});
+
+export const showCreateBackup = show => ({
+  type: "SHOW_CREATE_BACKUP",
+  show: show
+});
+
+export const async_api = (dispatch, action, open_spinner) => {
+  if (open_spinner === true) {
+    dispatch(openProgress());
+  }
+  var resolve_callback;
+  var reject_callback;
+  let myFirstPromise = new Promise((resolve, reject) => {
+    resolve_callback = resolve;
+    reject_callback = reject;
+  });
+  action.resolve_callback = resolve_callback;
+  action.reject_callback = reject_callback;
+  dispatch(action);
+  return myFirstPromise;
+};
 
 export const format_message = (command, data) => {
   var action = walletMessage();
@@ -55,18 +107,96 @@ export const genereate_mnemonics = () => {
   return action;
 };
 
-export const add_key = mnemonic => {
+export const add_key = (mnemonic, type, file_path) => {
   var action = walletMessage();
   action.message.command = "add_key";
-  action.message.data = { mnemonic: mnemonic };
+  action.message.data = {
+    mnemonic: mnemonic,
+    type: type,
+    file_path: file_path
+  };
   return action;
 };
 
-export const add_key_hex = hexkey => {
-  var action = walletMessage();
-  action.message.command = "add_key";
-  action.message.data = { hexkey };
-  return action;
+export const add_new_key_action = mnemonic => {
+  return dispatch => {
+    return async_api(
+      dispatch,
+      add_key(mnemonic, "new_wallet", null),
+      true
+    ).then(response => {
+      dispatch(closeProgress());
+      if (response.data.success) {
+        // Go to wallet
+        dispatch(resetMnemonic());
+        dispatch(format_message("get_public_keys", {}));
+        refreshAllState(dispatch);
+      } else {
+        if (response.data.word) {
+          dispatch(setIncorrectWord(response.data.word));
+          dispatch(changeEntranceMenu(presentOldWallet));
+        } else if (response.data.error === "Invalid order of mnemonic words") {
+          dispatch(changeEntranceMenu(presentOldWallet));
+        }
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
+};
+
+export const add_and_skip_backup = mnemonic => {
+  return dispatch => {
+    return async_api(dispatch, add_key(mnemonic, "skip", null), true).then(
+      response => {
+        dispatch(closeProgress());
+        if (response.data.success) {
+          // Go to wallet
+          dispatch(resetMnemonic());
+          dispatch(format_message("get_public_keys", {}));
+          refreshAllState(dispatch);
+        } else {
+          if (response.data.word) {
+            dispatch(setIncorrectWord(response.data.word));
+            dispatch(changeEntranceMenu(presentOldWallet));
+          } else if (
+            response.data.error === "Invalid order of mnemonic words"
+          ) {
+            dispatch(changeEntranceMenu(presentOldWallet));
+          }
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
+};
+
+export const add_and_restore_from_backup = (mnemonic, file_path) => {
+  return dispatch => {
+    return async_api(
+      dispatch,
+      add_key(mnemonic, "restore_backup", file_path),
+      true
+    ).then(response => {
+      dispatch(closeProgress());
+      if (response.data.success) {
+        // Go to wallet
+        dispatch(resetMnemonic());
+        dispatch(format_message("get_public_keys", {}));
+        refreshAllState(dispatch);
+      } else {
+        if (response.data.word) {
+          dispatch(setIncorrectWord(response.data.word));
+          dispatch(changeEntranceMenu(presentOldWallet));
+        } else if (response.data.error === "Invalid order of mnemonic words") {
+          dispatch(changeEntranceMenu(presentOldWallet));
+        }
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
 };
 
 export const delete_key = fingerprint => {
@@ -86,8 +216,70 @@ export const delete_all_keys = () => {
 export const log_in = fingerprint => {
   var action = walletMessage();
   action.message.command = "log_in";
-  action.message.data = { fingerprint: fingerprint };
+  action.message.data = { fingerprint: fingerprint, type: "normal" };
   return action;
+};
+
+export const log_in_and_skip_import = fingerprint => {
+  var action = walletMessage();
+  action.message.command = "log_in";
+  action.message.data = { fingerprint: fingerprint, type: "skip" };
+  return action;
+};
+
+export const log_in_and_import_backup = (fingerprint, file_path) => {
+  var action = walletMessage();
+  action.message.command = "log_in";
+  action.message.data = {
+    fingerprint: fingerprint,
+    type: "restore_backup",
+    file_path: file_path
+  };
+  return action;
+};
+
+export const login_and_skip_action = fingerprint => {
+  return dispatch => {
+    dispatch(selectFingerprint(fingerprint));
+    return async_api(dispatch, log_in_and_skip_import(fingerprint), true).then(
+      response => {
+        dispatch(closeProgress());
+        if (response.data.success) {
+          // Go to wallet
+          refreshAllState(dispatch);
+        } else {
+          const error = response.data.error;
+          if (error === "not_initialized") {
+            dispatch(changeEntranceMenu(presentRestoreBackup));
+            // Go to restore from backup screen
+          } else {
+            dispatch(openDialog("Error", error));
+          }
+        }
+      }
+    );
+  };
+};
+
+export const login_action = fingerprint => {
+  return dispatch => {
+    dispatch(selectFingerprint(fingerprint));
+    return async_api(dispatch, log_in(fingerprint), true).then(response => {
+      dispatch(closeProgress());
+      if (response.data.success) {
+        // Go to wallet
+        refreshAllState(dispatch);
+      } else {
+        const error = response.data.error;
+        if (error === "not_initialized") {
+          dispatch(changeEntranceMenu(presentRestoreBackup));
+          // Go to restore from backup screen
+        } else {
+          dispatch(openDialog("Error", error));
+        }
+      }
+    });
+  };
 };
 
 export const get_private_key = fingerprint => {
@@ -134,31 +326,97 @@ export const get_sync_status = () => {
 
 export const get_connection_info = () => {
   var action = walletMessage();
-  action.message.command = "get_connection_info";
+  action.message.command = "get_connections";
   action.message.data = {};
   return action;
 };
 
-export const create_coloured_coin = amount => {
+export const create_coloured_coin = (amount, fee) => {
   var action = walletMessage();
   action.message.command = "create_new_wallet";
   action.message.data = {
     wallet_type: "cc_wallet",
     mode: "new",
-    amount: amount
+    amount: amount,
+    fee: fee
   };
   return action;
 };
 
-export const create_cc_for_colour = colour => {
+export const create_cc_for_colour = (colour, fee) => {
   var action = walletMessage();
   action.message.command = "create_new_wallet";
   action.message.data = {
     wallet_type: "cc_wallet",
     mode: "existing",
-    colour: colour
+    colour: colour,
+    fee: fee
   };
   return action;
+};
+
+export const create_backup = file_path => {
+  var action = walletMessage();
+  action.message.command = "create_backup";
+  action.message.data = {
+    file_path: file_path
+  };
+  return action;
+};
+
+export const create_backup_action = file_path => {
+  return dispatch => {
+    return async_api(dispatch, create_backup(file_path), true).then(
+      response => {
+        dispatch(closeProgress());
+        if (response.data.success) {
+          dispatch(showCreateBackup(false));
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
+};
+
+export const create_cc_action = (amount, fee) => {
+  return dispatch => {
+    return async_api(dispatch, create_coloured_coin(amount, fee), true).then(
+      response => {
+        dispatch(closeProgress());
+        dispatch(createState(true, false));
+        if (response.data.success) {
+          // Go to wallet
+          dispatch(format_message("get_wallets", {}));
+          dispatch(showCreateBackup(true));
+          dispatch(createState(true, false));
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
+};
+
+export const create_cc_for_colour_action = (colour, fee) => {
+  return dispatch => {
+    return async_api(dispatch, create_cc_for_colour(colour, fee), true).then(
+      response => {
+        dispatch(closeProgress());
+        dispatch(createState(true, false));
+        if (response.data.success) {
+          // Go to wallet
+          dispatch(showCreateBackup(true));
+          dispatch(format_message("get_wallets", {}));
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
 };
 
 export const get_colour_info = wallet_id => {
@@ -182,46 +440,57 @@ export const rename_cc_wallet = (wallet_id, name) => {
   return action;
 };
 
-export const cc_spend = (wallet_id, puzzle_hash, amount) => {
+export const cc_spend = (wallet_id, puzzle_hash, amount, fee) => {
   var action = walletMessage();
   action.message.command = "cc_spend";
   action.message.data = {
     wallet_id: wallet_id,
     innerpuzhash: puzzle_hash,
-    amount: amount
+    amount: amount,
+    fee: fee
   };
-  return action;
-};
-
-export const create_trade_offer = (trades, filepath) => {
-  var action = walletMessage();
-  action.message.command = "create_offer_for_ids";
-  const data = {
-    ids: trades,
-    filename: filepath
-  };
-  action.message.data = data;
   return action;
 };
 
 export const logOut = (command, data) => ({ type: "LOG_OUT", command, data });
 
-export const parse_trade_offer = filepath => {
-  var action = walletMessage();
-  action.message.command = "get_discrepancies_for_offer";
-  const data = { filename: filepath };
-  action.message.data = data;
-  return action;
-};
-
-export const accept_trade_offer = filepath => {
-  var action = walletMessage();
-  action.message.command = "respond_to_offer";
-  action.message.data = { filename: filepath };
-  return action;
-};
-
 export const incomingMessage = message => ({
   type: "INCOMING_MESSAGE",
   message: message
 });
+
+export const add_plot_directory_and_refresh = dir => {
+  return dispatch => {
+    return async_api(dispatch, addPlotDirectory(dir), true).then(response => {
+      if (response.data.success) {
+        dispatch(getPlotDirectories());
+        return async_api(dispatch, refreshPlots(), false).then(response => {
+          dispatch(closeProgress());
+          dispatch(getPlots());
+        });
+      } else {
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
+};
+
+export const remove_plot_directory_and_refresh = dir => {
+  return dispatch => {
+    return async_api(dispatch, removePlotDirectory(dir), true).then(
+      response => {
+        if (response.data.success) {
+          dispatch(getPlotDirectories());
+          return async_api(dispatch, refreshPlots(), false).then(response => {
+            dispatch(closeProgress());
+            dispatch(getPlots());
+          });
+        } else {
+          const error = response.data.error;
+          dispatch(openDialog("Error", error));
+        }
+      }
+    );
+  };
+};

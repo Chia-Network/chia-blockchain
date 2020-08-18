@@ -1,12 +1,12 @@
 from typing import Optional, Tuple
 
 from clvm_tools import binutils
-import clvm
+from blspy import AugSchemeMPL
 import string
-from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
+from src.util.clvm import run_program
 
 
 # This is for spending an existing coloured coin
@@ -18,7 +18,7 @@ from src.util.ints import uint64
 def cc_make_puzzle(innerpuzhash, core):
     # Puzzle runs the core, but stores innerpuzhash commitment
     puzstring = f"(r (c (q 0x{innerpuzhash}) ((c (q {core}) (a)))))"
-    result = Program(binutils.assemble(puzstring))
+    result = Program.to(binutils.assemble(puzstring))
     return result
 
 
@@ -101,7 +101,7 @@ def create_spend_for_ephemeral(parent_of_e, auditor_coin, spend_amount):
     puzzle = Program(binutils.assemble(puzstring))
     coin = Coin(parent_of_e.name(), puzzle.get_tree_hash(), uint64(0))
     solution = Program(binutils.assemble("()"))
-    coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
+    coinsol = CoinSolution(coin, Program.to([puzzle, solution]))
     return coinsol
 
 
@@ -111,7 +111,7 @@ def create_spend_for_auditor(parent_of_a, auditee):
     puzzle = Program(binutils.assemble(puzstring))
     coin = Coin(parent_of_a.name(), puzzle.get_tree_hash(), uint64(0))
     solution = Program(binutils.assemble("()"))
-    coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
+    coinsol = CoinSolution(coin, Program.to([puzzle, solution]))
     return coinsol
 
 
@@ -119,8 +119,8 @@ def cc_generate_eve_spend(coin: Coin, full_puzzle: Program):
     solution = cc_make_eve_solution(
         coin.parent_coin_info, coin.puzzle_hash, coin.amount
     )
-    list_of_solutions = [CoinSolution(coin, clvm.to_sexp_f([full_puzzle, solution]),)]
-    aggsig = BLSSignature.aggregate([])
+    list_of_solutions = [CoinSolution(coin, Program.to([full_puzzle, solution]),)]
+    aggsig = AugSchemeMPL.aggregate([])
     spend_bundle = SpendBundle(list_of_solutions, aggsig)
     return spend_bundle
 
@@ -136,7 +136,7 @@ def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
 
 
 def get_output_amount_for_puzzle_and_solution(puzzle, solution):
-    conditions = clvm.run_program(puzzle, solution)[1]
+    conditions = run_program(puzzle, solution)[1]
     amount = 0
     while conditions != b"":
         opcode = conditions.first().first()

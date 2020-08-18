@@ -1,11 +1,11 @@
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint8, uint64
+from src.util.ints import uint64
 from src.consensus.pos_quality import quality_str_to_quality
 
 
 def calculate_iterations_quality(
-    quality: bytes32, size: uint8, difficulty: uint64, min_iterations: uint64,
+    quality: bytes32, size: int, difficulty: int, min_iterations: int,
 ) -> uint64:
     """
     Calculates the number of iterations from the quality. The quality is converted to a number
@@ -20,27 +20,34 @@ def calculate_iterations_quality(
 
 
 def calculate_iterations(
-    proof_of_space: ProofOfSpace, difficulty: uint64, min_iterations: uint64,
+    proof_of_space: ProofOfSpace,
+    difficulty: int,
+    min_iterations: int,
+    num_zero_bits: int,
 ) -> uint64:
     """
     Convenience function to calculate the number of iterations using the proof instead
     of the quality. The quality must be retrieved from the proof.
     """
-    quality: bytes32 = proof_of_space.verify_and_get_quality_string()
+    quality: bytes32 = proof_of_space.verify_and_get_quality_string(num_zero_bits)
+    assert quality is not None
     return calculate_iterations_quality(
         quality, proof_of_space.size, difficulty, min_iterations
     )
 
 
 def calculate_min_iters_from_iterations(
-    proof_of_space: ProofOfSpace, difficulty: uint64, iterations: uint64,
+    proof_of_space: ProofOfSpace,
+    difficulty: int,
+    iterations: uint64,
+    num_zero_bits: int,
 ) -> uint64:
     """
     Using the total number of iterations on a block (which is encoded in the block) along with
     other details, we can calculate the constant factor in iterations, which is not written into
     the block.
     """
-    quality: bytes32 = proof_of_space.verify_and_get_quality_string()
+    quality: bytes32 = proof_of_space.verify_and_get_quality_string(num_zero_bits)
     iters_rounded = (int(difficulty) << 32) // quality_str_to_quality(
         quality, proof_of_space.size
     )

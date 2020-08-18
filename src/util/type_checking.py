@@ -67,7 +67,10 @@ def strictdataclass(cls: Any):
                 try:
                     item = f_type(item)
                 except (TypeError, AttributeError, ValueError):
-                    item = f_type.from_bytes(item)
+                    try:
+                        item = f_type.from_bytes(item)
+                    except Exception:
+                        item = f_type.from_bytes(bytes(item))
             if not isinstance(item, f_type):
                 raise ValueError(f"Wrong type for {f_name}")
             return item

@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles, withStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
@@ -9,8 +8,6 @@ import Box from "@material-ui/core/Box";
 import {
   Paper,
   TableRow,
-  Drawer,
-  Divider,
   List,
   ListItem,
   ListItemText,
@@ -25,22 +22,23 @@ import TableHead from "@material-ui/core/TableHead";
 import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
 import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import IconButton from "@material-ui/core/IconButton";
+import Dialog from "@material-ui/core/Dialog";
+import DialogActions from "@material-ui/core/DialogActions";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogContentText from "@material-ui/core/DialogContentText";
+import DialogTitle from "@material-ui/core/DialogTitle";
 
-import { calculateSizeFromK } from "../util/plot_sizes";
 import { closeConnection, openConnection } from "../modules/farmerMessages";
 import {
   refreshPlots,
   deletePlot,
-  addPlot
+  getPlotDirectories
 } from "../modules/harvesterMessages";
 
 import TablePagination from "@material-ui/core/TablePagination";
 import RefreshIcon from "@material-ui/icons/Refresh";
 import Connections from "./Connections";
 
-import Plotter from "./Plotter";
-import { presentFarmer } from "../modules/farmer_menu";
-import { presentPlotter, changeFarmerMenu } from "../modules/farmer_menu";
 import { big_int_to_array, arr_to_hex, sha256 } from "../util/utils";
 import { mojo_to_chia_string } from "../util/chia";
 import HelpIcon from "@material-ui/icons/Help";
@@ -142,7 +140,7 @@ const getStatusItems = (
 
   status_items.push({
     label: "Total size of local plots",
-    value: Math.floor(farmerSpace / Math.pow(1024, 3)).toString() + " GB",
+    value: Math.floor(farmerSpace / Math.pow(1024, 3)).toString() + " GiB",
     tooltip:
       "You have " +
       (proportion * 100).toFixed(6) +
@@ -207,11 +205,10 @@ const FarmerStatus = props => {
   const totalNetworkSpace = useSelector(
     state => state.full_node_state.blockchain_state.space
   );
+
   var farmerSpace = 0;
   if (plots !== undefined) {
-    farmerSpace = plots
-      .map(p => calculateSizeFromK(p.size))
-      .reduce((a, b) => a + b, 0);
+    farmerSpace = plots.map(p => p.file_size).reduce((a, b) => a + b, 0);
   }
 
   const connected = useSelector(state => state.daemon_state.farmer_connected);
@@ -268,7 +265,7 @@ const Challenges = props => {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Challange hash</TableCell>
+                  <TableCell>Challenge hash</TableCell>
                   <TableCell align="right">Height</TableCell>
                   <TableCell align="right">Number of proofs</TableCell>
                   <TableCell align="right">Best estimate</TableCell>
@@ -313,7 +310,9 @@ const Plots = props => {
   plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
-  const [open, setOpen] = React.useState(false);
+  const [addDirectoryOpen, addDirectorySetOpen] = React.useState(false);
+  const [deletePlotName, deletePlotSetName] = React.useState("");
+  const [deletePlotOpen, deletePlotSetOpen] = React.useState(false);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -324,30 +323,21 @@ const Plots = props => {
     setPage(0);
   };
 
-  const deletePlotClick = filename => {
-    return () => {
-      dispatch(deletePlot(filename));
-    };
-  };
-
   const refreshPlotsClick = () => {
     dispatch(refreshPlots());
   };
-  const handleClose = responseDict => {
-    setOpen(false);
-    if (
-      responseDict["plotPath"] &&
-      responseDict["poolPkHex"] &&
-      responseDict["skHex"]
-    ) {
-      dispatch(
-        addPlot(
-          responseDict["plotPath"],
-          responseDict["poolPkHex"],
-          responseDict["skHex"]
-        )
-      );
-    }
+  const addDirectoryHandleClose = () => {
+    addDirectorySetOpen(false);
+  };
+
+  const handleCloseDeletePlot = () => {
+    deletePlotSetOpen(false);
+  };
+
+  const handleCloseDeletePlotYes = () => {
+    handleCloseDeletePlot();
+    console.log("deleting plot", deletePlotName);
+    dispatch(deletePlot(deletePlotName));
   };
 
   return (
@@ -371,10 +361,11 @@ const Plots = props => {
                 color="primary"
                 className={classes.addPlotButton}
                 onClick={() => {
-                  setOpen(true);
+                  dispatch(getPlotDirectories());
+                  addDirectorySetOpen(true);
                 }}
               >
-                Add plot
+                Manage plot directories
               </Button>
               <AddPlotDialog
                 classes={{
@@ -382,8 +373,8 @@ const Plots = props => {
                 }}
                 id="ringtone-menu"
                 keepMounted
-                open={open}
-                onClose={handleClose}
+                open={addDirectoryOpen}
+                onClose={addDirectoryHandleClose}
               />
             </Typography>
           </div>
@@ -398,7 +389,7 @@ const Plots = props => {
                 <TableRow>
                   <TableCell>Filename</TableCell>
                   <TableCell align="right">Size</TableCell>
-                  <TableCell align="right">Plot seed</TableCell>
+                  <TableCell align="right">Plot id</TableCell>
                   <TableCell align="right">Plot pk</TableCell>
                   <TableCell align="right">Pool pk</TableCell>
                   <TableCell align="right">Delete</TableCell>
@@ -414,25 +405,38 @@ const Plots = props => {
                           <span>{item.filename.substring(0, 40)}...</span>
                         </Tooltip>
                       </TableCell>
-                      <TableCell align="right">{item.size}</TableCell>
+                      <TableCell align="right">
+                        {item.size} (
+                        {Math.round(
+                          (item.file_size * 1000) / (1024 * 1024 * 1024)
+                        ) / 1000}
+                        GiB)
+                      </TableCell>
                       <TableCell align="right">
                         <Tooltip title={item["plot-seed"]} interactive>
                           <span>{item["plot-seed"].substring(0, 10)}</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title={item.plot_pk} interactive>
-                          <span>{item.plot_pk.substring(0, 10)}...</span>
+                        <Tooltip title={item.plot_public_key} interactive>
+                          <span>
+                            {item.plot_public_key.substring(0, 10)}...
+                          </span>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title={item.pool_pk} interactive>
-                          <span>{item.pool_pk.substring(0, 10)}...</span>
+                        <Tooltip title={item.pool_public_key} interactive>
+                          <span>
+                            {item.pool_public_key.substring(0, 10)}...
+                          </span>
                         </Tooltip>
                       </TableCell>
                       <TableCell
                         className={classes.clickable}
-                        onClick={deletePlotClick(item.filename)}
+                        onClick={() => {
+                          deletePlotSetName(item.filename);
+                          deletePlotSetOpen(true);
+                        }}
                         align="right"
                       >
                         <DeleteForeverIcon fontSize="small"></DeleteForeverIcon>
@@ -471,7 +475,10 @@ const Plots = props => {
                       <IconButton
                         edge="end"
                         aria-label="delete"
-                        onClick={deletePlotClick(filename)}
+                        onClick={() => {
+                          deletePlotSetName(filename);
+                          deletePlotSetOpen(true);
+                        }}
                       >
                         <DeleteForeverIcon />
                       </IconButton>
@@ -501,7 +508,10 @@ const Plots = props => {
                       <IconButton
                         edge="end"
                         aria-label="delete"
-                        onClick={deletePlotClick(filename)}
+                        onClick={() => {
+                          deletePlotSetName(filename);
+                          deletePlotSetOpen(true);
+                        }}
                       >
                         <DeleteForeverIcon />
                       </IconButton>
@@ -515,6 +525,32 @@ const Plots = props => {
           )}
         </Grid>
       </Grid>
+      <Dialog
+        open={deletePlotOpen}
+        onClose={handleCloseDeletePlot}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Delete all keys"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            Are you sure you want to delete the plot? The plot cannot be
+            recovered.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeletePlot} color="secondary">
+            Back
+          </Button>
+          <Button
+            onClick={handleCloseDeletePlotYes}
+            color="secondary"
+            autoFocus
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 };
@@ -537,74 +573,35 @@ const FarmerContent = props => {
   const closeConnectionCallback = node_id => {
     dispatch(closeConnection(node_id));
   };
-
-  const to_present = useSelector(state => state.farmer_menu.view);
-
-  if (to_present === presentFarmer) {
-    return (
-      <Container maxWidth="lg" className={classes.container}>
-        <Grid container spacing={3}>
-          {/* Chart */}
-          <Grid item xs={12}>
-            <FarmerStatus
-              totalChiaFarmed={props.totalChiaFarmed}
-              biggestHeight={props.biggestHeight}
-            ></FarmerStatus>
-          </Grid>
-          <Grid item xs={12}>
-            <Challenges></Challenges>
-          </Grid>
-          <Grid item xs={12}>
-            <Plots></Plots>
-          </Grid>
-          <Grid item xs={12}>
-            <Connections
-              connections={connections}
-              connectionError={connectionError}
-              openConnection={openConnectionCallback}
-              closeConnection={closeConnectionCallback}
-            ></Connections>
-          </Grid>
+  return (
+    <Container maxWidth="lg" className={classes.container}>
+      <Grid container spacing={3}>
+        {/* Chart */}
+        <Grid item xs={12}>
+          <FarmerStatus
+            totalChiaFarmed={props.totalChiaFarmed}
+            biggestHeight={props.biggestHeight}
+          ></FarmerStatus>
         </Grid>
-      </Container>
-    );
-  } else {
-    return <Plotter></Plotter>;
-  }
-};
-
-const FarmerListItem = props => {
-  const dispatch = useDispatch();
-  const label = props.label;
-  const type = props.type;
-  function present() {
-    if (type === presentFarmer) {
-      dispatch(changeFarmerMenu(presentFarmer));
-    } else if (type === presentPlotter) {
-      dispatch(changeFarmerMenu(presentPlotter));
-    }
-  }
-
-  return (
-    <ListItem button onClick={present}>
-      <ListItemText primary={label} />
-    </ListItem>
+        <Grid item xs={12}>
+          <Challenges></Challenges>
+        </Grid>
+        <Grid item xs={12}>
+          <Plots></Plots>
+        </Grid>
+        <Grid item xs={12}>
+          <Connections
+            connections={connections}
+            connectionError={connectionError}
+            openConnection={openConnectionCallback}
+            closeConnection={closeConnectionCallback}
+          ></Connections>
+        </Grid>
+      </Grid>
+    </Container>
   );
 };
 
-const FarmerMenuList = () => {
-  return (
-    <List>
-      <FarmerListItem
-        label="Farmer & Harvester"
-        type={presentFarmer}
-      ></FarmerListItem>
-      <Divider />
-      <FarmerListItem label="Plotter" type={presentPlotter}></FarmerListItem>
-      <Divider />
-    </List>
-  );
-};
 class Farmer extends Component {
   constructor(props) {
     super(props);
@@ -673,19 +670,8 @@ class Farmer extends Component {
 
   render() {
     const classes = this.props.classes;
-    var open = true;
     return (
       <div className={classes.root}>
-        <CssBaseline />
-        <Drawer
-          variant="permanent"
-          classes={{
-            paper: classes.drawerPaper
-          }}
-          open={open}
-        >
-          <FarmerMenuList></FarmerMenuList>
-        </Drawer>
         <main className={classes.content}>
           <Container maxWidth="lg" className={classes.noPadding}>
             <FarmerContent

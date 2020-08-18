@@ -1,100 +1,67 @@
-import asyncio
-import logging
-import logging.config
-import signal
+from multiprocessing import freeze_support
+
+from src.rpc.full_node_rpc_api import FullNodeRpcApi
+from src.server.outbound_message import NodeType
+from src.server.start_service import run_service
+from src.util.config import load_config_cli
+from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.path import mkdir, path_from_root
 from src.simulator.full_node_simulator import FullNodeSimulator
 from src.simulator.simulator_constants import test_constants
-
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
-
-from src.rpc.full_node_rpc_server import start_full_node_rpc_server
-from src.server.server import ChiaServer, start_server
-from src.server.connection import NodeType
-from src.util.logging import initialize_logging
-from src.util.config import load_config_cli, load_config
-from src.util.default_root import DEFAULT_ROOT_PATH
-from src.util.setproctitle import setproctitle
-from src.util.path import mkdir, path_from_root
+from src.util.block_tools import BlockTools
 
 
-async def main():
-    root_path = DEFAULT_ROOT_PATH
-    net_config = load_config(root_path, "config.yaml")
+# See: https://bugs.python.org/issue29288
+u"".encode("idna")
+
+
+def service_kwargs_for_full_node(root_path):
+    service_name = "full_node"
+
     config = load_config_cli(root_path, "config.yaml", "full_node")
-    setproctitle("chia_full_node_simulator")
-    initialize_logging("FullNode %(name)-23s", config["logging"], root_path)
-
-    log = logging.getLogger(__name__)
-    server_closed = False
-
     db_path = path_from_root(root_path, config["simulator_database_path"])
     mkdir(db_path.parent)
 
     config["database_path"] = config["simulator_database_path"]
-    full_node = await FullNodeSimulator.create(
-        config, root_path=root_path, override_constants=test_constants,
-    )
 
-    ping_interval = net_config.get("ping_interval")
-    network_id = net_config.get("network_id")
-
-    # Starts the full node server (which full nodes can connect to)
-    assert ping_interval is not None
-    assert network_id is not None
-    server = ChiaServer(
-        config["port"],
-        full_node,
-        NodeType.FULL_NODE,
-        ping_interval,
-        network_id,
-        DEFAULT_ROOT_PATH,
+    api = FullNodeSimulator(
         config,
-    )
-    full_node._set_server(server)
-    server_socket = await start_server(server, full_node._on_connect)
-    rpc_cleanup = None
-
-    def stop_all():
-        nonlocal server_closed
-        if not server_closed:
-            # Called by the UI, when node is closed, or when a signal is sent
-            log.info("Closing all connections, and server...")
-            server.close_all()
-            server_socket.close()
-            server_closed = True
-
-        # Starts the RPC server
-
-    rpc_cleanup = await start_full_node_rpc_server(
-        full_node, stop_all, config["rpc_port"]
+        root_path=root_path,
+        consensus_constants=test_constants,
+        name=service_name,
+        bt=BlockTools(),
     )
 
-    try:
-        asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop_all)
-        asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop_all)
-    except NotImplementedError:
-        log.info("signal handlers unsupported")
+    async def start_callback():
+        await api._start()
 
-    # Awaits for server and all connections to close
-    await server_socket.wait_closed()
-    await server.await_closed()
-    log.info("Closed all node servers.")
+    def stop_callback():
+        api._close()
 
-    # Stops the full node and closes DBs
-    await full_node._await_closed()
+    async def await_closed_callback():
+        await api._await_closed()
 
-    # Waits for the rpc server to close
-    if rpc_cleanup is not None:
-        await rpc_cleanup()
-    log.info("Closed RPC server.")
+    kwargs = dict(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.FULL_NODE,
+        advertised_port=config["port"],
+        service_name=service_name,
+        server_listen_ports=[config["port"]],
+        on_connect_callback=api._on_connect,
+        start_callback=start_callback,
+        stop_callback=stop_callback,
+        await_closed_callback=await_closed_callback,
+        rpc_info=(FullNodeRpcApi, config["rpc_port"]),
+    )
+    return kwargs
 
-    await asyncio.get_running_loop().shutdown_asyncgens()
-    log.info("Node fully closed.")
+
+def main():
+    kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH)
+    return run_service(**kwargs)
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+if __name__ == "__main__":
+    freeze_support()
+    main()

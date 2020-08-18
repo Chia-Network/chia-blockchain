@@ -3,7 +3,7 @@ import time
 from typing import Dict, List, Optional, Tuple
 import blspy
 
-from src.consensus.block_rewards import calculate_block_reward
+from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_min_iters
 from src.types.challenge import Challenge
@@ -13,7 +13,6 @@ from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
-from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.util.significant_bits import count_significant_bits
 
@@ -21,7 +20,7 @@ log = logging.getLogger(__name__)
 
 
 async def validate_unfinished_block_header(
-    constants: Dict,
+    constants: ConsensusConstants,
     headers: Dict[bytes32, Header],
     height_to_hash: Dict[uint32, bytes32],
     block_header: Header,
@@ -44,19 +43,16 @@ async def validate_unfinished_block_header(
             return (Err.INVALID_POSPACE_HASH, None)
 
         # 2. The coinbase signature must be valid, according the the pool public key
-        pair = block_header.data.coinbase_signature.PkMessagePair(
-            proof_of_space.pool_pubkey, block_header.data.coinbase.name(),
-        )
-
-        if not block_header.data.coinbase_signature.validate([pair]):
-            return (Err.INVALID_COINBASE_SIGNATURE, None)
+        # TODO: change numbers
 
         # 3. Check harvester signature of header data is valid based on harvester key
-        if not block_header.harvester_signature.verify(
-            [blspy.Util.hash256(block_header.data.get_hash())],
-            [proof_of_space.plot_pubkey],
-        ):
-            return (Err.INVALID_HARVESTER_SIGNATURE, None)
+        validates = blspy.AugSchemeMPL.verify(
+            proof_of_space.plot_public_key,
+            block_header.data.get_hash(),
+            block_header.plot_signature,
+        )
+        if not validates:
+            return (Err.INVALID_PLOT_SIGNATURE, None)
 
     # 4. If not genesis, the previous block must exist
     if prev_header_block is not None and block_header.prev_header_hash not in headers:
@@ -68,19 +64,19 @@ async def validate_unfinished_block_header(
     if prev_header_block is not None:
         last_timestamps: List[uint64] = []
         curr = prev_header_block.header
-        while len(last_timestamps) < constants["NUMBER_OF_TIMESTAMPS"]:
+        while len(last_timestamps) < constants.NUMBER_OF_TIMESTAMPS:
             last_timestamps.append(curr.data.timestamp)
             fetched = headers.get(curr.prev_header_hash, None)
             if not fetched:
                 break
             curr = fetched
-        if len(last_timestamps) != constants["NUMBER_OF_TIMESTAMPS"]:
+        if len(last_timestamps) != constants.NUMBER_OF_TIMESTAMPS:
             # For blocks 1 to 10, average timestamps of all previous blocks
             assert curr.height == 0
         prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
         if block_header.data.timestamp < prev_time:
             return (Err.TIMESTAMP_TOO_FAR_IN_PAST, None)
-        if block_header.data.timestamp > time.time() + constants["MAX_FUTURE_TIME"]:
+        if block_header.data.timestamp > time.time() + constants.MAX_FUTURE_TIME:
             return (Err.TIMESTAMP_TOO_FAR_IN_FUTURE, None)
 
     # 7. Extension data must be valid, if any is present
@@ -96,7 +92,9 @@ async def validate_unfinished_block_header(
 
     # 10. The proof of space must be valid on the challenge
     if pos_quality_string is None:
-        pos_quality_string = proof_of_space.verify_and_get_quality_string()
+        pos_quality_string = proof_of_space.verify_and_get_quality_string(
+            constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
+        )
         if not pos_quality_string:
             return (Err.INVALID_POSPACE, None)
 
@@ -109,22 +107,12 @@ async def validate_unfinished_block_header(
         if block_header.height != 0:
             return (Err.INVALID_HEIGHT, None)
 
-    # 13. The coinbase reward must match the block schedule
-    coinbase_reward = calculate_block_reward(block_header.height)
-    if coinbase_reward != block_header.data.coinbase.amount:
-        return (Err.INVALID_COINBASE_AMOUNT, None)
-
-    # 13b. The coinbase parent id must be the height
-    if block_header.data.coinbase.parent_coin_info != block_header.height.to_bytes(
-        32, "big"
+    # 13. The pool max height must be valid
+    if (
+        block_header.data.pool_target.max_height != 0
+        and block_header.data.pool_target.max_height < block_header.height
     ):
-        return (Err.INVALID_COINBASE_PARENT, None)
-
-    # 13c. The fees coin parent id must be hash(hash(height))
-    if block_header.data.fees_coin.parent_coin_info != std_hash(
-        std_hash(uint32(block_header.height))
-    ):
-        return (Err.INVALID_FEES_COIN_PARENT, None)
+        return (Err.INVALID_POOL_TARGET, None)
 
     difficulty: uint64
     if prev_header_block is not None:
@@ -135,15 +123,15 @@ async def validate_unfinished_block_header(
             constants, headers, height_to_hash, prev_header_block
         )
     else:
-        difficulty = uint64(constants["DIFFICULTY_STARTING"])
-        min_iters = uint64(constants["MIN_ITERS_STARTING"])
+        difficulty = uint64(constants.DIFFICULTY_STARTING)
+        min_iters = uint64(constants.MIN_ITERS_STARTING)
 
     number_of_iters: uint64 = calculate_iterations_quality(
         pos_quality_string, proof_of_space.size, difficulty, min_iters,
     )
 
-    assert count_significant_bits(difficulty) <= constants["SIGNIFICANT_BITS"]
-    assert count_significant_bits(min_iters) <= constants["SIGNIFICANT_BITS"]
+    assert count_significant_bits(difficulty) <= constants.SIGNIFICANT_BITS
+    assert count_significant_bits(min_iters) <= constants.SIGNIFICANT_BITS
 
     if prev_header_block is not None:
         # 17. If not genesis, the total weight must be the parent weight + difficulty
@@ -169,7 +157,7 @@ async def validate_unfinished_block_header(
 
 
 async def validate_finished_block_header(
-    constants: Dict,
+    constants: ConsensusConstants,
     headers: Dict[bytes32, Header],
     height_to_hash: Dict[uint32, bytes32],
     block: HeaderBlock,
@@ -215,7 +203,7 @@ async def validate_finished_block_header(
 
     # 2. the PoT must be valid, on a discriminant of size 1024, and the challenge_hash
     if not pre_validated:
-        if not block.proof_of_time.is_valid(constants["DISCRIMINANT_SIZE_BITS"]):
+        if not block.proof_of_time.is_valid(constants.DISCRIMINANT_SIZE_BITS):
             return Err.INVALID_POT
     # 3. If not genesis, the challenge_hash in the proof of time must match the challenge on the previous block
     if not genesis:
@@ -236,7 +224,7 @@ async def validate_finished_block_header(
     return None
 
 
-def pre_validate_finished_block_header(constants: Dict, data: bytes):
+def pre_validate_finished_block_header(constants: ConsensusConstants, data: bytes):
     """
     Validates all parts of block that don't need to be serially checked
     """
@@ -246,18 +234,22 @@ def pre_validate_finished_block_header(constants: Dict, data: bytes):
         return False, None
 
     # 4. Check PoT
-    if not block.proof_of_time.is_valid(constants["DISCRIMINANT_SIZE_BITS"]):
+    if not block.proof_of_time.is_valid(constants.DISCRIMINANT_SIZE_BITS):
         return False, None
 
     # 9. Check harvester signature of header data is valid based on harvester key
-    if not block.header.harvester_signature.verify(
-        [blspy.Util.hash256(block.header.data.get_hash())],
-        [block.proof_of_space.plot_pubkey],
-    ):
+    validates = blspy.AugSchemeMPL.verify(
+        block.proof_of_space.plot_public_key,
+        block.header.data.get_hash(),
+        block.header.plot_signature,
+    )
+    if not validates:
         return False, None
 
     # 10. Check proof of space based on challenge
-    pos_quality_string = block.proof_of_space.verify_and_get_quality_string()
+    pos_quality_string = block.proof_of_space.verify_and_get_quality_string(
+        constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
+    )
 
     if not pos_quality_string:
         return False, None

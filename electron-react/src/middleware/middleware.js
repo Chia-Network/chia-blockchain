@@ -2,11 +2,12 @@ import * as actions from "../modules/websocket";
 import {
   registerService,
   startService,
-  isServiceRunning
+  isServiceRunning,
+  startServiceTest
 } from "../modules/daemon_messages";
 import { handle_message } from "./middleware_api";
 import {
-  service_wallet_server,
+  service_wallet,
   service_full_node,
   service_simulator,
   service_plotter
@@ -14,6 +15,7 @@ import {
 const config = require("../config");
 
 const crypto = require("crypto");
+const callback_map = {};
 
 const outgoing_message = (command, data, destination) => ({
   command: command,
@@ -29,16 +31,17 @@ const socketMiddleware = () => {
   let connected = false;
 
   const onOpen = store => event => {
+    connected = true;
     store.dispatch(actions.wsConnected(event.target.url));
     var register_action = registerService();
     store.dispatch(register_action);
 
     let start_wallet, start_node;
     if (config.local_test) {
-      start_wallet = startService(service_wallet_server + " --testing=true");
+      start_wallet = startServiceTest(service_wallet);
       start_node = startService(service_simulator);
     } else {
-      start_wallet = startService(service_wallet_server);
+      start_wallet = startService(service_wallet);
       start_node = startService(service_full_node);
     }
     store.dispatch(isServiceRunning(service_plotter));
@@ -52,6 +55,13 @@ const socketMiddleware = () => {
 
   const onMessage = store => event => {
     const payload = JSON.parse(event.data);
+    const request_id = payload["request_id"];
+    if (callback_map[request_id] != null) {
+      const callback_action = callback_map[request_id];
+      const callback = callback_action.resolve_callback;
+      callback(payload);
+      callback_map[request_id] = null;
+    }
     handle_message(store, payload);
   };
 
@@ -63,13 +73,17 @@ const socketMiddleware = () => {
         }
 
         // connect to the remote host
-        socket = new WebSocket(action.host);
+        try {
+          socket = new WebSocket(action.host);
+        } catch {
+          console.log("Failed connection to", action.host);
+          break;
+        }
 
         // websocket handlers
         socket.onmessage = onMessage(store);
         socket.onclose = onClose(store);
         socket.onopen = onOpen(store);
-        connected = true;
         break;
       case "WS_DISCONNECT":
         if (socket !== null) {
@@ -84,6 +98,9 @@ const socketMiddleware = () => {
             action.message.data,
             action.message.destination
           );
+          if (action.resolve_callback != null) {
+            callback_map[message.request_id] = action;
+          }
           socket.send(JSON.stringify(message));
         } else {
           console.log("Socket not connected");

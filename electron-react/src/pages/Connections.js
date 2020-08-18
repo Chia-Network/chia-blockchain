@@ -119,7 +119,7 @@ const Connections = props => {
 
                     <TableCell align="right">
                       {Math.floor(item.bytes_written / 1024)}/
-                      {Math.floor(item.bytes_read / 1024)} KB
+                      {Math.floor(item.bytes_read / 1024)} KiB
                     </TableCell>
                     <TableCell align="right">
                       {service_connection_types[item.type]}

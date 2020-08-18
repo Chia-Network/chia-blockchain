@@ -91,15 +91,16 @@ class CoinStore:
         for coin_name in removals:
             await self.set_spent(coin_name, block.height)
 
-        coinbase: CoinRecord = CoinRecord(
-            block.header.data.coinbase, block.height, uint32(0), False, True
-        )
-        fees_coin: CoinRecord = CoinRecord(
-            block.header.data.fees_coin, block.height, uint32(0), False, True
-        )
+        coinbase_coin = block.get_coinbase()
+        fees_coin = block.get_fees_coin()
 
-        await self.add_coin_record(coinbase)
-        await self.add_coin_record(fees_coin)
+        coinbase_r: CoinRecord = CoinRecord(
+            coinbase_coin, block.height, uint32(0), False, True
+        )
+        fees_r: CoinRecord = CoinRecord(fees_coin, block.height, uint32(0), False, True)
+
+        await self.add_coin_record(coinbase_r)
+        await self.add_coin_record(fees_r)
 
     def nuke_diffs(self):
         self.head_diffs.clear()
@@ -128,9 +129,9 @@ class CoinStore:
             added: CoinRecord = CoinRecord(coin, block.height, 0, 0, 0)  # type: ignore # noqa
             diff_store.diffs[added.name.hex()] = added
 
-        coinbase: CoinRecord = CoinRecord(block.header.data.coinbase, block.height, 0, 0, 1)  # type: ignore # noqa
+        coinbase: CoinRecord = CoinRecord(block.get_coinbase(), block.height, 0, 0, 1)  # type: ignore # noqa
         diff_store.diffs[coinbase.name.hex()] = coinbase
-        fees_coin: CoinRecord = CoinRecord(block.header.data.fees_coin, block.height, 0, 0, 1)  # type: ignore # noqa
+        fees_coin: CoinRecord = CoinRecord(block.get_fees_coin(), block.height, 0, 0, 1)  # type: ignore # noqa
         diff_store.diffs[fees_coin.name.hex()] = fees_coin
 
         for coin_name in removals:

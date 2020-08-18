@@ -1,13 +1,11 @@
 from dataclasses import dataclass
 
-from typing import Optional
-from blspy import PrependSignature
+from blspy import G2Element
 
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64, uint32, uint128
 from src.util.streamable import Streamable, streamable
-from src.types.BLSSignature import BLSSignature
-from src.types.coin import Coin
+from src.types.pool_target import PoolTarget
 
 
 @dataclass(frozen=True)
@@ -22,10 +20,10 @@ class HeaderData(Streamable):
     total_iters: uint64
     additions_root: bytes32
     removals_root: bytes32
-    coinbase: Coin
-    coinbase_signature: BLSSignature
-    fees_coin: Coin
-    aggregated_signature: Optional[BLSSignature]
+    farmer_rewards_puzzle_hash: bytes32
+    total_transaction_fees: uint64
+    pool_target: PoolTarget
+    aggregated_signature: G2Element
     cost: uint64
     extension_data: bytes32
     generator_hash: bytes32  # This needs to be a tree hash
@@ -35,7 +33,7 @@ class HeaderData(Streamable):
 @streamable
 class Header(Streamable):
     data: HeaderData
-    harvester_signature: PrependSignature
+    plot_signature: G2Element
 
     @property
     def height(self):

@@ -1,29 +1,30 @@
 network_id: testnet  # testnet/mainnet
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
+self_hostname: &self_hostname "localhost"
+daemon_port: 55400
 
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.
 logging: &logging
   log_stdout: False  # If True, outputs to stdout instead of a file
   log_filename: "log/debug.log"
-  log_level: "INFO"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
+  log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
 
 harvester:
   # The harvester server (if run) will run on this port
   port: 8448
   farmer_peer:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8447
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8560
 
-  # Location of all the plots, default ./plots, for relative paths in plots.yaml.
-  # plot_root: "/mnt/pos"
   logging: *logging
-  # new_plot_root is the default location where new plots are created by "chia-create-plots"
-  new_plot_root: plots
+
+  # Plots are searched for in the following directories
+  plot_directories: []
 
   ssl:
     crt: "trusted.crt"
@@ -31,7 +32,8 @@ harvester:
 
 pool: {
   # Replace this with a real puzzle hash
-  xch_target_puzzle_hash: a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836
+  # xch_target_puzzle_hash: a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836
+  logging: *logging
 }
 
 farmer:
@@ -39,20 +41,20 @@ farmer:
   port: 8447
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8444
   harvester_peer:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8448
 
+  pool_public_keys: []
+
   # Replace this with a real puzzle hash
-  xch_target_puzzle_hash: a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836
+  # xch_target_puzzle_hash: a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
   rpc_port: 8559
-
-  pool_public_keys: []
 
   # To send a share to a pool, a block must be faster than this, in seconds
   pool_share_threshold: 50000
@@ -78,26 +80,29 @@ timelord_launcher:
 timelord:
   # The timelord server (if run) will run on this port
   port: 8446
-  # How much recursion to use for the wesolowski VDF proof. This increases the size
-  # of the proofs.
-  n_wesolowski: 2
   # Provides a list of VDF clients expected to connect to this timelord.
   # For each client, an IP is provided, together with the estimated iterations per second.
   vdf_clients:
     ip:
-      - 127.0.0.1
+      - *self_hostname
     ips_estimate:
-      - 100000
+      - 150000
   full_node_peer:
-      host: 127.0.0.1
+      host: *self_hostname
       port: 8444
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
   vdf_server:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8000
   logging: *logging
+  # Set 'True' if clients connecting to this timelord have a high number of CPUs.
+  fast_algorithm: False
+  # If set 'True', the timelord will create compact proofs of time, instead of
+  # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
+  # is running in sanitizer_mode.
+  sanitizer_mode: False
 
   ssl:
     crt: "trusted.crt"
@@ -108,8 +113,8 @@ full_node:
   port: 8444
 
   # Run multiple nodes with different databases by changing the database_path
-  database_path: db/blockchain_v5.db
-  simulator_database_path: sim_db/simulator_blockchain_v5.db
+  database_path: db/blockchain_v18.db
+  simulator_database_path: sim_db/simulator_blockchain_v18.db
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -128,24 +133,26 @@ full_node:
   # How often to connect to introducer if we need to learn more peers
   introducer_connect_interval: 500
   # Continue trying to connect to more peers until this number of connections
-  target_peer_count: 10
+  target_peer_count: 15
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
   recent_peer_threshold: 6000
 
-  connect_to_farmer: False
-  connect_to_timelord: False
+  # Send to the timelords uncompact blocks once every 'send_uncompact_interval' seconds
+  # Set to 0 if you don't use this feature. The recommended value is
+  # send_uncompact_interval=1800
+  send_uncompact_interval: 0
 
   farmer_peer:
-      host: 127.0.0.1
+      host: *self_hostname
       port: 8447
   timelord_peer:
-      host: 127.0.0.1
+      host: *self_hostname
       port: 8446
   introducer_peer:
-      host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+      host: introducer1.beta.chia.net  # Chia AWS introducer IPv4/IPv6
       port: 8444
   wallet_peer:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8449
   logging: *logging
 
@@ -165,7 +172,7 @@ ui:
   logging: *logging
 
 introducer:
-  host: 127.0.0.1
+  host: *self_hostname
   port: 8445
   max_peers_to_send: 20
   # The introducer will only return peers who it has seen in the last
@@ -185,13 +192,14 @@ wallet:
   # If we are restoring from private key and don't know the height.
   starting_height: 0
   num_sync_batches: 50
+  initial_num_public_keys: 100
 
   full_node_peer:
-    host: 127.0.0.1
+    host: *self_hostname
     port: 8444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v5.db
+  database_path: wallet/db/blockchain_wallet_v18.db
 
   logging: *logging
 
@@ -202,7 +210,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+    host: introducer1.beta.chia.net  # Chia AWS introducer IPv4/IPv6
     port: 8444
 
   ssl:

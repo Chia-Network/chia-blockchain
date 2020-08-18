@@ -1,5 +1,5 @@
 import asyncio
-from blspy import PublicKey
+from blspy import G1Element
 from typing import Set, Tuple, Optional, List
 import aiosqlite
 import logging
@@ -124,7 +124,7 @@ class WalletPuzzleStore:
             return DerivationRecord(
                 row[0],
                 bytes.fromhex(row[2]),
-                PublicKey.from_bytes(bytes.fromhex(row[1])),
+                G1Element.from_bytes(bytes.fromhex(row[1])),
                 row[3],
                 row[4],
             )
@@ -147,7 +147,7 @@ class WalletPuzzleStore:
             return DerivationRecord(
                 row[0],
                 bytes.fromhex(row[2]),
-                PublicKey.from_bytes(bytes.fromhex(row[1])),
+                G1Element.from_bytes(bytes.fromhex(row[1])),
                 row[3],
                 row[4],
             )
@@ -158,7 +158,6 @@ class WalletPuzzleStore:
         """
         Sets a derivation path to used so we don't use it again.
         """
-        pass
         cursor = await self.db_connection.execute(
             "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?", (index,),
         )
@@ -178,7 +177,7 @@ class WalletPuzzleStore:
 
         return row is not None
 
-    async def index_for_pubkey(self, pubkey: PublicKey) -> Optional[uint32]:
+    async def index_for_pubkey(self, pubkey: G1Element) -> Optional[uint32]:
         """
         Returns derivation paths for the given pubkey.
         Returns None if not present.
