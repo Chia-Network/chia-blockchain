@@ -87,17 +87,21 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       };
 
     case "CLEAR_SEND":
-      state["sending_transaction"] = false;
-      state["send_transaction_result"] = null;
-      return state;
-
+      return {
+        ...state,
+        sending_transaction: false,
+        send_transaction_result: null
+      };
     case "OUTGOING_MESSAGE":
       if (
         action.message.command === "send_transaction" ||
         action.message.command === "cc_spend"
       ) {
-        state["sending_transaction"] = true;
-        state["send_transaction_result"] = null;
+        return {
+          ...state,
+          sending_transaction: true,
+          send_transaction_result: null
+        };
       }
       return state;
     case "INCOMING_MESSAGE":
@@ -150,7 +154,6 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
             var wallet_obj = Wallet(id, object.name, object.type, object.data);
             wallets_state[id] = wallet_obj;
           }
-          // console.log(wallets_state);
           return { ...state, wallets: wallets_state };
         }
       } else if (command === "get_wallet_balance") {
@@ -199,20 +202,23 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         return { ...state };
       } else if (command === "get_connections") {
         if (data.success || data.connections) {
-          const connections = data.connections;
-          state.status["connections"] = connections;
-          state.status["connection_count"] = connections.length;
-          return state;
+          return {
+            ...state,
+            status: {
+              ...state.status,
+              connections: data.connections,
+              connection_count: data.connections.length
+            }
+          };
         }
       } else if (command === "get_height_info") {
-        const height = data.height;
-        state.status["height"] = height;
-        return { ...state };
+        return { ...state, status: { ...state.status, height: data.height } };
       } else if (command === "get_sync_status") {
         if (data.success) {
-          const syncing = data.syncing;
-          state.status["syncing"] = syncing;
-          return state;
+          return {
+            ...state,
+            status: { ...state.status, syncing: data.syncing }
+          };
         }
       } else if (command === "cc_get_colour") {
         id = data.wallet_id;
@@ -223,7 +229,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           return state;
         }
         wallet.colour = colour;
-        return state;
+        return { ...state };
       } else if (command === "cc_get_name") {
         const id = data.wallet_id;
         const name = data.name;
@@ -233,7 +239,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           return state;
         }
         wallet.name = name;
-        return state;
+        return { ...state };
       }
       if (command === "send_transaction" || command === "cc_spend") {
         state["sending_transaction"] = false;
@@ -241,7 +247,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
         wallet.send_transaction_result = message.data;
-        return state;
+        return { ...state };
       }
       return state;
     default:
