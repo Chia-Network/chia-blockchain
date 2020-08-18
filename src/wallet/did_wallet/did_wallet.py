@@ -440,7 +440,7 @@ class DIDWallet:
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = self.wallet_state_manager.private_key.derive_child(index)
         signature = AugSchemeMPL.sign(private, message)
-        assert signature.validate([signature.PkMessagePair(pubkey, message)])
+        # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
@@ -506,7 +506,7 @@ class DIDWallet:
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = self.wallet_state_manager.private_key.derive_child(index)
         signature = AugSchemeMPL.sign(private, message)
-        assert signature.validate([signature.PkMessagePair(pubkey, message)])
+        # assert signature.validate([signature.PkMessagePair(pubkey, message)])
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
