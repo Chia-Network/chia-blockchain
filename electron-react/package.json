@@ -3,6 +3,7 @@
   "author": "Straya Markovic <hello@chia.net> (https://chia.net/)",
   "description": "GUI for Chia Blockchain",
   "productName": "Chia Blockchain",
+  "version": "1.0.0-beta11",
   "private": true,
   "devDependencies": {
     "electron": "^8.5.0",
@@ -16,6 +17,7 @@
   "dependencies": {
     "@material-ui/core": "^4.11.0",
     "@material-ui/icons": "^4.9.1",
+    "about-window": "^1.13.4",
     "is-electron": "^2.2.0",
     "npm-audit-resolver": "^2.2.1",
     "react": "^16.13.1",

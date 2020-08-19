@@ -5,11 +5,10 @@ if (setupEvents.handleSquirrelEvent()) {
   return;
 }
 
-const electron = require("electron");
-const app = electron.app;
-const BrowserWindow = electron.BrowserWindow;
+const { promisify } = require("util");
+const { app, dialog, ipcMain, BrowserWindow, Menu } = require("electron");
+const openAboutWindow = require("about-window").default;
 const path = require("path");
-const ipcMain = require("electron").ipcMain;
 const config = require("./config");
 const dev_config = require("./dev_config");
 const WebSocket = require("ws");
@@ -106,7 +105,12 @@ const createPyProc = () => {
 };
 
 const closeDaemon = callback => {
-  let called_cb = false;
+  const timeout = setTimeout(() => callback(), 20000);
+  const clearTimeoutCallback = err => {
+    clearTimeout(timeout);
+    callback(err);
+  };
+
   try {
     const request_id = crypto.randomBytes(32).toString("hex");
     ws = new WebSocket(daemon_rpc_ws, {
@@ -126,26 +130,19 @@ const closeDaemon = callback => {
     ws.on("message", function incoming(message) {
       message = JSON.parse(message);
       if (message["ack"] === true && message["request_id"] === request_id) {
-        called_cb = true;
-        callback();
+        clearTimeoutCallback();
       }
     });
     ws.on("error", err => {
       if (err.errno === "ECONNREFUSED") {
-        called_cb = true;
-        callback();
+        clearTimeoutCallback();
       } else {
-        console.log("Unexpected websocket error err ", err);
+        clearTimeoutCallback(err);
       }
     });
   } catch (e) {
-    console.log("Error in websocket", e);
+    clearTimeoutCallback(e);
   }
-  setTimeout(function() {
-    if (!called_cb) {
-      callback();
-    }
-  }, 20000);
 };
 
 const exitPyProc = e => {};
@@ -209,7 +206,7 @@ const createWindow = () => {
       return;
     }
     e.preventDefault();
-    var choice = require("electron").dialog.showMessageBoxSync({
+    var choice = dialog.showMessageBoxSync({
       type: "question",
       buttons: ["No", "Yes"],
       title: "Confirm",
@@ -228,12 +225,37 @@ const createWindow = () => {
   });
 };
 
-const appReady = () => {
-  closeDaemon(() => {
-    createPyProc();
-    ws.terminate();
-    createWindow();
-  });
+const createMenu = () => {
+  const menu = Menu.buildFromTemplate([{
+      label: "Help",
+      submenu: [{
+        label: "About",
+        click: () =>
+          openAboutWindow({
+            homepage: "https://www.chia.net/",
+            bug_report_url: "https://github.com/Chia-Network/chia-blockchain/issues",
+            icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
+            copyright: "Copyright (c) 2020 Chia Network"
+          }),
+      }]
+    }
+  ]);
+
+  return menu;
+}
+
+const appReady = async() => {
+  app.applicationMenu = createMenu();
+
+  try {
+    await promisify(closeDaemon)();
+  } catch (e) {
+    console.error("Error in websocket", e);
+  }
+
+  createPyProc();
+  ws.terminate();
+  createWindow();
 };
 
 app.on("ready", appReady);
