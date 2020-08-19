@@ -228,7 +228,6 @@ const createWindow = () => {
 };
 
 const createMenu = () => {
-  console.log(path.join(__dirname, "assets/chia.png"));
   const menu = Menu.buildFromTemplate([{
       label: "Help",
       submenu: [{
