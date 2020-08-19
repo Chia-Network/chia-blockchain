@@ -250,7 +250,7 @@ const appReady = async() => {
 
   try {
     await promisify(closeDaemon)();
-  } catch (err) {
+  } catch (e) {
     console.error("Error in websocket", e);
   }
 
