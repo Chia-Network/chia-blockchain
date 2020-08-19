@@ -10,6 +10,11 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 
+### Changed
+
+### Fixed
+- A bug in aiosqlite is causing tests to hang.
+
 ## [1.0beta10] aka Beta 1.10 - 2020-08-18
 
 ### Added
@@ -24,7 +29,6 @@ for setuptools_scm/PEP 440 reasons.
 - We added a first few enhancements to plotting speed. For a k=30 on a ramdisk with `-b 64 GiB` it results in an 11% speedup in overall plotting speed and a 23% improvement in phase 1 speed. Many more significant increases in plotting speed are in the works.
 - The proof of space document in chiapos has been updated to the new format and edited for clarity. Additionally GitHub actions now has the on demand ability to create the PDF version.
 - Relic has upstreamed our changes required for the IETF BLS standard. We now build directly from the Relic repository for all but Windows and will be migrating Windows in the next release.
-- Improvements to coloured coin wallet.
 - Minor improvements to the Coloured Coin wallet were integrated in advance of an upcoming re-factor.
 - Smart wallet backup was upgraded to encrypt and sign the contents of the backup.
 
