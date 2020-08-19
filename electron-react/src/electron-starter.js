@@ -141,9 +141,7 @@ const closeDaemon = callback => {
       }
     });
   } catch (e) {
-    clearTimeout(timeout);
-
-    callback(e);
+    clearTimeoutCallback(e);
   }
 };
 
