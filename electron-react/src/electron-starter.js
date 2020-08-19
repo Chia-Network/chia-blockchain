@@ -5,7 +5,7 @@ if (setupEvents.handleSquirrelEvent()) {
   return;
 }
 
-const { promisify } = require('util');
+const { promisify } = require("util");
 const { app, dialog, ipcMain, BrowserWindow, Menu } = require("electron");
 const openAboutWindow = require("about-window").default;
 const path = require("path");
