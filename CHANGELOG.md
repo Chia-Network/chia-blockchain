@@ -9,6 +9,7 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
+- The Chia UI now has a proper About menu entry that gives the various component versions and directs people to submit issues on GitHub. Thank you to @freddiecoleman for this pull request!
 
 ### Changed
 

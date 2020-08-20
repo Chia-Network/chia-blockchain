@@ -6,7 +6,7 @@ if (setupEvents.handleSquirrelEvent()) {
 }
 
 const { promisify } = require("util");
-const { app, dialog, ipcMain, BrowserWindow, Menu } = require("electron");
+const { app, dialog, shell, ipcMain, BrowserWindow, Menu } = require("electron");
 const openAboutWindow = require("about-window").default;
 const path = require("path");
 const config = require("./config");
@@ -226,27 +226,12 @@ const createWindow = () => {
 };
 
 const createMenu = () => {
-  const menu = Menu.buildFromTemplate([{
-      label: "Help",
-      submenu: [{
-        label: "About",
-        click: () =>
-          openAboutWindow({
-            homepage: "https://www.chia.net/",
-            bug_report_url: "https://github.com/Chia-Network/chia-blockchain/issues",
-            icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
-            copyright: "Copyright (c) 2020 Chia Network"
-          }),
-      }]
-    }
-  ]);
-
+  const menu = Menu.buildFromTemplate(getMenuTemplate());
   return menu;
 }
 
 const appReady = async() => {
-  app.applicationMenu = createMenu();
-
+   app.applicationMenu = createMenu();
   try {
     await promisify(closeDaemon)();
   } catch (e) {
@@ -279,3 +264,246 @@ ipcMain.on("load-page", (event, arg) => {
     }) + arg.query
   );
 });
+
+function getMenuTemplate () {
+  const template = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Quit',
+          role: 'quit'
+        }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        {
+          role: 'undo'
+        },
+        {
+          role: 'redo'
+        },
+        {
+          type: 'separator'
+        },
+        {
+          role: 'cut'
+        },
+        {
+          role: 'copy'
+        },
+        {
+          role: 'paste'
+        },
+        {
+          role: 'delete'
+        },
+        {
+          role: 'selectall'
+        }
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          role: 'reload'
+        },
+        {
+          role: 'forcereload'
+        },
+        {
+          label: 'Developer',
+          submenu: [
+            {
+              label: 'Developer Tools',
+              accelerator: process.platform === 'darwin'
+                ? 'Alt+Command+I'
+                : 'Ctrl+Shift+I',
+              click: () => windows.main.toggleDevTools()
+            },
+          ]
+        },
+        {
+          type: 'separator'
+        },
+        {
+          label: 'Full Screen',
+          type: 'checkbox',
+          accelerator: process.platform === 'darwin'
+            ? 'Ctrl+Command+F'
+            : 'F11',
+          click: () => windows.main.toggleFullScreen()
+        },
+      ]
+    },
+    {
+      label: 'Help',
+      role: 'help',
+      submenu: [
+         {
+            label: 'About ' + 'Chia Blockchain',
+            click: () =>
+              openAboutWindow({
+                homepage: "https://www.chia.net/",
+                bug_report_url: "https://github.com/Chia-Network/chia-blockchain/issues",
+                icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
+                copyright: "Copyright (c) 2020 Chia Network"
+              }),
+          },
+          {
+            label: 'Release Notes',
+            click: () => {
+              openExternal("https://github.com/Chia-Network/chia-blockchain/releases")
+            }
+          },
+          {
+            label: 'Contribute on GitHub',
+            click: () => {
+              openExternal("https://github.com/Chia-Network/chia-blockchain/blob/master/CONTRIBUTING.md")
+            }
+          },
+          {
+            type: 'separator'
+          },
+          {
+            label: 'Report an Issue...',
+            click: () => {
+              openExternal("https://github.com/Chia-Network/chia-blockchain/issues")
+            }
+          },
+          {
+            label: 'Chat on KeyBase',
+            click: () => {
+              openExternal("https://keybase.io/team/chia_network.public")
+            },
+          },
+          {
+            label: 'Follow us on Twitter',
+            click: () => {
+              openExternal("https://twitter.com/chia_project")
+            }
+          }
+      ]
+    }
+  ]
+
+  if (process.platform === 'darwin') {
+    // Chia Blockchain menu (Mac)
+    template.unshift({
+      label: 'Chia',
+      submenu: [
+        {
+          label: 'About ' + 'Chia Blockchain',
+          click: () =>
+            openAboutWindow({
+              homepage: "https://www.chia.net/",
+              bug_report_url: "https://github.com/Chia-Network/chia-blockchain/issues",
+              icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
+              copyright: "Copyright (c) 2020 Chia Network"
+            }),
+        },
+        {
+          type: 'separator'
+        },
+        {
+          role: 'services'
+        },
+        {
+          type: 'separator'
+        },
+        {
+          role: 'hide'
+        },
+        {
+          role: 'hideothers'
+        },
+        {
+          role: 'unhide'
+        },
+        {
+          type: 'separator'
+        },
+        {
+          role: 'quit'
+        }
+      ]
+    })
+
+    // Edit menu (Mac)
+    template[2].submenu.push(
+      {
+        type: 'separator'
+      },
+      {
+        label: 'Speech',
+        submenu: [
+          {
+            role: 'startspeaking'
+          },
+          {
+            role: 'stopspeaking'
+          }
+        ]
+      }
+    )
+
+    // Window menu (Mac)
+    template.splice(4, 0, {
+      role: 'window',
+      submenu: [
+        {
+          role: 'minimize'
+        },
+        {
+          type: 'separator'
+        },
+        {
+          role: 'front'
+        }
+      ]
+    })
+  }
+
+  // On Windows and Linux, open dialogs do not support selecting both files and
+  // folders and files, so add an extra menu item so there is one for each type.
+  if (process.platform === 'linux' || process.platform === 'win32') {
+    // Help menu (Windows, Linux)
+    template[5].submenu.push(
+      {
+        type: 'separator'
+      },
+      {
+        label: 'About ' + 'Chia Blockchain',
+        click: () =>
+          openAboutWindow({
+            homepage: "https://www.chia.net/",
+            bug_report_url: "https://github.com/Chia-Network/chia-blockchain/issues",
+            icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
+            copyright: "Copyright (c) 2020 Chia Network"
+          }),
+      }
+    )
+  }
+  // Add "File > Quit" menu item so Linux distros where the system tray icon is
+  // missing will have a way to quit the app.
+  if (process.platform === 'linux') {
+    // File menu (Linux)
+    template[0].submenu.push({
+      label: 'Quit',
+      click: () => app.quit()
+    })
+  }
+
+  return template
+}
+
+/**
+ * Open the given external protocol URL in the desktop’s default manner.
+ */
+function openExternal (url) {
+  console.log(`openExternal: ${url}`)
+  shell.openExternal(url)
+}
