@@ -467,8 +467,6 @@ function getMenuTemplate () {
     })
   }
 
-  // On Windows and Linux, open dialogs do not support selecting both files and
-  // folders and files, so add an extra menu item so there is one for each type.
   if (process.platform === 'linux' || process.platform === 'win32') {
     // Help menu (Windows, Linux)
     template[5].submenu.push(
