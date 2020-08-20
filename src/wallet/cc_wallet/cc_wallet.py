@@ -874,9 +874,3 @@ class CCWallet:
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
-
-    # Create an offer spend bundle for chia given an amount of relative change (i.e -400 or 1000)
-    # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
-    async def create_spend_bundle_relative_chia(self, chia_amount: uint64):
-        self.log.error("Not implemented")
-        # TODO MATT: Implement

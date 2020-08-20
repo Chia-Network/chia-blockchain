@@ -28,7 +28,6 @@ from src.wallet.derivation_record import DerivationRecord
 from src.wallet.did_wallet import did_wallet_puzzles
 from src.wallet.derive_keys import master_sk_to_wallet_sk
 from clvm import run_program
-from src.util.hash import std_hash
 
 
 class DIDWallet:
@@ -238,7 +237,6 @@ class DIDWallet:
         self.log.info(f"Successfully selected coins: {used_coins}")
         return used_coins
 
-
     # This will be used in the recovery case where we don't have the parent info already
     async def coin_added(
         self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin]
@@ -438,7 +436,7 @@ class DIDWallet:
             )
         ]
         # sign for AGG_SIG_ME
-        message = std_hash(bytes(puzhash) + bytes(coin.name()))
+        message = bytes(puzhash) + bytes(coin.name())
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
@@ -503,7 +501,7 @@ class DIDWallet:
         # )
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
-        message = std_hash(bytes(newpuz) + bytes(coin.name()))
+        message = bytes(newpuz) + bytes(coin.name())
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
@@ -726,7 +724,7 @@ class DIDWallet:
             )
         ]
         # sign for AGG_SIG_ME
-        message = std_hash(bytes(coin.puzzle_hash) + bytes(coin.name()))
+        message = bytes(coin.puzzle_hash) + bytes(coin.name())
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)

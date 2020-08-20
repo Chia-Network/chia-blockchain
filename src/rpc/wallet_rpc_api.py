@@ -29,6 +29,7 @@ from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.did_wallet.did_wallet import DIDWallet
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
+from src.types.spend_bundle import SpendBundle
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 
 # Timeout for response from wallet/full node for sending a transaction
