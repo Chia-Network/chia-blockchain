@@ -582,17 +582,11 @@ class TestWalletSimulator:
             )
         ]
         # sign for AGG_SIG_ME
-        message = std_hash(bytes(ph) + bytes(coin.name()))
+        message = bytes(coin.puzzle_hash) + bytes(coin.name())
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
-        index = await did_wallet.wallet_state_manager.puzzle_store.index_for_pubkey(
-            pubkey
-        )
-        private = did_wallet.wallet_state_manager.private_key.private_child(
-            index
-        ).get_private_key()
-        # pk = BLSPrivateKey(private)
-        signature = private.sign(message)
-        assert signature.validate([signature.PkMessagePair(pubkey, message)])
+        index = await did_wallet.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
+        private = master_sk_to_wallet_sk(did_wallet.wallet_state_manager.private_key, index)
+        signature = AugSchemeMPL.sign(private, message)
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
@@ -611,6 +605,7 @@ class TestWalletSimulator:
             removals=spend_bundle.removals(),
             wallet_id=did_wallet.wallet_info.id,
             sent_to=[],
+            trade_id=None
         )
 
         await did_wallet.standard_wallet.push_transaction(did_record)
