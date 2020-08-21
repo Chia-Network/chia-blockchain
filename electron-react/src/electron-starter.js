@@ -231,7 +231,7 @@ const createMenu = () => {
 }
 
 const appReady = async() => {
-   app.applicationMenu = createMenu();
+  app.applicationMenu = createMenu();
   try {
     await promisify(closeDaemon)();
   } catch (e) {
@@ -322,7 +322,7 @@ function getMenuTemplate () {
                 ? 'Alt+Command+I'
                 : 'Ctrl+Shift+I',
               click: () => windows.main.toggleDevTools()
-            },
+            }
           ]
         },
         {
@@ -335,7 +335,21 @@ function getMenuTemplate () {
             ? 'Ctrl+Command+F'
             : 'F11',
           click: () => windows.main.toggleFullScreen()
+        }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        {
+          role: 'minimize'
         },
+        {
+          role: 'zoom'
+        },
+        {
+          role: 'close'
+        }
       ]
     },
     {
@@ -452,19 +466,23 @@ function getMenuTemplate () {
     )
 
     // Window menu (Mac)
-    template.splice(4, 0, {
-      role: 'window',
-      submenu: [
-        {
-          role: 'minimize'
-        },
-        {
-          type: 'separator'
-        },
-        {
-          role: 'front'
-        }
-      ]
+    template.splice(4, 1,
+      {
+        role: 'window',
+        submenu: [
+          {
+            role: 'minimize'
+          },
+          {
+            role: 'zoom'
+          },
+          {
+            type: 'separator'
+          },
+          {
+            role: 'front'
+          }
+        ]
     })
   }
 
