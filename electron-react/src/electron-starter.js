@@ -271,8 +271,7 @@ function getMenuTemplate () {
       label: 'File',
       submenu: [
         {
-          label: 'Quit',
-          role: 'quit'
+          role: 'close'
         }
       ]
     },
@@ -471,7 +470,7 @@ function getMenuTemplate () {
 
   if (process.platform === 'linux' || process.platform === 'win32') {
     // Help menu (Windows, Linux)
-    template[5].submenu.push(
+    template[4].submenu.push(
       {
         type: 'separator'
       },
