@@ -278,7 +278,7 @@ function getMenuTemplate() {
       label: "File",
       submenu: [
         {
-          role: "exit",
+          role: "quit",
         },
       ],
     },
@@ -427,7 +427,7 @@ function getMenuTemplate() {
           },
         },
         {
-          label: "Follow us on Twitter",
+          label: "Follow on Twitter",
           click: () => {
             openExternal("https://twitter.com/chia_project");
           },
