@@ -13,6 +13,7 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.wallet.util.wallet_types import WalletType
 from src.cmds.units import units
 
 
@@ -328,14 +329,13 @@ async def show_async(args, parser):
                     balances_response = await wallet_client.get_wallet_balance(
                         wallet_id
                     )
-                    if "balances" not in balances_response:
+                    if "wallet_balance" not in balances_response:
                         print("Balances cannot be displayed")
                         continue
-                    balances = balances_response["balances"]
+                    balances = balances_response["wallet_balance"]
+                    typ = WalletType(int(summary["type"])).name
                     if "name" in summary:
-                        print(
-                            f"Wallet ID {wallet_id} type {summary['type']} {summary['name']}"
-                        )
+                        print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
                         print(
                             f"   -Confirmed: {balances['confirmed_wallet_balance']/units['colouredcoin']}"
                         )
@@ -352,7 +352,7 @@ async def show_async(args, parser):
                             f"   -Pending change: {balances['pending_change']/units['colouredcoin']}"
                         )
                     else:
-                        print(f"Wallet ID {wallet_id} type {summary['type']}")
+                        print(f"Wallet ID {wallet_id} type {typ}")
                         print(
                             f"   -Confirmed: {balances['confirmed_wallet_balance']/units['chia']} TXCH"
                         )
