@@ -118,8 +118,7 @@ async function track_progress(store, location) {
     global_tail.on("line", data => {
       dispatch(addProgress(data));
       if (
-        data.includes("Copied final file") ||
-        data.includes("Moved final file")
+        data.includes("Renamed final file")
       ) {
         dispatch(refreshPlots());
       }
