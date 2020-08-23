@@ -548,15 +548,6 @@ function getMenuTemplate() {
       }
     );
   }
-  // Add "File > Quit" menu item so Linux distros where the system tray icon is
-  // missing will have a way to quit the app.
-  if (process.platform === "linux") {
-    // File menu (Linux)
-    template[0].submenu.push({
-      label: "Quit",
-      click: () => app.quit(),
-    });
-  }
 
   return template;
 }
