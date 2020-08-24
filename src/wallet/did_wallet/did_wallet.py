@@ -27,7 +27,7 @@ from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.did_wallet import did_wallet_puzzles
 from src.wallet.derive_keys import master_sk_to_wallet_sk
-from clvm import run_program
+from src.util.clvm import run_program
 
 
 class DIDWallet:
