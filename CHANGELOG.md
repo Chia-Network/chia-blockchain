@@ -9,6 +9,13 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+## [1.0beta11] aka Beta 1.11 - 2020-08-24
+
+### Added
 - The Chia UI now has a proper About menu entry that gives the various component versions and directs people to submit issues on GitHub. Thank you to @freddiecoleman for this pull request!
 - Ability to run only the farmer, wallet, or timelord services, for more advanced configurations (chia run farmer-only, wallet-only, timelord-only)
 
