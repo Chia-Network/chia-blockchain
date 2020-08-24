@@ -517,7 +517,7 @@ class WalletRpcApi:
 
     async def did_update_recovery_ids(self, request):
         wallet_id = int(request["wallet_id"])
-        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = request["new_list"]
         await wallet.update_recovery_list(recovery_list)
         # Update coin with new ID info
@@ -529,7 +529,7 @@ class WalletRpcApi:
 
     async def did_spend(self, request):
         wallet_id = int(request["wallet_id"])
-        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         spend_bundle = await wallet.create_spend(request["puzzlehash"])
         if spend_bundle is not None:
             return {"success": True}
@@ -537,7 +537,7 @@ class WalletRpcApi:
 
     async def did_get_id(self, request):
         wallet_id = int(request["wallet_id"])
-        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         id = wallet.get_my_ID()
         try:
             coins = wallet.select_coins(1)
@@ -548,13 +548,13 @@ class WalletRpcApi:
 
     async def did_get_recovery_list(self, request):
         wallet_id = int(request["wallet_id"])
-        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = wallet.did_info.backup_ids
         return {"success": True, "recover_list": recovery_list}
 
     async def did_recovery_spend(self, request):
         wallet_id = int(request["wallet_id"])
-        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         spend_bundle_list = []
         # INFO LIST MUST BE SAME ORDER AS RECOVERY LIST
         # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
@@ -570,7 +570,7 @@ class WalletRpcApi:
 
     async def did_create_attest(self, request):
         wallet_id = int(request["wallet_id"])
-        wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         info = await wallet.get_info_for_recovery()
         spend_bundle = await wallet.create_attestment(
             request["coin_name"], request["puzhash"]
