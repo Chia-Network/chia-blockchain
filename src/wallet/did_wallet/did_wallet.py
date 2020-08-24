@@ -541,18 +541,6 @@ class DIDWallet:
         amount = coin.amount
         return f"(0x{parent} 0x{innerpuzhash} {amount})"
 
-    def format_info_list_json(self, info_dict):
-        # info_dict - {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
-        # 0xidentity should be a hex string
-        my_recovery_list: List[bytes] = self.did_info.backup_ids
-        if len(info_dict) != len(my_recovery_list):
-            return False
-        output = "("
-        for entry in my_recovery_list:
-            output = output + info_dict[entry.hex()]
-        output = output + ")"
-        return output
-
     async def recovery_spend(
         self,
         coin,

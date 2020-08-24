@@ -556,15 +556,23 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         spend_bundle_list = []
-        # INFO LIST MUST BE SAME ORDER AS RECOVERY LIST
-        # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
+
         for i in request["spend_bundles"]:
             spend_bundle_list.append(SpendBundle.from_bytes(bytes.fromhex(i)))
-
-        info = wallet.format_info_list_json(request["info_dict"])
+        # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
+        info_dict = request["info_dict"]
+        my_recovery_list: List[bytes] = wallet.did_info.backup_ids
+        if len(info_dict) != len(my_recovery_list):
+            return False
+        # convert info dict into recovery list - same order as wallet
+        info_str = "("
+        for entry in my_recovery_list:
+            info_str = info_str + info_dict[entry.hex()]
+        info_str = info_str + ")"
         message_spend_bundle = spend_bundle_list.aggregate(spend_bundle_list)
+
         success = await wallet.recovery_spend(
-            request["coin_name"], request["puzhash"], info, message_spend_bundle
+            request["coin_name"], request["puzhash"], info_str, message_spend_bundle
         )
         return {"success": success}
 
