@@ -49,11 +49,13 @@ class TestRpc:
 
         config = load_config(bt.root_path, "config.yaml")
         hostname = config["self_hostname"]
+        daemon_hostname = config["daemon_hostname"] or hostname
         daemon_port = config["daemon_port"]
 
         rpc_cleanup = await start_rpc_server(
             full_node_rpc_api,
             hostname,
+            daemon_hostname,
             daemon_port,
             test_rpc_port,
             stop_node_cb,

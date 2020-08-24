@@ -96,12 +96,12 @@ class DaemonProxy:
         return await self._get(request)
 
 
-async def connect_to_daemon(self_hostname: str, daemon_port: int):
+async def connect_to_daemon(daemon_hostname: str, daemon_port: int):
     """
     Connect to the local daemon.
     """
 
-    client = DaemonProxy(f"ws://{self_hostname}:{daemon_port}")
+    client = DaemonProxy(f"ws://{daemon_hostname}:{daemon_port}")
     await client.start()
     return client
 
@@ -113,8 +113,9 @@ async def connect_to_daemon_and_validate(root_path):
     """
     try:
         net_config = load_config(root_path, "config.yaml")
+        daemon_hostname = net_config["daemon_hostname"] or net_config["self_hostname"]
         connection = await connect_to_daemon(
-            net_config["self_hostname"], net_config["daemon_port"]
+            daemon_hostname, net_config["daemon_port"]
         )
         r = await connection.ping()
 

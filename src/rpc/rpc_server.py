@@ -197,7 +197,7 @@ class RpcServer:
 
         await ws.close()
 
-    async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
+    async def connect_to_daemon(self, daemon_hostname: str, daemon_port: uint16):
         while True:
             session = None
             try:
@@ -205,7 +205,7 @@ class RpcServer:
                     break
                 session = aiohttp.ClientSession()
                 async with session.ws_connect(
-                    f"ws://{self_hostname}:{daemon_port}",
+                    f"ws://{daemon_hostname}:{daemon_port}",
                     autoclose=False,
                     autoping=True,
                 ) as ws:
@@ -215,7 +215,7 @@ class RpcServer:
                 await session.close()
             except aiohttp.client_exceptions.ClientConnectorError:
                 self.log.warning(
-                    f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}"
+                    f"Cannot connect to daemon at ws://{daemon_hostname}:{daemon_port}"
                 )
             except Exception as e:
                 tb = traceback.format_exc()
