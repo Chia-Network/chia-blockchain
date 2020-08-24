@@ -488,7 +488,7 @@ class TestWalletSimulator:
 (0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount})\
 {coin.amount} {innerpuz} {innersol})"
         try:
-            cost, result = clvm.run_program(binutils.assemble(full_puzzle), binutils.assemble(fullsol))
+            cost, result = run_program(binutils.assemble(full_puzzle), binutils.assemble(fullsol))
         except Exception as e:
             assert e.args == ('clvm raise',)
         else:
