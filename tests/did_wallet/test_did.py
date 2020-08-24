@@ -323,13 +323,9 @@ class TestWalletSimulator:
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
         info = "()"
-        await did_wallet.recovery_spend(coin, ph, info)
-
-        for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
-
-        await self.time_out_assert(15, wallet.get_confirmed_balance, 400000000000000)
-        await self.time_out_assert(15, wallet.get_unconfirmed_balance, 400000000000000)
+        spend_bundle = await did_wallet.recovery_spend(coin, ph, info)
+        additions = spend_bundle.additions()
+        assert additions == []
 
     @pytest.mark.asyncio
     async def test_did_attest_after_recovery(self, two_wallet_nodes):
