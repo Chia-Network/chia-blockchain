@@ -450,20 +450,6 @@ class WalletRpcApi:
 
         return response
 
-    async def rl_set_user_info(self, request):
-        wallet_id = int(request["wallet_id"])
-        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        admin_pubkey = request["admin_pubkey"]
-        limit = uint64(int(request["limit"]))
-        interval = uint64(int(request["interval"]))
-        origin_id = request["origin_id"]
-
-        success = await wallet.set_user_info(interval, limit, origin_id, admin_pubkey)
-
-        response = {"success": success}
-
-        return response
-
     async def did_update_recovery_ids(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.wallet_node.wallet_state_manager.wallets[wallet_id]
