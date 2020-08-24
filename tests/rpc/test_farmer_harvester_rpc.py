@@ -45,6 +45,7 @@ class TestRpc:
 
         config = load_config(bt.root_path, "config.yaml")
         hostname = config["self_hostname"]
+        daemon_hostname = config["daemon_hostname"] or hostname
         daemon_port = config["daemon_port"]
 
         farmer_rpc_api = FarmerRpcApi(farmer)
@@ -53,6 +54,7 @@ class TestRpc:
         rpc_cleanup = await start_rpc_server(
             farmer_rpc_api,
             hostname,
+            daemon_hostname,
             daemon_port,
             test_rpc_port,
             stop_node_cb,
@@ -61,6 +63,7 @@ class TestRpc:
         rpc_cleanup_2 = await start_rpc_server(
             harvester_rpc_api,
             hostname,
+            daemon_hostname,
             daemon_port,
             test_rpc_port_2,
             stop_node_cb_2,
