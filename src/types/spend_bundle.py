@@ -3,7 +3,6 @@ from typing import List
 
 from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
-from src.util.chain_utils import additions_for_solution
 from src.util.streamable import Streamable, streamable
 from .coin_solution import CoinSolution
 from blspy import G2Element, AugSchemeMPL
@@ -35,11 +34,7 @@ class SpendBundle(Streamable):
     def additions(self) -> List[Coin]:
         items: List[Coin] = []
         for coin_solution in self.coin_solutions:
-            items.extend(
-                additions_for_solution(
-                    coin_solution.coin.name(), coin_solution.solution
-                )
-            )
+            items.extend(coin_solution.additions())
         return items
 
     def removals(self) -> List[Coin]:

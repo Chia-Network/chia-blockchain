@@ -1,5 +1,5 @@
 import io
-from typing import Any
+from typing import Any, List, Set
 
 from src.types.sized_bytes import bytes32
 from src.util.clvm import sexp_from_stream, sexp_to_stream, SExp
@@ -36,15 +36,27 @@ class Program(SExp):  # type: ignore # noqa
     def __str__(self) -> str:
         return bytes(self).hex()
 
-    def get_tree_hash(self) -> bytes32:
+    def _tree_hash(self, precalculated: Set[bytes32]) -> bytes32:
+        """
+        Hash values in `precalculated` are presumed to have been hashed already.
+        """
         if self.listp():
-            left = self.to(self.first()).get_tree_hash()
-            right = self.to(self.rest()).get_tree_hash()
+            left = self.to(self.first())._tree_hash(precalculated)
+            right = self.to(self.rest())._tree_hash(precalculated)
             s = b"\2" + left + right
         else:
             atom = self.as_atom()
+            if atom in precalculated:
+                return bytes32(atom)
             s = b"\1" + atom
         return bytes32(std_hash(s))
+
+    def get_tree_hash(self, *args: List[bytes32]) -> bytes32:
+        """
+        Any values in `args` that appear in the tree
+        are presumed to have been hashed already.
+        """
+        return self._tree_hash(set(args))
 
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))
