@@ -215,8 +215,8 @@ class TestCCTrades:
         assert offer is not None
         assert offer["chia"] == -1000
 
-        colour_2 = await cc_a_2.get_colour()
-        colour_3 = await cc_a_3.get_colour()
+        colour_2 = cc_a_2.get_colour()
+        colour_3 = cc_a_3.get_colour()
 
         assert offer[colour_2] == 20
         assert offer[colour_3] == 50
@@ -265,7 +265,7 @@ class TestCCTrades:
 
         await time_out_assert(15, cc_a_4.get_confirmed_balance, 100)
 
-        colour = await cc_a_4.get_colour()
+        colour = cc_a_4.get_colour()
 
         cc_b_4: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_b.wallet_state_manager, wallet_b, colour

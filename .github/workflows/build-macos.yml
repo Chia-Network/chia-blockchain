@@ -17,7 +17,7 @@ jobs:
 
     steps:
     - name: Cancel previous runs on the same branch
-      uses: styfle/cancel-workflow-action@0.4.0
+      uses: styfle/cancel-workflow-action@0.4.1
       with:
         access_token: ${{ github.token }}
 
@@ -97,7 +97,7 @@ jobs:
       run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
 
     - name: Setup Node 12.x
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v2.1.1
       with:
         node-version: '12.x'
 
@@ -116,7 +116,7 @@ jobs:
         ./venv/bin/py.test tests -s -v --durations 0
 
     - name: Upload MacOS artifacts
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2.1.4
       with:
         name: Chia-Installer-on-MacOS-10.15-dmg
         path: ${{ github.workspace }}/build_scripts/final_installer/

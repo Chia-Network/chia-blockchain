@@ -1,11 +1,11 @@
 from clvm import run_program as default_run_program, to_sexp_f, KEYWORD_TO_ATOM  # noqa
-from clvm.runtime_001 import OPERATOR_LOOKUP  # noqa
+from clvm.operators import OPERATOR_LOOKUP  # noqa
 from clvm.EvalError import EvalError  # noqa
 from clvm.casts import int_from_bytes, int_to_bytes  # noqa
 from clvm.serialize import sexp_from_stream, sexp_to_stream  # noqa
-from clvm.subclass_sexp import BaseSExp  # noqa
 
 SExp = to_sexp_f(1).__class__
+BaseSExp = SExp
 
 
 def run_program(

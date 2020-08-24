@@ -7,7 +7,7 @@ xcrun altool --notarize-app -f Chia-0.1.X.dmg --primary-bundle-id net.chia.block
 echo "xcrun altool --notarize-app; -should return REQUEST-ID, use it in next command"
 
 echo "Wait until following command return a success message"
-xcrun altool --notarization-info  {REQUEST-ID} -u username -p password
+watch -n 20 'xcrun altool --notarization-info  {REQUEST-ID} -u username -p password'
 echo "It can take a while, run it every few minutes"
 
 

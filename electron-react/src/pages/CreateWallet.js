@@ -3,6 +3,7 @@ import {
   makeStyles,
   Typography,
   Paper,
+  Grid,
   List,
   Button,
   Box
@@ -15,16 +16,24 @@ import {
   changeCreateWallet,
   ALL_OPTIONS,
   CREATE_CC_WALLET_OPTIONS,
-  CRAETE_EXISTING_CC,
-  CREATE_NEW_CC
+  CREATE_EXISTING_CC,
+  CREATE_NEW_CC,
+  CREATE_RL_WALLET_OPTIONS,
+  CREATE_RL_ADMIN,
+  CREATE_RL_USER
 } from "../modules/createWalletReducer";
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { CreateNewCCWallet } from "./createNewColouredCoin";
 import { CreateExistingCCWallet } from "./createExistingColouredCoin";
+import { CreateRLAdminWallet } from "./createRLAdmin";
+import { CreateRLUserWallet } from "./createRLUser";
 import InvertColorsIcon from "@material-ui/icons/InvertColors";
 
 export const useStyles = makeStyles(theme => ({
+  walletContainer: {
+    marginBottom: theme.spacing(5)
+  },
   root: {
     display: "flex",
     paddingLeft: "0px",
@@ -43,7 +52,7 @@ export const useStyles = makeStyles(theme => ({
   },
   paper: {
     marginTop: theme.spacing(2),
-    padding: theme.spacing(0),
+    padding: theme.spacing(2),
     display: "flex",
     overflow: "auto",
     flexDirection: "column",
@@ -73,26 +82,42 @@ export const MainWalletList = () => {
   const dispatch = useDispatch();
   const classes = useStyles();
 
-  function select_option() {
+  function select_option_cc() {
     dispatch(changeCreateWallet(CREATE_CC_WALLET_OPTIONS));
   }
 
+  function select_option_rl() {
+    dispatch(changeCreateWallet(CREATE_RL_WALLET_OPTIONS));
+  }
+
   return (
-    <div>
-      <div className={classes.cardTitle}>
-        <Typography component="h6" variant="h6">
-          Select Wallet Type
-        </Typography>
-      </div>
-      <List>
-        <ListItem button onClick={select_option}>
-          <ListItemIcon>
-            <InvertColorsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Coloured Coin" />
-        </ListItem>
-      </List>
-    </div>
+    <Grid container spacing={0}>
+      <Grid item xs={12}>
+        <div className={classes.cardTitle}>
+          <Box display="flex">
+            <Box flexGrow={1} className={classes.title}>
+              <Typography component="h6" variant="h6">
+                Select Wallet Type
+              </Typography>
+            </Box>
+          </Box>
+        </div>
+        <List>
+          <ListItem button onClick={select_option_cc}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Coloured Coin" />
+          </ListItem>
+          <ListItem button onClick={select_option_rl}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Rate Limited" />
+          </ListItem>
+        </List>
+      </Grid>
+    </Grid>
   );
 };
 
@@ -109,40 +134,94 @@ export const CCListItems = () => {
   }
 
   function select_option_existing() {
-    dispatch(changeCreateWallet(CRAETE_EXISTING_CC));
+    dispatch(changeCreateWallet(CREATE_EXISTING_CC));
   }
 
   return (
-    <div>
-      <div className={classes.cardTitle}>
-        <Box display="flex">
-          <Box>
-            <Button onClick={goBack}>
-              <ArrowBackIosIcon> </ArrowBackIosIcon>
-            </Button>
+    <Grid container spacing={0}>
+      <Grid item xs={12}>
+        <div className={classes.cardTitle}>
+          <Box display="flex">
+            <Box>
+              <Button onClick={goBack}>
+                <ArrowBackIosIcon> </ArrowBackIosIcon>
+              </Button>
+            </Box>
+            <Box flexGrow={1} className={classes.title}>
+              <Typography component="h6" variant="h6">
+                Coloured Coin Options
+              </Typography>
+            </Box>
           </Box>
-          <Box flexGrow={1} className={classes.title}>
-            <Typography component="h6" variant="h6">
-              Coloured Coin Options
-            </Typography>
+        </div>
+        <List>
+          <ListItem button onClick={select_option_new}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create new coloured coin" />
+          </ListItem>
+          <ListItem button onClick={select_option_existing}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create wallet for existing colour" />
+          </ListItem>
+        </List>
+      </Grid>
+    </Grid>
+  );
+};
+
+export const RLListItems = () => {
+  const classes = useStyles();
+  const dispatch = useDispatch();
+
+  function goBack() {
+    dispatch(changeCreateWallet(ALL_OPTIONS));
+  }
+
+  function select_option_admin() {
+    dispatch(changeCreateWallet(CREATE_RL_ADMIN));
+  }
+
+  function select_option_user() {
+    dispatch(changeCreateWallet(CREATE_RL_USER));
+  }
+
+  return (
+    <Grid container spacing={0}>
+      <Grid item xs={12}>
+        <div className={classes.cardTitle}>
+          <Box display="flex">
+            <Box>
+              <Button onClick={goBack}>
+                <ArrowBackIosIcon> </ArrowBackIosIcon>
+              </Button>
+            </Box>
+            <Box flexGrow={1} className={classes.title}>
+              <Typography component="h6" variant="h6">
+                Rate Limited Options
+              </Typography>
+            </Box>
           </Box>
-        </Box>
-      </div>
-      <List>
-        <ListItem button onClick={select_option_new}>
-          <ListItemIcon>
-            <InvertColorsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Create new coloured coin" />
-        </ListItem>
-        <ListItem button onClick={select_option_existing}>
-          <ListItemIcon>
-            <InvertColorsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Create wallet for existing colour" />
-        </ListItem>
-      </List>
-    </div>
+        </div>
+        <List>
+          <ListItem button onClick={select_option_admin}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create admin wallet" />
+          </ListItem>
+          <ListItem button onClick={select_option_user}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create user wallet" />
+          </ListItem>
+        </List>
+      </Grid>
+    </Grid>
   );
 };
 
@@ -155,8 +234,14 @@ const CreateViewSwitch = () => {
     return <CCListItems></CCListItems>;
   } else if (view === CREATE_NEW_CC) {
     return <CreateNewCCWallet></CreateNewCCWallet>;
-  } else if (view === CRAETE_EXISTING_CC) {
+  } else if (view === CREATE_EXISTING_CC) {
     return <CreateExistingCCWallet></CreateExistingCCWallet>;
+  } else if (view === CREATE_RL_WALLET_OPTIONS) {
+    return <RLListItems></RLListItems>;
+  } else if (view === CREATE_RL_ADMIN) {
+    return <CreateRLAdminWallet></CreateRLAdminWallet>;
+  } else if (view === CREATE_RL_USER) {
+    return <CreateRLUserWallet></CreateRLUserWallet>;
   }
 };
 
@@ -164,10 +249,10 @@ export const CreateWalletView = () => {
   const classes = useStyles();
 
   return (
-    <div className={classes.root}>
+    <Grid className={classes.walletContainer} item xs={12}>
       <Paper className={classes.paper}>
         <CreateViewSwitch></CreateViewSwitch>
       </Paper>
-    </div>
+    </Grid>
   );
 };

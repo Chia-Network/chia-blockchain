@@ -8,12 +8,20 @@ import sys
 import traceback
 from typing import Dict, Any, List
 from sys import platform
-from aiohttp import web
+
+try:
+    from aiohttp import web
+except ModuleNotFoundError:
+    print(
+        "Error: Make sure to run . ./activate from the project folder before starting Chia."
+    )
+    quit()
 
 
 import websockets
-from src.cmds.init import chia_init
 
+from src.cmds.init import chia_init
+from src.daemon.windows_signal import kill
 from src.util.ws_message import format_response
 from src.util.json_util import dict_to_json_str
 
@@ -108,6 +116,7 @@ class WebSocketServer:
     async def stop(self):
         await self.exit()
         self.websocket_server.close()
+        return {"success": True}
 
     async def safe_handle(self, websocket, path):
         service_name = ""
@@ -328,9 +337,8 @@ class WebSocketServer:
         return response
 
     async def register_service(self, websocket, request):
-        self.log.info(request)
+        self.log.info(f"Register service {request}")
         service = request["service"]
-        self.log.info(service)
         if service in self.connections:
             ws = self.connections[service]
             self.connections.pop(service)
@@ -421,7 +429,17 @@ def launch_service(root_path, service_command):
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
 
-    process = subprocess.Popen(service_array, shell=False, startupinfo=startupinfo)
+    # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
+    if platform == "win32" or platform == "cygwin":
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        creationflags = 0
+    process = subprocess.Popen(
+        service_array,
+        shell=False,
+        startupinfo=startupinfo,
+        creationflags=creationflags,
+    )
     pid_path = pid_path_for_service(root_path, service_command)
     try:
         mkdir(pid_path.parent)
@@ -432,27 +450,31 @@ def launch_service(root_path, service_command):
     return process, pid_path
 
 
-async def kill_service(root_path, services, service_name, delay_before_kill=10) -> bool:
+async def kill_service(root_path, services, service_name, delay_before_kill=15) -> bool:
     process = services.get(service_name)
     if process is None:
         return False
     del services[service_name]
     pid_path = pid_path_for_service(root_path, service_name)
 
-    log.info("sending term signal to %s", service_name)
-    process.terminate()
-    # on Windows, process.kill and process.terminate are the same,
-    # so no point in trying process.kill later
-    if process.kill != process.terminate:
-        count = 0
-        while count < delay_before_kill:
-            if process.poll() is not None:
-                break
-            await asyncio.sleep(1)
-            count += 1
-        else:
-            process.kill()
-            log.info("sending kill signal to %s", service_name)
+    if platform == "win32" or platform == "cygwin":
+        log.info("sending CTRL_BREAK_EVENT signal to %s", service_name)
+        # pylint: disable=E1101
+        kill(process.pid, signal.SIGBREAK)  # type: ignore
+
+    else:
+        log.info("sending term signal to %s", service_name)
+        process.terminate()
+
+    count = 0
+    while count < delay_before_kill:
+        if process.poll() is not None:
+            break
+        await asyncio.sleep(1)
+        count += 1
+    else:
+        process.kill()
+        log.info("sending kill signal to %s", service_name)
     r = process.wait()
     log.info("process %s returned %d", service_name, r)
     try:

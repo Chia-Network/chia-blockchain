@@ -28,8 +28,7 @@ export const fullnodeReducer = (state = { ...initial_state }, action) => {
     case "LOG_OUT":
       return { ...initial_state };
     case "CLEAR_BLOCK":
-      state.block = null;
-      return state;
+      return { ...state, block: null };
     case "INCOMING_MESSAGE":
       if (action.message.origin !== service_full_node) {
         return state;
@@ -40,36 +39,28 @@ export const fullnodeReducer = (state = { ...initial_state }, action) => {
 
       if (command === "get_blockchain_state") {
         if (data.success) {
-          state.blockchain_state = data.blockchain_state;
+          return { ...state, blockchain_state: data.blockchain_state };
         }
-        return state;
       } else if (command === "get_latest_block_headers") {
         if (data.success) {
-          const headers = data.latest_blocks;
-          state.headers = headers;
+          return { ...state, headers: data.latest_blocks };
         }
-        return state;
       } else if (command === "get_block") {
         if (data.success) {
-          state.block = data.block;
+          return { ...state, block: data.block };
         }
-        return state;
       } else if (command === "get_header") {
         if (data.success) {
-          state.header = data.header;
+          return { ...state, header: data.header };
         }
-        return state;
       } else if (command === "get_connections") {
-        state.connections = data.connections;
-        return state;
-      }
-      if (command === "open_connection") {
+        return { ...state, connections: data.connections };
+      } else if (command === "open_connection") {
         if (data.success) {
-          state.open_connection_error = "";
+          return { ...state, open_connection_error: "" };
         } else {
-          state.open_connection_error = data.error;
+          return { ...state, open_connection_error: data.error };
         }
-        return state;
       }
       return state;
     default:

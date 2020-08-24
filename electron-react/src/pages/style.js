@@ -74,7 +74,7 @@ const myStyle = makeStyles(theme => ({
     paddingBottom: 20
   },
   drag: {
-    backgroundColor: "#888888",
+    backgroundColor: "#aaaaaa",
     height: 300,
     width: "100%"
   },
@@ -98,6 +98,18 @@ const myStyle = makeStyles(theme => ({
   whiteP: {
     color: "white",
     fontSize: "18px"
+  },
+  column_three: {
+    width: "33%"
+  },
+  align_right: {
+    textAlign: "right"
+  },
+  align_left: {
+    textAlign: "left"
+  },
+  align_center: {
+    textAlign: "center"
   }
 }));
 

@@ -1,3 +1,4 @@
+import base64
 import json
 import time
 from pathlib import Path
@@ -8,7 +9,8 @@ import asyncio
 
 import aiosqlite
 from chiabip158 import PyBIP158
-from blspy import PrivateKey, G1Element
+from blspy import PrivateKey, G1Element, AugSchemeMPL
+from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
 from src.types.coin import Coin
@@ -24,9 +26,11 @@ from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.key_val_store import KeyValStore
 from src.wallet.settings.user_settings import UserSettings
+from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.trade_manager import TradeManager
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
+from src.wallet.util.backup_utils import open_backup_file
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_action_store import WalletActionStore
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -45,7 +49,8 @@ from src.types.program import Program
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.wallet.derive_keys import master_sk_to_wallet_sk
+from src.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_backup_sk
+from src import __version__
 
 
 class WalletStateManager:
@@ -142,7 +147,19 @@ class WalletStateManager:
         self.wallets = {}
         self.wallets[main_wallet_info.id] = self.main_wallet
 
-        await self.load_wallets()
+        for wallet_info in await self.get_all_wallets():
+            # self.log.info(f"wallet_info {wallet_info}")
+            if wallet_info.type == WalletType.STANDARD_WALLET.value:
+                if wallet_info.id == 1:
+                    continue
+                wallet = await Wallet.create(config, wallet_info)
+                self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.COLOURED_COIN.value:
+                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
+                self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.RATE_LIMITED.value:
+                wallet = await RLWallet.create(self, wallet_info)
+                self.wallets[wallet_info.id] = wallet
 
         async with self.puzzle_store.lock:
             index = await self.puzzle_store.get_last_derivation_path()
@@ -192,6 +209,13 @@ class WalletStateManager:
             )
 
         return self
+
+    def get_derivation_index(self, pubkey: G1Element, max_depth: int = 1000) -> int:
+        for i in range(0, max_depth):
+            derived = self.get_public_key(uint32(i))
+            if derived == pubkey:
+                return i
+        return -1
 
     def get_public_key(self, index: uint32) -> G1Element:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
@@ -283,11 +307,43 @@ class WalletStateManager:
                 start_index = 0
 
             for index in range(start_index, unused + to_generate):
+                if target_wallet.wallet_info.type == WalletType.RATE_LIMITED:
+                    if target_wallet.rl_info.initialized is False:
+                        break
+                    type = target_wallet.rl_info.type
+                    if type == "user":
+                        rl_pubkey = G1Element.from_bytes(
+                            target_wallet.rl_info.user_pubkey
+                        )
+                    else:
+                        rl_pubkey = G1Element.from_bytes(
+                            target_wallet.rl_info.admin_pubkey
+                        )
+                    rl_puzzle: Program = target_wallet.puzzle_for_pk(rl_pubkey)
+                    puzzle_hash: bytes32 = rl_puzzle.get_tree_hash()
+
+                    rl_index = self.get_derivation_index(rl_pubkey)
+                    if rl_index == -1:
+                        break
+
+                    derivation_paths.append(
+                        DerivationRecord(
+                            uint32(rl_index),
+                            puzzle_hash,
+                            rl_pubkey,
+                            target_wallet.wallet_info.type,
+                            uint32(target_wallet.wallet_info.id),
+                        )
+                    )
+                    break
+
                 pubkey: G1Element = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+                if puzzle is None:
+                    continue
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
                 self.log.info(
-                    f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}"
+                    f"Puzzle at index {index} wid {wallet_id} puzzle hash {puzzlehash.hex()}"
                 )
                 derivation_paths.append(
                     DerivationRecord(
@@ -1359,18 +1415,49 @@ class WalletStateManager:
                 all_wallets.remove(wallet)
                 break
 
-        backup = WalletInfoBackup(all_wallets)
-        file_path.write_text(bytes(backup).hex())
+        backup_pk = master_sk_to_backup_sk(self.private_key)
+        now = uint64(int(time.time()))
+        wallet_backup = WalletInfoBackup(all_wallets)
+
+        backup: Dict[str, Any] = {}
+
+        data = wallet_backup.to_json_dict()
+        data["version"] = __version__
+        data["fingerprint"] = self.private_key.get_g1().get_fingerprint()
+        data["timestamp"] = now
+        key_base_64 = base64.b64encode(bytes(backup_pk))
+        f = Fernet(key_base_64)
+        data_bytes = json.dumps(data).encode()
+        encrypted = f.encrypt(data_bytes)
+
+        meta_data: Dict[str, Any] = {}
+        meta_data["timestamp"] = now
+        meta_data["pubkey"] = bytes(backup_pk.get_g1()).hex()
+
+        meta_data_bytes = json.dumps(meta_data).encode()
+        signature = bytes(
+            AugSchemeMPL.sign(
+                backup_pk, std_hash(encrypted) + std_hash(meta_data_bytes)
+            )
+        ).hex()
+
+        backup["data"] = encrypted.decode()
+        backup["meta_data"] = meta_data
+        backup["signature"] = signature
+
+        backup_file_text = json.dumps(backup)
+        file_path.write_text(backup_file_text)
 
     async def import_backup_info(self, file_path):
-        backup_text = file_path.read_text()
-        backup: WalletInfoBackup = WalletInfoBackup.from_bytes(
-            hexstr_to_bytes(backup_text)
-        )
+        json_dict = open_backup_file(file_path, self.private_key)
+        wallet_list_json = json_dict["data"]["wallet_list"]
 
-        for wallet_info in backup.wallet_list:
+        for wallet_info in wallet_list_json:
             await self.user_store.create_wallet(
-                wallet_info.name, wallet_info.type, wallet_info.data
+                wallet_info["name"],
+                wallet_info["type"],
+                wallet_info["data"],
+                wallet_info["id"],
             )
 
         await self.load_wallets()

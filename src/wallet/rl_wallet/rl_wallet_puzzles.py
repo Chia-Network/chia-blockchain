@@ -31,16 +31,15 @@ def rl_puzzle_for_pk(
 
     hex_pk = pubkey.hex()
     clawback_pk_str = clawback_pk.hex()
+    origin_id = origin_id.hex()
 
-    opcode_aggsig = hexlify(ConditionOpcode.AGG_SIG).decode("ascii")
-    opcode_coin_block_age = hexlify(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS).decode(
-        "ascii"
-    )
-    opcode_create = hexlify(ConditionOpcode.CREATE_COIN).decode("ascii")
-    opcode_myid = hexlify(ConditionOpcode.ASSERT_MY_COIN_ID).decode("ascii")
+    opcode_aggsig = ConditionOpcode.AGG_SIG.hex()
+    opcode_coin_block_age = ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS.hex()
+    opcode_create = ConditionOpcode.CREATE_COIN.hex()
+    opcode_myid = ConditionOpcode.ASSERT_MY_COIN_ID.hex()
 
     TEMPLATE_MY_PARENT_ID = "(sha256 (f (r (r (r (r (r (r (a)))))))) (f (r (a))) (f (r (r (r (r (r (r (r (a))))))))))"
-    TEMPLATE_SINGLETON_RL = f'((c (i (i (= {TEMPLATE_MY_PARENT_ID} (f (a))) (q 1) (= (f (a)) (q 0x{origin_id}))) (q (c (q 1) (q ()))) (q (x (q "Parent doesnt satisfy RL conditions")))) (a)))'  # noqa: E501
+    TEMPLATE_SINGLETON_RL = f'((c (i (i (= {TEMPLATE_MY_PARENT_ID} (f (a))) (q 1) (= (f (a)) (q 0x{origin_id}))) (q ()) (q (x (q "Parent doesnt satisfy RL conditions")))) (a)))'  # noqa: E501
     TEMPLATE_BLOCK_AGE = f'((c (i (i (= (* (f (r (r (r (r (r (a))))))) (q {rate_amount})) (* (f (r (r (r (r (a)))))) (q {interval_time}))) (q 1) (q (> (* (f (r (r (r (r (r (a))))))) (q {rate_amount})) (* (f (r (r (r (r (a))))))) (q {interval_time})))) (q (c (q 0x{opcode_coin_block_age}) (c (f (r (r (r (r (r (a))))))) (q ())))) (q (x (q "wrong min block time")))) (a) ))'  # noqa: E501
     TEMPLATE_MY_ID = f"(c (q 0x{opcode_myid}) (c (sha256 (f (a)) (f (r (a))) (f (r (r (a))))) (q ())))"  # noqa: E501
     CREATE_CHANGE = f"(c (q 0x{opcode_create}) (c (f (r (a))) (c (- (f (r (r (a)))) (f (r (r (r (r (a))))))) (q ()))))"  # noqa: E501
@@ -64,7 +63,6 @@ def rl_puzzle_for_pk(
     WHOLE_PUZZLE_WITH_CLAWBACK = (
         f"((c (i (= (f (a)) (q 3)) (q {CLAWBACK}) (q {WHOLE_PUZZLE})) (a)))"
     )
-
     return Program(binutils.assemble(WHOLE_PUZZLE_WITH_CLAWBACK))
 
 
@@ -102,13 +100,13 @@ def rl_make_solution_mode_2(
 
 
 def solution_for_rl(
-    my_parent_id,
-    my_puzzlehash,
-    my_amount,
-    out_puzzlehash,
-    out_amount,
-    my_parent_parent_id,
-    parent_amount,
+    my_parent_id: bytes32,
+    my_puzzlehash: bytes32,
+    my_amount: uint64,
+    out_puzzlehash: bytes32,
+    out_amount: uint64,
+    my_parent_parent_id: bytes32,
+    parent_amount: uint64,
     interval,
     limit,
 ):
@@ -117,10 +115,11 @@ def solution_for_rl(
     min_block_time, parent_parent_id, parent_amount)
     min block time = Math.ceil((new_amount * self.interval) / self.limit)
     """
+
     min_block_count = math.ceil((out_amount * interval) / limit)
     solution = (
-        f"(1 0x{my_parent_id} 0x{my_puzzlehash} {my_amount} 0x{out_puzzlehash} {out_amount}"
-        f" {min_block_count} 0x{my_parent_parent_id} {parent_amount})"
+        f"(1 0x{my_parent_id.hex()} 0x{my_puzzlehash.hex()} {my_amount} 0x{out_puzzlehash.hex()} {out_amount}"
+        f" {min_block_count} 0x{my_parent_parent_id.hex()} {parent_amount})"
     )
     return Program(binutils.assemble(solution))
 

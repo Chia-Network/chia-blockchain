@@ -3,6 +3,7 @@ import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import { withRouter } from "react-router-dom";
 import { connect, useDispatch, useSelector } from "react-redux";
+
 import Typography from "@material-ui/core/Typography";
 import Paper from "@material-ui/core/Paper";
 import Box from "@material-ui/core/Box";
@@ -11,39 +12,37 @@ import Button from "@material-ui/core/Button";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
-
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
-import {
-  get_puzzle_hash,
-  send_transaction,
-  farm_block
-} from "../modules/message";
+
+import { send_transaction, rl_set_user_info_action } from "../modules/message";
 import ExpansionPanel from "@material-ui/core/ExpansionPanel";
 import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
 import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
-import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
-import { unix_to_short_date } from "../util/utils";
-import { openDialog } from "../modules/dialogReducer";
 import { Tooltip } from "@material-ui/core";
 import HelpIcon from "@material-ui/icons/Help";
-const config = require("../config");
+import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
+
+import { unix_to_short_date } from "../util/utils";
+
+import { openDialog } from "../modules/dialogReducer";
+
 const drawerWidth = 240;
 
 const useStyles = makeStyles(theme => ({
   front: {
     zIndex: "100"
   },
+  root: {
+    display: "flex",
+    paddingLeft: "0px"
+  },
   resultSuccess: {
     color: "green"
   },
   resultFailure: {
     color: "red"
-  },
-  root: {
-    display: "flex",
-    paddingLeft: "0px"
   },
   toolbar: {
     paddingRight: 24 // keep right padding when drawer closed
@@ -117,13 +116,6 @@ const useStyles = makeStyles(theme => ({
     overflow: "auto",
     flexDirection: "column"
   },
-  fixedHeight: {
-    height: 240
-  },
-  heading: {
-    fontSize: theme.typography.pxToRem(15),
-    fontWeight: theme.typography.fontWeightRegular
-  },
   drawerWallet: {
     position: "relative",
     whiteSpace: "nowrap",
@@ -134,7 +126,7 @@ const useStyles = makeStyles(theme => ({
       duration: theme.transitions.duration.enteringScreen
     })
   },
-  sendCard: {
+  balancePaper: {
     marginTop: theme.spacing(2)
   },
   sendButton: {
@@ -143,10 +135,16 @@ const useStyles = makeStyles(theme => ({
     width: 150,
     height: 50
   },
+  clawbackButton: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    width: 200,
+    height: 50
+  },
   copyButton: {
     marginTop: theme.spacing(0),
     marginBottom: theme.spacing(0),
-    width: 50,
+    width: 70,
     height: 56
   },
   cardTitle: {
@@ -159,13 +157,50 @@ const useStyles = makeStyles(theme => ({
     paddingRight: theme.spacing(3),
     paddingTop: theme.spacing(1)
   },
+  setupSection: {
+    paddingLeft: theme.spacing(3),
+    paddingRight: theme.spacing(3),
+    paddingTop: theme.spacing(3),
+    paddingBottom: theme.spacing(1)
+  },
+  setupTitle: {
+    paddingLeft: theme.spacing(3),
+    paddingRight: theme.spacing(3),
+    paddingTop: theme.spacing(2),
+    paddingBottom: theme.spacing(0)
+  },
+  inputLeft: {
+    marginLeft: theme.spacing(3),
+    height: 56
+  },
+  inputRight: {
+    marginRight: theme.spacing(3),
+    marginLeft: theme.spacing(6),
+    height: 56
+  },
+  inputTitleLeft: {
+    marginLeft: theme.spacing(0),
+    marginBottom: theme.spacing(0),
+    width: 400
+  },
+  inputTitleRight: {
+    marginLeft: theme.spacing(3),
+    width: 400
+  },
   walletContainer: {
     marginBottom: theme.spacing(5)
   },
   table_root: {
     width: "100%",
     maxHeight: 600,
-    overflowY: "scroll"
+    overflowY: "scroll",
+    padding: theme.spacing(1),
+    margin: theme.spacing(1),
+    marginBottom: theme.spacing(2),
+    marginTop: theme.spacing(2),
+    display: "flex",
+    overflow: "auto",
+    flexDirection: "column"
   },
   table: {
     height: "100%",
@@ -183,10 +218,310 @@ const useStyles = makeStyles(theme => ({
     width: 50,
     overflowWrap: "break-word" /* Renamed property in CSS3 draft spec */
   },
-  amountField: {
+  leftField: {
     paddingRight: 20
+  },
+  submitButton: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    width: 150,
+    height: 50
   }
 }));
+
+const IncompleteCard = props => {
+  var id = props.wallet_id;
+
+  const dispatch = useDispatch();
+  const data = useSelector(state => state.wallet_state.wallets[id].data);
+  const data_parsed = JSON.parse(data);
+  const pubkey = data_parsed["user_pubkey"];
+
+  function copy() {
+    navigator.clipboard.writeText(pubkey);
+  }
+
+  var ip_input = null;
+
+  function submit() {
+    const ip_val = ip_input.value;
+    const hexcheck = /[0-9a-f]+$/gi;
+
+    if (!hexcheck.test(ip_val) || ip_val.value === "") {
+      dispatch(openDialog("Please enter a valid info packet"));
+      return;
+    }
+
+    const ip_unhex = Buffer.from(ip_val, "hex");
+    const ip_debuf = ip_unhex.toString("utf8");
+    const ip_parsed = JSON.parse(ip_debuf);
+    const interval_input = ip_parsed["interval"];
+    const chiaper_input = ip_parsed["limit"];
+    const origin_input = ip_parsed["origin_string"];
+    const admin_pubkey_input = ip_parsed["admin_pubkey"];
+    const interval_value = parseInt(Number(interval_input));
+    const chiaper_value = parseInt(Number(chiaper_input));
+    const origin_parsed = JSON.parse(origin_input);
+    dispatch(
+      rl_set_user_info_action(
+        id,
+        interval_value,
+        chiaper_value,
+        origin_parsed,
+        admin_pubkey_input
+      )
+    );
+  }
+
+  const classes = useStyles();
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              Rate Limited User Wallet Setup
+            </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.setupSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <Typography variant="subtitle1">
+                  Send your pubkey to your Rate Limited Wallet admin:
+                </Typography>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  disabled
+                  fullWidth
+                  label="User Pubkey"
+                  value={pubkey}
+                  variant="outlined"
+                />
+              </Box>
+              <Box>
+                <Button
+                  onClick={copy}
+                  className={classes.copyButton}
+                  variant="contained"
+                  color="secondary"
+                  disableElevation
+                >
+                  Copy
+                </Button>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.setupSection}>
+            <Box display="flex">
+              <Box flexGrow={1} style={{ marginTop: 10, marginBottom: 0 }}>
+                <Typography variant="subtitle1">
+                  When you receive the setup info packet from your admin, enter
+                  it below to complete your Rate Limited Wallet setup:
+                </Typography>
+              </Box>
+            </Box>
+            <Box display="flex">
+              <Box flexGrow={1} style={{ marginTop: 0 }}>
+                <TextField
+                  variant="filled"
+                  color="secondary"
+                  fullWidth
+                  inputRef={input => {
+                    ip_input = input;
+                  }}
+                  margin="normal"
+                  label="Info Packet"
+                />
+              </Box>
+            </Box>
+          </div>
+          <div className={classes.setupSection}>
+            <Box display="flex">
+              <Box>
+                <Button
+                  onClick={submit}
+                  className={classes.submitButton}
+                  variant="contained"
+                  color="primary"
+                >
+                  Submit
+                </Button>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+};
+
+const RLDetailsCard = props => {
+  var id = props.wallet_id;
+
+  const data = useSelector(state => state.wallet_state.wallets[id].data);
+  const data_parsed = JSON.parse(data);
+  const type = data_parsed["type"];
+  const user_pubkey = data_parsed["user_pubkey"];
+  const admin_pubkey = data_parsed["admin_pubkey"];
+  const interval = data_parsed["interval"];
+  const limit = data_parsed["limit"];
+  const origin = data_parsed["rl_origin"];
+  const origin_string = JSON.stringify(origin);
+  const infopacket = {
+    interval: interval,
+    limit: limit,
+    origin_string: origin_string,
+    admin_pubkey: admin_pubkey
+  };
+
+  const ip_string = JSON.stringify(infopacket);
+  const ip_buf = Buffer.from(ip_string, "utf8");
+  const ip_hex = ip_buf.toString("hex");
+
+  function user_copy() {
+    navigator.clipboard.writeText(user_pubkey);
+  }
+
+  function ip_hex_copy() {
+    navigator.clipboard.writeText(ip_hex);
+  }
+
+  const classes = useStyles();
+  if (type === "user") {
+    return (
+      <Paper className={classes.paper}>
+        <Grid container spacing={0}>
+          <Grid item xs={12}>
+            <div className={classes.cardTitle}>
+              <Typography component="h6" variant="h6">
+                Rate Limited Info
+              </Typography>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
+                <Box flexGrow={1}>
+                  <Typography variant="subtitle1">
+                    Spending Interval (number of blocks): {interval}
+                  </Typography>
+                </Box>
+                <Box flexGrow={1}>
+                  <Typography variant="subtitle1">
+                    Spending Limit (chia per interval):{" "}
+                    {mojo_to_chia_string(limit)}
+                  </Typography>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex" style={{ marginBottom: 20 }}>
+                <Box flexGrow={1}>
+                  <TextField
+                    disabled
+                    fullWidth
+                    label="My Pubkey"
+                    value={user_pubkey}
+                    variant="outlined"
+                  />
+                </Box>
+                <Box>
+                  <Button
+                    onClick={user_copy}
+                    className={classes.copyButton}
+                    variant="contained"
+                    color="secondary"
+                    disableElevation
+                  >
+                    Copy
+                  </Button>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+        </Grid>
+      </Paper>
+    );
+  } else if (type === "admin") {
+    return (
+      <Paper className={classes.paper}>
+        <Grid container spacing={0}>
+          <Grid item xs={12}>
+            <div className={classes.cardTitle}>
+              <Typography component="h6" variant="h6">
+                Rate Limited Info
+              </Typography>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
+                <Box flexGrow={1}>
+                  <Typography variant="subtitle1">
+                    Spending Interval (number of blocks): {interval}
+                  </Typography>
+                </Box>
+                <Box flexGrow={1}>
+                  <Typography variant="subtitle1">
+                    Spending Limit (chia per interval):{" "}
+                    {mojo_to_chia_string(limit)}
+                  </Typography>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+          <Grid item xs={12}>
+            <div className={classes.cardSubSection}>
+              <Box display="flex">
+                <Box flexGrow={1} style={{ marginTop: 5, marginBottom: 20 }}>
+                  <Typography variant="subtitle1">
+                    Send this info packet to your Rate Limited Wallet user who
+                    must use it to complete setup of their wallet:
+                  </Typography>
+                </Box>
+              </Box>
+              <Box display="flex" style={{ marginBottom: 20 }}>
+                <Box flexGrow={1}>
+                  <TextField
+                    disabled
+                    fullWidth
+                    label="Info Packet"
+                    value={ip_hex}
+                    variant="outlined"
+                  />
+                </Box>
+                <Box>
+                  <Button
+                    onClick={ip_hex_copy}
+                    className={classes.copyButton}
+                    variant="contained"
+                    color="secondary"
+                    disableElevation
+                  >
+                    Copy
+                  </Button>
+                </Box>
+              </Box>
+            </div>
+          </Grid>
+        </Grid>
+      </Paper>
+    );
+  }
+};
 
 const BalanceCardSubSection = props => {
   const classes = useStyles();
@@ -230,9 +565,6 @@ const BalanceCard = props => {
   const balance_pending = useSelector(
     state => state.wallet_state.wallets[id].balance_pending
   );
-  const balance_frozen = useSelector(
-    state => state.wallet_state.wallets[id].balance_frozen
-  );
   const balance_change = useSelector(
     state => state.wallet_state.wallets[id].balance_change
   );
@@ -252,14 +584,12 @@ const BalanceCard = props => {
         <BalanceCardSubSection
           title="Total Balance"
           balance={balance}
-          tooltip="This is the total amount of Chia in the blockchain at the LCA block (latest common ancestor) that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+          tooltip=""
         />
         <BalanceCardSubSection
           title="Spendable Balance"
           balance={balance_spendable}
-          tooltip={
-            "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transctions, and Chia that you have just spent but is not yet in the blockchain."
-          }
+          tooltip={""}
         />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
@@ -280,30 +610,17 @@ const BalanceCard = props => {
                       <BalanceCardSubSection
                         title="Pending Total Balance"
                         balance={balance_ptotal}
-                        tooltip={
-                          "This is the total balance + pending balance: it it what your balance will be after all pending transactions are confirmed."
-                        }
+                        tooltip={""}
                       />
                       <BalanceCardSubSection
                         title="Pending Balance"
                         balance={balance_pending}
-                        tooltip={
-                          "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-                        }
-                      />
-                      <BalanceCardSubSection
-                        title="Pending Farming Rewards"
-                        balance={balance_frozen}
-                        tooltip={
-                          "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable. Farming rewards are frozen for 200 blocks."
-                        }
+                        tooltip={""}
                       />
                       <BalanceCardSubSection
                         title="Pending Change"
                         balance={balance_change}
-                        tooltip={
-                          "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-                        }
+                        tooltip={""}
                       />
                     </Grid>
                   </ExpansionPanelDetails>
@@ -332,6 +649,7 @@ const SendCard = props => {
   const send_transaction_result = useSelector(
     state => state.wallet_state.wallets[id].send_transaction_result
   );
+
   let result_message = "";
   let result_class = classes.resultSuccess;
   if (send_transaction_result) {
@@ -345,13 +663,6 @@ const SendCard = props => {
     } else {
       result_message = "Transaction failed. " + send_transaction_result.reason;
       result_class = classes.resultFailure;
-    }
-  }
-
-  function farm() {
-    var address = address_input.value;
-    if (address !== "") {
-      dispatch(farm_block(address));
     }
   }
 
@@ -376,16 +687,6 @@ const SendCard = props => {
     const amount = chia_to_mojo(amount_input.value);
     const fee = chia_to_mojo(fee_input.value);
 
-    if (puzzle_hash.includes("colour")) {
-      dispatch(
-        openDialog(
-          "Error: Cannot send chia to coloured address. Please enter a chia address."
-        )
-      );
-      return;
-    } else if (puzzle_hash.substring(0, 12) === "chia_addr://") {
-      puzzle_hash = puzzle_hash.substring(12);
-    }
     if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
       puzzle_hash = puzzle_hash.substring(2);
     }
@@ -419,7 +720,6 @@ const SendCard = props => {
             <Box display="flex">
               <Box flexGrow={1}>
                 <TextField
-                  id="filled-secondary"
                   variant="filled"
                   color="secondary"
                   fullWidth
@@ -439,12 +739,11 @@ const SendCard = props => {
             <Box display="flex">
               <Box flexGrow={6}>
                 <TextField
-                  id="filled-secondary"
                   variant="filled"
                   color="secondary"
                   fullWidth
                   disabled={sending_transaction}
-                  className={classes.amountField}
+                  className={classes.leftField}
                   margin="normal"
                   inputRef={input => {
                     amount_input = input;
@@ -454,7 +753,6 @@ const SendCard = props => {
               </Box>
               <Box flexGrow={6}>
                 <TextField
-                  id="filled-secondary"
                   variant="filled"
                   fullWidth
                   color="secondary"
@@ -472,17 +770,6 @@ const SendCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
-              <Box flexGrow={1}>
-                <Button
-                  onClick={farm}
-                  className={classes.sendButton}
-                  style={config.local_test ? {} : { visibility: "hidden" }}
-                  variant="contained"
-                  color="primary"
-                >
-                  Farm
-                </Button>
-              </Box>
               <Box>
                 <Button
                   onClick={send}
@@ -501,6 +788,55 @@ const SendCard = props => {
     </Paper>
   );
 };
+
+// TODO(lipa): use this / clean up
+// const ClawbackCard = props => {
+//   var id = props.wallet_id;
+//   const classes = useStyles();
+//   const dispatch = useDispatch();
+
+//   function clawback() {
+//     dispatch(clawback_rl_coin(id));
+//   }
+//   return (
+//     <Paper className={classes.paper}>
+//       <Grid container spacing={0}>
+//         <Grid item xs={12}>
+//           <div className={classes.cardTitle}>
+//             <Typography component="h6" variant="h6">
+//               Clawback Rate Limited Coin
+//             </Typography>
+//           </div>
+//         </Grid>
+//         <Grid item xs={12}>
+//           <div className={classes.cardSubSection}>
+//             <Box display="flex" style={{ marginTop: 20 }}>
+//               <Box flexGrow={1}>
+//                 <Typography variant="subtitle1">You may use the clawback feature to retrieve your coin at any time. If you do so, your Rate Limited User will no longer be able to spend the coin.</Typography>
+//               </Box>
+//             </Box>
+//           </div>
+//         </Grid>
+//         <Grid item xs={12}>
+//           <div className={classes.cardSubSection}>
+//             <Box display="flex">
+//               <Box>
+//                 <Button
+//                   onClick={clawback}
+//                   className={classes.clawbackButton}
+//                   variant="contained"
+//                   color="primary"
+//                 >
+//                   Clawback Coin
+//                 </Button>
+//               </Box>
+//             </Box>
+//           </div>
+//         </Grid>
+//       </Grid>
+//     </Paper>
+//   );
+// };
 
 const HistoryCard = props => {
   var id = props.wallet_id;
@@ -541,10 +877,8 @@ const TransactionTable = props => {
       return "Outgoing";
     }
   };
-  const confirmed_to_string = tx => {
-    return tx.confirmed
-      ? "Confirmed at height " + tx.confirmed_at_index
-      : "Pending";
+  const confirmed_to_string = confirmed => {
+    return confirmed ? "Confirmed" : "Pending";
   };
 
   return (
@@ -564,12 +898,7 @@ const TransactionTable = props => {
           {transactions.map(tx => (
             <TableRow
               className={classes.row}
-              key={
-                tx.to_puzzle_hash +
-                tx.created_at_time +
-                tx.amount +
-                (tx.removals.length > 0 ? tx.removals[0].parent_coin_info : "")
-              }
+              key={tx.to_puzzle_hash + tx.created_at_time + tx.amount}
             >
               <TableCell className={classes.cell_short}>
                 {incoming_string(tx.incoming)}
@@ -584,7 +913,7 @@ const TransactionTable = props => {
                 {unix_to_short_date(tx.created_at_time)}
               </TableCell>
               <TableCell className={classes.cell_short}>
-                {confirmed_to_string(tx)}
+                {confirmed_to_string(tx.confirmed)}
               </TableCell>
               <TableCell className={classes.cell_short}>
                 {mojo_to_chia_string(tx.amount)}
@@ -600,95 +929,46 @@ const TransactionTable = props => {
   );
 };
 
-const AddressCard = props => {
-  var id = props.wallet_id;
-  const puzzle_hash = useSelector(
-    state => state.wallet_state.wallets[id].puzzle_hash
-  );
+const RateLimitedWallet = props => {
   const classes = useStyles();
-  const dispatch = useDispatch();
-
-  function newAddress() {
-    dispatch(get_puzzle_hash(id));
-  }
-
-  function copy() {
-    navigator.clipboard.writeText(puzzle_hash);
-  }
-
-  return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              Receive Addresss
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  disabled
-                  fullWidth
-                  label="Address"
-                  value={puzzle_hash}
-                  variant="outlined"
-                />
-              </Box>
-              <Box>
-                <Button
-                  onClick={copy}
-                  className={classes.copyButton}
-                  variant="contained"
-                  color="secondary"
-                  disableElevation
-                >
-                  Copy
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}></Box>
-              <Box>
-                <Button
-                  onClick={newAddress}
-                  className={classes.sendButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  New Address
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-};
-
-const StandardWallet = props => {
-  const classes = useStyles();
-  var id = props.wallet_id;
+  const id = useSelector(state => state.wallet_menu.id);
   const wallets = useSelector(state => state.wallet_state.wallets);
+  const data = useSelector(state => state.wallet_state.wallets[id].data);
+  const data_parsed = JSON.parse(data);
+  const type = data_parsed["type"];
+  var init_status = data_parsed["initialized"];
 
-  return wallets.length > props.wallet_id ? (
-    <Grid className={classes.walletContainer} item xs={12}>
-      <BalanceCard wallet_id={id}></BalanceCard>
-      <SendCard wallet_id={id}></SendCard>
-      <AddressCard wallet_id={id}> </AddressCard>
-      <HistoryCard wallet_id={id}></HistoryCard>
-    </Grid>
-  ) : (
-    ""
-  );
+  if (type === "user") {
+    if (init_status) {
+      return wallets.length > props.wallet_id ? (
+        <Grid className={classes.walletContainer} item xs={12}>
+          <RLDetailsCard wallet_id={id}></RLDetailsCard>
+          <BalanceCard wallet_id={id}></BalanceCard>
+          <SendCard wallet_id={id}></SendCard>
+          <HistoryCard wallet_id={id}></HistoryCard>
+        </Grid>
+      ) : (
+        ""
+      );
+    } else {
+      return wallets.length > props.wallet_id ? (
+        <Grid className={classes.walletContainer} item xs={12}>
+          <IncompleteCard wallet_id={id}></IncompleteCard>
+        </Grid>
+      ) : (
+        ""
+      );
+    }
+  } else if (type === "admin") {
+    return wallets.length > props.wallet_id ? (
+      <Grid className={classes.walletContainer} item xs={12}>
+        <RLDetailsCard wallet_id={id}></RLDetailsCard>
+        <BalanceCard wallet_id={id}></BalanceCard>
+      </Grid>
+    ) : (
+      ""
+    );
+  }
 };
 
-export default withRouter(connect()(StandardWallet));
+export default withRouter(connect()(RateLimitedWallet));

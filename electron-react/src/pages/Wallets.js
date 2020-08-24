@@ -18,10 +18,17 @@ import {
   changeWalletMenu,
   createWallet,
   standardWallet,
-  CCWallet
+  CCWallet,
+  RLWallet
 } from "../modules/walletMenu";
 import { CreateWalletView } from "./CreateWallet";
 import ColouredWallet from "./ColouredWallet";
+import RateLimitedWallet from "./RateLimitedWallet";
+import {
+  STANDARD_WALLET,
+  COLOURED_COIN,
+  RATE_LIMITED
+} from "../util/wallet_types";
 
 const drawerWidth = 180;
 
@@ -109,11 +116,17 @@ const WalletItem = props => {
     name = "";
   }
   var mainLabel = "";
-  if (wallet.type === 0) {
+  if (wallet.type === STANDARD_WALLET) {
     mainLabel = "Chia Wallet";
     name = "Chia";
-  } else if (wallet.type === 6) {
+  } else if (wallet.type === COLOURED_COIN) {
     mainLabel = "CC Wallet";
+    if (name.length > 18) {
+      name = name.substring(0, 18);
+      name = name.concat("...");
+    }
+  } else if (wallet.type === RATE_LIMITED) {
+    mainLabel = "RL Wallet";
     if (name.length > 18) {
       name = name.substring(0, 18);
       name = name.concat("...");
@@ -121,10 +134,12 @@ const WalletItem = props => {
   }
 
   function presentWallet() {
-    if (wallet.type === 0) {
+    if (wallet.type === STANDARD_WALLET) {
       dispatch(changeWalletMenu(standardWallet, wallet.id));
-    } else if (wallet.type === 6) {
+    } else if (wallet.type === COLOURED_COIN) {
       dispatch(changeWalletMenu(CCWallet, wallet.id));
+    } else if (wallet.type === RATE_LIMITED) {
+      dispatch(changeWalletMenu(RLWallet, wallet.id));
     }
   }
 
@@ -156,6 +171,8 @@ const WalletViewSwitch = () => {
     return <CreateWalletView></CreateWalletView>;
   } else if (toPresent === CCWallet) {
     return <ColouredWallet wallet_id={id}> </ColouredWallet>;
+  } else if (toPresent === RLWallet) {
+    return <RateLimitedWallet wallet_id={id}> </RateLimitedWallet>;
   }
   return <div></div>;
 };

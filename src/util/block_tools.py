@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from argparse import Namespace
 
-from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
+from blspy import G1Element, G2Element, AugSchemeMPL
 
 from chiavdf import prove
 from chiabip158 import PyBIP158
@@ -104,8 +104,10 @@ class BlockTools:
             args.tmp_dir = temp_dir
             args.tmp2_dir = plot_dir
             args.final_dir = plot_dir
+            args.plotid = None
+            args.memo = None
             test_private_keys = [
-                PrivateKey.from_seed(std_hash(bytes([i]))) for i in range(args.num)
+                AugSchemeMPL.key_gen(std_hash(bytes([i]))) for i in range(args.num)
             ]
             try:
                 # No datetime in the filename, to get deterministic filenames and not replot

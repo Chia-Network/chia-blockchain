@@ -3,20 +3,20 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.2.2",  # Signature library
+    "blspy==0.2.3",  # Signature library
     "chiavdf==0.12.24",  # timelord and vdf verification
     "chiabip158==0.16",  # bip158-style wallet filters
-    "chiapos==0.12.24",  # proof of space
-    "clvm==0.4",  # contract language
-    "clvm-tools==0.1.1",  # clvm compiler tools
+    "chiapos==0.12.26",  # proof of space
+    "clvm==0.4.1",  # contract language
+    "clvm-tools==0.1.4",  # clvm compiler tools
     "aiohttp==3.6.2",  # HTTP server for full node rpc
-    "aiosqlite==0.15.0",  # asyncio wrapper for sqlite, to store blocks
+    "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@28cb5754deec562ac931da8fca799fb82df97a12#egg=aiosqlite",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
-    "cbor2==5.1.0",  # Used for network wire format
-    "colorlog==4.1.0",  # Adds color to logs
+    "cbor2==5.1.2",  # Used for network wire format
+    "colorlog==4.2.1",  # Adds color to logs
     "concurrent-log-handler==0.9.16",  # Concurrently log and rotate logs
     "cryptography==3.0", #Python cryptography library for TLS
-    "keyring==21.2.1",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "keyring==21.3.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     "PyYAML==5.3.1",  # Used for config file format
     "sortedcontainers==2.2.2",  # For maintaining sorted mempools

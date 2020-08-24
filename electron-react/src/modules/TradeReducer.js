@@ -91,31 +91,45 @@ export const tradeReducer = (state = { ...initial_state }, action) => {
       new_trades.push(trade);
       return { ...state, trades: new_trades };
     case "RESET_TRADE":
-      state = { ...initial_state };
-      return state;
+      return { ...initial_state };
     case "OFFER_PARSING":
       var status = action.status;
-      state.parsing_state = status;
       if (status === parsingStateParsed) {
-        state.parsed_offer = action.offer;
-        state.show_offer = true;
+        return {
+          ...state,
+          parsing_state: status,
+          parsed_offer: action.offer,
+          show_offer: true
+        };
       } else if (status === parsingStateReset) {
-        state.show_offer = false;
-        state.parsing_state = parsingStatePending;
+        return {
+          ...state,
+          parsing_state: parsingStatePending,
+          show_offer: false
+        };
       }
-      return state;
+      return {
+        ...state,
+        parsing_state: status
+      };
     case "OFFER_NAME":
-      state.parsed_offer_name = action.name;
-      state.parsed_offer_path = action.path;
-      return state;
+      return {
+        ...state,
+        parsed_offer_name: action.name,
+        parsed_offer_path: action.path
+      };
     case "PRESENT_OVERVIEW":
-      state.showing_trade = false;
-      state.trade_showed = null;
-      return state;
+      return {
+        ...state,
+        showing_trade: false,
+        trade_showed: null
+      };
     case "PRESENT_TRADES":
-      state.showing_trade = true;
-      state.trade_showed = action.trade;
-      return state;
+      return {
+        ...state,
+        showing_trade: true,
+        trade_showed: action.trade
+      };
     default:
       return state;
   }

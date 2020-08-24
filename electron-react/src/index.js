@@ -6,26 +6,26 @@ import App from "./App";
 import "./assets/css/App.css";
 import store from "./modules/store";
 import WebSocketConnection from "./hocs/WebsocketConnection";
-import { Backdrop, CircularProgress } from "@material-ui/core";
 import { daemon_rpc_ws } from "./util/config";
-
-const LoadingScreen = () => {
-  return (
-    <Backdrop open={true} invisible={false}>
-      <CircularProgress color="inherit" />
-    </Backdrop>
-  );
-};
+import { exit_and_close } from "./modules/message";
+import isElectron from "is-electron";
 
 const Root = ({ store }) => (
   <Provider store={store}>
     <WebSocketConnection host={daemon_rpc_ws}>
       <Router>
         <Route path="/" component={App} />
-        <Route path="/closing" component={LoadingScreen} />
       </Router>
     </WebSocketConnection>
   </Provider>
 );
 
 ReactDOM.render(<Root store={store} />, document.getElementById("root"));
+
+window.onload = () => {
+  if (isElectron()) {
+    window.ipcRenderer.on("exit-daemon", (event, ...args) => {
+      store.dispatch(exit_and_close(event));
+    });
+  }
+};

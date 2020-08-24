@@ -22,7 +22,7 @@ export const startPlotting = (k, n, t, t2, d, b) => {
 
 export const workspaceSelected = location => {
   const action = plotControl();
-  action.command = "workplace_location";
+  action.command = "workspace_location";
   action.location = location;
   return action;
 };
