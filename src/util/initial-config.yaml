@@ -2,6 +2,7 @@ network_id: testnet  # testnet/mainnet
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
+daemon_hostname: *self_hostname
 daemon_port: 55400
 
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.

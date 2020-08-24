@@ -229,6 +229,7 @@ class RpcServer:
 async def start_rpc_server(
     rpc_api: Any,
     self_hostname: str,
+    daemon_hostname: str,
     daemon_port: uint16,
     rpc_port: uint16,
     stop_cb: Callable,
@@ -268,7 +269,7 @@ async def start_rpc_server(
     app.add_routes(routes)
     if connect_to_daemon:
         daemon_connection = asyncio.create_task(
-            rpc_server.connect_to_daemon(self_hostname, daemon_port)
+            rpc_server.connect_to_daemon(daemon_hostname, daemon_port)
         )
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()

@@ -94,6 +94,7 @@ class Service:
         ping_interval = net_config.get("ping_interval")
         network_id = net_config.get("network_id")
         self.self_hostname = net_config.get("self_hostname")
+        self.daemon_hostname = net_config.get("daemon_hostname") or self.self_hostname
         self.daemon_port = net_config.get("daemon_port")
         assert ping_interval is not None
         assert network_id is not None
@@ -176,6 +177,7 @@ class Service:
                     start_rpc_server(
                         rpc_api(self._api),
                         self.self_hostname,
+                        self.daemon_hostname,
                         self.daemon_port,
                         rpc_port,
                         self.stop,
