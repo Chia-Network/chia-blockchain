@@ -10,6 +10,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 - The Chia UI now has a proper About menu entry that gives the various component versions and directs people to submit issues on GitHub. Thank you to @freddiecoleman for this pull request!
+- Ability to run only the farmer, wallet, or timelord services, for more advanced configurations
 
 ### Changed
 - To complement the new About menu, we have revamped all Electron menus and made them OS native. There are now direct links to the Wiki, Keybase, and FAQ in the Help menu.
