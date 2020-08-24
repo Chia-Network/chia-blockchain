@@ -555,8 +555,8 @@ class WalletRpcApi:
     async def did_recovery_spend(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        spend_bundle_list = []
 
+        spend_bundle_list = []
         for i in request["spend_bundles"]:
             spend_bundle_list.append(SpendBundle.from_bytes(bytes.fromhex(i)))
         # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
@@ -569,7 +569,7 @@ class WalletRpcApi:
         for entry in my_recovery_list:
             info_str = info_str + info_dict[entry.hex()]
         info_str = info_str + ")"
-        message_spend_bundle = spend_bundle_list.aggregate(spend_bundle_list)
+        message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
 
         success = await wallet.recovery_spend(
             request["coin_name"], request["puzhash"], info_str, message_spend_bundle
