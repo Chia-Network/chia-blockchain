@@ -466,8 +466,10 @@ class DIDWallet:
     async def create_attestment(self, identity, newpuz):
         coins = await self.select_coins(1)
         coin = coins.pop()
+        message_sexp = binutils.assemble(f"(r (r (c (q 0x{identity}) (c (q 0x{newpuz}) (q ())))))")
+        innermessage = Program(message_sexp).get_tree_hash()
         # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol = f"(1 {coin.amount} 0x{newpuz} 0x{identity} 0x{coin.puzzle_hash})"
+        innersol = f"(1 {coin.amount} 0x{innermessage} 0x{identity} 0x{coin.puzzle_hash})"
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz_str = self.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
@@ -494,13 +496,14 @@ class DIDWallet:
         message_spend = did_wallet_puzzles.create_spend_for_mesasage(
             coin.name(), identity, newpuz
         )
+
         # # spend the message coin
         # list_of_solutions.append(
         #     message_spend
         # )
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
-        message = bytes(newpuz) + bytes(coin.name())
+        message = bytes(innermessage) + bytes(coin.name())
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = master_sk_to_wallet_sk(self.wallet_state_manager.private_key, index)
@@ -609,7 +612,7 @@ class DIDWallet:
             trade_id=None
         )
         await self.standard_wallet.push_transaction(did_record)
-        return True
+        return spend_bundle
 
     async def get_new_innerpuz(self) -> Program:
         devrec = await self.wallet_state_manager.get_unused_derivation_record(
