@@ -590,7 +590,7 @@ class RLWallet(AbstractWallet):
         )
 
     async def clawback_rl_coin_transaction(self):
-        to_puzzle_hash = self.get_new_puzzlehash()
+        to_puzzle_hash = await self.main_wallet.get_new_puzzlehash()
         spend_bundle = await self.clawback_rl_coin(to_puzzle_hash)
         if spend_bundle is None:
             return None
