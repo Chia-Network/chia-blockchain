@@ -13,6 +13,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 
 ### Fixed
+
 ## [1.0beta11] aka Beta 1.11 - 2020-08-24
 
 ### Added
