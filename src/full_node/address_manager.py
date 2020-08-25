@@ -39,7 +39,7 @@ class ExtendedPeerInfo:
         self.timestamp: int = addr.timestamp
         self.src: Optional[PeerInfo] = src_peer
         if src_peer is None:
-            self.src = peer_info
+            self.src = self.peer_info
         self.random_pos: Optional[int] = None
         self.is_tried: bool = False
         self.ref_count: int = 0
@@ -62,7 +62,7 @@ class ExtendedPeerInfo:
     def from_string(cls, peer_str: str):
         blobs = peer_str.split(" ")
         assert len(blobs) == 4
-        peer_info = PeerInfo(blobs[0], int(blobs[1]))
+        peer_info = TimestampedPeerInfo(blobs[0], int(blobs[1]), 0)
         src_peer = PeerInfo(blobs[2], int(blobs[3]))
         return cls(peer_info, src_peer)
 
