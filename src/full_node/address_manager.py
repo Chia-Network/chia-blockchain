@@ -2,7 +2,7 @@ from src.util.hash import std_hash
 from secrets import randbits
 from random import randrange, choice
 
-from src.types.peer_info import PeerInfo
+from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from typing import Dict, List, Optional
 from asyncio import Lock
 
@@ -29,10 +29,14 @@ MAX_FAILURES = 10
 class ExtendedPeerInfo:
     def __init__(
         self,
-        peer_info: PeerInfo,
+        addr: TimestampedPeerInfo,
         src_peer: Optional[PeerInfo],
     ):
-        self.peer_info: PeerInfo = peer_info
+        self.peer_info: PeerInfo = PeerInfo(
+            addr.host,
+            addr.port,
+        )
+        self.timestamp: int = addr.timestamp
         self.src: Optional[PeerInfo] = src_peer
         if src_peer is None:
             self.src = peer_info
@@ -41,7 +45,6 @@ class ExtendedPeerInfo:
         self.ref_count: int = 0
         self.last_success: int = 0
         self.last_try: int = 0
-        self.timestamp: int = peer_info.timestamp
         self.num_attempts: int = 0
         self.last_count_attempt: int = 0
 
@@ -213,7 +216,7 @@ class AddressManager:
         self.last_good = 1
         self.tried_collisions = []
 
-    def create_(self, addr: PeerInfo, addr_src: Optional[PeerInfo]):
+    def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]):
         self.id_count += 1
         node_id = self.id_count
         self.map_info[node_id] = ExtendedPeerInfo(addr, addr_src)
@@ -344,9 +347,13 @@ class AddressManager:
         del self.map_info[node_id]
         self.new_count -= 1
 
-    def add_to_new_table_(self, addr: PeerInfo, source: Optional[PeerInfo], penalty: int):
+    def add_to_new_table_(self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int):
         is_unique = False
-        (info, node_id) = self.find_(addr)
+        peer_info = PeerInfo(
+            addr.host,
+            addr.port,
+        )
+        (info, node_id) = self.find_(peer_info)
         if (
             info is not None
             and info.peer_info.host == addr.host
@@ -530,7 +537,7 @@ class AddressManager:
             self.swap_random_(n, rand_pos)
             info = self.map_info[self.random_pos[n]]
             if not info.is_terrible():
-                cur_peer_info = PeerInfo(
+                cur_peer_info = TimestampedPeerInfo(
                     info.peer_info.host,
                     info.peer_info.port,
                     info.timestamp,
@@ -561,7 +568,7 @@ class AddressManager:
 
     async def add_to_new_table(
         self,
-        addresses: List[PeerInfo],
+        addresses: List[TimestampedPeerInfo],
         source: Optional[PeerInfo] = None,
         penalty: int = 0
     ):
