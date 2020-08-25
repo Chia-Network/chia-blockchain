@@ -17,7 +17,6 @@ from src.util.network import create_node_id
 from .pipeline import initialize_pipeline
 from .ssl_context import ssl_context_for_client, ssl_context_for_server
 
-
 async def start_server(
     self: "ChiaServer", on_connect: OnConnectFunc = None
 ) -> asyncio.AbstractServer:
@@ -129,8 +128,9 @@ class ChiaServer:
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
+        self.log.info(f"Trying to connect with {target_node}.")
         if self._pipeline_task.done():
-            self.log.warning("Starting client after server closed")
+            self.log.error("Starting client after server closed")
             return False
 
         ssl_context = ssl_context_for_client(self.root_path, self.config, auth=auth)

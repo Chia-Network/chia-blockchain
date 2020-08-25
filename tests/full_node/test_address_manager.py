@@ -4,7 +4,7 @@ import time
 import math
 import aiosqlite
 from src.types.peer_info import PeerInfo
-from src.server.address_manager import ExtendedPeerInfo, AddressManager
+from src.full_node.address_manager import ExtendedPeerInfo, AddressManager
 from src.full_node.address_manager_store import AddressManagerStore
 from pathlib import Path
 
