@@ -209,7 +209,7 @@ def chia_init(root_path: Path):
 
     PATH_MANIFEST_LIST: List[Tuple[Path, List[str]]] = [
         (Path(os.path.expanduser("~/.chia/beta-%s" % _)), MANIFEST)
-        for _ in ["1.0b9", "1.0b8"]
+        for _ in ["1.0b11", "1.0b10", "1.0b9", "1.0b8"]
     ]
 
     for old_path, manifest in PATH_MANIFEST_LIST:
