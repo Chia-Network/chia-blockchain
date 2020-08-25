@@ -72,15 +72,11 @@ async def setup_full_node(
     config = load_config(bt.root_path, "config.yaml", "full_node")
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
-    config["introducer_connect_interval"] = 10
-
-    periodic_introducer_poll = None
+    config["peer_connect_interval"] = 10
     if introducer_port is not None:
-        periodic_introducer_poll = (
-            PeerInfo(self_hostname, introducer_port),
-            10,
-            config["target_peer_count"],
-        )
+        config["introducer_peer"]["host"] = "::1"
+        config["introducer_peer"]["port"] = introducer_port 
+
     if not simulator:
         api: FullNode = FullNode(
             config=config,
@@ -122,7 +118,6 @@ async def setup_full_node(
         start_callback=start_callback,
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
-        periodic_introducer_poll=periodic_introducer_poll,
         parse_cli_args=False,
     )
 

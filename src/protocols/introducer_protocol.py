@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List
 
-from src.types.peer_info import PeerInfo
+from src.types.peer_info import TimestampedPeerInfo
 from src.util.cbor_message import cbor_message
 
 
@@ -21,4 +21,4 @@ class RequestPeers:
 @dataclass(frozen=True)
 @cbor_message
 class RespondPeers:
-    peer_list: List[PeerInfo]
+    peer_list: List[TimestampedPeerInfo]

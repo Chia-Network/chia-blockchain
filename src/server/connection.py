@@ -7,9 +7,8 @@ from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.peer_info import PeerInfo
 from src.util import cbor
 from src.util.ints import uint16
-from src.server.address_manager import AddressManager
-from src.full_node.address_manager_store import AddressManagerStore
 from src.server.introducer_peers import IntroducerPeers
+from src.util.errors import Err, ProtocolError
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 4
@@ -34,8 +33,9 @@ class ChiaConnection:
         server_port: int,
         on_connect: OnConnectFunc,
         log: logging.Logger,
-        is_outbound: bool = False,
-        is_feeler: bool = False,
+        is_outbound: bool,
+        # Special type of connection, that disconnects after the handshake.
+        is_feeler: bool,
     ):
         self.local_type = local_type
         self.connection_type = connection_type
@@ -134,33 +134,35 @@ class PeerConnections:
     ):
         self._all_connections = all_connections
         self.local_type = local_type
-        self.address_manager = None
         self.introducer_peers = None
         self.connection = None
-
-        if local_type == NodeType.FULL_NODE:
-            asyncio.create_task(self.initialize_address_manager())
-            self.max_inbound_count = config["target_peer_count"] - config["target_outbound_peer_count"]
-            self.target_outbound_count = config["target_outbound_peer_count"]
-
         if local_type == NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
             for c in all_connections:
                 if c.connection_type == NodeType.FULL_NODE:
                     self.introducer_peers.add(c.get_peer_info())
         self.state_changed_callback: Optional[Callable] = None
+        self.full_node_peers_callback: Optional[Callable] = None
 
     def set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
+
+    def set_full_node_peers_callback(self, callback: Callable):
+        self.full_node_peers_callback = callback
 
     def _state_changed(self, state: str):
         if self.state_changed_callback is not None:
             self.state_changed_callback(state)
 
     def add(self, connection: ChiaConnection) -> bool:
+        if not connection.is_outbound:
+            if not self.accept_inbound_connections(connection.connection_type):
+                connection.log.warn("Add problem..")
+                raise ProtocolError(Err.MAX_INBOUND_CONNECTIONS_REACHED)
+
         for c in self._all_connections:
             if c.node_id == connection.node_id:
-                return False
+                raise ProtocolError(Err.DUPLICATE_CONNECTION, [False])
         self._all_connections.append(connection)
 
         if connection.connection_type == NodeType.FULL_NODE:
@@ -199,66 +201,56 @@ class PeerConnections:
             filter(None, map(ChiaConnection.get_peer_info, self._all_connections))
         )
 
-    # Functions related to AddressManager calls.
-    async def add_potential_peer(self, peer: PeerInfo, peer_source: Optional[PeerInfo], penalty=0):
-        if self.address_manager is None:
-            return
-        if peer is None or not peer.port:
-            return False
-        await self.address_manager.add_to_new_table([peer], peer_source, penalty)
+    async def successful_handshake(self, connection):
+        if (
+            connection.connection_type == NodeType.FULL_NODE
+            and connection.is_outbound
+            and connection.local_type == NodeType.FULL_NODE
+        ):
+            if self.full_node_peers_callback is not None:
+                self.full_node_peers_callback(
+                    "mark_tried",
+                    connection.get_peer_info(),
+                )
+                if connection.is_feeler:
+                    connection.close()
+                    self.close(connection)
+                    return
+                # Request peers after handshake.
+                if connection.local_type == NodeType.FULL_NODE:
+                    await connection.send(Message("request_peers", ""))
+        yield connection
 
-    async def add_potential_peers(self, peers: List[PeerInfo], peer_source: Optional[PeerInfo], penalty=0):
-        if self.address_manager is None:
-            return
-        await self.address_manager.add_to_new_table(peers, peer_source, penalty)
+    def failed_handshake(self, connection, e):
+        if (
+            connection.connection_type == NodeType.FULL_NODE
+            and connection.is_outbound
+            and connection.local_type == NodeType.FULL_NODE
+        ):
+            if isinstance(e, ProtocolError):
+                if (
+                    isinstance(e.code, type(Err.MAX_INBOUND_CONNECTIONS_REACHED))
+                    or isinstance(e.code, type(Err.DUPLICATE_CONNECTION))
+                ):
+                    return
+               
+            if self.full_node_peers_callback is not None:
+                self.full_node_peers_callback(
+                    "mark_attempted",
+                    connection.get_peer_info(),
+                )
 
-    async def get_peers(self):
-        if self.address_manager is None:
-            return []
-        peers = await self.address_manager.get_peers()
-        return peers
-
-    async def mark_attempted(self, peer_info: Optional[PeerInfo]):
-        if self.address_manager is None:
-            return
-        if peer_info is None or not peer_info.port:
-            return
-        await self.address_manager.attempt(peer_info, True)
-
-    async def update_connection_time(self, peer_info: Optional[PeerInfo]):
-        if self.address_manager is None:
-            return
-        if peer_info is None or not peer_info.port:
-            return
-        await self.address_manager.connect(peer_info)
-
-    async def mark_good(self, peer_info: Optional[PeerInfo]):
-        if self.address_manager is None:
-            return
-        if peer_info is None or not peer_info.port:
-            return
-        # Always test before evict.
-        await self.address_manager.mark_good(peer_info, True)
-
-    async def size(self):
-        if self.address_manager is None:
-            return 0
-        return await self.address_manager.size()
-
-    async def serialize(self):
-        if self.address_manager is not None:
-            async with self.address_manager.lock:
-                self.address_manager_store.serialize(self.address_manager)
-
-    async def initialize_address_manager(self):
-        while self.connection is None:
-            await asyncio.sleep(3)
-        self.address_manager_store = await AddressManagerStore.create(self.connection)
-        if not await self.address_manager_store.is_empty():
-            self.address_manager = self.address_manager_store.unserialize()
-        else:
-            await self.address_manager_store.clear()
-            self.address_manager = AddressManager()
+    def pong_received(self, connection):
+        if (
+            connection.connection_type == NodeType.FULL_NODE
+            and connection.is_outbound
+            and connection.local_type == NodeType.FULL_NODE
+        ):
+            if self.full_node_peers_callback is not None:
+                self.full_node_peers_callback(
+                    "update_connection_time",
+                    connection.get_peer_info(),
+                )
 
     # Functions related to outbound and inbound connections for the full node.
     def count_outbound_connections(self):

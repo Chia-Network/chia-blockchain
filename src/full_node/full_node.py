@@ -6,7 +6,6 @@ import time
 import random
 from pathlib import Path
 from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
-
 import aiosqlite
 from chiabip158 import PyBIP158
 from chiapos import Verifier
@@ -54,6 +53,8 @@ from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128
 from src.util.merkle_set import MerkleSet
 from src.util.path import mkdir, path_from_root
+from src.full_node.full_node_peers import FullNodePeers
+from src.types.peer_info import PeerInfo
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
@@ -61,6 +62,7 @@ OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 class FullNode:
     block_store: BlockStore
     full_node_store: FullNodeStore
+    full_node_peers: FullNodePeers
     sync_store: SyncStore
     coin_store: CoinStore
     mempool_manager: MempoolManager
@@ -106,8 +108,19 @@ class FullNode:
         self.full_node_store = await FullNodeStore.create(self.connection)
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.connection)
-        self.global_connections.connection = self.connection
-
+        self.full_node_peers = FullNodePeers(
+            self.server,
+            self.root_path,
+            self.global_connections,
+            self.config["target_peer_count"] - self.config["target_outbound_peer_count"],
+            self.config["target_outbound_peer_count"],
+            self.config["peer_db_path"],
+            self.config["introducer_peer"],
+            self.config["peer_connect_interval"],
+            self.log,
+        )
+        await self.full_node_peers.start()
+        
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(
             self.coin_store, self.block_store, self.constants
@@ -124,12 +137,6 @@ class FullNode:
             self.broadcast_uncompact_task = asyncio.create_task(
                 self.broadcast_uncompact_blocks(uncompact_interval)
             )
-        self.peer_gossip_task = asyncio.create_task(
-            self.periodically_peer_gossip()
-        )
-        self.peer_serialize_task = asyncio.create_task(
-            self.periodically_store_peer_table()
-        )
 
         for ((_, _), block) in (
             await self.full_node_store.get_unfinished_blocks()
@@ -293,25 +300,22 @@ class FullNode:
         async for msg in self._send_tips_to_farmers(Delivery.RESPOND):
             yield msg
 
-    async def periodically_peer_gossip(self):
-        while True:
-            # Randomly choose to get peers from 12 to 24 hours.
-            sleep_interval = random.randint(3600 * 12, 3600 * 24)
-            await asyncio.sleep(sleep_interval)
-            outbound_message = OutboundMessage(
-                NodeType.FULL_NODE,
-                Message("request_peers", full_node_protocol.RequestPeers()),
-                Delivery.BROADCAST,
-            )
-            if self.server is not None:
-                self.server.push_message(outbound_message)
+    @api_request
+    async def request_peers_with_peer_info(
+        self,
+        request: full_node_protocol.RequestPeers,
+        peer_info: PeerInfo,
+    ):
+        async for msg in self.full_node_peers.request_peers(peer_info):
+            yield msg
 
-    async def periodically_store_peer_table(self):
-        while True:
-            serialize_interval = random.randint(15 * 60, 30 * 60)
-            await asyncio.sleep(serialize_interval)
-            if self.global_connections is not None:
-                await self.global_connections.serialize()
+    @api_request
+    async def respond_peers_with_peer_info(
+        self,
+        request,
+        peer_info: PeerInfo,
+    ):
+        await self.full_node_peers.respond_peers(request["peer_list"], peer_info)
 
     def _num_needed_peers(self) -> int:
         assert self.global_connections is not None
@@ -323,6 +327,9 @@ class FullNode:
     def _close(self):
         self._shut_down = True
         self.blockchain.shut_down()
+        asyncio.create_task(
+            self.full_node_peers.close()
+        )
 
     async def _await_closed(self):
         await self.connection.close()

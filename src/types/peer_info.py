@@ -6,22 +6,13 @@ from src.util.streamable import Streamable, streamable
 import ipaddress
 
 
-@dataclass(frozen=True, init=False, eq=False)
+@dataclass(frozen=True)
 @streamable
 class PeerInfo(Streamable):
-    # TODO: Change `host` type to bytes16
     host: str
     port: uint16
-    timestamp: uint64
 
-    def __init__(self, host, port, timestamp=0):
-        object.__setattr__(self, 'host', host)
-        object.__setattr__(self, 'port', port)
-        object.__setattr__(self, 'timestamp', uint64(timestamp))
-
-    def __eq__(self, other):
-        return (self.host == other.host and self.port == other.port)
-
+    # Functions related to peer bucketing in new/tried tables.
     def get_key(self):
         try:
             ip = ipaddress.IPv6Address(self.host)
@@ -57,3 +48,10 @@ class PeerInfo(Streamable):
         else:
             group = bytes([0]) + ip.packed[:4]
         return group
+
+@dataclass(frozen=True)
+@streamable
+class TimestampedPeerInfo(Streamable):
+    host: str
+    port: uint16
+    timestamp: uint64

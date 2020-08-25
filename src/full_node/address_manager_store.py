@@ -1,4 +1,4 @@
-from src.server.address_manager import (
+from src.full_node.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
     NEW_BUCKET_COUNT,
@@ -61,10 +61,8 @@ class AddressManagerStore:
     async def clear(self):
         cursor = await self.db.execute("DELETE from peer_metadata")
         await cursor.close()
-        await self.db.commit()
         cursor = await self.db.execute("DELETE from peer_nodes")
         await cursor.close()
-        await self.db.commit()
         cursor = await self.db.execute("DELETE from peer_new_table")
         await cursor.close()
         await self.db.commit()
@@ -79,15 +77,9 @@ class AddressManagerStore:
         metadata = await self.get_metadata()
         if "key" not in metadata:
             return True
-        if (
-            "new_count" in metadata
-            and metadata["new_count"] > 0
-        ):
+        if metadata.get("new_count", 0) > 0:
             return False
-        if (
-            "tried_count" in metadata
-            and metadata["tried_count"] > 0
-        ):
+        if metadata.get("tried_count", 0) > 0:
             return False
         return True
 
