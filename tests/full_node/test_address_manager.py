@@ -3,7 +3,7 @@ import pytest
 import time
 import math
 import aiosqlite
-from src.types.peer_info import PeerInfo
+from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.full_node.address_manager import ExtendedPeerInfo, AddressManager
 from src.full_node.address_manager_store import AddressManagerStore
 from pathlib import Path
@@ -29,6 +29,16 @@ class AddressManagerTest(AddressManager):
         await self.mark_good(peer.peer_info, True, 1)
         await self.attempt(peer.peer_info, False, time.time() - 61)
 
+    async def add_peer_info(self, peers, peer_src=None):
+        timestamped_peers = [
+            TimestampedPeerInfo(
+                peer.host,
+                peer.port,
+                0,
+            ) for peer in peers
+        ]
+        added = await self.add_to_new_table(timestamped_peers, peer_src)
+        return added
 
 class TestPeerManager:
     @pytest.mark.asyncio
@@ -40,14 +50,14 @@ class TestPeerManager:
         assert await addrman.size() == 0
         # Test: Does Add work as expected.
         peer1 = PeerInfo("250.1.1.1", 8444)
-        assert await addrman.add_to_new_table([peer1])
+        assert await addrman.add_peer_info([peer1])
         assert await addrman.size() == 1
         peer1_ret = await addrman.select_peer()
         assert peer1_ret.peer_info == peer1
 
         # Test: Does IP address deduplication work correctly.
         peer1_duplicate = PeerInfo("250.1.1.1", 8444)
-        assert not await addrman.add_to_new_table([peer1_duplicate])
+        assert not await addrman.add_peer_info([peer1_duplicate])
         assert await addrman.size() == 1
 
         # Test: New table has one addr and we add a diff addr we should
@@ -57,13 +67,13 @@ class TestPeerManager:
         # success.
 
         peer2 = PeerInfo("250.1.1.2", 8444)
-        assert await addrman.add_to_new_table([peer2])
+        assert await addrman.add_peer_info([peer2])
         assert await addrman.size() >= 1
 
         # Test: AddrMan::Add multiple addresses works as expected
         addrman2 = AddressManagerTest()
         peers = [peer1, peer2]
-        assert await addrman2.add_to_new_table(peers)
+        assert await addrman2.add_peer_info(peers)
         assert await addrman2.size() >= 1
 
     @pytest.mark.asyncio
@@ -74,11 +84,11 @@ class TestPeerManager:
 
         # Test: Addr with same IP but diff port does not replace existing addr.
         peer1 = PeerInfo("250.1.1.1", 8444)
-        assert await addrman.add_to_new_table([peer1], source)
+        assert await addrman.add_peer_info([peer1], source)
         assert await addrman.size() == 1
 
         peer2 = PeerInfo("250.1.1.1", 8445)
-        assert not await addrman.add_to_new_table([peer2], source)
+        assert not await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 1
         peer3 = await addrman.select_peer()
         assert peer3.peer_info == peer1
@@ -99,7 +109,7 @@ class TestPeerManager:
 
         # Test: Select from new with 1 addr in new.
         peer1 = PeerInfo("250.1.1.1", 8444)
-        assert await addrman.add_to_new_table([peer1], source)
+        assert await addrman.add_peer_info([peer1], source)
         assert await addrman.size() == 1
 
         peer1_ret = await addrman.select_peer(True)
@@ -119,20 +129,20 @@ class TestPeerManager:
         peer3 = PeerInfo("250.3.2.2", 9999)
         peer4 = PeerInfo("250.3.3.3", 9999)
 
-        assert await addrman.add_to_new_table([peer2], PeerInfo("250.3.1.1", 8444))
-        assert await addrman.add_to_new_table([peer3], PeerInfo("250.3.1.1", 8444))
-        assert await addrman.add_to_new_table([peer4], PeerInfo("250.4.1.1", 8444))
+        assert await addrman.add_peer_info([peer2], PeerInfo("250.3.1.1", 8444))
+        assert await addrman.add_peer_info([peer3], PeerInfo("250.3.1.1", 8444))
+        assert await addrman.add_peer_info([peer4], PeerInfo("250.4.1.1", 8444))
 
         # Add three addresses to tried table.
         peer5 = PeerInfo("250.4.4.4", 8444)
         peer6 = PeerInfo("250.4.5.5", 7777)
         peer7 = PeerInfo("250.4.6.6", 8444)
 
-        assert await addrman.add_to_new_table([peer5], PeerInfo("250.3.1.1", 8444))
+        assert await addrman.add_peer_info([peer5], PeerInfo("250.3.1.1", 8444))
         await addrman.mark_good(peer5)
-        assert await addrman.add_to_new_table([peer6], PeerInfo("250.3.1.1", 8444))
+        assert await addrman.add_peer_info([peer6], PeerInfo("250.3.1.1", 8444))
         await addrman.mark_good(peer6)
-        assert await addrman.add_to_new_table([peer7], PeerInfo("250.1.1.3", 8444))
+        assert await addrman.add_peer_info([peer7], PeerInfo("250.1.1.3", 8444))
         await addrman.mark_good(peer7)
 
         # Test: 6 addrs + 1 addr from last test = 7.
@@ -156,16 +166,16 @@ class TestPeerManager:
 
         for i in range(1, 8):
             peer = PeerInfo("250.1.1." + str(i), 8444)
-            assert await addrman.add_to_new_table([peer], source)
+            assert await addrman.add_peer_info([peer], source)
             assert await addrman.size() == i
 
         # Test: new table collision!
         peer1 = PeerInfo("250.1.1.8", 8444)
-        assert await addrman.add_to_new_table([peer1], source)
+        assert await addrman.add_peer_info([peer1], source)
         assert await addrman.size() == 7
 
         peer2 = PeerInfo("250.1.1.9", 8444)
-        assert await addrman.add_to_new_table([peer2], source)
+        assert await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 8
 
     @pytest.mark.asyncio
@@ -176,18 +186,18 @@ class TestPeerManager:
 
         for i in range(1, 77):
             peer = PeerInfo("250.1.1." + str(i), 8444)
-            assert await addrman.add_to_new_table([peer], source)
+            assert await addrman.add_peer_info([peer], source)
             await addrman.mark_good(peer)
             # Test: No collision in tried table yet.
             assert await addrman.size() == i
 
         # Test: tried table collision!
         peer1 = PeerInfo("250.1.1.77", 8444)
-        assert await addrman.add_to_new_table([peer1], source)
+        assert await addrman.add_peer_info([peer1], source)
         assert await addrman.size() == 76
 
         peer2 = PeerInfo("250.1.1.78", 8444)
-        assert await addrman.add_to_new_table([peer2], source)
+        assert await addrman.add_peer_info([peer2], source)
         assert await addrman.size() == 77
 
     @pytest.mark.asyncio
@@ -202,9 +212,9 @@ class TestPeerManager:
         source1 = PeerInfo("250.1.2.1", 8444)
         source2 = PeerInfo("250.1.2.2", 8444)
 
-        assert await addrman.add_to_new_table([peer1], source1)
-        assert not await addrman.add_to_new_table([peer2], source2)
-        assert await addrman.add_to_new_table([peer3], source1)
+        assert await addrman.add_peer_info([peer1], source1)
+        assert not await addrman.add_peer_info([peer2], source2)
+        assert await addrman.add_peer_info([peer3], source1)
 
         # Test: ensure Find returns an IP matching what we searched on.
         info1 = addrman.find_(peer1)
@@ -236,7 +246,8 @@ class TestPeerManager:
         assert await addrman.size() == 0
 
         peer1 = PeerInfo("250.1.2.1", 8444)
-        info, node_id = addrman.create_(peer1, peer1)
+        t_peer = TimestampedPeerInfo("250.1.2.1", 8444, 0)
+        info, node_id = addrman.create_(t_peer, peer1)
         assert info.peer_info == peer1
         info, _ = addrman.find_(peer1)
         assert info.peer_info == peer1
@@ -247,7 +258,8 @@ class TestPeerManager:
         assert await addrman.size() == 0
 
         peer1 = PeerInfo("250.1.2.1", 8444)
-        info, node_id = addrman.create_(peer1, peer1)
+        t_peer = TimestampedPeerInfo("250.1.2.1", 8444, 0)
+        info, node_id = addrman.create_(t_peer, peer1)
 
         # Test: Delete should actually delete the addr.
         assert await addrman.size() == 1
@@ -263,13 +275,13 @@ class TestPeerManager:
         peers1 = await addrman.get_peers()
         assert len(peers1) == 0
 
-        peer1 = PeerInfo("250.250.2.1", 8444, time.time())
-        peer2 = PeerInfo("250.250.2.2", 9999, time.time())
-        peer3 = PeerInfo("251.252.2.3", 8444, time.time())
-        peer4 = PeerInfo("251.252.2.4", 8444, time.time())
-        peer5 = PeerInfo("251.252.2.5", 8444, time.time())
-        source1 = PeerInfo("250.1.2.1", 8444, time.time())
-        source2 = PeerInfo("250.2.3.3", 8444, time.time())
+        peer1 = TimestampedPeerInfo("250.250.2.1", 8444, time.time())
+        peer2 = TimestampedPeerInfo("250.250.2.2", 9999, time.time())
+        peer3 = TimestampedPeerInfo("251.252.2.3", 8444, time.time())
+        peer4 = TimestampedPeerInfo("251.252.2.4", 8444, time.time())
+        peer5 = TimestampedPeerInfo("251.252.2.5", 8444, time.time())
+        source1 = PeerInfo("250.1.2.1", 8444)
+        source2 = PeerInfo("250.2.3.3", 8444)
 
         # Test: Ensure GetPeers works with new addresses.
         assert await addrman.add_to_new_table([peer1], source1)
@@ -292,7 +304,7 @@ class TestPeerManager:
         for i in range(1, 8 * 256):
             octet1 = i % 256
             octet2 = i >> 8 % 256
-            peer = PeerInfo(str(octet1) + "." + str(octet2) + ".1.23", 8444, time.time())
+            peer = TimestampedPeerInfo(str(octet1) + "." + str(octet2) + ".1.23", 8444, time.time())
             await addrman.add_to_new_table([peer])
             if i % 8 == 0:
                 await addrman.mark_good(peer)
@@ -305,9 +317,11 @@ class TestPeerManager:
     @pytest.mark.asyncio
     async def test_addrman_tried_bucket(self):
         peer1 = PeerInfo("250.1.1.1", 8444)
+        t_peer1 = TimestampedPeerInfo("250.1.1.1", 8444, 0)
         peer2 = PeerInfo("250.1.1.1", 9999)
+        t_peer2 = TimestampedPeerInfo("250.1.1.1", 9999, 0)
         source1 = PeerInfo("250.1.1.1", 8444)
-        peer_info1 = ExtendedPeerInfo(peer1, source1)
+        peer_info1 = ExtendedPeerInfo(t_peer1, source1)
         # Test: Make sure key actually randomizes bucket placement. A fail on
         # this test could be a security issue.
         key1 = 2**256 - 1
@@ -318,7 +332,7 @@ class TestPeerManager:
 
         # Test: Two addresses with same IP but different ports can map to
         # different buckets because they have different keys.
-        peer_info2 = ExtendedPeerInfo(peer2, source1)
+        peer_info2 = ExtendedPeerInfo(t_peer2, source1)
         assert peer1.get_key() != peer2.get_key()
         assert peer_info1.get_tried_bucket(key1) != peer_info2.get_tried_bucket(key1)
 
@@ -327,7 +341,8 @@ class TestPeerManager:
         buckets = []
         for i in range(255):
             peer = PeerInfo("250.1.1." + str(i), 8444)
-            extended_peer_info = ExtendedPeerInfo(peer, peer)
+            t_peer = TimestampedPeerInfo("250.1.1." + str(i), 8444, 0)
+            extended_peer_info = ExtendedPeerInfo(t_peer, peer)
             bucket = extended_peer_info.get_tried_bucket(key1)
             if bucket not in buckets:
                 buckets.append(bucket)
@@ -339,7 +354,8 @@ class TestPeerManager:
         buckets = []
         for i in range(255):
             peer = PeerInfo("250." + str(i) + ".1.1", 8444)
-            extended_peer_info = ExtendedPeerInfo(peer, peer)
+            t_peer = TimestampedPeerInfo("250." + str(i) + ".1.1", 8444, 0)
+            extended_peer_info = ExtendedPeerInfo(t_peer, peer)
             bucket = extended_peer_info.get_tried_bucket(key1)
             if bucket not in buckets:
                 buckets.append(bucket)
@@ -348,9 +364,11 @@ class TestPeerManager:
     @pytest.mark.asyncio
     async def test_addrman_new_bucket(self):
         peer1 = PeerInfo("250.1.2.1", 8444)
+        t_peer1 = TimestampedPeerInfo("250.1.2.1", 8444, 0)
         peer2 = PeerInfo("250.1.2.1", 9999)
         source1 = PeerInfo("250.1.2.1", 8444)
-        peer_info1 = ExtendedPeerInfo(peer1, source1)
+        t_peer2 = TimestampedPeerInfo("250.1.2.1", 9999, 0)
+        peer_info1 = ExtendedPeerInfo(t_peer1, source1)
         # Test: Make sure key actually randomizes bucket placement. A fail on
         # this test could be a security issue.
         key1 = 2**256 - 1
@@ -360,7 +378,7 @@ class TestPeerManager:
         assert bucket1 != bucket2
 
         # Test: Ports should not affect bucket placement in the addr
-        peer_info2 = ExtendedPeerInfo(peer2, source1)
+        peer_info2 = ExtendedPeerInfo(t_peer2, source1)
         assert peer_info1.get_new_bucket(key1) == peer_info2.get_new_bucket(key1)
 
         # Test: IP addresses in the same group (\16 prefix for IPv4) should
@@ -368,7 +386,8 @@ class TestPeerManager:
         buckets = []
         for i in range(255):
             peer = PeerInfo("250.1.1." + str(i), 8444)
-            extended_peer_info = ExtendedPeerInfo(peer, peer)
+            t_peer = TimestampedPeerInfo("250.1.1." + str(i), 8444, 0)
+            extended_peer_info = ExtendedPeerInfo(t_peer, peer)
             bucket = extended_peer_info.get_new_bucket(key1)
             if bucket not in buckets:
                 buckets.append(bucket)
@@ -380,7 +399,8 @@ class TestPeerManager:
         for i in range(4 * 255):
             src = PeerInfo("251.4.1.1", 8444)
             peer = PeerInfo(str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8444)
-            extended_peer_info = ExtendedPeerInfo(peer, src)
+            t_peer = TimestampedPeerInfo(str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8444, 0)
+            extended_peer_info = ExtendedPeerInfo(t_peer, src)
             bucket = extended_peer_info.get_new_bucket(key1)
             if bucket not in buckets:
                 buckets.append(bucket)
@@ -392,7 +412,8 @@ class TestPeerManager:
         for i in range(255):
             src = PeerInfo("250." + str(i) + ".1.1", 8444)
             peer = PeerInfo("250.1.1.1", 8444)
-            extended_peer_info = ExtendedPeerInfo(peer, src)
+            t_peer = TimestampedPeerInfo("250.1.1.1", 8444, 0)
+            extended_peer_info = ExtendedPeerInfo(t_peer, src)
             bucket = extended_peer_info.get_new_bucket(key1)
             if bucket not in buckets:
                 buckets.append(bucket)
@@ -409,7 +430,7 @@ class TestPeerManager:
         source = PeerInfo("252.2.2.2", 8444)
         for i in range(1, 18):
             peer = PeerInfo("250.1.1." + str(i), 8444)
-            assert await addrman.add_to_new_table([peer], source)
+            assert await addrman.add_peer_info([peer], source)
             await addrman.mark_good(peer)
 
             # No collisions yet.
@@ -433,7 +454,7 @@ class TestPeerManager:
         source = PeerInfo("252.2.2.2", 8444)
         for i in range(1, 18):
             peer = PeerInfo("250.1.1." + str(i), 8444)
-            assert await addrman.add_to_new_table([peer], source)
+            assert await addrman.add_peer_info([peer], source)
             await addrman.mark_good(peer)
             # No collision yet.
             assert await addrman.size() == i
@@ -441,7 +462,7 @@ class TestPeerManager:
             assert collision is None
 
         peer18 = PeerInfo("250.1.1.18", 8444)
-        assert await addrman.add_to_new_table([peer18], source)
+        assert await addrman.add_peer_info([peer18], source)
         await addrman.mark_good(peer18)
         assert await addrman.size() == 18
         collision = await addrman.select_tried_collision()
@@ -453,19 +474,19 @@ class TestPeerManager:
         # Lets create two collisions.
         for i in range(19, 37):
             peer = PeerInfo("250.1.1." + str(i), 8444)
-            assert await addrman.add_to_new_table([peer], source)
+            assert await addrman.add_peer_info([peer], source)
             await addrman.mark_good(peer)
             assert await addrman.size() == i
             assert await addrman.select_tried_collision() is None
 
         # Cause a collision.
         peer37 = PeerInfo("250.1.1.37", 8444)
-        assert await addrman.add_to_new_table([peer37], source)
+        assert await addrman.add_peer_info([peer37], source)
         await addrman.mark_good(peer37)
         assert await addrman.size() == 37
 
         # Cause a second collision.
-        assert not await addrman.add_to_new_table([peer18], source)
+        assert not await addrman.add_peer_info([peer18], source)
         await addrman.mark_good(peer18)
         assert await addrman.size() == 37
 
@@ -486,7 +507,7 @@ class TestPeerManager:
         source = PeerInfo("252.2.2.2", 8444)
         for i in range(1, 18):
             peer = PeerInfo("250.1.1." + str(i), 8444)
-            assert await addrman.add_to_new_table([peer], source)
+            assert await addrman.add_peer_info([peer], source)
             await addrman.mark_good(peer)
             # No collision yet.
             assert await addrman.size() == i
@@ -494,7 +515,7 @@ class TestPeerManager:
 
         # Collision between 18 and 16.
         peer18 = PeerInfo("250.1.1.18", 8444)
-        assert await addrman.add_to_new_table([peer18], source)
+        assert await addrman.add_peer_info([peer18], source)
         await addrman.mark_good(peer18)
         assert await addrman.size() == 18
         collision = await addrman.select_tried_collision()
@@ -505,13 +526,13 @@ class TestPeerManager:
         assert await addrman.select_tried_collision() is None
 
         # If 18 was swapped for 16, then this should cause no collisions.
-        assert not await addrman.add_to_new_table([peer18], source)
+        assert not await addrman.add_peer_info([peer18], source)
         await addrman.mark_good(peer18)
         assert await addrman.select_tried_collision() is None
 
         # If we insert 16 is should collide with 18.
         addr16 = PeerInfo("250.1.1.16", 8444)
-        assert not await addrman.add_to_new_table([addr16], source)
+        assert not await addrman.add_peer_info([addr16], source)
         await addrman.mark_good(addr16)
         collision = await addrman.select_tried_collision()
         assert collision.peer_info == PeerInfo("250.1.1.18", 8444)
@@ -525,7 +546,7 @@ class TestPeerManager:
         peer2 = PeerInfo("250.7.2.2", 9999)
         peer3 = PeerInfo("250.7.3.3", 9999)
         source = PeerInfo("252.5.1.1", 8333)
-        await addrman.add_to_new_table([peer1, peer2, peer3], source)
+        await addrman.add_peer_info([peer1, peer2, peer3], source)
         await addrman.mark_good(peer1)
 
         db_filename = Path("peer_table.db")
@@ -534,7 +555,7 @@ class TestPeerManager:
         connection = await aiosqlite.connect(db_filename)
         address_manager_store = await AddressManagerStore.create(connection)
         await address_manager_store.serialize(addrman)
-        addrman2 = await address_manager_store.unserialize()
+        addrman2 = await address_manager_store.deserialize()
 
         retrieved_peers = []
         for _ in range(20):
@@ -544,10 +565,13 @@ class TestPeerManager:
             if len(retrieved_peers) == 3:
                 break
         assert len(retrieved_peers) == 3
+        t_peer1 = TimestampedPeerInfo("250.7.1.1", 8333, 0)
+        t_peer2 = TimestampedPeerInfo("250.7.2.2", 9999, 0)
+        t_peer3 = TimestampedPeerInfo("250.7.3.3", 9999, 0)
         wanted_peers = [
-            ExtendedPeerInfo(peer1, source),
-            ExtendedPeerInfo(peer2, source),
-            ExtendedPeerInfo(peer3, source),
+            ExtendedPeerInfo(t_peer1, source),
+            ExtendedPeerInfo(t_peer2, source),
+            ExtendedPeerInfo(t_peer3, source),
         ]
         recovered = 0
         for target_peer in wanted_peers:

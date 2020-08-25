@@ -164,7 +164,7 @@ class AddressManagerStore:
         await self.set_nodes(nodes)
         await self.set_new_table(new_table_entries)
 
-    async def unserialize(self) -> AddressManager:
+    async def deserialize(self) -> AddressManager:
         address_manager = AddressManager()
         metadata = await self.get_metadata()
         nodes = await self.get_nodes()
