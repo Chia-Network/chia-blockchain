@@ -9,17 +9,6 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
-- The Chia UI now has a proper About menu entry that gives the various component versions and directs people to submit issues on GitHub. Thank you to @freddiecoleman for this pull request!
-
-### Changed
-- To complement the new About menu, we have revamped all Electron menus and made them OS native. There are now direct links to the Wiki, Keybase, and FAQ in the Help menu.
-- There are minor improvements to how working space is calculated and displayed by the plotter. The plotter also has additional debugging information in its output.
-- Successful plots only have an atomic rename.
-
-### Fixed
-- kOffsetSize should have been 10 bits and not 9. This was causing plots, especially larger plots, to fail with "Error 0". This bug was introduced in Beta 8 with the new plot file format.
-- A bug in aiosqlite was causing tests to hang - especially on the ci. This may also have been causing wallet database corruption.
-- `chia show -w` now correctly outputs all wallet types and balances from the local wallet.
 
 ### Changed
 
