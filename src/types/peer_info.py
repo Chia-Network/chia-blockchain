@@ -49,6 +49,7 @@ class PeerInfo(Streamable):
             group = bytes([0]) + ip.packed[:4]
         return group
 
+
 @dataclass(frozen=True)
 @streamable
 class TimestampedPeerInfo(Streamable):

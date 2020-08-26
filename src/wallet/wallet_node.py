@@ -342,11 +342,15 @@ class WalletNode:
         # Pseudo-message to close the connection
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
         connected = self.global_connections.get_full_node_peerinfos()
-        to_connect = []
+        to_connect: List[PeerInfo] = []
         for peer in request.peer_list:
-            if peer in connected:
+            peer_info = PeerInfo(
+                peer.host,
+                peer.port,
+            )
+            if peer_info in connected:
                 continue
-            to_connect.append(peer)
+            to_connect.append(peer_info)
             if len(to_connect) >= self._num_needed_peers():
                 break
 
@@ -355,9 +359,9 @@ class WalletNode:
 
         self.log.info(f"Trying to connect to peers: {to_connect}")
         tasks = []
-        for target in to_connect:
+        for cur_peer in to_connect:
             tasks.append(
-                asyncio.create_task(self.server.start_client(target, self._on_connect))
+                asyncio.create_task(self.server.start_client(cur_peer, self._on_connect))
             )
         await asyncio.gather(*tasks)
 

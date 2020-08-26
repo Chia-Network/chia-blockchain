@@ -263,7 +263,7 @@ class FullNodePeers:
         except Exception as e:
             self.log.error(f"Request peers exception: {e}")
 
-    async def respond_peers(self, peers, peer_src):
+    async def respond_peers(self, request, peer_src):
         # Check if we got the peers from a full node or from the introducer.
         full_node_peers = self.global_connections.get_full_node_peerinfos()
         is_full_node = False
@@ -272,8 +272,8 @@ class FullNodePeers:
                 is_full_node = True
                 break
         peers_adjusted_timestamp = []
-        for bytes_peer in peers:
-            peer = TimestampedPeerInfo.from_bytes(bytes_peer)
+        for peer_bytes in request["peer_list"]:
+            peer = TimestampedPeerInfo.from_bytes(peer_bytes)
             if (
                 peer.timestamp < 100000000
                 or peer.timestamp > time.time() + 10 * 60

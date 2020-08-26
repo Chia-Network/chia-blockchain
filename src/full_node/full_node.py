@@ -120,7 +120,7 @@ class FullNode:
             self.log,
         )
         await self.full_node_peers.start()
-        
+
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(
             self.coin_store, self.block_store, self.constants
@@ -315,7 +315,7 @@ class FullNode:
         request,
         peer_info: PeerInfo,
     ):
-        await self.full_node_peers.respond_peers(request["peer_list"], peer_info)
+        await self.full_node_peers.respond_peers(request, peer_info)
 
     def _num_needed_peers(self) -> int:
         assert self.global_connections is not None
