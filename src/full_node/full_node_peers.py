@@ -133,7 +133,6 @@ class FullNodePeers:
     async def _connect_to_peers(self, random):
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 120, random)
         while not self.is_stopped:
-            self.log.info("Initiating new outbound peer connection.")
             # We don't know any address, connect to the introducer to get some.
             size = await self.address_manager.size()
             if size == 0:
@@ -172,7 +171,10 @@ class FullNodePeers:
             now = time.time()
             got_peer = False
             addr: Optional[PeerInfo] = None
-            while not got_peer:
+            while (
+                not got_peer
+                and not self.is_stopped
+            ):
                 if tries > 0:
                     await asyncio.sleep(15)
                 info: Optional[ExtendedPeerInfo] = await self.address_manager.select_tried_collision()
@@ -188,9 +190,11 @@ class FullNodePeers:
                     not is_feeler
                     and addr.get_group() in groups
                 ):
+                    addr = None
                     break
                 tries += 1
                 if tries > 100:
+                    addr = None
                     break
                 # only consider very recently tried nodes after 30 failed attempts
                 if (
@@ -256,24 +260,17 @@ class FullNodePeers:
             peers = await self.address_manager.get_peers()
             outbound_message = OutboundMessage(
                 NodeType.FULL_NODE,
-                Message("respond_peers", full_node_protocol.RespondPeers(peers)),
+                Message("respond_peers_full_node", full_node_protocol.RespondPeers(peers)),
                 Delivery.RESPOND,
             )
             yield outbound_message
         except Exception as e:
             self.log.error(f"Request peers exception: {e}")
 
-    async def respond_peers(self, request, peer_src):
+    async def respond_peers(self, request, peer_src, is_full_node):
         # Check if we got the peers from a full node or from the introducer.
-        full_node_peers = self.global_connections.get_full_node_peerinfos()
-        is_full_node = False
-        for peer in full_node_peers:
-            if peer == peer_src:
-                is_full_node = True
-                break
         peers_adjusted_timestamp = []
-        for peer_bytes in request["peer_list"]:
-            peer = TimestampedPeerInfo.from_bytes(peer_bytes)
+        for peer in request.peer_list:
             if (
                 peer.timestamp < 100000000
                 or peer.timestamp > time.time() + 10 * 60
