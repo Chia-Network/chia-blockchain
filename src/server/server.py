@@ -150,6 +150,7 @@ class ChiaServer:
             self.log.warning(
                 f"Could not connect to {target_node}. {type(e)}{str(e)}. Aborting and removing peer."
             )
+            self.global_connections.failed_connection(target_node)
             if self.global_connections.introducer_peers is not None:
                 self.global_connections.introducer_peers.remove(target_node)
             return False

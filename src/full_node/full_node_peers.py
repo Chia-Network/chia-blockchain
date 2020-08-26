@@ -176,7 +176,7 @@ class FullNodePeers:
                 and not self.is_stopped
             ):
                 if tries > 0:
-                    await asyncio.sleep(15)
+                    await asyncio.sleep(30)
                 info: Optional[ExtendedPeerInfo] = await self.address_manager.select_tried_collision()
                 if info is None:
                     info = await self.address_manager.select_peer(is_feeler)

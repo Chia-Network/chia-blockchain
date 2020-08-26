@@ -232,7 +232,7 @@ class PeerConnections:
         ):
             if isinstance(e, ProtocolError):
                 if (
-                    isinstance(e.code, type(Err.MAX_INBOUND_CONNECTIONS_REACHED))
+                    isinstance(e.code, type(Err.SELF_CONNECTION))
                     or isinstance(e.code, type(Err.DUPLICATE_CONNECTION))
                 ):
                     return
@@ -241,6 +241,14 @@ class PeerConnections:
                 self.full_node_peers_callback(
                     "mark_attempted",
                     connection.get_peer_info(),
+                )
+
+    def failed_connection(self, peer_info):
+        if self.local_type == NodeType.FULL_NODE:
+            if self.full_node_peers_callback is not None:
+                self.full_node_peers_callback(
+                    "mark_attempted",
+                    peer_info,
                 )
 
     def pong_received(self, connection):
