@@ -40,6 +40,7 @@ class AddressManagerTest(AddressManager):
         added = await self.add_to_new_table(timestamped_peers, peer_src)
         return added
 
+
 class TestPeerManager:
     @pytest.mark.asyncio
     async def test_addr_manager(self):
@@ -363,9 +364,7 @@ class TestPeerManager:
 
     @pytest.mark.asyncio
     async def test_addrman_new_bucket(self):
-        peer1 = PeerInfo("250.1.2.1", 8444)
         t_peer1 = TimestampedPeerInfo("250.1.2.1", 8444, 0)
-        peer2 = PeerInfo("250.1.2.1", 9999)
         source1 = PeerInfo("250.1.2.1", 8444)
         t_peer2 = TimestampedPeerInfo("250.1.2.1", 9999, 0)
         peer_info1 = ExtendedPeerInfo(t_peer1, source1)
