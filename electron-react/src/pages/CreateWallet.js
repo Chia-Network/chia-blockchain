@@ -20,7 +20,8 @@ import {
   CREATE_NEW_CC,
   CREATE_RL_WALLET_OPTIONS,
   CREATE_RL_ADMIN,
-  CREATE_RL_USER
+  CREATE_RL_USER,
+  CREATE_DID_WALLET
 } from "../modules/createWalletReducer";
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
@@ -28,6 +29,7 @@ import { CreateNewCCWallet } from "./createNewColouredCoin";
 import { CreateExistingCCWallet } from "./createExistingColouredCoin";
 import { CreateRLAdminWallet } from "./createRLAdmin";
 import { CreateRLUserWallet } from "./createRLUser";
+import { CreateDIDWallet } from "./createDIDWallet";
 import InvertColorsIcon from "@material-ui/icons/InvertColors";
 
 export const useStyles = makeStyles(theme => ({
@@ -90,6 +92,10 @@ export const MainWalletList = () => {
     dispatch(changeCreateWallet(CREATE_RL_WALLET_OPTIONS));
   }
 
+  function select_option_did() {
+    dispatch(changeCreateWallet(CREATE_DID_WALLET));
+  }
+
   return (
     <Grid container spacing={0}>
       <Grid item xs={12}>
@@ -114,6 +120,12 @@ export const MainWalletList = () => {
               <InvertColorsIcon />
             </ListItemIcon>
             <ListItemText primary="Rate Limited" />
+          </ListItem>
+          <ListItem button onClick={select_option_did}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Distribute Identity" />
           </ListItem>
         </List>
       </Grid>
@@ -242,6 +254,8 @@ const CreateViewSwitch = () => {
     return <CreateRLAdminWallet></CreateRLAdminWallet>;
   } else if (view === CREATE_RL_USER) {
     return <CreateRLUserWallet></CreateRLUserWallet>;
+  } else if (view === CREATE_DID_WALLET) {
+    return <CreateDIDWallet></CreateDIDWallet>;
   }
 };
 

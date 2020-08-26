@@ -671,3 +671,89 @@ export const exit_and_close = event => {
     });
   };
 };
+
+export const create_did_wallet = (amount, backup_ids) => {
+  var action = walletMessage();
+  action.message.command = "create_new_wallet";
+  action.message.data = {
+    wallet_type: "did_wallet",
+    amount: amount,
+    backup_ids: backup_ids
+  };
+  return action;
+};
+
+export const create_did_action = (amount, backup_ids) => {
+  return dispatch => {
+    return async_api(
+      dispatch,
+      create_did_wallet(amount, backup_ids),
+      true
+    ).then(response => {
+      dispatch(closeProgress());
+      dispatch(createState(true, false));
+      if (response.data.success) {
+        // Go to wallet
+        dispatch(format_message("get_wallets", {}));
+        dispatch(showCreateBackup(true));
+        dispatch(createState(true, false));
+        dispatch(changeCreateWallet(ALL_OPTIONS));
+      } else {
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
+};
+
+export const did_update_recovery_ids = (wallet_id, new_list) => {
+  var action = walletMessage();
+  action.message.command = "did_update_recovery_ids";
+  action.message.data = { wallet_id: wallet_id, new_list: new_list };
+  return action;
+};
+
+export const did_spend = (wallet_id, puzzlehash) => {
+  var action = walletMessage();
+  action.message.command = "did_spend";
+  action.message.data = { wallet_id: wallet_id, puzzlehash: puzzlehash };
+  return action;
+};
+
+export const did_get_id = (wallet_id) => {
+  var action = walletMessage();
+  action.message.command = "did_get_id";
+  action.message.data = { wallet_id: wallet_id };
+  return action;
+};
+
+export const did_get_recovery_list = (wallet_id) => {
+  var action = walletMessage();
+  action.message.command = "did_get_recovery_list";
+  action.message.data = { wallet_id: wallet_id };
+  return action;
+};
+
+export const did_recovery_spend = (wallet_id, spend_bundles, info_dict, coin_name, puzhash) => {
+  var action = walletMessage();
+  action.message.command = "did_recovery_spend";
+  action.message.data = {
+    wallet_id: wallet_id,
+    spend_bundles: spend_bundles,
+    info_dict: info_dict,
+    coin_name: coin_name,
+    puzhash: puzhash
+  };
+  return action;
+};
+
+export const did_create_attest = (wallet_id, coin_name, puzhash) => {
+  var action = walletMessage();
+  action.message.command = "did_create_attest";
+  action.message.data = {
+    wallet_id: wallet_id,
+    coin_name: coin_name,
+    puzhash: puzhash
+  };
+  return action;
+};
