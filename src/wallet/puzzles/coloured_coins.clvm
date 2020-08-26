@@ -10,8 +10,9 @@
   ; C0: a spendable colored coin input that is special and runs extra logic. The "auditor" coin
   ; C1... CN (red): other spendable coloured coin inputs that do NOT run the extra logic
   ; A0... AN (yellow): ephemeral coloured coin children of C0 corresponding to A0... AN
-  ;;  As are created because they "prove that we are being audited"
-  ; E0... EN (blue): ephemeral coin created by corresponding C_k which create new red coins
+  ;;  As are created because they "prove that we are being audited".
+  ;;  Each of C0, C1, ... CN does `ASSERT_COIN_CONSUMED` its A_k
+  ; E0... EN (blue): ephemeral coin created by corresponding C_k
   ;;  Es are created because they commit to the outputs created by C_n: "prove we are creating outputs valued at X"
 
   ; these constants are for creating output conditions
@@ -179,14 +180,14 @@
                                auditor_id))
       (prepend_additional_conditions my_id auditor_id running_sum transformed_conditions_acc)))
 
-  ; this macro takes a list of auditees and returns the ID of the first one from the list
-  (defun-inline get_first_aggee_id (mod_hash genesis_id aggee_list)
-    (sha256 (f (f aggee_list))
-                (calculate_puzzle_hash mod_hash
-                                       genesis_id
-                                       (f (r (f aggee_list)))
-                )
-                (f (r (r (f aggee_list))))))
+  ; this function takes an auditee and returns its id
+  (defun get_aggee_id (mod_hash genesis_id aggee)
+    (sha256 (f aggee)
+            (calculate_puzzle_hash mod_hash
+                                   genesis_id
+                                   (f (r aggee))
+            )
+            (f (r (r aggee)))))
 
   ; this will create the lock which lets coins know that the auditor is including them
   (defun-inline create_a (aggee_id)
@@ -216,7 +217,7 @@
                               genesis_id
                               (r aggee_list)
                               my_id
-                              (create_a_and_consume_e (get_first_aggee_id mod_hash genesis_id aggee_list)
+                              (create_a_and_consume_e (get_aggee_id mod_hash genesis_id (f aggee_list))
                                                       my_id
                                                       (f (r (r (r (f aggee_list)))))
                                                       output)
@@ -227,10 +228,10 @@
         (x))))
 
   ; this checks if our coin is the auditor and if so runs the auditor code, otherwise outputs the standard output
-  (defun-inline normal_case_aggee_checker (mod_hash genesis_id my_id aggee_list normal_output)
+  (defun-inline normal_case_aggee_checker (mod_hash genesis_id my_id aggee_list conditions)
     (if aggee_list
-      (consume_es_generate_as mod_hash genesis_id aggee_list my_id normal_output 0 0)
-      normal_output))
+      (consume_es_generate_as mod_hash genesis_id aggee_list my_id conditions 0 0)
+      conditions))
 
   ; this calculates the standard output and passes it to the auditor route checker
   (defun normal_case (mod_hash genesis_id conditions my_id auditor_id aggee_list)
