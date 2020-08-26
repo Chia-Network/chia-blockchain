@@ -12,7 +12,8 @@ from src.protocols import (
     wallet_protocol,
 )
 from src.server.outbound_message import NodeType
-from src.types.peer_info import PeerInfo
+from src.types.peer_info import TimestampedPeerInfo, PeerInfo
+from src.full_node.address_manager import AddressManager
 from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.spend_bundle import SpendBundle
@@ -88,13 +89,27 @@ class TestFullNodeProtocol:
     @pytest.mark.asyncio
     async def test_request_peers(self, two_nodes, wallet_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        await asyncio.sleep(5)
-        await server_2.global_connections.add_potential_peer(PeerInfo("::1", uint16(server_1._port)), None)
         await server_2.start_client(PeerInfo("::1", uint16(server_1._port)), None)
-        await asyncio.sleep(10)
-        peers = await full_node_2.global_connections.get_peers()
-        assert len(peers) == 1
-        assert peers[0] == PeerInfo("::1", uint16(server_1._port))
+        async def have_msgs():
+            await full_node_1.full_node_peers.address_manager.add_to_new_table(
+                [
+                    TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000),
+                ], 
+                None,
+            )
+            msgs = [
+                _
+                async for _ in full_node_2.request_peers_with_peer_info(
+                    fnp.RequestPeers(),
+                    PeerInfo("::1", server_2._port)
+                )
+            ]
+            if not (len(msgs) > 0 and len(msgs[0].message.data.peer_list) == 1):
+                return False
+            for peer in msgs[0].message.data.peer_list:
+                return peer.host == "127.0.0.1" and peer.port == 1000
+        await time_out_assert(10, have_msgs, True)
+        full_node_1.full_node_peers.address_manager = AddressManager()
 
     @pytest.mark.asyncio
     async def test_new_tip(self, two_nodes, wallet_blocks):

@@ -3,6 +3,7 @@ from secrets import randbits
 from random import randrange, choice
 
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
+from src.util.ints import uint16, uint64
 from typing import Dict, List, Optional
 from asyncio import Lock
 
@@ -62,8 +63,8 @@ class ExtendedPeerInfo:
     def from_string(cls, peer_str: str):
         blobs = peer_str.split(" ")
         assert len(blobs) == 4
-        peer_info = TimestampedPeerInfo(blobs[0], int(blobs[1]), 0)
-        src_peer = PeerInfo(blobs[2], int(blobs[3]))
+        peer_info = TimestampedPeerInfo(blobs[0], uint16(int(blobs[1])), uint64(0))
+        src_peer = PeerInfo(blobs[2], uint16(int(blobs[3])))
         return cls(peer_info, src_peer)
 
     def get_tried_bucket(self, key: int):

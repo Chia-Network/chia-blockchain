@@ -75,7 +75,7 @@ async def setup_full_node(
     config["peer_connect_interval"] = 10
     if introducer_port is not None:
         config["introducer_peer"]["host"] = "::1"
-        config["introducer_peer"]["port"] = introducer_port 
+        config["introducer_peer"]["port"] = introducer_port
 
     if not simulator:
         api: FullNode = FullNode(

@@ -8,6 +8,7 @@ from src.server.outbound_message import Delivery, Message, NodeType, OutboundMes
 from src.server.server import ChiaServer
 from src.util.api_decorators import api_request
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
+from src.util.ints import uint64
 log = logging.getLogger(__name__)
 
 
@@ -97,7 +98,7 @@ class Introducer:
                 peer_without_timestamp = TimestampedPeerInfo(
                     peer.host,
                     peer.port,
-                    0,
+                    uint64(0),
                 )
                 peers.append(peer_without_timestamp)
 

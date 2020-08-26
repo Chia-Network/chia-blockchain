@@ -17,6 +17,7 @@ from src.util.network import create_node_id
 from .pipeline import initialize_pipeline
 from .ssl_context import ssl_context_for_client, ssl_context_for_server
 
+
 async def start_server(
     self: "ChiaServer", on_connect: OnConnectFunc = None
 ) -> asyncio.AbstractServer:

@@ -143,6 +143,7 @@ class PeerConnections:
                     self.introducer_peers.add(c.get_peer_info())
         self.state_changed_callback: Optional[Callable] = None
         self.full_node_peers_callback: Optional[Callable] = None
+        self.max_inbound_count = 0
 
     def set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -156,8 +157,10 @@ class PeerConnections:
 
     def add(self, connection: ChiaConnection) -> bool:
         if not connection.is_outbound:
-            if not self.accept_inbound_connections(connection.connection_type):
-                connection.log.warn("Add problem..")
+            if (
+                connection.connection_type is not None
+                and not self.accept_inbound_connections(connection.connection_type)
+            ):
                 raise ProtocolError(Err.MAX_INBOUND_CONNECTIONS_REACHED)
 
         for c in self._all_connections:
@@ -233,7 +236,7 @@ class PeerConnections:
                     or isinstance(e.code, type(Err.DUPLICATE_CONNECTION))
                 ):
                     return
-               
+
             if self.full_node_peers_callback is not None:
                 self.full_node_peers_callback(
                     "mark_attempted",
