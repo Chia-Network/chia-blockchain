@@ -24,6 +24,7 @@ from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
 from src.protocols import (
+    introducer_protocol,
     farmer_protocol,
     full_node_protocol,
     timelord_protocol,
@@ -312,10 +313,18 @@ class FullNode:
     @api_request
     async def respond_peers_with_peer_info(
         self,
-        request,
+        request: introducer_protocol.RespondPeers,
         peer_info: PeerInfo,
     ):
-        await self.full_node_peers.respond_peers(request, peer_info)
+        await self.full_node_peers.respond_peers(request, peer_info, False)
+
+    @api_request
+    async def respond_peers_full_node_with_peer_info(
+        self,
+        request: full_node_protocol.RespondPeers,
+        peer_info: PeerInfo,
+    ):
+        await self.full_node_peers.respond_peers(request, peer_info, True)
 
     def _num_needed_peers(self) -> int:
         assert self.global_connections is not None
