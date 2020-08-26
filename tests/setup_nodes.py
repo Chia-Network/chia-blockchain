@@ -73,8 +73,8 @@ async def setup_full_node(
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
     config["peer_connect_interval"] = 10
+    config["introducer_peer"]["host"] = "::1"
     if introducer_port is not None:
-        config["introducer_peer"]["host"] = "::1"
         config["introducer_peer"]["port"] = introducer_port
 
     if not simulator:
