@@ -33,20 +33,6 @@ class TestCCWallet:
         ):
             yield _
 
-    @pytest.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_simulators_and_wallets(
-            1, 2, {"COINBASE_FREEZE_PERIOD": 5}
-        ):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def three_sim_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(
-            3, 2, {"COINBASE_FREEZE_PERIOD": 0}
-        ):
-            yield _
-
     @pytest.mark.asyncio
     async def test_colour_creation(self, two_wallet_nodes):
         num_blocks = 5
