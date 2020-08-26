@@ -540,8 +540,8 @@ class AddressManager:
             if not info.is_terrible():
                 cur_peer_info = TimestampedPeerInfo(
                     info.peer_info.host,
-                    info.peer_info.port,
-                    info.timestamp,
+                    uint16(info.peer_info.port),
+                    uint64(info.timestamp),
                 )
                 addr.append(cur_peer_info)
 
