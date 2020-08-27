@@ -1,13 +1,12 @@
 import asyncio
 import pytest
 
-from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.coin import Coin
 from src.types.peer_info import PeerInfo
 from src.util.chech32 import encode_puzzle_hash
-from src.util.ints import uint16, uint32
+from src.util.ints import uint16
 from src.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
@@ -46,7 +45,7 @@ class TestCCWallet:
             PeerInfo("localhost", uint16(server_1._port)), None
         )
         await full_node.farm_new_block(FarmNewBlockProtocol(ph))
-        for i in range(0, num_blocks+1):
+        for i in range(0, num_blocks + 1):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         fund_owners_initial_balance = await wallet.get_confirmed_balance()
 
@@ -102,6 +101,7 @@ class TestCCWallet:
         ] == 0
         for i in range(0, 2 * num_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+
         async def check_balance(api, wallet_id):
             balance_response = await api.get_wallet_balance({"wallet_id": wallet_id})
             balance = balance_response["wallet_balance"]["confirmed_wallet_balance"]
