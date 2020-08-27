@@ -434,8 +434,6 @@ class WalletRpcApi:
 
         return response
 
-<<<<<<< HEAD
-=======
     async def rl_set_admin_info(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
