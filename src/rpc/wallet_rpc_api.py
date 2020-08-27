@@ -518,7 +518,6 @@ class WalletRpcApi:
         )
         return {"success": True, "message_spend_bundle": bytes(spend_bundle).hex(), "info": info}
 
->>>>>>> f822ffc2... runs, but with bad aggsigs
     async def cc_set_name(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
