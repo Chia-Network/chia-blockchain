@@ -1,4 +1,4 @@
-from setuptools_scm import get_version
+from src import __version__
 import os
 import shutil
 
@@ -177,7 +177,7 @@ def init(args: Namespace, parser: ArgumentParser):
 
 
 def chiaMinorReleaseNumber():
-    scm_full_version = get_version(root="../..", relative_to=__file__)
+    scm_full_version = __version__
     left_full_version = scm_full_version.split("+")
 
     version = left_full_version[0].split(".")
