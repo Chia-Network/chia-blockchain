@@ -78,7 +78,6 @@ vdf_bench
 *.offer
 
 # Compiled CLVM
-*.hex
 main.sym
 
 # Dev config react
