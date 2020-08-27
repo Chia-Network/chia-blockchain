@@ -11,7 +11,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 - Rate limited wallets can now have funds clawed back by the Admin wallet.
 - Added a Code of Conduct in CODE_OF_CONDUCT.md.
-- Added a bug report template in `.github/ISSUE_TEMPLATE/bug_report.md`
+- Added a bug report template in `.github/ISSUE_TEMPLATE/bug_report.md`.
 
 ### Changed
 - Coloured coins have been updated to simplify them, remove 'a', and stop using an 'auditor'.
@@ -20,7 +20,7 @@ for setuptools_scm/PEP 440 reasons.
 - Keyring was bumped to 21.3.1.
 
 ### Fixed
-- View -> Developer -> Developer tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request!
+- View -> Developer -> Developer Tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request!
 
 ## [1.0beta11] aka Beta 1.11 - 2020-08-24
 
