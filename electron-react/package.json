@@ -11,6 +11,7 @@
     "foreman": "^3.0.1",
     "prettier-eslint": "^9.0.2",
     "prettier-eslint-cli": "^5.0.0",
+    "react-styleguidist": "^11.0.8",
     "redux-devtools-extension": "^2.13.8"
   },
   "dependencies": {
@@ -41,7 +42,9 @@
     "eject": "react-scripts eject",
     "electron": "electron .",
     "dev": "nf start -p 3000",
-    "format": "prettier-eslint --write $PWD/\"src/**/*.js\""
+    "format": "prettier-eslint --write $PWD/\"src/**/*.js\"",
+    "styleguide": "styleguidist server",
+    "styleguide:build": "styleguidist build"
   },
   "browserslist": {
     "production": [
