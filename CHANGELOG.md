@@ -9,10 +9,13 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
+- Added a Code of Conduct in CODE_OF_CONDUCT.md.
+- Added a bug report template in `.github/ISSUE_TEMPLATE/bug_report.md`
 
 ### Changed
 
 ### Fixed
+- View -> Developer -> Developer tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request! 
 
 ## [1.0beta11] aka Beta 1.11 - 2020-08-24
 
