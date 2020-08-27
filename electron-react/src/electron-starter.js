@@ -332,7 +332,7 @@ function getMenuTemplate() {
                 process.platform === "darwin"
                   ? "Alt+Command+I"
                   : "Ctrl+Shift+I",
-              click: () => windows.main.toggleDevTools(),
+              click: () => mainWindow.toggleDevTools(),
             },
           ],
         },
