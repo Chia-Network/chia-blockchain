@@ -504,6 +504,20 @@ class WalletRpcApi:
             "transaction_id": tx.name(),
         }
 
+    async def rl_set_admin_info(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        user_pubkey = request["user_pubkey"]
+        limit = uint64(int(request["limit"]))
+        interval = uint64(int(request["interval"]))
+        amount = uint64(int(request["amount"]))
+
+        success = await wallet.admin_create_coin(interval, limit, user_pubkey, amount)
+
+        response = {"success": success}
+
+        return response
+
     async def create_backup(self, request):
         assert self.service.wallet_state_manager is not None
         file_path = Path(request["file_path"])
