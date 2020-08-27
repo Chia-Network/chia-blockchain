@@ -2,7 +2,7 @@ import dataclasses
 
 from typing import Any, List, Optional, Tuple
 
-from blspy import G2Element
+from blspy import G2Element, AugSchemeMPL
 
 from clvm_tools.curry import curry as ct_curry, uncurry
 
@@ -24,6 +24,9 @@ CC_MOD = load_clvm("cc.clvm", package_or_requirement=__name__)
 
 ZERO_GENESIS_MOD = load_clvm("zero-genesis.clvm", package_or_requirement=__name__)
 
+NULL_SIGNATURE = G2Element.generator() * 0
+
+ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
 # information needed to spend a cc
 # if we ever support more genesis conditions, like a re-issuable coin,
@@ -164,6 +167,7 @@ def spend_bundle_for_spendable_ccs(
     genesis_coin_checker: Program,
     spendable_cc_list: List[SpendableCC],
     inner_solutions: List[Program],
+    sigs: Optional[List[G2Element]] = []
 ) -> SpendBundle:
     """
     Given a list of `SpendableCC` objects and inner solutions for those objects, create a `SpendBundle`
@@ -239,8 +243,10 @@ def spend_bundle_for_spendable_ccs(
             parent_coin, next_coin, output_amount, subtotal
         )
         coin_solutions.append(coin_solution)
-
-    return SpendBundle(coin_solutions, NULL_SIGNATURE)
+    if sigs is None or sigs == []:
+        return SpendBundle(coin_solutions, NULL_SIGNATURE)
+    else:
+        return SpendBundle(coin_solutions, AugSchemeMPL.aggregate(sigs))
 
 
 def is_cc_mod(inner_f: Program):
@@ -264,6 +270,19 @@ def uncurry_cc(puzzle: Program) -> Optional[Tuple[Program, Program, Program]]:
 
     mod_hash, genesis_coin_checker, inner_puzzle = list(args.as_iter())
     return mod_hash, genesis_coin_checker, inner_puzzle
+
+
+def get_lineage_proof_from_coin_and_puz(parent_coin, parent_puzzle):
+    r = uncurry_cc(parent_puzzle)
+    if r:
+        mod_hash, genesis_checker, inner_puzzle = r
+        lineage_proof = lineage_proof_for_cc_parent(parent_coin, inner_puzzle.get_tree_hash())
+    else:
+        if parent_coin.amount == 0:
+            lineage_proof = lineage_proof_for_zero(parent_coin)
+        else:
+            lineage_proof = lineage_proof_for_genesis(parent_coin)
+    return lineage_proof
 
 
 def spendable_cc_list_from_coin_solution(
