@@ -77,6 +77,10 @@ vdf_bench
 # Offer Files
 *.offer
 
+# Compiled CLVM
+*.hex
+main.sym
+
 # Dev config react
 electron-react/src/dev_config.js
 # React built app

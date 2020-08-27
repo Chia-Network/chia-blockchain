@@ -1450,7 +1450,7 @@ class WalletStateManager:
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
             if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
-                if wallet.cc_info.genesis_id() == colour:
+                if bytes(wallet.cc_info.my_genesis_checker).hex() == colour:
                     return wallet
         return None
 
