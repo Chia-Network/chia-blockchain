@@ -13,7 +13,7 @@ from src.protocols import (
 )
 from src.server.outbound_message import NodeType
 from src.types.peer_info import TimestampedPeerInfo, PeerInfo
-from src.full_node.address_manager import AddressManager
+from src.server.address_manager import AddressManager
 from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.spend_bundle import SpendBundle

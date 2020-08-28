@@ -1,4 +1,4 @@
-from src.full_node.address_manager import (
+from src.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
     NEW_BUCKET_COUNT,

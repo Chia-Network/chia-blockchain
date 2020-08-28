@@ -143,6 +143,7 @@ class PeerConnections:
                     self.introducer_peers.add(c.get_peer_info())
         self.state_changed_callback: Optional[Callable] = None
         self.full_node_peers_callback: Optional[Callable] = None
+        self.wallet_callback: Optional[Callable] = None
         self.max_inbound_count = 0
 
     def set_state_changed_callback(self, callback: Callable):
@@ -150,6 +151,9 @@ class PeerConnections:
 
     def set_full_node_peers_callback(self, callback: Callable):
         self.full_node_peers_callback = callback
+
+    def set_wallet_callback(self, callback: Callable):
+        self.wallet_callback = callback
 
     def _state_changed(self, state: str):
         if self.state_changed_callback is not None:
@@ -208,27 +212,30 @@ class PeerConnections:
         if (
             connection.connection_type == NodeType.FULL_NODE
             and connection.is_outbound
-            and connection.local_type == NodeType.FULL_NODE
         ):
             if self.full_node_peers_callback is not None:
                 self.full_node_peers_callback(
                     "mark_tried",
                     connection.get_peer_info(),
                 )
-                if connection.is_feeler:
-                    connection.close()
-                    self.close(connection)
-                    return
-                # Request peers after handshake.
-                if connection.local_type == NodeType.FULL_NODE:
-                    await connection.send(Message("request_peers", ""))
+            if self.wallet_callback is not None:
+                self.wallet_callback(
+                    "make_tried",
+                    connection.get_peer_info(),
+                )
+            if connection.is_feeler:
+                connection.close()
+                self.close(connection)
+                return
+            # Request peers after handshake.
+            if connection.local_type == NodeType.FULL_NODE:
+                await connection.send(Message("request_peers", ""))
         yield connection
 
     def failed_handshake(self, connection, e):
         if (
             connection.connection_type == NodeType.FULL_NODE
             and connection.is_outbound
-            and connection.local_type == NodeType.FULL_NODE
         ):
             if isinstance(e, ProtocolError):
                 if (
@@ -242,11 +249,21 @@ class PeerConnections:
                     "mark_attempted",
                     connection.get_peer_info(),
                 )
+            if self.wallet_callback is not None:
+                self.wallet_callback(
+                    "mark_attempted",
+                    connection.get_peer_info(),
+                )
 
     def failed_connection(self, peer_info):
         if self.local_type == NodeType.FULL_NODE:
             if self.full_node_peers_callback is not None:
                 self.full_node_peers_callback(
+                    "mark_attempted",
+                    peer_info,
+                )
+            if self.wallet_callback is not None:
+                self.wallet_callback(
                     "mark_attempted",
                     peer_info,
                 )
