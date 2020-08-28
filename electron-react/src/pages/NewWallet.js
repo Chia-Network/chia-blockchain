@@ -5,7 +5,7 @@ import Grid from "@material-ui/core/Grid";
 import { withTheme } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
-import { useSelector, useDispatch } from "react-redux";
+import { connect, useSelector, useDispatch } from "react-redux";
 import { genereate_mnemonics, add_new_key_action } from "../modules/message";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
@@ -110,4 +110,4 @@ class NewWallet extends Component {
   }
 }
 
-export default withTheme(withRouter(NewWallet));
+export default withTheme(withRouter(connect()(NewWallet)));
