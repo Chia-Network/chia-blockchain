@@ -17,10 +17,12 @@ for setuptools_scm/PEP 440 reasons.
 - Coloured coins have been updated to simplify them, remove 'a', and stop using an 'auditor'.
 - clvm has been significantly changed to support the new coloured coins implementation.
 - Bumped cryptography to 3.1. Cryptography is now publishing ARM64 binary wheels to PyPi so Raspberry Pi installs should be even easier.
-- Keyring was bumped to 21.3.1.
+- `chia init` now automatically discovers previous releases in each new release.
 
 ### Fixed
 - View -> Developer -> Developer Tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request!
+- Fixed 'Receive Address' typo in Wallet. Thanks @meurtn on Keybase.
+- In Windows the start menu item is now Chia Network and the icon in Add/Remove is updated.
 
 ## [1.0beta11] aka Beta 1.11 - 2020-08-24
 
