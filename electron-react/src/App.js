@@ -3,7 +3,7 @@ import SelectKey from "./pages/SelectKey";
 import NewWallet from "./pages/NewWallet";
 import OldWallet from "./pages/OldWallet";
 import Dashboard from "./pages/Dashboard";
-import { connect, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
 import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
 import {
