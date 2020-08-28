@@ -2,25 +2,21 @@
 Pay to delegated conditions
 
 In this puzzle program, the solution must be a signed list of conditions, which
-is returned literally. The
-
-This is a pretty useless most of the time. But some (most?) solutions
-require a delegated puzzle program, so in those cases, this is just what
-the doctor ordered.
+is returned literally.
 """
 
 
-from clvm_tools import binutils
-
-from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
 
-
-def puzzle_for_pk(public_key):
-    aggsig = ConditionOpcode.AGG_SIG[0]
-    TEMPLATE = f"(c (c (q {aggsig}) (c (q 0x%s) (c (sha256tree (a)) (q ())))) (a))"
-    return Program.to(binutils.assemble(TEMPLATE % public_key.hex()))
+from .load_clvm import load_clvm
 
 
-def solution_for_conditions(puzzle_reveal, conditions):
-    return Program.to([puzzle_reveal, conditions])
+MOD = load_clvm("p2_delegated_conditions.clvm")
+
+
+def puzzle_for_pk(public_key) -> Program:
+    return MOD.curry(public_key)
+
+
+def solution_for_conditions(puzzle_reveal, conditions) -> Program:
+    return Program.to([puzzle_reveal, [conditions]])

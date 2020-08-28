@@ -1,7 +1,10 @@
+from typing import List
+
 from dataclasses import dataclass
 
 from .coin import Coin
 from .program import Program
+from src.util.chain_utils import additions_for_solution
 from src.util.streamable import Streamable, streamable
 
 
@@ -16,3 +19,6 @@ class CoinSolution(Streamable):
 
     coin: Coin
     solution: Program
+
+    def additions(self) -> List[Coin]:
+        return additions_for_solution(self.coin.name(), self.solution)

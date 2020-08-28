@@ -9,7 +9,6 @@ from src.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from tests.time_out_assert import time_out_assert
 from typing import List
@@ -31,20 +30,6 @@ class TestCCWallet:
     async def two_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(
             1, 2, {"COINBASE_FREEZE_PERIOD": 0}
-        ):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def two_wallet_nodes_five_freeze(self):
-        async for _ in setup_simulators_and_wallets(
-            1, 2, {"COINBASE_FREEZE_PERIOD": 5}
-        ):
-            yield _
-
-    @pytest.fixture(scope="function")
-    async def three_sim_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(
-            3, 2, {"COINBASE_FREEZE_PERIOD": 0}
         ):
             yield _
 
@@ -118,14 +103,13 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
-        assert cc_wallet.cc_info.my_core is not None
-        colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
+        colour = cc_wallet.cc_info.genesis_id()
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_2.wallet_state_manager, wallet2, colour
         )
 
-        assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
+        assert cc_wallet.cc_info.genesis_id() == cc_wallet_2.cc_info.genesis_id()
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
         tx_record = await cc_wallet.generate_signed_transaction(uint64(60), cc_2_hash)
@@ -222,14 +206,13 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
-        assert cc_wallet.cc_info.my_core is not None
-        colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
+        colour = cc_wallet.cc_info.genesis_id()
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_2.wallet_state_manager, wallet2, colour
         )
 
-        assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
+        assert cc_wallet.cc_info.genesis_id() == cc_wallet_2.cc_info.genesis_id()
 
         await cc_wallet_2.generate_zero_val_coin()
 
@@ -281,14 +264,14 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
-        assert cc_wallet.cc_info.my_core is not None
-        colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
+        assert cc_wallet.cc_info.genesis_id() is not None
+        colour = cc_wallet.cc_info.genesis_id()
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_2.wallet_state_manager, wallet2, colour
         )
 
-        assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
+        assert cc_wallet.cc_info.genesis_id() == cc_wallet_2.cc_info.genesis_id()
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
         tx_record = await cc_wallet.generate_signed_transaction(uint64(60), cc_2_hash)

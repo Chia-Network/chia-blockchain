@@ -15,67 +15,49 @@ This roughly corresponds to bitcoin's taproot.
 """
 import hashlib
 
-from clvm_tools import binutils
+from clvm.casts import int_from_bytes
 
 from src.types.program import Program
-from src.util.clvm import run_program
 
 from .load_clvm import load_clvm
 
+DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))  # (x)
 
-DEFAULT_HIDDEN_PUZZLE = binutils.assemble("(x)")
+MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 
-
-puzzle_prog_template = load_clvm("make_p2_delegated_puzzle_or_hidden_puzzle.clvm")
-
-
-def run(program, args):
-    sexp = binutils.assemble(program)
-
-    cost, r = run_program(sexp, args)
-
-    return r.as_python()
+SYNTHETIC_MOD = load_clvm("calculate_synthetic_public_key.clvm")
 
 
-def calculate_synthetic_offset(public_key, hidden_puzzle_hash):
+def calculate_synthetic_offset(public_key, hidden_puzzle_hash) -> int:
     blob = hashlib.sha256(bytes(public_key) + hidden_puzzle_hash).digest()
-    return int.from_bytes(blob, "big")
+    return int_from_bytes(blob)
 
 
-def calculate_synthetic_public_key(public_key, hidden_puzzle):
-    args = (public_key, hidden_puzzle)
-    r = run(
-        "(point_add (f (a)) (pubkey_for_exp (sha256 (f (a)) (sha256tree (r (a))))))",
-        args,
-    )
+def calculate_synthetic_public_key(public_key, hidden_puzzle) -> Program:
+    r = SYNTHETIC_MOD.run([public_key, hidden_puzzle.tree_hash()])
     return r
 
 
-def puzzle_for_synthetic_public_key(synthetic_public_key):
-    puzzle_src = "((c (q %s) (c (q 0x%s) (a))))" % (
-        binutils.disassemble(puzzle_prog_template),
-        synthetic_public_key.hex(),
-    )
-    puzzle_prog = binutils.assemble(puzzle_src)
-    return Program(puzzle_prog)
+def puzzle_for_synthetic_public_key(synthetic_public_key) -> Program:
+    return MOD.curry(synthetic_public_key)
 
 
 def puzzle_for_public_key_and_hidden_puzzle(
     public_key, hidden_puzzle=DEFAULT_HIDDEN_PUZZLE
-):
+) -> Program:
     synthetic_public_key = calculate_synthetic_public_key(public_key, hidden_puzzle)
 
     return puzzle_for_synthetic_public_key(synthetic_public_key)
 
 
-def solution_with_delegated_puzzle(synthetic_public_key, delegated_puzzle, solution):
+def solution_with_delegated_puzzle(synthetic_public_key, delegated_puzzle, solution) -> Program:
     puzzle = puzzle_for_synthetic_public_key(synthetic_public_key)
     return Program.to([puzzle, [[], delegated_puzzle, solution]])
 
 
 def solution_with_hidden_puzzle(
     hidden_public_key, hidden_puzzle, solution_to_hidden_puzzle
-):
+) -> Program:
     synthetic_public_key = calculate_synthetic_public_key(
         hidden_public_key, hidden_puzzle
     )

@@ -5,27 +5,20 @@ In this puzzle program, the solution must be a reveal of the puzzle with the giv
 hash along with its solution.
 """
 
-from clvm_tools import binutils
-
 from src.types.program import Program
 
-"""
-solution: (puzzle_reveal . solution_to_puzzle)
-
-(if (= (sha256 (wrap puzzle_reveal)) puzzle_hash) ((c puzzle_reveal solution_to_puzzle (a))) (x))
-
-((c (i (= (sha256 (wrap puzzle_reveal)) puzzle_hash) (q (e (f (a)) (r (a)))) (q (x))) (a)))
-
-((c (i (= (sha256 (wrap (f (a)))) CONST) (q (e (f (a)) (r (a)))) (q (x))) (a)))
-"""
+from .load_clvm import load_clvm
 
 
-def puzzle_for_puzzle_hash(underlying_puzzle_hash):
-    TEMPLATE = "((c (i (= (sha256tree (f (a))) (q 0x%s)) (q ((c (f (a)) (f (r (a)))))) (q (x))) (a)))"
-    return Program.to(binutils.assemble(TEMPLATE % underlying_puzzle_hash.hex()))
+MOD = load_clvm("p2_puzzle_hash.clvm")
 
 
-def solution_for_puzzle_and_solution(underlying_puzzle, underlying_solution):
-    underlying_puzzle_hash = underlying_puzzle.get_hash()
-    puzzle_program = puzzle_for_puzzle_hash(underlying_puzzle_hash)
-    return Program.to([puzzle_program, underlying_solution])
+def puzzle_for_puzzle_hash(inner_puzzle_hash) -> Program:
+    program = MOD.curry(inner_puzzle_hash)
+    return program
+
+
+def solution_for_puzzle_and_solution(inner_puzzle, inner_puzzle_solution) -> Program:
+    inner_puzzle_hash = Program.to(inner_puzzle).tree_hash()
+    puzzle_reveal = puzzle_for_puzzle_hash(inner_puzzle_hash)
+    return Program.to([puzzle_reveal, inner_puzzle_solution])

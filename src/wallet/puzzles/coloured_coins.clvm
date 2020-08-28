@@ -1,0 +1,321 @@
+(mod (mod_hash
+      genesis_id
+      inner_puzzle
+      parent_info
+      my_amount
+      solution
+      (auditor_parent auditor_inner_puzzle auditor_amount)
+      aggee_list)
+
+  ; C0: a spendable colored coin input that is special and runs extra logic. The "auditor" coin
+  ; C1... CN (red): other spendable coloured coin inputs that do NOT run the extra logic
+  ; A0... AN (yellow): ephemeral coloured coin children of C0 corresponding to A0... AN
+  ;;  As are created because they "prove that we are being audited".
+  ;;  Each of C0, C1, ... CN does `ASSERT_COIN_CONSUMED` its A_k
+  ; E0... EN (blue): ephemeral coin created by corresponding C_k
+  ;;  Es are created because they commit to the outputs created by C_n: "prove we are creating outputs valued at X"
+
+  ; these constants are for creating output conditions
+
+  (defconstant CREATE_COIN 51)
+  (defconstant ASSERT_COIN_CONSUMED 52)
+  (defconstant ASSERT_MY_COIN_ID 53)
+
+  (defmacro and ARGS
+      (if ARGS
+          (qq (if (unquote (f ARGS))
+                  (unquote (c and (r ARGS)))
+                  ()))
+          1))
+
+  (defun-inline not (ARGS)
+      (if ARGS 0 1)
+  )
+
+  ;; utility function used by `curry_args`
+  (defun fix_curry_args (items core)
+    (if items
+        (qq (c (q (unquote (f items))) (unquote (fix_curry_args (r items) core))))
+        core
+    )
+  )
+
+  ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
+  (defun curry_args (func list_of_args) (qq ((c (q (unquote func)) (unquote (fix_curry_args list_of_args (q 1)))))))
+
+  ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
+  (defun curry (func . args) (curry_args func args))
+
+  (defun is-in-list (atom items)
+    (if items
+      (if (= atom (f items))
+        1
+        (is-in-list atom (r items))
+      )
+      0
+    )
+  )
+
+  ;; hash a tree with escape values representing already-hashed subtrees
+  ;; This optimization can be useful if you know the puzzle hash of a sub-expression.
+  (defun sha256tree_esc_list
+         (TREE LITERALS)
+         (if (l TREE)
+             (sha256 2 (sha256tree_esc_list (f TREE) LITERALS) (sha256tree_esc_list (r TREE) LITERALS))
+             (if (is-in-list TREE LITERALS)
+                 TREE
+                 (sha256 1 TREE)
+             )
+         )
+  )
+
+  ;; hash a tree with escape values representing already-hashed subtrees
+  ;; This optimization can be useful if you know the tree hash of a sub-expression.
+  (defun sha256tree_esc
+     (TREE . LITERAL)
+     (sha256tree_esc_list TREE LITERAL)
+  )
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree1 (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+            (sha256 1 TREE)))
+
+   ; takes a hash of the innerpuzzle and a hash of the core and creates a hash of the full puzzle
+   ; using the sha256tree with escape
+   (defun calculate_puzzle_hash (mod_hash genesis_id inner_puzzle_hash)
+     (sha256tree_esc (curry mod_hash (sha256tree1 mod_hash) genesis_id inner_puzzle_hash)
+                     mod_hash
+                     (sha256tree1 mod_hash)
+                     inner_puzzle_hash
+     )
+   )
+
+   ; take a puzzle program and a solution and returns the result of running the program with the solution
+   (defun-inline conditions_from_inner_puzzle (puzzle solution)
+       ((c puzzle solution)))
+
+  ; replaces one of the generated create coin conditions with a coloured coin
+  ; which uses the created puzzlehash as the inner puzzlehash
+  (defun-inline transform_create_coin_condition (mod_hash genesis_id condition)
+    (list CREATE_COIN (calculate_puzzle_hash mod_hash genesis_id (f (r condition))) (f (r (r condition))))
+  )
+
+  ; creates the puzzle for the lock which lets the auditor confirm how much value we are outputting
+
+  (defun-inline puzzle_for_e_coin (auditor_id output_sum)
+    (curry (lambda ARGS ()) auditor_id output_sum)
+  )
+
+  ; creates the coin for the lock which lets the auditor confirm how much value we are outputting
+  (defun-inline generate_create_e_coin_condition (auditor_id output_sum)
+    ; build the condition that creates the ephemeral accounting coin
+    (list CREATE_COIN
+              (sha256tree1 (puzzle_for_e_coin auditor_id output_sum))
+              0))
+
+  ; creates the puzzle for the lock which lets the us confirm the auditor is including us
+   (defun-inline create_a_puz_for_cn (my_id)
+     (curry (lambda ARGS ()) my_id)
+   )
+
+  ; creates the coin for the lock which lets us confirm the auditor is including us
+  (defun-inline generate_assert_consumed_a_condition (my_id auditor_id)
+    ; we need to ensure that the coin is consumed
+    (list ASSERT_COIN_CONSUMED
+          (sha256 auditor_id
+                  (sha256tree1 (create_a_puz_for_cn my_id))
+                  (q 0))))
+
+  ; assembles information from the solution to create the auditor's full ID
+  (defun-inline calculate_auditor_id (mod_hash genesis_id auditor_parent auditor_inner_puzzle_hash auditor_amount)
+    (sha256 auditor_parent
+            (calculate_puzzle_hash mod_hash genesis_id auditor_inner_puzzle_hash)
+            auditor_amount))
+
+  ; assembles information from the solution to create our own full ID including asserting our parent is a coloured coin
+  (defun-inline calculate_my_id (mod_hash genesis_id parent_parent parent_inner_puzzle_hash parent_amount inner_puzzle_hash my_amount)
+    (sha256 (sha256 parent_parent
+                    (calculate_puzzle_hash mod_hash genesis_id parent_inner_puzzle_hash)
+                    parent_amount)
+            (calculate_puzzle_hash mod_hash genesis_id inner_puzzle_hash)
+            my_amount))
+
+  ; asserts that the information in the solution about ourselves is correct, and that our parent is a coloured coin
+  (defun-inline generate_assert_my_id_condition (my_id)
+    (list ASSERT_MY_COIN_ID my_id))
+
+  ; this macro adds some conditions to the returned output of the normal case
+  (defun-inline prepend_additional_conditions (my_id auditor_id running_sum conditions)
+    (c (generate_assert_my_id_condition my_id)
+       (c (generate_assert_consumed_a_condition my_id auditor_id)
+          (c (generate_create_e_coin_condition auditor_id running_sum)
+             conditions))))
+
+  ; this function loops through the created outputs from running the puzzle reveal with the solution and replaces the
+  ; CREATE_COIN conditions with a create coloured coin it then adds the locks and assertions about itself at the end
+  (defun normal_case_everybody (mod_hash genesis_id conditions transformed_conditions_acc running_sum my_id auditor_id)
+    (if conditions
+      (if (= (f (f conditions)) CREATE_COIN)
+        (normal_case_everybody mod_hash
+                               genesis_id
+                               (r conditions)
+                               (c (transform_create_coin_condition mod_hash
+                                                                   genesis_id
+                                                                   (f conditions)
+                                                                 )
+                                  transformed_conditions_acc)
+                               (+ (f (r (r (f conditions))))
+                                  running_sum)
+                               my_id
+                               auditor_id)
+        (normal_case_everybody mod_hash
+                               genesis_id
+                               (r conditions)
+                               (c (f conditions)
+                                  transformed_conditions_acc)
+                               running_sum
+                               my_id
+                               auditor_id))
+      (prepend_additional_conditions my_id auditor_id running_sum transformed_conditions_acc)))
+
+  ; this function takes an auditee and returns its id
+  (defun get_aggee_id (mod_hash genesis_id aggee)
+    (sha256 (f aggee)
+            (calculate_puzzle_hash mod_hash
+                                   genesis_id
+                                   (f (r aggee))
+            )
+            (f (r (r aggee)))))
+
+  ; this will create the lock which lets coins know that the auditor is including them
+  (defun-inline create_a (aggee_id)
+    (list CREATE_COIN
+          (sha256tree1 (create_a_puz_for_cn aggee_id))
+          (q 0)))
+
+  ; this will consume the lock which lets the auditor know how much each coin is outputting
+  (defun-inline consume_e (aggee_id my_id spend_amount)
+    (list ASSERT_COIN_CONSUMED
+          (sha256 aggee_id
+                  (sha256tree1 (puzzle_for_e_coin my_id spend_amount))
+                  (q 0))))
+
+  ; this adds the conditions related to the locks to the output of the auditor case
+  (defun create_a_and_consume_e (aggee_id my_id spend_amount output)
+    (c (consume_e aggee_id my_id spend_amount)
+       (c (create_a aggee_id)
+          output)))
+
+  ; this loops through a list of coins to be audited and creates the relevant conditions for each
+  ; it also compares the total value of coins being spent with total output amount of the transaction,
+  ; and if they aren't equal it will fail
+  (defun consume_es_generate_as (mod_hash genesis_id aggee_list my_id output running_actual running_e)
+    (if (l aggee_list)
+      (consume_es_generate_as mod_hash
+                              genesis_id
+                              (r aggee_list)
+                              my_id
+                              (create_a_and_consume_e (get_aggee_id mod_hash genesis_id (f aggee_list))
+                                                      my_id
+                                                      (f (r (r (r (f aggee_list)))))
+                                                      output)
+                              (+ (f (r (r (f aggee_list)))) running_actual)
+                              (+ (f (r (r (r (f aggee_list))))) running_e))
+      (if (= running_actual running_e)
+        output
+        (x))))
+
+  ; this checks if our coin is the auditor and if so runs the auditor code, otherwise outputs the standard output
+  (defun-inline normal_case_aggee_checker (mod_hash genesis_id my_id aggee_list conditions)
+    (if aggee_list
+      (consume_es_generate_as mod_hash genesis_id aggee_list my_id conditions 0 0)
+      conditions))
+
+  ; this calculates the standard output and passes it to the auditor route checker
+  (defun normal_case (mod_hash genesis_id conditions my_id auditor_id aggee_list)
+      (normal_case_aggee_checker mod_hash
+                                 genesis_id
+                                 my_id
+                                 aggee_list
+                                 (normal_case_everybody mod_hash genesis_id conditions () 0 my_id auditor_id)))
+
+  ; this returns a conditions which asserts that our parent is the actual parent to stop us lying about our heritage
+  (defun-inline generate_condition_proving_my_parent_is_genesis (parent_id my_puzzle_hash my_amount)
+    (list ASSERT_MY_COIN_ID
+          (sha256 parent_id
+                  my_puzzle_hash
+                  my_amount)))
+
+  ; this returns a conditions which allows us to have any parent but asserts our value must be 0 if so
+  (defun-inline generate_condition_proving_my_value_is_zero (parent_id my_puzzle_hash)
+    (list ASSERT_MY_COIN_ID
+          (sha256 parent_id
+                  my_puzzle_hash
+                  0)))
+
+  ; this will create a new coin which has the same puzzle hash as us
+  (defun-inline generate_create_coin_condition (my_puzzle_hash my_amount)
+      (list CREATE_COIN my_puzzle_hash my_amount))
+
+  ; this will check if our immediate parent is the genesis coin or not, and call the relevant assert depending
+  (defun eve_case_parent_check (genesis_id parent_id my_puzzle_hash my_amount)
+    (if (= parent_id genesis_id)
+      (generate_condition_proving_my_parent_is_genesis parent_id my_puzzle_hash my_amount)
+      (generate_condition_proving_my_value_is_zero parent_id my_puzzle_hash)))
+
+  ; this adds the create child with my puzzle to the result of the parent check
+  (defun-inline eve_case (genesis_id parent_id my_puzzle_hash my_amount)
+    (list (generate_create_coin_condition my_puzzle_hash
+                                          my_amount)
+          (eve_case_parent_check genesis_id
+                                 parent_id
+                                 my_puzzle_hash
+                                 my_amount)))
+
+  ; this is the final program
+  ; it checks if our parent is a coloured coin, and then calls the normal case if so, otherwise it calls the eve case
+  ; in eve case puzzlereveal is just actually just your full puzzlehash
+  (if (l parent_info)
+      (normal_case mod_hash
+                   genesis_id
+                   (conditions_from_inner_puzzle inner_puzzle solution)
+                   (calculate_my_id mod_hash
+                                    genesis_id
+                                    (f parent_info)
+                                    (f (r parent_info))
+                                    (f (r (r parent_info)))
+                                    (sha256tree1 inner_puzzle)
+                                    my_amount)
+                   (calculate_auditor_id mod_hash
+                                         genesis_id
+                                         auditor_parent
+                                         auditor_inner_puzzle
+                                         auditor_amount
+                   )
+                   aggee_list)
+      (eve_case genesis_id parent_info (calculate_puzzle_hash mod_hash genesis_id (sha256tree1 inner_puzzle)) my_amount))
+    )
+
+  ;HERE BE TESTS
+
+  ;(calculate_my_id ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 inner_puzzle) my_amount corehash)
+  ;(calculate_auditor_id (auditor_parent auditor_inner_puzzle auditor_amount) corehash)
+  ;(generate_create_e_coin_condition ((f (f ARGS)) (f (r (f ARGS))) (f (r (r (f ARGS))))) (f (r ARGS)) 100)
+  ;(create_a_puz_cn ((f (f ARGS)) (f (r (f ARGS))) (f (r (r (f ARGS))))) (f (r ARGS)) (f (r (r ARGS))) (f (r (r (r ARGS)))))
+  ;(prepend_additional_conditions (calculate_my_id (parent_parent parent_innerpuz parent_amount) my_innerpuz my_amount corehash) (calculate_auditor_id (auditor_parent auditor_inner_puzzle auditor_amount) corehash) (q 100))
+  ;(conditions_from_inner_puzzle inner_puzzle solution)
+
+  ;(eve_case_parent_check genesis_id parent_info (sha256tree1 (create_fullpuz (sha256tree1 inner_puzzle) corehash)) my_amount)
+  ;(eve_case genesis_id parent_info (sha256tree1 (create_fullpuz (sha256tree1 inner_puzzle) corehash)) my_amount)
+
+  ;(get_first_aggee_id genesis_id aggee_list corehash)
+  ;(consume_e (get_first_aggee_id genesis_id aggee_list corehash) (calculate_my_id ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 inner_puzzle) my_amount corehash) (f (r (r (r (f aggee_list))))))
+  ;(create_a_and_consume_e (sha256 (f (f aggee_list)) (sha256tree1 (create_fullpuz (f (r (f aggee_list))) corehash)) (f (r (r (f aggee_list))))) (calculate_my_id ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 inner_puzzle) my_amount corehash) (f (r (r (r (f aggee_list))))))
+  ;(consume_es_generate_as aggee_list (calculate_my_id ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 inner_puzzle) my_amount corehash) corehash () () ())
+  ;(normal_case_aggee_checker (conditions_from_inner_puzzle inner_puzzle solution) () corehash 0 (calculate_my_id ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 inner_puzzle) my_amount corehash) (calculate_auditor_id (auditor_parent auditor_inner_puzzle auditor_amount) corehash) aggee_list)
+
+  ;(normal_case_everybody genesis_id (conditions_from_inner_puzzle inner_puzzle solution) () corehash 0 (calculate_my_id ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 inner_puzzle) my_amount corehash) (calculate_auditor_id (auditor_parent auditor_inner_puzzle auditor_amount) corehash))
+  ;(normal_case (conditions_from_inner_puzzle inner_puzzle solution) () corehash 0 (calculate_my_id ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) (sha256tree1 inner_puzzle) my_amount corehash) (calculate_auditor_id (auditor_parent auditor_inner_puzzle auditor_amount) corehash) aggee_list)
+)

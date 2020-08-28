@@ -61,11 +61,12 @@ fi
 
 INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
 
+echo "Python version is $INSTALL_PYTHON_VERSION"
 $INSTALL_PYTHON_PATH -m venv venv
 if [ ! -f "activate" ]; then
     ln -s venv/bin/activate .
 fi
-echo "Python version is $INSTALL_PYTHON_VERSION"
+
 # shellcheck disable=SC1091
 . ./activate
 # pip 20.x+ supports Linux binary wheels
