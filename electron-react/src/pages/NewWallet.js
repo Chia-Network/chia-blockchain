@@ -110,4 +110,4 @@ class NewWallet extends Component {
   }
 }
 
-export default withTheme(withRouter(connect()(NewWallet)));
+export default withTheme(withRouter(NewWallet));
