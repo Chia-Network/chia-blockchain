@@ -20,6 +20,17 @@
 (mod
     (M public_key_list selectors delegated_puzzle solution)
 
+    (defconstant AGG_SIG 50)
+
+    ;; hash a tree
+    ;; This is used to calculate a puzzle hash given a puzzle program.
+    (defun sha256tree1
+           (TREE)
+           (if (l TREE)
+               (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+               (sha256 1 TREE)
+           )
+    )
 
     ; "assert" is a macro that wraps repeated instances of "if"
     ; usage: (assert A0 A1 ... An R)
@@ -43,7 +54,7 @@
 
     (defun add_aggsig (public_key_list hash delegated_puzzle solution)
         (if public_key_list
-            (c (list 50 (f public_key_list) hash)
+            (c (list AGG_SIG (f public_key_list) hash)
                (add_aggsig (r public_key_list) hash delegated_puzzle solution)
             )
             ((c delegated_puzzle solution))
@@ -77,12 +88,12 @@
 
     ; "solve_puzzle" is the main entry point
 
-    (defun solve_puzzle (M public_key_list selectors delegated_puzzle solution)
+    (defun-inline solve_puzzle (M public_key_list selectors delegated_puzzle solution)
         ; make sure we have exactly M selectors
         (assert (= M (count_selectors selectors))
             ; return the AGGSIG conditions plus the conditions from the delegated_puzzle
                 (add_aggsig (choose_keys selectors public_key_list)
-                            (sha256 (wrap delegated_puzzle))
+                            (sha256tree1 delegated_puzzle)
                             delegated_puzzle
                             solution)
         )

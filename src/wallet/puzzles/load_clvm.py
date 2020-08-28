@@ -6,7 +6,7 @@ from clvm_tools.clvmc import compile_clvm
 from src.types.program import Program
 
 
-def load_clvm(clvm_filename, package_or_requirement=__name__):
+def load_clvm(clvm_filename, package_or_requirement=__name__) -> Program:
     """
     This function takes a .clvm file in the given package and compiles it to a
     .clvm.hex file if the .hex file is missing or older than the .clvm file, then
