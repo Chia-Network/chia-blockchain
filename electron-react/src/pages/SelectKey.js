@@ -266,4 +266,4 @@ const SelectKey = () => {
   );
 };
 
-export default withRouter(connect()(SelectKey));
+export default withRouter(SelectKey);

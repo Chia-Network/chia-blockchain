@@ -549,4 +549,4 @@ const Plotter = () => {
   );
 };
 
-export default withRouter(connect()(Plotter));
+export default withRouter(Plotter);

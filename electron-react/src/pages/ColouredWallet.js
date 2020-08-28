@@ -793,4 +793,4 @@ const ColouredWallet = props => {
   );
 };
 
-export default withRouter(connect()(ColouredWallet));
+export default withRouter(ColouredWallet);
