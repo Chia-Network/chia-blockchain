@@ -691,4 +691,4 @@ const StandardWallet = props => {
   );
 };
 
-export default withRouter(connect()(StandardWallet));
+export default withRouter(StandardWallet);

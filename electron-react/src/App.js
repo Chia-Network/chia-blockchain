@@ -159,4 +159,4 @@ const App = () => {
   );
 };
 
-export default connect()(App);
+export default App;

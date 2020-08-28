@@ -511,4 +511,4 @@ const FullNode = () => {
   );
 };
 
-export default withRouter(connect()(FullNode));
+export default withRouter(FullNode);

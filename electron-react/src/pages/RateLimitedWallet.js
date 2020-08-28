@@ -971,4 +971,4 @@ const RateLimitedWallet = props => {
   }
 };
 
-export default withRouter(connect()(RateLimitedWallet));
+export default withRouter(RateLimitedWallet);

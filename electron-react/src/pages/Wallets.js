@@ -268,4 +268,4 @@ const Wallets = () => {
   );
 };
 
-export default withRouter(connect()(Wallets));
+export default withRouter(Wallets);

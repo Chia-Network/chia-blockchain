@@ -181,4 +181,4 @@ const CreateMnemonics = () => {
   return UIPart();
 };
 
-export default withTheme(withRouter(connect()(CreateMnemonics)));
+export default withTheme(withRouter(CreateMnemonics));
