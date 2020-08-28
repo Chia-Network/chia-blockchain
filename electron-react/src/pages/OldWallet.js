@@ -6,7 +6,7 @@ import Grid from "@material-ui/core/Grid";
 import { withTheme } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
-import { connect, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
 import { useDispatch } from "react-redux";
