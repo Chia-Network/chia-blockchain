@@ -202,12 +202,13 @@ wallet:
     port: 8444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v19.db
+  database_path: wallet/db/blockchain_wallet_v18.db
+  wallet_peers_path: wallet/db/wallet_peers.db
 
   logging: *logging
 
   target_peer_count: 5
-  introducer_connect_interval: 60
+  peer_connect_interval: 60
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000

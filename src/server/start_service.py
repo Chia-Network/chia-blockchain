@@ -37,7 +37,6 @@ class Service:
         start_callback: Optional[Callable] = None,
         stop_callback: Optional[Callable] = None,
         await_closed_callback: Optional[Callable] = None,
-        periodic_introducer_poll: Optional[Tuple[PeerInfo, int, int]] = None,
         parse_cli_args=True,
     ):
         net_config = load_config(root_path, "config.yaml")
@@ -86,7 +85,6 @@ class Service:
         self._is_stopping = False
         self._stopped_by_rpc = False
 
-        self._periodic_introducer_poll = periodic_introducer_poll
         self._on_connect_callback = on_connect_callback
         self._start_callback = start_callback
         self._stop_callback = stop_callback
