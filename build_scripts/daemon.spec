@@ -3,6 +3,7 @@
 import pathlib
 
 from pkg_resources import get_distribution
+
 from os import listdir
 from os.path import isfile, join
 from PyInstaller.utils.hooks import copy_metadata
@@ -15,7 +16,8 @@ onlyfiles = [f for f in listdir(puzzles_path) if isfile(join(puzzles_path, f))]
 hex_puzzles = []
 for file in onlyfiles:
     if file.endswith("clvm.hex"):
-        hex_puzzles.append((f"{puzzles_path}/{file}", puzzle_dist_path))
+        puzzle_path = f"{puzzles_path}/{file}"
+        hex_puzzles.append((puzzles_path, puzzle_dist_path))
 
 build = pathlib.Path().absolute()
 root = build.parent
@@ -59,7 +61,7 @@ daemon = Analysis([f"{root}/src/daemon/server.py"],
              pathex=[f"{root}/venv/lib/python3.7/site-packages/aiter/", f"{root}"],
              binaries = [],
              datas=[version_data, (f"../src/util/initial-config.yaml", f"./src/util/"),
-             (f"../src/util/initial-plots.yaml", f"./src/util/") ],
+             (f"../src/util/initial-plots.yaml", f"./src/util/") ] + hex_puzzles,
              hiddenimports=subcommand_modules,
              hookspath=[],
              runtime_hooks=[],
