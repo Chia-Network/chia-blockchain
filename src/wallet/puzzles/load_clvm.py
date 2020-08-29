@@ -1,4 +1,6 @@
 import pathlib
+import sys
+
 import pkg_resources
 
 from clvm_tools.clvmc import compile_clvm
