@@ -37,9 +37,9 @@ def _get_filenames(directory: Path) -> List[Path]:
                 if child.suffix == ".plot":
                     all_files.append(child)
             else:
-                log.info(f"Not checking subdirectory {child}")
+                log.info(f"Not checking subdirectory {child} - no .plot files found")
     except Exception as e:
-        log.info(f"Error reading directory {directory} {e}")
+        log.warning(f"Error reading directory {directory} {e}")
     return all_files
 
 
