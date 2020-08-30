@@ -424,7 +424,9 @@ class TradeManager:
                     )
                     if coinsol.coin in [record.coin for record in unspent]:
                         return False, None, "can't respond to own offer"
-                    innerpuzzlereveal = cc_wallet_puzzles.get_inner_puzzle_from_puzzle(puzzle)
+                    innerpuzzlereveal = cc_wallet_puzzles.get_inner_puzzle_from_puzzle(
+                        puzzle
+                    )
                     innersol = cc_wallet_puzzles.inner_puzzle_solution(solution)
                     out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
                         innerpuzzlereveal, innersol
@@ -661,7 +663,7 @@ class TradeManager:
                         cc_wallet_puzzles.puzzle_for_inner_puzzle(
                             auditor_inner_puzzle, bytes.fromhex(colour),
                         ),
-                        solution
+                        solution,
                     ]
                 ),
             )
