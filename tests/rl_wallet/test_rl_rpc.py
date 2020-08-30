@@ -77,7 +77,7 @@ class TestCCWallet:
         assert val["type"] == WalletType.RATE_LIMITED.value
         assert val["origin"]
         assert val["pubkey"]
-        admin_wallet_id = val['id']
+        admin_wallet_id = val["id"]
         admin_pubkey = val["pubkey"]
         origin: Coin = val["origin"]
 
@@ -96,9 +96,9 @@ class TestCCWallet:
         )
         assert val["success"]
 
-        assert (await api_user.get_wallet_balance({"wallet_id": user_wallet_id}))["wallet_balance"][
-            "confirmed_wallet_balance"
-        ] == 0
+        assert (await api_user.get_wallet_balance({"wallet_id": user_wallet_id}))[
+            "wallet_balance"
+        ]["confirmed_wallet_balance"] == 0
         for i in range(0, 2 * num_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
 
@@ -112,7 +112,12 @@ class TestCCWallet:
         puzzle_hash = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash())
         assert await receiving_wallet.get_spendable_balance() == 0
         val = await api_user.send_transaction(
-            {"wallet_id": user_wallet_id, "amount": 3, "fee": 0, "puzzle_hash": puzzle_hash}
+            {
+                "wallet_id": user_wallet_id,
+                "amount": 3,
+                "fee": 0,
+                "puzzle_hash": puzzle_hash,
+            }
         )
 
         assert val["status"] == "SUCCESS"
@@ -121,8 +126,8 @@ class TestCCWallet:
         await time_out_assert(15, check_balance, 97, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
 
-        val = await api_admin.send_clawback_transaction({'wallet_id': admin_wallet_id})
-        assert val['status'] == 'SUCCESS'
+        val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id})
+        assert val["status"] == "SUCCESS"
         for i in range(0, num_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 0, api_admin, admin_wallet_id)

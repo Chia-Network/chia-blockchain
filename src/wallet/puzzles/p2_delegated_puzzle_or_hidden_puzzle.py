@@ -50,7 +50,9 @@ def puzzle_for_public_key_and_hidden_puzzle(
     return puzzle_for_synthetic_public_key(synthetic_public_key)
 
 
-def solution_with_delegated_puzzle(synthetic_public_key, delegated_puzzle, solution) -> Program:
+def solution_with_delegated_puzzle(
+    synthetic_public_key, delegated_puzzle, solution
+) -> Program:
     puzzle = puzzle_for_synthetic_public_key(synthetic_public_key)
     return Program.to([puzzle, [[], delegated_puzzle, solution]])
 

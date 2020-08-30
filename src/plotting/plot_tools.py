@@ -30,13 +30,16 @@ def _get_filenames(directory: Path) -> List[Path]:
         log.warning(f"Directory: {directory} does not exist.")
         return []
     all_files: List[Path] = []
-    for child in directory.iterdir():
-        if not child.is_dir():
-            # If it is a file ending in .plot, add it
-            if child.suffix == ".plot":
-                all_files.append(child)
-        else:
-            log.info(f"Not checking subdirectory {child}")
+    try:
+        for child in directory.iterdir():
+            if not child.is_dir():
+                # If it is a file ending in .plot, add it
+                if child.suffix == ".plot":
+                    all_files.append(child)
+            else:
+                log.info(f"Not checking subdirectory {child}")
+    except Exception as e:
+        log.info(f"Error reading directory {directory} {e}")
     return all_files
 
 

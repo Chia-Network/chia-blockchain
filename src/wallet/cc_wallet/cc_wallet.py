@@ -337,7 +337,9 @@ class CCWallet:
 
                 if coin is not None:
                     if cc_wallet_puzzles.check_is_cc_puzzle(puzzle_program):
-                        inner_puzzle_hash = get_inner_puzzle_hash_from_puzzle(puzzle_program)
+                        inner_puzzle_hash = get_inner_puzzle_hash_from_puzzle(
+                            puzzle_program
+                        )
 
                         self.log.info(
                             f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle_hash.hex()}"
@@ -393,9 +395,7 @@ class CCWallet:
         return new
 
     def puzzle_for_pk(self, pubkey) -> Program:
-        inner_puzzle = self.standard_wallet.puzzle_for_pk(
-            bytes(pubkey)
-        )
+        inner_puzzle = self.standard_wallet.puzzle_for_pk(bytes(pubkey))
         inner_puzzle_hash = inner_puzzle.get_tree_hash()
         cc_puzzle: Program = self.cc_info.puzzle_for_inner_puzzle(inner_puzzle)
         self.base_puzzle_program = bytes(cc_puzzle)
@@ -440,7 +440,9 @@ class CCWallet:
         eve_spend = cc_generate_eve_spend(eve_coin, cc_inner_puzzle, genesis_id)
         full_spend = SpendBundle.aggregate([tx.spend_bundle, eve_spend])
 
-        future_parent = CCParent(eve_coin.parent_coin_info, cc_inner_puzzle_hash, eve_coin.amount)
+        future_parent = CCParent(
+            eve_coin.parent_coin_info, cc_inner_puzzle_hash, eve_coin.amount
+        )
         eve_parent = CCParent(
             origin.parent_coin_info, origin.puzzle_hash, origin.amount
         )
@@ -794,7 +796,9 @@ class CCWallet:
         await self.save_info(cc_info)
 
         cc_inner_puzzle = await self.get_new_inner_puzzle()
-        cc_puzzle = cc_wallet_puzzles.puzzle_for_inner_puzzle(cc_inner_puzzle, origin_id)
+        cc_puzzle = cc_wallet_puzzles.puzzle_for_inner_puzzle(
+            cc_inner_puzzle, origin_id
+        )
         cc_puzzle_hash = cc_puzzle.get_tree_hash()
 
         tx_record: Optional[
@@ -867,10 +871,7 @@ class CCWallet:
                 CoinSolution(
                     coin,
                     Program.to(
-                        [
-                            self.cc_info.puzzle_for_inner_puzzle(innerpuz),
-                            solution,
-                        ]
+                        [self.cc_info.puzzle_for_inner_puzzle(innerpuz), solution]
                     ),
                 )
             )

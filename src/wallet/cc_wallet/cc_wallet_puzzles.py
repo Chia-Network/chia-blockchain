@@ -74,7 +74,9 @@ def cc_make_solution(
 
     aggees_program = Program.to([] if auditees is None else [list(_) for _ in auditees])
 
-    solution = Program.to([parent, amount, inner_solution, auditor_list, aggees_program])
+    solution = Program.to(
+        [parent, amount, inner_solution, auditor_list, aggees_program]
+    )
     return solution
 
 

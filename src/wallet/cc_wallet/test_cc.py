@@ -34,7 +34,9 @@ CC_MOD = load_clvm("cc.clvm", package_or_requirement=__name__)
 ZERO_GENESIS_MOD = load_clvm("zero-genesis.clvm", package_or_requirement=__name__)
 
 
-PUZZLE_TABLE: Dict[bytes32, Program] = dict((_.get_tree_hash(), _) for _ in [ANYONE_CAN_SPEND_PUZZLE])
+PUZZLE_TABLE: Dict[bytes32, Program] = dict(
+    (_.get_tree_hash(), _) for _ in [ANYONE_CAN_SPEND_PUZZLE]
+)
 
 
 def hash_to_puzzle_f(puzzle_hash: bytes32) -> Optional[Program]:
