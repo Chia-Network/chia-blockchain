@@ -47,26 +47,11 @@ jobs:
       - name: Lint Code Base
         uses: docker://github/super-linter:v3.9.1
         env:
-          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: master
           LINTER_RULES_PATH: .github/linters
-          VALIDATE_YAML: true
-          VALIDATE_JSON: true
-          VALIDATE_MD: true
-          VALIDATE_BASH: true
-          VALIDATE_SHELL_SHFMT: true
-          VALIDATE_PYTHON: true
-          VALIDATE_PYTHON_PYLINT: true
-          VALIDATE_PYTHON_FLAKE8: true
-          VALIDATE_PYTHON_BLACK: true
           VALIDATE_JAVASCRIPT_STANDARD: false
-          VALIDATE_JAVASCRIPT_ES: true
-          VALIDATE_TYPESCRIPT_ES: true
-          VALIDATE_DOCKER: true
-          VALIDATE_GO: true
-          VALIDATE_POWERSHELL: true
           VALIDATE_CSS: false
-          VALIDATE_ENV: true
           DISABLE_ERRORS: false
           PYTHONPATH: ${{ github.workspace }}:$PYTHONPATH
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
