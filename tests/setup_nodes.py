@@ -167,6 +167,7 @@ async def setup_wallet_node(
     config["introducer_peer"]["host"] = "::1"
     if introducer_port is not None:
         config["introducer_peer"]["port"] = introducer_port
+        config["peer_connect_interval"] = 10
 
     connect_peers: List[PeerInfo] = []
     if full_node_port is not None:
