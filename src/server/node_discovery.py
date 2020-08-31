@@ -293,7 +293,6 @@ class FullNodePeers(FullNodeDiscovery):
         )
         self.global_connections.max_inbound_count = max_inbound_count
 
-
     async def start(self):
         await self.initialize_address_manager()
         self.global_connections.set_full_node_peers_callback(self.add_message)
