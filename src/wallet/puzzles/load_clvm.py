@@ -1,5 +1,4 @@
 import pathlib
-import sys
 
 import pkg_resources
 
