@@ -25,7 +25,6 @@ from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
-from src.wallet.cc_wallet import cc_wallet_puzzles
 from src.wallet.cc_wallet.cc_utils import (
     SpendableCC,
     cc_puzzle_for_inner_puzzle,
@@ -725,7 +724,6 @@ class CCWallet:
         await self.save_info(cc_info)
         return tx_record.spend_bundle
 
-    """
     async def create_spend_bundle_relative_amount(
         self, cc_amount, zero_coin: Coin = None
     ):
@@ -760,35 +758,29 @@ class CCWallet:
             else:
                 innersol = self.standard_wallet.make_solution()
             innerpuz: Program = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
-
-            parent_info = await self.get_parent_for_coin(coin)
-            assert parent_info is not None
-            # Use coin info to create solution and add coin and solution to list of CoinSolutions
-            solution = cc_wallet_puzzles.cc_make_solution(
-                self.cc_info.my_colour_name,
-                (
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ),
-                coin.amount,
-                innerpuz,
-                innersol,
-                None,
-                None,
-            )
-            list_of_solutions.append(
-                CoinSolution(
-                    coin,
-                    Program.to(
-                        [self.cc_info.puzzle_for_inner_puzzle(innerpuz), solution]
-                    ),
-                )
-            )
             sigs = sigs + await self.get_sigs(innerpuz, innersol)
+            lineage_proof = await self.get_lineage_proof_for_coin(coin)
+            puzzle_reveal = cc_puzzle_for_inner_puzzle(
+                CC_MOD, self.cc_info.my_genesis_checker, innerpuz
+            )
+            # Use coin info to create solution and add coin and solution to list of CoinSolutions
+            solution = [
+                innersol,
+                coin_as_list(coin),
+                lineage_proof,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ]
+            breakpoint()
+            full_solution = Program.to([puzzle_reveal, solution])
+
+            list_of_solutions.append(
+                CoinSolution(coin, full_solution)
+            )
 
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(list_of_solutions, aggsig)
         return spend_bundle
-
-    """

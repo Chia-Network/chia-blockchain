@@ -226,6 +226,7 @@ def spend_bundle_for_spendable_ccs(
             next_coin_output,
             coin_after_next,
         ]
+        breakpoint()
         full_solution = Program.to([puzzle_reveal, solution])
 
         coin_solution = CoinSolution(input_coins[index], full_solution)
@@ -254,6 +255,14 @@ def is_cc_mod(inner_f: Program):
     You may want to generalize this if different `CC_MOD` templates are supported.
     """
     return inner_f == CC_MOD
+
+
+def check_is_cc_puzzle(puzzle: Program):
+    r = uncurry(puzzle)
+    if r is None:
+        return False
+    inner_f, args = r
+    return is_cc_mod(inner_f)
 
 
 def uncurry_cc(puzzle: Program) -> Optional[Tuple[Program, Program, Program]]:

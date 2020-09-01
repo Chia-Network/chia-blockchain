@@ -95,14 +95,14 @@ class TestCCTrades:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
-        assert cc_wallet.cc_info.genesis_id() is not None
-        colour = cc_wallet.cc_info.genesis_id()
+        assert cc_wallet.cc_info.my_genesis_checker is not None
+        colour = cc_wallet.get_colour()
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_1.wallet_state_manager, wallet_1, colour
         )
 
-        assert cc_wallet.cc_info.genesis_id() == cc_wallet_2.cc_info.genesis_id()
+        assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -172,8 +172,8 @@ class TestCCTrades:
         await time_out_assert(15, cc_a_3.get_confirmed_balance, 100)
         await time_out_assert(15, cc_a_3.get_unconfirmed_balance, 100)
 
-        assert cc_a_3.cc_info.genesis_id() is not None
-        red = cc_a_3.cc_info.genesis_id()
+        assert cc_a_3.cc_info.my_genesis_checker is not None
+        red = cc_a_3.get_colour()
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -182,7 +182,7 @@ class TestCCTrades:
             wallet_node_b.wallet_state_manager, wallet_b, red
         )
 
-        assert cc_a_3.cc_info.genesis_id() == cc_b_3.cc_info.genesis_id()
+        assert cc_a_3.cc_info.my_genesis_checker == cc_b_3.cc_info.my_genesis_checker
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
