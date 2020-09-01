@@ -5,27 +5,33 @@ from secrets import token_bytes
 from typing import Dict, Optional, Tuple, List, Any
 import logging
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL
 
 from src.types.coin import Coin
-from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.util.byte_types import hexstr_to_bytes
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
-from src.wallet.cc_wallet import cc_wallet_puzzles
+from src.wallet.cc_wallet import cc_utils
 from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.cc_wallet.cc_wallet_puzzles import (
-    create_spend_for_auditor,
-    create_spend_for_ephemeral,
-)
 from src.wallet.trade_record import TradeRecord
 from src.wallet.trading.trade_status import TradeStatus
 from src.wallet.trading.trade_store import TradeStore
 from src.wallet.transaction_record import TransactionRecord
-from src.wallet.util.cc_utils import get_discrepancies_for_spend_bundle
+from src.wallet.util.trade_utils import (
+    get_discrepancies_for_spend_bundle,
+    get_output_discrepancy_for_puzzle_and_solution,
+    get_output_amount_for_puzzle_and_solution
+)
+from src.wallet.cc_wallet.cc_utils import (
+    SpendableCC,
+    genesis_coin_id_for_genesis_coin_checker,
+    uncurry_cc,
+    spend_bundle_for_spendable_ccs,
+    CC_MOD
+)
 from src.wallet.wallet import Wallet
 
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -402,8 +408,6 @@ class TradeManager:
 
         coinsols = []  # [] of CoinSolutions
         cc_coinsol_outamounts: Dict[bytes32, List[Tuple[Any, int]]] = dict()
-        # Used for generating auditor solution, key is colour
-        auditees: Dict[bytes32, List[Tuple[bytes32, bytes32, Any, int]]] = dict()
         aggsig = offer_spend_bundle.aggregated_signature
         cc_discrepancies: Dict[bytes32, int] = dict()
         chia_discrepancy = None
@@ -414,81 +418,51 @@ class TradeManager:
             solution = coinsol.solution.rest().first()
 
             # work out the deficits between coin amount and expected output for each
-            if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
-
-                if not cc_wallet_puzzles.is_ephemeral_solution(solution):
-                    # Calculate output amounts
-                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(puzzle).hex()
-                    if colour not in wallets:
-                        wallets[
-                            colour
-                        ] = await self.wallet_state_manager.get_wallet_for_colour(
-                            colour
-                        )
-                    unspent = (
-                        await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                            wallets[colour].wallet_info.id
-                        )
+            if cc_utils.check_is_cc_puzzle(puzzle):
+                # Calculate output amounts
+                mod_hash, genesis_checker, inner_puzzle = cc_utils.uncurry_cc(puzzle)
+                colour = bytes(genesis_checker).hex()
+                if colour not in wallets:
+                    wallets[
+                        colour
+                    ] = await self.wallet_state_manager.get_wallet_for_colour(
+                        colour
                     )
-                    if coinsol.coin in [record.coin for record in unspent]:
-                        return False, None, "can't respond to own offer"
-                    innerpuzzlereveal = cc_wallet_puzzles.get_inner_puzzle_from_puzzle(
-                        puzzle
-                    )
-                    innersol = cc_wallet_puzzles.inner_puzzle_solution(solution)
-                    out_amount = (
-                        cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                            innerpuzzlereveal, innersol
-                        )
-                    )
-
-                    if colour in cc_discrepancies:
-                        cc_discrepancies[colour] += coinsol.coin.amount - out_amount
-                    else:
-                        cc_discrepancies[colour] = coinsol.coin.amount - out_amount
-                    # Store coinsol and output amount for later
-                    if colour in cc_coinsol_outamounts:
-                        cc_coinsol_outamounts[colour].append((coinsol, out_amount))
-                    else:
-                        cc_coinsol_outamounts[colour] = [(coinsol, out_amount)]
-
-                    # auditees should be (primary_input, innerpuzhash, coin_amount, output_amount)
-                    if colour in auditees:
-                        auditees[colour].append(
-                            (
-                                coinsol.coin.parent_coin_info,
-                                Program(innerpuzzlereveal).get_tree_hash(),
-                                coinsol.coin.amount,
-                                out_amount,
-                            )
-                        )
-                    else:
-                        auditees[colour] = [
-                            (
-                                coinsol.coin.parent_coin_info,
-                                Program(innerpuzzlereveal).get_tree_hash(),
-                                coinsol.coin.amount,
-                                out_amount,
-                            )
-                        ]
-                else:
-                    coinsols.append(coinsol)
-            else:
-                # standard chia coin
-                unspent = (
-                    await self.wallet_state_manager.get_spendable_coins_for_wallet(1)
+                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    wallets[colour].wallet_info.id
                 )
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, None, "can't respond to own offer"
-                if chia_discrepancy is None:
-                    chia_discrepancy = cc_wallet_puzzles.get_output_discrepancy_for_puzzle_and_solution(
-                        coinsol.coin, puzzle, solution
-                    )
+
+                innersol = solution.first()
+
+                total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
+                if colour in cc_discrepancies:
+                    cc_discrepancies[colour] += coinsol.coin.amount - total
                 else:
-                    chia_discrepancy += cc_wallet_puzzles.get_output_discrepancy_for_puzzle_and_solution(
-                        coinsol.coin, puzzle, solution
-                    )
-                coinsols.append(coinsol)
+                    cc_discrepancies[colour] = coinsol.coin.amount - total
+                # Store coinsol and output amount for later
+                if colour in cc_coinsol_outamounts:
+                    cc_coinsol_outamounts[colour].append((coinsol, total))
+                else:
+                    cc_coinsol_outamounts[colour] = [(coinsol, total)]
+
+        else:
+            # standard chia coin
+            unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                1
+            )
+            if coinsol.coin in [record.coin for record in unspent]:
+                return False, None, "can't respond to own offer"
+            if chia_discrepancy is None:
+                chia_discrepancy = get_output_discrepancy_for_puzzle_and_solution(
+                    coinsol.coin, puzzle, solution
+                )
+            else:
+                chia_discrepancy += get_output_discrepancy_for_puzzle_and_solution(
+                    coinsol.coin, puzzle, solution
+                )
+            coinsols.append(coinsol)
 
         chia_spend_bundle: Optional[SpendBundle] = None
         if chia_discrepancy is not None:
@@ -532,169 +506,80 @@ class TradeManager:
             if my_cc_spends == set() or my_cc_spends is None:
                 return False, None, "insufficient funds"
 
-            auditor = my_cc_spends.pop()
-            auditor_inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
-                auditor.puzzle_hash
-            )
-            assert auditor_inner_puzzle is not None
-            inner_hash = auditor_inner_puzzle.get_tree_hash()
-
-            auditor_info = (
-                auditor.parent_coin_info,
-                inner_hash,
-                auditor.amount,
-            )
-            parent_info = await wallets[colour].get_parent_for_coin(auditor)
-
+            # Create SpendableCC list and innersol_list with both my coins and the offered coins
+            # Firstly get the output coin
+            my_output_coin = my_cc_spends.pop()
+            spendable_cc_list = []
+            innersol_list = []
+            genesis_id = genesis_coin_id_for_genesis_coin_checker(Program.from_bytes(bytes.fromhex(colour)))
+            # Make the rest of the coins assert the output coin is consumed
             for coloured_coin in my_cc_spends:
                 inner_solution = self.wallet_state_manager.main_wallet.make_solution(
-                    consumed=[auditor.name()]
+                    consumed=[my_output_coin.name()]
                 )
-                sig = await wallets[colour].get_sigs_for_innerpuz_with_innersol(
-                    await self.get_inner_puzzle_for_puzzle_hash(
-                        coloured_coin.puzzle_hash
-                    ),
-                    inner_solution,
-                )
-                aggsig = AugSchemeMPL.aggregate([sig, aggsig])
                 inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
                     coloured_coin.puzzle_hash
                 )
                 assert inner_puzzle is not None
-                # auditees should be (primary_input, innerpuzhash, coin_amount, output_amount)
-                auditees[colour].append(
-                    (
-                        coloured_coin.parent_coin_info,
-                        inner_puzzle.get_tree_hash(),
-                        coloured_coin.amount,
-                        0,
-                    )
-                )
 
-                solution = cc_wallet_puzzles.cc_make_solution(
-                    colour,
-                    (
-                        parent_info.parent_name,
-                        parent_info.inner_puzzle_hash,
-                        parent_info.amount,
-                    ),
-                    coloured_coin.amount,
+                sigs = await wallets[colour].get_sigs(
                     inner_puzzle,
                     inner_solution,
-                    auditor_info,
-                    None,
                 )
-                coin_spend = CoinSolution(
-                    coloured_coin,
-                    Program.to(
-                        [
-                            cc_wallet_puzzles.puzzle_for_inner_puzzle(
-                                inner_puzzle,
-                                colour,
-                            ),
-                            solution,
-                        ]
-                    ),
-                )
-                coinsols.append(coin_spend)
+                sigs.append(aggsig)
+                aggsig = AugSchemeMPL.aggregate(sigs)
 
-                ephemeral = cc_wallet_puzzles.create_spend_for_ephemeral(
-                    coloured_coin, auditor, 0
-                )
-                coinsols.append(ephemeral)
+                lineage_proof = await wallets[colour].get_lineage_proof_for_coin(coloured_coin)
+                spendable_cc_list.append(SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof))
+                innersol_list.append(inner_solution)
 
-                auditor = cc_wallet_puzzles.create_spend_for_auditor(
-                    auditor, coloured_coin
-                )
-                coinsols.append(auditor)
-
-            # Tweak the offer's solution to include the new auditor
+            # Create SpendableCC for each of the coloured coins received
             for cc_coinsol_out in cc_coinsol_outamounts[colour]:
                 cc_coinsol = cc_coinsol_out[0]
-                new_solution = cc_wallet_puzzles.update_auditors_in_solution(
-                    cc_coinsol.solution, auditor_info
-                )
-                new_coinsol = CoinSolution(cc_coinsol.coin, new_solution)
-                coinsols.append(new_coinsol)
+                puzzle = cc_coinsol.solution.first()
+                solution = cc_coinsol.solution.rest().first()
 
-                eph = cc_wallet_puzzles.create_spend_for_ephemeral(
-                    cc_coinsol.coin, auditor, cc_coinsol_out[1]
-                )
-                coinsols.append(eph)
+                mod_hash, genesis_coin_checker, inner_puzzle = uncurry_cc(puzzle)
+                inner_solution = solution.first()
+                lineage_proof = solution.rest().rest().first()
+                breakpoint()
+                spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
+                innersol_list.append(inner_solution)
 
-                aud = cc_wallet_puzzles.create_spend_for_auditor(
-                    auditor, cc_coinsol.coin
-                )
-                coinsols.append(aud)
-
-            # Finish the auditor CoinSolution with new information
+            # Finish the output coin SpendableCC with new information
             newinnerpuzhash = await wallets[colour].get_new_inner_hash()
             outputamount = (
                 sum([c.amount for c in my_cc_spends])
                 + cc_discrepancies[colour]
-                + auditor.amount
+                + my_output_coin.amount
             )
-            innersol = self.wallet_state_manager.main_wallet.make_solution(
+            inner_solution = self.wallet_state_manager.main_wallet.make_solution(
                 primaries=[{"puzzlehash": newinnerpuzhash, "amount": outputamount}]
             )
-            parent_info = await wallets[colour].get_parent_for_coin(auditor)
-
-            auditees[colour].append(
-                (
-                    auditor.parent_coin_info,
-                    auditor_inner_puzzle.get_tree_hash(),
-                    auditor.amount,
-                    outputamount,
-                )
+            inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
+                my_output_coin.puzzle_hash
             )
+            assert inner_puzzle is not None
 
-            sigs: List[G2Element] = await wallets[colour].get_sigs(
-                auditor_inner_puzzle, innersol
+            lineage_proof = await wallets[colour].get_lineage_proof_for_coin(my_output_coin)
+            spendable_cc_list.append(SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof))
+            innersol_list.append(inner_solution)
+
+            sigs = await wallets[colour].get_sigs(
+                inner_puzzle,
+                inner_solution,
             )
-            aggsig = AugSchemeMPL.aggregate(sigs + [aggsig])
-
-            solution = cc_wallet_puzzles.cc_make_solution(
-                colour,
-                (
-                    parent_info.parent_name,
-                    parent_info.inner_puzzle_hash,
-                    parent_info.amount,
-                ),
-                auditor.amount,
-                auditor_inner_puzzle,
-                innersol,
-                auditor_info,
-                auditees[colour],
-            )
-
-            cs = CoinSolution(
-                auditor,
-                Program.to(
-                    [
-                        cc_wallet_puzzles.puzzle_for_inner_puzzle(
-                            auditor_inner_puzzle,
-                            bytes.fromhex(colour),
-                        ),
-                        solution,
-                    ]
-                ),
-            )
-            coinsols.append(cs)
-
-            cs_eph = create_spend_for_ephemeral(auditor, auditor, outputamount)
-            coinsols.append(cs_eph)
-
-            cs_aud = create_spend_for_auditor(auditor, auditor)
-            coinsols.append(cs_aud)
-
-        spend_bundle = SpendBundle(coinsols, aggsig)
+            sigs.append(aggsig)
+            aggsig = AugSchemeMPL.aggregate(sigs)
+        breakpoint()
+        spend_bundle = spend_bundle_for_spendable_ccs(CC_MOD, Program.from_bytes(bytes.fromhex(colour)), spendable_cc_list, innersol_list, [aggsig])
         my_tx_records = []
 
         if zero_spend_list is not None:
             zero_spend_list.append(spend_bundle)
             spend_bundle = SpendBundle.aggregate(zero_spend_list)
 
-        # Add transaction history hor this trade
+        # Add transaction history for this trade
         now = uint64(int(time.time()))
         if chia_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
@@ -806,7 +691,6 @@ class TradeManager:
         )
 
         await self.save_trade(trade_record)
-
         await self.wallet_state_manager.add_pending_transaction(tx_record)
         for tx in my_tx_records:
             await self.wallet_state_manager.add_transaction(tx)

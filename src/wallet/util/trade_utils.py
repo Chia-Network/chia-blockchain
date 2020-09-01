@@ -2,9 +2,12 @@ from typing import Tuple, Optional, Dict
 
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
-from src.wallet.cc_wallet import cc_wallet_puzzles
+from src.wallet.cc_wallet import cc_utils
 from src.wallet.trade_record import TradeRecord
 from src.wallet.trading.trade_status import TradeStatus
+from src.types.program import Program
+from src.util.condition_tools import conditions_dict_for_solution
+from src.types.condition_opcodes import ConditionOpcode
 
 
 def trade_status_ui_string(status: TradeStatus):
@@ -39,42 +42,50 @@ def trade_record_to_dict(record: TradeRecord) -> Dict:
     return result
 
 
+# Returns the relative difference in value between the amount outputted by a puzzle and solution and a coin's amount
+def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
+    discrepancy = coin.amount - get_output_amount_for_puzzle_and_solution(
+        puzzle, solution
+    )
+    return discrepancy
+
+    # Returns the amount of value outputted by a puzzle and solution
+
+
+def get_output_amount_for_puzzle_and_solution(puzzle, solution):
+    error, conditions, cost = conditions_dict_for_solution(
+        Program.to([puzzle, solution])
+    )
+    total = 0
+    if conditions:
+        for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
+            total += Program.to(_.var2).as_int()
+    return total
+
+
 def get_discrepancies_for_spend_bundle(
     trade_offer: SpendBundle,
 ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
     try:
-        cc_discrepancies: Dict[bytes32, int] = dict()
+        cc_discrepancies: Dict[bytes, int] = dict()
         for coinsol in trade_offer.coin_solutions:
             puzzle = coinsol.solution.first()
             solution = coinsol.solution.rest().first()
-
             # work out the deficits between coin amount and expected output for each
-            if cc_wallet_puzzles.check_is_cc_puzzle(puzzle):
-                if not cc_wallet_puzzles.is_ephemeral_solution(solution):
-                    colour = cc_wallet_puzzles.get_genesis_from_puzzle(puzzle).hex()
-                    # get puzzle and solution
-                    innerpuzzlereveal = cc_wallet_puzzles.get_inner_puzzle_from_puzzle(
-                        puzzle
-                    )
-                    innersol = cc_wallet_puzzles.inner_puzzle_solution(solution)
-                    # Get output amounts by running innerpuzzle and solution
-                    out_amount = (
-                        cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                            innerpuzzlereveal, innersol
-                        )
-                    )
-                    # add discrepancy to dict of discrepancies
-                    if colour in cc_discrepancies:
-                        cc_discrepancies[colour] += coinsol.coin.amount - out_amount
-                    else:
-                        cc_discrepancies[colour] = coinsol.coin.amount - out_amount
-            else:  # standard chia coin
+            if cc_utils.check_is_cc_puzzle(puzzle):
+                # Calculate output amounts
+                mod_hash, genesis_checker, inner_puzzle = cc_utils.uncurry_cc(puzzle)
+                innersol = solution.first()
+
+                total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
+                colour = bytes(genesis_checker).hex()
+                if colour in cc_discrepancies:
+                    cc_discrepancies[colour] += coinsol.coin.amount - total
+                else:
+                    cc_discrepancies[colour] = coinsol.coin.amount - total
+            else:
                 coin_amount = coinsol.coin.amount
-                out_amount = (
-                    cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                        puzzle, solution
-                    )
-                )
+                out_amount = get_output_amount_for_puzzle_and_solution(puzzle, solution)
                 diff = coin_amount - out_amount
                 if "chia" in cc_discrepancies:
                     cc_discrepancies["chia"] = cc_discrepancies["chia"] + diff
