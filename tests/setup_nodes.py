@@ -451,7 +451,10 @@ async def setup_node_and_wallet(
 
 
 async def setup_simulators_and_wallets(
-    simulator_count: int, wallet_count: int, dic: Dict, starting_height=None,
+    simulator_count: int,
+    wallet_count: int,
+    dic: Dict,
+    starting_height=None,
 ):
     simulators: List[Tuple[FullNode, ChiaServer]] = []
     wallets = []

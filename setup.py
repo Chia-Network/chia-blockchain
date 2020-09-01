@@ -47,7 +47,9 @@ kwargs = dict(
     install_requires=dependencies,
     setup_requires=["setuptools_scm"],
     extras_require=dict(
-        uvloop=["uvloop"], dev=dev_dependencies, upnp=upnp_dependencies,
+        uvloop=["uvloop"],
+        dev=dev_dependencies,
+        upnp=upnp_dependencies,
     ),
     packages=[
         "build_scripts",

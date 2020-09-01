@@ -61,8 +61,8 @@ class TestMempool:
             1000, receiver_puzzlehash, block.get_coinbase()
         )
         assert spend_bundle is not None
-        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle
+        tx: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle)
         )
         async for _ in full_node_1.respond_transaction(tx):
             outbound: OutboundMessage = _
@@ -92,8 +92,8 @@ class TestMempool:
             1000, receiver_puzzlehash, block.get_coinbase()
         )
         assert spend_bundle is not None
-        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle
+        tx: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle)
         )
 
         async for _ in full_node_1.respond_transaction(tx):
@@ -140,8 +140,8 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -153,8 +153,8 @@ class TestMempool:
             1000, other_receiver.get_new_puzzlehash(), block.get_coinbase()
         )
         assert spend_bundle2 is not None
-        tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle2
+        tx2: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle2)
         )
         async for _ in full_node_1.respond_transaction(tx2):
             pass
@@ -185,8 +185,8 @@ class TestMempool:
             1000, receiver_puzzlehash, block.get_coinbase()
         )
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -198,8 +198,8 @@ class TestMempool:
         )
 
         assert spend_bundle2 is not None
-        tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle2
+        tx2: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle2)
         )
         async for _ in full_node_1.respond_transaction(tx2):
             pass
@@ -238,8 +238,8 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -278,8 +278,8 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -316,8 +316,8 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -356,8 +356,8 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -396,8 +396,8 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -427,7 +427,9 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID, blocks[2].get_coinbase().name(), None,
+            ConditionOpcode.ASSERT_MY_COIN_ID,
+            blocks[2].get_coinbase().name(),
+            None,
         )
         dic = {cvp.opcode: [cvp]}
 
@@ -436,8 +438,8 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -478,8 +480,8 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -523,8 +525,8 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -533,8 +535,8 @@ class TestMempool:
         # Sleep so that 3 sec passes
         await asyncio.sleep(3)
 
-        tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx2: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx2):
             outbound_2: OutboundMessage = _
@@ -565,7 +567,9 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED, block2.get_coinbase().name(), None,
+            ConditionOpcode.ASSERT_COIN_CONSUMED,
+            block2.get_coinbase().name(),
+            None,
         )
         dic = {cvp.opcode: [cvp]}
 
@@ -579,8 +583,8 @@ class TestMempool:
 
         bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            bundle
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(bundle)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -611,7 +615,9 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED, block2.get_coinbase().name(), None,
+            ConditionOpcode.ASSERT_COIN_CONSUMED,
+            block2.get_coinbase().name(),
+            None,
         )
         dic = {cvp.opcode: [cvp]}
 
@@ -620,8 +626,8 @@ class TestMempool:
         )
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
         async for _ in full_node_1.respond_transaction(tx1):
             outbound: OutboundMessage = _
@@ -652,7 +658,11 @@ class TestMempool:
             ):
                 pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_FEE,
+            int_to_bytes(10),
+            None,
+        )
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
@@ -661,8 +671,8 @@ class TestMempool:
 
         assert spend_bundle1 is not None
 
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
 
         outbound_messages: List[OutboundMessage] = []
@@ -700,7 +710,11 @@ class TestMempool:
             ):
                 pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_FEE,
+            int_to_bytes(10),
+            None,
+        )
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
@@ -709,8 +723,8 @@ class TestMempool:
 
         assert spend_bundle1 is not None
 
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
 
         outbound_messages: List[OutboundMessage] = []
@@ -752,7 +766,11 @@ class TestMempool:
             ):
                 pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_FEE,
+            int_to_bytes(10),
+            None,
+        )
         dic = {cvp.opcode: [cvp]}
 
         fee = 9
@@ -772,8 +790,8 @@ class TestMempool:
 
         assert combined.fees() == 4
 
-        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle1
+        tx1: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle1)
         )
 
         outbound_messages: List[OutboundMessage] = []
@@ -824,8 +842,8 @@ class TestMempool:
 
         spend_bundle_combined = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle_combined
+        tx: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle_combined)
         )
         messages = []
         async for outbound in full_node_1.respond_transaction(tx):
@@ -873,8 +891,8 @@ class TestMempool:
         spend_bundle = wallet_a.sign_transaction(unsigned)
         assert spend_bundle is not None
 
-        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(
-            spend_bundle
+        tx: full_node_protocol.RespondTransaction = (
+            full_node_protocol.RespondTransaction(spend_bundle)
         )
         async for _ in full_node_1.respond_transaction(tx):
             outbound: OutboundMessage = _

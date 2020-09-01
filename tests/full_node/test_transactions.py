@@ -100,8 +100,10 @@ class TestTransactions:
             10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds
         )
 
-        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-            10, ph1, 0
+        tx = (
+            await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+                10, ph1, 0
+            )
         )
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
@@ -173,8 +175,10 @@ class TestTransactions:
             10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds
         )
 
-        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-            10, token_bytes(), 0
+        tx = (
+            await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
+                10, token_bytes(), 0
+            )
         )
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
