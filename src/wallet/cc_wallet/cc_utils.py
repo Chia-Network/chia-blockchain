@@ -226,7 +226,6 @@ def spend_bundle_for_spendable_ccs(
             next_coin_output,
             coin_after_next,
         ]
-        breakpoint()
         full_solution = Program.to([puzzle_reveal, solution])
 
         coin_solution = CoinSolution(input_coins[index], full_solution)

@@ -654,8 +654,6 @@ class CCWallet:
             coin_inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
             innersol = self.standard_wallet.make_solution()
             innersol_list.append(innersol)
-            parent_info = await self.get_parent_for_coin(coin)
-            assert parent_info is not None
             sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol)
         spend_bundle = spend_bundle_for_spendable_ccs(CC_MOD, self.cc_info.my_genesis_checker, spendable_cc_list, innersol_list, sigs)
         tx_record = TransactionRecord(
@@ -756,7 +754,7 @@ class CCWallet:
                 )
                 output_created = coin
             else:
-                innersol = self.standard_wallet.make_solution()
+                innersol = self.standard_wallet.make_solution(consumed=[output_created.name()])
             innerpuz: Program = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
             sigs = sigs + await self.get_sigs(innerpuz, innersol)
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
@@ -774,7 +772,6 @@ class CCWallet:
                 None,
                 None,
             ]
-            breakpoint()
             full_solution = Program.to([puzzle_reveal, solution])
 
             list_of_solutions.append(

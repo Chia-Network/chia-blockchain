@@ -35,7 +35,7 @@ from src.wallet.cc_wallet.cc_utils import (
 from src.wallet.wallet import Wallet
 
 from src.wallet.wallet_coin_record import WalletCoinRecord
-
+from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 
 class TradeManager:
     wallet_state_manager: Any
@@ -542,7 +542,6 @@ class TradeManager:
                 mod_hash, genesis_coin_checker, inner_puzzle = uncurry_cc(puzzle)
                 inner_solution = solution.first()
                 lineage_proof = solution.rest().rest().first()
-                breakpoint()
                 spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
                 innersol_list.append(inner_solution)
 
@@ -571,8 +570,8 @@ class TradeManager:
             )
             sigs.append(aggsig)
             aggsig = AugSchemeMPL.aggregate(sigs)
-        breakpoint()
         spend_bundle = spend_bundle_for_spendable_ccs(CC_MOD, Program.from_bytes(bytes.fromhex(colour)), spendable_cc_list, innersol_list, [aggsig])
+        debug_spend_bundle(spend_bundle)
         my_tx_records = []
 
         if zero_spend_list is not None:
