@@ -61,7 +61,9 @@ class RLWallet(AbstractWallet):
     log: logging.Logger
 
     @staticmethod
-    async def create_rl_admin(wallet_state_manager: Any,):
+    async def create_rl_admin(
+        wallet_state_manager: Any,
+    ):
         unused: Optional[
             uint32
         ] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
@@ -103,7 +105,9 @@ class RLWallet(AbstractWallet):
         return self
 
     @staticmethod
-    async def create_rl_user(wallet_state_manager: Any,):
+    async def create_rl_user(
+        wallet_state_manager: Any,
+    ):
         async with wallet_state_manager.puzzle_store.lock:
             unused: Optional[
                 uint32
@@ -331,14 +335,18 @@ class RLWallet(AbstractWallet):
         return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
     async def get_spendable_balance(self) -> uint64:
-        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.wallet_info.id
+        spendable_am = (
+            await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+                self.wallet_info.id
+            )
         )
         return spendable_am
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            self.wallet_info.id
+        unconfirmed_tx = (
+            await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+                self.wallet_info.id
+            )
         )
         addition_amount = 0
 
@@ -405,8 +413,10 @@ class RLWallet(AbstractWallet):
         """
         Return keys for pubkey
         """
-        index_for_pubkey = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
-            G1Element.from_bytes(clawback_pubkey)
+        index_for_pubkey = (
+            await self.wallet_state_manager.puzzle_store.index_for_pubkey(
+                G1Element.from_bytes(clawback_pubkey)
+            )
         )
         if index_for_pubkey is None:
             raise Exception("index_for_pubkey is None")
@@ -439,8 +449,10 @@ class RLWallet(AbstractWallet):
         rl_parent_id = self.rl_coin_record.coin.parent_coin_info
         if rl_parent_id == self.rl_info.rl_origin_id:
             return self.rl_info.rl_origin
-        rl_parent = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
-            rl_parent_id
+        rl_parent = (
+            await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
+                rl_parent_id
+            )
         )
         if rl_parent is None:
             return None

@@ -58,8 +58,10 @@ def get_discrepancies_for_spend_bundle(
                     )
                     innersol = cc_wallet_puzzles.inner_puzzle_solution(solution)
                     # Get output amounts by running innerpuzzle and solution
-                    out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                        innerpuzzlereveal, innersol
+                    out_amount = (
+                        cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
+                            innerpuzzlereveal, innersol
+                        )
                     )
                     # add discrepancy to dict of discrepancies
                     if colour in cc_discrepancies:
@@ -68,8 +70,10 @@ def get_discrepancies_for_spend_bundle(
                         cc_discrepancies[colour] = coinsol.coin.amount - out_amount
             else:  # standard chia coin
                 coin_amount = coinsol.coin.amount
-                out_amount = cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
-                    puzzle, solution
+                out_amount = (
+                    cc_wallet_puzzles.get_output_amount_for_puzzle_and_solution(
+                        puzzle, solution
+                    )
                 )
                 diff = coin_amount - out_amount
                 if "chia" in cc_discrepancies:

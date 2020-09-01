@@ -48,7 +48,9 @@ def int_as_bytes32(v: int) -> bytes32:
 
 
 def generate_farmed_coin(
-    block_index: int, puzzle_hash: bytes32, amount: uint64,
+    block_index: int,
+    puzzle_hash: bytes32,
+    amount: uint64,
 ) -> Coin:
     """
     Generate a (fake) coin which can be used as a starting point for a chain
@@ -150,7 +152,10 @@ def test_spend_through_n(mod_code, n):
     inner_puzzle_solution = Program.to(output_conditions)
 
     spend_bundle = spend_bundle_for_spendable_ccs(
-        mod_code, genesis_coin_checker, spendable_cc_list, [inner_puzzle_solution],
+        mod_code,
+        genesis_coin_checker,
+        spendable_cc_list,
+        [inner_puzzle_solution],
     )
 
     debug_spend_bundle(spend_bundle)
@@ -175,7 +180,10 @@ def test_spend_through_n(mod_code, n):
     ]
 
     spend_bundle = spend_bundle_for_spendable_ccs(
-        mod_code, genesis_coin_checker, spendable_cc_list, inner_solutions,
+        mod_code,
+        genesis_coin_checker,
+        spendable_cc_list,
+        inner_solutions,
     )
 
     debug_spend_bundle(spend_bundle)

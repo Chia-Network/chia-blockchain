@@ -17,16 +17,16 @@ def rl_puzzle_for_pk(
     clawback_pk: bytes,
 ):
     """
-        Solution to this puzzle must be in format:
-        (1 my_parent_id, my_puzzlehash, my_amount, outgoing_puzzle_hash, outgoing_amount,
-         min_block_time, parent_parent_id, parent_amount)
-        RATE LIMIT LOGIC:
-        M - chia_per_interval
-        N - interval_blocks
-        V - amount being spent
-        MIN_BLOCK_AGE = V / (M / N)
-        if not (min_block_age * M >=  V * N) do X (raise)
-        ASSERT_COIN_BLOCK_AGE_EXCEEDS min_block_age
+    Solution to this puzzle must be in format:
+    (1 my_parent_id, my_puzzlehash, my_amount, outgoing_puzzle_hash, outgoing_amount,
+     min_block_time, parent_parent_id, parent_amount)
+    RATE LIMIT LOGIC:
+    M - chia_per_interval
+    N - interval_blocks
+    V - amount being spent
+    MIN_BLOCK_AGE = V / (M / N)
+    if not (min_block_age * M >=  V * N) do X (raise)
+    ASSERT_COIN_BLOCK_AGE_EXCEEDS min_block_age
     """
 
     hex_pk = pubkey.hex()
@@ -126,8 +126,8 @@ def solution_for_rl(
 
 def rl_make_aggregation_puzzle(wallet_puzzle):
     """
-     If Wallet A wants to send further funds to Wallet B then they can lock them up using this code
-     Solution will be (my_id wallet_coin_primary_input wallet_coin_amount)
+    If Wallet A wants to send further funds to Wallet B then they can lock them up using this code
+    Solution will be (my_id wallet_coin_primary_input wallet_coin_amount)
     """
     opcode_myid = hexlify(ConditionOpcode.ASSERT_MY_COIN_ID).decode("ascii")
     opcode_consumed = hexlify(ConditionOpcode.ASSERT_COIN_CONSUMED).decode("ascii")

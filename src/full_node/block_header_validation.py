@@ -127,7 +127,10 @@ async def validate_unfinished_block_header(
         min_iters = uint64(constants.MIN_ITERS_STARTING)
 
     number_of_iters: uint64 = calculate_iterations_quality(
-        pos_quality_string, proof_of_space.size, difficulty, min_iters,
+        pos_quality_string,
+        proof_of_space.size,
+        difficulty,
+        min_iters,
     )
 
     assert count_significant_bits(difficulty) <= constants.SIGNIFICANT_BITS

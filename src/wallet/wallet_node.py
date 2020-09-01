@@ -153,7 +153,9 @@ class WalletNode:
 
         assert self.wallet_state_manager is not None
 
-        backup_settings: BackupInitialized = self.wallet_state_manager.user_settings.get_backup_settings()
+        backup_settings: BackupInitialized = (
+            self.wallet_state_manager.user_settings.get_backup_settings()
+        )
         if backup_settings.user_initialized is False:
             if new_wallet is True:
                 await self.wallet_state_manager.user_settings.user_created_new_wallet()
@@ -395,8 +397,10 @@ class WalletNode:
             raise TimeoutError("Took too long to fetch header hashes.")
 
         # 2. Find fork point
-        fork_point_height: uint32 = self.wallet_state_manager.find_fork_point_alternate_chain(
-            self.header_hashes
+        fork_point_height: uint32 = (
+            self.wallet_state_manager.find_fork_point_alternate_chain(
+                self.header_hashes
+            )
         )
         fork_point_hash: bytes32 = self.header_hashes[fork_point_height]
 
@@ -489,13 +493,11 @@ class WalletNode:
                             uint32(query_heights[batch_start_index])
                         ].is_set()
                         if (
-                            (
-                                time.time() - last_request_time > sleep_interval
-                                and blocks_missing
-                            )
-                            or (query_heights[batch_start_index])
-                            > highest_height_requested
-                        ):
+                            time.time() - last_request_time > sleep_interval
+                            and blocks_missing
+                        ) or (
+                            query_heights[batch_start_index]
+                        ) > highest_height_requested:
                             self.log.info(
                                 f"Requesting sync header {query_heights[batch_start_index]}"
                             )
@@ -619,7 +621,8 @@ class WalletNode:
                             highest_height_requested = uint32(batch_end - 1)
                         request_made = True
                         request_header = wallet_protocol.RequestHeader(
-                            uint32(batch_start), self.header_hashes[batch_start],
+                            uint32(batch_start),
+                            self.header_hashes[batch_start],
                         )
                         yield OutboundMessage(
                             NodeType.FULL_NODE,
@@ -905,7 +908,8 @@ class WalletNode:
                     # Only requests the previous block if we are not in sync mode, close to the new block,
                     # and don't have prev
                     header_request = wallet_protocol.RequestHeader(
-                        uint32(block_record.height - 1), block_record.prev_header_hash,
+                        uint32(block_record.height - 1),
+                        block_record.prev_header_hash,
                     )
                     yield OutboundMessage(
                         NodeType.FULL_NODE,

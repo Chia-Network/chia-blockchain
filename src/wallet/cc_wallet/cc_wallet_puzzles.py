@@ -44,7 +44,12 @@ def is_ephemeral_solution(s: Program):
 def cc_generate_eve_spend(coin: Coin, inner_puzzle: Program, genesis_id: bytes32):
     full_puzzle = puzzle_for_inner_puzzle(inner_puzzle, genesis_id)
     solution = Program.to([coin.parent_coin_info, coin.amount, 0, 0, 0])
-    list_of_solutions = [CoinSolution(coin, Program.to([full_puzzle, solution]),)]
+    list_of_solutions = [
+        CoinSolution(
+            coin,
+            Program.to([full_puzzle, solution]),
+        )
+    ]
     aggsig = AugSchemeMPL.aggregate([])
     spend_bundle = SpendBundle(list_of_solutions, aggsig)
     return spend_bundle

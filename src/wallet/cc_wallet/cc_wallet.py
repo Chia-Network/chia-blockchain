@@ -53,7 +53,10 @@ class CCWallet:
 
     @staticmethod
     async def create_new_cc(
-        wallet_state_manager: Any, wallet: Wallet, amount: uint64, name: str = None,
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        amount: uint64,
+        name: str = None,
     ):
         self = CCWallet()
         self.base_puzzle_program = None
@@ -497,8 +500,10 @@ class CCWallet:
         return uint64(amount)
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            self.wallet_info.id
+        unconfirmed_tx = (
+            await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+                self.wallet_info.id
+            )
         )
         addition_amount = 0
 
@@ -664,7 +669,12 @@ class CCWallet:
                 coin.puzzle_hash
             )
             auditees.append(
-                (coin.parent_coin_info, coin_inner_puzzle[coin], coin.amount, 0,)
+                (
+                    coin.parent_coin_info,
+                    coin_inner_puzzle[coin],
+                    coin.amount,
+                    0,
+                )
             )
 
         primaries = [{"puzzlehash": to_address, "amount": amount}]
@@ -694,7 +704,10 @@ class CCWallet:
 
         puzzle = self.cc_info.puzzle_for_inner_puzzle(inner_puzzle)
 
-        main_coin_solution = CoinSolution(auditor, Program.to([puzzle, solution]),)
+        main_coin_solution = CoinSolution(
+            auditor,
+            Program.to([puzzle, solution]),
+        )
         list_of_solutions.append(main_coin_solution)
         # main = SpendBundle([main_coin_solution], ZERO96)
 
