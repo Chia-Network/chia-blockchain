@@ -230,12 +230,14 @@ class Harvester:
             )
             if quality_strings is not None:
                 for index, quality_str in enumerate(quality_strings):
-                    response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
-                        new_challenge.challenge_hash,
-                        str(filename),
-                        uint8(index),
-                        quality_str,
-                        prover.get_size(),
+                    response: harvester_protocol.ChallengeResponse = (
+                        harvester_protocol.ChallengeResponse(
+                            new_challenge.challenge_hash,
+                            str(filename),
+                            uint8(index),
+                            quality_str,
+                            prover.get_size(),
+                        )
                     )
                     all_responses.append(response)
             return all_responses
@@ -314,7 +316,9 @@ class Harvester:
             proof_xs,
         )
         response = harvester_protocol.RespondProofOfSpace(
-            request.plot_id, request.response_number, proof_of_space,
+            request.plot_id,
+            request.response_number,
+            proof_of_space,
         )
         if response:
             yield OutboundMessage(
@@ -346,14 +350,18 @@ class Harvester:
         # form a complete PrependSignature.
         signature: G2Element = AugSchemeMPL.sign(local_sk, request.message, agg_pk)
 
-        response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
-            request.plot_id,
-            request.message,
-            local_sk.get_g1(),
-            plot_info.farmer_public_key,
-            signature,
+        response: harvester_protocol.RespondSignature = (
+            harvester_protocol.RespondSignature(
+                request.plot_id,
+                request.message,
+                local_sk.get_g1(),
+                plot_info.farmer_public_key,
+                signature,
+            )
         )
 
         yield OutboundMessage(
-            NodeType.FARMER, Message("respond_signature", response), Delivery.RESPOND,
+            NodeType.FARMER,
+            Message("respond_signature", response),
+            Delivery.RESPOND,
         )

@@ -134,7 +134,10 @@ class Farmer:
         )
         estimate_min = uint64(int(estimate_min))
         number_iters: uint64 = calculate_iterations_quality(
-            quality_string, plot_size, difficulty, estimate_min,
+            quality_string,
+            plot_size,
+            difficulty,
+            estimate_min,
         )
         return number_iters
 
@@ -234,7 +237,10 @@ class Farmer:
         )
         estimate_min = uint64(int(estimate_min))
         number_iters: uint64 = calculate_iterations_quality(
-            computed_quality_string, response.proof.size, difficulty, estimate_min,
+            computed_quality_string,
+            response.proof.size,
+            difficulty,
+            estimate_min,
         )
         estimate_secs: float = number_iters / self.proof_of_time_estimate_ips
 
