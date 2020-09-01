@@ -10,12 +10,13 @@ dependencies = [
     "clvm==0.4.1",  # contract language
     "clvm-tools==0.1.4",  # clvm compiler tools
     "aiohttp==3.6.2",  # HTTP server for full node rpc
-    "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@28cb5754deec562ac931da8fca799fb82df97a12#egg=aiosqlite",  # asyncio wrapper for sqlite, to store blocks
+    "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@28cb5754deec562ac931da8fca799fb82df97a12#egg=aiosqlite",
+    # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
     "cbor2==5.1.2",  # Used for network wire format
     "colorlog==4.2.1",  # Adds color to logs
     "concurrent-log-handler==0.9.16",  # Concurrently log and rotate logs
-    "cryptography==3.1", #Python cryptography library for TLS
+    "cryptography==3.1",  # Python cryptography library for TLS
     "keyring==21.4.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     "PyYAML==5.3.1",  # Used for config file format
@@ -46,7 +47,9 @@ kwargs = dict(
     install_requires=dependencies,
     setup_requires=["setuptools_scm"],
     extras_require=dict(
-        uvloop=["uvloop"], dev=dev_dependencies, upnp=upnp_dependencies,
+        uvloop=["uvloop"],
+        dev=dev_dependencies,
+        upnp=upnp_dependencies,
     ),
     packages=[
         "build_scripts",

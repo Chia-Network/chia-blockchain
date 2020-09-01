@@ -22,7 +22,12 @@ class TestCostCalculation:
         receiver = WalletTool()
 
         num_blocks = 2
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10,)
+        blocks = bt.get_consecutive_blocks(
+            test_constants,
+            num_blocks,
+            [],
+            10,
+        )
 
         spend_bundle = wallet_tool.generate_signed_transaction(
             blocks[1].get_coinbase().amount,

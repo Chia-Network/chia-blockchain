@@ -86,8 +86,8 @@ class SyncBlocksProcessor:
 
             validation_start_time = time.time()
 
-            prevalidate_results = await self.blockchain.pre_validate_blocks_multiprocessing(
-                blocks
+            prevalidate_results = (
+                await self.blockchain.pre_validate_blocks_multiprocessing(blocks)
             )
 
             if self._shut_down:

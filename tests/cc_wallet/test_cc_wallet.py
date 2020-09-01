@@ -286,8 +286,10 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
 
         cc2_ph = await cc_wallet_2.get_new_cc_puzzle_hash()
-        tx_record = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
-            10, cc2_ph, 0
+        tx_record = (
+            await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
+                10, cc2_ph, 0
+            )
         )
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
