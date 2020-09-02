@@ -107,6 +107,13 @@ class TestCCTrades:
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
+        # send cc_wallet 2 a coin
+        cc_hash = await cc_wallet_2.get_new_inner_hash()
+        tx_record = await cc_wallet.generate_signed_transaction(uint64(1), cc_hash)
+        await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
+        for i in range(0, buffer_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+
         trade_manager_0 = wallet_node_0.wallet_state_manager.trade_manager
         trade_manager_1 = wallet_node_1.wallet_state_manager.trade_manager
 
@@ -143,8 +150,8 @@ class TestCCTrades:
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-        await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
-        await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 30)
+        await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 31)
+        await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 31)
         trade_2 = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
         assert TradeStatus(trade_2.status) is TradeStatus.CONFIRMED
 

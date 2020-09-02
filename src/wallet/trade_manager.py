@@ -447,28 +447,30 @@ class TradeManager:
                 else:
                     cc_coinsol_outamounts[colour] = [(coinsol, total)]
 
-        else:
-            # standard chia coin
-            unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                1
-            )
-            if coinsol.coin in [record.coin for record in unspent]:
-                return False, None, "can't respond to own offer"
-            if chia_discrepancy is None:
-                chia_discrepancy = get_output_discrepancy_for_puzzle_and_solution(
-                    coinsol.coin, puzzle, solution
-                )
             else:
-                chia_discrepancy += get_output_discrepancy_for_puzzle_and_solution(
-                    coinsol.coin, puzzle, solution
+                # standard chia coin
+                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    1
                 )
-            coinsols.append(coinsol)
+                if coinsol.coin in [record.coin for record in unspent]:
+                    return False, None, "can't respond to own offer"
+                if chia_discrepancy is None:
+                    chia_discrepancy = get_output_discrepancy_for_puzzle_and_solution(
+                        coinsol.coin, puzzle, solution
+                    )
+                else:
+                    chia_discrepancy += get_output_discrepancy_for_puzzle_and_solution(
+                        coinsol.coin, puzzle, solution
+                    )
+                coinsols.append(coinsol)
 
         chia_spend_bundle: Optional[SpendBundle] = None
         if chia_discrepancy is not None:
             chia_spend_bundle = await self.wallet_state_manager.main_wallet.create_spend_bundle_relative_chia(
                 chia_discrepancy, []
             )
+            for coinsol in coinsols:
+                chia_spend_bundle.coin_solutions.append(coinsol)
 
         zero_spend_list: List[SpendBundle] = []
         # create coloured coin
@@ -571,7 +573,6 @@ class TradeManager:
             sigs.append(aggsig)
             aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = spend_bundle_for_spendable_ccs(CC_MOD, Program.from_bytes(bytes.fromhex(colour)), spendable_cc_list, innersol_list, [aggsig])
-        debug_spend_bundle(spend_bundle)
         my_tx_records = []
 
         if zero_spend_list is not None:
@@ -582,6 +583,7 @@ class TradeManager:
         now = uint64(int(time.time()))
         if chia_spend_bundle is not None:
             spend_bundle = SpendBundle.aggregate([spend_bundle, chia_spend_bundle])
+            # debug_spend_bundle(spend_bundle)
             if chia_discrepancy < 0:
                 tx_record = TransactionRecord(
                     confirmed_at_index=uint32(0),

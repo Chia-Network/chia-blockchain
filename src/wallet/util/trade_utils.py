@@ -1,6 +1,5 @@
 from typing import Tuple, Optional, Dict
 
-from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.wallet.cc_wallet import cc_utils
 from src.wallet.trade_record import TradeRecord
