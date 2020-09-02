@@ -193,7 +193,7 @@ class TestCCTrades:
         if file_path.exists():
             file_path.unlink()
 
-        offer_dict = {1: 10, 2: -30}
+        offer_dict = {1: 10, 3: -30}
 
         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(
             offer_dict, file
