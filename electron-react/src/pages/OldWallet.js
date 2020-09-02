@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Link from "@material-ui/core/Link";
@@ -135,16 +135,8 @@ const UIPart = () => {
   );
 };
 
-class OldWallet extends Component {
-  constructor(props) {
-    super(props);
-    this.words = [];
-    this.classes = props.theme;
-  }
-
-  render() {
-    return <UIPart props={this.props}></UIPart>;
-  }
+const OldWallet = props => {
+  return <UIPart props={props}></UIPart>;
 }
 
 export default withTheme(withRouter(OldWallet));
