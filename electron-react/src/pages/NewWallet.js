@@ -1,11 +1,11 @@
-import React, { Component } from "react";
+import React from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
 import { withTheme } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
-import { connect, useSelector, useDispatch } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { genereate_mnemonics, add_new_key_action } from "../modules/message";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
@@ -94,20 +94,12 @@ const UIPart = props => {
   );
 };
 
-class NewWallet extends Component {
-  constructor(props) {
-    super(props);
-    this.words = [];
-    var get_mnemonics = genereate_mnemonics();
-    props.dispatch(get_mnemonics);
-    this.classes = props.theme;
-  }
+const NewWallet = props => {
+  const dispatch = useDispatch();
+  const get_mnemonics = genereate_mnemonics();
+  dispatch(get_mnemonics);
 
-  componentDidMount(props) {}
-
-  render() {
-    return <UIPart props={this.props}></UIPart>;
-  }
+  return <UIPart props={props}></UIPart>;
 }
 
-export default withTheme(withRouter(connect()(NewWallet)));
+export default withTheme(withRouter(NewWallet));

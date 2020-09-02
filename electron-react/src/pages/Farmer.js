@@ -1,8 +1,8 @@
-import React, { Component } from "react";
+import React, { useEffect, useState } from "react";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles, withStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
-import { connect, useSelector, useDispatch } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
 import {
@@ -602,24 +602,24 @@ const FarmerContent = props => {
   );
 };
 
-class Farmer extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      totalChiaFarmed: BigInt(0),
-      biggestHeight: 0
-    };
-    this.unmounted = false;
-  }
-  async checkRewards() {
+const Farmer = props => {
+  const dispatch = useDispatch();
+
+  const [totalChiaFarmed, setTotalChiaFarmed] = useState(BigInt(0));
+  const [biggestHeight, setBiggestHeight] = useState(0);
+  const [didMount, setDidMount] = useState(false);
+
+  const classes = props.classes;
+
+  const checkRewards = async () => {
     let totalChia = BigInt(0);
     let biggestHeight = 0;
-    for (let wallet of this.props.wallets) {
+    for (let wallet of props.wallets) {
       if (!wallet) {
         continue;
       }
       for (let tx of wallet.transactions) {
-        if (this.unmounted) return;
+        if (!didMount) return;
         if (tx.additions.length < 1) {
           continue;
         }
@@ -648,58 +648,34 @@ class Farmer extends Component {
         }
       }
     }
-    if (totalChia !== this.state.totalChiaFarmed && !this.unmounted) {
-      this.setState({
-        totalChiaFarmed: totalChia,
-        biggestHeight: biggestHeight
-      });
+    if (totalChia !== totalChiaFarmed && !didMount) {
+      setTotalChiaFarmed(totalChia);
+      setBiggestHeight(biggestHeight);
     }
-  }
-  async componentDidMount(prevProps) {
-    await this.checkRewards();
-    this.props.clearSend(); // Hack to clear the send message in wallet
-  }
+  };
 
-  async componentDidUpdate(prevProps) {
-    await this.checkRewards();
-  }
+  useEffect(() => { 
+    (async () => { 
+      await checkRewards(); 
+      if (didMount) { 
+        setDidMount(true); 
+        dispatch(clearSend);
+      }
+     }) ()
+  }, [props, dispatch, checkRewards, didMount]);
 
-  async componentWillUnmount() {
-    this.unmounted = true;
-  }
-
-  render() {
-    const classes = this.props.classes;
-    return (
-      <div className={classes.root}>
-        <main className={classes.content}>
-          <Container maxWidth="lg" className={classes.noPadding}>
-            <FarmerContent
-              totalChiaFarmed={this.state.totalChiaFarmed}
-              biggestHeight={this.state.biggestHeight}
-            ></FarmerContent>
-          </Container>
-        </main>
-      </div>
-    );
-  }
+  return (
+    <div className={classes.root}>
+      <main className={classes.content}>
+        <Container maxWidth="lg" className={classes.noPadding}>
+          <FarmerContent
+            totalChiaFarmed={totalChiaFarmed}
+            biggestHeight={biggestHeight}
+          ></FarmerContent>
+        </Container>
+      </main>
+     </div>
+  );
 }
 
-const mapStateToProps = (state, ownProps) => {
-  return {
-    wallets: state.wallet_state.wallets
-  };
-};
-
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    clearSend: () => {
-      dispatch(clearSend());
-    }
-  };
-};
-
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps
-)(withStyles(styles)(Farmer));
+export default (withStyles(styles)(Farmer));
