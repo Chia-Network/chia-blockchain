@@ -232,7 +232,6 @@ const Wallets = () => {
 
   const [open] = React.useState(true);
   if (!logged_in) {
-    // console.log("Redirecting to start");
     return <Redirect to="/" />;
   }
   return (
