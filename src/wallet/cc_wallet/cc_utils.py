@@ -89,7 +89,7 @@ def genesis_coin_id_for_genesis_coin_checker(
     if r is None:
         return r
     f, args = r
-    return args.first()
+    return args.first().as_atom()
 
 
 def coin_as_list(coin: Coin) -> List[Any]:

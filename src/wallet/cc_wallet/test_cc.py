@@ -43,6 +43,11 @@ def hash_to_puzzle_f(puzzle_hash: bytes32) -> Optional[Program]:
     return PUZZLE_TABLE.get(puzzle_hash)
 
 
+def add_puzzles_to_puzzle_preimage_db(puzzles: Program) -> None:
+    for _ in puzzles:
+        PUZZLE_TABLE[_.get_tree_hash()] = _
+
+
 def int_as_bytes32(v: int) -> bytes32:
     return v.to_bytes(32, byteorder="big")
 
@@ -127,10 +132,10 @@ def test_spend_through_n(mod_code, n):
 
     # hack the wrapped puzzles into the PUZZLE_TABLE DB
 
-    for _ in [
+    puzzles_for_db = [
         cc_puzzle_for_inner_puzzle(mod_code, genesis_coin_checker, eve_inner_puzzle)
-    ]:
-        PUZZLE_TABLE[_.get_tree_hash()] = _
+    ]
+    add_puzzles_to_puzzle_preimage_db(puzzles_for_db)
 
     debug_spend_bundle(spend_bundle)
 
@@ -189,9 +194,66 @@ def test_spend_through_n(mod_code, n):
     debug_spend_bundle(spend_bundle)
 
 
+def test_spend_zero_coin(mod_code):
+    """
+    Test to spend ccs from a farmed coin to a cc genesis coin, then to N outputs,
+    then joining back down to two outputs.
+    """
+
+    eve_inner_puzzle = ANYONE_CAN_SPEND_PUZZLE
+    eve_inner_puzzle_hash = eve_inner_puzzle.get_tree_hash()
+
+    total_minted = 0x111
+
+    genesis_coin_checker, spend_bundle = issue_cc_from_farmed_coin(
+        mod_code, 1, eve_inner_puzzle_hash, total_minted
+    )
+
+    puzzles_for_db = [
+        cc_puzzle_for_inner_puzzle(mod_code, genesis_coin_checker, eve_inner_puzzle)
+    ]
+    add_puzzles_to_puzzle_preimage_db(puzzles_for_db)
+
+    eve_cc_list = []
+    for _ in spend_bundle.coin_solutions:
+        eve_cc_list.extend(spendable_cc_list_from_coin_solution(_, hash_to_puzzle_f))
+    assert len(eve_cc_list) == 1
+    eve_cc_spendable = eve_cc_list[0]
+
+    # farm regular chia
+
+    farmed_coin = generate_farmed_coin(2, eve_inner_puzzle_hash, amount=500)
+
+    # create a zero cc from this farmed coin
+
+    wrapped_cc_puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(
+        mod_code, genesis_coin_checker, eve_inner_puzzle_hash
+    )
+
+    solution = solution_for_pay_to_any([(wrapped_cc_puzzle_hash, 0)])
+    reveal_w_solution = Program.to([ANYONE_CAN_SPEND_PUZZLE, solution])
+    coin_solution = CoinSolution(farmed_coin, reveal_w_solution)
+    spendable_cc_list = spendable_cc_list_from_coin_solution(coin_solution, hash_to_puzzle_f)
+    assert len(spendable_cc_list) == 1
+    zero_cc_spendable = spendable_cc_list[0]
+
+    # we have our zero coin
+    # now try to spend it
+
+    spendable_cc_list = [eve_cc_spendable, zero_cc_spendable]
+    inner_solutions = [
+        solution_for_pay_to_any([]),
+        solution_for_pay_to_any([(wrapped_cc_puzzle_hash, eve_cc_spendable.coin.amount)]),
+    ]
+    spend_bundle = spend_bundle_for_spendable_ccs(mod_code, genesis_coin_checker, spendable_cc_list, inner_solutions)
+    debug_spend_bundle(spend_bundle)
+
+
 def main():
     mod_code = CC_MOD
     test_spend_through_n(mod_code, 12)
+
+    test_spend_zero_coin(mod_code)
 
 
 if __name__ == "__main__":
