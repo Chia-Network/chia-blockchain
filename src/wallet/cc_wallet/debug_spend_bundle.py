@@ -91,15 +91,19 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     additions = spend_bundle.additions()
     removals = spend_bundle.removals()
     print()
-    print("created coins")
-    for coin in additions:
-        print(f"  {dump_coin(coin)}")
-        print(f"      => created coin id {coin.name()}")
-    print()
     print("spent coins")
     for coin in removals:
         print(f"  {dump_coin(coin)}")
-        print(f"      => spent coin id {coin.name()}")
+        print(f"    {'*' if coin in additions else ' '} => spent coin id {coin.name()}")
+    print()
+    print("created coins")
+    for coin in additions:
+        print(f"  {dump_coin(coin)}")
+        print(f"    {'*' if coin in removals else ' '} => created coin id {coin.name()}")
+    print()
+    if len(set(additions).intersection(removals)):
+        print("* = ephemeral coin")
+        print()
 
     zero_coin_set = set()
     for coin in additions:
