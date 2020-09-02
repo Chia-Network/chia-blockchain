@@ -156,6 +156,78 @@ class TestCCTrades:
         assert TradeStatus(trade_2.status) is TradeStatus.CONFIRMED
 
     @pytest.mark.asyncio
+    async def test_cc_trade_accept_with_zero(self, wallets_prefarm):
+        wallet_node_0, wallet_node_1, full_node = wallets_prefarm
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+
+        cc_wallet: CCWallet = await CCWallet.create_new_cc(
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(100)
+        )
+
+        for i in range(1, buffer_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+
+        await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
+
+        assert cc_wallet.cc_info.my_genesis_checker is not None
+        colour = cc_wallet.get_colour()
+
+        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
+            wallet_node_1.wallet_state_manager, wallet_1, colour
+        )
+
+        assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
+
+        ph = await wallet_1.get_new_puzzlehash()
+        for i in range(0, buffer_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(ph))
+
+        trade_manager_0 = wallet_node_0.wallet_state_manager.trade_manager
+        trade_manager_1 = wallet_node_1.wallet_state_manager.trade_manager
+
+        file = "test_offer_file.offer"
+        file_path = Path(file)
+
+        if file_path.exists():
+            file_path.unlink()
+
+        offer_dict = {1: 10, 2: -30}
+
+        success, trade_offer, error = await trade_manager_0.create_offer_for_ids(
+            offer_dict, file
+        )
+
+        assert success is True
+        assert trade_offer is not None
+
+        success, offer, error = await trade_manager_1.get_discrepancies_for_offer(
+            file_path
+        )
+
+        assert error is None
+        assert success is True
+        assert offer is not None
+
+        assert cc_wallet.get_colour() == cc_wallet_2.get_colour()
+
+        assert offer["chia"] == -10
+        assert offer[colour] == 30
+
+        success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
+
+        assert success is True
+
+        for i in range(0, buffer_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+
+        await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 30)
+        await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 30)
+        trade_2 = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
+        assert TradeStatus(trade_2.status) is TradeStatus.CONFIRMED
+
+    @pytest.mark.asyncio
     async def test_cc_trade_with_multiple_colours(self, wallets_prefarm):
         # This test start with CCWallet in both wallets. wall
         # wallet1 {wallet_id: 2 = 70}
