@@ -115,19 +115,13 @@ class WalletNode:
         self.sync_generator_task = None
         self.server = None
 
-    async def _start(
-        self,
-        fingerprint: Optional[int] = None,
-        new_wallet: bool = False,
-        backup_file: Optional[Path] = None,
-        skip_backup_import: bool = False,
-    ) -> bool:
+    def get_key_for_fingerprint(self, fingerprint):
         private_keys = self.keychain.get_all_private_keys()
         if len(private_keys) == 0:
             self.log.warning(
                 "No keys present. Create keys with the UI, or with the 'chia keys' program."
             )
-            return False
+            return None
 
         private_key: Optional[PrivateKey] = None
         if fingerprint is not None:
@@ -137,7 +131,16 @@ class WalletNode:
                     break
         else:
             private_key = private_keys[0][0]
+        return private_key
 
+    async def _start(
+        self,
+        fingerprint: Optional[int] = None,
+        new_wallet: bool = False,
+        backup_file: Optional[Path] = None,
+        skip_backup_import: bool = False,
+    ) -> bool:
+        private_key = self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
             raise RuntimeError("Invalid fingerprint {public_key_fingerprint}")
 

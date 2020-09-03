@@ -1,7 +1,9 @@
 import base64
 import json
+from typing import Any
 
-from blspy import PublicKeyMPL, SignatureMPL, AugSchemeMPL
+import aiohttp
+from blspy import PublicKeyMPL, SignatureMPL, AugSchemeMPL, PrivateKey
 from cryptography.fernet import Fernet
 
 from src.util.byte_types import hexstr_to_bytes
@@ -65,3 +67,49 @@ def get_backup_info(file_path, private_key):
     info_dict["wallets"] = wallets
 
     return info_dict
+
+
+async def post(session: aiohttp.ClientSession, url: str, data: Any):
+    response = await session.post(url, json=data)
+    return await response.json()
+
+
+async def get(session: aiohttp.ClientSession, url: str):
+    response = await session.get(url)
+    return await response.text()
+
+
+async def upload_backup(host: str, backup_text: str):
+    request = {"backup": backup_text}
+    session = aiohttp.ClientSession()
+    nonce_url = f"{host}/upload_backup"
+    upload_response = await post(session, nonce_url, request)
+    return upload_response
+
+
+async def download_backup(host: str, private_key: PrivateKey):
+    session = aiohttp.ClientSession()
+    backup_privkey = master_sk_to_backup_sk(private_key)
+    backup_pubkey = bytes(backup_privkey.get_g1()).hex()
+
+    # Get nonce
+    nonce_request = {"pubkey": backup_pubkey}
+    nonce_url = f"{host}/get_download_nonce"
+    nonce_response = await post(session, nonce_url, nonce_request)
+    nonce = nonce_response["nonce"]
+
+    # Sign nonce
+    signature = bytes(
+        AugSchemeMPL.sign(backup_privkey, std_hash(hexstr_to_bytes(nonce)))
+    ).hex()
+    # Request backup url
+    get_backup_url = f"{host}/download_backup"
+    backup_request = {"pubkey": backup_pubkey, "signature": signature}
+    backup_response = await post(session, get_backup_url, backup_request)
+
+    # Download from s3
+    assert backup_response["success"] is True
+    backup_url = backup_response["url"]
+    backup_text = await get(session, backup_url)
+
+    return backup_text
