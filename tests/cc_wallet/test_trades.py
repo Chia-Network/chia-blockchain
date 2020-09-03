@@ -276,7 +276,7 @@ class TestCCTrades:
             file_path.unlink()
 
         # Wallet
-        offer_dict = {1: 1000, 2: -20, 3: -50}
+        offer_dict = {1: 1000, 2: -20, 4: -50}
 
         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(
             offer_dict, file
