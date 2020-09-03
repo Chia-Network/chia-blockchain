@@ -113,7 +113,8 @@ class FullNode:
             self.server,
             self.root_path,
             self.global_connections,
-            self.config["target_peer_count"] - self.config["target_outbound_peer_count"],
+            self.config["target_peer_count"]
+            - self.config["target_outbound_peer_count"],
             self.config["target_outbound_peer_count"],
             self.config["peer_db_path"],
             self.config["introducer_peer"],
@@ -336,9 +337,7 @@ class FullNode:
     def _close(self):
         self._shut_down = True
         self.blockchain.shut_down()
-        asyncio.create_task(
-            self.full_node_peers.close()
-        )
+        asyncio.create_task(self.full_node_peers.close())
 
     async def _await_closed(self):
         await self.connection.close()

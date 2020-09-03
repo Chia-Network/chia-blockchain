@@ -9,6 +9,7 @@ from src.server.server import ChiaServer
 from src.util.api_decorators import api_request
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.util.ints import uint64
+
 log = logging.getLogger(__name__)
 
 
@@ -75,7 +76,8 @@ class Introducer:
 
     @api_request
     async def request_peers_with_peer_info(
-        self, request: RequestPeers,
+        self,
+        request: RequestPeers,
         peer_info: PeerInfo,
     ) -> AsyncGenerator[OutboundMessage, None]:
         max_peers = self.max_peers_to_send
@@ -90,10 +92,7 @@ class Introducer:
             if peer.get_hash() not in self.vetted:
                 continue
             if self.vetted[peer.get_hash()]:
-                if (
-                    peer.host == peer_info.host
-                    and peer.port == peer_info.port
-                ):
+                if peer.host == peer_info.host and peer.port == peer_info.port:
                     continue
                 peer_without_timestamp = TimestampedPeerInfo(
                     peer.host,

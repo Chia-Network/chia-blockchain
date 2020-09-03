@@ -67,7 +67,7 @@ class ChiaServer:
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
-        self.global_connections: PeerConnections = PeerConnections(local_type, root_path, config, [])
+        self.global_connections: PeerConnections = PeerConnections(local_type, [])
 
         self._port = port  # TCP port to identify our node
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
@@ -155,7 +155,9 @@ class ChiaServer:
                 self.global_connections.introducer_peers.remove(target_node)
             return False
         if not self._srwt_aiter.is_stopped():
-            self._srwt_aiter.push(iter_to_aiter([(reader, writer, on_connect, True, is_feeler)]))
+            self._srwt_aiter.push(
+                iter_to_aiter([(reader, writer, on_connect, True, is_feeler)])
+            )
 
         ssl_object = writer.get_extra_info(name="ssl_object")
         peer_cert = ssl_object.getpeercert()

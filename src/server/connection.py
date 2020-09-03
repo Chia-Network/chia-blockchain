@@ -1,7 +1,7 @@
 import logging
 import time
 import asyncio
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
+from typing import Any, AsyncGenerator, Callable, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.peer_info import PeerInfo
@@ -128,8 +128,6 @@ class PeerConnections:
     def __init__(
         self,
         local_type: NodeType,
-        root_path,
-        config: Dict,
         all_connections: List[ChiaConnection] = []
     ):
         self._all_connections = all_connections
@@ -209,10 +207,7 @@ class PeerConnections:
         )
 
     async def successful_handshake(self, connection):
-        if (
-            connection.connection_type == NodeType.FULL_NODE
-            and connection.is_outbound
-        ):
+        if connection.connection_type == NodeType.FULL_NODE and connection.is_outbound:
             if self.full_node_peers_callback is not None:
                 self.full_node_peers_callback(
                     "mark_tried",
@@ -233,14 +228,10 @@ class PeerConnections:
         yield connection
 
     def failed_handshake(self, connection, e):
-        if (
-            connection.connection_type == NodeType.FULL_NODE
-            and connection.is_outbound
-        ):
+        if connection.connection_type == NodeType.FULL_NODE and connection.is_outbound:
             if isinstance(e, ProtocolError):
-                if (
-                    isinstance(e.code, type(Err.SELF_CONNECTION))
-                    or isinstance(e.code, type(Err.DUPLICATE_CONNECTION))
+                if isinstance(e.code, type(Err.SELF_CONNECTION)) or isinstance(
+                    e.code, type(Err.DUPLICATE_CONNECTION)
                 ):
                     return
 
@@ -288,8 +279,7 @@ class PeerConnections:
         return [
             conn
             for conn in self._all_connections
-            if conn.is_outbound
-            and conn.connection_type == NodeType.FULL_NODE
+            if conn.is_outbound and conn.connection_type == NodeType.FULL_NODE
         ]
 
     def accept_inbound_connections(self, node_type: NodeType):
@@ -299,8 +289,7 @@ class PeerConnections:
             [
                 conn
                 for conn in self._all_connections
-                if not conn.is_outbound
-                and conn.connection_type == node_type
+                if not conn.is_outbound and conn.connection_type == node_type
             ]
         )
         if node_type == NodeType.FULL_NODE:
