@@ -21,8 +21,8 @@ from src.server.outbound_message import NodeType, OutboundMessage, Message, Deli
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
 from src.wallet.trade_record import TradeRecord
-from src.wallet.util.backup_utils import get_backup_info
-from src.wallet.util.trade_utils import trade_record_to_dict
+from src.wallet.util.backup_utils import get_backup_info, download_backup, upload_backup
+from src.wallet.util.cc_utils import trade_record_to_dict
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -335,9 +335,25 @@ class WalletRpcApi:
 
         return response
 
+    async def create_backup_and_upload(self, host):
+        try:
+            now = time.time()
+            file_name = f"backup_{now}"
+            path = path_from_root(self.service.root_path, file_name)
+            await self.service.wallet_state_manager.create_wallet_backup(path)
+            backup_text = path.read_text()
+            response = await upload_backup(host, backup_text)
+            success = response["success"]
+            if success is False:
+                log.error("Failed to upload backup to wallet backup service")
+            elif success is True:
+                log.info("Finished upload of the backup file")
+        except BaseException as e:
+            log.error(f"Exception in upload backup. Error: {e}")
+
     async def create_new_wallet(self, request):
         config, wallet_state_manager, main_wallet = self.get_wallet_config()
-
+        host = request["host"]
         if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
                 try:
@@ -345,6 +361,7 @@ class WalletRpcApi:
                         wallet_state_manager, main_wallet, request["amount"]
                     )
                     colour = cc_wallet.get_colour()
+                    asyncio.ensure_future(self.create_backup_and_upload(host))
                     return {
                         "success": True,
                         "type": cc_wallet.wallet_info.type,
@@ -359,6 +376,7 @@ class WalletRpcApi:
                     cc_wallet = await CCWallet.create_wallet_for_cc(
                         wallet_state_manager, main_wallet, request["colour"]
                     )
+                    asyncio.ensure_future(self.create_backup_and_upload(host))
                     return {"success": True, "type": cc_wallet.wallet_info.type}
                 except Exception as e:
                     log.error("FAILED2 {e}")
@@ -376,6 +394,7 @@ class WalletRpcApi:
                         request["pubkey"],
                         uint64(int(request["amount"])),
                     )
+                    asyncio.ensure_future(self.create_backup_and_upload(host))
                     return {
                         "success": success,
                         "id": rl_admin.wallet_info.id,
@@ -392,7 +411,7 @@ class WalletRpcApi:
                     rl_user: RLWallet = await RLWallet.create_rl_user(
                         wallet_state_manager
                     )
-
+                    asyncio.ensure_future(self.create_backup_and_upload(host))
                     return {
                         "success": True,
                         "id": rl_user.wallet_info.id,
@@ -657,6 +676,7 @@ class WalletRpcApi:
         await self.stop_wallet()
         fingerprint = request["fingerprint"]
         type = request["type"]
+        recovery_host = request["host"]
 
         if type == "skip":
             started = await self.service._start(
@@ -672,9 +692,26 @@ class WalletRpcApi:
 
         if started is True:
             return {"success": True}
-        else:
-            if self.service.backup_initialized is False:
-                return {"success": False, "error": "not_initialized"}
+        elif self.service.backup_initialized is False:
+            backup_info = None
+            backup_path = None
+            try:
+                private_key = self.service.get_key_for_fingerprint(fingerprint)
+                last_recovery = await download_backup(recovery_host, private_key)
+                backup_path = path_from_root(self.service.root_path, "last_recovery")
+                if backup_path.exists():
+                    backup_path.unlink()
+                backup_path.write_text(last_recovery)
+                backup_info = get_backup_info(backup_path, private_key)
+                backup_info["backup_host"] = recovery_host
+                backup_info["downloaded"] = True
+            except BaseException as e:
+                log.error(f"error {e}")
+            response = {"success": False, "error": "not_initialized"}
+            if backup_info is not None:
+                response["backup_info"] = backup_info
+                response["backup_path"] = f"{backup_path}"
+            return response
 
         return {"success": False, "error": "Unknown Error"}
 
