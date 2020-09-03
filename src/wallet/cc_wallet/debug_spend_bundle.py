@@ -99,11 +99,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     print("created coins")
     for coin in additions:
         print(f"  {dump_coin(coin)}")
-        print(f"    {'*' if coin in removals else ' '} => created coin id {coin.name()}")
-    print()
-    if len(set(additions).intersection(removals)):
-        print("* = ephemeral coin")
-        print()
+        print(f"      => created coin id {coin.name()}")
 
     zero_coin_set = set()
     for coin in additions:

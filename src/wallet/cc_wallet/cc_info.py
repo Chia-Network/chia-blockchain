@@ -4,7 +4,6 @@ from typing import List, Optional, Tuple
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.util.streamable import streamable, Streamable
-from src.types.program import Program
 
 
 @dataclass(frozen=True)
