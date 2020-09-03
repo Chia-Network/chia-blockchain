@@ -56,11 +56,6 @@ def service_kwargs_for_wallet(root_path):
         rpc_info=(WalletRpcApi, config["rpc_port"]),
         connect_peers=connect_peers,
         auth_connect_peers=False,
-        periodic_introducer_poll=(
-            peer_info,
-            config["introducer_connect_interval"],
-            config["target_peer_count"],
-        ),
     )
     return kwargs
 

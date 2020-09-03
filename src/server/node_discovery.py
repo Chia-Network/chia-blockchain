@@ -231,7 +231,7 @@ class FullNodeDiscovery:
             serialize_interval = random.randint(15 * 60, 30 * 60)
             await asyncio.sleep(serialize_interval)
             async with self.address_manager.lock:
-                self.address_manager_store.serialize(self.address_manager)
+                await self.address_manager_store.serialize(self.address_manager)
 
     async def respond_peers(self, request, peer_src, is_full_node):
         # Check if we got the peers from a full node or from the introducer.
