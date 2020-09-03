@@ -329,7 +329,9 @@ class TestWalletSimulator:
         introducer, introducer_server = await node_iters[2].__anext__()
 
         async def has_full_node():
-            return wallet.wallet_peers.global_connections.count_outbound_connections() > 0
+            return (
+                wallet.wallet_peers.global_connections.count_outbound_connections() > 0
+            )
 
         await time_out_assert(
             60,

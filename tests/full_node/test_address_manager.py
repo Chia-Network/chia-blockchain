@@ -35,7 +35,8 @@ class AddressManagerTest(AddressManager):
                 peer.host,
                 peer.port,
                 0,
-            ) for peer in peers
+            )
+            for peer in peers
         ]
         added = await self.add_to_new_table(timestamped_peers, peer_src)
         return added
@@ -219,26 +220,17 @@ class TestPeerManager:
 
         # Test: ensure Find returns an IP matching what we searched on.
         info1 = addrman.find_(peer1)
-        assert (
-            info1[0] is not None
-            and info1[1] is not None
-        )
+        assert info1[0] is not None and info1[1] is not None
         assert info1[0].peer_info == peer1
 
         # Test: Find does not discriminate by port number.
         info2 = addrman.find_(peer2)
-        assert (
-            info2[0] is not None
-            and info2[1] is not None
-        )
+        assert info2[0] is not None and info2[1] is not None
         assert info2 == info1
 
         # Test: Find returns another IP matching what we searched on.
         info3 = addrman.find_(peer3)
-        assert (
-            info3[0] is not None
-            and info3[1] is not None
-        )
+        assert info3[0] is not None and info3[1] is not None
         assert info3[0].peer_info == peer3
 
     @pytest.mark.asyncio
@@ -305,7 +297,9 @@ class TestPeerManager:
         for i in range(1, 8 * 256):
             octet1 = i % 256
             octet2 = i >> 8 % 256
-            peer = TimestampedPeerInfo(str(octet1) + "." + str(octet2) + ".1.23", 8444, time.time())
+            peer = TimestampedPeerInfo(
+                str(octet1) + "." + str(octet2) + ".1.23", 8444, time.time()
+            )
             await addrman.add_to_new_table([peer])
             if i % 8 == 0:
                 await addrman.mark_good(peer)
@@ -325,8 +319,8 @@ class TestPeerManager:
         peer_info1 = ExtendedPeerInfo(t_peer1, source1)
         # Test: Make sure key actually randomizes bucket placement. A fail on
         # this test could be a security issue.
-        key1 = 2**256 - 1
-        key2 = 2**128 - 1
+        key1 = 2 ** 256 - 1
+        key2 = 2 ** 128 - 1
         bucket1 = peer_info1.get_tried_bucket(key1)
         bucket2 = peer_info1.get_tried_bucket(key2)
         assert bucket1 != bucket2
@@ -370,8 +364,8 @@ class TestPeerManager:
         peer_info1 = ExtendedPeerInfo(t_peer1, source1)
         # Test: Make sure key actually randomizes bucket placement. A fail on
         # this test could be a security issue.
-        key1 = 2**256 - 1
-        key2 = 2**128 - 1
+        key1 = 2 ** 256 - 1
+        key2 = 2 ** 128 - 1
         bucket1 = peer_info1.get_new_bucket(key1)
         bucket2 = peer_info1.get_new_bucket(key2)
         assert bucket1 != bucket2
@@ -398,7 +392,9 @@ class TestPeerManager:
         for i in range(4 * 255):
             src = PeerInfo("251.4.1.1", 8444)
             peer = PeerInfo(str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8444)
-            t_peer = TimestampedPeerInfo(str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8444, 0)
+            t_peer = TimestampedPeerInfo(
+                str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8444, 0
+            )
             extended_peer_info = ExtendedPeerInfo(t_peer, src)
             bucket = extended_peer_info.get_new_bucket(key1)
             if bucket not in buckets:

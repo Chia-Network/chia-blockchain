@@ -126,9 +126,7 @@ class ChiaConnection:
 
 class PeerConnections:
     def __init__(
-        self,
-        local_type: NodeType,
-        all_connections: List[ChiaConnection] = []
+        self, local_type: NodeType, all_connections: List[ChiaConnection] = []
     ):
         self._all_connections = all_connections
         self.local_type = local_type

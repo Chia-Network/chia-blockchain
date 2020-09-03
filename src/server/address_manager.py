@@ -98,21 +98,23 @@ class ExtendedPeerInfo:
         hash1 = int.from_bytes(
             bytes(
                 std_hash(
-                    key.to_bytes(32, byteorder='big')
+                    key.to_bytes(32, byteorder="big")
                     + self.peer_info.get_group()
                     + src_peer.get_group()
                 )[:8]
-            ), byteorder="big"
+            ),
+            byteorder="big",
         )
         hash1 = hash1 % NEW_BUCKETS_PER_SOURCE_GROUP
         hash2 = int.from_bytes(
             bytes(
                 std_hash(
-                    key.to_bytes(32, byteorder='big')
+                    key.to_bytes(32, byteorder="big")
                     + src_peer.get_group()
                     + bytes([hash1])
                 )[:8]
-            ), byteorder="big"
+            ),
+            byteorder="big",
         )
         return hash2 % NEW_BUCKET_COUNT
 
@@ -126,7 +128,8 @@ class ExtendedPeerInfo:
                     + nBucket.to_bytes(3, byteorder="big")
                     + self.peer_info.get_key()
                 )[:8]
-            ), byteorder="big"
+            ),
+            byteorder="big",
         )
         return hash1 % BUCKET_SIZE
 
@@ -379,7 +382,7 @@ class AddressManager:
                 return False
 
             # stochastic test: previous ref_count == N: 2^N times harder to increase it
-            factor = (1 << info.ref_count)
+            factor = 1 << info.ref_count
             if factor > 1 and randrange(factor) != 0:
                 return False
         else:
@@ -465,7 +468,7 @@ class AddressManager:
                     ) % BUCKET_SIZE
                 node_id = self.new_matrix[new_bucket][new_bucket_pos]
                 info = self.map_info[node_id]
-                if (randbits(30) < chance * info.get_selection_chance() * (1 << 30)):
+                if randbits(30) < chance * info.get_selection_chance() * (1 << 30):
                     return info
                 chance *= 1.2
 
@@ -541,10 +544,7 @@ class AddressManager:
             return
 
         # check whether we are talking about the exact same peer
-        if not (
-            info.peer_info.host == addr.host
-            and info.peer_info.port == addr.port
-        ):
+        if not (info.peer_info.host == addr.host and info.peer_info.port == addr.port):
             return
 
         update_interval = 20 * 60
@@ -559,7 +559,7 @@ class AddressManager:
         self,
         addresses: List[TimestampedPeerInfo],
         source: Optional[PeerInfo] = None,
-        penalty: int = 0
+        penalty: int = 0,
     ):
         is_added = False
         async with self.lock:
@@ -579,7 +579,12 @@ class AddressManager:
             self.mark_good_(addr, test_before_evict, timestamp)
 
     # Mark an entry as connection attempted to.
-    async def attempt(self, addr: PeerInfo, count_failures: bool, timestamp: int = math.floor(time.time())):
+    async def attempt(
+        self,
+        addr: PeerInfo,
+        count_failures: bool,
+        timestamp: int = math.floor(time.time())
+    ):
         async with self.lock:
             self.attempt_(addr, count_failures, timestamp)
 
