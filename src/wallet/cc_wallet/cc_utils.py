@@ -1,6 +1,6 @@
 import dataclasses
 
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from blspy import G2Element, AugSchemeMPL
 
@@ -15,14 +15,19 @@ from src.util.condition_tools import conditions_dict_for_solution
 from src.util.ints import uint64
 from src.wallet.puzzles.load_clvm import load_clvm
 
+from src.wallet.cc_wallet.genesis_by_coin_id_with_0 import (
+    lineage_proof_for_genesis,
+    lineage_proof_for_coin,
+    lineage_proof_for_zero,
+    genesis_coin_id_for_genesis_coin_checker,
+)
+
 
 NULL_SIGNATURE = G2Element.generator() * 0
 
 LOCK_INNER_PUZZLE = Program.from_bytes(bytes.fromhex("ff01ff8080"))  # (q ())
 
 CC_MOD = load_clvm("cc.clvm", package_or_requirement=__name__)
-
-ZERO_GENESIS_MOD = load_clvm("zero-genesis.clvm", package_or_requirement=__name__)
 
 NULL_SIGNATURE = G2Element.generator() * 0
 
@@ -65,46 +70,10 @@ def cc_puzzle_hash_for_inner_puzzle_hash(
     """
     Given an inner puzzle hash, calculate a puzzle program hash for a specific cc.
     """
+    gcc_hash = genesis_coin_checker.get_tree_hash()
     return curry(
-        mod_code, [mod_code.get_tree_hash(), genesis_coin_checker, inner_puzzle_hash]
-    ).get_tree_hash(inner_puzzle_hash)
-
-
-def create_genesis_or_zero_coin_checker(genesis_coin_id: bytes32) -> Program:
-    """
-    Given a specific genesis coin id, create a `genesis_coin_mod` that allows
-    both that coin id to issue a cc, or anyone to create a cc with amount 0.
-    """
-    genesis_coin_mod = ZERO_GENESIS_MOD
-    return curry(genesis_coin_mod, [genesis_coin_id])
-
-
-def genesis_coin_id_for_genesis_coin_checker(
-    genesis_coin_checker: Program,
-) -> Optional[bytes32]:
-    """
-    Given a `genesis_coin_checker` program, pull out the genesis coin id.
-    """
-    r = uncurry(genesis_coin_checker)
-    if r is None:
-        return r
-    f, args = r
-    return args.first().as_atom()
-
-
-def coin_as_list(coin: Coin) -> List[Any]:
-    """
-    Convenience function for when putting `coin_info` into a solution.
-    """
-    return [coin.parent_coin_info, coin.puzzle_hash, coin.amount]
-
-
-def lineage_proof_for_genesis(parent_coin: Coin) -> Program:
-    return Program.to((0, [coin_as_list(parent_coin), 0]))
-
-
-def lineage_proof_for_zero(parent_coin: Coin) -> Program:
-    return Program.to((0, [coin_as_list(parent_coin), 1]))
+        mod_code, [mod_code.get_tree_hash(), gcc_hash, inner_puzzle_hash]
+    ).get_tree_hash(gcc_hash, inner_puzzle_hash)
 
 
 def lineage_proof_for_cc_parent(
@@ -151,8 +120,8 @@ def coin_solution_for_lock_coin(
         LOCK_INNER_PUZZLE,
         [
             total_output_amount,
-            coin_as_list(parent_coin),
-            coin_as_list(next_coin),
+            parent_coin.as_list(),
+            next_coin.as_list(),
             subtotal,
         ],
     )
@@ -212,13 +181,13 @@ def spend_bundle_for_spendable_ccs(
         index1 = (index + 1) % N
         index2 = (index + 2) % N
         next_cc_spend_info = spendable_cc_list[index1]
-        next_coin_info = coin_as_list(spendable_cc_list[index1].coin)
-        coin_after_next = coin_as_list(spendable_cc_list[index2].coin)
+        next_coin_info = spendable_cc_list[index1].coin.as_list()
+        coin_after_next = spendable_cc_list[index2].coin.as_list()
         next_coin_output = output_amounts[index1]
 
         solution = [
             inner_solutions[index],
-            coin_as_list(cc_spend_info.coin),
+            cc_spend_info.coin.as_list(),
             cc_spend_info.lineage_proof,
             subtotals[index],
             next_coin_info,
@@ -315,10 +284,7 @@ def spendable_cc_list_from_coin_solution(
         mod_hash, genesis_coin_checker, inner_puzzle = r
         lineage_proof = lineage_proof_for_cc_parent(coin, inner_puzzle.get_tree_hash())
     else:
-        if coin.amount == 0:
-            lineage_proof = lineage_proof_for_zero(coin)
-        else:
-            lineage_proof = lineage_proof_for_genesis(coin)
+        lineage_proof = lineage_proof_for_coin(coin)
 
     for new_coin in coin_solution.additions():
         puzzle = hash_to_puzzle_f(new_coin.puzzle_hash)

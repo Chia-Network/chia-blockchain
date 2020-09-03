@@ -11,15 +11,19 @@ from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import CoinSolution, SpendBundle
 from src.util.ints import uint64
-from src.wallet.puzzles.load_clvm import load_clvm
 from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 from src.wallet.cc_wallet.cc_utils import (
     cc_puzzle_for_inner_puzzle,
-    create_genesis_or_zero_coin_checker,
     cc_puzzle_hash_for_inner_puzzle_hash,
     spendable_cc_list_from_coin_solution,
     spend_bundle_for_spendable_ccs,
+    CC_MOD,
 )
+from src.wallet.cc_wallet.genesis_by_coin_id_with_0 import create_genesis_or_zero_coin_checker
+from src.wallet.cc_wallet.genesis_by_puzzle_hash_with_0 import (
+    create_genesis_puzzle_or_zero_coin_checker,
+)
+
 
 CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())
 
@@ -28,10 +32,6 @@ NULL_SIGNATURE = G2Element.generator() * 0
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
 NULL_F = Program.from_bytes(bytes.fromhex("ff01ff8080"))  # (q ())
-
-CC_MOD = load_clvm("cc.clvm", package_or_requirement=__name__)
-
-ZERO_GENESIS_MOD = load_clvm("zero-genesis.clvm", package_or_requirement=__name__)
 
 
 PUZZLE_TABLE: Dict[bytes32, Program] = dict(
@@ -65,7 +65,11 @@ def generate_farmed_coin(
 
 
 def issue_cc_from_farmed_coin(
-    mod_code: Program, block_id: int, inner_puzzle_hash: bytes32, amount: uint64
+    mod_code: Program,
+    coin_checker_for_farmed_coin,
+    block_id: int,
+    inner_puzzle_hash: bytes32,
+    amount: uint64,
 ) -> Tuple[Program, SpendBundle]:
     """
     This is an example of how to issue a cc.
@@ -79,7 +83,7 @@ def issue_cc_from_farmed_coin(
     # mint a cc
 
     farmed_coin = generate_farmed_coin(block_id, farmed_puzzle_hash, amount=amount)
-    genesis_coin_checker = create_genesis_or_zero_coin_checker(farmed_coin.name())
+    genesis_coin_checker = coin_checker_for_farmed_coin(farmed_coin)
 
     minted_cc_puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(
         mod_code, genesis_coin_checker, inner_puzzle_hash
@@ -106,7 +110,7 @@ def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Pr
     return Program.to(output_conditions)
 
 
-def test_spend_through_n(mod_code, n):
+def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n):
     """
     Test to spend ccs from a farmed coin to a cc genesis coin, then to N outputs,
     then joining back down to two outputs.
@@ -127,7 +131,7 @@ def test_spend_through_n(mod_code, n):
     total_minted = sum(output_values)
 
     genesis_coin_checker, spend_bundle = issue_cc_from_farmed_coin(
-        mod_code, 1, eve_inner_puzzle_hash, total_minted
+        mod_code, coin_checker_for_farmed_coin, 1, eve_inner_puzzle_hash, total_minted
     )
 
     # hack the wrapped puzzles into the PUZZLE_TABLE DB
@@ -194,7 +198,7 @@ def test_spend_through_n(mod_code, n):
     debug_spend_bundle(spend_bundle)
 
 
-def test_spend_zero_coin(mod_code):
+def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
     """
     Test to spend ccs from a farmed coin to a cc genesis coin, then to N outputs,
     then joining back down to two outputs.
@@ -206,7 +210,7 @@ def test_spend_zero_coin(mod_code):
     total_minted = 0x111
 
     genesis_coin_checker, spend_bundle = issue_cc_from_farmed_coin(
-        mod_code, 1, eve_inner_puzzle_hash, total_minted
+        mod_code, coin_checker_for_farmed_coin, 1, eve_inner_puzzle_hash, total_minted
     )
 
     puzzles_for_db = [
@@ -251,9 +255,17 @@ def test_spend_zero_coin(mod_code):
 
 def main():
     mod_code = CC_MOD
-    test_spend_through_n(mod_code, 12)
 
-    test_spend_zero_coin(mod_code)
+    def coin_checker_for_farmed_coin_by_coin_id(coin: Coin):
+        return create_genesis_or_zero_coin_checker(coin.name())
+
+    test_spend_through_n(mod_code, coin_checker_for_farmed_coin_by_coin_id, 12)
+    test_spend_zero_coin(mod_code, coin_checker_for_farmed_coin_by_coin_id)
+
+    def coin_checker_for_farmed_coin_by_puzzle_hash(coin: Coin):
+        return create_genesis_puzzle_or_zero_coin_checker(coin.puzzle_hash)
+
+    test_spend_through_n(mod_code, coin_checker_for_farmed_coin_by_puzzle_hash, 10)
 
 
 if __name__ == "__main__":
