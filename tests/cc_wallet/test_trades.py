@@ -251,6 +251,10 @@ class TestCCTrades:
         await time_out_assert(15, cc_a_3.get_confirmed_balance, 100)
         await time_out_assert(15, cc_a_3.get_unconfirmed_balance, 100)
 
+        # store these for asserting change later
+        cc_balance = await cc_a_2.get_unconfirmed_balance()
+        cc_balance_2 = await cc_b_2.get_unconfirmed_balance()
+
         assert cc_a_3.cc_info.my_genesis_checker is not None
         red = cc_a_3.get_colour()
 
@@ -311,8 +315,8 @@ class TestCCTrades:
         await time_out_assert(15, cc_a_3.get_confirmed_balance, 50)
         await time_out_assert(15, cc_a_3.get_unconfirmed_balance, 50)
 
-        await time_out_assert(15, cc_a_2.get_unconfirmed_balance, 50)
-        await time_out_assert(15, cc_b_2.get_unconfirmed_balance, 50)
+        await time_out_assert(15, cc_a_2.get_unconfirmed_balance, cc_balance - offer[colour_2])
+        await time_out_assert(15, cc_b_2.get_unconfirmed_balance, cc_balance_2 + offer[colour_2])
 
         trade = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
 
@@ -348,8 +352,10 @@ class TestCCTrades:
         cc_b_4: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_b.wallet_state_manager, wallet_b, colour
         )
+        cc_balance = await cc_a_4.get_confirmed_balance()
+        cc_balance_2 = await cc_b_4.get_confirmed_balance()
 
-        offer_dict = {1: -30, 4: 60}
+        offer_dict = {1: -30, 4: 50}
         file = "test_offer_file.offer"
         file_path = Path(file)
         if file_path.exists():
@@ -363,9 +369,8 @@ class TestCCTrades:
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
-
-        await time_out_assert(15, cc_a_4.get_confirmed_balance, 40)
-        await time_out_assert(15, cc_b_4.get_confirmed_balance, 60)
+        await time_out_assert(15, cc_a_4.get_confirmed_balance, cc_balance - 50)
+        await time_out_assert(15, cc_b_4.get_confirmed_balance, cc_balance_2 + 50)
 
         async def assert_func():
             assert trade_a is not None
