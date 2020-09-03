@@ -185,7 +185,7 @@
 
      ;; calculate the coin id of a lock coin
      (defun-inline calculate-lock-coin-id (output-value coin-info next-coin-info subtotal)
-       (sha256 (coin-id-for-coin coin-info) (puzzle-hash-for-lock output-value coin-info next-coin-info subtotal) 0)
+       (sha256 (coin-id-for-coin coin-info) (puzzle-hash-for-lock output-value next-coin-info subtotal) 0)
      )
 
      ;; utility to fetch coin amount from coin
@@ -209,14 +209,14 @@
      )
 
      ;; calculate the puzzle hash for a lock coin
-     (defun puzzle-hash-for-lock (o-sub-k my-coin-info next-coin-info subtotal)
-       (sha256tree1 (curry (lambda ARGS ()) o-sub-k my-coin-info next-coin-info subtotal))
+     (defun puzzle-hash-for-lock (o-sub-k next-coin-info subtotal)
+       (sha256tree1 (curry (lambda ARGS ()) o-sub-k next-coin-info subtotal))
      )
 
      ;; here we commit to O_k, I_{k+1} and S_k
-     (defun-inline create-lock-coin-condition (o-sub-k coin-info next-coin-info subtotal)
+     (defun-inline create-lock-coin-condition (o-sub-k next-coin-info subtotal)
        (list CREATE_COIN
-         (puzzle-hash-for-lock o-sub-k coin-info next-coin-info subtotal)
+         (puzzle-hash-for-lock o-sub-k next-coin-info subtotal)
          0
        )
       )
@@ -263,7 +263,7 @@
          coin-after-next
        )
        (c (create-assert-my-id my-coin-info)
-         (c (create-lock-coin-condition o-sub-k my-coin-info next-coin-info subtotal)
+         (c (create-lock-coin-condition o-sub-k next-coin-info subtotal)
            (c (create-assert-next-lock-consumed-condition my-coin-info next-coin-output-value next-coin-info coin-after-next subtotal)
              morphed-conditions)
          )
