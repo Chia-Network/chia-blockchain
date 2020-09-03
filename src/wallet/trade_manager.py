@@ -474,6 +474,7 @@ class TradeManager:
                 chia_spend_bundle.coin_solutions.append(coinsol)
 
         zero_spend_list: List[SpendBundle] = []
+        spend_bundle = None
         # create coloured coin
         self.log.info(cc_discrepancies)
         for colour in cc_discrepancies.keys():
@@ -573,16 +574,27 @@ class TradeManager:
             )
             sigs.append(aggsig)
             aggsig = AugSchemeMPL.aggregate(sigs)
-
-        spend_bundle = spend_bundle_for_spendable_ccs(
-            CC_MOD,
-            Program.from_bytes(bytes.fromhex(colour)),
-            spendable_cc_list,
-            innersol_list,
-            [aggsig],
-        )
+            if spend_bundle is None:
+                spend_bundle = spend_bundle_for_spendable_ccs(
+                    CC_MOD,
+                    Program.from_bytes(bytes.fromhex(colour)),
+                    spendable_cc_list,
+                    innersol_list,
+                    [aggsig]
+                )
+            else:
+                new_spend_bundle = spend_bundle_for_spendable_ccs(
+                    CC_MOD,
+                    Program.from_bytes(bytes.fromhex(colour)),
+                    spendable_cc_list,
+                    innersol_list,
+                    [aggsig]
+                )
+                spend_bundle = SpendBundle.aggregate([spend_bundle, new_spend_bundle])
+            # reset sigs and aggsig so that they aren't included next time around
+            sigs = []
+            aggsig = AugSchemeMPL.aggregate(sigs)
         my_tx_records = []
-
         if zero_spend_list is not None:
             zero_spend_list.append(spend_bundle)
             spend_bundle = SpendBundle.aggregate(zero_spend_list)
