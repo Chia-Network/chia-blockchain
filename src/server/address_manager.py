@@ -87,7 +87,8 @@ class ExtendedPeerInfo:
                     + self.peer_info.get_group()
                     + bytes([hash1])
                 )[:8]
-            ), byteorder="big"
+            ),
+            byteorder="big",
         )
         return hash2 % TRIED_BUCKET_COUNT
 
@@ -583,7 +584,7 @@ class AddressManager:
         self,
         addr: PeerInfo,
         count_failures: bool,
-        timestamp: int = math.floor(time.time())
+        timestamp: int = math.floor(time.time()),
     ):
         async with self.lock:
             self.attempt_(addr, count_failures, timestamp)
