@@ -260,6 +260,31 @@ export const log_in_and_import_backup = (fingerprint, file_path) => {
   return action;
 };
 
+export const log_in_and_import_backup_action = (fingerprint, file_path) => {
+  return (dispatch) => {
+    dispatch(selectFingerprint(fingerprint));
+    return async_api(
+      dispatch,
+      log_in_and_import_backup(fingerprint, file_path),
+      true
+    ).then((response) => {
+      dispatch(closeProgress());
+      if (response.data.success) {
+        // Go to wallet
+        refreshAllState(dispatch);
+      } else {
+        const error = response.data.error;
+        if (error === "not_initialized") {
+          dispatch(changeEntranceMenu(presentRestoreBackup));
+          // Go to restore from backup screen
+        } else {
+          dispatch(openDialog("Error", error));
+        }
+      }
+    });
+  };
+};
+
 export const login_and_skip_action = (fingerprint) => {
   return (dispatch) => {
     dispatch(selectFingerprint(fingerprint));

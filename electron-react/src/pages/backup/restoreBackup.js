@@ -12,10 +12,10 @@ import {
 } from "../../modules/entranceMenu";
 import {
   add_new_key_action,
-  log_in_and_import_backup,
   add_and_restore_from_backup,
   login_and_skip_action,
   get_backup_info_action,
+  log_in_and_import_backup_action,
 } from "../../modules/message";
 import { Paper, Grid } from "@material-ui/core";
 import {
@@ -164,7 +164,7 @@ const BackupDetails = () => {
 
   function next() {
     if (fingerprint !== null) {
-      dispatch(log_in_and_import_backup(fingerprint, file_path));
+      dispatch(log_in_and_import_backup_action(fingerprint, file_path));
     } else if (words !== null) {
       dispatch(add_and_restore_from_backup(words, file_path));
     }
