@@ -1,4 +1,4 @@
-# this is used to iterate on `lock_coins.clvm` to ensure that it's producing the sort
+# this is used to iterate on `cc.clvm` to ensure that it's producing the sort
 # of output that we expect
 
 from typing import Dict, Optional, Tuple

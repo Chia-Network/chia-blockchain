@@ -29,8 +29,6 @@ LOCK_INNER_PUZZLE = Program.from_bytes(bytes.fromhex("ff01ff8080"))  # (q ())
 
 CC_MOD = load_clvm("cc.clvm", package_or_requirement=__name__)
 
-NULL_SIGNATURE = G2Element.generator() * 0
-
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 
 # information needed to spend a cc
@@ -120,7 +118,6 @@ def coin_solution_for_lock_coin(
         LOCK_INNER_PUZZLE,
         [
             total_output_amount,
-            parent_coin.as_list(),
             next_coin.as_list(),
             subtotal,
         ],
