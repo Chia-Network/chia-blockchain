@@ -27,8 +27,6 @@ def service_kwargs_for_wallet(root_path):
 
     api = WalletNode(config, keychain, root_path, consensus_constants=wallet_constants)
 
-    introducer = config["introducer_peer"]
-    peer_info = PeerInfo(introducer["host"], introducer["port"])
     connect_peers = [
         PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
     ]

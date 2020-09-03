@@ -130,9 +130,7 @@ class FullNodeDiscovery:
         await asyncio.sleep(self.peer_connect_interval)
 
     async def _connect_to_peers(self, random):
-        next_feeler = self._poisson_next_send(
-            time.time() * 1000 * 1000, 120, random
-        )
+        next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 120, random)
         while not self.is_closed:
             # We don't know any address, connect to the introducer to get some.
             size = await self.address_manager.size()
@@ -164,7 +162,9 @@ class FullNodeDiscovery:
             has_collision = False
             if self._num_needed_peers() == 0:
                 if time.time() * 1000 * 1000 > next_feeler:
-                    next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 120, random)
+                    next_feeler = self._poisson_next_send(
+                        time.time() * 1000 * 1000, 120, random
+                    )
                     is_feeler = True
 
             await self.address_manager.resolve_tried_collisions()
@@ -202,15 +202,14 @@ class FullNodeDiscovery:
             if self._num_needed_peers() == 0:
                 disconnect_after_handshake = True
             initiate_connection = (
-                self._num_needed_peers() > 0
-                or has_collision
-                or is_feeler
+                self._num_needed_peers() > 0 or has_collision or is_feeler
             )
-            if (
-                addr is not None
-                and initiate_connection
-            ):
-                asyncio.create_task(self.server.start_client(addr, None, None, disconnect_after_handshake))
+            if addr is not None and initiate_connection:
+                asyncio.create_task(
+                    self.server.start_client(
+                        addr, None, None, disconnect_after_handshake
+                    )
+                )
             await asyncio.sleep(self.peer_connect_interval)
 
     async def _periodically_peer_gossip(self, random: Random):

@@ -158,7 +158,9 @@ async def stream_reader_writer_to_connection(
     which also stores the type of connection (str). It is also added to the global list.
     """
     sr, sw, on_connect, is_outbound, is_feeler = swrt
-    con = ChiaConnection(local_type, None, sr, sw, server_port, on_connect, log, is_outbound, is_feeler)
+    con = ChiaConnection(
+        local_type, None, sr, sw, server_port, on_connect, log, is_outbound, is_feeler
+    )
 
     con.log.info(f"Connection with {con.get_peername()} established")
     return con

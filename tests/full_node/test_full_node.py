@@ -94,21 +94,23 @@ class TestFullNodeProtocol:
         async def have_msgs():
             await full_node_1.full_node_peers.address_manager.add_to_new_table(
                 [
-                    TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000),
+                    TimestampedPeerInfo(
+                        "127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000
+                    ),
                 ],
                 None,
             )
             msgs = [
                 _
                 async for _ in full_node_2.request_peers_with_peer_info(
-                    fnp.RequestPeers(),
-                    PeerInfo("::1", server_2._port)
+                    fnp.RequestPeers(), PeerInfo("::1", server_2._port)
                 )
             ]
             if not (len(msgs) > 0 and len(msgs[0].message.data.peer_list) == 1):
                 return False
             for peer in msgs[0].message.data.peer_list:
                 return peer.host == "127.0.0.1" and peer.port == 1000
+
         await time_out_assert(10, have_msgs, True)
         full_node_1.full_node_peers.address_manager = AddressManager()
 
