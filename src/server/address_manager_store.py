@@ -28,6 +28,7 @@ class AddressManagerStore:
     Every other information, such as tried_matrix, map_addr, map_info, random_pos,
     be deduced and it is not explicitly stored, instead it is recalculated.
     """
+
     db: aiosqlite.Connection
 
     @classmethod
@@ -37,23 +38,17 @@ class AddressManagerStore:
         await self.db.commit()
 
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS peer_metadata("
-            "key text,"
-            "value text)"
+            "CREATE TABLE IF NOT EXISTS peer_metadata(key text,value text)"
         )
         await self.db.commit()
 
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS peer_nodes("
-            "node_id int,"
-            "value text)"
+            "CREATE TABLE IF NOT EXISTS peer_nodes(node_id int,value text)"
         )
         await self.db.commit()
 
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS peer_new_table("
-            "node_id int,"
-            "bucket int)"
+            "CREATE TABLE IF NOT EXISTS peer_new_table(node_id int,bucket int)"
         )
         await self.db.commit()
         return self
@@ -111,7 +106,7 @@ class AddressManagerStore:
         for node_id, peer_info in node_list:
             cursor = await self.db.execute(
                 "INSERT OR REPLACE INTO peer_nodes VALUES(?, ?)",
-                (node_id, peer_info.to_string())
+                (node_id, peer_info.to_string()),
             )
             await cursor.close()
             await self.db.commit()
@@ -194,7 +189,9 @@ class AddressManagerStore:
         lost_count = 0
         for node_id, info in tried_table_nodes:
             tried_bucket = info.get_tried_bucket(address_manager.key)
-            tried_bucket_pos = info.get_bucket_position(address_manager.key, False, tried_bucket)
+            tried_bucket_pos = info.get_bucket_position(
+                address_manager.key, False, tried_bucket
+            )
             if address_manager.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
                 info.random_pos = len(address_manager.random_pos)
                 info.is_tried = True
@@ -207,7 +204,7 @@ class AddressManagerStore:
 
         address_manager.tried_count -= lost_count
         for node_id, bucket in new_table_entries:
-            if (node_id >= 0 and node_id < address_manager.new_count):
+            if node_id >= 0 and node_id < address_manager.new_count:
                 info = address_manager.map_info[node_id]
                 bucket_pos = info.get_bucket_position(address_manager.key, True, bucket)
                 if (
@@ -218,6 +215,6 @@ class AddressManagerStore:
                     address_manager.new_matrix[bucket][bucket_pos] = node_id
 
         for node_id, info in address_manager.map_info.items():
-            if (not info.is_tried and info.ref_count == 0):
+            if not info.is_tried and info.ref_count == 0:
                 address_manager.delete_new_entry_(node_id)
         return address_manager

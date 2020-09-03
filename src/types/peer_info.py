@@ -19,8 +19,7 @@ class PeerInfo(Streamable):
         except ValueError:
             ip_v4 = ipaddress.IPv4Address(self.host)
             ip = ipaddress.IPv6Address(
-                int(ipaddress.IPv6Address("2002::"))
-                | (int(ip_v4) << 80)
+                int(ipaddress.IPv6Address("2002::")) | (int(ip_v4) << 80)
             )
         key = ip.packed
         key += bytes(
@@ -35,13 +34,9 @@ class PeerInfo(Streamable):
         # TODO: Port everything from Bitcoin.
         ipv4 = 1
         try:
-            ip = ipaddress.IPv4Address(
-                self.host
-            )
+            ip = ipaddress.IPv4Address(self.host)
         except ValueError:
-            ip = ipaddress.IPv6Address(
-                self.host
-            )
+            ip = ipaddress.IPv6Address(self.host)
             ipv4 = 0
         if ipv4:
             group = bytes([1]) + ip.packed[:2]

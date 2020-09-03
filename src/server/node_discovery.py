@@ -62,7 +62,9 @@ class FullNodeDiscovery:
         self.process_messages_task = asyncio.create_task(self._process_messages())
         random = Random()
         self.connect_peers_task = asyncio.create_task(self._connect_to_peers(random))
-        self.peer_gossip_task = asyncio.create_task(self._periodically_peer_gossip(random))
+        self.peer_gossip_task = asyncio.create_task(
+            self._periodically_peer_gossip(random)
+        )
         self.serialize_task = asyncio.create_task(self._periodically_serialize(random))
 
     async def close(self):
@@ -102,11 +104,13 @@ class FullNodeDiscovery:
     when we'll initiate a feeler connection.
     (https://en.wikipedia.org/wiki/Poisson_distribution)
     """
+
     def _poisson_next_send(self, now, avg_interval_seconds, random):
         return now + (
-            math.log(
-                random.randrange(1 << 48) * -0.0000000000000035527136788 + 1
-            ) * avg_interval_seconds * -1000000.0 + 0.5
+            math.log(random.randrange(1 << 48) * -0.0000000000000035527136788 + 1)
+            * avg_interval_seconds
+            * -1000000.0
+            + 0.5
         )
 
     async def _introducer_client(self):
@@ -126,7 +130,9 @@ class FullNodeDiscovery:
         await asyncio.sleep(self.peer_connect_interval)
 
     async def _connect_to_peers(self, random):
-        next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 120, random)
+        next_feeler = self._poisson_next_send(
+            time.time() * 1000 * 1000, 120, random
+        )
         while not self.is_closed:
             # We don't know any address, connect to the introducer to get some.
             size = await self.address_manager.size()
@@ -166,13 +172,12 @@ class FullNodeDiscovery:
             now = time.time()
             got_peer = False
             addr: Optional[PeerInfo] = None
-            while (
-                not got_peer
-                and not self.is_closed
-            ):
+            while not got_peer and not self.is_closed:
                 if tries > 0:
                     await asyncio.sleep(30)
-                info: Optional[ExtendedPeerInfo] = await self.address_manager.select_tried_collision()
+                info: Optional[
+                    ExtendedPeerInfo
+                ] = await self.address_manager.select_tried_collision()
                 if info is None:
                     info = await self.address_manager.select_peer(is_feeler)
                 else:
@@ -181,10 +186,7 @@ class FullNodeDiscovery:
                     break
                 # Require outbound connections, other than feelers, to be to distinct network groups.
                 addr = info.peer_info
-                if (
-                    not is_feeler
-                    and addr.get_group() in groups
-                ):
+                if not is_feeler and addr.get_group() in groups:
                     addr = None
                     break
                 tries += 1
@@ -192,10 +194,7 @@ class FullNodeDiscovery:
                     addr = None
                     break
                 # only consider very recently tried nodes after 30 failed attempts
-                if (
-                    now - info.last_try < 600
-                    and tries < 30
-                ):
+                if now - info.last_try < 600 and tries < 30:
                     continue
                 got_peer = True
 
@@ -238,10 +237,7 @@ class FullNodeDiscovery:
         # Check if we got the peers from a full node or from the introducer.
         peers_adjusted_timestamp = []
         for peer in request.peer_list:
-            if (
-                peer.timestamp < 100000000
-                or peer.timestamp > time.time() + 10 * 60
-            ):
+            if peer.timestamp < 100000000 or peer.timestamp > time.time() + 10 * 60:
                 # Invalid timestamp, predefine a bad one.
                 current_peer = TimestampedPeerInfo(
                     peer.host,
@@ -319,7 +315,10 @@ class FullNodePeers(FullNodeDiscovery):
             peers = await self.address_manager.get_peers()
             outbound_message = OutboundMessage(
                 NodeType.FULL_NODE,
-                Message("respond_peers_full_node", full_node_protocol.RespondPeers(peers)),
+                Message(
+                    "respond_peers_full_node",
+                    full_node_protocol.RespondPeers(peers),
+                ),
                 Delivery.RESPOND,
             )
             yield outbound_message
