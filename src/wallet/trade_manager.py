@@ -35,7 +35,8 @@ from src.wallet.cc_wallet.cc_utils import (
 from src.wallet.wallet import Wallet
 
 from src.wallet.wallet_coin_record import WalletCoinRecord
-from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
+# from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
+
 
 class TradeManager:
     wallet_state_manager: Any
@@ -572,7 +573,14 @@ class TradeManager:
             )
             sigs.append(aggsig)
             aggsig = AugSchemeMPL.aggregate(sigs)
-        spend_bundle = spend_bundle_for_spendable_ccs(CC_MOD, Program.from_bytes(bytes.fromhex(colour)), spendable_cc_list, innersol_list, [aggsig])
+
+        spend_bundle = spend_bundle_for_spendable_ccs(
+            CC_MOD,
+            Program.from_bytes(bytes.fromhex(colour)),
+            spendable_cc_list,
+            innersol_list,
+            [aggsig],
+        )
         my_tx_records = []
 
         if zero_spend_list is not None:
