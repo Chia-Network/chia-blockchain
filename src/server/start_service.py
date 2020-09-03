@@ -2,6 +2,8 @@ import asyncio
 import logging
 import logging.config
 import signal
+
+from sys import platform
 from typing import Any, Callable, List, Optional, Tuple
 
 try:
@@ -19,6 +21,14 @@ from src.rpc.rpc_server import start_rpc_server
 from src.server.connection import OnConnectFunc
 
 from .reconnect_task import start_reconnect_task
+
+
+stopped_by_signal = False
+
+
+def global_signal_handler(*args):
+    global stopped_by_signal
+    stopped_by_signal = True
 
 
 class Service:
