@@ -79,6 +79,7 @@ async def wallets_prefarm(two_wallet_nodes):
 
 
 class TestCCTrades:
+
     @pytest.mark.asyncio
     async def test_cc_trade(self, wallets_prefarm):
         wallet_node_0, wallet_node_1, full_node = wallets_prefarm
@@ -354,8 +355,8 @@ class TestCCTrades:
         )
         cc_balance = await cc_a_4.get_confirmed_balance()
         cc_balance_2 = await cc_b_4.get_confirmed_balance()
+        offer_dict = {1: -30, cc_a_4.wallet_info.id: 50}
 
-        offer_dict = {1: -30, 4: 50}
         file = "test_offer_file.offer"
         file_path = Path(file)
         if file_path.exists():
