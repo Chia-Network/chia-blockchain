@@ -10,7 +10,7 @@
   background-color: #fff;
   color: #444;
   cursor: pointer;
-  padding: 0px;
+  padding: 0;
   display: flex;
   align-items: center;
   border: none;
@@ -30,7 +30,7 @@
 }
 
 .accordion__icon {
-  margin-left: 0px;
+  margin-left: 0;
   transition: transform 0.6s ease;
 }
 
