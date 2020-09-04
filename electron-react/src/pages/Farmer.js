@@ -609,12 +609,14 @@ const Farmer = props => {
   const [biggestHeight, setBiggestHeight] = useState(0);
   const [didMount, setDidMount] = useState(false);
 
+  const wallets = useSelector(state => state.wallet_state.wallets);
+
   const classes = props.classes;
 
   const checkRewards = async () => {
     let totalChia = BigInt(0);
     let biggestHeight = 0;
-    for (let wallet of props.wallets) {
+    for (let wallet of wallets) {
       if (!wallet) {
         continue;
       }
@@ -657,12 +659,12 @@ const Farmer = props => {
   useEffect(() => { 
     (async () => { 
       await checkRewards(); 
-      if (didMount) { 
+      if (!didMount) { 
         setDidMount(true); 
         dispatch(clearSend);
       }
      }) ()
-  }, [props, dispatch, checkRewards, didMount]);
+  }, [checkRewards, dispatch, props, didMount, setDidMount]);
 
   return (
     <div className={classes.root}>
