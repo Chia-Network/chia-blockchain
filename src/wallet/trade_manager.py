@@ -401,11 +401,16 @@ class TradeManager:
         has_wallets = await self.maybe_create_wallets_for_offer(file_path)
         if not has_wallets:
             return False, None, "Unknown Error"
-        trade_offer_hex = file_path.read_text()
-        trade_offer: TradeRecord = TradeRecord.from_bytes(
-            hexstr_to_bytes(trade_offer_hex)
-        )
-        offer_spend_bundle = trade_offer.spend_bundle
+        trade_offer = None
+        try:
+            trade_offer_hex = file_path.read_text()
+            trade_offer = TradeRecord.from_bytes(
+                hexstr_to_bytes(trade_offer_hex)
+            )
+        except Exception as e:
+            return False, None, f"Error: {e}"
+        if trade_offer is not None:
+            offer_spend_bundle: SpendBundle = trade_offer.spend_bundle
 
         coinsols = []  # [] of CoinSolutions
         cc_coinsol_outamounts: Dict[bytes32, List[Tuple[Any, int]]] = dict()
@@ -415,8 +420,8 @@ class TradeManager:
         wallets: Dict[bytes32, Any] = dict()  # colour to wallet dict
 
         for coinsol in offer_spend_bundle.coin_solutions:
-            puzzle = coinsol.solution.first()
-            solution = coinsol.solution.rest().first()
+            puzzle: Program = coinsol.solution.first()
+            solution: Program = coinsol.solution.rest().first()
 
             # work out the deficits between coin amount and expected output for each
             r = cc_utils.uncurry_cc(puzzle)
