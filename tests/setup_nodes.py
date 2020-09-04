@@ -159,6 +159,7 @@ async def setup_wallet_node(
     if db_path.exists():
         db_path.unlink()
     config["database_path"] = str(db_name)
+    config["testing"] = True
 
     api = WalletNode(
         config,

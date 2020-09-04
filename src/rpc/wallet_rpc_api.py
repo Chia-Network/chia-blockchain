@@ -337,6 +337,11 @@ class WalletRpcApi:
 
     async def create_backup_and_upload(self, host):
         try:
+            if (
+                "testing" in self.service.config
+                and self.service.config["testing"] is True
+            ):
+                return
             now = time.time()
             file_name = f"backup_{now}"
             path = path_from_root(self.service.root_path, file_name)
@@ -677,7 +682,9 @@ class WalletRpcApi:
         fingerprint = request["fingerprint"]
         type = request["type"]
         recovery_host = request["host"]
-
+        testing = False
+        if "testing" in self.service.config and self.service.config["testing"] is True:
+            testing = True
         if type == "skip":
             started = await self.service._start(
                 fingerprint=fingerprint, skip_backup_import=True
@@ -692,6 +699,9 @@ class WalletRpcApi:
 
         if started is True:
             return {"success": True}
+        elif testing is True and self.service.backup_initialized is False:
+            response = {"success": False, "error": "not_initialized"}
+            return response
         elif self.service.backup_initialized is False:
             backup_info = None
             backup_path = None
