@@ -22,7 +22,7 @@ class SpendBundle(Streamable):
     aggregated_signature: G2Element
 
     @classmethod
-    def aggregate(cls, spend_bundles):
+    def aggregate(cls, spend_bundles) -> "SpendBundle":
         coin_solutions: List[CoinSolution] = []
         sigs = []
         for _ in spend_bundles:

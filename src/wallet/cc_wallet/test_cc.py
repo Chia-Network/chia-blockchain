@@ -1,7 +1,7 @@
 # this is used to iterate on `cc.clvm` to ensure that it's producing the sort
 # of output that we expect
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from blspy import G2Element
 
@@ -43,7 +43,7 @@ def hash_to_puzzle_f(puzzle_hash: bytes32) -> Optional[Program]:
     return PUZZLE_TABLE.get(puzzle_hash)
 
 
-def add_puzzles_to_puzzle_preimage_db(puzzles: Program) -> None:
+def add_puzzles_to_puzzle_preimage_db(puzzles: List[Program]) -> None:
     for _ in puzzles:
         PUZZLE_TABLE[_.get_tree_hash()] = _
 
@@ -55,13 +55,13 @@ def int_as_bytes32(v: int) -> bytes32:
 def generate_farmed_coin(
     block_index: int,
     puzzle_hash: bytes32,
-    amount: uint64,
+    amount: int,
 ) -> Coin:
     """
     Generate a (fake) coin which can be used as a starting point for a chain
     of coin tests.
     """
-    return Coin(int_as_bytes32(block_index), puzzle_hash, amount)
+    return Coin(int_as_bytes32(block_index), puzzle_hash, uint64(amount))
 
 
 def issue_cc_from_farmed_coin(
@@ -69,12 +69,11 @@ def issue_cc_from_farmed_coin(
     coin_checker_for_farmed_coin,
     block_id: int,
     inner_puzzle_hash: bytes32,
-    amount: uint64,
+    amount: int,
 ) -> Tuple[Program, SpendBundle]:
     """
     This is an example of how to issue a cc.
     """
-
     # get a farmed coin
 
     farmed_puzzle = ANYONE_CAN_SPEND_PUZZLE
@@ -82,7 +81,7 @@ def issue_cc_from_farmed_coin(
 
     # mint a cc
 
-    farmed_coin = generate_farmed_coin(block_id, farmed_puzzle_hash, amount=amount)
+    farmed_coin = generate_farmed_coin(block_id, farmed_puzzle_hash, amount=uint64(amount))
     genesis_coin_checker = coin_checker_for_farmed_coin(farmed_coin)
 
     minted_cc_puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(
@@ -102,7 +101,7 @@ def issue_cc_from_farmed_coin(
     return genesis_coin_checker, spend_bundle
 
 
-def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Program:
+def solution_for_pay_to_any(puzzle_hash_amount_pairs: List[Tuple[bytes32, int]]) -> Program:
     output_conditions = [
         [ConditionOpcode.CREATE_COIN, puzzle_hash, amount]
         for puzzle_hash, amount in puzzle_hash_amount_pairs
