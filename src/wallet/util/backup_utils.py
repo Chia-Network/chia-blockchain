@@ -84,6 +84,7 @@ async def upload_backup(host: str, backup_text: str):
     session = aiohttp.ClientSession()
     nonce_url = f"{host}/upload_backup"
     upload_response = await post(session, nonce_url, request)
+    await session.close()
     return upload_response
 
 
@@ -111,5 +112,5 @@ async def download_backup(host: str, private_key: PrivateKey):
     assert backup_response["success"] is True
     backup_url = backup_response["url"]
     backup_text = await get(session, backup_url)
-
+    await session.close()
     return backup_text

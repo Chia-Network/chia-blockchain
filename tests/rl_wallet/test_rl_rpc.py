@@ -51,7 +51,7 @@ class TestCCWallet:
 
         api_user = WalletRpcApi(wallet_node_1)
         val = await api_user.create_new_wallet(
-            {"wallet_type": "rl_wallet", "rl_type": "user"}
+            {"wallet_type": "rl_wallet", "rl_type": "user", "host": "127.0.0.1:5000"}
         )
         assert isinstance(val, dict)
         assert val["success"]
@@ -69,6 +69,7 @@ class TestCCWallet:
                 "limit": 1,
                 "pubkey": pubkey,
                 "amount": 100,
+                "host": "127.0.0.1:5000"
             }
         )
         assert isinstance(val, dict)
