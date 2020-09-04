@@ -45,7 +45,7 @@ jobs:
       # Run Linter against code base #
       ################################
       - name: Lint Code Base
-        uses: docker://github/super-linter:v3.9.2
+        uses: github/super-linter@v3.9.4
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: master
