@@ -95,9 +95,6 @@ def subtotals_for_deltas(deltas) -> List[int]:
     needed in solutions spending those coins.
     """
 
-    # move the first element to the end
-    deltas = deltas[1:] + deltas[:1]
-
     subtotals = []
     subtotal = 0
 
@@ -112,20 +109,18 @@ def subtotals_for_deltas(deltas) -> List[int]:
 
 
 def coin_solution_for_lock_coin(
-    parent_coin: Coin, next_coin: Coin, total_output_amount: int, subtotal: int
+    prev_coin: Coin, subtotal: int, coin: Coin,
 ) -> CoinSolution:
-    puzzle_reveal = curry(
-        LOCK_INNER_PUZZLE,
-        [
-            total_output_amount,
-            next_coin.as_list(),
-            subtotal,
-        ],
-    )
+    puzzle_reveal = curry(LOCK_INNER_PUZZLE, [prev_coin.as_list(), subtotal])
 
-    coin = Coin(parent_coin.name(), puzzle_reveal.get_tree_hash(), uint64(0))
+    coin = Coin(coin.name(), puzzle_reveal.get_tree_hash(), uint64(0))
     coin_solution = CoinSolution(coin, Program.to([puzzle_reveal, 0]))
     return coin_solution
+
+
+def bundle_for_spendable_cc_list(spendable_cc: SpendableCC) -> Program:
+    pair = (spendable_cc.coin.as_list(), spendable_cc.lineage_proof)
+    return Program.to(pair)
 
 
 def spend_bundle_for_spendable_ccs(
@@ -162,11 +157,13 @@ def spend_bundle_for_spendable_ccs(
 
     coin_solutions = []
 
-    deltas = [output_amounts[_] - input_coins[_].amount for _ in range(N)]
+    deltas = [input_coins[_].amount - output_amounts[_] for _ in range(N)]
     subtotals = subtotals_for_deltas(deltas)
 
     if sum(deltas) != 0:
         raise ValueError("input and output amounts don't match")
+
+    bundles = [bundle_for_spendable_cc_list(_) for _ in spendable_cc_list]
 
     for index in range(N):
         cc_spend_info = spendable_cc_list[index]
@@ -175,22 +172,18 @@ def spend_bundle_for_spendable_ccs(
             mod_code, genesis_coin_checker, cc_spend_info.inner_puzzle
         )
 
-        index1 = (index + 1) % N
-        index2 = (index + 2) % N
-        next_cc_spend_info = spendable_cc_list[index1]
-        next_coin_info = spendable_cc_list[index1].coin.as_list()
-        coin_after_next = spendable_cc_list[index2].coin.as_list()
-        next_coin_output = output_amounts[index1]
+        prev_index = (index - 1) % N
+        next_index = (index + 1) % N
+        prev_bundle = bundles[prev_index]
+        my_bundle = bundles[index]
+        next_bundle = bundles[next_index]
 
         solution = [
             inner_solutions[index],
-            cc_spend_info.coin.as_list(),
-            cc_spend_info.lineage_proof,
+            prev_bundle,
+            my_bundle,
+            next_bundle,
             subtotals[index],
-            next_coin_info,
-            next_cc_spend_info.lineage_proof,
-            next_coin_output,
-            coin_after_next,
         ]
         full_solution = Program.to([puzzle_reveal, solution])
 
@@ -200,14 +193,11 @@ def spend_bundle_for_spendable_ccs(
     # now add solutions to consume the lock coins
 
     for _ in range(N):
-        index1 = (_ + 1) % N
-        parent_coin = spendable_cc_list[_].coin
-        next_coin = spendable_cc_list[index1].coin
-        output_amount = output_amounts[_]
+        prev_index = (_ - 1) % N
+        prev_coin = spendable_cc_list[prev_index].coin
+        this_coin = spendable_cc_list[_].coin
         subtotal = subtotals[_]
-        coin_solution = coin_solution_for_lock_coin(
-            parent_coin, next_coin, output_amount, subtotal
-        )
+        coin_solution = coin_solution_for_lock_coin(prev_coin, subtotal, this_coin)
         coin_solutions.append(coin_solution)
     if sigs is None or sigs == []:
         return SpendBundle(coin_solutions, NULL_SIGNATURE)
