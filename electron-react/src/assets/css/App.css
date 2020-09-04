@@ -22,23 +22,32 @@
   to { transform: rotate(360deg); }
 }
 
-html, body, #wrapper-id, #root, #app, #app>div, #provider-wrap {
+html,
+body,
+#wrapper-id,
+#root,
+#app,
+#app > div,
+#provider-wrap {
   height: 100%;
-  margin: 0px;
+  margin: 0;
   padding: 0;
-  top: 0px;
+  top: 0;
   overflow: hidden;
 }
+
 @font-face {
   font-family: Roboto;
   src: url("../fonts/Roboto-Medium.ttf");
   font-weight: 500;
 }
+
 @font-face {
   font-family: Roboto;
   src: url("../fonts/Roboto-Regular.ttf");
   font-weight: 400;
 }
+
 @font-face {
   font-family: Roboto;
   src: url("../fonts/Roboto-Light.ttf");
