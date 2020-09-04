@@ -5,9 +5,7 @@
 
 (mod (
       genesis-id
-      genesis-coin-checker-hash
-      mod-hash
-      mod-hash-hash
+      lineage-proof-parameters
       my-coin-info
       (parent-coin zero-parent-inner-puzzle-hash)
     )

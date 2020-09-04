@@ -57,24 +57,22 @@
 ;;  inner-puzzle: the puzzle protecting the coins
 ;; ---- items above are curried into the puzzle hash ----
 ;;  inner-puzzle-solution: the solution to the inner puzzle
-;;  my-coin-info: the triple representing "me"
-;;  my-lineage-proof: the check that I am actually a valid cc, either via genesis-coin-checker
-;          or by proof that my parent puzzle hash is a wrapping
-;;  subtotal: S_k, the "subtotal" so far
-;;  next-coin-info: the triple representing the "next" coin in the loop
-;;  my-lineage-proof: the check that I am actually a valid cc, either via genesis-coin-checker
-;          or by proof that my parent puzzle hash is a wrapping
-;;  next-coin-output-value: O_{k+1}
-;;  coin-after-next: I_{k+2}, used to help calculate L_{k+1}
+;;  prev-coin-bundle: the bundle for the previous coin
+;;  my-coin-bundle: the bundle for this coin
+;;  next-coin-bundle: the bundle for the next coin
+;;  left-subtotal: the subtotal between prev-coin and this-coin
+;;
+;; A coin bundle is the cons box ((parent_id puzzle_hash amount) . lineage_proof)
+;;
 
 (mod (mod-hash                ;; curried into puzzle
       genesis-coin-checker    ;; curried into puzzle
       inner-puzzle            ;; curried into puzzle
       inner-puzzle-solution   ;; if invalid, inner-puzzle will fail
-      prev-coin-bundle
+      prev-coin-bundle        ;; used in this coin's lock coin, prev-coin ASSERT_CONSUMED will fail if wrong
       my-coin-bundle          ;; verified with ASSERT_MY_COIN_ID
-      next-coin-bundle
-      left-subtotal
+      next-coin-bundle        ;; used to generate ASSERT_CONSUMED
+      left-subtotal           ;; included in lock, prev-coin ASSERT_CONSUMED will fail if wrong
     )
 
      ;;;;; start library code
@@ -145,7 +143,7 @@
      ;;;;; end library code
 
      ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
-     (defun cc-puzzle-hash (mod-hash mod-hash-hash genesis-coin-checker-hash inner-puzzle-hash)
+     (defun cc-puzzle-hash ((mod-hash mod-hash-hash genesis-coin-checker genesis-coin-checker-hash) inner-puzzle-hash)
        (sha256tree_esc (curry mod-hash mod-hash-hash genesis-coin-checker-hash inner-puzzle-hash)
                        mod-hash
                        mod-hash-hash
@@ -154,10 +152,10 @@
      )
 
      ;; tweak `CREATE_COIN` condition by wrapping the puzzle hash, forcing it to be a cc
-     (defun-inline morph-condition (condition mod-hash mod-hash-hash genesis-coin-checker-hash)
+     (defun-inline morph-condition (condition lineage-proof-parameters)
        (if (= (f condition) CREATE_COIN)
          (list CREATE_COIN
-               (cc-puzzle-hash mod-hash mod-hash-hash genesis-coin-checker-hash (f (r condition)))
+               (cc-puzzle-hash lineage-proof-parameters (f (r condition)))
                (f (r (r condition)))
          )
          condition
@@ -165,11 +163,11 @@
      )
 
      ;; tweak all `CREATE_COIN` conditions, enforcing created coins to be ccs
-     (defun morph-conditions (conditions mod-hash mod-hash-hash genesis-coin-checker-hash)
+     (defun morph-conditions (conditions lineage-proof-parameters)
        (if conditions
          (c
-           (morph-condition (f conditions) mod-hash mod-hash-hash genesis-coin-checker-hash)
-           (morph-conditions (r conditions) mod-hash mod-hash-hash genesis-coin-checker-hash)
+           (morph-condition (f conditions) lineage-proof-parameters)
+           (morph-conditions (r conditions) lineage-proof-parameters)
          )
          ()
        )
@@ -269,15 +267,13 @@
 
      ;; return true iff parent of `my-coin-info` is provably a cc
      (defun is-parent-cc (
-       mod-hash
-       mod-hash-hash
-       genesis-coin-checker-hash
+       lineage-proof-parameters
        my-coin-info
        (parent-parent-coin-id parent-inner-puzzle-hash parent-amount)
      )
        (= (f my-coin-info)
           (sha256 parent-parent-coin-id
-                  (cc-puzzle-hash mod-hash mod-hash-hash genesis-coin-checker-hash parent-inner-puzzle-hash)
+                  (cc-puzzle-hash lineage-proof-parameters parent-inner-puzzle-hash)
                   parent-amount
           )
        )
@@ -289,17 +285,22 @@
      ;;  (0 . some-opaque-proof-passed-to-genesis-coin-checker)
      ;; so the `f` value determines what kind of proof it is, and the `r` value is the proof
 
+     (defun genesis-coin-checker-for-lpp ((mod_hash mod_hash_hash genesis-coin-checker genesis-coin-checker-hash))
+       genesis-coin-checker
+     )
+
      (defun-inline is-lineage-proof-valid (
-       mod-hash mod-hash-hash genesis-coin-checker genesis-coin-checker-hash my-coin-info lineage-proof)
+       lineage-proof-parameters my-coin-info lineage-proof)
        (if
          (f lineage-proof)
-         (is-parent-cc mod-hash mod-hash-hash genesis-coin-checker-hash my-coin-info (r lineage-proof))
-         ((c genesis-coin-checker (list genesis-coin-checker-hash mod-hash mod-hash-hash my-coin-info (r lineage-proof))))
+         (is-parent-cc lineage-proof-parameters my-coin-info (r lineage-proof))
+         ((c (genesis-coin-checker-for-lpp lineage-proof-parameters)
+             (list lineage-proof-parameters my-coin-info (r lineage-proof))))
        )
      )
 
-     (defun is-bundle-valid ((coin . lineage-proof) mod-hash mod-hash-hash genesis-coin-checker genesis-coin-checker-hash)
-       (is-lineage-proof-valid mod-hash mod-hash-hash genesis-coin-checker genesis-coin-checker-hash coin lineage-proof)
+     (defun is-bundle-valid ((coin . lineage-proof) lineage-proof-parameters)
+       (is-lineage-proof-valid lineage-proof-parameters coin lineage-proof)
      )
 
 
@@ -307,10 +308,7 @@
      ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
      (defun main (
-         mod-hash
-         mod-hash-hash
-         genesis-coin-checker
-         genesis-coin-checker-hash
+         lineage-proof-parameters
          inner-conditions
          prev-coin-bundle
          my-coin-bundle
@@ -318,16 +316,16 @@
          left-subtotal
       )
       (assert
-        (is-bundle-valid prev-coin-bundle mod-hash mod-hash-hash genesis-coin-checker genesis-coin-checker-hash)
+        (is-bundle-valid prev-coin-bundle lineage-proof-parameters)
 
-        (is-bundle-valid my-coin-bundle mod-hash mod-hash-hash genesis-coin-checker genesis-coin-checker-hash)
+        (is-bundle-valid my-coin-bundle lineage-proof-parameters)
 
-        (is-bundle-valid next-coin-bundle mod-hash mod-hash-hash genesis-coin-checker genesis-coin-checker-hash)
+        (is-bundle-valid next-coin-bundle lineage-proof-parameters)
 
         (generate-final-output-conditions
           left-subtotal
           (+ left-subtotal (- (amount-for-coin (coin-info-for-coin-bundle my-coin-bundle)) (output-totals inner-conditions)))
-          (morph-conditions inner-conditions mod-hash mod-hash-hash genesis-coin-checker-hash)
+          (morph-conditions inner-conditions lineage-proof-parameters)
           (coin-info-for-coin-bundle prev-coin-bundle)
           (coin-info-for-coin-bundle my-coin-bundle)
           (coin-info-for-coin-bundle next-coin-bundle)
@@ -336,11 +334,8 @@
     )
 
     (main
-        ;; cache some stuff: output conditions, and mod-hash-hash
-        mod-hash
-        (sha256tree1 mod-hash)
-        genesis-coin-checker
-        (sha256tree1 genesis-coin-checker)
+        ;; cache some stuff: output conditions, and lineage-proof-parameters
+        (list mod-hash (sha256tree1 mod-hash) genesis-coin-checker (sha256tree1 genesis-coin-checker))
         ((c inner-puzzle inner-puzzle-solution))
         prev-coin-bundle
         my-coin-bundle
