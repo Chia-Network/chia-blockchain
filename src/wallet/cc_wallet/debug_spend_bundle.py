@@ -88,23 +88,31 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
         print()
         print("-------")
 
-    additions = spend_bundle.additions()
-    removals = spend_bundle.removals()
+    created = set(spend_bundle.additions())
+    spent = set(spend_bundle.removals())
+
+    zero_coin_set = set(coin.name() for coin in created if coin.amount == 0)
+
+    ephemeral = created.intersection(spent)
+    created.difference_update(ephemeral)
+    spent.difference_update(ephemeral)
     print()
     print("spent coins")
-    for coin in removals:
+    for coin in sorted(spent, key=lambda _: _.name()):
         print(f"  {dump_coin(coin)}")
-        print(f"    {'*' if coin in additions else ' '} => spent coin id {coin.name()}")
+        print(f"      => spent coin id {coin.name()}")
     print()
     print("created coins")
-    for coin in additions:
+    for coin in sorted(created, key=lambda _: _.name()):
         print(f"  {dump_coin(coin)}")
-        print(f"    {'*' if coin in removals else ' '} => created coin id {coin.name()}")
+        print(f"      => created coin id {coin.name()}")
 
-    zero_coin_set = set()
-    for coin in additions:
-        if coin.amount == 0:
-            zero_coin_set.add(coin.name())
+    if ephemeral:
+        print()
+        print("ephemeral coins")
+        for coin in sorted(ephemeral, key=lambda _: _.name()):
+            print(f"  {dump_coin(coin)}")
+            print(f"      => created coin id {coin.name()}")
 
     print()
     print(f"assert_consumed_set = {sorted(assert_consumed_set)}")
