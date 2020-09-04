@@ -51,7 +51,7 @@ jobs:
           DEFAULT_BRANCH: master
           LINTER_RULES_PATH: .github/linters
           VALIDATE_BASH: true
-#          VALIDATE_CSS: true
+          VALIDATE_CSS: true
           VALIDATE_DOCKER: true
           VALIDATE_GO: true
           VALIDATE_HTML: true
