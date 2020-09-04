@@ -75,18 +75,6 @@ const Block = props => {
     [dispatch]
   ); 
 
-  /*function handleClearBlock() {
-    dispatch(clearBlock());
-  }
-  
-  function handleGetHeader(headerHash) {
-    dispatch(getHeader(headerHash));
-  }
-  
-  function handleGetBlock(headerHash) {
-    dispatch(getBlock(headerHash));
-  }*/ 
-
   const fetchHeaderIfNecessary = async () => {
     if (props.prevHeader) {
       const phh = await hash_header(props.prevHeader);

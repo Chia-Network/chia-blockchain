@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Button from "@material-ui/core/Button";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import Grid from "@material-ui/core/Grid";
@@ -95,9 +95,18 @@ const UIPart = props => {
 };
 
 const NewWallet = props => {
+  const [didMount, setDidMount] = useState(false);
+
   const dispatch = useDispatch();
-  const get_mnemonics = genereate_mnemonics();
-  dispatch(get_mnemonics);
+
+  useEffect(() => {
+    if (!didMount && dispatch) {
+      const get_mnemonics = genereate_mnemonics();
+      dispatch(get_mnemonics);
+      setDidMount(true);
+    }
+  }, [didMount, setDidMount, dispatch]);
+
 
   return <UIPart props={props}></UIPart>;
 }
