@@ -1,3 +1,8 @@
+; This is a "genesis checker" for use with cc.clvm.
+;
+; This checker allows new ccs to be created if they have a particular
+; coin id as parent; or created by anyone if their value is 0.
+
 (mod (
       genesis-id
       genesis-coin-checker-hash
@@ -18,21 +23,19 @@
         0)
     )
 
-    (defun main (
+    (defun-inline main (
       genesis-id
       my-coin-info
-      parent-coin-id
     )
 
       (or
         (= (f (r (r my-coin-info))) 0)
-        (= parent-coin-id genesis-id)
+        (= (f my-coin-info) genesis-id)
       )
     )
 
     (main
       genesis-id
       my-coin-info
-      (sha256 (f parent-coin) (f (r parent-coin)) (f (r (r parent-coin))))
     )
 )

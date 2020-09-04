@@ -1,3 +1,8 @@
+; This is a "genesis checker" for use with cc.clvm.
+;
+; This checker allows new ccs to be created if their parent has a particular
+; puzzle hash; or created by anyone if their value is 0.
+
 (mod (
       genesis-puzzle-hash
       genesis-coin-checker-hash
@@ -29,89 +34,16 @@
         0)
     )
 
-    ;;;;;;;;;;; curry
-
-    ;; utility function used by `curry_args`
-    (defun fix_curry_args (items core)
-      (if items
-          (qq (c (q (unquote (f items))) (unquote (fix_curry_args (r items) core))))
-          core
-      )
-    )
-
-    ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
-    (defun curry_args (func list_of_args) (qq ((c (q (unquote func)) (unquote (fix_curry_args list_of_args (q 1)))))))
-
-    ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
-    (defun curry (func . args) (curry_args func args))
-
-    ;;;;;;;;;;; sha256tree_esc_list
-
-    ;; hash a tree with escape values representing already-hashed subtrees
-    ;; This optimization can be useful if you know the puzzle hash of a sub-expression.
-    ;; You probably actually want to use `curry_and_hash` though.
-    (defun sha256tree_esc_list
-           (TREE LITERALS)
-           (if (l TREE)
-               (sha256 2 (sha256tree_esc_list (f TREE) LITERALS) (sha256tree_esc_list (r TREE) LITERALS))
-               (if (is-in-list TREE LITERALS)
-                   TREE
-                   (sha256 1 TREE)
-               )
-           )
-    )
-
-    ;; hash a tree with escape values representing already-hashed subtrees
-    ;; This optimization can be useful if you know the tree hash of a sub-expression.
-    (defun sha256tree_esc
-       (TREE . LITERAL)
-       (sha256tree_esc_list TREE LITERAL)
-    )
-
-
-    (defun cc-puzzle-hash (mod-hash mod-hash-hash genesis-coin-checker-hash inner-puzzle-hash)
-      ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
-      (sha256tree_esc (curry mod-hash mod-hash-hash genesis-coin-checker-hash inner-puzzle-hash)
-                      mod-hash
-                      mod-hash-hash
-                      genesis-coin-checker-hash
-                      inner-puzzle-hash)
-    )
-
-    (defun is-in-list (atom items)
-      ;; returns 1 iff `atom` is in the list of `items`
-      (if items
-        (if (= atom (f items))
-          1
-          (is-in-list atom (r items))
-        )
-        0
-      )
-    )
-
-    (defun is-zero-cc (parent-coin mod-hash mod-hash-hash genesis-coin-checker-hash inner-puzzle-hash)
-      (and
-        (= (f (r (r parent-coin))) 0)
-        (= (f (r parent-coin)) (cc-puzzle-hash mod-hash mod-hash-hash genesis-coin-checker-hash inner-puzzle-hash))
-      )
-    )
-
-    (defun main (
+    (defun-inline main (
       genesis-puzzle-hash
-      genesis-coin-checker-hash
-      mod-hash
-      mod-hash-hash
       my-coin-info
       parent-coin
-      zero-parent-inner-puzzle-hash
-      parent-coin-id
     )
 
-      (and
-        (= parent-coin-id (f my-coin-info))
-        (if
-          zero-parent-inner-puzzle-hash
-          (is-zero-cc parent-coin mod-hash mod-hash-hash genesis-coin-checker-hash zero-parent-inner-puzzle-hash)
+      (or
+        (= (f (r (r my-coin-info))) 0)
+        (and
+          (= (sha256 (f parent-coin) (f (r parent-coin)) (f (r (r parent-coin)))) (f my-coin-info))
           (= (f (r parent-coin)) genesis-puzzle-hash)
         )
       )
@@ -119,12 +51,7 @@
 
     (main
       genesis-puzzle-hash
-      genesis-coin-checker-hash
-      mod-hash
-      mod-hash-hash
       my-coin-info
       parent-coin
-      zero-parent-inner-puzzle-hash
-      (sha256 (f parent-coin) (f (r parent-coin)) (f (r (r parent-coin))))
     )
 )
