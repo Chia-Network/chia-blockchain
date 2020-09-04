@@ -192,12 +192,22 @@ const BackupDetails = () => {
             padding: "20px",
           }}
         >
-          <ArrowBackIosIcon
-            style={{ cursor: "pointer" }}
+          <Box
+            display="flex"
             onClick={goBackBackup}
+            style={{ cursor: "pointer", minWidth: "100%" }}
           >
-            {" "}
-          </ArrowBackIosIcon>
+            <Box>
+              {" "}
+              <ArrowBackIosIcon
+                style={{ cursor: "pointer" }}
+                onClick={goBackBackup}
+              ></ArrowBackIosIcon>
+            </Box>
+            <Box className={classes.align_left} flexGrow={1}>
+              <Typography variant="subtitle2">Import Backup File</Typography>
+            </Box>
+          </Box>
           <Grid container spacing={3} style={{ marginBottom: 10 }}>
             <Grid item xs={6}>
               <Typography variant="subtitle1">Backup info:</Typography>
