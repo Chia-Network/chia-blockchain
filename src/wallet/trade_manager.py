@@ -368,7 +368,7 @@ class TradeManager:
         trade_offer = TradeRecord.from_bytes(bytes.fromhex(trade_offer_hex))
         return get_discrepancies_for_spend_bundle(trade_offer.spend_bundle)
 
-    async def get_inner_puzzle_for_puzzle_hash(self, puzzle_hash) -> Optional[Program]:
+    async def get_inner_puzzle_for_puzzle_hash(self, puzzle_hash) -> Program:
         info = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
             puzzle_hash.hex()
         )
@@ -419,9 +419,10 @@ class TradeManager:
             solution = coinsol.solution.rest().first()
 
             # work out the deficits between coin amount and expected output for each
-            if cc_utils.check_is_cc_puzzle(puzzle):
+            r = cc_utils.uncurry_cc(puzzle)
+            if r:
                 # Calculate output amounts
-                mod_hash, genesis_checker, inner_puzzle = cc_utils.uncurry_cc(puzzle)
+                mod_hash, genesis_checker, inner_puzzle = r
                 colour = bytes(genesis_checker).hex()
                 if colour not in wallets:
                     wallets[
@@ -470,8 +471,9 @@ class TradeManager:
             chia_spend_bundle = await self.wallet_state_manager.main_wallet.create_spend_bundle_relative_chia(
                 chia_discrepancy, []
             )
-            for coinsol in coinsols:
-                chia_spend_bundle.coin_solutions.append(coinsol)
+            if chia_spend_bundle is not None:
+                for coinsol in coinsols:
+                    chia_spend_bundle.coin_solutions.append(coinsol)
 
         zero_spend_list: List[SpendBundle] = []
         spend_bundle = None
@@ -543,11 +545,13 @@ class TradeManager:
                 puzzle = cc_coinsol.solution.first()
                 solution = cc_coinsol.solution.rest().first()
 
-                mod_hash, genesis_coin_checker, inner_puzzle = uncurry_cc(puzzle)
-                inner_solution = solution.first()
-                lineage_proof = solution.rest().rest().first()
-                spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
-                innersol_list.append(inner_solution)
+                r = uncurry_cc(puzzle)
+                if r:
+                    mod_hash, genesis_coin_checker, inner_puzzle = r
+                    inner_solution = solution.first()
+                    lineage_proof = solution.rest().rest().first()
+                    spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
+                    innersol_list.append(inner_solution)
 
             # Finish the output coin SpendableCC with new information
             newinnerpuzhash = await wallets[colour].get_new_inner_hash()
@@ -595,9 +599,12 @@ class TradeManager:
             sigs = []
             aggsig = AugSchemeMPL.aggregate(sigs)
         my_tx_records = []
-        if zero_spend_list is not None:
+        if zero_spend_list is not None and spend_bundle is not None:
             zero_spend_list.append(spend_bundle)
             spend_bundle = SpendBundle.aggregate(zero_spend_list)
+
+        if spend_bundle is None:
+            return False, None, "spend_bundle missing"
 
         # Add transaction history for this trade
         now = uint64(int(time.time()))

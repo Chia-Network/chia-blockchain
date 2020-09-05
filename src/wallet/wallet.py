@@ -300,7 +300,7 @@ class Wallet(AbstractWallet):
             # Get AGGSIG conditions
             err, con, cost = conditions_for_solution(sexp)
             if err or not con:
-                self.log.error(f"Sign transcation failed, con:{con}, error: {err}")
+                self.log.error(f"Sign transaction failed, con:{con}, error: {err}")
                 return None
 
             conditions_dict = conditions_by_opcode(con)
@@ -418,7 +418,7 @@ class Wallet(AbstractWallet):
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(
         self, chia_amount: int, exclude: List[Coin]
-    ):
+    ) -> Optional[SpendBundle]:
         list_of_solutions = []
         utxos = None
 

@@ -351,10 +351,9 @@ class CCWallet:
                         break
 
                 if coin is not None:
-                    mod_hash, genesis_coin_checker, inner_puzzle = uncurry_cc(
-                        puzzle_program
-                    )
-                    if inner_puzzle is not None:
+                    r = uncurry_cc(puzzle_program)
+                    if r is not None:
+                        mod_hash, genesis_coin_checker, inner_puzzle = r
                         self.log.info(
                             f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}"
                         )
@@ -429,7 +428,9 @@ class CCWallet:
         tx = await self.standard_wallet.generate_signed_transaction(
             uint64(0), cc_puzzle_hash, uint64(0), origin_id, coins
         )
-        full_spend = tx.spend_bundle
+        if tx is None or tx.spend_bundle is None:
+            return None
+        full_spend: SpendBundle = tx.spend_bundle
         self.log.info(f"Generate zero val coin: cc_puzzle_hash is {cc_puzzle_hash}")
 
         # generate eve coin so we can add future lineage_proofs even if we don't eve spend
@@ -644,6 +645,10 @@ class CCWallet:
         innersol = self.standard_wallet.make_solution(primaries=primaries)
         coin = selected_coins.pop()
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
+
+        if self.cc_info.my_genesis_checker is None:
+            return None
+
         genesis_id = genesis_coin_id_for_genesis_coin_checker(
             self.cc_info.my_genesis_checker
         )
@@ -720,13 +725,14 @@ class CCWallet:
             CC_MOD, genesis_coin_checker, cc_inner_hash
         )
 
-        tx_record: Optional[
-            TransactionRecord
-        ] = await self.standard_wallet.generate_signed_transaction(
+        tx_record = await self.standard_wallet.generate_signed_transaction(
             amount, minted_cc_puzzle_hash, uint64(0), origin_id, coins
         )
+        if tx_record is None:
+            return None
 
-        lineage_proofs = [(origin_id, lineage_proof_for_genesis(origin))]
+        lineage_proof: Optional[Program] = lineage_proof_for_genesis(origin)
+        lineage_proofs = [(origin_id, lineage_proof)]
         cc_info: CCInfo = CCInfo(genesis_coin_checker, lineage_proofs)
         await self.save_info(cc_info)
         return tx_record.spend_bundle
