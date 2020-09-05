@@ -66,14 +66,15 @@ def get_discrepancies_for_spend_bundle(
     trade_offer: SpendBundle,
 ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
     try:
-        cc_discrepancies: Dict[bytes, int] = dict()
+        cc_discrepancies: Dict[str, int] = dict()
         for coinsol in trade_offer.coin_solutions:
             puzzle = coinsol.solution.first()
             solution = coinsol.solution.rest().first()
             # work out the deficits between coin amount and expected output for each
-            if cc_utils.check_is_cc_puzzle(puzzle):
+            r = cc_utils.uncurry_cc(puzzle)
+            if r:
                 # Calculate output amounts
-                mod_hash, genesis_checker, inner_puzzle = cc_utils.uncurry_cc(puzzle)
+                mod_hash, genesis_checker, inner_puzzle = r
                 innersol = solution.first()
 
                 total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
