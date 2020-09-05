@@ -69,7 +69,7 @@ class TestCCWallet:
                 "limit": 1,
                 "pubkey": pubkey,
                 "amount": 100,
-                "host": "127.0.0.1:5000"
+                "host": "127.0.0.1:5000",
             }
         )
         assert isinstance(val, dict)
