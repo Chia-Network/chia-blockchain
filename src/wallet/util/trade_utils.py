@@ -77,7 +77,9 @@ def get_discrepancies_for_spend_bundle(
                 mod_hash, genesis_checker, inner_puzzle = r
                 innersol = solution.first()
 
-                total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
+                total = get_output_amount_for_puzzle_and_solution(
+                    inner_puzzle, innersol
+                )
                 colour = bytes(genesis_checker).hex()
                 if colour in cc_discrepancies:
                     cc_discrepancies[colour] += coinsol.coin.amount - total

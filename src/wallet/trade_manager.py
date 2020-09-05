@@ -23,18 +23,19 @@ from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.trade_utils import (
     get_discrepancies_for_spend_bundle,
     get_output_discrepancy_for_puzzle_and_solution,
-    get_output_amount_for_puzzle_and_solution
+    get_output_amount_for_puzzle_and_solution,
 )
 from src.wallet.cc_wallet.cc_utils import (
     SpendableCC,
     genesis_coin_id_for_genesis_coin_checker,
     uncurry_cc,
     spend_bundle_for_spendable_ccs,
-    CC_MOD
+    CC_MOD,
 )
 from src.wallet.wallet import Wallet
 
 from src.wallet.wallet_coin_record import WalletCoinRecord
+
 # from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
 
 
@@ -404,9 +405,7 @@ class TradeManager:
         trade_offer = None
         try:
             trade_offer_hex = file_path.read_text()
-            trade_offer = TradeRecord.from_bytes(
-                hexstr_to_bytes(trade_offer_hex)
-            )
+            trade_offer = TradeRecord.from_bytes(hexstr_to_bytes(trade_offer_hex))
         except Exception as e:
             return False, None, f"Error: {e}"
         if trade_offer is not None:
@@ -432,18 +431,20 @@ class TradeManager:
                 if colour not in wallets:
                     wallets[
                         colour
-                    ] = await self.wallet_state_manager.get_wallet_for_colour(
-                        colour
+                    ] = await self.wallet_state_manager.get_wallet_for_colour(colour)
+                unspent = (
+                    await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                        wallets[colour].wallet_info.id
                     )
-                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                    wallets[colour].wallet_info.id
                 )
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, None, "can't respond to own offer"
 
                 innersol = solution.first()
 
-                total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
+                total = get_output_amount_for_puzzle_and_solution(
+                    inner_puzzle, innersol
+                )
                 if colour in cc_discrepancies:
                     cc_discrepancies[colour] += coinsol.coin.amount - total
                 else:
@@ -456,8 +457,8 @@ class TradeManager:
 
             else:
                 # standard chia coin
-                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                    1
+                unspent = (
+                    await self.wallet_state_manager.get_spendable_coins_for_wallet(1)
                 )
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, None, "can't respond to own offer"
@@ -522,7 +523,9 @@ class TradeManager:
             my_output_coin = my_cc_spends.pop()
             spendable_cc_list = []
             innersol_list = []
-            genesis_id = genesis_coin_id_for_genesis_coin_checker(Program.from_bytes(bytes.fromhex(colour)))
+            genesis_id = genesis_coin_id_for_genesis_coin_checker(
+                Program.from_bytes(bytes.fromhex(colour))
+            )
             # Make the rest of the coins assert the output coin is consumed
             for coloured_coin in my_cc_spends:
                 inner_solution = self.wallet_state_manager.main_wallet.make_solution(
@@ -540,8 +543,12 @@ class TradeManager:
                 sigs.append(aggsig)
                 aggsig = AugSchemeMPL.aggregate(sigs)
 
-                lineage_proof = await wallets[colour].get_lineage_proof_for_coin(coloured_coin)
-                spendable_cc_list.append(SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof))
+                lineage_proof = await wallets[colour].get_lineage_proof_for_coin(
+                    coloured_coin
+                )
+                spendable_cc_list.append(
+                    SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof)
+                )
                 innersol_list.append(inner_solution)
 
             # Create SpendableCC for each of the coloured coins received
@@ -555,7 +562,11 @@ class TradeManager:
                     mod_hash, genesis_coin_checker, inner_puzzle = r
                     inner_solution = solution.first()
                     lineage_proof = solution.rest().rest().first()
-                    spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
+                    spendable_cc_list.append(
+                        SpendableCC(
+                            cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof
+                        )
+                    )
                     innersol_list.append(inner_solution)
 
             # Finish the output coin SpendableCC with new information
@@ -573,8 +584,12 @@ class TradeManager:
             )
             assert inner_puzzle is not None
 
-            lineage_proof = await wallets[colour].get_lineage_proof_for_coin(my_output_coin)
-            spendable_cc_list.append(SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof))
+            lineage_proof = await wallets[colour].get_lineage_proof_for_coin(
+                my_output_coin
+            )
+            spendable_cc_list.append(
+                SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof)
+            )
             innersol_list.append(inner_solution)
 
             sigs = await wallets[colour].get_sigs(
@@ -589,7 +604,7 @@ class TradeManager:
                     Program.from_bytes(bytes.fromhex(colour)),
                     spendable_cc_list,
                     innersol_list,
-                    [aggsig]
+                    [aggsig],
                 )
             else:
                 new_spend_bundle = spend_bundle_for_spendable_ccs(
@@ -597,7 +612,7 @@ class TradeManager:
                     Program.from_bytes(bytes.fromhex(colour)),
                     spendable_cc_list,
                     innersol_list,
-                    [aggsig]
+                    [aggsig],
                 )
                 spend_bundle = SpendBundle.aggregate([spend_bundle, new_spend_bundle])
             # reset sigs and aggsig so that they aren't included next time around

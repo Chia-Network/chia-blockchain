@@ -79,7 +79,6 @@ async def wallets_prefarm(two_wallet_nodes):
 
 
 class TestCCTrades:
-
     @pytest.mark.asyncio
     async def test_cc_trade(self, wallets_prefarm):
         wallet_node_0, wallet_node_1, full_node = wallets_prefarm
@@ -103,7 +102,10 @@ class TestCCTrades:
             wallet_node_1.wallet_state_manager, wallet_1, colour
         )
 
-        assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
+        assert (
+            cc_wallet.cc_info.my_genesis_checker
+            == cc_wallet_2.cc_info.my_genesis_checker
+        )
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -179,7 +181,10 @@ class TestCCTrades:
             wallet_node_1.wallet_state_manager, wallet_1, colour
         )
 
-        assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
+        assert (
+            cc_wallet.cc_info.my_genesis_checker
+            == cc_wallet_2.cc_info.my_genesis_checker
+        )
 
         ph = await wallet_1.get_new_puzzlehash()
         for i in range(0, buffer_blocks):
@@ -316,8 +321,12 @@ class TestCCTrades:
         await time_out_assert(15, cc_a_3.get_confirmed_balance, 50)
         await time_out_assert(15, cc_a_3.get_unconfirmed_balance, 50)
 
-        await time_out_assert(15, cc_a_2.get_unconfirmed_balance, cc_balance - offer[colour_2])
-        await time_out_assert(15, cc_b_2.get_unconfirmed_balance, cc_balance_2 + offer[colour_2])
+        await time_out_assert(
+            15, cc_a_2.get_unconfirmed_balance, cc_balance - offer[colour_2]
+        )
+        await time_out_assert(
+            15, cc_b_2.get_unconfirmed_balance, cc_balance_2 + offer[colour_2]
+        )
 
         trade = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
 

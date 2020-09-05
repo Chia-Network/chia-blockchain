@@ -110,7 +110,10 @@ class TestCCWallet:
             wallet_node_2.wallet_state_manager, wallet2, colour
         )
 
-        assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
+        assert (
+            cc_wallet.cc_info.my_genesis_checker
+            == cc_wallet_2.cc_info.my_genesis_checker
+        )
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
         tx_record = await cc_wallet.generate_signed_transaction(uint64(60), cc_2_hash)
@@ -214,7 +217,10 @@ class TestCCWallet:
             wallet_node_2.wallet_state_manager, wallet2, colour
         )
 
-        assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
+        assert (
+            cc_wallet.cc_info.my_genesis_checker
+            == cc_wallet_2.cc_info.my_genesis_checker
+        )
 
         await cc_wallet_2.generate_zero_val_coin()
 
@@ -273,7 +279,10 @@ class TestCCWallet:
             wallet_node_2.wallet_state_manager, wallet2, colour
         )
 
-        assert cc_wallet.cc_info.my_genesis_checker == cc_wallet_2.cc_info.my_genesis_checker
+        assert (
+            cc_wallet.cc_info.my_genesis_checker
+            == cc_wallet_2.cc_info.my_genesis_checker
+        )
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
         tx_record = await cc_wallet.generate_signed_transaction(uint64(60), cc_2_hash)

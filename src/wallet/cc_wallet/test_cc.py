@@ -19,7 +19,9 @@ from src.wallet.cc_wallet.cc_utils import (
     spend_bundle_for_spendable_ccs,
     CC_MOD,
 )
-from src.wallet.cc_wallet.genesis_by_coin_id_with_0 import create_genesis_or_zero_coin_checker
+from src.wallet.cc_wallet.genesis_by_coin_id_with_0 import (
+    create_genesis_or_zero_coin_checker,
+)
 from src.wallet.cc_wallet.genesis_by_puzzle_hash_with_0 import (
     create_genesis_puzzle_or_zero_coin_checker,
 )
@@ -81,7 +83,9 @@ def issue_cc_from_farmed_coin(
 
     # mint a cc
 
-    farmed_coin = generate_farmed_coin(block_id, farmed_puzzle_hash, amount=uint64(amount))
+    farmed_coin = generate_farmed_coin(
+        block_id, farmed_puzzle_hash, amount=uint64(amount)
+    )
     genesis_coin_checker = coin_checker_for_farmed_coin(farmed_coin)
 
     minted_cc_puzzle_hash = cc_puzzle_hash_for_inner_puzzle_hash(
@@ -101,7 +105,9 @@ def issue_cc_from_farmed_coin(
     return genesis_coin_checker, spend_bundle
 
 
-def solution_for_pay_to_any(puzzle_hash_amount_pairs: List[Tuple[bytes32, int]]) -> Program:
+def solution_for_pay_to_any(
+    puzzle_hash_amount_pairs: List[Tuple[bytes32, int]]
+) -> Program:
     output_conditions = [
         [ConditionOpcode.CREATE_COIN, puzzle_hash, amount]
         for puzzle_hash, amount in puzzle_hash_amount_pairs
@@ -236,7 +242,9 @@ def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
     solution = solution_for_pay_to_any([(wrapped_cc_puzzle_hash, 0)])
     reveal_w_solution = Program.to([ANYONE_CAN_SPEND_PUZZLE, solution])
     coin_solution = CoinSolution(farmed_coin, reveal_w_solution)
-    spendable_cc_list = spendable_cc_list_from_coin_solution(coin_solution, hash_to_puzzle_f)
+    spendable_cc_list = spendable_cc_list_from_coin_solution(
+        coin_solution, hash_to_puzzle_f
+    )
     assert len(spendable_cc_list) == 1
     zero_cc_spendable = spendable_cc_list[0]
 
@@ -246,9 +254,13 @@ def test_spend_zero_coin(mod_code: Program, coin_checker_for_farmed_coin):
     spendable_cc_list = [eve_cc_spendable, zero_cc_spendable]
     inner_solutions = [
         solution_for_pay_to_any([]),
-        solution_for_pay_to_any([(wrapped_cc_puzzle_hash, eve_cc_spendable.coin.amount)]),
+        solution_for_pay_to_any(
+            [(wrapped_cc_puzzle_hash, eve_cc_spendable.coin.amount)]
+        ),
     ]
-    spend_bundle = spend_bundle_for_spendable_ccs(mod_code, genesis_coin_checker, spendable_cc_list, inner_solutions)
+    spend_bundle = spend_bundle_for_spendable_ccs(
+        mod_code, genesis_coin_checker, spendable_cc_list, inner_solutions
+    )
     debug_spend_bundle(spend_bundle)
 
 
