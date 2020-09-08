@@ -500,14 +500,13 @@ class WalletRpcApi:
         if len(info_dict) != len(my_recovery_list):
             return False
         # convert info dict into recovery list - same order as wallet
-        info_str = "("
+        info_list = []
         for entry in my_recovery_list:
-            info_str = info_str + info_dict[entry.hex()]
-        info_str = info_str + ")"
+            info_list.append(info_dict[entry.hex())
         message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
 
         success = await wallet.recovery_spend(
-            request["coin_name"], request["puzhash"], info_str, message_spend_bundle
+            request["coin_name"], request["puzhash"], info_list, message_spend_bundle
         )
         return {"success": success}
 

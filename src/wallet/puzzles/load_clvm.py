@@ -30,7 +30,6 @@ def load_clvm(clvm_filename, package_or_requirement=__name__) -> Program:
         # pyinstaller doesn't support `pkg_resources.resource_exists`
         # so we just fall through to loading the hex clvm
         pass
-
     clvm_hex = pkg_resources.resource_string(
         package_or_requirement, hex_filename
     ).decode("utf8")
