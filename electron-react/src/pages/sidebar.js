@@ -50,7 +50,7 @@ const menuItems = [
     icon: <img src={homeSidebarLogo} alt="Logo" />
   },
   {
-    label: "Wallet",
+    label: "Wallets",
     present: presentWallet,
     icon: <img src={walletSidebarLogo} alt="Logo" />
   },
