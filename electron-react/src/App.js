@@ -19,9 +19,8 @@ import { RestoreBackup } from "./pages/backup/restoreBackup";
 
 import theme from "./muiTheme";
 
-const useStyles = makeStyles(styles);
 const LoadingScreen = props => {
-  const classes = useStyles();
+  const classes = theme;
   return (
     <div className={classes.div}>
       <div className={classes.center}>
