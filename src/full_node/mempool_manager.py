@@ -126,8 +126,7 @@ class MempoolManager:
         program = best_solution_program(new_spend)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         fail_reason, npc_list, cost = calculate_cost_of_program(
-            program,
-            self.constants.CLVM_COST_RATIO_CONSTANT,
+            program, self.constants.CLVM_COST_RATIO_CONSTANT,
         )
         if fail_reason:
             return None, MempoolInclusionStatus.FAILED, fail_reason
@@ -322,10 +321,18 @@ class MempoolManager:
                     pks, msgs, new_spend.aggregated_signature
                 )
                 if not validates:
-                    return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
+                    return (
+                        None,
+                        MempoolInclusionStatus.FAILED,
+                        Err.BAD_AGGREGATE_SIGNATURE,
+                    )
             else:
                 if new_spend.aggregated_signature != G2Element():
-                    return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
+                    return (
+                        None,
+                        MempoolInclusionStatus.FAILED,
+                        Err.BAD_AGGREGATE_SIGNATURE,
+                    )
 
             # Remove all conflicting Coins and SpendBundles
             if fail_reason:

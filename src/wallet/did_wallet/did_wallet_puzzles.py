@@ -35,9 +35,7 @@ def create_innerpuz(pubkey: bytes, identities: List[bytes]) -> Program:
     id_list = []
     for id in identities:
         id_list.append(format_DID_to_corehash(id))
-    return curry(
-        DID_INNERPUZ_MOD, [pubkey, id_list]
-    )
+    return curry(DID_INNERPUZ_MOD, [pubkey, id_list])
 
 
 def create_fullpuz(innerpuzhash, core) -> str:

@@ -181,8 +181,7 @@ class WalletStore:
         coins = set()
 
         cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=0 and wallet_id=?",
-            (wallet_id,),
+            "SELECT * from coin_record WHERE spent=0 and wallet_id=?", (wallet_id,),
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -216,11 +215,7 @@ class WalletStore:
 
         cursor_regular_coins = await self.db_connection.execute(
             "SELECT * from coin_record WHERE spent=? and wallet_id=? and coinbase=?",
-            (
-                0,
-                wallet_id,
-                0,
-            ),
+            (0, wallet_id, 0,),
         )
 
         regular_rows = await cursor_regular_coins.fetchall()
@@ -386,8 +381,7 @@ class WalletStore:
         height. This is used during reorgs to rollback the current lca.
         """
         cursor = await self.db_connection.execute(
-            "UPDATE block_records SET in_lca_path=0 WHERE height>?",
-            (from_height,),
+            "UPDATE block_records SET in_lca_path=0 WHERE height>?", (from_height,),
         )
         await cursor.close()
         await self.db_connection.commit()

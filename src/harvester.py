@@ -316,9 +316,7 @@ class Harvester:
             proof_xs,
         )
         response = harvester_protocol.RespondProofOfSpace(
-            request.plot_id,
-            request.response_number,
-            proof_of_space,
+            request.plot_id, request.response_number, proof_of_space,
         )
         if response:
             yield OutboundMessage(
@@ -361,7 +359,5 @@ class Harvester:
         )
 
         yield OutboundMessage(
-            NodeType.FARMER,
-            Message("respond_signature", response),
-            Delivery.RESPOND,
+            NodeType.FARMER, Message("respond_signature", response), Delivery.RESPOND,
         )

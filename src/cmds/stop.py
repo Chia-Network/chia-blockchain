@@ -7,17 +7,10 @@ from src.util.service_groups import all_groups, services_for_groups
 def make_parser(parser):
 
     parser.add_argument(
-        "-d",
-        "--daemon",
-        action="store_true",
-        help="Stop daemon",
+        "-d", "--daemon", action="store_true", help="Stop daemon",
     )
     parser.add_argument(
-        "group",
-        choices=all_groups(),
-        type=str,
-        nargs="+",
-        default=None,
+        "group", choices=all_groups(), type=str, nargs="+", default=None,
     )
 
     parser.set_defaults(function=stop)

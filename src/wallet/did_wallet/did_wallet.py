@@ -96,7 +96,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_state_manager.main_wallet.wallet_info.id,
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
         did_record = TransactionRecord(
             confirmed_at_index=uint32(0),
@@ -112,7 +112,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(did_record)
@@ -256,9 +256,7 @@ class DIDWallet:
         await self.save_info(new_info)
 
         future_parent = CCParent(
-            coin.parent_coin_info,
-            inner_puzzle.get_tree_hash(),
-            coin.amount,
+            coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount,
         )
 
         await self.add_parent(coin.name(), future_parent)
@@ -387,7 +385,9 @@ class DIDWallet:
                 await self.wallet_state_manager.set_action_done(action_id)
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
-        innerpuzhash = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids).get_tree_hash()
+        innerpuzhash = did_wallet_puzzles.create_innerpuz(
+            pubkey, self.did_info.backup_ids
+        ).get_tree_hash()
         core = self.did_info.my_core
         return Program(
             binutils.assemble(did_wallet_puzzles.create_fullpuz(innerpuzhash, core))
@@ -408,41 +408,31 @@ class DIDWallet:
         coins = await self.select_coins(1)
         coin = coins.pop()
         # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol = Program.to(
-            [
-                0,
-                coin.amount,
-                puzhash,
-                coin.name(),
-                coin.puzzle_hash
-            ]
-        )
+        innersol = Program.to([0, coin.amount, puzhash, coin.name(), coin.puzzle_hash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = Program.from_bytes(self.did_info.current_inner)
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz.get_tree_hash(),
-            self.did_info.my_core,
+            innerpuz.get_tree_hash(), self.did_info.my_core,
         )
         parent_info = await self.get_parent_for_coin(coin)
 
         fullsol = Program.to(
             [
                 Program(binutils.assemble(self.did_info.my_core)).get_tree_hash(),
-                [parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount],
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
                 coin.amount,
                 innerpuz,
-                innersol
+                innersol,
             ]
         )
         list_of_solutions = [
             CoinSolution(
                 coin,
-                clvm.to_sexp_f(
-                    [
-                        Program(binutils.assemble(full_puzzle)),
-                        fullsol,
-                    ]
-                ),
+                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol,]),
             )
         ]
         # sign for AGG_SIG_ME
@@ -470,7 +460,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -478,44 +468,38 @@ class DIDWallet:
     async def create_attestment(self, identity, newpuz):
         coins = await self.select_coins(1)
         coin = coins.pop()
-        message_sexp = binutils.assemble(f"(r (r (c (q 0x{identity}) (c (q 0x{newpuz}) (q ())))))")
+        message_sexp = binutils.assemble(
+            f"(r (r (c (q 0x{identity}) (c (q 0x{newpuz}) (q ())))))"
+        )
         innermessage = Program(message_sexp).get_tree_hash()
         # innerpuz solution is (mode amount new_puz identity my_puz)
         innersol = Program.to(
-            [
-                1,
-                coin.amount,
-                innermessage,
-                identity,
-                coin.puzzle_hash
-            ]
+            [1, coin.amount, innermessage, identity, coin.puzzle_hash]
         )
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = Program.from_bytes(self.did_info.current_inner)
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz.get_tree_hash(),
-            self.did_info.my_core,
+            innerpuz.get_tree_hash(), self.did_info.my_core,
         )
         parent_info = await self.get_parent_for_coin(coin)
 
         fullsol = Program.to(
             [
                 Program(binutils.assemble(self.did_info.my_core)).get_tree_hash(),
-                [parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount],
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
                 coin.amount,
                 innerpuz,
-                innersol
+                innersol,
             ]
         )
         list_of_solutions = [
             CoinSolution(
                 coin,
-                clvm.to_sexp_f(
-                    [
-                        Program(binutils.assemble(full_puzzle)),
-                        fullsol,
-                    ]
-                ),
+                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol,]),
             )
         ]
         message_spend = did_wallet_puzzles.create_spend_for_mesasage(
@@ -551,7 +535,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
         await self.standard_wallet.push_transaction(did_record)
         return message_spend_bundle
@@ -560,9 +544,7 @@ class DIDWallet:
         coins = await self.select_coins(1)
         coin = coins.pop()
         parent = coin.parent_coin_info
-        innerpuzhash = Program.from_bytes(
-            self.did_info.current_inner
-        ).get_tree_hash()
+        innerpuzhash = Program.from_bytes(self.did_info.current_inner).get_tree_hash()
         amount = coin.amount
         return Program.to([parent, innerpuzhash, amount])
 
@@ -581,35 +563,33 @@ class DIDWallet:
                 puzhash,
                 coin.name(),
                 coin.puzzle_hash,
-                parent_innerpuzhash_amounts_for_recovery_ids
+                parent_innerpuzhash_amounts_for_recovery_ids,
             ]
         )
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = Program.from_bytes(self.did_info.current_inner)
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz.get_tree_hash(),
-            self.did_info.my_core,
+            innerpuz.get_tree_hash(), self.did_info.my_core,
         )
         parent_info = await self.get_parent_for_coin(coin)
 
         fullsol = Program.to(
             [
                 Program(binutils.assemble(self.did_info.my_core)).get_tree_hash(),
-                [parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount],
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
                 coin.amount,
                 innerpuz,
-                innersol
+                innersol,
             ]
         )
         list_of_solutions = [
             CoinSolution(
                 coin,
-                clvm.to_sexp_f(
-                    [
-                        Program(binutils.assemble(full_puzzle)),
-                        fullsol,
-                    ]
-                ),
+                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol,]),
             )
         ]
         sigs = []
@@ -635,7 +615,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -645,9 +625,7 @@ class DIDWallet:
             self.standard_wallet.wallet_info.id
         )
         pubkey = bytes(devrec.pubkey)
-        innerpuz = did_wallet_puzzles.create_innerpuz(
-            pubkey, self.did_info.backup_ids
-        )
+        innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
 
         return innerpuz
 
@@ -656,9 +634,7 @@ class DIDWallet:
         return innerpuz.get_tree_hash()
 
     async def get_innerhash_for_pubkey(self, pubkey: bytes):
-        innerpuz = did_wallet_puzzles.create_innerpuz(
-            pubkey, self.did_info.backup_ids
-        )
+        innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
         return innerpuz.get_tree_hash()
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
@@ -735,7 +711,9 @@ class DIDWallet:
         self, coin: Coin, full_puzzle: str, origin_id: bytes, innerpuz: Program
     ):
         # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol = Program.to([0, coin.amount, coin.puzzle_hash, coin.name(), coin.puzzle_hash])
+        innersol = Program.to(
+            [0, coin.amount, coin.puzzle_hash, coin.name(), coin.puzzle_hash]
+        )
         # full solution is (corehash parent_info my_amount innerpuz_reveal innersolution)
 
         fullsol = Program.to(
@@ -744,18 +722,13 @@ class DIDWallet:
                 coin.parent_coin_info,
                 coin.amount,
                 innerpuz,
-                innersol
+                innersol,
             ]
         )
         list_of_solutions = [
             CoinSolution(
                 coin,
-                clvm.to_sexp_f(
-                    [
-                        Program(binutils.assemble(full_puzzle)),
-                        fullsol,
-                    ]
-                ),
+                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol,]),
             )
         ]
         # sign for AGG_SIG_ME
