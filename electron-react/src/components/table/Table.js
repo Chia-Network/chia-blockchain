@@ -1,4 +1,6 @@
 import React from "react";
+import PropTypes from "prop-types";
+
 import { withStyles, makeStyles } from "@material-ui/core/styles";
 import MUITable from "@material-ui/core/Table";
 import TableContainer from "@material-ui/core/TableContainer";
@@ -56,8 +58,8 @@ const useStyles = makeStyles({
 /**
  * General table component to display data in a tabular way.
  */
-export default function Table(props) {
-  const { header, data } = props; // TODO prop checking
+function Table(props) {
+  const { header, data } = props;
 
   const isSingleRow = !Array.isArray(data[0]);
 
@@ -92,3 +94,12 @@ export default function Table(props) {
     </TableContainer>
   );
 }
+
+Table.propTypes = {
+  header: PropTypes.arrayOf(PropTypes.string).isRequired,
+  data: PropTypes.arrayOf(
+    PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number]))
+  ).isRequired,
+};
+
+export default Table;

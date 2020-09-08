@@ -32,8 +32,7 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
-  top: 0;
-  overflow: hidden;
+  top: 0px;
 }
 
 @font-face {
