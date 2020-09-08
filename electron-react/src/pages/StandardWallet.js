@@ -2,7 +2,7 @@ import React from "react";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import { withRouter } from "react-router-dom";
-import { connect, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Typography from "@material-ui/core/Typography";
 import Paper from "@material-ui/core/Paper";
 import Box from "@material-ui/core/Box";
@@ -622,7 +622,7 @@ const AddressCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Receive Addresss
+              Receive Address
             </Typography>
           </div>
         </Grid>
@@ -691,4 +691,4 @@ const StandardWallet = props => {
   );
 };
 
-export default withRouter(connect()(StandardWallet));
+export default withRouter(StandardWallet);

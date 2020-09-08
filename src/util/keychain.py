@@ -147,7 +147,7 @@ class Keychain:
         str_bytes = bytes.fromhex(read_str)
         return (
             G1Element.from_bytes(str_bytes[: G1Element.SIZE]),
-            str_bytes[G1Element.SIZE :],
+            str_bytes[G1Element.SIZE :],  # flake8: noqa
         )
 
     def _get_private_key_user(self, index: int):

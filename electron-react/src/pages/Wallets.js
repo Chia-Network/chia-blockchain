@@ -4,7 +4,7 @@ import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import { withRouter, Redirect } from "react-router-dom";
-import { connect, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import clsx from "clsx";
 import Drawer from "@material-ui/core/Drawer";
 import List from "@material-ui/core/List";
@@ -232,7 +232,6 @@ const Wallets = () => {
 
   const [open] = React.useState(true);
   if (!logged_in) {
-    // console.log("Redirecting to start");
     return <Redirect to="/" />;
   }
   return (
@@ -268,4 +267,4 @@ const Wallets = () => {
   );
 };
 
-export default withRouter(connect()(Wallets));
+export default withRouter(Wallets);

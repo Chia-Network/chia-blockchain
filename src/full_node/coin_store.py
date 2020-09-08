@@ -180,7 +180,11 @@ class CoinStore:
         if current is None:
             return
         spent: CoinRecord = CoinRecord(
-            current.coin, current.confirmed_block_index, index, True, current.coinbase,
+            current.coin,
+            current.confirmed_block_index,
+            index,
+            True,
+            current.coinbase,
         )  # type: ignore # noqa
         await self.add_coin_record(spent)
 

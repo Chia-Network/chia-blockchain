@@ -7,7 +7,7 @@ import Typography from "@material-ui/core/Typography";
 import { withTheme, withStyles, makeStyles } from "@material-ui/styles";
 import Container from "@material-ui/core/Container";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
-import { connect, useSelector, useDispatch } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { genereate_mnemonics } from "../modules/message";
 import { withRouter } from "react-router-dom";
 
@@ -181,4 +181,4 @@ const CreateMnemonics = () => {
   return UIPart();
 };
 
-export default withTheme(withRouter(connect()(CreateMnemonics)));
+export default withTheme(withRouter(CreateMnemonics));

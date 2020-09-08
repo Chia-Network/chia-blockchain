@@ -12,7 +12,6 @@ from src.wallet.trade_manager import TradeManager
 from src.wallet.trading.trade_status import TradeStatus
 from tests.setup_nodes import setup_simulators_and_wallets
 from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.cc_wallet import cc_wallet_puzzles
 
 
 @pytest.fixture(scope="module")
@@ -96,15 +95,25 @@ class TestCCTrades:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
-        assert cc_wallet.cc_info.my_core is not None
-        colour = cc_wallet_puzzles.get_genesis_from_core(cc_wallet.cc_info.my_core)
+        assert cc_wallet.cc_info.my_genesis_checker is not None
+        colour = cc_wallet.get_colour()
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_1.wallet_state_manager, wallet_1, colour
         )
 
-        assert cc_wallet.cc_info.my_core == cc_wallet_2.cc_info.my_core
+        assert (
+            cc_wallet.cc_info.my_genesis_checker
+            == cc_wallet_2.cc_info.my_genesis_checker
+        )
 
+        for i in range(0, buffer_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+
+        # send cc_wallet 2 a coin
+        cc_hash = await cc_wallet_2.get_new_inner_hash()
+        tx_record = await cc_wallet.generate_signed_transaction(uint64(1), cc_hash)
+        await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
@@ -133,6 +142,81 @@ class TestCCTrades:
         assert error is None
         assert success is True
         assert offer is not None
+
+        assert offer["chia"] == -10
+        assert offer[colour] == 30
+
+        success, trade, reason = await trade_manager_1.respond_to_offer(file_path)
+
+        assert success is True
+
+        for i in range(0, buffer_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+
+        await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 31)
+        await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 31)
+        trade_2 = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
+        assert TradeStatus(trade_2.status) is TradeStatus.CONFIRMED
+
+    @pytest.mark.asyncio
+    async def test_cc_trade_accept_with_zero(self, wallets_prefarm):
+        wallet_node_0, wallet_node_1, full_node = wallets_prefarm
+        wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+        wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
+
+        cc_wallet: CCWallet = await CCWallet.create_new_cc(
+            wallet_node_0.wallet_state_manager, wallet_0, uint64(100)
+        )
+
+        for i in range(1, buffer_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+
+        await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
+
+        assert cc_wallet.cc_info.my_genesis_checker is not None
+        colour = cc_wallet.get_colour()
+
+        cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
+            wallet_node_1.wallet_state_manager, wallet_1, colour
+        )
+
+        assert (
+            cc_wallet.cc_info.my_genesis_checker
+            == cc_wallet_2.cc_info.my_genesis_checker
+        )
+
+        ph = await wallet_1.get_new_puzzlehash()
+        for i in range(0, buffer_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(ph))
+
+        trade_manager_0 = wallet_node_0.wallet_state_manager.trade_manager
+        trade_manager_1 = wallet_node_1.wallet_state_manager.trade_manager
+
+        file = "test_offer_file.offer"
+        file_path = Path(file)
+
+        if file_path.exists():
+            file_path.unlink()
+
+        offer_dict = {1: 10, 3: -30}
+
+        success, trade_offer, error = await trade_manager_0.create_offer_for_ids(
+            offer_dict, file
+        )
+
+        assert success is True
+        assert trade_offer is not None
+
+        success, offer, error = await trade_manager_1.get_discrepancies_for_offer(
+            file_path
+        )
+
+        assert error is None
+        assert success is True
+        assert offer is not None
+
+        assert cc_wallet.get_colour() == cc_wallet_2.get_colour()
 
         assert offer["chia"] == -10
         assert offer[colour] == 30
@@ -173,8 +257,12 @@ class TestCCTrades:
         await time_out_assert(15, cc_a_3.get_confirmed_balance, 100)
         await time_out_assert(15, cc_a_3.get_unconfirmed_balance, 100)
 
-        assert cc_a_3.cc_info.my_core is not None
-        red = cc_wallet_puzzles.get_genesis_from_core(cc_a_3.cc_info.my_core)
+        # store these for asserting change later
+        cc_balance = await cc_a_2.get_unconfirmed_balance()
+        cc_balance_2 = await cc_b_2.get_unconfirmed_balance()
+
+        assert cc_a_3.cc_info.my_genesis_checker is not None
+        red = cc_a_3.get_colour()
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -183,7 +271,7 @@ class TestCCTrades:
             wallet_node_b.wallet_state_manager, wallet_b, red
         )
 
-        assert cc_a_3.cc_info.my_core == cc_b_3.cc_info.my_core
+        assert cc_a_3.cc_info.my_genesis_checker == cc_b_3.cc_info.my_genesis_checker
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
@@ -198,7 +286,7 @@ class TestCCTrades:
             file_path.unlink()
 
         # Wallet
-        offer_dict = {1: 1000, 2: -20, 3: -50}
+        offer_dict = {1: 1000, 2: -20, 4: -50}
 
         success, trade_offer, error = await trade_manager_0.create_offer_for_ids(
             offer_dict, file
@@ -233,8 +321,12 @@ class TestCCTrades:
         await time_out_assert(15, cc_a_3.get_confirmed_balance, 50)
         await time_out_assert(15, cc_a_3.get_unconfirmed_balance, 50)
 
-        await time_out_assert(15, cc_a_2.get_unconfirmed_balance, 50)
-        await time_out_assert(15, cc_b_2.get_unconfirmed_balance, 50)
+        await time_out_assert(
+            15, cc_a_2.get_unconfirmed_balance, cc_balance - offer[colour_2]
+        )
+        await time_out_assert(
+            15, cc_b_2.get_unconfirmed_balance, cc_balance_2 + offer[colour_2]
+        )
 
         trade = await trade_manager_0.get_trade_by_id(trade_offer.trade_id)
 
@@ -270,8 +362,10 @@ class TestCCTrades:
         cc_b_4: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_b.wallet_state_manager, wallet_b, colour
         )
+        cc_balance = await cc_a_4.get_confirmed_balance()
+        cc_balance_2 = await cc_b_4.get_confirmed_balance()
+        offer_dict = {1: -30, cc_a_4.wallet_info.id: 50}
 
-        offer_dict = {1: -30, 4: 60}
         file = "test_offer_file.offer"
         file_path = Path(file)
         if file_path.exists():
@@ -285,9 +379,8 @@ class TestCCTrades:
 
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
-
-        await time_out_assert(15, cc_a_4.get_confirmed_balance, 40)
-        await time_out_assert(15, cc_b_4.get_confirmed_balance, 60)
+        await time_out_assert(15, cc_a_4.get_confirmed_balance, cc_balance - 50)
+        await time_out_assert(15, cc_b_4.get_confirmed_balance, cc_balance_2 + 50)
 
         async def assert_func():
             assert trade_a is not None

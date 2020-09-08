@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+
 from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.coin import Coin
@@ -29,7 +30,7 @@ class TestCCWallet:
     async def test_create_rl_coin(self, three_wallet_nodes):
         num_blocks = 4
         full_nodes, wallets = three_wallet_nodes
-        full_node_1, server_1 = full_nodes[0]
+        full_node, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         wallet_node_1, wallet_server_1 = wallets[1]
         wallet_node_2, wallet_server_2 = wallets[2]
@@ -43,8 +44,10 @@ class TestCCWallet:
         await wallet_server_2.start_client(
             PeerInfo("localhost", uint16(server_1._port)), None
         )
-        for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+        await full_node.farm_new_block(FarmNewBlockProtocol(ph))
+        for i in range(0, num_blocks + 1):
+            await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        fund_owners_initial_balance = await wallet.get_confirmed_balance()
 
         api_user = WalletRpcApi(wallet_node_1)
         val = await api_user.create_new_wallet(
@@ -54,6 +57,7 @@ class TestCCWallet:
         assert val["success"]
         assert val["id"]
         assert val["type"] == WalletType.RATE_LIMITED.value
+        user_wallet_id = val["id"]
         pubkey = val["pubkey"]
 
         api_admin = WalletRpcApi(wallet_node)
@@ -73,12 +77,13 @@ class TestCCWallet:
         assert val["type"] == WalletType.RATE_LIMITED.value
         assert val["origin"]
         assert val["pubkey"]
+        admin_wallet_id = val["id"]
         admin_pubkey = val["pubkey"]
         origin: Coin = val["origin"]
 
         val = await api_user.rl_set_user_info(
             {
-                "wallet_id": 2,
+                "wallet_id": user_wallet_id,
                 "interval": 2,
                 "limit": 1,
                 "origin": {
@@ -91,27 +96,41 @@ class TestCCWallet:
         )
         assert val["success"]
 
-        assert (await api_user.get_wallet_balance({"wallet_id": 2}))["wallet_balance"][
-            "confirmed_wallet_balance"
-        ] == 0
+        assert (await api_user.get_wallet_balance({"wallet_id": user_wallet_id}))[
+            "wallet_balance"
+        ]["confirmed_wallet_balance"] == 0
         for i in range(0, 2 * num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+            await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
 
         async def check_balance(api, wallet_id):
             balance_response = await api.get_wallet_balance({"wallet_id": wallet_id})
             balance = balance_response["wallet_balance"]["confirmed_wallet_balance"]
             return balance
 
-        await time_out_assert(15, check_balance, 100, api_user, 2)
+        await time_out_assert(15, check_balance, 100, api_user, user_wallet_id)
         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
         puzzle_hash = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash())
         assert await receiving_wallet.get_spendable_balance() == 0
         val = await api_user.send_transaction(
-            {"wallet_id": 2, "amount": 3, "fee": 0, "puzzle_hash": puzzle_hash}
+            {
+                "wallet_id": user_wallet_id,
+                "amount": 3,
+                "fee": 0,
+                "puzzle_hash": puzzle_hash,
+            }
         )
 
         assert val["status"] == "SUCCESS"
-        for i in range(0, 2 * num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
-        await time_out_assert(15, check_balance, 97, api_user, 2)
+        for i in range(0, num_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        await time_out_assert(15, check_balance, 97, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
+
+        val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id})
+        assert val["status"] == "SUCCESS"
+        for i in range(0, num_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        await time_out_assert(15, check_balance, 0, api_admin, admin_wallet_id)
+        await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
+        final_balance = await wallet.get_confirmed_balance()
+        assert final_balance == fund_owners_initial_balance - 3

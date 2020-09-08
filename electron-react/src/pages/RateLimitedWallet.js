@@ -2,7 +2,7 @@ import React from "react";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import { withRouter } from "react-router-dom";
-import { connect, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import Typography from "@material-ui/core/Typography";
 import Paper from "@material-ui/core/Paper";
@@ -971,4 +971,4 @@ const RateLimitedWallet = props => {
   }
 };
 
-export default withRouter(connect()(RateLimitedWallet));
+export default withRouter(RateLimitedWallet);

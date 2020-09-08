@@ -22,7 +22,7 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
 from src.wallet.trade_record import TradeRecord
 from src.wallet.util.backup_utils import get_backup_info
-from src.wallet.util.cc_utils import trade_record_to_dict
+from src.wallet.util.trade_utils import trade_record_to_dict
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -292,7 +292,9 @@ class WalletRpcApi:
         raw_puzzle_hash = decode_puzzle_hash(puzzle_hash)
         request = FarmNewBlockProtocol(raw_puzzle_hash)
         msg = OutboundMessage(
-            NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
+            NodeType.FULL_NODE,
+            Message("farm_new_block", request),
+            Delivery.BROADCAST,
         )
 
         self.service.server.push_message(msg)

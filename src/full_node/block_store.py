@@ -158,7 +158,12 @@ class BlockStore:
     def add_proof_of_time(
         self, challenge: bytes32, iter: uint64, height: uint32
     ) -> None:
-        self.proof_of_time_heights[(challenge, iter,)] = height
+        self.proof_of_time_heights[
+            (
+                challenge,
+                iter,
+            )
+        ] = height
 
     def get_height_proof_of_time(
         self, challenge: bytes32, iter: uint64
