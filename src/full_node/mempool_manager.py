@@ -321,10 +321,18 @@ class MempoolManager:
                     pks, msgs, new_spend.aggregated_signature
                 )
                 if not validates:
-                    return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
+                    return (
+                        None,
+                        MempoolInclusionStatus.FAILED,
+                        Err.BAD_AGGREGATE_SIGNATURE,
+                    )
             else:
                 if new_spend.aggregated_signature != G2Element():
-                    return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
+                    return (
+                        None,
+                        MempoolInclusionStatus.FAILED,
+                        Err.BAD_AGGREGATE_SIGNATURE,
+                    )
 
             # Remove all conflicting Coins and SpendBundles
             if fail_reason:
