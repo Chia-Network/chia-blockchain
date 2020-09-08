@@ -432,7 +432,7 @@ class DIDWallet:
         list_of_solutions = [
             CoinSolution(
                 coin,
-                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol,]),
+                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol]),
             )
         ]
         # sign for AGG_SIG_ME
@@ -499,7 +499,7 @@ class DIDWallet:
         list_of_solutions = [
             CoinSolution(
                 coin,
-                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol,]),
+                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol]),
             )
         ]
         message_spend = did_wallet_puzzles.create_spend_for_mesasage(
@@ -589,7 +589,7 @@ class DIDWallet:
         list_of_solutions = [
             CoinSolution(
                 coin,
-                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol,]),
+                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol]),
             )
         ]
         sigs = []
@@ -728,7 +728,7 @@ class DIDWallet:
         list_of_solutions = [
             CoinSolution(
                 coin,
-                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol,]),
+                clvm.to_sexp_f([Program(binutils.assemble(full_puzzle)), fullsol]),
             )
         ]
         # sign for AGG_SIG_ME
