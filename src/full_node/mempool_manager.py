@@ -317,11 +317,23 @@ class MempoolManager:
                 continue
 
             # Verify aggregated signature
-            validates = AugSchemeMPL.aggregate_verify(
-                pks, msgs, new_spend.aggregated_signature
-            )
-            if not validates:
-                return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
+            if len(msgs) > 0:
+                validates = AugSchemeMPL.aggregate_verify(
+                    pks, msgs, new_spend.aggregated_signature
+                )
+                if not validates:
+                    return (
+                        None,
+                        MempoolInclusionStatus.FAILED,
+                        Err.BAD_AGGREGATE_SIGNATURE,
+                    )
+            else:
+                if new_spend.aggregated_signature != G2Element():
+                    return (
+                        None,
+                        MempoolInclusionStatus.FAILED,
+                        Err.BAD_AGGREGATE_SIGNATURE,
+                    )
 
             # Remove all conflicting Coins and SpendBundles
             if fail_reason:

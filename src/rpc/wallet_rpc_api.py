@@ -294,9 +294,7 @@ class WalletRpcApi:
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
         request = FarmNewBlockProtocol(raw_puzzle_hash)
         msg = OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("farm_new_block", request),
-            Delivery.BROADCAST,
+            NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
         )
 
         self.service.server.push_message(msg)
@@ -567,7 +565,7 @@ class WalletRpcApi:
         # convert info dict into recovery list - same order as wallet
         info_list = []
         for entry in my_recovery_list:
-            info_list.append(info_dict[entry.hex())
+            info_list.append(info_dict[entry.hex()])
         message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
 
         success = await wallet.recovery_spend(
@@ -582,7 +580,11 @@ class WalletRpcApi:
         spend_bundle = await wallet.create_attestment(
             request["coin_name"], request["puzhash"]
         )
-        return {"success": True, "message_spend_bundle": bytes(spend_bundle).hex(), "info": info}
+        return {
+            "success": True,
+            "message_spend_bundle": bytes(spend_bundle).hex(),
+            "info": info,
+        }
 
     async def cc_set_name(self, request):
         assert self.service.wallet_state_manager is not None
