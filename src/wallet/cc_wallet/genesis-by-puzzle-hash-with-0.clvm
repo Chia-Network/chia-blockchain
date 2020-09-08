@@ -1,0 +1,55 @@
+; This is a "genesis checker" for use with cc.clvm.
+;
+; This checker allows new ccs to be created if their parent has a particular
+; puzzle hash; or created by anyone if their value is 0.
+
+(mod (
+      genesis-puzzle-hash
+      lineage-proof-parameters
+      my-coin-info
+      (parent-coin zero-parent-inner-puzzle-hash)
+    )
+
+    ;; boolean and macro
+    ;; This lets you write something like (if (and COND1 COND2 COND3) (do-something) (do-something-else))
+    (defmacro and ARGS
+        (if ARGS
+            (qq (if (unquote (f ARGS))
+                (unquote (c and (r ARGS)))
+                ()
+                ))
+            1)
+    )
+
+    ;; boolean or macro
+    ;; This lets you write something like (if (or COND1 COND2 COND3) (do-something) (do-something-else))
+    (defmacro or ARGS
+        (if ARGS
+            (qq (if (unquote (f ARGS))
+                1
+                (unquote (c or (r ARGS)))
+            ))
+        0)
+    )
+
+    (defun-inline main (
+      genesis-puzzle-hash
+      my-coin-info
+      parent-coin
+    )
+
+      (or
+        (= (f (r (r my-coin-info))) 0)
+        (and
+          (= (sha256 (f parent-coin) (f (r parent-coin)) (f (r (r parent-coin)))) (f my-coin-info))
+          (= (f (r parent-coin)) genesis-puzzle-hash)
+        )
+      )
+    )
+
+    (main
+      genesis-puzzle-hash
+      my-coin-info
+      parent-coin
+    )
+)

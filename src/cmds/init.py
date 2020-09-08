@@ -1,8 +1,9 @@
+from src import __version__
 import os
 import shutil
 
 from argparse import Namespace, ArgumentParser
-from typing import List, Tuple, Dict, Any
+from typing import List, Dict, Any
 from src.util.keychain import Keychain
 
 from src.util.config import unflatten_properties
@@ -175,6 +176,59 @@ def init(args: Namespace, parser: ArgumentParser):
     return chia_init(args.root_path)
 
 
+def chiaMinorReleaseNumber():
+    scm_full_version = __version__
+    left_full_version = scm_full_version.split("+")
+
+    version = left_full_version[0].split(".")
+
+    scm_major_version = version[0]
+    scm_minor_version = version[1]
+    if len(version) > 2:
+        smc_patch_version = version[2]
+        patch_release_number = smc_patch_version
+    else:
+        smc_patch_version = ""
+
+    major_release_number = scm_major_version
+    minor_release_number = scm_minor_version
+    dev_release_number = ""
+
+    # If this is a beta dev release - get which beta it is
+    if "0b" in scm_minor_version:
+        orignial_minor_ver_list = scm_minor_version.split("0b")
+        major_release_number = str(
+            1 - int(scm_major_version)
+        )  # decrement the major release for beta
+        minor_release_number = scm_major_version
+        patch_release_number = orignial_minor_ver_list[1]
+        if smc_patch_version and "dev" in smc_patch_version:
+            dev_release_number = "." + smc_patch_version
+    elif "0rc" in version[1]:
+        original_minor_ver_list = scm_minor_version.split("0rc")
+        major_release_number = str(
+            1 - int(scm_major_version)
+        )  # decrement the major release for release candidate
+        minor_release_number = str(int(scm_major_version) + 1)  # RC is 0.2.1 for RC 1
+        patch_release_number = original_minor_ver_list[1]
+        if smc_patch_version and "dev" in smc_patch_version:
+            dev_release_number = "." + smc_patch_version
+    else:
+        major_release_number = scm_major_version
+        minor_release_number = scm_minor_version
+        patch_release_number = smc_patch_version
+        dev_release_number = ""
+
+    install_release_number = major_release_number + "." + minor_release_number
+    if len(patch_release_number) > 0:
+        install_release_number += "." + patch_release_number
+    if len(dev_release_number) > 0:
+        install_release_number += dev_release_number
+
+    print(f"Install release number: {install_release_number}")
+    return int(patch_release_number)
+
+
 def chia_init(root_path: Path):
     if os.environ.get("CHIA_ROOT", None) is not None:
         print(
@@ -207,12 +261,10 @@ def chia_init(root_path: Path):
         "wallet",
     ]
 
-    PATH_MANIFEST_LIST: List[Tuple[Path, List[str]]] = [
-        (Path(os.path.expanduser("~/.chia/beta-%s" % _)), MANIFEST)
-        for _ in ["1.0b11", "1.0b10", "1.0b9", "1.0b8"]
-    ]
-
-    for old_path, manifest in PATH_MANIFEST_LIST:
+    for versionnumber in range(chiaMinorReleaseNumber() - 1, 8, -1):
+        old_path = Path(os.path.expanduser("~/.chia/beta-1.0b%s" % versionnumber))
+        manifest = MANIFEST
+        print(f"Checking {old_path}")
         # This is reached if the user has updated the application, and therefore a new configuration
         # folder must be used. First we migrate the config fies, and then we migrate the private keys.
         r = migrate_from(old_path, root_path, manifest, DO_NOT_MIGRATE_SETTINGS)

@@ -153,7 +153,9 @@ class WalletNode:
 
         assert self.wallet_state_manager is not None
 
-        backup_settings: BackupInitialized = self.wallet_state_manager.user_settings.get_backup_settings()
+        backup_settings: BackupInitialized = (
+            self.wallet_state_manager.user_settings.get_backup_settings()
+        )
         if backup_settings.user_initialized is False:
             if new_wallet is True:
                 await self.wallet_state_manager.user_settings.user_created_new_wallet()
@@ -395,8 +397,10 @@ class WalletNode:
             raise TimeoutError("Took too long to fetch header hashes.")
 
         # 2. Find fork point
-        fork_point_height: uint32 = self.wallet_state_manager.find_fork_point_alternate_chain(
-            self.header_hashes
+        fork_point_height: uint32 = (
+            self.wallet_state_manager.find_fork_point_alternate_chain(
+                self.header_hashes
+            )
         )
         fork_point_hash: bytes32 = self.header_hashes[fork_point_height]
 

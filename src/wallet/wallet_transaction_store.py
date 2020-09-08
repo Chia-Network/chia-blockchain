@@ -260,7 +260,7 @@ class WalletTransactionStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE sent<? and confirmed=?", (4, 0,)
+            "SELECT * from transaction_record WHERE sent<? and confirmed=?", (4, 0,),
         )
         rows = await cursor.fetchall()
         await cursor.close()

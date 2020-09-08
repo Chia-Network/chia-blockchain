@@ -1,16 +1,24 @@
 # -*- mode: python ; coding: utf-8 -*-
-#from src.cmds.chia import SUBCOMMANDS
-import pathlib
+from PyInstaller.utils.hooks import collect_submodules
+from os import listdir
+from os.path import isfile, join
+from pkg_resources import get_distribution
+from PyInstaller.utils.hooks import copy_metadata
 
-from PyInstaller.utils.hooks import collect_submodules, copy_metadata
+# Include all files that end with clvm.hex
+puzzles_path = "../src/wallet/puzzles"
+puzzle_dist_path = "./src/wallet/puzzles"
+onlyfiles = [f for f in listdir(puzzles_path) if isfile(join(puzzles_path, f))]
+
+hex_puzzles = []
+for file in onlyfiles:
+    if file.endswith("clvm.hex"):
+        hex_puzzles.append((f"{puzzles_path}/{file}", puzzle_dist_path))
 
 keyring_imports = collect_submodules('keyring.backends')
 
 # keyring uses entrypoints to read keyring.backends from metadata file entry_points.txt.
 keyring_datas = copy_metadata('keyring')[0]
-
-from pkg_resources import get_distribution
-from PyInstaller.utils.hooks import copy_metadata
 version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 
 SUBCOMMANDS = [
@@ -51,7 +59,7 @@ daemon = Analysis([f"../src/daemon/server.py"],
              pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
              binaries = [("../venv\Lib\site-packages\\*dll", '.',), ("C:\Windows\System32\\msvcp140.dll", '.',) , ("C:\Windows\System32\\vcruntime140_1.dll", '.',)],
              datas=[keyring_datas, version_data, (f"../src/util/initial-config.yaml", f"./src/util/"),
-             (f"../src/util/initial-plots.yaml", f"./src/util/") ],
+             (f"../src/util/initial-plots.yaml", f"./src/util/") ] + hex_puzzles,
              hiddenimports=subcommand_modules,
              hookspath=[],
              runtime_hooks=[],
@@ -77,7 +85,7 @@ full_node = Analysis([f"../src/server/start_full_node.py"],
 wallet = Analysis([f"../src/server/start_wallet.py"],
              pathex=[f"../venv/lib/python3.7/site-packages/aiter/", f"../"],
              binaries = [],
-             datas=[(f"../src/util/english.txt", f"./src/util/"), version_data ],
+             datas=[(f"../src/util/english.txt", f"./src/util/"), version_data ] + hex_puzzles,
              hiddenimports=subcommand_modules,
              hookspath=[],
              runtime_hooks=[],

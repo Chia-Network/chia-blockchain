@@ -1,20 +1,29 @@
 from clvm_tools import binutils
 from src.types.program import Program
-from typing import List
+from typing import List, Optional, Tuple
 from blspy import G1Element
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.util.ints import uint64
-# from src.wallet.puzzles.load_clvm import load_clvm
-# from clvm_tools.curry import curry, uncurry
+from src.wallet.puzzles.load_clvm import load_clvm
+from clvm_tools.curry import curry as ct_curry, uncurry
 import string
 import clvm
 
-# core = load_clvm("did_core.clvm")
-# innerpuz = load_clvm("did_innerpuz.clvm")
-# group = load_clvm("did_group.clvm")
+DID_CORE_MOD = load_clvm("did_core.clvm")
+DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
+DID_GROUP_MOD = load_clvm("did_groups.clvm")
 
 # NULL_F = Program.from_bytes(bytes.fromhex("ff01ff8080"))  # (q ())
+
+
+def curry(*args, **kwargs):
+    """
+    The clvm_tools version of curry returns `cost, program` for now.
+    Eventually it will just return `program`. This placeholder awaits that day.
+    """
+    cost, prog = ct_curry(*args, **kwargs)
+    return Program.to(prog)
 
 
 def create_core(genesis_coin_id: bytes) -> str:
@@ -22,14 +31,11 @@ def create_core(genesis_coin_id: bytes) -> str:
     return core
 
 
-def create_innerpuz(pubkey: bytes, identities: List[bytes]) -> str:
-    id_list = "("
+def create_innerpuz(pubkey: bytes, identities: List[bytes]) -> Program:
+    id_list = []
     for id in identities:
-        id_list = id_list + "0x" + format_DID_to_corehash(id).hex() + " "
-    id_list = id_list + ")"
-
-    innerpuz = f"((c (q ((c (i 5 (q ((c (i (= 5 (q 1)) (q (c (c 20 (c 95 (c 11 (q ())))) (c (c 20 (c 23 (q (())))) (c (c 40 (c 16 (c 23 (q ())))) (q ()))))) (q ((c (i 22 (q ((c 44 (c 2 (c 22 (c 47 (c (c (c 20 (c 23 (c 11 (q ())))) (q ())) (c 23 (c 191 (q ())))))))))) (q (x))) 1)))) 1))) (q (c (c 20 (c 23 (c 11 (q ())))) (c (c 40 (c 16 (c 23 (q ())))) (q ()))))) 1))) (c (q (((0x{pubkey.hex()} 57 . 52) 51 ((c (i 5 (q ((c 44 (c 2 (c 13 (c 11 (c (c ((c 18 (c 2 (c ((c 60 (c 2 (c 9 (c 287 (c 671 (c 1439 (q ())))))))) (c 11 (c 47 (q ()))))))) 23) (c 47 (c 223 (q ())))))))))) (q 23)) 1)) 11 11 ((c 42 (c 2 (c 23 (c 5 (q ())))))) 47) ((c 56 (c (sha256 5 ((c 62 (c 2 (c ((c 58 (c 2 (c 11 (c 23 (q ())))))) (q ()))))) (q ())) (q ()))) ((c 46 (c 2 (c (c (q 7) (c (c (q 5) (c (c (q 1) (c 5 (q ()))) (c (c (c (q 5) (c (c (q 1) (c (c (q 97) (c 11 (q ()))) (q ()))) (q ((a))))) (q ())) (q ())))) (q ()))) (q ()))))) 5 (q 7) (c (c (q 7) (c (c (q 5) (c (c (q 1) (c 5 (q ()))) (c (c (q 5) (c (c (q 1) (c 11 (q ()))) (q ((q ()))))) (q ())))) (q ()))) (q ()))) {id_list} ((c (i (l 5) (q ((c (i ((c (i ((c (i (l 9) (q (q ())) (q (q 1))) 1)) (q ((c (i (= 9 (q 97)) (q (q 1)) (q (q ()))) 1))) (q (q ()))) 1)) (q 21) (q (sha256 (q 2) ((c 46 (c 2 (c 9 (q ()))))) ((c 46 (c 2 (c 13 (q ())))))))) 1))) (q (sha256 (q 1) 5))) 1)) (c (i (l 5) (q (sha256 (q 2) ((c 62 (c 2 (c 9 (q ()))))) ((c 62 (c 2 (c 13 (q ()))))))) (q (sha256 (q 1) 5))) 1))) 1)))"  # type: ignore # noqa
-    return innerpuz
+        id_list.append(format_DID_to_corehash(id))
+    return curry(DID_INNERPUZ_MOD, [pubkey, id_list])
 
 
 def create_fullpuz(innerpuzhash, core) -> str:
@@ -37,9 +43,33 @@ def create_fullpuz(innerpuzhash, core) -> str:
     return puzstring
 
 
-def get_pubkey_from_innerpuz(innerpuz: str) -> G1Element:
-    pubkey = G1Element.from_bytes(bytes.fromhex(innerpuz[363:459]))
+def get_pubkey_from_innerpuz(innerpuz: Program) -> G1Element:
+    pubkey_program, id_list = uncurry_innerpuz(innerpuz)
+    pubkey = G1Element.from_bytes(pubkey_program.as_atom())
     return pubkey
+
+
+def is_did_innerpuz(inner_f: Program):
+    """
+    You may want to generalize this if different `CC_MOD` templates are supported.
+    """
+    return inner_f == DID_INNERPUZ_MOD
+
+
+def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
+    """
+    Take a puzzle and return `None` if it's not a `CC_MOD` cc, or
+    a triple of `mod_hash, genesis_coin_checker, inner_puzzle` if it is.
+    """
+    r = uncurry(puzzle)
+    if r is None:
+        return r
+    inner_f, args = r
+    if not is_did_innerpuz(inner_f):
+        return None
+
+    pubkey, id_list = list(args.as_iter())
+    return pubkey, id_list
 
 
 def get_innerpuzzle_from_puzzle(puzzle: str):

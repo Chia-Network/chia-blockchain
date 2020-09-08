@@ -2,8 +2,10 @@ import io
 from typing import Any, List, Set
 
 from src.types.sized_bytes import bytes32
-from src.util.clvm import sexp_from_stream, sexp_to_stream, SExp
+from src.util.clvm import run_program, sexp_from_stream, sexp_to_stream, SExp
 from src.util.hash import std_hash
+
+from clvm_tools.curry import curry
 
 
 class Program(SExp):  # type: ignore # noqa
@@ -57,6 +59,15 @@ class Program(SExp):  # type: ignore # noqa
         are presumed to have been hashed already.
         """
         return self._tree_hash(set(args))
+
+    def run(self, args) -> "Program":
+        prog_args = Program.to(args)
+        cost, r = run_program(self, prog_args)
+        return Program.to(r)
+
+    def curry(self, *args) -> "Program":
+        cost, r = curry(self, list(args))
+        return Program.to(r)
 
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))

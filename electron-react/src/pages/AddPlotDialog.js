@@ -43,7 +43,7 @@ const styles = theme => ({
 
 const useStyles = makeStyles(styles);
 
-function AddPlotDialog(props) {
+const AddPlotDialog = props => {
   const classes = useStyles();
   const { onClose, open, ...other } = props;
   const dispatch = useDispatch();

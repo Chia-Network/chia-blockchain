@@ -9,10 +9,23 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
+- Rate limited wallets can now have funds clawed back by the Admin wallet.
+- Added a Code of Conduct in CODE_OF_CONDUCT.md.
+- Added a bug report template in `.github/ISSUE_TEMPLATE/bug_report.md`.
 
 ### Changed
+- Proof of Space now requires significantly less temp space to generate a new plot. A k=32 that used to require 524GiB now requires only 317GiB - a 60% decrease.
+- When plotting, instead of 1 monolithic temp file, there are now 8 files - one for each of the 7 tables and one for sorting plot data. These files are deleted as the `-2` or `-d` final file is written so the final file can fit within the footprint of the temporary files on the same filesystem.
+- We've made various additional CPU optimizations to the Proof of Space plotter that reduces plotting time by an additional 13%.
+- Coloured coins have been updated to simplify them, remove 'a', and stop using an 'auditor'.
+- clvm has been significantly changed to support the new coloured coins implementation.
+- Bumped cryptography to 3.1. Cryptography is now publishing ARM64 binary wheels to PyPi so Raspberry Pi installs should be even easier.
+- `chia init` now automatically discovers previous releases in each new release.
 
 ### Fixed
+- View -> Developer -> Developer Tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request!
+- Fixed 'Receive Address' typo in Wallet. Thanks @meurtn on Keybase.
+- In Windows the start menu item is now Chia Network and the icon in Add/Remove is updated.
 
 ## [1.0beta11] aka Beta 1.11 - 2020-08-24
 

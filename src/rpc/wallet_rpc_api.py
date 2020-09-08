@@ -1,3 +1,4 @@
+
 import asyncio
 import logging
 import time
@@ -22,7 +23,7 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
 from src.wallet.trade_record import TradeRecord
 from src.wallet.util.backup_utils import get_backup_info
-from src.wallet.util.cc_utils import trade_record_to_dict
+from src.wallet.util.trade_utils import trade_record_to_dict
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
@@ -58,11 +59,11 @@ class WalletRpcApi:
             "/cc_get_name": self.cc_get_name,
             "/cc_spend": self.cc_spend,
             "/cc_get_colour": self.cc_get_colour,
-            "/did_update_recovery_ids": self.did_update_recovery_ids,
-            "/did_spend": self.did_spend,
-            "/did_get_id": self.did_get_id,
-            "/did_recovery_spend": self.did_recovery_spend,
-            "/did_create_attest": self.did_create_attest,
+            "did_update_recovery_ids": self.did_update_recovery_ids,
+            "did_spend": self.did_spend,
+            "did_get_id": self.did_get_id,
+            "did_recovery_spend": self.did_recovery_spend,
+            "did_create_attest": self.did_create_attest,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
             "/respond_to_offer": self.respond_to_offer,
@@ -292,7 +293,9 @@ class WalletRpcApi:
         raw_puzzle_hash = decode_puzzle_hash(puzzle_hash)
         request = FarmNewBlockProtocol(raw_puzzle_hash)
         msg = OutboundMessage(
-            NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
+            NodeType.FULL_NODE,
+            Message("farm_new_block", request),
+            Delivery.BROADCAST,
         )
 
         self.service.server.push_message(msg)
@@ -498,14 +501,13 @@ class WalletRpcApi:
         if len(info_dict) != len(my_recovery_list):
             return False
         # convert info dict into recovery list - same order as wallet
-        info_str = "("
+        info_list = []
         for entry in my_recovery_list:
-            info_str = info_str + info_dict[entry.hex()]
-        info_str = info_str + ")"
+            info_list.append(info_dict[entry.hex())
         message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
 
         success = await wallet.recovery_spend(
-            request["coin_name"], request["puzhash"], info_str, message_spend_bundle
+            request["coin_name"], request["puzhash"], info_list, message_spend_bundle
         )
         return {"success": success}
 

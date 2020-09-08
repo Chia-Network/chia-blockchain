@@ -103,13 +103,17 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
-        colour = cc_wallet.cc_info.genesis_id()
+        assert cc_wallet.cc_info.my_genesis_checker is not None
+        colour = cc_wallet.get_colour()
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_2.wallet_state_manager, wallet2, colour
         )
 
-        assert cc_wallet.cc_info.genesis_id() == cc_wallet_2.cc_info.genesis_id()
+        assert (
+            cc_wallet.cc_info.my_genesis_checker
+            == cc_wallet_2.cc_info.my_genesis_checker
+        )
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
         tx_record = await cc_wallet.generate_signed_transaction(uint64(60), cc_2_hash)
@@ -206,13 +210,17 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
-        colour = cc_wallet.cc_info.genesis_id()
+        assert cc_wallet.cc_info.my_genesis_checker is not None
+        colour = cc_wallet.get_colour()
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_2.wallet_state_manager, wallet2, colour
         )
 
-        assert cc_wallet.cc_info.genesis_id() == cc_wallet_2.cc_info.genesis_id()
+        assert (
+            cc_wallet.cc_info.my_genesis_checker
+            == cc_wallet_2.cc_info.my_genesis_checker
+        )
 
         await cc_wallet_2.generate_zero_val_coin()
 
@@ -264,14 +272,17 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
-        assert cc_wallet.cc_info.genesis_id() is not None
-        colour = cc_wallet.cc_info.genesis_id()
+        assert cc_wallet.cc_info.my_genesis_checker is not None
+        colour = cc_wallet.get_colour()
 
         cc_wallet_2: CCWallet = await CCWallet.create_wallet_for_cc(
             wallet_node_2.wallet_state_manager, wallet2, colour
         )
 
-        assert cc_wallet.cc_info.genesis_id() == cc_wallet_2.cc_info.genesis_id()
+        assert (
+            cc_wallet.cc_info.my_genesis_checker
+            == cc_wallet_2.cc_info.my_genesis_checker
+        )
 
         cc_2_hash = await cc_wallet_2.get_new_inner_hash()
         tx_record = await cc_wallet.generate_signed_transaction(uint64(60), cc_2_hash)
@@ -286,8 +297,10 @@ class TestCCWallet:
         await time_out_assert(15, cc_wallet_2.get_unconfirmed_balance, 60)
 
         cc2_ph = await cc_wallet_2.get_new_cc_puzzle_hash()
-        tx_record = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
-            10, cc2_ph, 0
+        tx_record = (
+            await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(
+                10, cc2_ph, 0
+            )
         )
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 

@@ -3,7 +3,7 @@ from src.util.ints import uint32
 
 
 def find_fork_point_in_chain(hash_to_block: Dict, block_1: Any, block_2: Any) -> uint32:
-    """ Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
+    """Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
     are all included in chain)"""
     while block_2.height > 0 or block_1.height > 0:
         if block_2.height > block_1.height:
