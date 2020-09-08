@@ -191,7 +191,7 @@ class TestWalletSimulator:
         message_spend_bundle = await did_wallet.create_attestment(coin.name(), ph)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
-        info = "(" + info + ")"
+        info = Program.to([info])
         await did_wallet_2.recovery_spend(coin, ph, info, message_spend_bundle)
 
         for i in range(1, num_blocks):
@@ -272,7 +272,7 @@ class TestWalletSimulator:
         spend_bundle = await did_wallet_2.create_attestment(coin.name(), ph)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
-        info = "(" + info + ")"
+        info = Program.to([info])
 
         await did_wallet.recovery_spend(coin, ph, info, spend_bundle)
 
@@ -320,7 +320,7 @@ class TestWalletSimulator:
         await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
-        info = "()"
+        info = Program.to([])
         spend_bundle = await did_wallet.recovery_spend(coin, ph, info)
         additions = spend_bundle.additions()
         assert additions == []
@@ -395,7 +395,7 @@ class TestWalletSimulator:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
 
-        info = "(" + info + ")"
+        info = Program.to([info])
         await did_wallet_2.recovery_spend(coin, new_ph, info, message_spend_bundle)
 
         for i in range(1, num_blocks):
@@ -411,7 +411,7 @@ class TestWalletSimulator:
         message_spend_bundle = await did_wallet_2.create_attestment(coin.name(), ph)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
-        info = "(" + info + ")"
+        info = [info]
 
         await did_wallet.recovery_spend(coin, ph, info, message_spend_bundle)
 
@@ -554,17 +554,30 @@ class TestWalletSimulator:
 
         # Write spend by hand
         # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol = f"(0 {coin.amount} 0x{ph} 0x{coin.name()} 0x{coin.puzzle_hash})"
+        innersol = Program.to(
+            [
+                0,
+                coin.amount,
+                ph,
+                coin.name(),
+                coin.puzzle_hash
+            ]
+        )
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz_str = did_wallet.did_info.current_inner
+        innerpuz = Program.from_bytes(did_wallet.did_info.current_inner)
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            Program(binutils.assemble(innerpuz_str)).get_tree_hash(),
+            innerpuz.get_tree_hash(),
             did_wallet.did_info.my_core,
         )
-
-        fullsol = f"(0x{Program(binutils.assemble(did_wallet.did_info.my_core)).get_tree_hash()} \
-(0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount})\
-{coin.amount} {innerpuz_str} {innersol})"
+        fullsol = Program.to(
+            [
+                Program(binutils.assemble(did_wallet.did_info.my_core)).get_tree_hash(),
+                [parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount],
+                coin.amount,
+                innerpuz,
+                innersol
+            ]
+        )
 
         list_of_solutions = [
             CoinSolution(
@@ -572,14 +585,14 @@ class TestWalletSimulator:
                 clvm.to_sexp_f(
                     [
                         Program(binutils.assemble(full_puzzle)),
-                        Program(binutils.assemble(fullsol)),
+                        fullsol,
                     ]
                 ),
             )
         ]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())
-        pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz_str)
+        pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
         index = await did_wallet.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
         private = master_sk_to_wallet_sk(did_wallet.wallet_state_manager.private_key, index)
         signature = AugSchemeMPL.sign(private, message)

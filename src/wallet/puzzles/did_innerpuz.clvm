@@ -1,0 +1,120 @@
+(mod (MY_PUBKEY identities_corehash_list mode amount message my_id my_puzhash parent_innerpuzhash_amounts_for_recovery_ids)
+  ;message is the new puzzle in the recovery and standard spend cases
+
+  ;identities_corehash_list and MY_PUBKEY are curried into the puzzle
+  ;EXAMPLE SOLUTION (1 100 (q "source code") 0xdeadbeef 0xcafef00d ((0xdadadada 0xdad5dad5 200) (0xfafafafa 0xfaf5faf5 200) (0xbabababa 0xbab5bab5 200)))
+
+  (defconstant OP_AGG_SIG 50)
+  (defconstant OP_CREATE_COIN 51)
+  (defconstant OP_ASSERT_CONSUMED 52)
+  (defconstant OP_AGG_SIG_ME 57)
+
+  (defmacro and ARGS
+      (if ARGS
+          (qq (if (unquote (f ARGS))
+              (unquote (c and (r ARGS)))
+              ()
+          ))
+      1)
+  )
+
+  (defmacro not (ARGS)
+      (qq (if (unquote ARGS) 0 1))
+  )
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree1 (TREE)
+      (if (l TREE)
+          (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+          (sha256 1 TREE)
+      )
+  )
+
+  ; takes a lisp tree and returns the hash of it, but allows for escape character 97 so a precomputed hash value can be used
+  (defun sha256tree0 (TREE)
+    (if (l TREE)
+        (if (and (not (l (f TREE))) (= (f TREE) 97))
+            (f (r TREE))
+            (sha256 2 (sha256tree0 (f TREE)) (sha256tree0 (r TREE)))
+        )
+        (sha256 1 TREE)
+    )
+  )
+
+  (defun create_message (recovering_coin new_innerpuz)
+    (qq (r (r (c (q (unquote recovering_coin)) (c (q (unquote new_innerpuz)) (q ()))))))
+  )
+
+  (defun create_consume_message (coin_id my_id new_innerpuz)
+    (list OP_ASSERT_CONSUMED (sha256 coin_id (sha256tree1 (create_message my_id new_innerpuz)) 0))
+  )
+
+  ; takes a hash of the innerpuzzle and a hash of the core and creates a hash of the full puzzle using the sha256tree with escape
+  (defun create_fullpuzhash (innerpuzzlehash corehash)
+    (sha256tree0 (qq (r (c (q (unquote innerpuzzlehash)) ((c (q (97 (unquote corehash))) (a)))))))
+  )
+
+  (defun create_coin_ID_for_recovery (identity_corehash parent innerpuzhash amount)
+    (sha256 parent (create_fullpuzhash innerpuzhash identity_corehash) amount)
+  )
+
+  (defmacro attest_to_id_and_newpuz (identity new_innerpuz)
+    (qq (c OP_CREATE_COIN (c (sha256tree1 (create_message (unquote identity) (unquote new_innerpuz))) (q (0)))))
+  )
+
+  (defmacro recreate_self (my_puzhash amount)
+    (qq (c OP_CREATE_COIN (c (unquote my_puzhash) (c (unquote amount) (q ())))))
+  )
+
+  (defmacro create_new_coin (amount new_puz)
+    (qq (c OP_CREATE_COIN (c (unquote new_puz) (c (unquote amount) (q ())))))
+  )
+
+  (defun check_messages_from_identities (identities my_id output new_puz parent_innerpuzhash_amounts_for_recovery_ids)
+    (if identities
+      (check_messages_from_identities (r identities) my_id (c (create_consume_message (create_coin_ID_for_recovery (f identities) (f (f parent_innerpuzhash_amounts_for_recovery_ids)) (f (r (f parent_innerpuzhash_amounts_for_recovery_ids))) (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids))))) my_id new_puz) output) new_puz (r parent_innerpuzhash_amounts_for_recovery_ids))
+      output
+    )
+  )
+
+  (defun assert_consumed_identity identity
+    (list OP_ASSERT_CONSUMED identity)
+  )
+
+  ;Spend modes:
+  ;0 = normal spend
+  ;1 = attest
+  ;2 (or anything else) = recovery
+
+  ;MAIN
+
+  (if mode
+    (if (= mode (q 1))
+      ; mode one - create message
+      ; formerly (list (recreate_self my_puzhash amount) (attest_to_id_and_newpuz identity new_puz) (list OP_AGG_SIG_ME MY_PUBKEY new_puz))
+      (list (recreate_self my_puzhash amount) (list OP_CREATE_COIN message 0) (list OP_AGG_SIG_ME MY_PUBKEY message))
+    ; mode two - recovery
+    ; check that recovery list is not empty
+      (if identities_corehash_list
+        (check_messages_from_identities identities_corehash_list my_id (list (create_new_coin amount message)) message parent_innerpuzhash_amounts_for_recovery_ids)
+        (x)
+      )
+    )
+    ; mode zero - normal spend
+    (list (create_new_coin amount message) (list OP_AGG_SIG_ME MY_PUBKEY message))
+  )
+
+  ;HERE BE TESTS
+  ;(create_new_coin amount new_puz)
+  ;(list OP_AGG_SIG_ME (q "PUBKEY") new_puz)
+  ;(list (create_new_coin amount new_puz) (list OP_AGG_SIG_ME (q "PUBKEY") new_puz))
+  ;(list (recreate_self new_puzhash amount) (attest_to_id_and_newpuz identity new_puz) (list OP_AGG_SIG_ME (q "PUBKEY") new_puz) (assert_consumed_identity identity))
+  ;(create_consume_message (create_coin_ID_for_recovery (f identities_corehash_list) (f (f parent_innerpuzhash_amounts_for_recovery_ids)) (f (r (f parent_innerpuzhash_amounts_for_recovery_ids))) (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids))))) identity new_puz)
+  ;(check_messages_from_identities identities_corehash_list identity (list (create_new_coin amount new_puz)) new_puz parent_innerpuzhash_amounts_for_recovery_ids)
+  ;(c (create_consume_message (create_coin_ID_for_recovery (f identities_corehash_list) (f (f parent_innerpuzhash_amounts_for_recovery_ids)) (f (r (f parent_innerpuzhash_amounts_for_recovery_ids))) (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids))))) my_id new_puz) (list (create_new_coin amount new_puz)))
+  ;(list (f (f parent_innerpuzhash_amounts_for_recovery_ids)) (f (r (f parent_innerpuzhash_amounts_for_recovery_ids))) (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids)))))
+  ;(create_coin_ID_for_recovery (f identities_corehash_list) (f (f parent_innerpuzhash_amounts_for_recovery_ids)) (f (r (f parent_innerpuzhash_amounts_for_recovery_ids))) (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids)))))
+  ;(attest_to_id_and_newpuz identity new_puz)
+  ;(create_message identity new_puz)
+
+)
