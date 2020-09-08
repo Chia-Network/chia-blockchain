@@ -2,7 +2,7 @@ import React from "react";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import { withRouter } from "react-router-dom";
-import { connect, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import Typography from "@material-ui/core/Typography";
 import Paper from "@material-ui/core/Paper";
@@ -421,7 +421,7 @@ const SendCard = props => {
   );
 
   const send_transaction_result = useSelector(
-    state => state.wallet_state.send_transaction_result
+    state => state.wallet_state.wallets[id].send_transaction_result
   );
 
   const colour = useSelector(state => state.wallet_state.wallets[id].colour);
@@ -498,12 +498,7 @@ const SendCard = props => {
     if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
       puzzle_hash = puzzle_hash.substring(2);
     }
-    if (puzzle_hash.length !== 64) {
-      dispatch(
-        openDialog("Please enter a 32 byte puzzle hash in hexadecimal format")
-      );
-      return;
-    }
+
     const amount_value = parseFloat(Number(amount));
     const fee_value = parseFloat(Number(fee));
 
@@ -798,4 +793,4 @@ const ColouredWallet = props => {
   );
 };
 
-export default withRouter(connect()(ColouredWallet));
+export default withRouter(ColouredWallet);

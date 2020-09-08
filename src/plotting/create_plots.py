@@ -2,7 +2,7 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import Optional, List
 import logging
-from blspy import PrivateKey, G1Element
+from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
 from datetime import datetime
 from src.types.proof_of_space import ProofOfSpace
@@ -73,9 +73,18 @@ def create_plots(
         f"{bytes(pool_public_key).hex()} farmer public key: {bytes(farmer_public_key).hex()}"
     )
 
-    mkdir(args.tmp_dir)
-    mkdir(args.tmp2_dir)
+    tmp_dir_created = False
+    if not args.tmp_dir.exists():
+        mkdir(args.tmp_dir)
+        tmp_dir_created = True
+
+    tmp2_dir_created = False
+    if not args.tmp2_dir.exists():
+        mkdir(args.tmp2_dir)
+        tmp2_dir_created = True
+
     mkdir(args.final_dir)
+
     finished_filenames = []
     config = load_config(root_path, config_filename)
     plot_filenames = get_plot_filenames(config["harvester"])
@@ -85,7 +94,7 @@ def create_plots(
             assert len(test_private_keys) == num
             sk: PrivateKey = test_private_keys[i]
         else:
-            sk = PrivateKey.from_seed(token_bytes(32))
+            sk = AugSchemeMPL.key_gen(token_bytes(32))
 
         # The plot public key is the combination of the harvester and farmer keys
         plot_public_key = ProofOfSpace.generate_plot_public_key(
@@ -96,6 +105,15 @@ def create_plots(
         plot_id: bytes32 = ProofOfSpace.calculate_plot_id(
             pool_public_key, plot_public_key
         )
+        if args.plotid is not None:
+            log.info(f"Debug plot ID: {args.plotid}")
+            plot_id: bytes32 = bytes32(bytes.fromhex(args.plotid))
+
+        plot_memo: bytes32 = stream_plot_info(pool_public_key, farmer_public_key, sk)
+        if args.memo is not None:
+            log.info(f"Debug memo: {args.memo}")
+            plot_memo: bytes32 = bytes.fromhex(args.memo)
+
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
         if use_datetime:
@@ -122,7 +140,7 @@ def create_plots(
                 str(args.final_dir),
                 filename,
                 args.size,
-                stream_plot_info(pool_public_key, farmer_public_key, sk),
+                plot_memo,
                 plot_id,
                 args.buffer,
             )
@@ -131,18 +149,23 @@ def create_plots(
             log.info(f"Plot {filename} already exists")
 
     log.info("Summary:")
-    try:
-        args.tmp_dir.rmdir()
-    except Exception:
-        log.info(
-            f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty."
-        )
-    try:
-        args.tmp2_dir.rmdir()
-    except Exception:
-        log.info(
-            f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty."
-        )
+
+    if tmp_dir_created:
+        try:
+            args.tmp_dir.rmdir()
+        except Exception:
+            log.info(
+                f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty."
+            )
+
+    if tmp2_dir_created:
+        try:
+            args.tmp2_dir.rmdir()
+        except Exception:
+            log.info(
+                f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty."
+            )
+
     log.info(f"Created a total of {len(finished_filenames)} new plots")
     for filename in finished_filenames:
         log.info(filename)

@@ -49,7 +49,7 @@ import {
 import isElectron from "is-electron";
 import { startService, isServiceRunning } from "../modules/daemon_messages";
 import { get_all_trades } from "../modules/trade_messages";
-import { COLOURED_COIN } from "../util/wallet_types";
+import { COLOURED_COIN, STANDARD_WALLET } from "../util/wallet_types";
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -118,8 +118,7 @@ async function track_progress(store, location) {
     global_tail.on("line", data => {
       dispatch(addProgress(data));
       if (
-        data.includes("Copied final file") ||
-        data.includes("Moved final file")
+        data.includes("Renamed final file")
       ) {
         dispatch(refreshPlots());
       }
@@ -203,7 +202,9 @@ export const handle_message = (store, payload) => {
       for (let wallet of wallets) {
         store.dispatch(get_balance_for_wallet(wallet.id));
         store.dispatch(get_transactions(wallet.id));
-        store.dispatch(get_puzzle_hash(wallet.id));
+        if (wallet.type === COLOURED_COIN || wallet.type === STANDARD_WALLET) {
+          store.dispatch(get_puzzle_hash(wallet.id));
+        }
         if (wallet.type === COLOURED_COIN) {
           store.dispatch(get_colour_name(wallet.id));
           store.dispatch(get_colour_info(wallet.id));

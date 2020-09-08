@@ -22,6 +22,12 @@ import {
   presentBackupInfo,
   selectFilePath
 } from "./backup_state";
+import { exitDaemon } from "./daemon_messages";
+import { wsDisconnect } from "./websocket";
+import {
+  changeCreateWallet,
+  ALL_OPTIONS
+} from "../modules/createWalletReducer";
 
 export const clearSend = () => {
   var action = {
@@ -434,6 +440,7 @@ export const create_cc_action = (amount, fee) => {
           dispatch(format_message("get_wallets", {}));
           dispatch(showCreateBackup(true));
           dispatch(createState(true, false));
+          dispatch(changeCreateWallet(ALL_OPTIONS))
         } else {
           const error = response.data.error;
           dispatch(openDialog("Error", error));
@@ -453,6 +460,7 @@ export const create_cc_for_colour_action = (colour, fee) => {
           // Go to wallet
           dispatch(showCreateBackup(true));
           dispatch(format_message("get_wallets", {}));
+          dispatch(changeCreateWallet(ALL_OPTIONS))
         } else {
           const error = response.data.error;
           dispatch(openDialog("Error", error));
@@ -502,6 +510,71 @@ export const incomingMessage = message => ({
   message: message
 });
 
+export const create_rl_admin = (interval, limit, pubkey, amount) => {
+  var action = walletMessage();
+  action.message.command = "create_new_wallet";
+  action.message.data = {
+    wallet_type: "rl_wallet",
+    rl_type: "admin",
+    interval: interval,
+    limit: limit,
+    pubkey: pubkey,
+    amount: amount
+  };
+  return action;
+};
+
+export const create_rl_admin_action = (interval, limit, pubkey, amount) => {
+  return dispatch => {
+    return async_api(
+      dispatch,
+      create_rl_admin(interval, limit, pubkey, amount),
+      true
+    ).then(response => {
+      dispatch(closeProgress());
+      dispatch(createState(true, false));
+      if (response.data.success) {
+        // Go to wallet
+        dispatch(format_message("get_wallets", {}));
+        dispatch(showCreateBackup(true));
+        dispatch(createState(true, false));
+        dispatch(changeCreateWallet(ALL_OPTIONS));
+      } else {
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
+};
+
+export const create_rl_user = () => {
+  var action = walletMessage();
+  action.message.command = "create_new_wallet";
+  action.message.data = {
+    wallet_type: "rl_wallet",
+    rl_type: "user"
+  };
+  return action;
+};
+
+export const create_rl_user_action = () => {
+  return dispatch => {
+    return async_api(dispatch, create_rl_user(), true).then(response => {
+      dispatch(closeProgress());
+      dispatch(createState(true, false));
+      if (response.data.success) {
+        // Go to wallet
+        dispatch(format_message("get_wallets", {}));
+        dispatch(createState(true, false));
+        dispatch(changeCreateWallet(ALL_OPTIONS));
+      } else {
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
+};
+
 export const add_plot_directory_and_refresh = dir => {
   return dispatch => {
     return async_api(dispatch, addPlotDirectory(dir), true).then(response => {
@@ -535,5 +608,66 @@ export const remove_plot_directory_and_refresh = dir => {
         }
       }
     );
+  };
+};
+
+export const rl_set_user_info = (
+  wallet_id,
+  interval,
+  limit,
+  origin,
+  admin_pubkey
+) => {
+  var action = walletMessage();
+  action.message.command = "rl_set_user_info";
+  action.message.data = {
+    wallet_id: wallet_id,
+    interval: interval,
+    limit: limit,
+    origin: origin,
+    admin_pubkey: admin_pubkey
+  };
+  return action;
+};
+
+export const rl_set_user_info_action = (
+  wallet_id,
+  interval,
+  limit,
+  origin,
+  admin_pubkey
+) => {
+  return dispatch => {
+    return async_api(
+      dispatch,
+      rl_set_user_info(wallet_id, interval, limit, origin, admin_pubkey),
+      true
+    ).then(response => {
+      dispatch(closeProgress());
+      dispatch(createState(true, false));
+      if (response.data.success) {
+        // Go to wallet
+        dispatch(format_message("get_wallets", {}));
+        dispatch(showCreateBackup(true));
+        dispatch(createState(true, false));
+      } else {
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
+};
+
+export const clawback_rl_coin = wallet_id => {
+  // THIS IS A PLACEHOLDER FOR RL CLAWBACK FUNCTIONALITY
+};
+
+export const exit_and_close = event => {
+  return dispatch => {
+    return async_api(dispatch, exitDaemon(), false).then(response => {
+      console.log("GOT RESPONSE", response);
+      dispatch(wsDisconnect());
+      event.sender.send("daemon-exited");
+    });
   };
 };

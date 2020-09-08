@@ -4,6 +4,7 @@ from typing import List
 from blspy import AugSchemeMPL, G1Element, G2Element
 
 from src.cmds.init import check_keys
+from src.util.chech32 import encode_puzzle_hash
 from src.util.keychain import (
     generate_mnemonic,
     bytes_to_mnemonic,
@@ -59,7 +60,11 @@ def make_parser(parser):
         help="Enter mnemonic you want to use",
     )
     parser.add_argument(
-        "-k", "--key", type=str, default=None, help="Enter the raw private key in hex",
+        "-k",
+        "--key",
+        type=str,
+        default=None,
+        help="Enter the raw private key in hex",
     )
     parser.add_argument(
         "-f",
@@ -86,11 +91,19 @@ def make_parser(parser):
     )
 
     parser.add_argument(
-        "-p", "--public_key", type=str, default=None, help="Enter the pk in hex",
+        "-p",
+        "--public_key",
+        type=str,
+        default=None,
+        help="Enter the pk in hex",
     )
 
     parser.add_argument(
-        "-s", "--signature", type=str, default=None, help="Enter the signature in hex",
+        "-s",
+        "--signature",
+        type=str,
+        default=None,
+        help="Enter the signature in hex",
     )
 
     parser.add_argument(
@@ -175,9 +188,9 @@ def show_all_keys():
         )
         print(
             "First wallet address:",
-            create_puzzlehash_for_pk(
-                master_sk_to_wallet_sk(sk, uint32(0)).get_g1()
-            ).hex(),
+            encode_puzzle_hash(
+                create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
+            ),
         )
         assert seed is not None
         mnemonic = bytes_to_mnemonic(seed)
@@ -222,7 +235,7 @@ def sign(args):
     for sk, _ in private_keys:
         if sk.get_g1().get_fingerprint() == fingerprint:
             for c in path:
-                sk = sk.derive_child(c)
+                sk = AugSchemeMPL.derive_child_sk(sk, c)
             print("Public key:", sk.get_g1())
             print("Signature:", AugSchemeMPL.sign(sk, bytes(message, "utf-8")))
             return

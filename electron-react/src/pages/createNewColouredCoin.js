@@ -32,7 +32,6 @@ export const customStyles = makeStyles(theme => ({
     paddingLeft: "0px",
     marginLeft: theme.spacing(6),
     marginRight: theme.spacing(2),
-
     height: 56,
     width: 150
   },

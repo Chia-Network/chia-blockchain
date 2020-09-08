@@ -3,7 +3,7 @@ import SelectKey from "./pages/SelectKey";
 import NewWallet from "./pages/NewWallet";
 import OldWallet from "./pages/OldWallet";
 import Dashboard from "./pages/Dashboard";
-import { connect, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 
 import { ThemeProvider } from "@material-ui/core/styles";
 import {
@@ -13,17 +13,22 @@ import {
   presentSelectKeys,
   presentRestoreBackup
 } from "./modules/entranceMenu";
-import { Backdrop, CircularProgress } from "@material-ui/core";
+import { CircularProgress } from "@material-ui/core";
 import { ModalDialog, Spinner } from "./pages/ModalDialog";
 import { RestoreBackup } from "./pages/backup/restoreBackup";
 
 import theme from "./muiTheme";
 
-const LoadingScreen = () => {
+const useStyles = makeStyles(styles);
+const LoadingScreen = props => {
+  const classes = useStyles();
   return (
-    <Backdrop open={true} invisible={false}>
-      <CircularProgress color="inherit" />
-    </Backdrop>
+    <div className={classes.div}>
+      <div className={classes.center}>
+        <h3 className={classes.h3}>{props.children}</h3>
+        <CircularProgress className={classes.h3} />
+      </div>
+    </div>
   );
 };
 
@@ -35,11 +40,14 @@ const CustomRouter = () => {
   const wallet_connected = useSelector(
     state => state.daemon_state.wallet_connected
   );
+  const exiting = useSelector(state => state.daemon_state.exiting);
   const presentView = useSelector(state => state.entrance_menu.view);
-  if (!wallet_connected) {
-    return <LoadingScreen></LoadingScreen>;
+  if (exiting) {
+    return <LoadingScreen>Closing down node and server</LoadingScreen>;
+  } else if (!wallet_connected) {
+    return <LoadingScreen>Connecting to wallet</LoadingScreen>;
   } else if (!logged_in_received) {
-    return <LoadingScreen></LoadingScreen>;
+    return <LoadingScreen>Logging in</LoadingScreen>;
   } else if (logged_in) {
     return <Dashboard></Dashboard>;
   } else {
@@ -68,4 +76,4 @@ const App = () => {
   );
 };
 
-export default connect()(App);
+export default App;

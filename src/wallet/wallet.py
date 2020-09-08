@@ -7,6 +7,7 @@ from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
+from src.util.chech32 import decode_puzzle_hash
 from src.util.condition_tools import (
     conditions_for_solution,
     conditions_dict_for_solution,
@@ -36,7 +37,9 @@ class Wallet(AbstractWallet):
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any, info: WalletInfo, name: str = None,
+        wallet_state_manager: Any,
+        info: WalletInfo,
+        name: str = None,
     ):
         self = Wallet()
 
@@ -65,14 +68,18 @@ class Wallet(AbstractWallet):
         return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
     async def get_spendable_balance(self) -> uint64:
-        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.wallet_info.id
+        spendable_am = (
+            await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+                self.wallet_info.id
+            )
         )
         return spendable_am
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            self.wallet_info.id
+        unconfirmed_tx = (
+            await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+                self.wallet_info.id
+            )
         )
         addition_amount = 0
 
@@ -100,13 +107,10 @@ class Wallet(AbstractWallet):
         return puzzle_for_pk(pubkey)
 
     async def get_new_puzzle(self) -> Program:
-        return puzzle_for_pk(
-            bytes(
-                self.wallet_state_manager.get_unused_derivation_record(
-                    self.wallet_info.id
-                ).pubkey
-            )
+        dr = await self.wallet_state_manager.get_unused_derivation_record(
+            self.wallet_info.id
         )
+        return puzzle_for_pk(bytes(dr.pubkey))
 
     async def get_new_puzzlehash(self) -> bytes32:
         return (
@@ -296,7 +300,7 @@ class Wallet(AbstractWallet):
             # Get AGGSIG conditions
             err, con, cost = conditions_for_solution(sexp)
             if err or not con:
-                self.log.error(f"Sign transcation failed, con:{con}, error: {err}")
+                self.log.error(f"Sign transaction failed, con:{con}, error: {err}")
                 return None
 
             conditions_dict = conditions_by_opcode(con)
@@ -334,7 +338,7 @@ class Wallet(AbstractWallet):
         else:
             fee = uint64(0)
 
-        puzzle_hash = bytes32(bytes.fromhex(data["puzzle_hash"]))
+        puzzle_hash = decode_puzzle_hash(data["puzzle_hash"])
 
         return await self.generate_signed_transaction(amount, puzzle_hash, fee)
 
@@ -414,7 +418,7 @@ class Wallet(AbstractWallet):
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(
         self, chia_amount: int, exclude: List[Coin]
-    ):
+    ) -> Optional[SpendBundle]:
         list_of_solutions = []
         utxos = None
 

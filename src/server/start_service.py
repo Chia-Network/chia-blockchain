@@ -3,6 +3,7 @@ import logging
 import logging.config
 import signal
 
+from sys import platform
 from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 
 try:
@@ -23,6 +24,14 @@ from src.server.connection import OnConnectFunc
 from .reconnect_task import start_reconnect_task
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
+
+
+stopped_by_signal = False
+
+
+def global_signal_handler(*args):
+    global stopped_by_signal
+    stopped_by_signal = True
 
 
 def create_periodic_introducer_poll_task(
@@ -125,6 +134,7 @@ class Service:
         self._api = api
         self._task = None
         self._is_stopping = False
+        self._stopped_by_rpc = False
 
         self._periodic_introducer_poll = periodic_introducer_poll
         self._on_connect_callback = on_connect_callback
@@ -158,8 +168,10 @@ class Service:
                 )
 
             self._rpc_task = None
+            self._rpc_close_task = None
             if self._rpc_info:
                 rpc_api, rpc_port = self._rpc_info
+
                 self._rpc_task = asyncio.create_task(
                     start_rpc_server(
                         rpc_api(self._api),
@@ -181,17 +193,21 @@ class Service:
                 for _ in self._server_listen_ports
             ]
 
-            try:
-                asyncio.get_running_loop().add_signal_handler(signal.SIGINT, self.stop)
-                asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self.stop)
-            except NotImplementedError:
-                self._log.info("signal handlers unsupported")
+            signal.signal(signal.SIGINT, global_signal_handler)
+            signal.signal(signal.SIGTERM, global_signal_handler)
+            if platform == "win32" or platform == "cygwin":
+                # pylint: disable=E1101
+                signal.signal(signal.SIGBREAK, global_signal_handler)  # type: ignore
 
         self._task = asyncio.create_task(_run())
 
     async def run(self):
         self.start()
         await self._task
+        while not stopped_by_signal and not self._is_stopping:
+            await asyncio.sleep(1)
+
+        self.stop()
         await self.wait_closed()
         return 0
 
@@ -211,6 +227,18 @@ class Service:
             if self._introducer_poll_task:
                 self._introducer_poll_task.cancel()
 
+            self._log.info("Calling service stop callback")
+            if self._stop_callback:
+                self._stop_callback()
+
+            if self._rpc_task:
+                self._log.info("Closing RPC server")
+
+                async def close_rpc_server():
+                    await (await self._rpc_task)()
+
+                self._rpc_close_task = asyncio.create_task(close_rpc_server())
+
     async def wait_closed(self):
         self._log.info("Waiting for socket to be closed (if opened)")
         for _ in self._server_sockets:
@@ -219,15 +247,10 @@ class Service:
         self._log.info("Waiting for ChiaServer to be closed")
         await self._server.await_closed()
 
-        self._log.info("Calling service stop callback")
-        if self._stop_callback:
-            self._stop_callback()
-
-        if self._rpc_task:
-
+        if self._rpc_close_task:
             self._log.info("Waiting for RPC server")
-            await (await self._rpc_task)()
-            self._log.info("Closed RPC server.")
+            await self._rpc_close_task
+            self._log.info("Closed RPC server")
 
         if self._await_closed_callback:
             self._log.info("Waiting for service _await_closed callback")

@@ -13,7 +13,9 @@ def generate_selfsigned_cert(hostname="/CN=Chia Blockchain CA", key=None):
     # Generate our key
     if key is None:
         key = rsa.generate_private_key(
-            public_exponent=65537, key_size=2048, backend=default_backend(),
+            public_exponent=65537,
+            key_size=2048,
+            backend=default_backend(),
         )
 
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, hostname)])

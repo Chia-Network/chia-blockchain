@@ -3,7 +3,7 @@ import asyncio
 import time
 from time import struct_time, localtime
 
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 from src.server.connection import NodeType
 from src.types.header_block import HeaderBlock
@@ -13,6 +13,7 @@ from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
+from src.wallet.util.wallet_types import WalletType
 from src.cmds.units import units
 
 
@@ -317,46 +318,56 @@ async def show_async(args, parser):
             else:
                 wallet_rpc_port = args.wallet_rpc_port
             wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port)
-            summaries: Dict = await wallet_client.get_wallet_summaries()
-            print("Balances")
-            for wallet_id, summary in summaries.items():
-                balances = await wallet_client.get_wallet_balance(wallet_id)
-                if "name" in summary:
-                    print(
-                        f"Wallet ID {wallet_id} type {summary['type']} {summary['name']}"
+            summaries_response = await wallet_client.get_wallet_summaries()
+            if "wallet_summaries" not in summaries_response:
+                print("Wallet summary cannot be displayed")
+            else:
+                print("Balances")
+                for wallet_id, summary in summaries_response[
+                    "wallet_summaries"
+                ].items():
+                    balances_response = await wallet_client.get_wallet_balance(
+                        wallet_id
                     )
-                    print(
-                        f"   -Confirmed: {balances['confirmed_wallet_balance']/units['colouredcoin']}"
-                    )
-                    print(
-                        f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}"
-                    )
-                    print(
-                        f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}"
-                    )
-                    print(
-                        f"   -Frozen: {balances['frozen_balance']/units['colouredcoin']}"
-                    )
-                    print(
-                        f"   -Pending change: {balances['pending_change']/units['colouredcoin']}"
-                    )
-                else:
-                    print(f"Wallet ID {wallet_id} type {summary['type']}")
-                    print(
-                        f"   -Confirmed: {balances['confirmed_wallet_balance']/units['chia']} TXCH"
-                    )
-                    print(
-                        f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['chia']} TXCH"
-                    )
-                    print(
-                        f"   -Spendable: {balances['spendable_balance']/units['chia']} TXCH"
-                    )
-                    print(
-                        f"   -Frozen: {balances['frozen_balance']/units['chia']} TXCH"
-                    )
-                    print(
-                        f"   -Pending change: {balances['pending_change']/units['chia']} TXCH"
-                    )
+                    if "wallet_balance" not in balances_response:
+                        print("Balances cannot be displayed")
+                        continue
+                    balances = balances_response["wallet_balance"]
+                    typ = WalletType(int(summary["type"])).name
+                    if "name" in summary:
+                        print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
+                        print(
+                            f"   -Confirmed: {balances['confirmed_wallet_balance']/units['colouredcoin']}"
+                        )
+                        print(
+                            f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}"
+                        )
+                        print(
+                            f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}"
+                        )
+                        print(
+                            f"   -Frozen: {balances['frozen_balance']/units['colouredcoin']}"
+                        )
+                        print(
+                            f"   -Pending change: {balances['pending_change']/units['colouredcoin']}"
+                        )
+                    else:
+                        print(f"Wallet ID {wallet_id} type {typ}")
+                        print(
+                            f"   -Confirmed: {balances['confirmed_wallet_balance']/units['chia']} TXCH"
+                        )
+                        print(
+                            f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['chia']} TXCH"
+                        )
+                        print(
+                            f"   -Spendable: {balances['spendable_balance']/units['chia']} TXCH"
+                        )
+                        print(
+                            f"   -Frozen: {balances['frozen_balance']/units['chia']} TXCH"
+                        )
+                        print(
+                            f"   -Pending change: {balances['pending_change']/units['chia']} TXCH"
+                        )
             wallet_client.close()
             await wallet_client.await_closed()
 

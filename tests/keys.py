@@ -1,4 +1,4 @@
-from blspy import PrivateKey
+from blspy import AugSchemeMPL
 
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
@@ -9,7 +9,7 @@ from tests.util.key_tool import KeyTool
 from src.util.ints import uint32
 from src.wallet.derive_keys import master_sk_to_wallet_sk
 
-MASTER_KEY = PrivateKey.from_seed(bytes([1] * 32))
+MASTER_KEY = AugSchemeMPL.key_gen(bytes([1] * 32))
 
 
 def puzzle_program_for_index(index: uint32):

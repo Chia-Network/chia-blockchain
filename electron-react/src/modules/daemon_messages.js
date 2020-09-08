@@ -39,3 +39,9 @@ export const isServiceRunning = service_name => {
   action.message.data = { service: service_name };
   return action;
 };
+
+export const exitDaemon = () => {
+  var action = daemonMessage();
+  action.message.command = "exit";
+  return action;
+};

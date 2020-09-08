@@ -63,6 +63,7 @@ activate
 
 # Editors
 .vscode
+.idea
 
 # Packaging
 chia-blockchain.tar.gz
@@ -75,6 +76,9 @@ vdf_bench
 
 # Offer Files
 *.offer
+
+# Compiled CLVM
+main.sym
 
 # Dev config react
 electron-react/src/dev_config.js

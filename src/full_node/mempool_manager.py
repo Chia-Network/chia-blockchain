@@ -126,7 +126,8 @@ class MempoolManager:
         program = best_solution_program(new_spend)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
         fail_reason, npc_list, cost = calculate_cost_of_program(
-            program, self.constants.CLVM_COST_RATIO_CONSTANT,
+            program,
+            self.constants.CLVM_COST_RATIO_CONSTANT,
         )
         if fail_reason:
             return None, MempoolInclusionStatus.FAILED, fail_reason
@@ -316,7 +317,7 @@ class MempoolManager:
                 continue
 
             # Verify aggregated signature
-            validates = AugSchemeMPL.agg_verify(
+            validates = AugSchemeMPL.aggregate_verify(
                 pks, msgs, new_spend.aggregated_signature
             )
             if not validates:

@@ -178,7 +178,7 @@ never-returning-functions=optparse.Values,sys.exit
 
 # List of additional names supposed to be defined in builtins. Remember that
 # you should avoid to define new builtins when possible.
-additional-builtins=
+additional-builtins=cls
 
 # Tells whether unused global variables should be treated as a violation.
 allow-global-unused-variables=yes

@@ -9,13 +9,65 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
+- Rate limited wallets can now have funds clawed back by the Admin wallet.
+- Added a Code of Conduct in CODE_OF_CONDUCT.md.
+- Added a bug report template in `.github/ISSUE_TEMPLATE/bug_report.md`.
 
 ### Changed
-- `chia show -b` now returns plot public key and pool public key for each block.
-- Improvements to coloured coin wallet.
+- Proof of Space now requires significantly less temp space to generate a new plot. A k=32 that used to require 524GiB now requires only 317GiB - a 60% decrease.
+- When plotting, instead of 1 monolithic temp file, there are now 8 files - one for each of the 7 tables and one for sorting plot data. These files are deleted as the `-2` or `-d` final file is written so the final file can fit within the footprint of the temporary files on the same filesystem.
+- We've made various additional CPU optimizations to the Proof of Space plotter that reduces plotting time by an additional 13%.
+- Coloured coins have been updated to simplify them, remove 'a', and stop using an 'auditor'.
+- clvm has been significantly changed to support the new coloured coins implementation.
+- Bumped cryptography to 3.1. Cryptography is now publishing ARM64 binary wheels to PyPi so Raspberry Pi installs should be even easier.
+- `chia init` now automatically discovers previous releases in each new release.
 
 ### Fixed
+- View -> Developer -> Developer Tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request!
+- Fixed 'Receive Address' typo in Wallet. Thanks @meurtn on Keybase.
+- In Windows the start menu item is now Chia Network and the icon in Add/Remove is updated.
 
+## [1.0beta11] aka Beta 1.11 - 2020-08-24
+
+### Added
+- The Chia UI now has a proper About menu entry that gives the various component versions and directs people to submit issues on GitHub. Thank you to @freddiecoleman for this pull request!
+- Ability to run only the farmer, wallet, or timelord services, for more advanced configurations (chia run farmer-only, wallet-only, timelord-only)
+
+### Changed
+- To complement the new About menu, we have revamped all Electron menus and made them OS native. There are now direct links to the Wiki, Keybase, and FAQ in the Help menu.
+- There are minor improvements to how working space is calculated and displayed by the plotter. The plotter also has additional debugging information in its output.
+- Successful plots only have an atomic rename.
+
+### Fixed
+- kOffsetSize should have been 10 bits and not 9. This was causing plots, especially larger plots, to fail with "Error 0". This bug was introduced in Beta 8 with the new plot file format.
+- A bug in aiosqlite was causing tests to hang - especially on the ci. This may also have been causing wallet database corruption.
+- `chia show -w` now correctly outputs all wallet types and balances from the local wallet.
+
+## [1.0beta10] aka Beta 1.10 - 2020-08-18
+
+### Added
+- Meet our new Rate Limited wallet. You can now fund a wallet from an Admin wallet that will set how many coins can be spent over a given range of blocks for a given User wallet. Once combined with on chain wallet recovery, this makes it much easier to secure your "spending money" wallet so that if it is compromised you have time to get most of the funds back before an attacker can steal them all. This wallet should be considered alpha in this release as additional fixes and functionality will be coming in subsequent releases.
+- We've added unhardened HD keys to bls-signatures for the smart wallets that need them. We've added significant cross project testing to our BLS implementation.
+- The python implementation of bls-signatures is now current to the new specification.
+- `chia show -b` now returns plot public key and pool public key for each block.
+- Added cbor2 binary wheels for ARM64 to the Chia simple site. Raspberry Pi should be just a little easier to install.
+
+### Changed
+- Wallet addresses and other key related elements are now expressed in Chech32 which is the Chia implementation of [Bech32](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki). All of your old wallet addresses will be replaced with the new Chech32 addresses. The only thing you can't do is send test chia between 1.8/1.9 and 1.10 software. Anyone who upgrades to 1.10 will keep their transactions and balances of test chia from the earlier two releases however.
+- We added a first few enhancements to plotting speed. For a k=30 on a ramdisk with `-b 64 GiB` it results in an 11% speedup in overall plotting speed and a 23% improvement in phase 1 speed. Many more significant increases in plotting speed are in the works.
+- The proof of space document in chiapos has been updated to the new format and edited for clarity. Additionally GitHub actions now has the on demand ability to create the PDF version.
+- Relic has upstreamed our changes required for the IETF BLS standard. We now build directly from the Relic repository for all but Windows and will be migrating Windows in the next release.
+- Minor improvements to the Coloured Coin wallet were integrated in advance of an upcoming re-factor.
+- Smart wallet backup was upgraded to encrypt and sign the contents of the backup.
+
+### Fixed
+- Proof of space plotting now correctly calculates the total working space used in the `-t` directory.
+- `chia show -w` now displays a message when balances cannot be displayed instead of throwing an error. Thanks to @freddiecoleman for this fix!
+- Fix issue with shutting down full node (full node processes remained open, and caused a spinner when launching Chia)
+- Various code review alerts for comparing to a wider type in chiapos were fixed. Additionally, unused code was removed from chiapos
+- Benchmarking has been re-enabled in bls-signatures.
+- Various node security vulnerabilities were addressed.
+- Updated keyring, various GitHub actions, colorlog, cbor2, and clvm_tools.
 
 ## [1.0beta9] aka Beta 1.9 - 2020-07-27
 

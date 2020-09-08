@@ -5,7 +5,10 @@ from src.consensus.pos_quality import quality_str_to_quality
 
 
 def calculate_iterations_quality(
-    quality: bytes32, size: int, difficulty: int, min_iterations: int,
+    quality: bytes32,
+    size: int,
+    difficulty: int,
+    min_iterations: int,
 ) -> uint64:
     """
     Calculates the number of iterations from the quality. The quality is converted to a number

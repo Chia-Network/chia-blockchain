@@ -47,7 +47,8 @@ class ProofOfSpace(Streamable):
 
     @staticmethod
     def calculate_plot_id(
-        pool_public_key: G1Element, plot_public_key: G1Element,
+        pool_public_key: G1Element,
+        plot_public_key: G1Element,
     ) -> bytes32:
         return bytes32(std_hash(bytes(pool_public_key) + bytes(plot_public_key)))
 
