@@ -18,7 +18,8 @@ python -m venv venv
 . .\venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install wheel pep517
-pip install pywin32 pyinstaller
+pip install pywin32
+pip install pyinstaller==3.6
 pip install setuptools_scm
 
 Write-Output "   ---"
