@@ -567,7 +567,7 @@ class TestWalletSimulator:
             ]
         )
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz = Program.from_bytes(did_wallet.did_info.current_inner)
+        innerpuz = did_wallet.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
             innerpuz.get_tree_hash(),
             did_wallet.did_info.my_core,

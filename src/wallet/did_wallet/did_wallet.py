@@ -410,7 +410,7 @@ class DIDWallet:
         # innerpuz solution is (mode amount new_puz identity my_puz)
         innersol = Program.to([0, coin.amount, puzhash, coin.name(), coin.puzzle_hash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz = Program.from_bytes(self.did_info.current_inner)
+        innerpuz = self.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
             innerpuz.get_tree_hash(), self.did_info.my_core,
         )
@@ -477,7 +477,7 @@ class DIDWallet:
             [1, coin.amount, innermessage, identity, coin.puzzle_hash]
         )
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz = Program.from_bytes(self.did_info.current_inner)
+        innerpuz = self.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
             innerpuz.get_tree_hash(), self.did_info.my_core,
         )
@@ -544,7 +544,7 @@ class DIDWallet:
         coins = await self.select_coins(1)
         coin = coins.pop()
         parent = coin.parent_coin_info
-        innerpuzhash = Program.from_bytes(self.did_info.current_inner).get_tree_hash()
+        innerpuzhash = self.did_info.current_inner.get_tree_hash()
         amount = coin.amount
         return Program.to([parent, innerpuzhash, amount])
 
@@ -567,7 +567,7 @@ class DIDWallet:
             ]
         )
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        innerpuz = Program.from_bytes(self.did_info.current_inner)
+        innerpuz = self.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
             innerpuz.get_tree_hash(), self.did_info.my_core,
         )
@@ -696,7 +696,7 @@ class DIDWallet:
             did_core,
             self.did_info.backup_ids,
             self.did_info.parent_info,
-            bytes(did_inner),
+            did_inner,
         )
         await self.save_info(did_info)
 
