@@ -320,10 +320,14 @@ async def show_async(args, parser):
             wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port)
             get_keys_response = await wallet_client.get_keys()
             if (
-                not "public_key_fingerprints" in get_keys_response
+                "public_key_fingerprints" not in get_keys_response
                 or len(get_keys_response["public_key_fingerprints"]) == 0
             ):
                 print("Error, no keys loaded")
+                wallet_client.close()
+                await wallet_client.await_closed()
+                client.close()
+                await client.await_closed()
                 return
             fingerprints = get_keys_response["public_key_fingerprints"]
             fingerprint = None
@@ -372,11 +376,13 @@ async def show_async(args, parser):
                     if "backup_path" not in log_in_response or use_cloud is False:
                         if use_cloud is True:
                             val = input(
-                                "No online backup file found, \n Press S to skip restore from backup \n Press F to use your own backup file: "
+                                "No online backup file found, \n Press S to skip restore from backup"
+                                " \n Press F to use your own backup file: "
                             )
                         else:
                             val = input(
-                                "Cloud backup declined, \n Press S to skip restore from backup \n Press F to use your own backup file: "
+                                "Cloud backup declined, \n Press S to skip restore from backup"
+                                " \n Press F to use your own backup file: "
                             )
 
                         if val.lower() == "s":
@@ -395,8 +401,6 @@ async def show_async(args, parser):
                 if "error" in log_in_response:
                     error = log_in_response["error"]
                     print(f"Error: {log_in_response[error]}")
-                print("Unable to log in into wallet, try using GUI")
-                return
 
             summaries_response = await wallet_client.get_wallet_summaries()
             if "wallet_summaries" not in summaries_response:
