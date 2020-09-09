@@ -200,11 +200,11 @@ const plot_size_options = [
   { label: "11.5GiB", value: 29, workspace: "31GiB" },
   { label: "23.8GiB", value: 30, workspace: "68GiB" },
   { label: "49.1GiB", value: 31, workspace: "135GiB" },
-  { label: "101.4GiB", value: 32, workspace: "391GiB" },
-  // workspace are guesses using 60% v 69% actual k=32 past here
-  { label: "208.8GiB", value: 33, workspace: "657GiB" },
-  { label: "429.8GiB", value: 34, workspace: "1373GiB" },
-  { label: "884.1GiB", value: 35, workspace: "2804GiB" }
+  { label: "101.4GiB", value: 32, workspace: "289GiB" },
+  // workspace are guesses using 51% - rounded up - past here
+  { label: "208.8GiB", value: 33, workspace: "559GiB" },
+  { label: "429.8GiB", value: 34, workspace: "1167GiB" },
+  { label: "884.1GiB", value: 35, workspace: "2383GiB" }
 ];
 
 const WorkLocation = () => {
