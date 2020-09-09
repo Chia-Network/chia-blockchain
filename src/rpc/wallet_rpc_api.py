@@ -353,7 +353,7 @@ class WalletRpcApi:
                 log.error("Failed to upload backup to wallet backup service")
             elif success is True:
                 log.info("Finished upload of the backup file")
-        except BaseException as e:
+        except Exception as e:
             log.error(f"Exception in upload backup. Error: {e}")
 
     async def create_new_wallet(self, request):
@@ -715,7 +715,7 @@ class WalletRpcApi:
                 backup_info = get_backup_info(backup_path, private_key)
                 backup_info["backup_host"] = recovery_host
                 backup_info["downloaded"] = True
-            except BaseException as e:
+            except Exception as e:
                 log.error(f"error {e}")
             response = {"success": False, "error": "not_initialized"}
             if backup_info is not None:
