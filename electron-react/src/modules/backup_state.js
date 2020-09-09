@@ -1,21 +1,21 @@
 export const presentBackupInfo = "BACKUP_INFO";
 export const presentMain = "MAIN";
 
-export const changeBackupView = (view) => ({ type: "BACKUP_VIEW", view: view });
-export const setBackupInfo = (backup_info) => ({
+export const changeBackupView = view => ({ type: "BACKUP_VIEW", view: view });
+export const setBackupInfo = backup_info => ({
   type: "BACKUP_INFO",
-  backup_info: backup_info,
+  backup_info: backup_info
 });
 
-export const selectFilePath = (file_path) => ({
+export const selectFilePath = file_path => ({
   type: "SELECT_FILEPATH",
-  file_path: file_path,
+  file_path: file_path
 });
 
 const initial_state = {
   view: presentMain,
   backup_info: {},
-  selected_file_path: null,
+  selected_file_path: null
 };
 
 export const backupReducer = (state = { ...initial_state }, action) => {

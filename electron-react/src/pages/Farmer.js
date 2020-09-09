@@ -191,8 +191,8 @@ const StatusCell = props => {
                 <HelpIcon style={{ color: "#c8c8c8", fontSize: 12 }}></HelpIcon>
               </Tooltip>
             ) : (
-                ""
-              )}
+              ""
+            )}
           </Box>
         </Box>
       </div>
@@ -282,8 +282,8 @@ const Challenges = props => {
                     <TableCell align="right">
                       {item.estimates.length > 0
                         ? Math.floor(
-                          Math.min.apply(Math, item.estimates) / 60
-                        ).toString() + " minutes"
+                            Math.min.apply(Math, item.estimates) / 60
+                          ).toString() + " minutes"
                         : ""}
                     </TableCell>
                   </TableRow>
@@ -488,8 +488,8 @@ const Plots = props => {
               </List>{" "}
             </span>
           ) : (
-              ""
-            )}
+            ""
+          )}
           {failed_to_open_filenames.length > 0 ? (
             <span>
               <div className={classes.cardTitle}>
@@ -521,8 +521,8 @@ const Plots = props => {
               </List>
             </span>
           ) : (
-              ""
-            )}
+            ""
+          )}
         </Grid>
       </Grid>
       <Dialog
@@ -663,7 +663,7 @@ const Farmer = props => {
         setDidMount(true);
         dispatch(clearSend);
       }
-    })()
+    })();
   }, [checkRewards, dispatch, props, didMount, setDidMount]);
 
   return (
@@ -678,6 +678,6 @@ const Farmer = props => {
       </main>
     </div>
   );
-}
+};
 
-export default (withStyles(styles)(Farmer));
+export default withStyles(styles)(Farmer);

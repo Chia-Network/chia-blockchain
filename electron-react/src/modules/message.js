@@ -5,7 +5,7 @@ import { setIncorrectWord, resetMnemonic } from "./mnemonic_input";
 import {
   changeEntranceMenu,
   presentRestoreBackup,
-  presentOldWallet,
+  presentOldWallet
 } from "./entranceMenu";
 import { openDialog } from "./dialogReducer";
 import { createState } from "./createWalletReducer";
@@ -14,19 +14,19 @@ import {
   getPlotDirectories,
   removePlotDirectory,
   getPlots,
-  refreshPlots,
+  refreshPlots
 } from "./harvesterMessages";
 import {
   setBackupInfo,
   changeBackupView,
   presentBackupInfo,
-  selectFilePath,
+  selectFilePath
 } from "./backup_state";
 import { exitDaemon } from "./daemon_messages";
 import { wsDisconnect } from "./websocket";
 import {
   changeCreateWallet,
-  ALL_OPTIONS,
+  ALL_OPTIONS
 } from "../modules/createWalletReducer";
 const config = require("../config");
 const backup_host = config.backup_host;
@@ -34,7 +34,7 @@ const backup_host = config.backup_host;
 export const clearSend = () => {
   var action = {
     type: "CLEAR_SEND",
-    mesasge: "",
+    mesasge: ""
   };
   return action;
 };
@@ -42,27 +42,27 @@ export const clearSend = () => {
 export const walletMessage = () => ({
   type: "OUTGOING_MESSAGE",
   message: {
-    destination: service_wallet,
-  },
+    destination: service_wallet
+  }
 });
 
-export const selectFingerprint = (fingerprint) => ({
+export const selectFingerprint = fingerprint => ({
   type: "SELECT_FINGERPRINT",
-  fingerprint: fingerprint,
+  fingerprint: fingerprint
 });
 
 export const unselectFingerprint = () => ({
-  type: "UNSELECT_FINGERPRINT",
+  type: "UNSELECT_FINGERPRINT"
 });
 
-export const selectMnemonic = (mnemonic) => ({
+export const selectMnemonic = mnemonic => ({
   type: "SELECT_MNEMONIC",
-  mnemonic: mnemonic,
+  mnemonic: mnemonic
 });
 
-export const showCreateBackup = (show) => ({
+export const showCreateBackup = show => ({
   type: "SHOW_CREATE_BACKUP",
-  show: show,
+  show: show
 });
 
 export const async_api = (dispatch, action, open_spinner) => {
@@ -95,7 +95,7 @@ export const pingWallet = () => {
   return action;
 };
 
-export const get_balance_for_wallet = (id) => {
+export const get_balance_for_wallet = id => {
   var action = walletMessage();
   action.message.command = "get_wallet_balance";
   action.message.data = { wallet_id: id };
@@ -109,7 +109,7 @@ export const send_transaction = (wallet_id, amount, fee, puzzle_hash) => {
     wallet_id: wallet_id,
     amount: amount,
     fee: fee,
-    puzzle_hash: puzzle_hash,
+    puzzle_hash: puzzle_hash
   };
   return action;
 };
@@ -127,18 +127,18 @@ export const add_key = (mnemonic, type, file_path) => {
   action.message.data = {
     mnemonic: mnemonic,
     type: type,
-    file_path: file_path,
+    file_path: file_path
   };
   return action;
 };
 
-export const add_new_key_action = (mnemonic) => {
-  return (dispatch) => {
+export const add_new_key_action = mnemonic => {
+  return dispatch => {
     return async_api(
       dispatch,
       add_key(mnemonic, "new_wallet", null),
       true
-    ).then((response) => {
+    ).then(response => {
       dispatch(closeProgress());
       if (response.data.success) {
         // Go to wallet
@@ -159,10 +159,10 @@ export const add_new_key_action = (mnemonic) => {
   };
 };
 
-export const add_and_skip_backup = (mnemonic) => {
-  return (dispatch) => {
+export const add_and_skip_backup = mnemonic => {
+  return dispatch => {
     return async_api(dispatch, add_key(mnemonic, "skip", null), true).then(
-      (response) => {
+      response => {
         dispatch(closeProgress());
         if (response.data.success) {
           // Go to wallet
@@ -187,12 +187,12 @@ export const add_and_skip_backup = (mnemonic) => {
 };
 
 export const add_and_restore_from_backup = (mnemonic, file_path) => {
-  return (dispatch) => {
+  return dispatch => {
     return async_api(
       dispatch,
       add_key(mnemonic, "restore_backup", file_path),
       true
-    ).then((response) => {
+    ).then(response => {
       dispatch(closeProgress());
       if (response.data.success) {
         // Go to wallet
@@ -212,7 +212,7 @@ export const add_and_restore_from_backup = (mnemonic, file_path) => {
   };
 };
 
-export const delete_key = (fingerprint) => {
+export const delete_key = fingerprint => {
   var action = walletMessage();
   action.message.command = "delete_key";
   action.message.data = { fingerprint: fingerprint };
@@ -226,24 +226,24 @@ export const delete_all_keys = () => {
   return action;
 };
 
-export const log_in = (fingerprint) => {
+export const log_in = fingerprint => {
   var action = walletMessage();
   action.message.command = "log_in";
   action.message.data = {
     fingerprint: fingerprint,
     host: backup_host,
-    type: "normal",
+    type: "normal"
   };
   return action;
 };
 
-export const log_in_and_skip_import = (fingerprint) => {
+export const log_in_and_skip_import = fingerprint => {
   var action = walletMessage();
   action.message.command = "log_in";
   action.message.data = {
     fingerprint: fingerprint,
     host: backup_host,
-    type: "skip",
+    type: "skip"
   };
   return action;
 };
@@ -255,19 +255,19 @@ export const log_in_and_import_backup = (fingerprint, file_path) => {
     fingerprint: fingerprint,
     type: "restore_backup",
     file_path: file_path,
-    host: backup_host,
+    host: backup_host
   };
   return action;
 };
 
 export const log_in_and_import_backup_action = (fingerprint, file_path) => {
-  return (dispatch) => {
+  return dispatch => {
     dispatch(selectFingerprint(fingerprint));
     return async_api(
       dispatch,
       log_in_and_import_backup(fingerprint, file_path),
       true
-    ).then((response) => {
+    ).then(response => {
       dispatch(closeProgress());
       if (response.data.success) {
         // Go to wallet
@@ -285,11 +285,11 @@ export const log_in_and_import_backup_action = (fingerprint, file_path) => {
   };
 };
 
-export const login_and_skip_action = (fingerprint) => {
-  return (dispatch) => {
+export const login_and_skip_action = fingerprint => {
+  return dispatch => {
     dispatch(selectFingerprint(fingerprint));
     return async_api(dispatch, log_in_and_skip_import(fingerprint), true).then(
-      (response) => {
+      response => {
         dispatch(closeProgress());
         if (response.data.success) {
           // Go to wallet
@@ -308,10 +308,10 @@ export const login_and_skip_action = (fingerprint) => {
   };
 };
 
-export const login_action = (fingerprint) => {
-  return (dispatch) => {
+export const login_action = fingerprint => {
+  return dispatch => {
     dispatch(selectFingerprint(fingerprint));
-    return async_api(dispatch, log_in(fingerprint), true).then((response) => {
+    return async_api(dispatch, log_in(fingerprint), true).then(response => {
       dispatch(closeProgress());
       if (response.data.success) {
         // Go to wallet
@@ -342,25 +342,25 @@ export const get_backup_info = (file_path, fingerprint, words) => {
   if (fingerprint === null) {
     action.message.data = {
       file_path: file_path,
-      words: words,
+      words: words
     };
   } else if (words === null) {
     action.message.data = {
       file_path: file_path,
-      fingerprint: fingerprint,
+      fingerprint: fingerprint
     };
   }
   return action;
 };
 
 export const get_backup_info_action = (file_path, fingerprint, words) => {
-  return (dispatch) => {
+  return dispatch => {
     dispatch(selectFilePath(file_path));
     return async_api(
       dispatch,
       get_backup_info(file_path, fingerprint, words),
       true
-    ).then((response) => {
+    ).then(response => {
       dispatch(closeProgress());
       if (response.data.success) {
         response.data.backup_info.downloaded = false;
@@ -374,28 +374,28 @@ export const get_backup_info_action = (file_path, fingerprint, words) => {
   };
 };
 
-export const get_private_key = (fingerprint) => {
+export const get_private_key = fingerprint => {
   var action = walletMessage();
   action.message.command = "get_private_key";
   action.message.data = { fingerprint: fingerprint };
   return action;
 };
 
-export const get_transactions = (wallet_id) => {
+export const get_transactions = wallet_id => {
   var action = walletMessage();
   action.message.command = "get_transactions";
   action.message.data = { wallet_id: wallet_id };
   return action;
 };
 
-export const get_puzzle_hash = (wallet_id) => {
+export const get_puzzle_hash = wallet_id => {
   var action = walletMessage();
   action.message.command = "get_next_puzzle_hash";
   action.message.data = { wallet_id: wallet_id };
   return action;
 };
 
-export const farm_block = (puzzle_hash) => {
+export const farm_block = puzzle_hash => {
   var action = walletMessage();
   action.message.command = "farm_block";
   action.message.data = { puzzle_hash: puzzle_hash };
@@ -431,7 +431,7 @@ export const create_coloured_coin = (amount, fee) => {
     mode: "new",
     amount: amount,
     fee: fee,
-    host: backup_host,
+    host: backup_host
   };
   return action;
 };
@@ -444,24 +444,24 @@ export const create_cc_for_colour = (colour, fee) => {
     mode: "existing",
     colour: colour,
     fee: fee,
-    host: backup_host,
+    host: backup_host
   };
   return action;
 };
 
-export const create_backup = (file_path) => {
+export const create_backup = file_path => {
   var action = walletMessage();
   action.message.command = "create_backup";
   action.message.data = {
-    file_path: file_path,
+    file_path: file_path
   };
   return action;
 };
 
-export const create_backup_action = (file_path) => {
-  return (dispatch) => {
+export const create_backup_action = file_path => {
+  return dispatch => {
     return async_api(dispatch, create_backup(file_path), true).then(
-      (response) => {
+      response => {
         dispatch(closeProgress());
         if (response.data.success) {
           dispatch(showCreateBackup(false));
@@ -475,9 +475,9 @@ export const create_backup_action = (file_path) => {
 };
 
 export const create_cc_action = (amount, fee) => {
-  return (dispatch) => {
+  return dispatch => {
     return async_api(dispatch, create_coloured_coin(amount, fee), true).then(
-      (response) => {
+      response => {
         dispatch(closeProgress());
         dispatch(createState(true, false));
         if (response.data.success) {
@@ -496,9 +496,9 @@ export const create_cc_action = (amount, fee) => {
 };
 
 export const create_cc_for_colour_action = (colour, fee) => {
-  return (dispatch) => {
+  return dispatch => {
     return async_api(dispatch, create_cc_for_colour(colour, fee), true).then(
-      (response) => {
+      response => {
         dispatch(closeProgress());
         dispatch(createState(true, false));
         if (response.data.success) {
@@ -515,14 +515,14 @@ export const create_cc_for_colour_action = (colour, fee) => {
   };
 };
 
-export const get_colour_info = (wallet_id) => {
+export const get_colour_info = wallet_id => {
   var action = walletMessage();
   action.message.command = "cc_get_colour";
   action.message.data = { wallet_id: wallet_id };
   return action;
 };
 
-export const get_colour_name = (wallet_id) => {
+export const get_colour_name = wallet_id => {
   var action = walletMessage();
   action.message.command = "cc_get_name";
   action.message.data = { wallet_id: wallet_id };
@@ -543,16 +543,16 @@ export const cc_spend = (wallet_id, puzzle_hash, amount, fee) => {
     wallet_id: wallet_id,
     innerpuzhash: puzzle_hash,
     amount: amount,
-    fee: fee,
+    fee: fee
   };
   return action;
 };
 
 export const logOut = (command, data) => ({ type: "LOG_OUT", command, data });
 
-export const incomingMessage = (message) => ({
+export const incomingMessage = message => ({
   type: "INCOMING_MESSAGE",
-  message: message,
+  message: message
 });
 
 export const create_rl_admin = (interval, limit, pubkey, amount) => {
@@ -565,18 +565,18 @@ export const create_rl_admin = (interval, limit, pubkey, amount) => {
     limit: limit,
     pubkey: pubkey,
     amount: amount,
-    host: backup_host,
+    host: backup_host
   };
   return action;
 };
 
 export const create_rl_admin_action = (interval, limit, pubkey, amount) => {
-  return (dispatch) => {
+  return dispatch => {
     return async_api(
       dispatch,
       create_rl_admin(interval, limit, pubkey, amount),
       true
-    ).then((response) => {
+    ).then(response => {
       dispatch(closeProgress());
       dispatch(createState(true, false));
       if (response.data.success) {
@@ -599,14 +599,14 @@ export const create_rl_user = () => {
   action.message.data = {
     wallet_type: "rl_wallet",
     rl_type: "user",
-    host: backup_host,
+    host: backup_host
   };
   return action;
 };
 
 export const create_rl_user_action = () => {
-  return (dispatch) => {
-    return async_api(dispatch, create_rl_user(), true).then((response) => {
+  return dispatch => {
+    return async_api(dispatch, create_rl_user(), true).then(response => {
       dispatch(closeProgress());
       dispatch(createState(true, false));
       if (response.data.success) {
@@ -622,12 +622,12 @@ export const create_rl_user_action = () => {
   };
 };
 
-export const add_plot_directory_and_refresh = (dir) => {
-  return (dispatch) => {
-    return async_api(dispatch, addPlotDirectory(dir), true).then((response) => {
+export const add_plot_directory_and_refresh = dir => {
+  return dispatch => {
+    return async_api(dispatch, addPlotDirectory(dir), true).then(response => {
       if (response.data.success) {
         dispatch(getPlotDirectories());
-        return async_api(dispatch, refreshPlots(), false).then((response) => {
+        return async_api(dispatch, refreshPlots(), false).then(response => {
           dispatch(closeProgress());
           dispatch(getPlots());
         });
@@ -639,13 +639,13 @@ export const add_plot_directory_and_refresh = (dir) => {
   };
 };
 
-export const remove_plot_directory_and_refresh = (dir) => {
-  return (dispatch) => {
+export const remove_plot_directory_and_refresh = dir => {
+  return dispatch => {
     return async_api(dispatch, removePlotDirectory(dir), true).then(
-      (response) => {
+      response => {
         if (response.data.success) {
           dispatch(getPlotDirectories());
-          return async_api(dispatch, refreshPlots(), false).then((response) => {
+          return async_api(dispatch, refreshPlots(), false).then(response => {
             dispatch(closeProgress());
             dispatch(getPlots());
           });
@@ -672,7 +672,7 @@ export const rl_set_user_info = (
     interval: interval,
     limit: limit,
     origin: origin,
-    admin_pubkey: admin_pubkey,
+    admin_pubkey: admin_pubkey
   };
   return action;
 };
@@ -684,12 +684,12 @@ export const rl_set_user_info_action = (
   origin,
   admin_pubkey
 ) => {
-  return (dispatch) => {
+  return dispatch => {
     return async_api(
       dispatch,
       rl_set_user_info(wallet_id, interval, limit, origin, admin_pubkey),
       true
-    ).then((response) => {
+    ).then(response => {
       dispatch(closeProgress());
       dispatch(createState(true, false));
       if (response.data.success) {
@@ -705,13 +705,13 @@ export const rl_set_user_info_action = (
   };
 };
 
-export const clawback_rl_coin = (wallet_id) => {
+export const clawback_rl_coin = wallet_id => {
   // THIS IS A PLACEHOLDER FOR RL CLAWBACK FUNCTIONALITY
 };
 
-export const exit_and_close = (event) => {
-  return (dispatch) => {
-    return async_api(dispatch, exitDaemon(), false).then((response) => {
+export const exit_and_close = event => {
+  return dispatch => {
+    return async_api(dispatch, exitDaemon(), false).then(response => {
       console.log("GOT RESPONSE", response);
       dispatch(wsDisconnect());
       event.sender.send("daemon-exited");

@@ -107,8 +107,7 @@ const NewWallet = props => {
     }
   }, [didMount, setDidMount, dispatch]);
 
-
   return <UIPart props={props}></UIPart>;
-}
+};
 
 export default withTheme(withRouter(NewWallet));
