@@ -19,10 +19,10 @@ from src.wallet.cc_wallet.cc_utils import (
     spend_bundle_for_spendable_ccs,
     CC_MOD,
 )
-from src.wallet.cc_wallet.genesis_by_coin_id_with_0 import (
+from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
     create_genesis_or_zero_coin_checker,
 )
-from src.wallet.cc_wallet.genesis_by_puzzle_hash_with_0 import (
+from src.wallet.puzzles.genesis_by_puzzle_hash_with_0 import (
     create_genesis_puzzle_or_zero_coin_checker,
 )
 
