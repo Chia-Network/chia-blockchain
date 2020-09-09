@@ -47,7 +47,7 @@ for setuptools_scm/PEP 440 reasons.
 - `chia init` now automatically discovers previous releases in each new release.
 
 ### Fixed
-- `chia show -w` should now more reliably work. Wallet balances should be more often correct.
+- `chia show -w` should now more reliably work. Wallet ballances should be more often correct.
 - View -> Developer -> Developer Tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request!
 - Fixed 'Receive Address' typo in Wallet. Thanks @meurtn on Keybase.
 - Fixed a typo in `chia show -w` with thanks to @pyl on Keybase.
