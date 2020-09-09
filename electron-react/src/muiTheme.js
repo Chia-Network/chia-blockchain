@@ -62,6 +62,25 @@ const theme = createMuiTheme({
     marginLeft: defaultTheme.spacing(4),
     fontSize: 35,
   },
+  div: {
+    height: "100%",
+    background: "linear-gradient(45deg, #222222 30%, #333333 90%)",
+    fontFamily: "Open Sans, sans-serif"
+  },
+  center: {
+    textAlign: "center",
+    height: "200px",
+    width: "300px",
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    margin: "auto"
+  },
+  h3: {
+    color: "white"
+  }
 });
 
 export default theme;

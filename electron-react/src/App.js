@@ -16,16 +16,18 @@ import {
 import { CircularProgress } from "@material-ui/core";
 import { ModalDialog, Spinner } from "./pages/ModalDialog";
 import { RestoreBackup } from "./pages/backup/restoreBackup";
+import { useTheme } from '@material-ui/core/styles';
 
 import theme from "./muiTheme";
 
 const LoadingScreen = props => {
-  const classes = theme;
+  const theme = useTheme();
+  debugger
   return (
-    <div className={classes.div}>
-      <div className={classes.center}>
-        <h3 className={classes.h3}>{props.children}</h3>
-        <CircularProgress className={classes.h3} />
+    <div style={theme.div}>
+      <div style={theme.center}>
+        <h3 style={theme.h3}>{props.children}</h3>
+        <CircularProgress style={theme.h3} />
       </div>
     </div>
   );
