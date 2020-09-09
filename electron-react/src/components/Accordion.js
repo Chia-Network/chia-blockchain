@@ -46,6 +46,6 @@ const Accordion = props => {
       </div>
     </div>
   );
-}
+};
 
 export default Accordion;

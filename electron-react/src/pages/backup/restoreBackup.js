@@ -8,14 +8,14 @@ import { useSelector, useDispatch } from "react-redux";
 import myStyle from "../style";
 import {
   changeEntranceMenu,
-  presentSelectKeys,
+  presentSelectKeys
 } from "../../modules/entranceMenu";
 import {
   add_new_key_action,
   add_and_restore_from_backup,
   login_and_skip_action,
   get_backup_info_action,
-  log_in_and_import_backup_action,
+  log_in_and_import_backup_action
 } from "../../modules/message";
 import { Paper, Grid } from "@material-ui/core";
 import {
@@ -23,17 +23,17 @@ import {
   presentMain,
   presentBackupInfo,
   setBackupInfo,
-  selectFilePath,
+  selectFilePath
 } from "../../modules/backup_state";
 import { unix_to_short_date } from "../../util/utils";
 import { Box } from "@material-ui/core";
 
-const UIPart = (props) => {
+const UIPart = props => {
   const dispatch = useDispatch();
   const classes = myStyle();
-  var words = useSelector((state) => state.mnemonic_state.mnemonic_input);
+  var words = useSelector(state => state.mnemonic_state.mnemonic_input);
   var fingerprint = useSelector(
-    (state) => state.wallet_state.selected_fingerprint
+    state => state.wallet_state.selected_fingerprint
   );
 
   for (let word of words) {
@@ -54,19 +54,19 @@ const UIPart = (props) => {
     }
   }
 
-  const handleDragEnter = (e) => {
+  const handleDragEnter = e => {
     e.preventDefault();
     e.stopPropagation();
   };
-  const handleDragLeave = (e) => {
+  const handleDragLeave = e => {
     e.preventDefault();
     e.stopPropagation();
   };
-  const handleDragOver = (e) => {
+  const handleDragOver = e => {
     e.preventDefault();
     e.stopPropagation();
   };
-  const handleDrop = (e) => {
+  const handleDrop = e => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -91,10 +91,10 @@ const UIPart = (props) => {
         </Container>
       </div>
       <div
-        onDrop={(e) => handleDrop(e)}
-        onDragOver={(e) => handleDragOver(e)}
-        onDragEnter={(e) => handleDragEnter(e)}
-        onDragLeave={(e) => handleDragLeave(e)}
+        onDrop={e => handleDrop(e)}
+        onDragOver={e => handleDragOver(e)}
+        onDragEnter={e => handleDragEnter(e)}
+        onDragLeave={e => handleDragLeave(e)}
         className={classes.dragContainer}
       >
         <Paper
@@ -126,12 +126,10 @@ const UIPart = (props) => {
 const BackupDetails = () => {
   const classes = myStyle();
   const dispatch = useDispatch();
-  const file_path = useSelector(
-    (state) => state.backup_state.selected_file_path
-  );
-  const backup_info = useSelector((state) => state.backup_state.backup_info);
+  const file_path = useSelector(state => state.backup_state.selected_file_path);
+  const backup_info = useSelector(state => state.backup_state.backup_info);
   const selected_file_path = useSelector(
-    (state) => state.backup_state.selected_file_path
+    state => state.backup_state.selected_file_path
   );
   const date = unix_to_short_date(backup_info["timestamp"]);
   const backup_fingerprint = backup_info["fingerprint"];
@@ -140,9 +138,9 @@ const BackupDetails = () => {
   const downloaded = backup_info["downloaded"];
   const host = backup_info["backup_host"];
 
-  var words = useSelector((state) => state.mnemonic_state.mnemonic_input);
+  var words = useSelector(state => state.mnemonic_state.mnemonic_input);
   var fingerprint = useSelector(
-    (state) => state.wallet_state.selected_fingerprint
+    state => state.wallet_state.selected_fingerprint
   );
 
   for (let word of words) {
@@ -189,7 +187,7 @@ const BackupDetails = () => {
             position: "relative",
             width: "80%",
             margin: "auto",
-            padding: "20px",
+            padding: "20px"
           }}
         >
           <Box
@@ -249,7 +247,7 @@ const BackupDetails = () => {
           </Grid>
           <Typography variant="subtitle1">Smart wallets</Typography>
           <WalletHeader></WalletHeader>
-          {wallets.map((wallet) => (
+          {wallets.map(wallet => (
             <WalletRow wallet={wallet}></WalletRow>
           ))}
         </Paper>
@@ -273,7 +271,7 @@ const BackupDetails = () => {
   );
 };
 
-const WalletRow = (props) => {
+const WalletRow = props => {
   const wallet = props.wallet;
   const id = wallet.id;
   const name = wallet.name;
@@ -320,7 +318,7 @@ const WalletHeader = () => {
 };
 
 export const RestoreBackup = () => {
-  const view = useSelector((state) => state.backup_state.view);
+  const view = useSelector(state => state.backup_state.view);
   if (view === presentBackupInfo) {
     return <BackupDetails></BackupDetails>;
   } else {

@@ -60,18 +60,17 @@ const Block = props => {
 
   const dispatch = useDispatch();
 
-  const handleClearBlock = useCallback(
-    () => dispatch(clearBlock()),
-    [dispatch]
-  );
+  const handleClearBlock = useCallback(() => dispatch(clearBlock()), [
+    dispatch
+  ]);
 
   const handleGetHeader = useCallback(
-    (headerHash) => dispatch(getHeader(headerHash)),
+    headerHash => dispatch(getHeader(headerHash)),
     [dispatch]
   );
 
   const handleGetBlock = useCallback(
-    (headerHash) => dispatch(getBlock(headerHash)),
+    headerHash => dispatch(getBlock(headerHash)),
     [dispatch]
   );
 
@@ -87,22 +86,23 @@ const Block = props => {
     var newHeaderHash = await hash_header(props.block.header);
 
     let buf = hex_to_array(props.block.proof_of_space.pool_public_key);
-    buf = buf.concat(
-      hex_to_array(props.block.proof_of_space.plot_public_key)
-    );
+    buf = buf.concat(hex_to_array(props.block.proof_of_space.plot_public_key));
     const bufHash = await sha256(buf);
     var newPlotId = arr_to_hex(bufHash);
     setHeaderHash(newHeaderHash);
     setPlotId(newPlotId);
-  }, [handleGetHeader, props])
+  }, [handleGetHeader, props]);
 
-  useEffect((prevProps) => {
-    (async () => {
-      if (!didMount || height > 0) {
-        await fetchHeaderIfNecessary();
-      }
-    })()
-  }, [prev_header_hash, height, didMount, setDidMount, fetchHeaderIfNecessary]);
+  useEffect(
+    prevProps => {
+      (async () => {
+        if (!didMount || height > 0) {
+          await fetchHeaderIfNecessary();
+        }
+      })();
+    },
+    [prev_header_hash, height, didMount, setDidMount, fetchHeaderIfNecessary]
+  );
 
   const classes = props.classes;
   const block = props.block;
@@ -155,9 +155,7 @@ const Block = props => {
     },
     {
       name: "Block VDF Iterations",
-      value: BigInt(
-        block.proof_of_time.number_of_iterations
-      ).toLocaleString(),
+      value: BigInt(block.proof_of_time.number_of_iterations).toLocaleString(),
       tooltip:
         "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
     },
@@ -206,8 +204,7 @@ const Block = props => {
           <Button onClick={handleClearBlock}>Back</Button>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Block at height {block.header.data.height} in the Chia
-              blockchain
+              Block at height {block.header.data.height} in the Chia blockchain
             </Typography>
           </div>
           <TableContainer component={Paper}>
@@ -224,14 +221,14 @@ const Block = props => {
                           ></HelpIcon>
                         </Tooltip>
                       ) : (
-                          ""
-                        )}
+                        ""
+                      )}
                     </TableCell>
                     <TableCell
                       onClick={
                         row.name === "Previous block"
                           ? () => handleGetBlock(row.value)
-                          : () => { }
+                          : () => {}
                       }
                       align="right"
                     >
@@ -246,6 +243,6 @@ const Block = props => {
       </Grid>
     </Paper>
   );
-}
+};
 
 export default withStyles(styles)(Block);

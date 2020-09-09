@@ -12,7 +12,7 @@ const {
   shell,
   ipcMain,
   BrowserWindow,
-  Menu,
+  Menu
 } = require("electron");
 const openAboutWindow = require("about-window").default;
 const path = require("path");
@@ -91,17 +91,17 @@ const createPyProc = () => {
   if (pyProc != null) {
     pyProc.stdout.setEncoding("utf8");
 
-    pyProc.stdout.on("data", function (data) {
+    pyProc.stdout.on("data", function(data) {
       process.stdout.write(data.toString());
     });
 
     pyProc.stderr.setEncoding("utf8");
-    pyProc.stderr.on("data", function (data) {
+    pyProc.stderr.on("data", function(data) {
       //Here is where the error output goes
       process.stdout.write("stderr: " + data.toString());
     });
 
-    pyProc.on("close", function (code) {
+    pyProc.on("close", function(code) {
       //Here you can get the exit code of the script
       console.log("closing code: " + code);
     });
@@ -111,9 +111,9 @@ const createPyProc = () => {
   //pyProc.unref();
 };
 
-const closeDaemon = (callback) => {
+const closeDaemon = callback => {
   const timeout = setTimeout(() => callback(), 20000);
-  const clearTimeoutCallback = (err) => {
+  const clearTimeoutCallback = err => {
     clearTimeout(timeout);
     callback(err);
   };
@@ -121,7 +121,7 @@ const closeDaemon = (callback) => {
   try {
     const request_id = crypto.randomBytes(32).toString("hex");
     ws = new WebSocket(daemon_rpc_ws, {
-      perMessageDeflate: false,
+      perMessageDeflate: false
     });
     ws.on("open", function open() {
       console.log("Opened websocket with", daemon_rpc_ws);
@@ -130,7 +130,7 @@ const closeDaemon = (callback) => {
         ack: false,
         origin: "wallet_ui",
         destination: "daemon",
-        request_id,
+        request_id
       };
       ws.send(JSON.stringify(msg));
     });
@@ -140,7 +140,7 @@ const closeDaemon = (callback) => {
         clearTimeoutCallback();
       }
     });
-    ws.on("error", (err) => {
+    ws.on("error", err => {
       if (err.errno === "ECONNREFUSED") {
         clearTimeoutCallback();
       } else {
@@ -152,7 +152,7 @@ const closeDaemon = (callback) => {
   }
 };
 
-const exitPyProc = (e) => {};
+const exitPyProc = e => {};
 
 app.on("will-quit", exitPyProc);
 
@@ -174,8 +174,8 @@ const createWindow = () => {
     show: false,
     webPreferences: {
       preload: __dirname + "/preload.js",
-      nodeIntegration: true,
-    },
+      nodeIntegration: true
+    }
   });
 
   if (dev_config.redux_tool) {
@@ -195,12 +195,12 @@ const createWindow = () => {
     url.format({
       pathname: path.join(__dirname, "/../build/index.html"),
       protocol: "file:",
-      slashes: true,
+      slashes: true
     });
 
   mainWindow.loadURL(startUrl);
 
-  mainWindow.once("ready-to-show", function () {
+  mainWindow.once("ready-to-show", function() {
     mainWindow.show();
   });
 
@@ -208,7 +208,7 @@ const createWindow = () => {
   // if (!guessPackaged()) {
   //   mainWindow.webContents.openDevTools();
   // }
-  mainWindow.on("close", (e) => {
+  mainWindow.on("close", e => {
     if (decidedToClose) {
       return;
     }
@@ -218,7 +218,7 @@ const createWindow = () => {
       buttons: ["No", "Yes"],
       title: "Confirm",
       message:
-        "Are you sure you want to quit? GUI Plotting and farming will stop.",
+        "Are you sure you want to quit? GUI Plotting and farming will stop."
     });
     if (choice == 0) {
       return;
@@ -267,7 +267,7 @@ ipcMain.on("load-page", (event, arg) => {
     require("url").format({
       pathname: path.join(__dirname, arg.file),
       protocol: "file:",
-      slashes: true,
+      slashes: true
     }) + arg.query
   );
 });
@@ -278,50 +278,50 @@ function getMenuTemplate() {
       label: "File",
       submenu: [
         {
-          role: "quit",
-        },
-      ],
+          role: "quit"
+        }
+      ]
     },
     {
       label: "Edit",
       submenu: [
         {
-          role: "undo",
+          role: "undo"
         },
         {
-          role: "redo",
+          role: "redo"
         },
         {
-          type: "separator",
+          type: "separator"
         },
         {
-          role: "cut",
+          role: "cut"
         },
         {
-          role: "copy",
+          role: "copy"
         },
         {
-          role: "paste",
+          role: "paste"
         },
         {
-          role: "delete",
+          role: "delete"
         },
         {
-          type: "separator",
+          type: "separator"
         },
         {
-          role: "selectall",
-        },
-      ],
+          role: "selectall"
+        }
+      ]
     },
     {
       label: "View",
       submenu: [
         {
-          role: "reload",
+          role: "reload"
         },
         {
-          role: "forcereload",
+          role: "forcereload"
         },
         {
           label: "Developer",
@@ -332,46 +332,46 @@ function getMenuTemplate() {
                 process.platform === "darwin"
                   ? "Alt+Command+I"
                   : "Ctrl+Shift+I",
-              click: () => mainWindow.toggleDevTools(),
-            },
-          ],
+              click: () => mainWindow.toggleDevTools()
+            }
+          ]
         },
         {
-          type: "separator",
+          type: "separator"
         },
         {
-          role: "resetzoom",
+          role: "resetzoom"
         },
         {
-          role: "zoomin",
+          role: "zoomin"
         },
         {
-          role: "zoomout",
+          role: "zoomout"
         },
         {
-          type: "separator",
+          type: "separator"
         },
         {
           label: "Full Screen",
           type: "checkbox",
           accelerator: process.platform === "darwin" ? "Ctrl+Command+F" : "F11",
-          click: () => windows.main.toggleFullScreen(),
-        },
-      ],
+          click: () => windows.main.toggleFullScreen()
+        }
+      ]
     },
     {
       label: "Window",
       submenu: [
         {
-          role: "minimize",
+          role: "minimize"
         },
         {
-          role: "zoom",
+          role: "zoom"
         },
         {
-          role: "close",
-        },
-      ],
+          role: "close"
+        }
+      ]
     },
     {
       label: "Help",
@@ -383,7 +383,7 @@ function getMenuTemplate() {
             openExternal(
               "https://github.com/Chia-Network/chia-blockchain/wiki"
             );
-          },
+          }
         },
         {
           label: "Frequently Asked Questions",
@@ -391,7 +391,7 @@ function getMenuTemplate() {
             openExternal(
               "https://github.com/Chia-Network/chia-blockchain/wiki/FAQ"
             );
-          },
+          }
         },
         {
           label: "Release Notes",
@@ -399,7 +399,7 @@ function getMenuTemplate() {
             openExternal(
               "https://github.com/Chia-Network/chia-blockchain/releases"
             );
-          },
+          }
         },
         {
           label: "Contribute on GitHub",
@@ -407,10 +407,10 @@ function getMenuTemplate() {
             openExternal(
               "https://github.com/Chia-Network/chia-blockchain/blob/master/CONTRIBUTING.md"
             );
-          },
+          }
         },
         {
-          type: "separator",
+          type: "separator"
         },
         {
           label: "Report an Issue...",
@@ -418,22 +418,22 @@ function getMenuTemplate() {
             openExternal(
               "https://github.com/Chia-Network/chia-blockchain/issues"
             );
-          },
+          }
         },
         {
           label: "Chat on KeyBase",
           click: () => {
             openExternal("https://keybase.io/team/chia_network.public");
-          },
+          }
         },
         {
           label: "Follow on Twitter",
           click: () => {
             openExternal("https://twitter.com/chia_project");
-          },
-        },
-      ],
-    },
+          }
+        }
+      ]
+    }
   ];
 
   if (process.platform === "darwin") {
@@ -450,34 +450,34 @@ function getMenuTemplate() {
                 "https://github.com/Chia-Network/chia-blockchain/issues",
               icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
               copyright: "Copyright (c) 2020 Chia Network",
-              license: "Apache 2.0",
-            }),
+              license: "Apache 2.0"
+            })
         },
         {
-          type: "separator",
+          type: "separator"
         },
         {
-          role: "services",
+          role: "services"
         },
         {
-          type: "separator",
+          type: "separator"
         },
         {
-          role: "hide",
+          role: "hide"
         },
         {
-          role: "hideothers",
+          role: "hideothers"
         },
         {
-          role: "unhide",
+          role: "unhide"
         },
         {
-          type: "separator",
+          type: "separator"
         },
         {
-          role: "quit",
-        },
-      ],
+          role: "quit"
+        }
+      ]
     });
 
     // File menu (MacOS)
@@ -485,26 +485,26 @@ function getMenuTemplate() {
       label: "File",
       submenu: [
         {
-          role: "close",
-        },
-      ],
+          role: "close"
+        }
+      ]
     });
 
     // Edit menu (MacOS)
     template[2].submenu.push(
       {
-        type: "separator",
+        type: "separator"
       },
       {
         label: "Speech",
         submenu: [
           {
-            role: "startspeaking",
+            role: "startspeaking"
           },
           {
-            role: "stopspeaking",
-          },
-        ],
+            role: "stopspeaking"
+          }
+        ]
       }
     );
 
@@ -513,18 +513,18 @@ function getMenuTemplate() {
       role: "window",
       submenu: [
         {
-          role: "minimize",
+          role: "minimize"
         },
         {
-          role: "zoom",
+          role: "zoom"
         },
         {
-          type: "separator",
+          type: "separator"
         },
         {
-          role: "front",
-        },
-      ],
+          role: "front"
+        }
+      ]
     });
   }
 
@@ -532,7 +532,7 @@ function getMenuTemplate() {
     // Help menu (Windows, Linux)
     template[4].submenu.push(
       {
-        type: "separator",
+        type: "separator"
       },
       {
         label: "About " + "Chia Blockchain",
@@ -543,8 +543,8 @@ function getMenuTemplate() {
               "https://github.com/Chia-Network/chia-blockchain/issues",
             icon_path: path.join(__dirname, "assets/img/chia_circle.png"),
             copyright: "Copyright (c) 2020 Chia Network",
-            license: "Apache 2.0",
-          }),
+            license: "Apache 2.0"
+          })
       }
     );
   }
