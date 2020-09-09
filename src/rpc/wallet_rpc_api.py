@@ -285,9 +285,7 @@ class WalletRpcApi:
         raw_puzzle_hash = decode_puzzle_hash(puzzle_hash)
         request = FarmNewBlockProtocol(raw_puzzle_hash)
         msg = OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("farm_new_block", request),
-            Delivery.BROADCAST,
+            NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
         )
 
         self.service.server.push_message(msg)
@@ -541,7 +539,7 @@ class WalletRpcApi:
             balance = await wallet.get_confirmed_balance()
             type = wallet.wallet_info.type
             if type == WalletType.COLOURED_COIN.value:
-                name = wallet.cc_info.my_colour_name
+                name = wallet.wallet_info.name
                 colour = wallet.get_colour()
                 wallet_summaries[wallet_id] = {
                     "type": type,
