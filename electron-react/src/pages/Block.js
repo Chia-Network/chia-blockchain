@@ -54,28 +54,28 @@ const Block = props => {
   const [headerHash, setHeaderHash] = useState("");
   const [plotId, setPlotId] = useState("");
   const [didMount, setDidMount] = useState(false);
-  
+
   const prev_header_hash = props.block.header.data.prev_header_hash;
   const height = props.block.header.data.height;
-  
+
   const dispatch = useDispatch();
-  
+
   const handleClearBlock = useCallback(
-    () => dispatch(clearBlock()), 
+    () => dispatch(clearBlock()),
     [dispatch]
   );
-  
+
   const handleGetHeader = useCallback(
-    (headerHash) => dispatch(getHeader(headerHash)), 
+    (headerHash) => dispatch(getHeader(headerHash)),
     [dispatch]
   );
 
   const handleGetBlock = useCallback(
-    (headerHash) => dispatch(getBlock(headerHash)), 
+    (headerHash) => dispatch(getBlock(headerHash)),
     [dispatch]
-  ); 
+  );
 
-  const fetchHeaderIfNecessary = async () => {
+  const fetchHeaderIfNecessary = useCallback(async () => {
     if (props.prevHeader) {
       const phh = await hash_header(props.prevHeader);
       if (phh !== props.block.header.data.prev_header_hash) {
@@ -94,13 +94,14 @@ const Block = props => {
     var newPlotId = arr_to_hex(bufHash);
     setHeaderHash(newHeaderHash);
     setPlotId(newPlotId);
-  }
+  }, [handleGetHeader, props])
 
-  useEffect((prevProps) => { 
+  useEffect((prevProps) => {
     (async () => {
       if (!didMount || height > 0) {
         await fetchHeaderIfNecessary();
-      }}) ()
+      }
+    })()
   }, [prev_header_hash, height, didMount, setDidMount, fetchHeaderIfNecessary]);
 
   const classes = props.classes;
@@ -223,14 +224,14 @@ const Block = props => {
                           ></HelpIcon>
                         </Tooltip>
                       ) : (
-                        ""
-                      )}
+                          ""
+                        )}
                     </TableCell>
                     <TableCell
                       onClick={
                         row.name === "Previous block"
                           ? () => handleGetBlock(row.value)
-                          : () => {}
+                          : () => { }
                       }
                       align="right"
                     >
