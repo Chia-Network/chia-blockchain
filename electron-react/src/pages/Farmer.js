@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles, withStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
@@ -191,8 +191,8 @@ const StatusCell = props => {
                 <HelpIcon style={{ color: "#c8c8c8", fontSize: 12 }}></HelpIcon>
               </Tooltip>
             ) : (
-              ""
-            )}
+                ""
+              )}
           </Box>
         </Box>
       </div>
@@ -282,8 +282,8 @@ const Challenges = props => {
                     <TableCell align="right">
                       {item.estimates.length > 0
                         ? Math.floor(
-                            Math.min.apply(Math, item.estimates) / 60
-                          ).toString() + " minutes"
+                          Math.min.apply(Math, item.estimates) / 60
+                        ).toString() + " minutes"
                         : ""}
                     </TableCell>
                   </TableRow>
@@ -488,8 +488,8 @@ const Plots = props => {
               </List>{" "}
             </span>
           ) : (
-            ""
-          )}
+              ""
+            )}
           {failed_to_open_filenames.length > 0 ? (
             <span>
               <div className={classes.cardTitle}>
@@ -521,8 +521,8 @@ const Plots = props => {
               </List>
             </span>
           ) : (
-            ""
-          )}
+              ""
+            )}
         </Grid>
       </Grid>
       <Dialog
@@ -613,7 +613,7 @@ const Farmer = props => {
 
   const classes = props.classes;
 
-  const checkRewards = async () => {
+  const checkRewards = useCallback(async () => {
     let totalChia = BigInt(0);
     let biggestHeight = 0;
     for (let wallet of wallets) {
@@ -654,16 +654,16 @@ const Farmer = props => {
       setTotalChiaFarmed(totalChia);
       setBiggestHeight(biggestHeight);
     }
-  };
+  }, [totalChiaFarmed, didMount, wallets]);
 
-  useEffect(() => { 
-    (async () => { 
-      await checkRewards(); 
-      if (!didMount) { 
-        setDidMount(true); 
+  useEffect(() => {
+    (async () => {
+      await checkRewards();
+      if (!didMount) {
+        setDidMount(true);
         dispatch(clearSend);
       }
-     }) ()
+    })()
   }, [checkRewards, dispatch, props, didMount, setDidMount]);
 
   return (
@@ -676,7 +676,7 @@ const Farmer = props => {
           ></FarmerContent>
         </Container>
       </main>
-     </div>
+    </div>
   );
 }
 
