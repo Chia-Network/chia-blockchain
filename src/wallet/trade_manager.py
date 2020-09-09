@@ -16,6 +16,7 @@ from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.wallet.cc_wallet import cc_utils
 from src.wallet.cc_wallet.cc_wallet import CCWallet
+from src.wallet.puzzles.genesis_by_coin_id_with_0 import genesis_coin_id_for_genesis_coin_checker
 from src.wallet.trade_record import TradeRecord
 from src.wallet.trading.trade_status import TradeStatus
 from src.wallet.trading.trade_store import TradeStore
@@ -27,7 +28,6 @@ from src.wallet.util.trade_utils import (
 )
 from src.wallet.cc_wallet.cc_utils import (
     SpendableCC,
-    genesis_coin_id_for_genesis_coin_checker,
     uncurry_cc,
     spend_bundle_for_spendable_ccs,
     CC_MOD,
