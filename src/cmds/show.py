@@ -318,6 +318,86 @@ async def show_async(args, parser):
             else:
                 wallet_rpc_port = args.wallet_rpc_port
             wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port)
+            get_keys_response = await wallet_client.get_keys()
+            if (
+                not "public_key_fingerprints" in get_keys_response
+                or len(get_keys_response["public_key_fingerprints"]) == 0
+            ):
+                print("Error, no keys loaded")
+                return
+            fingerprints = get_keys_response["public_key_fingerprints"]
+            fingerprint = None
+            if len(fingerprints) == 1:
+                fingerprint = fingerprints[0][0]
+                log_in_response = await wallet_client.log_in(fingerprint)
+            else:
+                print("Choose wallet key:")
+                for i, fp in enumerate(fingerprints):
+                    print(f"{i+1}) {fp[0]}")
+                val = None
+                while val is None:
+                    val = input("Enter number to pick press q to quite: ")
+                    if val == "q":
+                        return
+                    if not val.isdigit():
+                        val = None
+                    else:
+                        index = int(val) - 1
+                        if index >= len(fingerprints):
+                            print("Invalid value")
+                            val = None
+                            continue
+                        else:
+                            fingerprint = fingerprints[index][0]
+                log_in_response = await wallet_client.log_in(fingerprint)
+
+            if log_in_response["success"] is False:
+                if log_in_response["error"] == "not_initialized":
+                    use_cloud = True
+                    if "backup_path" in log_in_response:
+                        path = log_in_response["backup_path"]
+                        print(
+                            f"Backup file from backup.chia.net downloaded and written to: {path}"
+                        )
+                        val = input(
+                            "Do you want to use this file to restore from backup? (Y/N) "
+                        )
+                        if val.lower() == "y":
+                            log_in_response = await wallet_client.log_in_and_restore(
+                                fingerprint, path
+                            )
+                        else:
+                            use_cloud = False
+
+                    if "backup_path" not in log_in_response or use_cloud is False:
+                        if use_cloud is True:
+                            val = input(
+                                "No online backup file found, \n Press S to skip restore from backup \n Press F to use your own backup file: "
+                            )
+                        else:
+                            val = input(
+                                "Cloud backup declined, \n Press S to skip restore from backup \n Press F to use your own backup file: "
+                            )
+
+                        if val.lower() == "s":
+                            log_in_response = await wallet_client.log_in_and_skip(
+                                fingerprint
+                            )
+                        elif val.lower() == "f":
+                            val = input(
+                                "Please provide the full path to your backup file: "
+                            )
+                            log_in_response = await wallet_client.log_in_and_restore(
+                                fingerprint, val
+                            )
+
+            if "success" not in log_in_response or log_in_response["success"] is False:
+                if "error" in log_in_response:
+                    error = log_in_response["error"]
+                    print(f"Error: {log_in_response[error]}")
+                print("Unable to log in into wallet, try using GUI")
+                return
+
             summaries_response = await wallet_client.get_wallet_summaries()
             if "wallet_summaries" not in summaries_response:
                 print("Wallet summary cannot be displayed")
