@@ -28,6 +28,7 @@ import {
   changeCreateWallet,
   ALL_OPTIONS,
 } from "../modules/createWalletReducer";
+import { Fab } from "@material-ui/core";
 const config = require("../config");
 const backup_host = config.backup_host;
 
@@ -131,6 +132,42 @@ export const add_key = (mnemonic, type, file_path) => {
   };
   return action;
 };
+
+export const send_transaction_and_wait = (wallet_id, amount, fee, puzzle_hash) => {
+  return (dispatch) => {
+    try {
+      response = await async_api(dispatch, send_transaction(wallet_id, amount, fee, puzzle_hash), False);
+      if (!response.data.success) {
+        // Do something bad
+        return;
+      }
+      const transaction_id = response.data.transaction_id;
+      while (response.data.success) {
+        sent_to = response.data.transaction.sent_to;
+        for (const node of sent_to) {
+          if (node[1] == "FAILED") {
+            dispatch(transaction_failed())
+            // Do something bad
+            return;
+          }
+          else if (node[1] == "SUCCESS") {
+            // Do something good
+          }
+          response = await async_api(dispatch, get_transaction(wallet_id, transaction_id), False);
+        }
+      }
+
+    } catch (err) {
+        // Do something good
+        return;
+    }
+  }
+}
+
+export const send_transaction_and_wait = (wallet_id, amount, fee, puzzle_hash) => {
+
+
+}
 
 export const add_new_key_action = (mnemonic) => {
   return (dispatch) => {
@@ -458,6 +495,9 @@ export const create_backup = (file_path) => {
   return action;
 };
 
+
+
+
 export const create_backup_action = (file_path) => {
   return (dispatch) => {
     return async_api(dispatch, create_backup(file_path), true).then(
@@ -712,7 +752,6 @@ export const clawback_rl_coin = (wallet_id) => {
 export const exit_and_close = (event) => {
   return (dispatch) => {
     return async_api(dispatch, exitDaemon(), false).then((response) => {
-      console.log("GOT RESPONSE", response);
       dispatch(wsDisconnect());
       event.sender.send("daemon-exited");
     });

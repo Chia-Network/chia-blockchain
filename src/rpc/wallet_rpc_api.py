@@ -20,6 +20,7 @@ from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
+from src.types.sized_bytes import bytes32
 from src.wallet.trade_record import TradeRecord
 from src.wallet.util.backup_utils import get_backup_info, download_backup, upload_backup
 from src.wallet.util.trade_utils import trade_record_to_dict
@@ -46,6 +47,7 @@ class WalletRpcApi:
             "/get_wallet_balance": self.get_wallet_balance,
             "/send_transaction": self.send_transaction,
             "/get_next_puzzle_hash": self.get_next_puzzle_hash,
+            "/get_transaction": self.get_transaction,
             "/get_transactions": self.get_transactions,
             "/farm_block": self.farm_block,
             "/get_sync_status": self.get_sync_status,
@@ -204,14 +206,14 @@ class WalletRpcApi:
             tx = await wallet.generate_signed_transaction_dict(request)
         except Exception as e:
             data = {
-                "status": "FAILED",
+                "success": False,
                 "reason": f"Failed to generate signed transaction. Error: {e}",
                 "id": wallet_id,
             }
             return data
         if tx is None:
             data = {
-                "status": "FAILED",
+                "success": False,
                 "reason": "Failed to generate signed transaction",
                 "id": wallet_id,
             }
@@ -220,46 +222,35 @@ class WalletRpcApi:
             await wallet.push_transaction(tx)
         except Exception as e:
             data = {
-                "status": "FAILED",
+                "success": False,
                 "reason": f"Failed to push transaction {e}",
                 "id": wallet_id,
             }
             return data
-        sent = False
-        start = time.time()
-        while time.time() - start < TIMEOUT:
-            sent_to: List[
-                Tuple[str, MempoolInclusionStatus, Optional[str]]
-            ] = await self.service.wallet_state_manager.get_transaction_status(
-                tx.name()
-            )
 
-            if len(sent_to) == 0:
-                await asyncio.sleep(1)
-                continue
-            status, err = sent_to[0][1], sent_to[0][2]
-            if status == MempoolInclusionStatus.SUCCESS:
-                data = {"status": "SUCCESS", "id": wallet_id}
-                sent = True
-                break
-            elif status == MempoolInclusionStatus.PENDING:
-                assert err is not None
-                data = {"status": "PENDING", "reason": err, "id": wallet_id}
-                sent = True
-                break
-            elif status == MempoolInclusionStatus.FAILED:
-                assert err is not None
-                data = {"status": "FAILED", "reason": err, "id": wallet_id}
-                sent = True
-                break
-        if not sent:
-            data = {
-                "status": "FAILED",
-                "reason": "Timed out. Transaction may or may not have been sent.",
+        # Transaction may not have been included in the mempool yet. Use get_transaction to check.
+        return {
+            "success": True,
+            "transaction": tx,
+            "transaction_id": tx.spend_bundle.name(),
+        }
+
+    async def get_transaction(self, request):
+        transaction_id: bytes32 = bytes32(bytes.fromhex(request["transaction_id"]))
+        tr: Optional[TransactionRecord] = await self.service.wallet_state_manager.get_transaction(transaction_id)
+        if tr is None:
+            return {
+                "success": False,
+                "reason": "Transaction not found",
                 "id": wallet_id,
+                "transaction_id": tr.spend_bundle.name(),
             }
 
-        return data
+        return {
+            "success": True,
+            "transaction": tr,
+            "transaction_id": tr.spend_bundle.name(),
+        }
 
     async def get_transactions(self, request):
         wallet_id = int(request["wallet_id"])
@@ -285,9 +276,7 @@ class WalletRpcApi:
         raw_puzzle_hash = decode_puzzle_hash(puzzle_hash)
         request = FarmNewBlockProtocol(raw_puzzle_hash)
         msg = OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("farm_new_block", request),
-            Delivery.BROADCAST,
+            NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
         )
 
         self.service.server.push_message(msg)

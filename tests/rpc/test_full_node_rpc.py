@@ -10,6 +10,7 @@ from src.util.ints import uint16
 from src.util.config import load_config
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.time_out_assert import time_out_assert
+from src.types.sized_bytes import bytes32
 
 
 @pytest.fixture(scope="module")
