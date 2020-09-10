@@ -132,7 +132,7 @@ full_node:
   sync_blocks_behind_threshold: 20
 
   # How often to connect to introducer if we need to learn more peers
-  peer_connect_interval: 500
+  peer_connect_interval: 50
   # Accept peers until this number of connections
   target_peer_count: 60
   # Initiate outbound connections until this number is hit.

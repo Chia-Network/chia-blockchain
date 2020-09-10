@@ -127,19 +127,21 @@ class FullNodeDiscovery:
             if connection.connection_type == NodeType.INTRODUCER:
                 self.global_connections.close(connection)
 
-        await asyncio.sleep(self.peer_connect_interval)
-
     async def _connect_to_peers(self, random):
-        next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 120, random)
+        next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
+        empty_tables = False
         while not self.is_closed:
             # We don't know any address, connect to the introducer to get some.
             size = await self.address_manager.size()
-            if size == 0:
+            if size == 0 or empty_tables:
                 await self._introducer_client()
+                await asyncio.sleep(15)
                 continue
 
             # Only connect out to one peer per network group (/16 for IPv4).
             groups = []
+            connected = self.global_connections.get_full_node_peerinfos()
+            empty_tables = False
             for conn in self.global_connections.get_outbound_connections():
                 peer = conn.get_peer_info()
                 group = peer.get_group()
@@ -163,7 +165,7 @@ class FullNodeDiscovery:
             if self._num_needed_peers() == 0:
                 if time.time() * 1000 * 1000 > next_feeler:
                     next_feeler = self._poisson_next_send(
-                        time.time() * 1000 * 1000, 120, random
+                        time.time() * 1000 * 1000, 240, random
                     )
                     is_feeler = True
 
@@ -172,9 +174,14 @@ class FullNodeDiscovery:
             now = time.time()
             got_peer = False
             addr: Optional[PeerInfo] = None
+            max_tries = 50 if len(connected) >= 3 else 10
             while not got_peer and not self.is_closed:
-                if tries > 0:
-                    await asyncio.sleep(30)
+                await asyncio.sleep(15)
+                tries += 1
+                if tries > max_tries:
+                    addr = None
+                    empty_tables = True
+                    break
                 info: Optional[
                     ExtendedPeerInfo
                 ] = await self.address_manager.select_tried_collision()
@@ -183,18 +190,19 @@ class FullNodeDiscovery:
                 else:
                     has_collision = True
                 if info is None:
+                    if not is_feeler:
+                        empty_tables = True
                     break
                 # Require outbound connections, other than feelers, to be to distinct network groups.
                 addr = info.peer_info
                 if not is_feeler and addr.get_group() in groups:
                     addr = None
-                    break
-                tries += 1
-                if tries > 100:
+                    continue
+                if addr in connected:
                     addr = None
-                    break
+                    continue
                 # only consider very recently tried nodes after 30 failed attempts
-                if now - info.last_try < 600 and tries < 30:
+                if now - info.last_try < 1800 and tries < 30:
                     continue
                 got_peer = True
 
@@ -210,7 +218,9 @@ class FullNodeDiscovery:
                         addr, None, None, disconnect_after_handshake
                     )
                 )
-            await asyncio.sleep(self.peer_connect_interval)
+            sleep_interval = 5 + len(connected) * 10
+            sleep_interval = min(sleep_interval, self.peer_connect_interval)
+            await asyncio.sleep(sleep_interval)
 
     async def _periodically_peer_gossip(self, random: Random):
         while not self.is_closed:
