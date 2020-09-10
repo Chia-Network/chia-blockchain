@@ -196,15 +196,15 @@ const plot_size_options = [
   { label: "600MiB", value: 25, workspace: "1.8GiB" },
   { label: "1.3GiB", value: 26, workspace: "4.9GiB" },
   { label: "2.7GiB", value: 27, workspace: "10.7GiB" },
-  { label: "5.6GiB", value: 28, workspace: "15.5GiB" },
-  { label: "11.5GiB", value: 29, workspace: "31GiB" },
-  { label: "23.8GiB", value: 30, workspace: "68GiB" },
-  { label: "49.1GiB", value: 31, workspace: "135GiB" },
-  { label: "101.4GiB", value: 32, workspace: "289GiB" },
-  // workspace are guesses using 51% - rounded up - past here
-  { label: "208.8GiB", value: 33, workspace: "559GiB" },
-  { label: "429.8GiB", value: 34, workspace: "1167GiB" },
-  { label: "884.1GiB", value: 35, workspace: "2383GiB" }
+  { label: "5.6GiB", value: 28, workspace: "21.3GiB" },
+  { label: "11.5GiB", value: 29, workspace: "41.1GiB" },
+  { label: "23.8GiB", value: 30, workspace: "77.3GiB" },
+  { label: "49.1GiB", value: 31, workspace: "145GiB" },
+  { label: "101.4GiB", value: 32, workspace: "297GiB" },
+  // workspace are guesses using 55.35% - rounded up - past here
+  { label: "208.8GiB", value: 33, workspace: "606GiB" },
+  { label: "429.8GiB", value: 34, workspace: "1266GiB" },
+  { label: "884.1GiB", value: 35, workspace: "2586GiB" }
 ];
 
 const WorkLocation = () => {
