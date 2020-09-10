@@ -10,7 +10,6 @@ from src.protocols import (
     full_node_protocol as fnp,
     timelord_protocol,
     wallet_protocol,
-    introducer_protocol,
 )
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
@@ -794,6 +793,8 @@ class TestFullNodeProtocol:
         ]
         assert len(msgs) == 0
 
+    """
+    This test will be added back soon.
     @pytest.mark.asyncio
     async def test_request_peers(self, two_nodes, wallet_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -816,6 +817,7 @@ class TestFullNodeProtocol:
             return len(msgs) > 0 and len(msgs[0].message.data.peer_list) > 0
 
         await time_out_assert(10, have_msgs, True)
+    """
 
 
 class TestWalletProtocol:
