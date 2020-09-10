@@ -1741,7 +1741,7 @@ class FullNode:
 
     @api_request
     async def request_peers(
-        self, request: introducer_protocol.RequestPeers
+        self, request: full_node_protocol.RequestPeers
     ) -> OutboundMessageGenerator:
         if self.global_connections is None:
             return
@@ -1753,7 +1753,7 @@ class FullNode:
 
         yield OutboundMessage(
             NodeType.FULL_NODE,
-            Message("respond_peers", introducer_protocol.RespondPeers(peers)),
+            Message("respond_peers_full_node", full_node_protocol.RespondPeers(peers)),
             Delivery.RESPOND,
         )
 
@@ -1765,7 +1765,9 @@ class FullNode:
             return
         conns = self.global_connections
         for peer in request.peer_list:
-            conns.peers.add(peer)
+            conns.peers.add(
+                PeerInfo(peer.host, peer.port)
+            )
 
         # Pseudo-message to close the connection
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
@@ -1780,6 +1782,12 @@ class FullNode:
         self.log.info(f"Trying to connect to peers: {to_connect}")
         for peer in to_connect:
             asyncio.create_task(self.server.start_client(peer, self._on_connect))
+
+    @api_request
+    async def respond_peers_full_node(
+        self, request: full_node_protocol.RespondPeers
+    ):
+        pass
 
     @api_request
     async def request_mempool_transactions(

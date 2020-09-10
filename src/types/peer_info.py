@@ -10,3 +10,11 @@ class PeerInfo(Streamable):
     # TODO: Change `host` type to bytes16
     host: str
     port: uint16
+
+
+@dataclass(frozen=True)
+@streamable
+class TimestampedPeerInfo(Streamable):
+    host: str
+    port: uint16
+    timestamp: uint64
