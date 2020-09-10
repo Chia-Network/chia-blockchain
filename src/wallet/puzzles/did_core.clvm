@@ -1,6 +1,6 @@
-(mod (corehash parent_info my_amount innerpuz_reveal solution)
+(mod (genesis_id corehash parent_info my_amount innerpuz_reveal solution)
 
-;EXAMPLE SOLUTION '(0xfadeddab (0xdeadbeef 0xcafef00d 200) 50 (a) ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
+; EXAMPLE SOLUTION '(0xfadeddab (0xdeadbeef 0xcafef00d 200) 50 (a) ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
 
 ; 51 = CREATE_COIN
 ; 52 = ASSERT_CONSUMED
@@ -60,17 +60,13 @@
     (qq (c (q 53) (c (unquote my_ID) (q ()))))
   )
 
-  (defun assert_parent_is_genesis (my_innerpuzhash my_amount corehash)
-    (list OP_ASSERT_MY_ID (sha256 (q "GENESIS_COIN") (create_fullpuzhash my_innerpuzhash corehash) my_amount))
-  )
-
-  (defun check_my_amount_and_ID (parent_info my_innerpuzhash my_amount corehash)
-    (if (> my_amount 0)
+  (defun check_my_amount_and_ID (genesis_id parent_info my_innerpuzhash my_value corehash)
+    (if (> my_value 0)
       (if (l parent_info)
-        (assert_my_id (create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) my_innerpuzhash my_amount corehash))
-        (assert_parent_is_genesis my_innerpuzhash my_amount corehash)
+        (assert_my_id (create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) my_innerpuzhash my_value corehash))
+        (list OP_ASSERT_MY_ID (sha256 genesis_id (create_fullpuzhash my_innerpuzhash corehash) my_value))
       )
-      (x)
+      (x "my_amount_and_id fail")
     )
   )
 
@@ -79,7 +75,7 @@
       (if (= (f (f outputs_loop)) (q 51))
         (if (> (f (r (r (f outputs_loop)))) 0)
           (if flag
-            (x)
+            (x "more than one output with value > 1")
             (check_outputs_value (r outputs_loop) 1)
           )
           (check_outputs_value (r outputs_loop) flag)
@@ -90,10 +86,10 @@
     )
   )
 
-  (defun check_id_and_check_outputs (corehash parent_info my_amount innerpuzhash outputs)
+  (defun check_id_and_check_outputs (genesis_id corehash parent_info my_amount innerpuzhash outputs)
     (if (check_outputs_value outputs 0)
-      (c (check_my_amount_and_ID parent_info innerpuzhash my_amount corehash) outputs)
-      (x)
+      (c (check_my_amount_and_ID genesis_id parent_info innerpuzhash my_amount corehash) outputs)
+      (x "check_id_and_check_outputs fail")
     )
   )
 
@@ -101,13 +97,13 @@
   ;(f (f (create_outputs innerpuz_reveal solution)))
   ;(list corehash parent_info my_amount innerpuz_reveal (create_outputs innerpuz_reveal solution))
   ;(check_outputs_value (create_outputs innerpuz_reveal solution) 0)
-  ;(check_my_amount_and_ID parent_info innerpuz_reveal my_amount corehash)
+  ;(check_my_amount_and_ID genesis_id parent_info innerpuz_reveal my_amount corehash)
   ;(create_fullpuzhash my_innerpuz corehash)
   ;(assert_parent_is_genesis my_innerpuz my_amount corehash)
 
 
 
   ;main
-  (check_id_and_check_outputs corehash parent_info my_amount (sha256tree1 innerpuz_reveal) (create_outputs innerpuz_reveal solution))
+  (check_id_and_check_outputs genesis_id corehash parent_info my_amount (sha256tree1 innerpuz_reveal) (create_outputs innerpuz_reveal solution))
 
 )

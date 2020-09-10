@@ -10,7 +10,7 @@ from src.types.program import Program
 @dataclass(frozen=True)
 @streamable
 class DIDInfo(Streamable):
-    my_core: Optional[str]
+    my_core: Optional[Program]
     backup_ids: List[bytes]
     parent_info: List[Tuple[bytes32, Optional[CCParent]]]  # {coin.name(): CCParent}
     current_inner: Optional[Program]  # represents a Program as bytes
