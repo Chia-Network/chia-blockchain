@@ -117,6 +117,7 @@ class ChiaServer:
 
         self.root_path = root_path
         self.config = config
+        self._pending_connections = []
 
     async def start_client(
         self,
@@ -138,6 +139,10 @@ class ChiaServer:
         try:
             # Sometimes open_connection takes a long time, so we add it as a task, and cancel
             # the task in the event of closing the node.
+            peer_info = (target_node.host, target_node.port)
+            if peer_info in self._pending_connections:
+                return
+            self._pending_connections.append(peer_info)
             oc_task: asyncio.Task = asyncio.create_task(
                 asyncio.open_connection(
                     target_node.host, int(target_node.port), ssl=ssl_context
@@ -145,6 +150,7 @@ class ChiaServer:
             )
             self._oc_tasks.append(oc_task)
             reader, writer = await oc_task
+            self._pending_connections.remove(peer_info)
             self._oc_tasks.remove(oc_task)
         except Exception as e:
             self.log.warning(
@@ -153,6 +159,8 @@ class ChiaServer:
             self.global_connections.failed_connection(target_node)
             if self.global_connections.introducer_peers is not None:
                 self.global_connections.introducer_peers.remove(target_node)
+            if peer_info in self._pending_connections:
+                self._pending_connections.remove(peer_info)
             return False
         if not self._srwt_aiter.is_stopped():
             self._srwt_aiter.push(
