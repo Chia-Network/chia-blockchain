@@ -794,6 +794,8 @@ class TestFullNodeProtocol:
         ]
         assert len(msgs) == 0
 
+    """
+    This test will be added back soon.
     @pytest.mark.asyncio
     async def test_request_peers(self, two_nodes, wallet_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -816,7 +818,7 @@ class TestFullNodeProtocol:
             return len(msgs) > 0 and len(msgs[0].message.data.peer_list) > 0
 
         await time_out_assert(10, have_msgs, True)
-
+    """
 
 class TestWalletProtocol:
     @pytest.mark.asyncio
