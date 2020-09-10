@@ -13,8 +13,7 @@ from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import CoinSolution, SpendBundle
 from src.util.condition_tools import conditions_dict_for_solution
 from src.util.ints import uint64
-from src.wallet.puzzles.load_clvm import load_clvm
-
+from src.wallet.puzzles.cc_loader import CC_MOD
 from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
     lineage_proof_for_genesis,
     lineage_proof_for_coin,
@@ -26,8 +25,6 @@ from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
 NULL_SIGNATURE = G2Element.generator() * 0
 
 LOCK_INNER_PUZZLE = Program.from_bytes(bytes.fromhex("ff01ff8080"))  # (q ())
-
-CC_MOD = load_clvm("../puzzles/cc.clvm", package_or_requirement=__name__)
 
 ANYONE_CAN_SPEND_PUZZLE = Program.to(1)  # simply return the conditions
 

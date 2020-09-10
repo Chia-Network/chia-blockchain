@@ -374,7 +374,7 @@ class WalletRpcApi:
                         "wallet_id": cc_wallet.wallet_info.id,
                     }
                 except Exception as e:
-                    log.error("FAILED {e}")
+                    log.error(f"FAILED {e}")
                     return {"success": False, "reason": str(e)}
             elif request["mode"] == "existing":
                 try:
@@ -384,7 +384,7 @@ class WalletRpcApi:
                     asyncio.ensure_future(self.create_backup_and_upload(host))
                     return {"success": True, "type": cc_wallet.wallet_info.type}
                 except Exception as e:
-                    log.error("FAILED2 {e}")
+                    log.error(f"FAILED2 {e}")
                     return {"success": False, "reason": str(e)}
         if request["wallet_type"] == "rl_wallet":
             if request["rl_type"] == "admin":
@@ -408,7 +408,7 @@ class WalletRpcApi:
                         "pubkey": rl_admin.rl_info.admin_pubkey.hex(),
                     }
                 except Exception as e:
-                    log.error("FAILED {e}")
+                    log.error(f"FAILED {e}")
                     return {"success": False, "reason": str(e)}
             elif request["rl_type"] == "user":
                 log.info("Create rl user wallet")
