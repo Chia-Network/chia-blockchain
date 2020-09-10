@@ -5,7 +5,7 @@ import asyncio
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
-from src.types.peer_info import PeerInfo
+from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.types.sized_bytes import bytes32
 from src.util import cbor
 from src.util.ints import uint16, uint64
@@ -213,9 +213,11 @@ class Peers:
 
     def get_peers(
         self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999
-    ) -> List[PeerInfo]:
+    ) -> List[TimestampedPeerInfo]:
         target_peers = [
-            peer
+            TimestampedPeerInfo(
+                peer.host, uint16(peer.port), uint64(0)
+            )
             for peer in self._peers
             if time.time() - self.time_added[peer.get_hash()] < recent_threshold
         ]
