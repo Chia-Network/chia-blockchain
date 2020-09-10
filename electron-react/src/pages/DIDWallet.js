@@ -336,6 +336,72 @@ const BalanceCard = props => {
   );
 };
 
+const CashoutCard = props => {
+  var id = props.wallet_id;
+  var address_input = null;
+  const classes = useStyles();
+  const dispatch = useDispatch();
+
+  function cashout() {
+    let puzzlehash = address_input.value.trim();
+
+    if (puzzlehash.startsWith("0x") || puzzlehash.startsWith("0X")) {
+      puzzlehash = puzzlehash.substring(2);
+    };
+
+    dispatch(cashout(id, puzzlehash));
+    address_input.value = "";
+  };
+
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              Cash Out
+            </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  variant="filled"
+                  color="secondary"
+                  fullWidth
+                  inputRef={input => {
+                    address_input = input;
+                  }}
+                  label="Address / Puzzle hash"
+                />
+              </Box>
+              <Box></Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box>
+                <Button
+                  onClick={cashout}
+                  className={classes.sendButton}
+                  variant="contained"
+                  color="primary"
+                >
+                  Cash Out
+                </Button>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+};
+
 const HistoryCard = props => {
   var id = props.wallet_id;
   const classes = useStyles();
@@ -435,6 +501,7 @@ const DistributedIDWallet = props => {
   return wallets.length > props.wallet_id ? (
     <Grid className={classes.walletContainer} item xs={12}>
       <BalanceCard wallet_id={id}></BalanceCard>
+      <CashoutCard wallet_id={id}></CashoutCard>
       <HistoryCard wallet_id={id}></HistoryCard>
     </Grid>
   ) : (
