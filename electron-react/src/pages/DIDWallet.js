@@ -15,7 +15,7 @@ import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 
-// DO I NEED TO IMPORT ANYTHING FROM MESSAGE? import { send_transaction } from "../modules/message";
+import { did_spend } from "../modules/message";
 import {
   Accordion,
   AccordionSummary,
@@ -349,7 +349,7 @@ const CashoutCard = props => {
       puzzlehash = puzzlehash.substring(2);
     };
 
-    dispatch(cashout(id, puzzlehash));
+    dispatch(did_spend(id, puzzlehash));
     address_input.value = "";
   };
 
