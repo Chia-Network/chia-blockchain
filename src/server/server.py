@@ -117,7 +117,7 @@ class ChiaServer:
 
         self.root_path = root_path
         self.config = config
-        self._pending_connections = []
+        self._pending_connections: List = []
 
     async def start_client(
         self,
@@ -141,7 +141,7 @@ class ChiaServer:
             # the task in the event of closing the node.
             peer_info = (target_node.host, target_node.port)
             if peer_info in self._pending_connections:
-                return
+                return False
             self._pending_connections.append(peer_info)
             oc_task: asyncio.Task = asyncio.create_task(
                 asyncio.open_connection(

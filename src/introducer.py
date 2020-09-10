@@ -55,7 +55,7 @@ class Introducer:
                         if time.time() > self.vetted_timestamps[peer.get_hash()] + 3600:
                             if peer.get_hash() in self.vetted:
                                 self.vetted[peer.get_hash()] = False
-                    if peer.get_hash() not in self.vetted and self.vetted[peer.get_hash()]:
+                    if peer.get_hash() not in self.vetted and not self.vetted[peer.get_hash()]:
                         try:
                             log.info(f"Vetting peer {peer.host} {peer.port}")
                             r, w = await asyncio.wait_for(
