@@ -15,7 +15,7 @@ for setuptools_scm/PEP 440 reasons.
 - Added a bug report template in `.github/ISSUE_TEMPLATE/bug_report.md`.
 
 ### Changed
-- Proof of Space now requires significantly less temp space to generate a new plot. A k=32 that used to require 524GiB now requires only 391GiB - a 60% decrease.
+- Proof of Space now requires significantly less temp space to generate a new plot. A k=32 that used to require 524GiB now requires only 289GiB - generally a 51% decrease across k sizes.
 - When plotting, instead of 1 monolithic temp file, there are now 8 files - one for each of the 7 tables and one for sorting plot data. These files are deleted as the `-2` or `-d` final file is written so the final file can fit within the footprint of the temporary files on the same filesystem.
 - We've made various additional CPU optimizations to the Proof of Space plotter that reduces plotting time by an additional 13%. These changes will also reduce CPU utilization in harvesting.
 - We moved to react-styleguidist to develop reusable components in isolation and better document the UI. Thanks to @embiem for this pull request.
@@ -25,7 +25,7 @@ for setuptools_scm/PEP 440 reasons.
 - `chia init` now automatically discovers previous releases in each new release.
 
 ### Fixed
-- `chia show -w` should now more reliably work. Wallet ballances should be more often correct.
+- `chia show -w` should now more reliably work. Wallet balances should be more often correct.
 - View -> Developer -> Developer Tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request!
 - Fixed 'Receive Address' typo in Wallet. Thanks @meurtn on Keybase.
 - In Windows the start menu item is now Chia Network and the icon in Add/Remove is updated.
