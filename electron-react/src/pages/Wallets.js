@@ -185,7 +185,7 @@ const WalletViewSwitch = () => {
   } else if (toPresent === RLWallet) {
     return <RateLimitedWallet wallet_id={id}> </RateLimitedWallet>;
   } else if (toPresent === DIDWallet) {
-    return <DIDWallet wallet_id={id}> </DIDWallet>;
+    return <DistributedIDWallet wallet_id={id}> </DistributedIDWallet>;
   }
   return <div></div>;
 };

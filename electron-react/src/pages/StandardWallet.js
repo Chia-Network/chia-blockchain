@@ -14,7 +14,12 @@ import TableCell from "@material-ui/core/TableCell";
 
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
-import { get_address, send_transaction, farm_block } from "../modules/message";
+import {
+  get_address,
+  get_puzzle_hash,
+  send_transaction,
+  farm_block
+} from "../modules/message";
 import Accordion from "@material-ui/core/Accordion";
 import AccordionSummary from "@material-ui/core/AccordionSummary";
 import AccordionDetails from "@material-ui/core/AccordionDetails";
