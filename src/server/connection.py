@@ -5,7 +5,7 @@ import asyncio
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
-from src.types.peer_info import PeerInfo
+from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.types.sized_bytes import bytes32
 from src.util import cbor
 from src.util.ints import uint16, uint64
