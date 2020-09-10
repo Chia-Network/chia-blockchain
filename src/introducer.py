@@ -56,7 +56,7 @@ class Introducer:
                             if peer.get_hash() in self.vetted:
                                 self.vetted[peer.get_hash()] = False
                     if (
-                        peer.get_hash() not in self.vetted 
+                        peer.get_hash() not in self.vetted
                         or not self.vetted[peer.get_hash()]
                     ):
                         try:
