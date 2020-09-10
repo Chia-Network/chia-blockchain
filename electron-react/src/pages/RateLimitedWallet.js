@@ -16,9 +16,9 @@ import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 
 import { send_transaction, rl_set_user_info_action } from "../modules/message";
-import ExpansionPanel from "@material-ui/core/ExpansionPanel";
-import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
-import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
+import Accordion from "@material-ui/core/Accordion";
+import AccordionSummary from "@material-ui/core/AccordionSummary";
+import AccordionDetails from "@material-ui/core/AccordionDetails";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import { Tooltip } from "@material-ui/core";
 import HelpIcon from "@material-ui/icons/Help";
@@ -595,8 +595,8 @@ const BalanceCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <ExpansionPanel className={classes.front}>
-                  <ExpansionPanelSummary
+                <Accordion className={classes.front}>
+                  <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     aria-controls="panel1a-content"
                     id="panel1a-header"
@@ -604,8 +604,8 @@ const BalanceCard = props => {
                     <Typography className={classes.heading}>
                       View pending balances
                     </Typography>
-                  </ExpansionPanelSummary>
-                  <ExpansionPanelDetails>
+                  </AccordionSummary>
+                  <AccordionDetails>
                     <Grid container spacing={0}>
                       <BalanceCardSubSection
                         title="Pending Total Balance"
@@ -623,8 +623,8 @@ const BalanceCard = props => {
                         tooltip={""}
                       />
                     </Grid>
-                  </ExpansionPanelDetails>
-                </ExpansionPanel>
+                  </AccordionDetails>
+                </Accordion>
               </Box>
             </Box>
           </div>

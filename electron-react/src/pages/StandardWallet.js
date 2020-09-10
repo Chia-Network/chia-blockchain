@@ -19,9 +19,9 @@ import {
   send_transaction,
   farm_block
 } from "../modules/message";
-import ExpansionPanel from "@material-ui/core/ExpansionPanel";
-import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
-import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
+import Accordion from "@material-ui/core/Accordion";
+import AccordionSummary from "@material-ui/core/AccordionSummary";
+import AccordionDetails from "@material-ui/core/AccordionDetails";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
@@ -265,8 +265,8 @@ const BalanceCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <ExpansionPanel className={classes.front}>
-                  <ExpansionPanelSummary
+                <Accordion className={classes.front}>
+                  <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     aria-controls="panel1a-content"
                     id="panel1a-header"
@@ -274,8 +274,8 @@ const BalanceCard = props => {
                     <Typography className={classes.heading}>
                       View pending balances
                     </Typography>
-                  </ExpansionPanelSummary>
-                  <ExpansionPanelDetails>
+                  </AccordionSummary>
+                  <AccordionDetails>
                     <Grid container spacing={0}>
                       <BalanceCardSubSection
                         title="Pending Total Balance"
@@ -306,8 +306,8 @@ const BalanceCard = props => {
                         }
                       />
                     </Grid>
-                  </ExpansionPanelDetails>
-                </ExpansionPanel>
+                  </AccordionDetails>
+                </Accordion>
               </Box>
             </Box>
           </div>
