@@ -16,7 +16,7 @@ import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import {
-  get_puzzle_hash,
+  get_address,
   cc_spend,
   farm_block,
   rename_cc_wallet
@@ -29,6 +29,7 @@ import {
 import { unix_to_short_date } from "../util/utils";
 import Accordion from "../components/Accordion";
 import { openDialog } from "../modules/dialogReducer";
+import { get_transaction_result } from "../util/transaction_result";
 const config = require("../config");
 
 const drawerWidth = 240;
@@ -417,7 +418,7 @@ const SendCard = props => {
   const cc_unit = get_cc_unit(name);
 
   const sending_transaction = useSelector(
-    state => state.wallet_state.sending_transaction
+    state => state.wallet_state.wallets[id].sending_transaction
   );
 
   const send_transaction_result = useSelector(
@@ -426,21 +427,9 @@ const SendCard = props => {
 
   const colour = useSelector(state => state.wallet_state.wallets[id].colour);
 
-  let result_message = "";
-  let result_class = classes.resultSuccess;
-  if (send_transaction_result) {
-    if (send_transaction_result.status === "SUCCESS") {
-      result_message =
-        "Transaction has successfully been sent to a full node and included in the mempool.";
-    } else if (send_transaction_result.status === "PENDING") {
-      result_message =
-        "Transaction has sent to a full node and is pending inclusion into the mempool. " +
-        send_transaction_result.reason;
-    } else {
-      result_message = "Transaction failed. " + send_transaction_result.reason;
-      result_class = classes.resultFailure;
-    }
-  }
+  result = get_transaction_result(send_transaction_result);
+  let result_message = result.message;
+  let result_class = result.success ? classes.resultSuccess : classes.resultFailure;
 
   function farm() {
     var address = address_input.value;
@@ -453,7 +442,7 @@ const SendCard = props => {
     if (sending_transaction) {
       return;
     }
-    let puzzle_hash = address_input.value.trim();
+    let address = address_input.value.trim();
     if (
       amount_input.value === "" ||
       Number(amount_input.value) === 0 ||
@@ -472,8 +461,8 @@ const SendCard = props => {
     const fee = colouredcoin_to_mojo(fee_input.value);
 
     if (
-      puzzle_hash.includes("chia_addr") ||
-      puzzle_hash.includes("colour_desc")
+      address.includes("chia_addr") ||
+      address.includes("colour_desc")
     ) {
       dispatch(
         openDialog(
@@ -482,9 +471,9 @@ const SendCard = props => {
       );
       return;
     }
-    if (puzzle_hash.substring(0, 14) === "colour_addr://") {
-      const colour_id = puzzle_hash.substring(14, 78);
-      puzzle_hash = puzzle_hash.substring(79);
+    if (address.substring(0, 14) === "colour_addr://") {
+      const colour_id = address.substring(14, 78);
+      address = address.substring(79);
       if (colour_id !== colour) {
         dispatch(
           openDialog(
@@ -495,14 +484,14 @@ const SendCard = props => {
       }
     }
 
-    if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
-      puzzle_hash = puzzle_hash.substring(2);
+    if (address.startsWith("0x") || address.startsWith("0X")) {
+      address = address.substring(2);
     }
 
     const amount_value = parseFloat(Number(amount));
     const fee_value = parseFloat(Number(fee));
 
-    dispatch(cc_spend(id, puzzle_hash, amount_value, fee_value));
+    dispatch(cc_spend(id, address, amount_value, fee_value));
     address_input.value = "";
     amount_input.value = "";
   }
@@ -669,7 +658,7 @@ const TransactionTable = props => {
           {transactions.map(tx => (
             <TableRow
               className={classes.row}
-              key={tx.to_puzzle_hash + tx.created_at_time + tx.amount}
+              key={tx.to_address + tx.created_at_time + tx.amount}
             >
               <TableCell className={classes.cell_short}>
                 {incoming_string(tx.incoming)}
@@ -678,7 +667,7 @@ const TransactionTable = props => {
                 style={{ maxWidth: "150px" }}
                 className={classes.cell_short}
               >
-                {tx.to_puzzle_hash}
+                {tx.to_address}
               </TableCell>
               <TableCell className={classes.cell_short}>
                 {unix_to_short_date(tx.created_at_time)}
@@ -702,18 +691,18 @@ const TransactionTable = props => {
 
 const AddressCard = props => {
   var id = props.wallet_id;
-  const puzzle_hash = useSelector(
-    state => state.wallet_state.wallets[id].puzzle_hash
+  const address = useSelector(
+    state => state.wallet_state.wallets[id].address
   );
   const classes = useStyles();
   const dispatch = useDispatch();
 
   function newAddress() {
-    dispatch(get_puzzle_hash(id));
+    dispatch(get_address(id));
   }
 
   function copy() {
-    navigator.clipboard.writeText(puzzle_hash);
+    navigator.clipboard.writeText(address);
   }
 
   return (
@@ -734,7 +723,7 @@ const AddressCard = props => {
                   disabled
                   fullWidth
                   label="Address"
-                  value={puzzle_hash}
+                  value={address}
                   variant="outlined"
                 />
               </Box>

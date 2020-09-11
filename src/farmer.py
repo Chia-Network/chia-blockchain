@@ -16,6 +16,7 @@ from src.types.pool_target import PoolTarget
 from src.util.api_decorators import api_request
 from src.util.ints import uint32, uint64, uint128, uint8
 from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
+from src.util.chech32 import decode_puzzle_hash
 
 log = logging.getLogger(__name__)
 
@@ -57,14 +58,14 @@ class Farmer:
             raise RuntimeError(error_str)
 
         # This is the farmer configuration
-        self.wallet_target = bytes.fromhex(self.config["xch_target_puzzle_hash"])
+        self.wallet_target = decode_puzzle_hash(bytes.fromhex(self.config["xch_target_address"]))
         self.pool_public_keys = [
             G1Element.from_bytes(bytes.fromhex(pk))
             for pk in self.config["pool_public_keys"]
         ]
 
         # This is the pool configuration, which should be moved out to the pool once it exists
-        self.pool_target = bytes.fromhex(pool_config["xch_target_puzzle_hash"])
+        self.pool_target = decode_puzzle_hash(bytes.fromhex(pool_config["xch_target_address"]))
         self.pool_sks_map: Dict = {}
         for key in self._get_private_keys():
             self.pool_sks_map[bytes(key.get_g1())] = key

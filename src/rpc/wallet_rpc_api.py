@@ -45,7 +45,12 @@ class WalletRpcApi:
         return {
             "/get_wallet_balance": self.get_wallet_balance,
             "/send_transaction": self.send_transaction,
+<<<<<<< HEAD
             "/get_next_puzzle_hash": self.get_next_puzzle_hash,
+=======
+            "/get_next_address": self.get_next_address,
+            "/get_transaction": self.get_transaction,
+>>>>>>> c125573c... Cleaner send_transaction flow and more wallet rpc testing
             "/get_transactions": self.get_transactions,
             "/farm_block": self.farm_block,
             "/get_sync_status": self.get_sync_status,
@@ -155,18 +160,18 @@ class WalletRpcApi:
         if len(args) < 2:
             return []
 
-        change = args[0]
-        wallet_id = args[1]
         data = {
-            "state": change,
+            "state": args[0],
         }
-        if wallet_id is not None:
-            data["wallet_id"] = wallet_id
+        if args[1] is not None:
+            data["wallet_id"] = args[1]
+        if args[2] is not None:
+            data["additional_data"] = args[2]
         return [create_payload("state_changed", data, "chia_wallet", "wallet_ui")]
 
-    async def get_next_puzzle_hash(self, request: Dict) -> Dict:
+    async def get_next_address(self, request: Dict) -> Dict:
         """
-        Returns a new puzzlehash
+        Returns a new address
         """
         if self.service is None:
             return {"success": False}
@@ -178,10 +183,10 @@ class WalletRpcApi:
 
         if wallet.wallet_info.type == WalletType.STANDARD_WALLET.value:
             raw_puzzle_hash = await wallet.get_new_puzzlehash()
-            puzzle_hash = encode_puzzle_hash(raw_puzzle_hash)
+            address = encode_puzzle_hash(raw_puzzle_hash)
         elif wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
             raw_puzzle_hash = await wallet.get_new_inner_hash()
-            puzzle_hash = encode_puzzle_hash(raw_puzzle_hash)
+            address = encode_puzzle_hash(raw_puzzle_hash)
         else:
             return {
                 "success": False,
@@ -191,13 +196,12 @@ class WalletRpcApi:
         response = {
             "success": True,
             "wallet_id": wallet_id,
-            "puzzle_hash": puzzle_hash,
+            "address": address,
         }
 
         return response
 
     async def send_transaction(self, request):
-        log.debug("rpc_api request: " + str(request))
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
@@ -270,7 +274,7 @@ class WalletRpcApi:
 
         for tx in transactions:
             formatted = tx.to_json_dict()
-            formatted["to_puzzle_hash"] = encode_puzzle_hash(tx.to_puzzle_hash)
+            formatted["to_address"] = encode_puzzle_hash(tx.to_address)
             formatted_transactions.append(formatted)
 
         response = {
@@ -462,7 +466,7 @@ class WalletRpcApi:
     async def cc_spend(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        encoded_puzzle_hash = request["innerpuzhash"]
+        encoded_puzzle_hash = request["inner_address"]
         puzzle_hash = decode_puzzle_hash(encoded_puzzle_hash)
 
         try:
@@ -475,7 +479,7 @@ class WalletRpcApi:
 
         if tx is None:
             data = {
-                "status": "FAILED",
+                "success": False,
                 "reason": "Failed to generate signed transaction",
                 "id": wallet_id,
             }
@@ -484,46 +488,17 @@ class WalletRpcApi:
             await wallet.wallet_state_manager.add_pending_transaction(tx)
         except Exception as e:
             data = {
-                "status": "FAILED",
+                "success": False,
                 "reason": f"Failed to push transaction {e}",
+                "id": wallet_id,
             }
             return data
 
-        sent = False
-        start = time.time()
-        while time.time() - start < TIMEOUT:
-            sent_to: List[
-                Tuple[str, MempoolInclusionStatus, Optional[str]]
-            ] = await self.service.wallet_state_manager.get_transaction_status(
-                tx.name()
-            )
-
-            if len(sent_to) == 0:
-                await asyncio.sleep(0.1)
-                continue
-            status, err = sent_to[0][1], sent_to[0][2]
-            if status == MempoolInclusionStatus.SUCCESS:
-                data = {"status": "SUCCESS", "id": wallet_id}
-                sent = True
-                break
-            elif status == MempoolInclusionStatus.PENDING:
-                assert err is not None
-                data = {"status": "PENDING", "reason": err, "id": wallet_id}
-                sent = True
-                break
-            elif status == MempoolInclusionStatus.FAILED:
-                assert err is not None
-                data = {"status": "FAILED", "reason": err, "id": wallet_id}
-                sent = True
-                break
-        if not sent:
-            data = {
-                "status": "FAILED",
-                "reason": "Timed out. Transaction may or may not have been sent.",
-                "id": wallet_id,
-            }
-
-        return data
+        return {
+            "success": True,
+            "transaction": tr,
+            "transaction_id": tr.spend_bundle.name(),
+        }
 
     async def cc_get_colour(self, request):
         wallet_id = int(request["wallet_id"])
@@ -818,13 +793,13 @@ class WalletRpcApi:
             tx = await wallet.clawback_rl_coin_transaction()
         except Exception as e:
             data = {
-                "status": "FAILED",
+                "success": False,
                 "reason": f"Failed to generate signed transaction {e}",
             }
             return data
         if tx is None:
             data = {
-                "status": "FAILED",
+                "success": False,
                 "reason": "Failed to generate signed transaction",
             }
             return data
@@ -832,41 +807,14 @@ class WalletRpcApi:
             await wallet.push_transaction(tx)
         except Exception as e:
             data = {
-                "status": "FAILED",
+                "success": False,
                 "reason": f"Failed to push transaction {e}",
             }
             return data
-        sent = False
-        start = time.time()
-        while time.time() - start < TIMEOUT:
-            sent_to: List[
-                Tuple[str, MempoolInclusionStatus, Optional[str]]
-            ] = await self.service.wallet_state_manager.get_transaction_status(
-                tx.name()
-            )
 
-            if len(sent_to) == 0:
-                await asyncio.sleep(1)
-                continue
-            status, err = sent_to[0][1], sent_to[0][2]
-            if status == MempoolInclusionStatus.SUCCESS:
-                data = {"status": "SUCCESS"}
-                sent = True
-                break
-            elif status == MempoolInclusionStatus.PENDING:
-                assert err is not None
-                data = {"status": "PENDING", "reason": err}
-                sent = True
-                break
-            elif status == MempoolInclusionStatus.FAILED:
-                assert err is not None
-                data = {"status": "FAILED", "reason": err}
-                sent = True
-                break
-        if not sent:
-            data = {
-                "status": "FAILED",
-                "reason": "Timed out. Transaction may or may not have been sent.",
-            }
-
-        return data
+        # Transaction may not have been included in the mempool yet. Use get_transaction to check.
+        return {
+            "success": True,
+            "transaction": tx,
+            "transaction_id": tx.spend_bundle.name(),
+        }
