@@ -30,15 +30,14 @@ from src.wallet.cc_wallet.cc_utils import (
     cc_puzzle_hash_for_inner_puzzle_hash,
     cc_puzzle_for_inner_puzzle,
     spend_bundle_for_spendable_ccs,
-    genesis_coin_id_for_genesis_coin_checker,
     get_lineage_proof_from_coin_and_puz,
     uncurry_cc,
     CC_MOD,
 )
-from src.wallet.cc_wallet.genesis_by_coin_id_with_0 import (
+from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
     create_genesis_or_zero_coin_checker,
     lineage_proof_for_genesis,
-)
+    genesis_coin_id_for_genesis_coin_checker)
 from dataclasses import replace
 
 

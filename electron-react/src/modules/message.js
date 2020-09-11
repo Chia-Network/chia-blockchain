@@ -28,6 +28,8 @@ import {
   changeCreateWallet,
   ALL_OPTIONS
 } from "../modules/createWalletReducer";
+const config = require("../config");
+const backup_host = config.backup_host;
 
 export const clearSend = () => {
   var action = {
@@ -195,7 +197,6 @@ export const add_and_restore_from_backup = (mnemonic, file_path) => {
       if (response.data.success) {
         // Go to wallet
         dispatch(resetMnemonic());
-        dispatch(format_message("get_public_keys", {}));
         refreshAllState(dispatch);
       } else {
         if (response.data.word) {
@@ -228,14 +229,22 @@ export const delete_all_keys = () => {
 export const log_in = fingerprint => {
   var action = walletMessage();
   action.message.command = "log_in";
-  action.message.data = { fingerprint: fingerprint, type: "normal" };
+  action.message.data = {
+    fingerprint: fingerprint,
+    host: backup_host,
+    type: "normal"
+  };
   return action;
 };
 
 export const log_in_and_skip_import = fingerprint => {
   var action = walletMessage();
   action.message.command = "log_in";
-  action.message.data = { fingerprint: fingerprint, type: "skip" };
+  action.message.data = {
+    fingerprint: fingerprint,
+    host: backup_host,
+    type: "skip"
+  };
   return action;
 };
 
@@ -245,9 +254,35 @@ export const log_in_and_import_backup = (fingerprint, file_path) => {
   action.message.data = {
     fingerprint: fingerprint,
     type: "restore_backup",
-    file_path: file_path
+    file_path: file_path,
+    host: backup_host
   };
   return action;
+};
+
+export const log_in_and_import_backup_action = (fingerprint, file_path) => {
+  return dispatch => {
+    dispatch(selectFingerprint(fingerprint));
+    return async_api(
+      dispatch,
+      log_in_and_import_backup(fingerprint, file_path),
+      true
+    ).then(response => {
+      dispatch(closeProgress());
+      if (response.data.success) {
+        // Go to wallet
+        refreshAllState(dispatch);
+      } else {
+        const error = response.data.error;
+        if (error === "not_initialized") {
+          dispatch(changeEntranceMenu(presentRestoreBackup));
+          // Go to restore from backup screen
+        } else {
+          dispatch(openDialog("Error", error));
+        }
+      }
+    });
+  };
 };
 
 export const login_and_skip_action = fingerprint => {
@@ -284,7 +319,14 @@ export const login_action = fingerprint => {
       } else {
         const error = response.data.error;
         if (error === "not_initialized") {
+          const backup_info = response.data.backup_info;
+          const backup_path = response.data.backup_path;
           dispatch(changeEntranceMenu(presentRestoreBackup));
+          if (backup_info && backup_path) {
+            dispatch(setBackupInfo(backup_info));
+            dispatch(selectFilePath(backup_path));
+            dispatch(changeBackupView(presentBackupInfo));
+          }
           // Go to restore from backup screen
         } else {
           dispatch(openDialog("Error", error));
@@ -321,6 +363,7 @@ export const get_backup_info_action = (file_path, fingerprint, words) => {
     ).then(response => {
       dispatch(closeProgress());
       if (response.data.success) {
+        response.data.backup_info.downloaded = false;
         dispatch(setBackupInfo(response.data.backup_info));
         dispatch(changeBackupView(presentBackupInfo));
       } else {
@@ -387,7 +430,8 @@ export const create_coloured_coin = (amount, fee) => {
     wallet_type: "cc_wallet",
     mode: "new",
     amount: amount,
-    fee: fee
+    fee: fee,
+    host: backup_host
   };
   return action;
 };
@@ -399,7 +443,8 @@ export const create_cc_for_colour = (colour, fee) => {
     wallet_type: "cc_wallet",
     mode: "existing",
     colour: colour,
-    fee: fee
+    fee: fee,
+    host: backup_host
   };
   return action;
 };
@@ -440,7 +485,7 @@ export const create_cc_action = (amount, fee) => {
           dispatch(format_message("get_wallets", {}));
           dispatch(showCreateBackup(true));
           dispatch(createState(true, false));
-          dispatch(changeCreateWallet(ALL_OPTIONS))
+          dispatch(changeCreateWallet(ALL_OPTIONS));
         } else {
           const error = response.data.error;
           dispatch(openDialog("Error", error));
@@ -460,7 +505,7 @@ export const create_cc_for_colour_action = (colour, fee) => {
           // Go to wallet
           dispatch(showCreateBackup(true));
           dispatch(format_message("get_wallets", {}));
-          dispatch(changeCreateWallet(ALL_OPTIONS))
+          dispatch(changeCreateWallet(ALL_OPTIONS));
         } else {
           const error = response.data.error;
           dispatch(openDialog("Error", error));
@@ -519,7 +564,8 @@ export const create_rl_admin = (interval, limit, pubkey, amount) => {
     interval: interval,
     limit: limit,
     pubkey: pubkey,
-    amount: amount
+    amount: amount,
+    host: backup_host
   };
   return action;
 };
@@ -552,7 +598,8 @@ export const create_rl_user = () => {
   action.message.command = "create_new_wallet";
   action.message.data = {
     wallet_type: "rl_wallet",
-    rl_type: "user"
+    rl_type: "user",
+    host: backup_host
   };
   return action;
 };

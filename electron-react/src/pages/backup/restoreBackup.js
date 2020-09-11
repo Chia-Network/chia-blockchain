@@ -12,16 +12,18 @@ import {
 } from "../../modules/entranceMenu";
 import {
   add_new_key_action,
-  log_in_and_import_backup,
   add_and_restore_from_backup,
   login_and_skip_action,
-  get_backup_info_action
+  get_backup_info_action,
+  log_in_and_import_backup_action
 } from "../../modules/message";
 import { Paper, Grid } from "@material-ui/core";
 import {
   changeBackupView,
   presentMain,
-  presentBackupInfo
+  presentBackupInfo,
+  setBackupInfo,
+  selectFilePath
 } from "../../modules/backup_state";
 import { unix_to_short_date } from "../../util/utils";
 import { Box } from "@material-ui/core";
@@ -69,7 +71,6 @@ const UIPart = props => {
     e.stopPropagation();
 
     const file_path = e.dataTransfer.files[0].path;
-    debugger;
     if (fingerprint !== null) {
       dispatch(get_backup_info_action(file_path, fingerprint, null));
     } else if (words !== null) {
@@ -127,10 +128,15 @@ const BackupDetails = () => {
   const dispatch = useDispatch();
   const file_path = useSelector(state => state.backup_state.selected_file_path);
   const backup_info = useSelector(state => state.backup_state.backup_info);
+  const selected_file_path = useSelector(
+    state => state.backup_state.selected_file_path
+  );
   const date = unix_to_short_date(backup_info["timestamp"]);
   const backup_fingerprint = backup_info["fingerprint"];
   const version = backup_info["version"];
   const wallets = backup_info["wallets"];
+  const downloaded = backup_info["downloaded"];
+  const host = backup_info["backup_host"];
 
   var words = useSelector(state => state.mnemonic_state.mnemonic_input);
   var fingerprint = useSelector(
@@ -148,9 +154,15 @@ const BackupDetails = () => {
     dispatch(changeEntranceMenu(presentSelectKeys));
   }
 
+  function goBackBackup() {
+    dispatch(changeBackupView(presentMain));
+    dispatch(setBackupInfo({}));
+    dispatch(selectFilePath(null));
+  }
+
   function next() {
     if (fingerprint !== null) {
-      dispatch(log_in_and_import_backup(fingerprint, file_path));
+      dispatch(log_in_and_import_backup_action(fingerprint, file_path));
     } else if (words !== null) {
       dispatch(add_and_restore_from_backup(words, file_path));
     }
@@ -178,7 +190,23 @@ const BackupDetails = () => {
             padding: "20px"
           }}
         >
-          <Grid container spacing={0} style={{ marginBottom: 10 }}>
+          <Box
+            display="flex"
+            onClick={goBackBackup}
+            style={{ cursor: "pointer", minWidth: "100%" }}
+          >
+            <Box>
+              {" "}
+              <ArrowBackIosIcon
+                style={{ cursor: "pointer" }}
+                onClick={goBackBackup}
+              ></ArrowBackIosIcon>
+            </Box>
+            <Box className={classes.align_left} flexGrow={1}>
+              <Typography variant="subtitle2">Import Backup File</Typography>
+            </Box>
+          </Box>
+          <Grid container spacing={3} style={{ marginBottom: 10 }}>
             <Grid item xs={6}>
               <Typography variant="subtitle1">Backup info:</Typography>
               <Box display="flex" style={{ minWidth: "100%" }}>
@@ -197,6 +225,22 @@ const BackupDetails = () => {
                 <Box flexGrow={1}>Fingerprint: </Box>
                 <Box className={classes.align_right} flexGrow={1}>
                   {backup_fingerprint}
+                </Box>
+              </Box>
+            </Grid>
+            <Grid item xs={6}>
+              <Box display="flex" style={{ minWidth: "100%" }}>
+                <Box flexGrow={1}>Downloaded: </Box>
+                <Box className={classes.align_right} flexGrow={1}>
+                  {downloaded + ""}
+                </Box>
+              </Box>
+              <Box display="flex" style={{ minWidth: "100%" }}>
+                <Box flexGrow={1}>
+                  {downloaded ? "Backup Host:" : "File Path"}
+                </Box>
+                <Box className={classes.align_right} flexGrow={1}>
+                  {downloaded ? host : selected_file_path}
                 </Box>
               </Box>
             </Grid>

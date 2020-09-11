@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles, withStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
@@ -613,7 +613,7 @@ const Farmer = props => {
 
   const classes = props.classes;
 
-  const checkRewards = async () => {
+  const checkRewards = useCallback(async () => {
     let totalChia = BigInt(0);
     let biggestHeight = 0;
     for (let wallet of wallets) {
@@ -654,16 +654,16 @@ const Farmer = props => {
       setTotalChiaFarmed(totalChia);
       setBiggestHeight(biggestHeight);
     }
-  };
+  }, [totalChiaFarmed, didMount, wallets]);
 
-  useEffect(() => { 
-    (async () => { 
-      await checkRewards(); 
-      if (!didMount) { 
-        setDidMount(true); 
+  useEffect(() => {
+    (async () => {
+      await checkRewards();
+      if (!didMount) {
+        setDidMount(true);
         dispatch(clearSend);
       }
-     }) ()
+    })();
   }, [checkRewards, dispatch, props, didMount, setDidMount]);
 
   return (
@@ -676,8 +676,8 @@ const Farmer = props => {
           ></FarmerContent>
         </Container>
       </main>
-     </div>
+    </div>
   );
-}
+};
 
-export default (withStyles(styles)(Farmer));
+export default withStyles(styles)(Farmer);

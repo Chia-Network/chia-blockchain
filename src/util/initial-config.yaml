@@ -210,7 +210,7 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer1.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+    host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
     port: 8444
 
   ssl:

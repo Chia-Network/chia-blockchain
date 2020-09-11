@@ -62,7 +62,8 @@ const myStyle = makeStyles(theme => ({
     marginLeft: theme.spacing(4),
     fontSize: 35,
     flex: 1,
-    align: "right"
+    align: "right",
+    cursor: "pointer"
   },
   instructions: {
     color: "#ffffff",
