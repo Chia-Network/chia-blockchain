@@ -54,28 +54,27 @@ const Block = props => {
   const [headerHash, setHeaderHash] = useState("");
   const [plotId, setPlotId] = useState("");
   const [didMount, setDidMount] = useState(false);
-  
+
   const prev_header_hash = props.block.header.data.prev_header_hash;
   const height = props.block.header.data.height;
-  
+
   const dispatch = useDispatch();
-  
-  const handleClearBlock = useCallback(
-    () => dispatch(clearBlock()), 
-    [dispatch]
-  );
-  
+
+  const handleClearBlock = useCallback(() => dispatch(clearBlock()), [
+    dispatch
+  ]);
+
   const handleGetHeader = useCallback(
-    (headerHash) => dispatch(getHeader(headerHash)), 
+    headerHash => dispatch(getHeader(headerHash)),
     [dispatch]
   );
 
   const handleGetBlock = useCallback(
-    (headerHash) => dispatch(getBlock(headerHash)), 
+    headerHash => dispatch(getBlock(headerHash)),
     [dispatch]
-  ); 
+  );
 
-  const fetchHeaderIfNecessary = async () => {
+  const fetchHeaderIfNecessary = useCallback(async () => {
     if (props.prevHeader) {
       const phh = await hash_header(props.prevHeader);
       if (phh !== props.block.header.data.prev_header_hash) {
@@ -87,21 +86,23 @@ const Block = props => {
     var newHeaderHash = await hash_header(props.block.header);
 
     let buf = hex_to_array(props.block.proof_of_space.pool_public_key);
-    buf = buf.concat(
-      hex_to_array(props.block.proof_of_space.plot_public_key)
-    );
+    buf = buf.concat(hex_to_array(props.block.proof_of_space.plot_public_key));
     const bufHash = await sha256(buf);
     var newPlotId = arr_to_hex(bufHash);
     setHeaderHash(newHeaderHash);
     setPlotId(newPlotId);
-  }
+  }, [handleGetHeader, props]);
 
-  useEffect((prevProps) => { 
-    (async () => {
-      if (!didMount || height > 0) {
-        await fetchHeaderIfNecessary();
-      }}) ()
-  }, [prev_header_hash, height, didMount, setDidMount, fetchHeaderIfNecessary]);
+  useEffect(
+    prevProps => {
+      (async () => {
+        if (!didMount || height > 0) {
+          await fetchHeaderIfNecessary();
+        }
+      })();
+    },
+    [prev_header_hash, height, didMount, setDidMount, fetchHeaderIfNecessary]
+  );
 
   const classes = props.classes;
   const block = props.block;
@@ -154,9 +155,7 @@ const Block = props => {
     },
     {
       name: "Block VDF Iterations",
-      value: BigInt(
-        block.proof_of_time.number_of_iterations
-      ).toLocaleString(),
+      value: BigInt(block.proof_of_time.number_of_iterations).toLocaleString(),
       tooltip:
         "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
     },
@@ -205,8 +204,7 @@ const Block = props => {
           <Button onClick={handleClearBlock}>Back</Button>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Block at height {block.header.data.height} in the Chia
-              blockchain
+              Block at height {block.header.data.height} in the Chia blockchain
             </Typography>
           </div>
           <TableContainer component={Paper}>
@@ -245,6 +243,6 @@ const Block = props => {
       </Grid>
     </Paper>
   );
-}
+};
 
 export default withStyles(styles)(Block);

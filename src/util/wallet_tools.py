@@ -1,6 +1,5 @@
 from typing import List, Optional, Dict, Tuple
 
-from secrets import token_bytes
 from blspy import PrivateKey, AugSchemeMPL
 
 from src.types.condition_var_pair import ConditionVarPair
@@ -31,8 +30,11 @@ from src.wallet.puzzles.puzzle_utils import (
 from src.wallet.derive_keys import master_sk_to_wallet_sk
 
 
+DEFAULT_SEED = b"seed" * 8
+assert len(DEFAULT_SEED) == 32
+
+
 class WalletTool:
-    seed = b"seed"
     next_address = 0
     pubkey_num_lookup: Dict[str, int] = {}
 
@@ -42,33 +44,14 @@ class WalletTool:
         if sk is not None:
             self.private_key = sk
         else:
-            self.private_key = AugSchemeMPL.key_gen(token_bytes(32))
+            self.private_key = AugSchemeMPL.key_gen(DEFAULT_SEED)
         self.generator_lookups: Dict = {}
-        self.name = "MyChiaWallet"
         self.puzzle_pk_cache: Dict = {}
         self.get_new_puzzle()
 
-    def get_next_public_key(self):
-        pubkey = master_sk_to_wallet_sk(self.private_key, self.next_address).get_g1()
-        self.pubkey_num_lookup[bytes(pubkey)] = self.next_address
+    def get_next_address_index(self):
         self.next_address = self.next_address + 1
-        return pubkey
-
-    def set_name(self, name):
-        self.name = name
-
-    def can_generate_puzzle_hash(self, hash):
-        return any(
-            map(
-                lambda child: hash
-                == puzzle_for_pk(
-                    bytes(
-                        master_sk_to_wallet_sk(self.private_key, uint32(child)).get_g1()
-                    )
-                ).get_tree_hash(),
-                reversed(range(self.next_address)),
-            )
-        )
+        return self.next_address
 
     def get_keys(self, puzzle_hash):
         if puzzle_hash in self.puzzle_pk_cache:
@@ -91,17 +74,14 @@ class WalletTool:
     def puzzle_for_pk(self, pubkey: bytes):
         return puzzle_for_pk(pubkey)
 
-    def get_first_puzzle(self):
-        pubkey = master_sk_to_wallet_sk(self.private_key, self.next_address).get_g1()
-        puzzle = puzzle_for_pk(bytes(pubkey))
-        self.puzzle_pk_cache[puzzle.get_tree_hash()] = 0
-        return puzzle
-
     def get_new_puzzle(self):
-        pubkey_a = self.get_next_public_key()
-        pubkey = bytes(pubkey_a)
-        puzzle = puzzle_for_pk(pubkey)
-        self.puzzle_pk_cache[puzzle.get_tree_hash()] = self.next_address - 1
+        next_address_index = self.get_next_address_index()
+        pubkey = master_sk_to_wallet_sk(self.private_key, next_address_index).get_g1()
+        self.pubkey_num_lookup[bytes(pubkey)] = next_address_index
+
+        puzzle = puzzle_for_pk(bytes(pubkey))
+
+        self.puzzle_pk_cache[puzzle.get_tree_hash()] = next_address_index
         return puzzle
 
     def get_new_puzzlehash(self):

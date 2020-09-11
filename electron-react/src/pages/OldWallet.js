@@ -137,6 +137,6 @@ const UIPart = () => {
 
 const OldWallet = props => {
   return <UIPart props={props}></UIPart>;
-}
+};
 
 export default withTheme(withRouter(OldWallet));

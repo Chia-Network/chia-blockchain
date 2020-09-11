@@ -10,7 +10,7 @@ import TableRow from "@material-ui/core/TableRow";
 import TableCell from "@material-ui/core/TableCell";
 import Paper from "@material-ui/core/Paper";
 
-const StyledTableCell = withStyles((theme) => ({
+const StyledTableCell = withStyles(theme => ({
   head: {
     backgroundColor: theme.palette.grey[200],
     padding: "20px",
@@ -21,7 +21,7 @@ const StyledTableCell = withStyles((theme) => ({
     letterSpacing: "0.685741px",
 
     color: "#111111",
-    whiteSpace: "nowrap",
+    whiteSpace: "nowrap"
   },
   body: {
     fontWeight: "normal",
@@ -30,29 +30,29 @@ const StyledTableCell = withStyles((theme) => ({
     textAlign: "center",
     letterSpacing: "0.575px",
 
-    color: "#66666B",
-  },
+    color: "#66666B"
+  }
 }))(TableCell);
 
-export const SingleRowTableCell = withStyles((theme) => ({
+export const SingleRowTableCell = withStyles(theme => ({
   root: {
     border: "1px solid",
-    borderColor: theme.palette.grey[200],
-  },
+    borderColor: theme.palette.grey[200]
+  }
 }))(StyledTableCell);
 
-export const StyledTableRow = withStyles((theme) => ({
+export const StyledTableRow = withStyles(theme => ({
   root: {
     "&:nth-of-type(even)": {
-      backgroundColor: "#FAFAFA",
-    },
-  },
+      backgroundColor: "#FAFAFA"
+    }
+  }
 }))(TableRow);
 
 const useStyles = makeStyles({
   table: {
-    minWidth: 700,
-  },
+    minWidth: 700
+  }
 });
 
 /**
@@ -74,7 +74,7 @@ function Table(props) {
       <MUITable className={classes.table}>
         <TableHead>
           <TableRow>
-            {header.map((h) => (
+            {header.map(h => (
               <StyledTableCell key={h} align="center">
                 {h}
               </StyledTableCell>
@@ -82,9 +82,9 @@ function Table(props) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {rowData.map((row) => (
+          {rowData.map(row => (
             <StyledTableRow>
-              {row.map((entry) => (
+              {row.map(entry => (
                 <TableCellComp align="center">{entry}</TableCellComp>
               ))}
             </StyledTableRow>
@@ -99,7 +99,7 @@ Table.propTypes = {
   header: PropTypes.arrayOf(PropTypes.string).isRequired,
   data: PropTypes.arrayOf(
     PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number]))
-  ).isRequired,
+  ).isRequired
 };
 
 export default Table;

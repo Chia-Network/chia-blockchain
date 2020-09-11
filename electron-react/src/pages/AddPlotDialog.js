@@ -138,6 +138,6 @@ const AddPlotDialog = props => {
       </DialogActions>
     </Dialog>
   );
-}
+};
 
 export default AddPlotDialog;

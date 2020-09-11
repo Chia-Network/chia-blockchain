@@ -652,7 +652,9 @@ const SendCard = props => {
 
   result = get_transaction_result(send_transaction_result);
   let result_message = result.message;
-  let result_class = result.success ? classes.resultSuccess : classes.resultFailure;
+  let result_class = result.success
+    ? classes.resultSuccess
+    : classes.resultFailure;
 
   function send() {
     if (sending_transaction) {

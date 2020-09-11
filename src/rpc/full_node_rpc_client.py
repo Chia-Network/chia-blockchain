@@ -52,6 +52,8 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch(
                 "get_header", {"header_hash": header_hash.hex()}
             )
+            if response["header"] is None:
+                return None
         except aiohttp.client_exceptions.ClientResponseError as e:
             if e.message == "Not Found":
                 return None

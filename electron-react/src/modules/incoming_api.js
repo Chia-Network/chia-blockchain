@@ -92,7 +92,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       wallet.sending_transaction = false;
       wallet.send_transaction_result = null;
       return {
-        ...state,
+        ...state
       };
     case "OUTGOING_MESSAGE":
       if (
@@ -104,7 +104,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         wallet.sending_transaction = false;
         wallet.send_transaction_result = null;
         return {
-          ...state,
+          ...state
         };
       }
       return state;

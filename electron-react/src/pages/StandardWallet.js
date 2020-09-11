@@ -14,11 +14,7 @@ import TableCell from "@material-ui/core/TableCell";
 
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
-import {
-  get_address,
-  send_transaction,
-  farm_block
-} from "../modules/message";
+import { get_address, send_transaction, farm_block } from "../modules/message";
 import ExpansionPanel from "@material-ui/core/ExpansionPanel";
 import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
 import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
@@ -335,7 +331,9 @@ const SendCard = props => {
 
   result = get_transaction_result(send_transaction_result);
   let result_message = result.message;
-  let result_class = result.success ? classes.resultSuccess : classes.resultFailure;
+  let result_class = result.success
+    ? classes.resultSuccess
+    : classes.resultFailure;
 
   function farm() {
     var address = address_input.value;
@@ -591,9 +589,7 @@ const TransactionTable = props => {
 
 const AddressCard = props => {
   var id = props.wallet_id;
-  const address = useSelector(
-    state => state.wallet_state.wallets[id].address
-  );
+  const address = useSelector(state => state.wallet_state.wallets[id].address);
   const classes = useStyles();
   const dispatch = useDispatch();
 

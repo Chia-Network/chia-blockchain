@@ -3,14 +3,14 @@ import {
   registerService,
   startService,
   isServiceRunning,
-  startServiceTest,
+  startServiceTest
 } from "../modules/daemon_messages";
 import { handle_message } from "./middleware_api";
 import {
   service_wallet,
   service_full_node,
   service_simulator,
-  service_plotter,
+  service_plotter
 } from "../util/service_names";
 const config = require("../config");
 
@@ -24,14 +24,14 @@ const outgoing_message = (command, data, destination) => ({
   ack: false,
   origin: "wallet_ui",
   destination: destination,
-  request_id: crypto.randomBytes(32).toString("hex"),
+  request_id: crypto.randomBytes(32).toString("hex")
 });
 
 const socketMiddleware = () => {
   let socket = null;
   let connected = false;
 
-  const onOpen = (store) => (event) => {
+  const onOpen = store => event => {
     connected = true;
     store.dispatch(actions.wsConnected(event.target.url));
     var register_action = registerService();
@@ -50,12 +50,12 @@ const socketMiddleware = () => {
     store.dispatch(start_node);
   };
 
-  const onClose = (store) => () => {
+  const onClose = store => () => {
     connected = false;
     store.dispatch(actions.wsDisconnected());
   };
 
-  const onMessage = (store) => (event) => {
+  const onMessage = store => event => {
     const payload = JSON.parse(event.data);
     const request_id = payload["request_id"];
     if (callback_map[request_id] != null) {
@@ -67,7 +67,7 @@ const socketMiddleware = () => {
     handle_message(store, payload);
   };
 
-  return (store) => (next) => (action) => {
+  return store => next => action => {
     switch (action.type) {
       case "WS_CONNECT":
         if (socket !== null) {

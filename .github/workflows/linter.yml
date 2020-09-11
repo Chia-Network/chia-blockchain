@@ -45,7 +45,8 @@ jobs:
       # Run Linter against code base #
       ################################
       - name: Lint Code Base
-        uses: github/super-linter@v3.9.4
+#        uses: github/super-linter@v3.10.0
+        uses: docker://github/super-linter:v3.10.0
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: master
@@ -62,7 +63,7 @@ jobs:
           VALIDATE_PYTHON: true
           VALIDATE_PYTHON_PYLINT: true
           VALIDATE_PYTHON_FLAKE8: true
-          VALIDATE_PYTHON_BLACK: true
+#          VALIDATE_PYTHON_BLACK: true
           VALIDATE_SHELL_SHFMT: true
           VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_YAML: true

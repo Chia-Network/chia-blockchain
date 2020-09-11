@@ -18,12 +18,14 @@ from src.util.merkle_set import (
     confirm_not_included_already_hashed,
     MerkleSet,
 )
-from src.protocols import introducer_protocol, wallet_protocol
+from src.protocols import (
+    introducer_protocol, wallet_protocol, full_node_protocol
+)
 from src.consensus.constants import ConsensusConstants
 from src.server.connection import PeerConnections
 from src.server.server import ChiaServer
 from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
-from src.util.ints import uint32, uint64
+from src.util.ints import uint16, uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
 from src.wallet.derivation_record import DerivationRecord
@@ -339,7 +341,9 @@ class WalletNode:
             return
         conns = self.global_connections
         for peer in request.peer_list:
-            conns.peers.add(peer)
+            conns.peers.add(
+                PeerInfo(peer.host, uint16(peer.port))
+            )
 
         # Pseudo-message to close the connection
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
@@ -353,11 +357,17 @@ class WalletNode:
 
         self.log.info(f"Trying to connect to peers: {to_connect}")
         tasks = []
-        for peer in to_connect:
+        for target in to_connect:
             tasks.append(
-                asyncio.create_task(self.server.start_client(peer, self._on_connect))
+                asyncio.create_task(self.server.start_client(target, self._on_connect))
             )
         await asyncio.gather(*tasks)
+
+    @api_request
+    async def respond_peers_full_node(
+        self, request: full_node_protocol.RespondPeers
+    ):
+        pass
 
     async def _sync(self):
         """

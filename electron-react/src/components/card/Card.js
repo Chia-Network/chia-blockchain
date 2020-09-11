@@ -11,18 +11,18 @@ import { makeStyles } from "@material-ui/core/styles";
 const useStyles = makeStyles({
   root: {
     width: 440,
-    padding: "27px 59px 27px 44px",
+    padding: "27px 59px 27px 44px"
   },
   content: {
     padding: 0,
-    marginBottom: "30px",
+    marginBottom: "30px"
   },
   text: {
     fontWeight: 300,
     fontSize: "22px",
     lineHeight: "32px",
-    color: "#66666B",
-  },
+    color: "#66666B"
+  }
 });
 
 function Card(props) {
@@ -57,7 +57,7 @@ function Card(props) {
 Card.propTypes = {
   actionText: PropTypes.string,
   onAction: PropTypes.func,
-  iconSrc: PropTypes.string,
+  iconSrc: PropTypes.string
 };
 
 export default Card;
