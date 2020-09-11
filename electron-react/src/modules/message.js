@@ -103,14 +103,14 @@ export const get_balance_for_wallet = (id) => {
   return action;
 };
 
-export const send_transaction = (wallet_id, amount, fee, puzzle_hash) => {
+export const send_transaction = (wallet_id, amount, fee, address) => {
   var action = walletMessage();
   action.message.command = "send_transaction";
   action.message.data = {
     wallet_id: wallet_id,
     amount: amount,
     fee: fee,
-    puzzle_hash: puzzle_hash,
+    address: address,
   };
   return action;
 };
@@ -133,40 +133,20 @@ export const add_key = (mnemonic, type, file_path) => {
   return action;
 };
 
-export const send_transaction_and_wait = (wallet_id, amount, fee, puzzle_hash) => {
+export const send_transaction_and_wait = (wallet_id, amount, fee, address) => {
   return (dispatch) => {
     try {
-      response = await async_api(dispatch, send_transaction(wallet_id, amount, fee, puzzle_hash), False);
+      response = await async_api(dispatch, send_transaction(wallet_id, amount, fee, address), False);
       if (!response.data.success) {
         // Do something bad
         return;
       }
-      const transaction_id = response.data.transaction_id;
-      while (response.data.success) {
-        sent_to = response.data.transaction.sent_to;
-        for (const node of sent_to) {
-          if (node[1] == "FAILED") {
-            dispatch(transaction_failed())
-            // Do something bad
-            return;
-          }
-          else if (node[1] == "SUCCESS") {
-            // Do something good
-          }
-          response = await async_api(dispatch, get_transaction(wallet_id, transaction_id), False);
-        }
-      }
-
-    } catch (err) {
         // Do something good
+    } catch (err) {
+        // Do something bad
         return;
     }
   }
-}
-
-export const send_transaction_and_wait = (wallet_id, amount, fee, puzzle_hash) => {
-
-
 }
 
 export const add_new_key_action = (mnemonic) => {
@@ -425,17 +405,17 @@ export const get_transactions = (wallet_id) => {
   return action;
 };
 
-export const get_puzzle_hash = (wallet_id) => {
+export const get_address = (wallet_id) => {
   var action = walletMessage();
-  action.message.command = "get_next_puzzle_hash";
+  action.message.command = "get_next_address";
   action.message.data = { wallet_id: wallet_id };
   return action;
 };
 
-export const farm_block = (puzzle_hash) => {
+export const farm_block = (address) => {
   var action = walletMessage();
   action.message.command = "farm_block";
-  action.message.data = { puzzle_hash: puzzle_hash };
+  action.message.data = { address: address };
   return action;
 };
 
@@ -576,12 +556,12 @@ export const rename_cc_wallet = (wallet_id, name) => {
   return action;
 };
 
-export const cc_spend = (wallet_id, puzzle_hash, amount, fee) => {
+export const cc_spend = (wallet_id, address, amount, fee) => {
   var action = walletMessage();
   action.message.command = "cc_spend";
   action.message.data = {
     wallet_id: wallet_id,
-    innerpuzhash: puzzle_hash,
+    inner_address: address,
     amount: amount,
     fee: fee,
   };

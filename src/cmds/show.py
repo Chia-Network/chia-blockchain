@@ -15,6 +15,7 @@ from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.wallet.util.wallet_types import WalletType
 from src.cmds.units import units
+from src.util.chech32 import encode_puzzle_hash
 
 
 def make_parser(parser):
@@ -304,9 +305,9 @@ async def show_async(args, parser):
                     f"Tx Filter Hash         {b'block.transactions_filter'.hex()}\n"
                     f"Tx Generator Hash      {block.transactions_generator}\n"
                     f"Coinbase Amount        {block.get_coinbase().amount/1000000000000}\n"
-                    f"Coinbase Puzzle Hash   0x{block.get_coinbase().puzzle_hash}\n"
+                    f"Coinbase Address       {encode_puzzle_hash(block.get_coinbase().puzzle_hash)}\n"
                     f"Fees Amount            {block.get_fees_coin().amount/1000000000000}\n"
-                    f"Fees Puzzle Hash       0x{block.get_fees_coin().puzzle_hash}\n"
+                    f"Fees Address           {encode_puzzle_hash(block.get_fees_coin().puzzle_hash)}\n"
                     f"Aggregated Signature   {aggregated_signature}"
                 )
             else:

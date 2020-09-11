@@ -32,7 +32,7 @@ harvester:
 
 pool: {
   # Replace this with a real puzzle hash
-  # xch_target_puzzle_hash: a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836
+  # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
   logging: *logging
 }
 
@@ -50,7 +50,7 @@ farmer:
   pool_public_keys: []
 
   # Replace this with a real puzzle hash
-  # xch_target_puzzle_hash: a4259182b4d8e0af21331fc5be2681f953400b6726fa4095e3b91ae8f005a836
+  # xch_target_address: txch102gkhhzs60grx7cfnpng5n6rjecr89r86l5s8xux2za8k820cxsq64ssdg
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
