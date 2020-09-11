@@ -7,7 +7,6 @@ from src.types.coin_solution import CoinSolution
 from src.util.ints import uint64
 from src.wallet.puzzles.load_clvm import load_clvm
 from clvm_tools.curry import curry as ct_curry, uncurry
-import string
 import clvm
 
 DID_CORE_MOD = load_clvm("did_core.clvm")
