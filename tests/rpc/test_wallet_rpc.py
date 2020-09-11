@@ -41,13 +41,14 @@ class TestWalletRpc:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
+        ph_2 = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
-        funds = sum(
+        initial_funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
                 for i in range(1, num_blocks - 1)
@@ -72,23 +73,36 @@ class TestWalletRpc:
             connect_to_daemon=False,
         )
 
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
-        await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
+        await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
 
         client = await WalletRpcClient.create("localhost", test_rpc_port)
         try:
             addr = encode_puzzle_hash(
                 await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
             )
-            print(await client.get_wallet_summaries())
-            tx = await client.send_transaction("1", 10, addr)
-            print(tx)
+            tx = await client.send_transaction("1", 1, addr)
             assert tx is not None
+            transaction_id = tx.name()
 
-            while True:
-                tx = await client.get_transaction("1", tx.name())
-                print("Tx", tx)
-                await asyncio.sleep(1)
+            async def tx_in_mempool():
+                tx = await client.get_transaction("1", transaction_id)
+                return tx.is_in_mempool()
+
+            await time_out_assert(5, tx_in_mempool, True)
+            await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds - 1)
+            assert (await client.get_wallet_balance("1"))["wallet_balance"]["unconfirmed_wallet_balance"] == initial_funds - 1
+            assert (await client.get_wallet_balance("1"))["wallet_balance"]["confirmed_wallet_balance"] == initial_funds
+
+            for i in range(0, num_blocks * 5):
+                await full_node_1.farm_new_block(FarmNewBlockProtocol(ph_2))
+
+            assert (await client.get_wallet_balance("1"))["wallet_balance"]["confirmed_wallet_balance"] == initial_funds - 1
+
+
+
+            print(await client.get_wallet_balance("1"))
+
         except Exception:
             # Checks that the RPC manages to stop the node
             client.close()

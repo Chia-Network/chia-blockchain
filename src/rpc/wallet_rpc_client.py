@@ -46,7 +46,6 @@ class WalletRpcClient(RpcClient):
             {"walled_id": wallet_id, "transaction_id": transaction_id.hex()},
         )
         if response["success"]:
-            print("response", response)
             return TransactionRecord.from_json_dict(response["transaction"])
         return None
 
