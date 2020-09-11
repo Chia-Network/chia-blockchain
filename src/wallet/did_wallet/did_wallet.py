@@ -349,7 +349,9 @@ class DIDWallet:
 
                 if coin is not None:
                     if did_wallet_puzzles.check_is_did_puzzle(puzzle_program):
-                        inner_puzzle_hash = did_wallet_puzzles.get_innerpuzzle_from_puzzle(puzzle_program)
+                        inner_puzzle_hash = did_wallet_puzzles.get_innerpuzzle_from_puzzle(
+                            puzzle_program
+                        )
                         self.log.info(
                             f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle_hash.hex()}"
                         )
@@ -423,10 +425,7 @@ class DIDWallet:
             ]
         )
         list_of_solutions = [
-            CoinSolution(
-                coin,
-                clvm.to_sexp_f([full_puzzle, fullsol]),
-            )
+            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
         ]
         # sign for AGG_SIG_ME
         message = bytes(puzhash) + bytes(coin.name())
@@ -488,10 +487,7 @@ class DIDWallet:
             ]
         )
         list_of_solutions = [
-            CoinSolution(
-                coin,
-                clvm.to_sexp_f([full_puzzle, fullsol]),
-            )
+            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
         ]
         message_spend = did_wallet_puzzles.create_spend_for_message(
             coin.name(), identity, newpuz
@@ -578,10 +574,7 @@ class DIDWallet:
             ]
         )
         list_of_solutions = [
-            CoinSolution(
-                coin,
-                clvm.to_sexp_f([full_puzzle, fullsol]),
-            )
+            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
         ]
         sigs = []
         aggsig = AugSchemeMPL.aggregate(sigs)
@@ -682,10 +675,7 @@ class DIDWallet:
 
         # Only want to save this information if the transaction is valid
         did_info: DIDInfo = DIDInfo(
-            did_core,
-            self.did_info.backup_ids,
-            self.did_info.parent_info,
-            did_inner,
+            did_core, self.did_info.backup_ids, self.did_info.parent_info, did_inner,
         )
         await self.save_info(did_info)
 
@@ -714,10 +704,7 @@ class DIDWallet:
             ]
         )
         list_of_solutions = [
-            CoinSolution(
-                coin,
-                clvm.to_sexp_f([full_puzzle, fullsol]),
-            )
+            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
         ]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())

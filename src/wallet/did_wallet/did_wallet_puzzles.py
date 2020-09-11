@@ -40,7 +40,9 @@ def create_innerpuz(pubkey: bytes, identities: List[bytes]) -> Program:
 
 
 def create_fullpuz(innerpuzhash, core) -> Program:
-    puzstring = f"(r (c (q 0x{innerpuzhash}) ((c (q {binutils.disassemble(core)}) (a)))))"
+    puzstring = (
+        f"(r (c (q 0x{innerpuzhash}) ((c (q {binutils.disassemble(core)}) (a)))))"
+    )
     # return curry(DID_FULLPUZ_MOD, [innerpuzhash, core])
     return Program(binutils.assemble(puzstring))
 
