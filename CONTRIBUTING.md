@@ -25,11 +25,13 @@ proofs of space during testing. The next time tests are run, this won't be neces
 ```bash
 . ./activate
 pip install -r requirements-dev.txt
-black src tests && flake8 src --exclude src/wallet/electron/node_modules  && mypy src tests
-py.test tests -s -v
+black src tests && flake8 src tests  && mypy src tests
+py.test tests -s -v --durations 0
 ```
 Black is used as an automatic style formatter to make things easier, and flake8 helps ensure consistent style.
 Mypy is very useful for ensuring objects are of the correct type, so try to always add the type of the return value, and the type of local variables.
+
+If you want verbose logging for tests, edit the tests/pytest.ini file.
 
 ## Configure VS code
 1. Install Python extension

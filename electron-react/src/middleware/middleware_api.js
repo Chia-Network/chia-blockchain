@@ -1,5 +1,5 @@
 import {
-  get_puzzle_hash,
+  get_address,
   format_message,
   incomingMessage,
   get_balance_for_wallet,
@@ -201,7 +201,7 @@ export const handle_message = (store, payload) => {
         store.dispatch(get_balance_for_wallet(wallet.id));
         store.dispatch(get_transactions(wallet.id));
         if (wallet.type === COLOURED_COIN || wallet.type === STANDARD_WALLET) {
-          store.dispatch(get_puzzle_hash(wallet.id));
+          store.dispatch(get_address(wallet.id));
         }
         if (wallet.type === COLOURED_COIN) {
           store.dispatch(get_colour_name(wallet.id));

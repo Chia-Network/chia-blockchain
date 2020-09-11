@@ -319,7 +319,7 @@ class WalletStateManager:
                     continue
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
                 self.log.info(
-                    f"Puzzle at index {index} wid {wallet_id} puzzle hash {puzzlehash.hex()}"
+                    f"Puzzle at index {index} with {wallet_id} puzzle hash {puzzlehash.hex()}"
                 )
                 derivation_paths.append(
                     DerivationRecord(
@@ -376,13 +376,13 @@ class WalletStateManager:
         """
         self.pending_tx_callback = callback
 
-    def state_changed(self, state: str, wallet_id: int = None):
+    def state_changed(self, state: str, wallet_id: int = None, data_object = {}):
         """
         Calls the callback if it's present.
         """
         if self.state_changed_callback is None:
             return
-        self.state_changed_callback(state, wallet_id)
+        self.state_changed_callback(state, wallet_id, data_object)
 
     def tx_pending_changed(self):
         """
@@ -698,7 +698,9 @@ class WalletStateManager:
         Full node received our transaction, no need to keep it in queue anymore
         """
         await self.tx_store.increment_sent(spendbundle_id, name, send_status, error)
-        self.state_changed("tx_sent")
+        tx: Optional[TransactionRecord] = self.get_transaction(spendbundle_id)
+        if tx is not None:
+            self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
 
     async def get_send_queue(self) -> List[TransactionRecord]:
         """
@@ -1541,13 +1543,3 @@ class WalletStateManager:
                     if callback_str is not None:
                         callback = getattr(wallet, callback_str)
                         await callback(height, header_hash, program, action.id)
-
-    async def get_transaction_status(
-        self, tx_id: bytes32
-    ) -> List[Tuple[str, MempoolInclusionStatus, Optional[str]]]:
-        tr: Optional[TransactionRecord] = await self.get_transaction(tx_id)
-        ret_list = []
-        if tr is not None:
-            for (name, ss, err) in tr.sent_to:
-                ret_list.append((name, MempoolInclusionStatus(ss), err))
-        return ret_list

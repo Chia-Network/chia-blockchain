@@ -21,6 +21,7 @@ from src.util.ints import uint16, uint32
 from src.server.start_service import Service
 from src.util.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert
+from src.util.chech32 import encode_puzzle_hash
 
 
 test_constants, bt = make_test_constants_with_genesis(
@@ -269,9 +270,9 @@ async def setup_farmer(
     config = load_config(bt.root_path, "config.yaml", "farmer")
     config_pool = load_config(bt.root_path, "config.yaml", "pool")
 
-    config["xch_target_puzzle_hash"] = bt.farmer_ph.hex()
+    config["xch_target_address"] = encode_puzzle_hash(bt.farmer_ph).hex()
     config["pool_public_keys"] = [bytes(pk).hex() for pk in bt.pool_pubkeys]
-    config_pool["xch_target_puzzle_hash"] = bt.pool_ph.hex()
+    config_pool["xch_target_address"] = encode_puzzle_hash(bt.pool_ph).hex()
     if full_node_port:
         connect_peers = [PeerInfo(self_hostname, full_node_port)]
     else:
