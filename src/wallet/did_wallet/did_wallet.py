@@ -392,8 +392,9 @@ class DIDWallet:
         return self.puzzle_for_pk(bytes(devrec.pubkey))
 
     def get_my_ID(self):
-        ret = did_wallet_puzzles.get_genesis_from_puzzle(self.did_info.my_core)
-        return ret
+        core = self.did_info.my_core
+        ret = did_wallet_puzzles.get_genesis_from_core(core)
+        return ret.hex()
 
     # This is used to cash out, or update the id_list
     async def create_spend(self, puzhash):

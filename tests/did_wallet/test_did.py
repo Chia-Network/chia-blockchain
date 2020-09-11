@@ -460,17 +460,17 @@ class TestWalletSimulator:
 
         # Lock up with non DID innerpuz so that we can create two outputs
         # Innerpuz will output the innersol, so we just pass in ((51 0xMyPuz 49) (51 0xMyPuz 51))
-        innerpuz = "(a)"
-        innerpuzhash = Program(binutils.assemble(innerpuz)).get_tree_hash()
+        innerpuz = Program(binutils.assemble("(a)"))
+        innerpuzhash = innerpuz.get_tree_hash()
+
         puz = did_wallet_puzzles.create_fullpuz(innerpuzhash, did_wallet.did_info.my_core)
-        compiled_puz = Program(binutils.assemble(puz))
 
         # Add the hacked puzzle to the puzzle store so that it is recognised as "our" puzzle
         old_devrec = await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)
-        devrec = DerivationRecord(old_devrec.index, compiled_puz.get_tree_hash(), old_devrec.pubkey,
+        devrec = DerivationRecord(old_devrec.index, puz.get_tree_hash(), old_devrec.pubkey,
                                   old_devrec.wallet_type, old_devrec.wallet_id)
         await did_wallet.wallet_state_manager.puzzle_store.add_derivation_paths([devrec])
-        await did_wallet.create_spend(Program(compiled_puz).get_tree_hash())
+        await did_wallet.create_spend(puz.get_tree_hash())
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
@@ -482,16 +482,18 @@ class TestWalletSimulator:
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
         # innerpuz is our desired output
-        innersol = f"((51 0x{coin.puzzle_hash} 45) (51 0x{coin.puzzle_hash} 55)))"
+        innersol = Program.to([[51, coin.puzzle_hash, 45], [51, coin.puzzle_hash, 55]])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
-        full_puzzle: str = puz
         parent_info = await did_wallet.get_parent_for_coin(coin)
-
-        fullsol = f"(0x{Program(binutils.assemble(did_wallet.did_info.my_core)).get_tree_hash()} \
-(0x{parent_info.parent_name} 0x{parent_info.inner_puzzle_hash} {parent_info.amount})\
-{coin.amount} {innerpuz} {innersol})"
+        fullsol = Program.to([
+            did_wallet.did_info.my_core.get_tree_hash(),
+            [parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount],
+            coin.amount,
+            innerpuz,
+            innersol,
+        ])
         try:
-            cost, result = run_program(binutils.assemble(full_puzzle), binutils.assemble(fullsol))
+            cost, result = run_program(puz, fullsol)
         except Exception as e:
             assert e.args == ('clvm raise',)
         else:
@@ -574,7 +576,7 @@ class TestWalletSimulator:
         )
         fullsol = Program.to(
             [
-                Program(binutils.assemble(did_wallet.did_info.my_core)).get_tree_hash(),
+                did_wallet.did_info.my_core.get_tree_hash(),
                 [parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount],
                 coin.amount,
                 innerpuz,
@@ -587,7 +589,7 @@ class TestWalletSimulator:
                 coin,
                 clvm.to_sexp_f(
                     [
-                        Program(binutils.assemble(full_puzzle)),
+                        full_puzzle,
                         fullsol,
                     ]
                 ),
