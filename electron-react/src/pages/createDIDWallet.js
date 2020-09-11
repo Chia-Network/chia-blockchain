@@ -46,7 +46,7 @@ export const CreateDIDWallet = () => {
   const custom = customStyles();
   const dispatch = useDispatch();
   var amount_input = null;
-  var fee_input = null;
+  var backup_ids = [];
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
 
@@ -64,14 +64,9 @@ export const CreateDIDWallet = () => {
       dispatch(openDialog("Please enter a valid numeric amount"));
       return;
     }
-    if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
-      dispatch(openDialog("Please enter a valid numeric fee"));
-      return;
-    }
     dispatch(createState(true, true));
     var amount = chia_to_mojo(amount_input.value);
-    var fee = chia_to_mojo(fee_input.value);
-    dispatch(create_did_action(amount, fee));
+    dispatch(create_did_action(amount, backup_ids));
   }
 
   return (
@@ -103,47 +98,6 @@ export const CreateDIDWallet = () => {
                 amount_input = input;
               }}
               label="Amount"
-            />
-          </Box>
-          <Box flexGrow={1}>
-            <TextField
-              className={custom.input}
-              id="filled-secondary"
-              variant="filled"
-              color="secondary"
-              fullWidth
-              inputRef={input => {
-                fee_input = input;
-              }}
-              label="Fee"
-            />
-          </Box>
-        </Box>
-        <Box display="flex">
-          <Box flexGrow={1}>
-            <TextField
-              className={custom.input}
-              id="filled-secondary" // lgtm [js/duplicate-html-id]
-              variant="filled"
-              color="secondary"
-              fullWidth
-              inputRef={input => {
-                amount_input = input;
-              }}
-              label="Amount"
-            />
-          </Box>
-          <Box flexGrow={1}>
-            <TextField
-              className={custom.input}
-              id="filled-secondary"
-              variant="filled"
-              color="secondary"
-              fullWidth
-              inputRef={input => {
-                fee_input = input;
-              }}
-              label="Fee"
             />
           </Box>
           <Box>

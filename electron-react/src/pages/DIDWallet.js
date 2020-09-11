@@ -15,10 +15,12 @@ import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 
-// DO I NEED TO IMPORT ANYTHING FROM MESSAGE? import { send_transaction } from "../modules/message";
-import ExpansionPanel from "@material-ui/core/ExpansionPanel";
-import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
-import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
+import { did_spend } from "../modules/message";
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
+} from "@material-ui/core";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import { Tooltip } from "@material-ui/core";
 import HelpIcon from "@material-ui/icons/Help";
@@ -295,8 +297,8 @@ const BalanceCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <ExpansionPanel className={classes.front}>
-                  <ExpansionPanelSummary
+                <Accordion className={classes.front}>
+                  <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     aria-controls="panel1a-content"
                     id="panel1a-header"
@@ -304,8 +306,8 @@ const BalanceCard = props => {
                     <Typography className={classes.heading}>
                       View pending balances
                     </Typography>
-                  </ExpansionPanelSummary>
-                  <ExpansionPanelDetails>
+                  </AccordionSummary>
+                  <AccordionDetails>
                     <Grid container spacing={0}>
                       <BalanceCardSubSection
                         title="Pending Total Balance"
@@ -323,8 +325,74 @@ const BalanceCard = props => {
                         tooltip={""}
                       />
                     </Grid>
-                  </ExpansionPanelDetails>
-                </ExpansionPanel>
+                  </AccordionDetails>
+                </Accordion>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+};
+
+const CashoutCard = props => {
+  var id = props.wallet_id;
+  var address_input = null;
+  const classes = useStyles();
+  const dispatch = useDispatch();
+
+  function cashout() {
+    let puzzlehash = address_input.value.trim();
+
+    if (puzzlehash.startsWith("0x") || puzzlehash.startsWith("0X")) {
+      puzzlehash = puzzlehash.substring(2);
+    };
+
+    dispatch(did_spend(id, puzzlehash));
+    address_input.value = "";
+  };
+
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              Cash Out
+            </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  variant="filled"
+                  color="secondary"
+                  fullWidth
+                  inputRef={input => {
+                    address_input = input;
+                  }}
+                  label="Address / Puzzle hash"
+                />
+              </Box>
+              <Box></Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box>
+                <Button
+                  onClick={cashout}
+                  className={classes.sendButton}
+                  variant="contained"
+                  color="primary"
+                >
+                  Cash Out
+                </Button>
               </Box>
             </Box>
           </div>
@@ -433,6 +501,7 @@ const DistributedIDWallet = props => {
   return wallets.length > props.wallet_id ? (
     <Grid className={classes.walletContainer} item xs={12}>
       <BalanceCard wallet_id={id}></BalanceCard>
+      <CashoutCard wallet_id={id}></CashoutCard>
       <HistoryCard wallet_id={id}></HistoryCard>
     </Grid>
   ) : (

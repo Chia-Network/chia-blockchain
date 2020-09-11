@@ -125,7 +125,7 @@ export const MainWalletList = () => {
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText primary="Distribute Identity" />
+            <ListItemText primary="Distributed Identity" />
           </ListItem>
         </List>
       </Grid>
