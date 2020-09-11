@@ -113,7 +113,7 @@ def get_genesis_from_core(puzzle: Program):
     inner_f, args = r
     if not is_did_core(inner_f):
         return None
-    genesis_id = list(args.as_iter())
+    genesis_id = list(args.as_iter())[0]
     return genesis_id.as_atom()
 
 
@@ -130,7 +130,6 @@ def format_DID_to_corehash(did: bytes):
 
 
 def get_recovery_message_puzzle(recovering_coin, newpuz):
-    breakpoint()
     return curry(DID_RECOVERY_MESSAGE_MOD, [recovering_coin, newpuz])
 
 
