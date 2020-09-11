@@ -36,6 +36,9 @@ class WalletRpcClient(RpcClient):
             return TransactionRecord.from_json_dict(response["transaction"])
         raise Exception(response["reason"])
 
+    async def get_next_address(self, wallet_id: str) -> Dict:
+        return await self.fetch("get_next_address", {"wallet_id": wallet_id})
+
     async def get_transaction(
         self, wallet_id: str, transaction_id: bytes32
     ) -> Optional[TransactionRecord]:

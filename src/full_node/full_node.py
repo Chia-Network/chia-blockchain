@@ -560,7 +560,7 @@ class FullNode:
         if self.mempool_manager.seen(transaction.transaction_id):
             return
 
-        elif self.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
+        if self.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
             requestTX = full_node_protocol.RequestTransaction(
                 transaction.transaction_id
             )
@@ -613,10 +613,12 @@ class FullNode:
             # Ignore if we have already added this transaction
             if self.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
                 return
+            self.log.warning(f"Adding transaction to mempool: {transaction.transaction_id}")
             cost, status, error = await self.mempool_manager.add_spendbundle(
                 tx.transaction
             )
             if status == MempoolInclusionStatus.SUCCESS:
+                self.log.warning(f"Added transaction to mempool: {transaction.transaction_id}")
                 fees = tx.transaction.fees()
                 assert fees >= 0
                 assert cost is not None
@@ -1823,6 +1825,7 @@ class FullNode:
                     tx.transaction
                 )
                 if status == MempoolInclusionStatus.SUCCESS:
+                    self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     fees = tx.transaction.fees()

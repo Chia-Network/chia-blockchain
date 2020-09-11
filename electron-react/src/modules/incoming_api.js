@@ -11,15 +11,16 @@ export const Wallet = (id, name, type, data) => ({
   balance_frozen: 0,
   balance_change: 0,
   transactions: [],
-  puzzle_hash: "",
+  address: "",
   colour: "",
+  sending_transaction: false,
   send_transaction_result: ""
 });
 
 export const Transaction = (
   confirmed_at_index,
   created_at_time,
-  to_puzzle_hash,
+  to_address,
   amount,
   fee_amount,
   incoming,
@@ -32,7 +33,7 @@ export const Transaction = (
 ) => ({
   confirmed_at_index: confirmed_at_index,
   created_at_time: created_at_time,
-  to_puzzle_hash: to_puzzle_hash,
+  to_address: to_address,
   amount: amount,
   fee_amount: fee_amount,
   incoming: incoming,
@@ -58,7 +59,6 @@ const initial_state = {
     connection_count: 0,
     syncing: false
   },
-  sending_transaction: false,
   show_create_backup: false
 };
 
@@ -87,20 +87,24 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       };
 
     case "CLEAR_SEND":
+      id = action.message.data.wallet_id;
+      wallet = state.wallets[parseInt(id)];
+      wallet.sending_transaction = false;
+      wallet.send_transaction_result = null;
       return {
         ...state,
-        sending_transaction: false,
-        send_transaction_result: null
       };
     case "OUTGOING_MESSAGE":
       if (
         action.message.command === "send_transaction" ||
         action.message.command === "cc_spend"
       ) {
+        id = action.message.data.wallet_id;
+        wallet = state.wallets[parseInt(id)];
+        wallet.sending_transaction = false;
+        wallet.send_transaction_result = null;
         return {
           ...state,
-          sending_transaction: true,
-          send_transaction_result: null
         };
       }
       return state;
@@ -190,15 +194,15 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           wallet.transactions = transactions.reverse();
           return { ...state };
         }
-      } else if (command === "get_next_puzzle_hash") {
+      } else if (command === "get_next_address") {
         id = data.wallet_id;
-        var puzzle_hash = data.puzzle_hash;
+        var address = data.address;
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
         if (!wallet) {
           return state;
         }
-        wallet.puzzle_hash = puzzle_hash;
+        wallet.address = address;
         return { ...state };
       } else if (command === "get_connections") {
         if (data.success || data.connections) {
@@ -241,12 +245,12 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         wallet.name = name;
         return { ...state };
       }
-      if (command === "send_transaction" || command === "cc_spend") {
-        state["sending_transaction"] = false;
+      if (command === "tx_update") {
         const id = data.id;
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
-        wallet.send_transaction_result = message.data;
+        wallet.sending_transaction = false;
+        wallet.send_transaction_result = message.data.additional_data;
         return { ...state };
       }
       return state;
