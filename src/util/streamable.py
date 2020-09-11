@@ -49,7 +49,9 @@ def dataclass_from_dict(klass, d):
         if not d:
             return None
         return dataclass_from_dict(klass.__args__[0], d)
-    if dataclasses.is_dataclass(klass):
+    elif is_type_Tuple(klass):
+        return tuple(dataclass_from_dict(klass.__args__[0], item) for item in d)
+    elif dataclasses.is_dataclass(klass):
         # Type is a dataclass, data is a dictionary
         fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
         return klass(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})

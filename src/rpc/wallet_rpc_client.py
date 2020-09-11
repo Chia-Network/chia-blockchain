@@ -17,6 +17,38 @@ class WalletRpcClient(RpcClient):
     async def get_wallet_balance(self, wallet_id: str) -> Dict:
         return await self.fetch("get_wallet_balance", {"wallet_id": wallet_id})
 
+<<<<<<< HEAD
+=======
+    async def send_transaction(
+        self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0)
+    ) -> TransactionRecord:
+
+        response = await self.fetch(
+            "send_transaction",
+            {
+                "wallet_id": wallet_id,
+                "amount": amount,
+                "puzzle_hash": address,
+                "fee": fee,
+            },
+        )
+        if response["success"]:
+            return TransactionRecord.from_json_dict(response["transaction"])
+        raise Exception(response["reason"])
+
+    async def get_transaction(
+        self, wallet_id: str, transaction_id: bytes32
+    ) -> Optional[TransactionRecord]:
+
+        response = await self.fetch(
+            "get_transaction",
+            {"walled_id": wallet_id, "transaction_id": transaction_id.hex()},
+        )
+        if response["success"]:
+            return TransactionRecord.from_json_dict(response["transaction"])
+        return None
+
+>>>>>>> f1c565a8... More test
     async def log_in(self, fingerprint) -> Dict:
         return await self.fetch(
             "log_in",
