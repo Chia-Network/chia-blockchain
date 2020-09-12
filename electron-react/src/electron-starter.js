@@ -1,3 +1,5 @@
+import isElectron from "is-electron";
+
 //handle setupevents as quickly as possible
 const setupEvents = require("./setupEvents");
 if (setupEvents.handleSquirrelEvent()) {
@@ -19,7 +21,6 @@ const path = require("path");
 const config = require("./config");
 const dev_config = require("./dev_config");
 const WebSocket = require("ws");
-const daemon_rpc_ws = require("./util/config").daemon_rpc_ws;
 const local_test = config.local_test;
 var url = require("url");
 const os = require("os");
@@ -91,17 +92,17 @@ const createPyProc = () => {
   if (pyProc != null) {
     pyProc.stdout.setEncoding("utf8");
 
-    pyProc.stdout.on("data", function(data) {
+    pyProc.stdout.on("data", function (data) {
       process.stdout.write(data.toString());
     });
 
     pyProc.stderr.setEncoding("utf8");
-    pyProc.stderr.on("data", function(data) {
+    pyProc.stderr.on("data", function (data) {
       //Here is where the error output goes
       process.stdout.write("stderr: " + data.toString());
     });
 
-    pyProc.on("close", function(code) {
+    pyProc.on("close", function (code) {
       //Here you can get the exit code of the script
       console.log("closing code: " + code);
     });
@@ -112,47 +113,51 @@ const createPyProc = () => {
 };
 
 const closeDaemon = callback => {
-  const timeout = setTimeout(() => callback(), 20000);
-  const clearTimeoutCallback = err => {
-    clearTimeout(timeout);
-    callback(err);
-  };
+  // only manage the daemon's lifetime if the UI is electron and is on the same machine
+  // if the UI is browser based or on a diffrenet machine just leave the daemon alone
+  if (isElectron() && config.isLocalHost()) {
+    const timeout = setTimeout(() => callback(), 20000);
+    const clearTimeoutCallback = err => {
+      clearTimeout(timeout);
+      callback(err);
+    };
 
-  try {
-    const request_id = crypto.randomBytes(32).toString("hex");
-    ws = new WebSocket(daemon_rpc_ws, {
-      perMessageDeflate: false
-    });
-    ws.on("open", function open() {
-      console.log("Opened websocket with", daemon_rpc_ws);
-      const msg = {
-        command: "exit",
-        ack: false,
-        origin: "wallet_ui",
-        destination: "daemon",
-        request_id
-      };
-      ws.send(JSON.stringify(msg));
-    });
-    ws.on("message", function incoming(message) {
-      message = JSON.parse(message);
-      if (message["ack"] === true && message["request_id"] === request_id) {
-        clearTimeoutCallback();
-      }
-    });
-    ws.on("error", err => {
-      if (err.errno === "ECONNREFUSED") {
-        clearTimeoutCallback();
-      } else {
-        clearTimeoutCallback(err);
-      }
-    });
-  } catch (e) {
-    clearTimeoutCallback(e);
+    try {
+      const request_id = crypto.randomBytes(32).toString("hex");
+      ws = new WebSocket(config.getDaemonHost(), {
+        perMessageDeflate: false
+      });
+      ws.on("open", function open() {
+        console.log("Opened websocket with", config.getDaemonHost());
+        const msg = {
+          command: "exit",
+          ack: false,
+          origin: "wallet_ui",
+          destination: "daemon",
+          request_id
+        };
+        ws.send(JSON.stringify(msg));
+      });
+      ws.on("message", function incoming(message) {
+        message = JSON.parse(message);
+        if (message["ack"] === true && message["request_id"] === request_id) {
+          clearTimeoutCallback();
+        }
+      });
+      ws.on("error", err => {
+        if (err.errno === "ECONNREFUSED") {
+          clearTimeoutCallback();
+        } else {
+          clearTimeoutCallback(err);
+        }
+      });
+    } catch (e) {
+      clearTimeoutCallback(e);
+    }
   }
 };
 
-const exitPyProc = e => {};
+const exitPyProc = e => { };
 
 app.on("will-quit", exitPyProc);
 
@@ -200,7 +205,7 @@ const createWindow = () => {
 
   mainWindow.loadURL(startUrl);
 
-  mainWindow.once("ready-to-show", function() {
+  mainWindow.once("ready-to-show", function () {
     mainWindow.show();
   });
 
@@ -239,6 +244,7 @@ const createMenu = () => {
 
 const appReady = async () => {
   app.applicationMenu = createMenu();
+
   try {
     await promisify(closeDaemon)();
   } catch (e) {
@@ -246,7 +252,8 @@ const appReady = async () => {
   }
 
   createPyProc();
-  ws.terminate();
+  if (ws)
+    ws.terminate();
   createWindow();
 };
 
