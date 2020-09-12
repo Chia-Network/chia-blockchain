@@ -1,5 +1,3 @@
-import isElectron from "is-electron";
-
 //handle setupevents as quickly as possible
 const setupEvents = require("./setupEvents");
 if (setupEvents.handleSquirrelEvent()) {
@@ -115,7 +113,7 @@ const createPyProc = () => {
 const closeDaemon = callback => {
   // only manage the daemon's lifetime if the UI is electron and is on the same machine
   // if the UI is browser based or on a diffrenet machine just leave the daemon alone
-  if (isElectron() && config.isLocalHost()) {
+  if (config.isLocalHost()) {
     const timeout = setTimeout(() => callback(), 20000);
     const clearTimeoutCallback = err => {
       clearTimeout(timeout);
