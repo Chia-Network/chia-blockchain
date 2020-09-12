@@ -24,6 +24,7 @@ const local_test = config.local_test;
 const url = require("url");
 const os = require("os");
 const crypto = require("crypto");
+const parseArgs = require('minimist');
 
 global.sharedObj = { local_test: local_test };
 
@@ -213,22 +214,32 @@ const createWindow = () => {
       return;
     }
     e.preventDefault();
-    var choice = dialog.showMessageBoxSync({
-      type: "question",
-      buttons: ["No", "Yes"],
-      title: "Confirm",
-      message:
-        "Are you sure you want to quit? GUI Plotting and farming will stop."
-    });
-    if (choice == 0) {
-      return;
+
+    // only ask about closing and exit the daemon when ui and node are on the same machine
+    if (utilConfig.isLocalHost()) {
+      var choice = dialog.showMessageBoxSync({
+        type: "question",
+        buttons: ["No", "Yes"],
+        title: "Confirm",
+        message:
+          "Are you sure you want to quit? GUI Plotting and farming will stop."
+      });
+      if (choice == 0) {
+        return;
+      }
+
+      decidedToClose = true;
+      mainWindow.webContents.send("exit-daemon");
+      mainWindow.setBounds({ height: 500, width: 500 });
+      ipcMain.on("daemon-exited", (event, args) => {
+        mainWindow.close();
+      });
     }
-    decidedToClose = true;
-    mainWindow.webContents.send("exit-daemon");
-    mainWindow.setBounds({ height: 500, width: 500 });
-    ipcMain.on("daemon-exited", (event, args) => {
+    // for remote daemons just exit
+    else {
+      decidedToClose = true;
       mainWindow.close();
-    });
+    }
   });
 };
 
@@ -236,6 +247,12 @@ const createMenu = () => {
   const menu = Menu.buildFromTemplate(getMenuTemplate());
   return menu;
 };
+
+// get the host name off the command line if it's there
+const argv = parseArgs(process.argv.slice(1));
+if (argv.selfHostName) {
+  utilConfig.setSelfHostName(argv.selfHostName);
+}
 
 const appReady = async () => {
   app.applicationMenu = createMenu();

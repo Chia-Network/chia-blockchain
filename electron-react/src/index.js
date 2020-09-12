@@ -13,13 +13,11 @@ const url = require("url");
 const config = require("./util/config");
 
 const Root = ({ store }) => {
-  // if the host name was passed on the url, update the config
-  var query = url.parse(window.document.URL, true).query;
-  config.setSelfHostName(query && query.selfHostName ? query.selfHostName : "localhost");
+  const daemonHost = getDaemonHost();
 
   return (
     <Provider store={store}>
-      <WebSocketConnection host={config.getDaemonHost()}>
+      <WebSocketConnection host={daemonHost}>
         <Router>
           <Route path="/" component={App} />
         </Router>
@@ -37,3 +35,24 @@ window.onload = () => {
     });
   }
 };
+
+function getDaemonHost() {
+  if (isElectron()) {
+    // if the host name was passed on the command line, update the config 
+    const remote = window.require('electron').remote;  // leave this here it breaks loading
+    const parseArgs = require('minimist');
+    const argv = parseArgs(remote.process.argv.slice(1));
+    if (argv.selfHostName) {
+      config.setSelfHostName(argv.selfHostName);
+    }
+  }
+  else {
+    // if the host name was passed on the url, update the config    
+    var query = url.parse(window.document.URL, true).query;
+    if (query && query.selfHostName) {
+      config.setSelfHostName(query.selfHostName);
+    }
+  }
+
+  return config.getDaemonHost();
+}
