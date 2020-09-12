@@ -251,6 +251,7 @@ def chia_init(root_path: Path):
         "full_node.introducer_peer",
         "wallet.introducer_peer",
         "full_node.database_path",
+        "wallet.database_path",
         "full_node.simulator_database_path",
     ]
 
