@@ -20,7 +20,7 @@ const config = require("./config");
 const dev_config = require("./dev_config");
 const WebSocket = require("ws");
 const local_test = config.local_test;
-var url = require("url");
+const url = require("url");
 const os = require("os");
 const crypto = require("crypto");
 
