@@ -16,6 +16,7 @@ const {
 } = require("electron");
 const openAboutWindow = require("about-window").default;
 const path = require("path");
+const utilConfig = require("./util/config");
 const config = require("./config");
 const dev_config = require("./dev_config");
 const WebSocket = require("ws");
@@ -111,47 +112,43 @@ const createPyProc = () => {
 };
 
 const closeDaemon = callback => {
-  // only manage the daemon's lifetime if the UI is electron and is on the same machine
-  // if the UI is browser based or on a diffrenet machine just leave the daemon alone
-  if (config.isLocalHost()) {
-    const timeout = setTimeout(() => callback(), 20000);
-    const clearTimeoutCallback = err => {
-      clearTimeout(timeout);
-      callback(err);
-    };
+  const timeout = setTimeout(() => callback(), 20000);
+  const clearTimeoutCallback = err => {
+    clearTimeout(timeout);
+    callback(err);
+  };
 
-    try {
-      const request_id = crypto.randomBytes(32).toString("hex");
-      ws = new WebSocket(config.getDaemonHost(), {
-        perMessageDeflate: false
-      });
-      ws.on("open", function open() {
-        console.log("Opened websocket with", config.getDaemonHost());
-        const msg = {
-          command: "exit",
-          ack: false,
-          origin: "wallet_ui",
-          destination: "daemon",
-          request_id
-        };
-        ws.send(JSON.stringify(msg));
-      });
-      ws.on("message", function incoming(message) {
-        message = JSON.parse(message);
-        if (message["ack"] === true && message["request_id"] === request_id) {
-          clearTimeoutCallback();
-        }
-      });
-      ws.on("error", err => {
-        if (err.errno === "ECONNREFUSED") {
-          clearTimeoutCallback();
-        } else {
-          clearTimeoutCallback(err);
-        }
-      });
-    } catch (e) {
-      clearTimeoutCallback(e);
-    }
+  try {
+    const request_id = crypto.randomBytes(32).toString("hex");
+    ws = new WebSocket(utilConfig.getDaemonHost(), {
+      perMessageDeflate: false
+    });
+    ws.on("open", function open() {
+      console.log("Opened websocket with", utilConfig.getDaemonHost());
+      const msg = {
+        command: "exit",
+        ack: false,
+        origin: "wallet_ui",
+        destination: "daemon",
+        request_id
+      };
+      ws.send(JSON.stringify(msg));
+    });
+    ws.on("message", function incoming(message) {
+      message = JSON.parse(message);
+      if (message["ack"] === true && message["request_id"] === request_id) {
+        clearTimeoutCallback();
+      }
+    });
+    ws.on("error", err => {
+      if (err.errno === "ECONNREFUSED") {
+        clearTimeoutCallback();
+      } else {
+        clearTimeoutCallback(err);
+      }
+    });
+  } catch (e) {
+    clearTimeoutCallback(e);
   }
 };
 
@@ -242,13 +239,14 @@ const createMenu = () => {
 
 const appReady = async () => {
   app.applicationMenu = createMenu();
-
-  try {
-    await promisify(closeDaemon)();
-  } catch (e) {
-    console.error("Error in websocket", e);
+  // if the UI is on a different machine, just leave the daemon alone
+  if (utilConfig.isLocalHost()) {
+    try {
+      await promisify(closeDaemon)();
+    } catch (e) {
+      console.error("Error in websocket", e);
+    }
   }
-
   createPyProc();
   if (ws)
     ws.terminate();
