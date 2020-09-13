@@ -263,8 +263,9 @@ const appReady = async () => {
     } catch (e) {
       console.error("Error in websocket", e);
     }
+    createPyProc();
   }
-  createPyProc();
+
   if (ws)
     ws.terminate();
   createWindow();
