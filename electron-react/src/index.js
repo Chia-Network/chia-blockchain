@@ -29,6 +29,12 @@ const Root = ({ store }) => {
 ReactDOM.render(<Root store={store} />, document.getElementById("root"));
 
 window.onload = () => {
+  var title = "Chia Blockchain"
+  if (!config.isLocalHost()) {
+    title += " - [" + config.getDaemonHost() + "]";
+  }
+  window.document.title = title;
+
   if (isElectron()) {
     window.ipcRenderer.on("exit-daemon", (event, ...args) => {
       store.dispatch(exit_and_close(event));
