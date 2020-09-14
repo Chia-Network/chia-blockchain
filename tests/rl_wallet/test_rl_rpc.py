@@ -113,15 +113,10 @@ class TestCCWallet:
 
         await time_out_assert(15, check_balance, 100, api_user, user_wallet_id)
         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
-        puzzle_hash = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash())
+        address = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash())
         assert await receiving_wallet.get_spendable_balance() == 0
         val = await api_user.send_transaction(
-            {
-                "wallet_id": user_wallet_id,
-                "amount": 3,
-                "fee": 0,
-                "puzzle_hash": puzzle_hash,
-            }
+            {"wallet_id": user_wallet_id, "amount": 3, "fee": 0, "address": address}
         )
         assert "transaction_id" in val
 
