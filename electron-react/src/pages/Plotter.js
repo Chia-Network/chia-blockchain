@@ -200,7 +200,7 @@ const plot_size_options = [
   { label: "11.5GiB", value: 29, workspace: "41.1GiB" },
   { label: "23.8GiB", value: 30, workspace: "77.3GiB" },
   { label: "49.1GiB", value: 31, workspace: "145GiB" },
-  { label: "101.4GiB", value: 32, workspace: "297GiB" },
+  { label: "101.4GiB", value: 32, workspace: "313GiB" },
   // workspace are guesses using 55.35% - rounded up - past here
   { label: "208.8GiB", value: 33, workspace: "606GiB" },
   { label: "429.8GiB", value: 34, workspace: "1266GiB" },
