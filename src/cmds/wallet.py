@@ -75,7 +75,7 @@ async def wallet_loop(wallet_client):
                 print(f"{i+1}) {fp}")
             val = None
             while val is None:
-                val = input("Enter number to pick press q to quite: ")
+                val = input("Enter a number to pick or q to quit: ")
                 if val == "q":
                     return
                 if not val.isdigit():
