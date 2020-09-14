@@ -7,32 +7,35 @@ export const mempool_inclusion_status = {
 export const get_transaction_result = (transaction) => {
   let success = true;
   let message = "";
-  if (!transaction) {
+  if (!transaction || transaction.transaction.sent_to.length === 0) {
     return {
       message,
       success
     }
   }
 
-    for (let full_node_response of transaction.transaction.sent_to) {
-        console.log("full node response", full_node_response);
+  // At least one node has accepted our transaction
+  for (let full_node_response of transaction.transaction.sent_to) {
+    if (full_node_response[1] === mempool_inclusion_status["SUCCESS"]) {
+      return {
+          "message": "Transaction has successfully been sent to a full node and included in the mempool.",
+          success: true,
+      };
     }
+  }
+  // At least one node has accepted our transaction as pending
+  for (let full_node_response of transaction.transaction.sent_to) {
+    if (full_node_response[1] === mempool_inclusion_status["PENDING"]) {
+      return {
+          "message": ("Transaction has sent to a full node and is pending inclusion into the mempool. " + full_node_response[2]),
+          success: true,
+      };
+    }
+  }
 
-//   if (send_transaction_result) {
-//     if (send_transaction_result.status === "SUCCESS") {
-//       result_message =
-//         "Transaction has successfully been sent to a full node and included in the mempool.";
-//     } else if (send_transaction_result.status === "PENDING") {
-//       result_message =
-//         "Transaction has sent to a full node and is pending inclusion into the mempool. " +
-//         send_transaction_result.reason;
-//     } else {
-//       result_message = "Transaction failed. " + send_transaction_result.reason;
-//       result_class = classes.resultFailure;
-//     }
-//   }
-    return {
-        message,
-        success
-    }
+  // No nodes have accepted our transaction, so display the error message of the first
+  return {
+    "message": transaction.transaction.sent_to[0][2],
+    "success": false,
+  };
 }
