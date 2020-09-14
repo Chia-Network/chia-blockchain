@@ -5,7 +5,7 @@ from binascii import hexlify
 from dataclasses import dataclass
 import time
 from secrets import token_bytes
-from typing import Optional, List, Tuple, Any, Dict
+from typing import Optional, List, Tuple, Any
 
 import json
 from blspy import PrivateKey, AugSchemeMPL, G1Element
@@ -16,7 +16,6 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
-from src.util.chech32 import decode_puzzle_hash
 from src.util.ints import uint64, uint32
 from src.util.streamable import streamable, Streamable
 from src.wallet.abstract_wallet import AbstractWallet
@@ -476,7 +475,7 @@ class RLWallet(AbstractWallet):
 
         return rl_parent.coin
 
-    async def rl_generate_unsigned_transaction(self, to_puzzlehash, amount):
+    async def rl_generate_unsigned_transaction(self, to_puzzlehash, amount, fee):
         spends = []
         coin = self.rl_coin_record.coin
         puzzle_hash = coin.puzzle_hash
@@ -508,8 +507,8 @@ class RLWallet(AbstractWallet):
         spends.append((puzzle, CoinSolution(coin, solution)))
         return spends
 
-    async def rl_generate_signed_transaction(
-        self, amount, to_puzzle_hash
+    async def generate_signed_transaction(
+        self, amount, to_puzzle_hash, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
         self.rl_coin_record = await self._get_rl_coin_record()
         if not self.rl_coin_record:
@@ -519,7 +518,7 @@ class RLWallet(AbstractWallet):
                 f"Coin value not sufficient: {amount} > {self.rl_coin_record.coin.amount}"
             )
         transaction = await self.rl_generate_unsigned_transaction(
-            to_puzzle_hash, amount
+            to_puzzle_hash, amount, fee
         )
         spend_bundle = await self.rl_sign_transaction(transaction)
 
@@ -717,15 +716,6 @@ class RLWallet(AbstractWallet):
         puzzle_hash = rl_make_aggregation_puzzle(wallet_puzzle).get_tree_hash()
 
         return puzzle_hash
-
-    async def generate_signed_transaction_dict(
-        self, data: Dict[str, Any]
-    ) -> TransactionRecord:
-        if not isinstance(data["amount"], int) or not isinstance(data["amount"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        amount = uint64(data["amount"])
-        puzzle_hash = decode_puzzle_hash(data["puzzle_hash"])
-        return await self.rl_generate_signed_transaction(amount, puzzle_hash)
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """ Use this API to send transactions. """

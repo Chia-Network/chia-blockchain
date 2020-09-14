@@ -282,7 +282,10 @@ class WalletStateManager:
                 start_index = 0
 
             for index in range(start_index, unused + to_generate):
-                if target_wallet.wallet_info.type == WalletType.RATE_LIMITED:
+                if (
+                    WalletType(target_wallet.wallet_info.type)
+                    == WalletType.RATE_LIMITED
+                ):
                     if target_wallet.rl_info.initialized is False:
                         break
                     type = target_wallet.rl_info.type
@@ -315,7 +318,10 @@ class WalletStateManager:
                 pubkey: G1Element = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 if puzzle is None:
-                    continue
+                    self.log.warning(
+                        f"Unable to create puzzles with wallet {target_wallet}"
+                    )
+                    break
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
                 self.log.info(
                     f"Puzzle at index {index} with {wallet_id} puzzle hash {puzzlehash.hex()}"

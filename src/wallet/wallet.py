@@ -7,7 +7,6 @@ from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
-from src.util.chech32 import decode_puzzle_hash
 from src.util.condition_tools import (
     conditions_for_solution,
     conditions_dict_for_solution,
@@ -314,24 +313,6 @@ class Wallet(AbstractWallet):
             for (puzzle, coin_solution) in spends
         ]
         return SpendBundle(solution_list, aggsig)
-
-    async def generate_signed_transaction_dict(
-        self, data: Dict[str, Any]
-    ) -> TransactionRecord:
-        """ Use this to generate transaction. """
-        # Check that both are integers
-        if not isinstance(data["amount"], int) or not isinstance(data["amount"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        amount = uint64(data["amount"])
-
-        if "fee" in data:
-            fee = uint64(data["fee"])
-        else:
-            fee = uint64(0)
-
-        puzzle_hash = decode_puzzle_hash(data["puzzle_hash"])
-
-        return await self.generate_signed_transaction(amount, puzzle_hash, fee)
 
     async def generate_signed_transaction(
         self,

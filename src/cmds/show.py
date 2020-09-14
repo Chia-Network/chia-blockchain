@@ -8,13 +8,10 @@ from typing import List, Optional
 from src.server.connection import NodeType
 from src.types.header_block import HeaderBlock
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
-from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.wallet.util.wallet_types import WalletType
-from src.cmds.units import units
 from src.util.chech32 import encode_puzzle_hash
 
 
