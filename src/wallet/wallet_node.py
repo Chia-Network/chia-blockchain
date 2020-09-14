@@ -714,9 +714,6 @@ class WalletNode:
         """
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return None
-        self.log.info(
-            f"Finishing block {block_record.header_hash} at height {block_record.height}"
-        )
         assert block_record.prev_header_hash in self.wallet_state_manager.block_records
         assert block_record.additions is not None and block_record.removals is not None
 

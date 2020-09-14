@@ -473,7 +473,20 @@ class WalletRpcApi:
 
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        tx: TransactionRecord = await wallet.generate_signed_transaction_dict(request)
+
+        if not isinstance(request["amount"], int) or not isinstance(
+            request["amount"], int
+        ):
+            raise ValueError("An integer amount or fee is required (too many decimals)")
+        amount: uint64 = uint64(request["amount"])
+        puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+        if "fee" in request:
+            fee = uint64(request["fee"])
+        else:
+            fee = uint64(0)
+        tx: TransactionRecord = await wallet.generate_signed_transaction(
+            amount, puzzle_hash, fee
+        )
 
         await wallet.push_transaction(tx)
 
