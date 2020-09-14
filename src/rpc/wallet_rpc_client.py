@@ -18,35 +18,44 @@ class WalletRpcClient(RpcClient):
 
     # Key Management APIs
     async def log_in(self, fingerprint: int) -> Dict:
-        return await self.fetch(
-            "log_in",
-            {
-                "host": "https://backup.chia.net",
-                "fingerprint": fingerprint,
-                "type": "start",
-            },
-        )
+        try:
+            return await self.fetch(
+                "log_in",
+                {
+                    "host": "https://backup.chia.net",
+                    "fingerprint": fingerprint,
+                    "type": "start",
+                },
+            )
+        except ValueError as e:
+            return e.args[0]
 
     async def log_in_and_restore(self, fingerprint: int, file_path) -> Dict:
-        return await self.fetch(
-            "log_in",
-            {
-                "host": "https://backup.chia.net",
-                "fingerprint": fingerprint,
-                "type": "restore_backup",
-                "file_path": file_path,
-            },
-        )
+        try:
+            return await self.fetch(
+                "log_in",
+                {
+                    "host": "https://backup.chia.net",
+                    "fingerprint": fingerprint,
+                    "type": "restore_backup",
+                    "file_path": file_path,
+                },
+            )
+        except ValueError as e:
+            return e.args[0]
 
     async def log_in_and_skip(self, fingerprint: int) -> Dict:
-        return await self.fetch(
-            "log_in",
-            {
-                "host": "https://backup.chia.net",
-                "fingerprint": fingerprint,
-                "type": "skip",
-            },
-        )
+        try:
+            return await self.fetch(
+                "log_in",
+                {
+                    "host": "https://backup.chia.net",
+                    "fingerprint": fingerprint,
+                    "type": "skip",
+                },
+            )
+        except ValueError as e:
+            return e.args[0]
 
     async def get_public_keys(self) -> List[int]:
         return (await self.fetch("get_public_keys", {}))["public_key_fingerprints"]
