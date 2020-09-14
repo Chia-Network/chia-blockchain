@@ -418,11 +418,11 @@ class WalletRpcApi:
             TransactionRecord
         ] = await self.service.wallet_state_manager.get_transaction(transaction_id)
         if tr is None:
-            raise ValueError(f"Transaction {transaction_id} not found")
+            raise ValueError(f"Transaction 0x{transaction_id.hex()} not found")
 
         return {
             "transaction": tr,
-            "transaction_id": tr.spend_bundle.name(),
+            "transaction_id": tr.name(),
         }
 
     async def get_transactions(self, request):
@@ -436,11 +436,11 @@ class WalletRpcApi:
 
         for tx in transactions:
             formatted = tx.to_json_dict()
-            formatted["to_address"] = encode_puzzle_hash(tx.to_address)
+            formatted["to_address"] = encode_puzzle_hash(tx.to_puzzle_hash)
             formatted_transactions.append(formatted)
 
         return {
-            "txs": formatted_transactions,
+            "transactions": formatted_transactions,
             "wallet_id": wallet_id,
         }
 
@@ -474,16 +474,14 @@ class WalletRpcApi:
 
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        tx = await wallet.generate_signed_transaction_dict(request)
-        if tx is None:
-            raise ValueError("Failed to generate signed transaction")
+        tx: TransactionRecord = await wallet.generate_signed_transaction_dict(request)
 
         await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
             "transaction": tx,
-            "transaction_id": tx.spend_bundle.name(),
+            "transaction_id": tx.name(),
         }
 
     async def create_backup(self, request):
@@ -514,18 +512,17 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        encoded_puzzle_hash = request["inner_address"]
-        puzzle_hash = decode_puzzle_hash(encoded_puzzle_hash)
+        encoded_puzzle_hash: str = request["inner_address"]
+        puzzle_hash: bytes32 = decode_puzzle_hash(encoded_puzzle_hash)
 
-        tx = await wallet.generate_signed_transaction(request["amount"], puzzle_hash)
-
-        if tx is None:
-            raise ValueError("Failed to generate signed transaction")
+        tx: TransactionRecord = await wallet.generate_signed_transaction(
+            request["amount"], puzzle_hash
+        )
         await wallet.wallet_state_manager.add_pending_transaction(tx)
 
         return {
             "transaction": tx,
-            "transaction_id": tx.spend_bundle.name(),
+            "transaction_id": tx.name(),
         }
 
     async def cc_get_colour(self, request):
@@ -656,7 +653,7 @@ class WalletRpcApi:
         wallet_id = uint32(int(request["wallet_id"]))
         rl_user = self.service.wallet_state_manager.wallets[wallet_id]
         origin = request["origin"]
-        success = await rl_user.set_user_info(
+        await rl_user.set_user_info(
             uint64(request["interval"]),
             uint64(request["limit"]),
             origin["parent_coin_info"],
@@ -664,7 +661,7 @@ class WalletRpcApi:
             origin["amount"],
             request["admin_pubkey"],
         )
-        return {"success": success}
+        return {}
 
     async def send_clawback_transaction(self, request):
         assert self.service.wallet_state_manager is not None
@@ -673,12 +670,10 @@ class WalletRpcApi:
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         tx = await wallet.clawback_rl_coin_transaction()
-        if tx is None:
-            raise ValueError("Failed to generate signed transaction")
         await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
             "transaction": tx,
-            "transaction_id": tx.spend_bundle.name(),
+            "transaction_id": tx.name(),
         }

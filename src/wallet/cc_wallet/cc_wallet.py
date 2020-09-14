@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 import time
 
@@ -75,10 +76,11 @@ class CCWallet:
         if self.wallet_info is None:
             raise ValueError("Internal Error")
 
-        spend_bundle = await self.generate_new_coloured_coin(amount)
-        if spend_bundle is None:
+        try:
+            spend_bundle = await self.generate_new_coloured_coin(amount)
+        except Exception:
             await wallet_state_manager.user_store.delete_wallet(self.wallet_info.id)
-            raise ValueError("Internal Error, unable to generate new coloured coin")
+            raise
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
 
@@ -140,7 +142,7 @@ class CCWallet:
         wallet: Wallet,
         genesis_checker_hex: str,
         name: str = None,
-    ):
+    ) -> CCWallet:
 
         self = CCWallet()
         self.base_puzzle_program = None
@@ -172,7 +174,7 @@ class CCWallet:
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: str = None,
-    ):
+    ) -> CCWallet:
         self = CCWallet()
 
         if name:
@@ -237,7 +239,8 @@ class CCWallet:
         self.wallet_info = new_info
         await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
-    def get_colour(self):
+    def get_colour(self) -> str:
+        assert self.cc_info.my_genesis_checker is not None
         return bytes(self.cc_info.my_genesis_checker).hex()
 
     async def coin_added(
@@ -398,14 +401,14 @@ class CCWallet:
     # Create a new coin of value 0 with a given colour
     async def generate_zero_val_coin(
         self, send=True, exclude: List[Coin] = None
-    ) -> Optional[SpendBundle]:
+    ) -> SpendBundle:
         if self.cc_info.my_genesis_checker is None:
-            return None
+            raise ValueError("My genesis checker is None")
         if exclude is None:
             exclude = []
         coins = await self.standard_wallet.select_coins(0, exclude)
-        if coins == set() or coins is None:
-            return None
+
+        assert coins != set()
 
         origin = coins.copy().pop()
         origin_id = origin.name()
@@ -415,11 +418,10 @@ class CCWallet:
             CC_MOD, self.cc_info.my_genesis_checker, cc_inner
         )
 
-        tx = await self.standard_wallet.generate_signed_transaction(
+        tx: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
             uint64(0), cc_puzzle_hash, uint64(0), origin_id, coins
         )
-        if tx is None or tx.spend_bundle is None:
-            return None
+        assert tx.spend_bundle is not None
         full_spend: SpendBundle = tx.spend_bundle
         self.log.info(f"Generate zero val coin: cc_puzzle_hash is {cc_puzzle_hash}")
 
@@ -525,16 +527,15 @@ class CCWallet:
 
         return result
 
-    async def select_coins(self, amount: uint64) -> Optional[Set[Coin]]:
+    async def select_coins(self, amount: uint64) -> Set[Coin]:
         """ Returns a set of coins that can be used for generating a new transaction. """
         async with self.wallet_state_manager.lock:
             spendable_am = await self.get_confirmed_balance()
 
             if amount > spendable_am:
-                self.log.warning(
-                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
-                )
-                return None
+                error_msg = f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_am}"
+                self.log.warning(error_msg)
+                raise ValueError(error_msg)
 
             self.log.info(f"About to select coins for amount {amount}")
             spendable: List[WalletCoinRecord] = await self.get_cc_spendable_coins()
@@ -606,16 +607,14 @@ class CCWallet:
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-    ) -> Optional[TransactionRecord]:
+    ) -> TransactionRecord:
         sigs: List[G2Element] = []
 
         # Get coins and calculate amount of change required
         if coins is None:
-            selected_coins: Optional[Set[Coin]] = await self.select_coins(amount)
+            selected_coins: Set[Coin] = await self.select_coins(amount)
         else:
             selected_coins = coins
-        if selected_coins is None:
-            return None
 
         total_amount = sum([x.amount for x in selected_coins])
         change = total_amount - amount
@@ -630,7 +629,7 @@ class CCWallet:
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
 
         if self.cc_info.my_genesis_checker is None:
-            return None
+            raise ValueError("My genesis checker is None")
 
         genesis_id = genesis_coin_id_for_genesis_coin_checker(
             self.cc_info.my_genesis_checker
@@ -655,7 +654,7 @@ class CCWallet:
             innersol_list,
             sigs,
         )
-        tx_record = TransactionRecord(
+        return TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=to_address,
@@ -671,8 +670,6 @@ class CCWallet:
             sent_to=[],
             trade_id=None,
         )
-
-        return tx_record
 
     async def add_lineage(self, name: bytes32, lineage: Optional[Program]):
         self.log.info(f"Adding parent {name}: {lineage}")
@@ -691,11 +688,8 @@ class CCWallet:
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info)
 
-    async def generate_new_coloured_coin(self, amount: uint64) -> Optional[SpendBundle]:
-
+    async def generate_new_coloured_coin(self, amount: uint64) -> SpendBundle:
         coins = await self.standard_wallet.select_coins(amount)
-        if coins is None:
-            return None
 
         origin = coins.copy().pop()
         origin_id = origin.name()
@@ -708,11 +702,10 @@ class CCWallet:
             CC_MOD, genesis_coin_checker, cc_inner_hash
         )
 
-        tx_record = await self.standard_wallet.generate_signed_transaction(
+        tx_record: TransactionRecord = await self.standard_wallet.generate_signed_transaction(
             amount, minted_cc_puzzle_hash, uint64(0), origin_id, coins
         )
-        if tx_record is None:
-            return None
+        assert tx_record.spend_bundle is not None
 
         lineage_proof: Optional[Program] = lineage_proof_for_genesis(origin)
         lineage_proofs = [(origin_id, lineage_proof)]
@@ -722,7 +715,7 @@ class CCWallet:
 
     async def create_spend_bundle_relative_amount(
         self, cc_amount, zero_coin: Coin = None
-    ):
+    ) -> Optional[SpendBundle]:
         # If we're losing value then get coloured coins with at least that much value
         # If we're gaining value then our amount doesn't matter
         if cc_amount < 0:
@@ -777,5 +770,4 @@ class CCWallet:
             list_of_solutions.append(CoinSolution(coin, full_solution))
 
         aggsig = AugSchemeMPL.aggregate(sigs)
-        spend_bundle = SpendBundle(list_of_solutions, aggsig)
-        return spend_bundle
+        return SpendBundle(list_of_solutions, aggsig)

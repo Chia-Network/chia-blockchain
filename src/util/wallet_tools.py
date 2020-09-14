@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Tuple
 
-from blspy import PrivateKey, AugSchemeMPL
+from blspy import PrivateKey, AugSchemeMPL, G1Element, G2Element
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
@@ -14,7 +14,7 @@ from src.util.condition_tools import (
     pkm_pairs_for_conditions_dict,
     conditions_for_solution,
 )
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
 from src.wallet.puzzles.puzzle_utils import (
@@ -28,6 +28,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_fee_condition,
 )
 from src.wallet.derive_keys import master_sk_to_wallet_sk
+from src.types.sized_bytes import bytes32
 
 
 DEFAULT_SEED = b"seed" * 8
@@ -36,7 +37,7 @@ assert len(DEFAULT_SEED) == 32
 
 class WalletTool:
     next_address = 0
-    pubkey_num_lookup: Dict[str, int] = {}
+    pubkey_num_lookup: Dict[bytes, uint32] = {}
 
     def __init__(self, sk: Optional[PrivateKey] = None):
         self.current_balance = 0
@@ -49,11 +50,11 @@ class WalletTool:
         self.puzzle_pk_cache: Dict = {}
         self.get_new_puzzle()
 
-    def get_next_address_index(self):
-        self.next_address = self.next_address + 1
+    def get_next_address_index(self) -> uint32:
+        self.next_address = uint32(self.next_address + 1)
         return self.next_address
 
-    def get_keys(self, puzzle_hash):
+    def get_keys(self, puzzle_hash) -> Tuple[G1Element, PrivateKey]:
         if puzzle_hash in self.puzzle_pk_cache:
             child = self.puzzle_pk_cache[puzzle_hash]
             private = master_sk_to_wallet_sk(self.private_key, uint32(child))
@@ -69,13 +70,13 @@ class WalletTool:
                         pubkey,
                         master_sk_to_wallet_sk(self.private_key, uint32(child)),
                     )
-        raise RuntimeError(f"Do not have the keys for puzzle hash {puzzle_hash}")
+        raise ValueError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
-    def puzzle_for_pk(self, pubkey: bytes):
+    def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
-    def get_new_puzzle(self):
-        next_address_index = self.get_next_address_index()
+    def get_new_puzzle(self) -> bytes32:
+        next_address_index: uint32 = self.get_next_address_index()
         pubkey = master_sk_to_wallet_sk(self.private_key, next_address_index).get_g1()
         self.pubkey_num_lookup[bytes(pubkey)] = next_address_index
 
@@ -84,20 +85,19 @@ class WalletTool:
         self.puzzle_pk_cache[puzzle.get_tree_hash()] = next_address_index
         return puzzle
 
-    def get_new_puzzlehash(self):
+    def get_new_puzzlehash(self) -> bytes32:
         puzzle = self.get_new_puzzle()
-        puzzlehash = puzzle.get_tree_hash()
-        return puzzlehash
+        return puzzle.get_tree_hash()
 
-    def sign(self, value, pubkey):
-        privatekey = master_sk_to_wallet_sk(
+    def sign(self, value, pubkey) -> G2Element:
+        privatekey: PrivateKey = master_sk_to_wallet_sk(
             self.private_key, self.pubkey_num_lookup[pubkey]
         )
         return AugSchemeMPL.sign(privatekey, value)
 
     def make_solution(
         self, condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]]
-    ):
+    ) -> Program:
         ret = []
 
         for con_list in condition_dic.values():
@@ -123,13 +123,13 @@ class WalletTool:
 
     def generate_unsigned_transaction(
         self,
-        amount,
-        newpuzzlehash,
+        amount: uint64,
+        newpuzzlehash: bytes32,
         coin: Coin,
         condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]],
         fee: int = 0,
         secretkey=None,
-    ):
+    ) -> List[Tuple[Program, CoinSolution]]:
         spends = []
         spend_value = coin.amount
         puzzle_hash = coin.puzzle_hash
@@ -163,7 +163,9 @@ class WalletTool:
         spends.append((puzzle, CoinSolution(coin, solution)))
         return spends
 
-    def sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]):
+    def sign_transaction(
+        self, spends: List[Tuple[Program, CoinSolution]]
+    ) -> SpendBundle:
         sigs = []
         solution: Program
         puzzle: Program
@@ -173,7 +175,7 @@ class WalletTool:
             sexp = Program.to(code_)
             err, con, cost = conditions_for_solution(sexp)
             if not con:
-                return
+                raise ValueError(err)
             conditions_dict = conditions_by_opcode(con)
 
             for _, msg in pkm_pairs_for_conditions_dict(
@@ -188,8 +190,7 @@ class WalletTool:
             )
             for (puzzle, coin_solution) in spends
         ]
-        spend_bundle = SpendBundle(solution_list, aggsig)
-        return spend_bundle
+        return SpendBundle(solution_list, aggsig)
 
     def generate_signed_transaction(
         self,
@@ -198,12 +199,11 @@ class WalletTool:
         coin: Coin,
         condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]] = None,
         fee: int = 0,
-    ) -> Optional[SpendBundle]:
+    ) -> SpendBundle:
         if condition_dic is None:
             condition_dic = {}
         transaction = self.generate_unsigned_transaction(
             amount, newpuzzlehash, coin, condition_dic, fee
         )
-        if transaction is None:
-            return None
+        assert transaction is not None
         return self.sign_transaction(transaction)

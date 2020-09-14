@@ -185,7 +185,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       } else if (command === "get_transactions") {
         if (data.success) {
           id = data.wallet_id;
-          var transactions = data.txs;
+          var transactions = data.transactions;
           wallets = state.wallets;
           wallet = wallets[parseInt(id)];
           if (!wallet) {
