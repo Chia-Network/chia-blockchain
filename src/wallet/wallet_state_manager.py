@@ -702,10 +702,13 @@ class WalletStateManager:
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
-        await self.tx_store.increment_sent(spendbundle_id, name, send_status, error)
-        tx: Optional[TransactionRecord] = await self.get_transaction(spendbundle_id)
-        if tx is not None:
-            self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
+        updated = await self.tx_store.increment_sent(
+            spendbundle_id, name, send_status, error
+        )
+        if updated:
+            tx: Optional[TransactionRecord] = await self.get_transaction(spendbundle_id)
+            if tx is not None:
+                self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
 
     async def get_send_queue(self) -> List[TransactionRecord]:
         """
