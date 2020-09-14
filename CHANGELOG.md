@@ -9,15 +9,25 @@ for setuptools_scm/PEP 440 reasons.
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [1.0beta12] aka Beta 1.12 - 2020-09-14
+
+### Added
 - Rate limited wallets can now have unspent and un-spendable funds clawed back by the Admin wallet.
-- You can now backup your wallet related metadata in an encrypted and signed file to a free service from Chia Network at backup.chia.net. Simply having a backup of your private key will allow you to fully restore the state of your wallet including coloured coins, rate limited wallets, distributed identity wallets and many more. Your private key is used to automatically restore the last backup you saved to the Chia backup cloud service. This service is open source and ultimately you will be able to configure your backups to go to backup.chia.net, your own installation, or and third party's version of it.
+- You can now backup your wallet related metadata in an encrypted and signed file to a free service from Chia Network at backup.chia.net. Simply having a backup of your private key will allow you to fully restore the state of your wallet including coloured coins, rate limited wallets, distributed identity wallets and many more. Your private key is used to automatically restore the last backup you saved to the Chia backup cloud service. This service is open source and ultimately you will be able to configure your backups to go to backup.chia.net, your own installation, or a third party's version of it.
 - Added a Code of Conduct in CODE_OF_CONDUCT.md.
 - Added a bug report template in `.github/ISSUE_TEMPLATE/bug_report.md`.
 
 ### Changed
-- Proof of Space now requires significantly less temp space to generate a new plot. A k=32 that used to require 524GiB now requires only 289GiB - generally a 51% decrease across k sizes.
+- This is a new blockchain as we changed how the default puzzle hashes are generated and previous coins would not be easy to spend. Plots made with Beta 8 and newer continue to work, but all previous test chia are left on the old chain and do not migrate over. Configuration data like plot directories automatically migrate in your `~/.chia` directory.
+- Proof of Space now requires significantly less temp space to generate a new plot. A k=32 that used to require 524GiB now requires only 313GiB - generally a 40% decrease across all k sizes.
 - When plotting, instead of 1 monolithic temp file, there are now 8 files - one for each of the 7 tables and one for sorting plot data. These files are deleted as the `-2` or `-d` final file is written so the final file can fit within the footprint of the temporary files on the same filesystem.
 - We've made various additional CPU optimizations to the Proof of Space plotter that reduces plotting time by an additional 13%. These changes will also reduce CPU utilization in harvesting.
+- We have ruled out k=30 for mainnet minimum plot size. k=31 may still make mainnet. k=32 and larger will be vialble on mainnet.
 - We moved to react-styleguidist to develop reusable components in isolation and better document the UI. Thanks to @embiem for this pull request.
 - Coloured coins have been updated to simplify them, remove 'a', and stop using an 'auditor'.
 - clvm has been significantly changed to support the new coloured coins implementation.
@@ -28,6 +38,7 @@ for setuptools_scm/PEP 440 reasons.
 - `chia show -w` should now more reliably work. Wallet balances should be more often correct.
 - View -> Developer -> Developer Tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request!
 - Fixed 'Receive Address' typo in Wallet. Thanks @meurtn on Keybase.
+- Fixed a typo in `chia show -w` with thanks to @pyl on Keybase.
 - In Windows the start menu item is now Chia Network and the icon in Add/Remove is updated.
 
 ## [1.0beta11] aka Beta 1.11 - 2020-08-24
