@@ -324,7 +324,7 @@ class WalletStateManager:
                     break
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
                 self.log.info(
-                    f"Puzzle at index {index} with {wallet_id} puzzle hash {puzzlehash.hex()}"
+                    f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}"
                 )
                 derivation_paths.append(
                     DerivationRecord(
