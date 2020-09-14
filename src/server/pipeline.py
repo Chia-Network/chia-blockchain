@@ -326,10 +326,11 @@ async def handle_message(
                 Message("pong", Pong(ping_msg.nonce)),
                 Delivery.RESPOND,
             )
+            global_connections.update_connection_time(connection)
             yield connection, outbound_message, global_connections
             return
         elif full_message.function == "pong":
-            global_connections.pong_received(connection)
+            global_connections.update_connection_time(connection)
             return
 
         f_with_peer_name = getattr(api, full_message.function + "_with_peer_name", None)
@@ -353,6 +354,8 @@ async def handle_message(
                 yield connection, outbound_message, global_connections
         else:
             await result
+
+        global_connections.update_connection_time(connection)
     except Exception:
         tb = traceback.format_exc()
         connection.log.error(f"Error, closing connection {connection}. {tb}")
