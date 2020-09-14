@@ -1,4 +1,4 @@
-from clvm import run_program as default_run_program, SExp, KEYWORD_TO_ATOM  # noqa
+from clvm import run_program as default_run_program, KEYWORD_TO_ATOM  # noqa
 from clvm.operators import OPERATOR_LOOKUP  # noqa
 from clvm.EvalError import EvalError  # noqa
 from clvm.casts import int_from_bytes, int_to_bytes  # noqa
