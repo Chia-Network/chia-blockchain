@@ -62,9 +62,11 @@ def check_keys(new_root):
             break
         for sk, _ in all_sks:
             all_targets.append(
-                encode_puzzle_hash(create_puzzlehash_for_pk(
-                    master_sk_to_wallet_sk(sk, uint32(i)).get_g1()
-                ))
+                encode_puzzle_hash(
+                    create_puzzlehash_for_pk(
+                        master_sk_to_wallet_sk(sk, uint32(i)).get_g1()
+                    )
+                )
             )
             if all_targets[-1] == config["farmer"].get("xch_target_address"):
                 stop_searching_for_farmer = True

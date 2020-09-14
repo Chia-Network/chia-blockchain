@@ -376,7 +376,7 @@ class WalletStateManager:
         """
         self.pending_tx_callback = callback
 
-    def state_changed(self, state: str, wallet_id: int = None, data_object = {}):
+    def state_changed(self, state: str, wallet_id: int = None, data_object={}):
         """
         Calls the callback if it's present.
         """

@@ -319,18 +319,14 @@ async def show_async(args, parser):
             else:
                 wallet_rpc_port = args.wallet_rpc_port
             wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port)
-            get_keys_response = await wallet_client.get_keys()
-            if (
-                "public_key_fingerprints" not in get_keys_response
-                or len(get_keys_response["public_key_fingerprints"]) == 0
-            ):
+            fingerprints = await wallet_client.get_public_keys()
+            if len(fingerprints) == 0:
                 print("Error, no keys loaded")
                 wallet_client.close()
                 await wallet_client.await_closed()
                 client.close()
                 await client.await_closed()
                 return
-            fingerprints = get_keys_response["public_key_fingerprints"]
             fingerprint = None
             if len(fingerprints) == 1:
                 fingerprint = fingerprints[0][0]
@@ -403,7 +399,7 @@ async def show_async(args, parser):
                     error = log_in_response["error"]
                     print(f"Error: {log_in_response[error]}")
 
-            summaries_response = await wallet_client.get_wallet_summaries()
+            summaries_response = await wallet_client.get_wallets()
             if "wallet_summaries" not in summaries_response:
                 print("Wallet summary cannot be displayed")
             else:
