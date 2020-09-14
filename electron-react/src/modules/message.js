@@ -109,11 +109,7 @@ export const send_transaction = (wallet_id, amount, fee, address) => {
     wallet_id: wallet_id,
     amount: amount,
     fee: fee,
-<<<<<<< HEAD
-    puzzle_hash: puzzle_hash
-=======
     address: address,
->>>>>>> c125573c... Cleaner send_transaction flow and more wallet rpc testing
   };
   return action;
 };
@@ -136,10 +132,6 @@ export const add_key = (mnemonic, type, file_path) => {
   return action;
 };
 
-<<<<<<< HEAD
-export const add_new_key_action = mnemonic => {
-  return dispatch => {
-=======
 export const send_transaction_and_wait = (wallet_id, amount, fee, address) => {
   return (dispatch) => {
     try {
@@ -158,7 +150,6 @@ export const send_transaction_and_wait = (wallet_id, amount, fee, address) => {
 
 export const add_new_key_action = (mnemonic) => {
   return (dispatch) => {
->>>>>>> c125573c... Cleaner send_transaction flow and more wallet rpc testing
     return async_api(
       dispatch,
       add_key(mnemonic, "new_wallet", null),
@@ -413,22 +404,14 @@ export const get_transactions = wallet_id => {
   return action;
 };
 
-<<<<<<< HEAD
-export const get_puzzle_hash = wallet_id => {
-=======
 export const get_address = (wallet_id) => {
->>>>>>> c125573c... Cleaner send_transaction flow and more wallet rpc testing
   var action = walletMessage();
   action.message.command = "get_next_address";
   action.message.data = { wallet_id: wallet_id };
   return action;
 };
 
-<<<<<<< HEAD
-export const farm_block = puzzle_hash => {
-=======
 export const farm_block = (address) => {
->>>>>>> c125573c... Cleaner send_transaction flow and more wallet rpc testing
   var action = walletMessage();
   action.message.command = "farm_block";
   action.message.data = { address: address };

@@ -1,6 +1,6 @@
 import asyncio
-
 import pytest
+from pathlib import Path
 
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
@@ -87,11 +87,17 @@ class TestWalletRpc:
                 await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
             )
             tx_amount = 15600000
-            tx = (await client.send_transaction("1", tx_amount, addr))
+            try:
+                await client.send_transaction("1", 100000000000000000, addr)
+                raise Exception("Should not create high value tx")
+            except ValueError:
+                pass
+
+            tx = await client.send_transaction("1", tx_amount, addr)
             transaction_id = tx.name()
 
             async def tx_in_mempool():
-                tx = (await client.get_transaction("1", transaction_id))
+                tx = await client.get_transaction("1", transaction_id)
                 return tx.is_in_mempool()
 
             await time_out_assert(5, tx_in_mempool, True)
@@ -106,7 +112,8 @@ class TestWalletRpc:
             ] == initial_funds
 
             for i in range(0, 5):
-                await full_node_1.farm_new_block(FarmNewBlockProtocol(ph_2))
+                await client.farm_block(encode_puzzle_hash(ph_2))
+                await asyncio.sleep(1)
 
             async def eventual_balance():
                 return (await client.get_wallet_balance("1"))[
@@ -117,12 +124,60 @@ class TestWalletRpc:
                 5, eventual_balance, initial_funds_eventually - tx_amount
             )
 
-            address = (await client.get_next_address("1"))
+            address = await client.get_next_address("1")
             assert len(address) > 10
 
-            transactions = (await client.get_transactions("1"))
+            transactions = await client.get_transactions("1")
             assert len(transactions) > 1
 
+            pks = await client.get_public_keys()
+            assert len(pks) == 1
+
+            assert (await client.get_height_info()) > 0
+
+            sk_dict = await client.get_private_key(pks[0])
+            assert sk_dict["fingerprint"] == pks[0]
+            assert sk_dict["sk"] is not None
+            assert sk_dict["pk"] is not None
+            assert sk_dict["seed"] is not None
+
+            mnemonic = await client.generate_mnemonic()
+            assert len(mnemonic) == 24
+
+            await client.add_key(mnemonic)
+
+            pks = await client.get_public_keys()
+            assert len(pks) == 2
+
+            await client.log_in_and_skip(pks[1])
+            sk_dict = await client.get_private_key(pks[1])
+            assert sk_dict["fingerprint"] == pks[1]
+
+            await client.delete_key(pks[0])
+            await client.log_in_and_skip(pks[1])
+            assert len(await client.get_public_keys()) == 1
+
+            assert not (await client.get_sync_status())
+
+            wallets = await client.get_wallets()
+            assert len(wallets) == 1
+            balance = await client.get_wallet_balance(wallets[0]["id"])
+            assert balance["unconfirmed_wallet_balance"] == 0
+
+            test_wallet_backup_path = Path("test_wallet_backup_file")
+            await client.create_backup(test_wallet_backup_path)
+            assert test_wallet_backup_path.exists()
+            test_wallet_backup_path.unlink()
+
+            try:
+                await client.send_transaction(wallets[0]["id"], 100, addr)
+                raise Exception("Should not create tx if no balance")
+            except ValueError:
+                pass
+
+            await client.delete_all_keys()
+
+            assert len(await client.get_public_keys()) == 0
         except Exception:
             # Checks that the RPC manages to stop the node
             client.close()
