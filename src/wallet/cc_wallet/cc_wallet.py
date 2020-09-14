@@ -253,14 +253,7 @@ class CCWallet:
 
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
         lineage_proof = Program.to(
-            (
-                1,
-                [
-                    coin.parent_coin_info,
-                    inner_puzzle.get_tree_hash(),
-                    coin.amount,
-                ],
-            )
+            (1, [coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount])
         )
         await self.add_lineage(coin.name(), lineage_proof)
 

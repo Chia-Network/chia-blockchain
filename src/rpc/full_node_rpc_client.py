@@ -1,4 +1,3 @@
-import aiohttp
 from typing import Dict, Optional, List
 from src.types.full_block import FullBlock
 from src.types.header import Header
@@ -30,10 +29,8 @@ class FullNodeRpcClient(RpcClient):
     async def get_block(self, header_hash) -> Optional[FullBlock]:
         try:
             response = await self.fetch("get_block", {"header_hash": header_hash.hex()})
-        except aiohttp.client_exceptions.ClientResponseError as e:
-            if e.message == "Not Found":
-                return None
-            raise
+        except Exception:
+            return None
         return FullBlock.from_json_dict(response["block"])
 
     async def get_header_by_height(self, header_height) -> Optional[Header]:
@@ -41,10 +38,8 @@ class FullNodeRpcClient(RpcClient):
             response = await self.fetch(
                 "get_header_by_height", {"height": header_height}
             )
-        except aiohttp.client_exceptions.ClientResponseError as e:
-            if e.message == "Not Found":
-                return None
-            raise
+        except Exception:
+            return None
         return Header.from_json_dict(response["header"])
 
     async def get_header(self, header_hash) -> Optional[Header]:
@@ -54,10 +49,8 @@ class FullNodeRpcClient(RpcClient):
             )
             if response["header"] is None:
                 return None
-        except aiohttp.client_exceptions.ClientResponseError as e:
-            if e.message == "Not Found":
-                return None
-            raise
+        except Exception:
+            return None
         return Header.from_json_dict(response["header"])
 
     async def get_unfinished_block_headers(self, height: uint32) -> List[Header]:
@@ -75,10 +68,8 @@ class FullNodeRpcClient(RpcClient):
                     "older_block_header_hash": older_block_header_hash,
                 },
             )
-        except aiohttp.client_exceptions.ClientResponseError as e:
-            if e.message == "Not Found":
-                return None
-            raise
+        except Exception:
+            return None
         return network_space_bytes_estimate["space"]
 
     async def get_unspent_coins(

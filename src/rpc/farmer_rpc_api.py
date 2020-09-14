@@ -26,7 +26,7 @@ class FarmerRpcApi:
         response = []
         seen_challenges: Set = set()
         if self.service.current_weight == 0:
-            return {"success": True, "latest_challenges": []}
+            return {"latest_challenges": []}
         for pospace_fin in self.service.challenges[self.service.current_weight]:
             estimates = self.service.challenge_to_estimates.get(
                 pospace_fin.challenge_hash, []
@@ -43,4 +43,4 @@ class FarmerRpcApi:
                 }
             )
             seen_challenges.add(pospace_fin.challenge_hash)
-        return {"success": True, "latest_challenges": response}
+        return {"latest_challenges": response}

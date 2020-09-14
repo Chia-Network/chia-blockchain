@@ -1824,7 +1824,9 @@ class FullNode:
                     tx.transaction
                 )
                 if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
+                    self.log.info(
+                        f"Added transaction to mempool: {tx.transaction.name()}"
+                    )
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     fees = tx.transaction.fees()
