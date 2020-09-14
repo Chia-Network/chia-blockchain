@@ -108,23 +108,25 @@ class TradeStore:
         name: str,
         send_status: MempoolInclusionStatus,
         err: Optional[Err],
-    ):
+    ) -> bool:
         """
         Updates trade sent count (Full Node has received spend_bundle and sent ack).
         """
 
         current: Optional[TradeRecord] = await self.get_trade_record(id)
         if current is None:
-            return
-
-        # Don't increment count if it's already sent to othis peer
-        if name in current.sent_to:
-            return
+            return False
 
         sent_to = current.sent_to.copy()
 
         err_str = err.name if err is not None else None
-        sent_to.append((name, uint8(send_status.value), err_str))
+        append_data = (name, uint8(send_status.value), err_str)
+
+        # Don't increment count if it's already sent to othis peer
+        if append_data in sent_to:
+            return False
+
+        sent_to.append(append_data)
 
         tx: TradeRecord = TradeRecord(
             confirmed_at_index=current.confirmed_at_index,
@@ -142,6 +144,7 @@ class TradeStore:
         )
 
         await self.add_trade_record(tx)
+        return True
 
     async def set_not_sent(self, id: bytes32):
         """
