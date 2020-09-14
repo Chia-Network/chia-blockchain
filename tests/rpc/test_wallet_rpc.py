@@ -89,12 +89,11 @@ class TestWalletRpc:
                 await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
             )
             tx_amount = 15600000
-            tx = await client.send_transaction("1", tx_amount, addr)
-            assert tx is not None
+            tx = (await client.send_transaction("1", tx_amount, addr))["transaction"]
             transaction_id = tx.name()
 
             async def tx_in_mempool():
-                tx = await client.get_transaction("1", transaction_id)
+                tx = (await client.get_transaction("1", transaction_id))["transaction"]
                 return tx.is_in_mempool()
             await time_out_assert(5, tx_in_mempool, True)
             await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds - tx_amount)
@@ -109,7 +108,11 @@ class TestWalletRpc:
 
             await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount)
 
-            await client.get_next_address()
+            address = (await client.get_next_address("1"))["address"]
+            assert len(address) > 10
+
+            txs = (await client.get_transactions("1"))["transactions"]
+
 
 
         except Exception:

@@ -21,9 +21,9 @@ class WalletRpcClient(RpcClient):
 =======
     async def send_transaction(
         self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0)
-    ) -> TransactionRecord:
+    ) -> Dict:
 
-        response = await self.fetch(
+        res = await self.fetch(
             "send_transaction",
             {
                 "wallet_id": wallet_id,
@@ -32,24 +32,33 @@ class WalletRpcClient(RpcClient):
                 "fee": fee,
             },
         )
-        if response["success"]:
-            return TransactionRecord.from_json_dict(response["transaction"])
-        raise Exception(response["reason"])
+        res["transaction"] = TransactionRecord.from_json_dict(res["transaction"])
+        return res
 
     async def get_next_address(self, wallet_id: str) -> Dict:
         return await self.fetch("get_next_address", {"wallet_id": wallet_id})
 
     async def get_transaction(
         self, wallet_id: str, transaction_id: bytes32
-    ) -> Optional[TransactionRecord]:
+    ) -> Dict:
 
-        response = await self.fetch(
+        res = await self.fetch(
             "get_transaction",
             {"walled_id": wallet_id, "transaction_id": transaction_id.hex()},
         )
-        if response["success"]:
-            return TransactionRecord.from_json_dict(response["transaction"])
-        return None
+        res["transaction"] = TransactionRecord.from_json_dict(res["transaction"])
+        return res
+
+    async def get_transactions(
+        self, wallet_id: str,
+    ) -> Dict:
+        res = await self.fetch(
+            "get_transactions",
+            {"walled_id": wallet_id},
+        )
+        parsed = [TransactionRecord.from_json_dict(tx) for tx in res["transactions"])
+        res[transactions] = parsed
+        return res
 
 >>>>>>> f1c565a8... More test
     async def log_in(self, fingerprint) -> Dict:

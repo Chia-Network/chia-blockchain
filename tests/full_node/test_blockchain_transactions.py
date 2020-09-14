@@ -9,7 +9,7 @@ from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.header import HeaderData, Header
 from src.types.sized_bytes import bytes32
-from src.util.bundle_tools import best_solution_program
+from src.full_node.bundle_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
 from src.types.full_block import FullBlock
