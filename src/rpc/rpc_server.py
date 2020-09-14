@@ -59,16 +59,27 @@ class RpcServer:
     def _wrap_http_handler(self, f) -> Callable:
         async def inner(request) -> aiohttp.web.Response:
             request_data = await request.json()
-            res_object = await f(request_data)
-            if res_object is None:
-                raise aiohttp.web.HTTPNotFound()
+            try:
+                res_object = await f(request_data)
+                if res_object is None:
+                    res_object = {}
+                if "success" not in res_object:
+                    res_object["success"] = True
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.warning(f"Error while handling message: {tb}")
+                if len(e.args) > 0:
+                    res_object = {"success": False, "error": f"{e.args[0]}"}
+                else:
+                    res_object = {"success": False, "error": f"{e}"}
+
             return obj_to_response(res_object)
 
         return inner
 
     async def get_connections(self, request: Dict) -> Dict:
         if self.rpc_api.service.global_connections is None:
-            return {"success": False}
+            raise ValueError("Global connections is not set")
         connections = self.rpc_api.service.global_connections.get_connections()
         con_info = [
             {
@@ -86,7 +97,7 @@ class RpcServer:
             }
             for con in connections
         ]
-        return {"success": True, "connections": con_info}
+        return {"connections": con_info}
 
     async def open_connection(self, request: Dict):
         host = request["host"]
@@ -98,8 +109,8 @@ class RpcServer:
         if getattr(self.rpc_api.service, "server", None) is None or not (
             await self.rpc_api.service.server.start_client(target_node, on_connect)
         ):
-            raise aiohttp.web.HTTPInternalServerError()
-        return {"success": True}
+            raise ValueError("Start client failed, or server is not set")
+        return {}
 
     async def close_connection(self, request: Dict):
         node_id = hexstr_to_bytes(request["node_id"])
@@ -111,10 +122,10 @@ class RpcServer:
             if c.node_id == node_id
         ]
         if len(connections_to_close) == 0:
-            raise aiohttp.web.HTTPNotFound()
+            raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
         for connection in connections_to_close:
             self.rpc_api.service.global_connections.close(connection)
-        return {"success": True}
+        return {}
 
     async def stop_node(self, request):
         """
@@ -122,7 +133,7 @@ class RpcServer:
         """
         if self.stop_cb is not None:
             self.stop_cb()
-        return {"success": True}
+        return {}
 
     async def ws_api(self, message):
         """
@@ -145,8 +156,8 @@ class RpcServer:
         f = getattr(self.rpc_api, command, None)
         if f is not None:
             return await f(data)
-        else:
-            return {"error": f"unknown_command {command}"}
+
+        raise ValueError(f"unknown_command {command}")
 
     async def safe_handle(self, websocket, payload):
         message = None
@@ -154,14 +165,22 @@ class RpcServer:
             message = json.loads(payload)
             self.log.info(f"Rpc call <- {message['command']}")
             response = await self.ws_api(message)
+
+            # Only respond if we return something from api call
             if response is not None:
                 log.info(f"Rpc response -> {message['command']}")
+                # Set success to true automatically (unless it's already set)
+                if "success" not in response:
+                    response["success"] = True
                 await websocket.send_str(format_response(message, response))
 
         except Exception as e:
             tb = traceback.format_exc()
-            self.log.error(f"Error while handling message: {tb}")
-            error = {"success": False, "error": f"{e}"}
+            self.log.warning(f"Error while handling message: {tb}")
+            if len(e.args) > 0:
+                error = {"success": False, "error": f"{e.args[0]}"}
+            else:
+                error = {"success": False, "error": f"{e}"}
             if message is None:
                 return
             await websocket.send_str(format_response(message, error))

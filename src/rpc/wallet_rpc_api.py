@@ -28,7 +28,7 @@ from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
-from src.types.mempool_inclusion_status import MempoolInclusionStatus
+from src.wallet.transaction_record import TransactionRecord
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
@@ -38,11 +38,13 @@ log = logging.getLogger(__name__)
 
 class WalletRpcApi:
     def __init__(self, wallet_node: WalletNode):
+        assert wallet_node is not None
         self.service = wallet_node
         self.service_name = "chia_wallet"
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
+<<<<<<< HEAD
             "/get_wallet_balance": self.get_wallet_balance,
             "/send_transaction": self.send_transaction,
 <<<<<<< HEAD
@@ -53,10 +55,31 @@ class WalletRpcApi:
 >>>>>>> c125573c... Cleaner send_transaction flow and more wallet rpc testing
             "/get_transactions": self.get_transactions,
             "/farm_block": self.farm_block,
+=======
+            # Key management
+            "/log_in": self.log_in,
+            "/get_public_keys": self.get_public_keys,
+            "/get_private_key": self.get_private_key,
+            "/generate_mnemonic": self.generate_mnemonic,
+            "/add_key": self.add_key,
+            "/delete_key": self.delete_key,
+            "/delete_all_keys": self.delete_all_keys,
+            # Wallet node
+>>>>>>> 8908edc0... Refactor RPCs
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
-            "/create_new_wallet": self.create_new_wallet,
+            "/farm_block": self.farm_block,  # Only when node simulator is running
+            # Wallet management
             "/get_wallets": self.get_wallets,
+            "/create_new_wallet": self.create_new_wallet,
+            # Wallet
+            "/get_wallet_balance": self.get_wallet_balance,
+            "/get_transaction": self.get_transaction,
+            "/get_transactions": self.get_transactions,
+            "/get_next_address": self.get_next_address,
+            "/send_transaction": self.send_transaction,
+            "/create_backup": self.create_backup,
+            # Coloured coins and trading
             "/cc_set_name": self.cc_set_name,
             "/cc_get_name": self.cc_get_name,
             "/cc_spend": self.cc_spend,
@@ -64,99 +87,19 @@ class WalletRpcApi:
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
             "/respond_to_offer": self.respond_to_offer,
-            "/get_wallet_summaries": self.get_wallet_summaries,
-            "/get_public_keys": self.get_public_keys,
-            "/generate_mnemonic": self.generate_mnemonic,
-            "/log_in": self.log_in,
-            "/add_key": self.add_key,
-            "/delete_key": self.delete_key,
-            "/delete_all_keys": self.delete_all_keys,
-            "/get_private_key": self.get_private_key,
             "/get_trade": self.get_trade,
             "/get_all_trades": self.get_all_trades,
             "/cancel_trade": self.cancel_trade,
-            "/create_backup": self.create_backup,
+            # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
         }
 
-    async def rl_set_user_info(self, request):
-        wallet_id = uint32(int(request["wallet_id"]))
-        rl_user = self.service.wallet_state_manager.wallets[wallet_id]
-        origin = request["origin"]
-        try:
-            success = await rl_user.set_user_info(
-                uint64(request["interval"]),
-                uint64(request["limit"]),
-                origin["parent_coin_info"],
-                origin["puzzle_hash"],
-                origin["amount"],
-                request["admin_pubkey"],
-            )
-            return {"success": success}
-        except Exception as e:
-            data = {
-                "success": False,
-                "reason": str(e),
-            }
-            return data
-
-    async def get_trade(self, request: Dict):
-        if self.service is None:
-            return {"success": False}
-        if self.service.wallet_state_manager is None:
-            return {"success": False}
-
-        trade_mgr = self.service.wallet_state_manager.trade_manager
-
-        trade_id = request["trade_id"]
-        trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
-        if trade is None:
-            response = {
-                "success": False,
-                "error": f"No trade with trade id: {trade_id}",
-            }
-            return response
-
-        result = trade_record_to_dict(trade)
-        response = {"success": True, "trade": result}
-        return response
-
-    async def get_all_trades(self, request: Dict):
-        if self.service is None:
-            return {"success": False}
-        if self.service.wallet_state_manager is None:
-            return {"success": False}
-
-        trade_mgr = self.service.wallet_state_manager.trade_manager
-
-        all_trades = await trade_mgr.get_all_trades()
-        result = []
-        for trade in all_trades:
-            result.append(trade_record_to_dict(trade))
-
-        response = {"success": True, "trades": result}
-        return response
-
-    async def cancel_trade(self, request: Dict):
-        if self.service is None:
-            return {"success": False}
-        if self.service.wallet_state_manager is None:
-            return {"success": False}
-
-        wsm = self.service.wallet_state_manager
-        secure = request["secure"]
-        trade_id = hexstr_to_bytes(request["trade_id"])
-
-        if secure:
-            await wsm.trade_manager.cancel_pending_offer_safely(trade_id)
-        else:
-            await wsm.trade_manager.cancel_pending_offer(trade_id)
-
-        response = {"success": True}
-        return response
-
     async def _state_changed(self, *args) -> List[str]:
+        """
+        Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
+        gives us an opportunity to send notifications to all connected clients via WebSocket.
+        """
         if len(args) < 2:
             return []
 
@@ -169,38 +112,72 @@ class WalletRpcApi:
             data["additional_data"] = args[2]
         return [create_payload("state_changed", data, "chia_wallet", "wallet_ui")]
 
-    async def get_next_address(self, request: Dict) -> Dict:
+    async def _stop_wallet(self):
         """
-        Returns a new address
+        Stops a currently running wallet/key, which allows starting the wallet with a new key.
+        Each key has it's own wallet database.
         """
-        if self.service is None:
-            return {"success": False}
+        if self.service is not None:
+            self.service._close()
+            await self.service._await_closed()
 
-        wallet_id = uint32(int(request["wallet_id"]))
-        if self.service.wallet_state_manager is None:
-            return {"success": False}
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+    ##########################################################################################
+    # Key management
+    ##########################################################################################
 
-        if wallet.wallet_info.type == WalletType.STANDARD_WALLET.value:
-            raw_puzzle_hash = await wallet.get_new_puzzlehash()
-            address = encode_puzzle_hash(raw_puzzle_hash)
-        elif wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
-            raw_puzzle_hash = await wallet.get_new_inner_hash()
-            address = encode_puzzle_hash(raw_puzzle_hash)
+    async def log_in(self, request):
+        """
+        Logs in the wallet with a specific key.
+        """
+
+        await self._stop_wallet()
+        fingerprint = request["fingerprint"]
+        type = request["type"]
+        recovery_host = request["host"]
+        testing = False
+        if "testing" in self.service.config and self.service.config["testing"] is True:
+            testing = True
+        if type == "skip":
+            started = await self.service._start(
+                fingerprint=fingerprint, skip_backup_import=True
+            )
+        elif type == "restore_backup":
+            file_path = Path(request["file_path"])
+            started = await self.service._start(
+                fingerprint=fingerprint, backup_file=file_path
+            )
         else:
-            return {
-                "success": False,
-                "reason": "Wallet type cannnot create puzzle hashes",
-            }
+            started = await self.service._start(fingerprint)
 
-        response = {
-            "success": True,
-            "wallet_id": wallet_id,
-            "address": address,
-        }
+        if started is True:
+            return {}
+        elif testing is True and self.service.backup_initialized is False:
+            response = {"success": False, "error": "not_initialized"}
+            return response
+        elif self.service.backup_initialized is False:
+            backup_info = None
+            backup_path = None
+            try:
+                private_key = self.service.get_key_for_fingerprint(fingerprint)
+                last_recovery = await download_backup(recovery_host, private_key)
+                backup_path = path_from_root(self.service.root_path, "last_recovery")
+                if backup_path.exists():
+                    backup_path.unlink()
+                backup_path.write_text(last_recovery)
+                backup_info = get_backup_info(backup_path, private_key)
+                backup_info["backup_host"] = recovery_host
+                backup_info["downloaded"] = True
+            except Exception as e:
+                log.error(f"error {e}")
+            response = {"success": False, "error": "not_initialized"}
+            if backup_info is not None:
+                response["backup_info"] = backup_info
+                response["backup_path"] = f"{backup_path}"
+            return response
 
-        return response
+        return {"success": False, "error": "Unknown Error"}
 
+<<<<<<< HEAD
     async def send_transaction(self, request):
         wallet_id = int(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
@@ -261,28 +238,128 @@ class WalletRpcApi:
                 "status": "FAILED",
                 "reason": "Timed out. Transaction may or may not have been sent.",
                 "id": wallet_id,
+=======
+    async def get_public_keys(self, request: Dict):
+        fingerprints = [
+            (sk.get_g1().get_fingerprint(), seed is not None)
+            for (sk, seed) in self.service.keychain.get_all_private_keys()
+        ]
+        return {"public_key_fingerprints": fingerprints}
+
+    async def _get_private_key(
+        self, fingerprint
+    ) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
+        for sk, seed in self.service.keychain.get_all_private_keys():
+            if sk.get_g1().get_fingerprint() == fingerprint:
+                return sk, seed
+        return None, None
+
+    async def get_private_key(self, request):
+        fingerprint = request["fingerprint"]
+        sk, seed = await self._get_private_key(fingerprint)
+        if sk is not None:
+            s = bytes_to_mnemonic(seed) if seed is not None else None
+            return {
+                "private_key": {
+                    "fingerprint": fingerprint,
+                    "sk": bytes(sk).hex(),
+                    "pk": bytes(sk.get_g1()).hex(),
+                    "seed": s,
+                },
+>>>>>>> 8908edc0... Refactor RPCs
             }
+        return {"success": False, "private_key": {"fingerprint": fingerprint}}
 
+<<<<<<< HEAD
         return data
+=======
+    async def generate_mnemonic(self, request: Dict):
+        return {"mnemonic": generate_mnemonic()}
+>>>>>>> 8908edc0... Refactor RPCs
 
-    async def get_transactions(self, request):
-        wallet_id = int(request["wallet_id"])
-        transactions = await self.service.wallet_state_manager.get_all_transactions(
-            wallet_id
+    async def add_key(self, request):
+        if "mnemonic" in request:
+            # Adding a key from 24 word mnemonic
+            mnemonic = request["mnemonic"]
+            passphrase = ""
+            try:
+                sk = self.service.keychain.add_private_key(
+                    " ".join(mnemonic), passphrase
+                )
+            except KeyError as e:
+                return {
+                    "success": False,
+                    "error": f"The word '{e.args[0]}' is incorrect.'",
+                    "word": e.args[0],
+                }
+
+        else:
+            raise ValueError("Mnemonic not in request")
+
+        fingerprint = sk.get_g1().get_fingerprint()
+        await self._stop_wallet()
+
+        # Makes sure the new key is added to config properly
+        started = False
+        check_keys(self.service.root_path)
+        type = request["type"]
+        if type == "new_wallet":
+            started = await self.service._start(
+                fingerprint=fingerprint, new_wallet=True
+            )
+        elif type == "skip":
+            started = await self.service._start(
+                fingerprint=fingerprint, skip_backup_import=True
+            )
+        elif type == "restore_backup":
+            file_path = Path(request["file_path"])
+            started = await self.service._start(
+                fingerprint=fingerprint, backup_file=file_path
+            )
+
+        if started is True:
+            return {}
+        raise ValueError("Failed to start")
+
+    async def delete_key(self, request):
+        await self._stop_wallet()
+        fingerprint = request["fingerprint"]
+        self.service.keychain.delete_key_by_fingerprint(fingerprint)
+        path = path_from_root(
+            self.service.root_path,
+            f"{self.service.config['database_path']}-{fingerprint}",
         )
-        formatted_transactions = []
+        if path.exists():
+            path.unlink()
+        return {}
 
-        for tx in transactions:
-            formatted = tx.to_json_dict()
-            formatted["to_address"] = encode_puzzle_hash(tx.to_address)
-            formatted_transactions.append(formatted)
+    async def delete_all_keys(self, request: Dict):
+        await self._stop_wallet()
+        self.service.keychain.delete_all_keys()
+        path = path_from_root(
+            self.service.root_path, self.service.config["database_path"]
+        )
+        if path.exists():
+            path.unlink()
+        return {}
 
-        response = {
-            "success": True,
-            "txs": formatted_transactions,
-            "wallet_id": wallet_id,
-        }
-        return response
+    ##########################################################################################
+    # Wallet Node
+    ##########################################################################################
+
+    async def get_sync_status(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
+        syncing = self.service.wallet_state_manager.sync_mode
+
+        return {"syncing": syncing}
+
+    async def get_height_info(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
+
+        lca = self.service.wallet_state_manager.lca
+        height = self.service.wallet_state_manager.block_records[lca].height
+
+        return {"height": height}
 
     async def farm_block(self, request):
         puzzle_hash = request["puzzle_hash"]
@@ -295,51 +372,24 @@ class WalletRpcApi:
         )
 
         self.service.server.push_message(msg)
-        return {"success": True}
+        return {}
 
-    async def get_wallet_balance(self, request: Dict):
-        if self.service.wallet_state_manager is None:
-            return {"success": False}
-        wallet_id = uint32(int(request["wallet_id"]))
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        balance = await wallet.get_confirmed_balance()
-        pending_balance = await wallet.get_unconfirmed_balance()
-        spendable_balance = await wallet.get_spendable_balance()
-        pending_change = await wallet.get_pending_change_balance()
-        if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
-            frozen_balance = 0
-        else:
-            frozen_balance = await wallet.get_frozen_amount()
+    ##########################################################################################
+    # Wallet Management
+    ##########################################################################################
 
-        wallet_balance = {
-            "wallet_id": wallet_id,
-            "confirmed_wallet_balance": balance,
-            "unconfirmed_wallet_balance": pending_balance,
-            "spendable_balance": spendable_balance,
-            "frozen_balance": frozen_balance,
-            "pending_change": pending_change,
-        }
+    async def get_wallets(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
 
-        return {"success": True, "wallet_balance": wallet_balance}
+        wallets: List[
+            WalletInfo
+        ] = await self.service.wallet_state_manager.get_all_wallets()
 
-    async def get_sync_status(self, request: Dict):
-        if self.service.wallet_state_manager is None:
-            return {"success": False}
-        syncing = self.service.wallet_state_manager.sync_mode
-
-        return {"success": True, "syncing": syncing}
-
-    async def get_height_info(self, request: Dict):
-        if self.service.wallet_state_manager is None:
-            return {"success": False}
-        lca = self.service.wallet_state_manager.lca
-        height = self.service.wallet_state_manager.block_records[lca].height
-
-        response = {"success": True, "height": height}
+        response = {"wallets": wallets}
 
         return response
 
-    async def create_backup_and_upload(self, host):
+    async def _create_backup_and_upload(self, host):
         try:
             if (
                 "testing" in self.service.config
@@ -361,192 +411,214 @@ class WalletRpcApi:
             log.error(f"Exception in upload backup. Error: {e}")
 
     async def create_new_wallet(self, request):
-        config, wallet_state_manager, main_wallet = self.get_wallet_config()
+        assert self.service.wallet_state_manager is not None
+
+        wallet_state_manager = self.service.wallet_state_manager
+        main_wallet = wallet_state_manager.main_wallet
         host = request["host"]
         if request["wallet_type"] == "cc_wallet":
             if request["mode"] == "new":
-                try:
-                    cc_wallet: CCWallet = await CCWallet.create_new_cc(
-                        wallet_state_manager, main_wallet, request["amount"]
-                    )
-                    colour = cc_wallet.get_colour()
-                    asyncio.ensure_future(self.create_backup_and_upload(host))
-                    return {
-                        "success": True,
-                        "type": cc_wallet.wallet_info.type,
-                        "colour": colour,
-                        "wallet_id": cc_wallet.wallet_info.id,
-                    }
-                except Exception as e:
-                    log.error(f"FAILED {e}")
-                    return {"success": False, "reason": str(e)}
+                cc_wallet: CCWallet = await CCWallet.create_new_cc(
+                    wallet_state_manager, main_wallet, request["amount"]
+                )
+                colour = cc_wallet.get_colour()
+                asyncio.ensure_future(self._create_backup_and_upload(host))
+                return {
+                    "type": cc_wallet.wallet_info.type,
+                    "colour": colour,
+                    "wallet_id": cc_wallet.wallet_info.id,
+                }
             elif request["mode"] == "existing":
-                try:
-                    cc_wallet = await CCWallet.create_wallet_for_cc(
-                        wallet_state_manager, main_wallet, request["colour"]
-                    )
-                    asyncio.ensure_future(self.create_backup_and_upload(host))
-                    return {"success": True, "type": cc_wallet.wallet_info.type}
-                except Exception as e:
-                    log.error(f"FAILED2 {e}")
-                    return {"success": False, "reason": str(e)}
+                cc_wallet = await CCWallet.create_wallet_for_cc(
+                    wallet_state_manager, main_wallet, request["colour"]
+                )
+                asyncio.ensure_future(self._create_backup_and_upload(host))
+                return {"type": cc_wallet.wallet_info.type}
         if request["wallet_type"] == "rl_wallet":
             if request["rl_type"] == "admin":
                 log.info("Create rl admin wallet")
-                try:
-                    rl_admin: RLWallet = await RLWallet.create_rl_admin(
-                        wallet_state_manager
-                    )
-                    success = await rl_admin.admin_create_coin(
-                        uint64(int(request["interval"])),
-                        uint64(int(request["limit"])),
-                        request["pubkey"],
-                        uint64(int(request["amount"])),
-                    )
-                    asyncio.ensure_future(self.create_backup_and_upload(host))
-                    return {
-                        "success": success,
-                        "id": rl_admin.wallet_info.id,
-                        "type": rl_admin.wallet_info.type,
-                        "origin": rl_admin.rl_info.rl_origin,
-                        "pubkey": rl_admin.rl_info.admin_pubkey.hex(),
-                    }
-                except Exception as e:
-                    log.error(f"FAILED {e}")
-                    return {"success": False, "reason": str(e)}
+                rl_admin: RLWallet = await RLWallet.create_rl_admin(
+                    wallet_state_manager
+                )
+                success = await rl_admin.admin_create_coin(
+                    uint64(int(request["interval"])),
+                    uint64(int(request["limit"])),
+                    request["pubkey"],
+                    uint64(int(request["amount"])),
+                )
+                asyncio.ensure_future(self._create_backup_and_upload(host))
+                return {
+                    "success": success,
+                    "id": rl_admin.wallet_info.id,
+                    "type": rl_admin.wallet_info.type,
+                    "origin": rl_admin.rl_info.rl_origin,
+                    "pubkey": rl_admin.rl_info.admin_pubkey.hex(),
+                }
             elif request["rl_type"] == "user":
                 log.info("Create rl user wallet")
-                try:
-                    rl_user: RLWallet = await RLWallet.create_rl_user(
-                        wallet_state_manager
-                    )
-                    asyncio.ensure_future(self.create_backup_and_upload(host))
-                    return {
-                        "success": True,
-                        "id": rl_user.wallet_info.id,
-                        "type": rl_user.wallet_info.type,
-                        "pubkey": rl_user.rl_info.user_pubkey.hex(),
-                    }
-                except Exception as e:
-                    log.error("FAILED {e}")
-                    return {"success": False, "reason": str(e)}
+                rl_user: RLWallet = await RLWallet.create_rl_user(wallet_state_manager)
+                asyncio.ensure_future(self._create_backup_and_upload(host))
+                return {
+                    "id": rl_user.wallet_info.id,
+                    "type": rl_user.wallet_info.type,
+                    "pubkey": rl_user.rl_info.user_pubkey.hex(),
+                }
 
-    def get_wallet_config(self):
-        return (
-            self.service.config,
-            self.service.wallet_state_manager,
-            self.service.wallet_state_manager.main_wallet,
+    ##########################################################################################
+    # Wallet
+    ##########################################################################################
+
+    async def get_wallet_balance(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
+        wallet_id = uint32(int(request["wallet_id"]))
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        balance = await wallet.get_confirmed_balance()
+        pending_balance = await wallet.get_unconfirmed_balance()
+        spendable_balance = await wallet.get_spendable_balance()
+        pending_change = await wallet.get_pending_change_balance()
+        if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
+            frozen_balance = 0
+        else:
+            frozen_balance = await wallet.get_frozen_amount()
+
+        wallet_balance = {
+            "wallet_id": wallet_id,
+            "confirmed_wallet_balance": balance,
+            "unconfirmed_wallet_balance": pending_balance,
+            "spendable_balance": spendable_balance,
+            "frozen_balance": frozen_balance,
+            "pending_change": pending_change,
+        }
+
+        return {"wallet_balance": wallet_balance}
+
+    async def get_transaction(self, request):
+        assert self.service.wallet_state_manager is not None
+        transaction_id: bytes32 = bytes32(bytes.fromhex(request["transaction_id"]))
+        tr: Optional[
+            TransactionRecord
+        ] = await self.service.wallet_state_manager.get_transaction(transaction_id)
+        if tr is None:
+            raise ValueError(f"Transaction {transaction_id} not found")
+
+        return {
+            "transaction": tr,
+            "transaction_id": tr.spend_bundle.name(),
+        }
+
+    async def get_transactions(self, request):
+        assert self.service.wallet_state_manager is not None
+
+        wallet_id = int(request["wallet_id"])
+        transactions = await self.service.wallet_state_manager.get_all_transactions(
+            wallet_id
         )
+        formatted_transactions = []
 
-    async def get_wallets(self, request: Dict):
-        if self.service.wallet_state_manager is None:
-            return {"success": False}
-        wallets: List[
-            WalletInfo
-        ] = await self.service.wallet_state_manager.get_all_wallets()
+        for tx in transactions:
+            formatted = tx.to_json_dict()
+            formatted["to_address"] = encode_puzzle_hash(tx.to_address)
+            formatted_transactions.append(formatted)
 
-        response = {"wallets": wallets, "success": True}
+        return {
+            "txs": formatted_transactions,
+            "wallet_id": wallet_id,
+        }
 
-        return response
+    async def get_next_address(self, request: Dict) -> Dict:
+        """
+        Returns a new address
+        """
+        assert self.service.wallet_state_manager is not None
+
+        wallet_id = uint32(int(request["wallet_id"]))
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+
+        if wallet.wallet_info.type == WalletType.STANDARD_WALLET.value:
+            raw_puzzle_hash = await wallet.get_new_puzzlehash()
+            address = encode_puzzle_hash(raw_puzzle_hash)
+        elif wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
+            raw_puzzle_hash = await wallet.get_new_inner_hash()
+            address = encode_puzzle_hash(raw_puzzle_hash)
+        else:
+            raise ValueError(
+                f"Wallet type {wallet.wallet_info.type} cannot create puzzle hashes"
+            )
+
+        return {
+            "wallet_id": wallet_id,
+            "address": address,
+        }
+
+    async def send_transaction(self, request):
+        assert self.service.wallet_state_manager is not None
+
+        wallet_id = int(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        tx = await wallet.generate_signed_transaction_dict(request)
+        if tx is None:
+            raise ValueError("Failed to generate signed transaction")
+
+        await wallet.push_transaction(tx)
+
+        # Transaction may not have been included in the mempool yet. Use get_transaction to check.
+        return {
+            "transaction": tx,
+            "transaction_id": tx.spend_bundle.name(),
+        }
+
+    async def create_backup(self, request):
+        assert self.service.wallet_state_manager is not None
+        file_path = Path(request["file_path"])
+        await self.service.wallet_state_manager.create_wallet_backup(file_path)
+        return {}
+
+    ##########################################################################################
+    # Coloured Coins and Trading
+    ##########################################################################################
 
     async def cc_set_name(self, request):
+        assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
         await wallet.set_name(str(request["name"]))
-        response = {"wallet_id": wallet_id, "success": True}
-        return response
+        return {"wallet_id": wallet_id}
 
     async def cc_get_name(self, request):
+        assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
         name: str = await wallet.get_name()
-        response = {"wallet_id": wallet_id, "name": name}
-        return response
+        return {"wallet_id": wallet_id, "name": name}
 
     async def cc_spend(self, request):
+        assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
         encoded_puzzle_hash = request["inner_address"]
         puzzle_hash = decode_puzzle_hash(encoded_puzzle_hash)
 
-        try:
-            tx = await wallet.generate_signed_transaction(
-                request["amount"], puzzle_hash
-            )
-        except Exception as e:
-            data = {"status": "FAILED", "reason": f"{e}", "id": wallet_id}
-            return data
+        tx = await wallet.generate_signed_transaction(request["amount"], puzzle_hash)
 
         if tx is None:
-            data = {
-                "success": False,
-                "reason": "Failed to generate signed transaction",
-                "id": wallet_id,
-            }
-            return data
-        try:
-            await wallet.wallet_state_manager.add_pending_transaction(tx)
-        except Exception as e:
-            data = {
-                "success": False,
-                "reason": f"Failed to push transaction {e}",
-                "id": wallet_id,
-            }
-            return data
+            raise ValueError("Failed to generate signed transaction")
+        await wallet.wallet_state_manager.add_pending_transaction(tx)
 
         return {
-            "success": True,
-            "transaction": tr,
-            "transaction_id": tr.spend_bundle.name(),
+            "transaction": tx,
+            "transaction_id": tx.spend_bundle.name(),
         }
 
     async def cc_get_colour(self, request):
+        assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
         colour: str = wallet.get_colour()
-        response = {"colour": colour, "wallet_id": wallet_id}
-        return response
-
-    async def get_wallet_summaries(self, request: Dict):
-        if self.service.wallet_state_manager is None:
-            return {"success": False}
-        wallet_summaries = {}
-        for wallet_id in self.service.wallet_state_manager.wallets:
-            wallet = self.service.wallet_state_manager.wallets[wallet_id]
-            balance = await wallet.get_confirmed_balance()
-            type = wallet.wallet_info.type
-            if type == WalletType.COLOURED_COIN.value:
-                name = wallet.wallet_info.name
-                colour = wallet.get_colour()
-                wallet_summaries[wallet_id] = {
-                    "type": type,
-                    "balance": balance,
-                    "name": name,
-                    "colour": colour,
-                }
-            else:
-                wallet_summaries[wallet_id] = {"type": type, "balance": balance}
-        return {"success": True, "wallet_summaries": wallet_summaries}
-
-    async def get_discrepancies_for_offer(self, request):
-        file_name = request["filename"]
-        file_path = Path(file_name)
-        (
-            success,
-            discrepancies,
-            error,
-        ) = await self.service.wallet_state_manager.trade_manager.get_discrepancies_for_offer(
-            file_path
-        )
-
-        if success:
-            response = {"success": True, "discrepancies": discrepancies}
-        else:
-            response = {"success": False, "error": error}
-
-        return response
+        return {"colour": colour, "wallet_id": wallet_id}
 
     async def create_offer_for_ids(self, request):
+        assert self.service.wallet_state_manager is not None
+
         offer = request["ids"]
         file_name = request["filename"]
         (
@@ -560,17 +632,76 @@ class WalletRpcApi:
             self.service.wallet_state_manager.trade_manager.write_offer_to_disk(
                 Path(file_name), spend_bundle
             )
-            response = {"success": success}
+            return {}
+        raise ValueError(error)
+
+    async def get_discrepancies_for_offer(self, request):
+        assert self.service.wallet_state_manager is not None
+        file_name = request["filename"]
+        file_path = Path(file_name)
+        (
+            success,
+            discrepancies,
+            error,
+        ) = await self.service.wallet_state_manager.trade_manager.get_discrepancies_for_offer(
+            file_path
+        )
+
+        if success:
+            return {"discrepancies": discrepancies}
+        raise ValueError(error)
+
+    async def respond_to_offer(self, request):
+        assert self.service.wallet_state_manager is not None
+        file_path = Path(request["filename"])
+        (
+            success,
+            trade_record,
+            error,
+        ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
+            file_path
+        )
+        if not success:
+            raise ValueError(error)
+        return {}
+
+    async def get_trade(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
+
+        trade_mgr = self.service.wallet_state_manager.trade_manager
+
+        trade_id = request["trade_id"]
+        trade: Optional[TradeRecord] = await trade_mgr.get_trade_by_id(trade_id)
+        if trade is None:
+            raise ValueError(f"No trade with trade id: {trade_id}")
+
+        result = trade_record_to_dict(trade)
+        return {"trade": result}
+
+    async def get_all_trades(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
+
+        trade_mgr = self.service.wallet_state_manager.trade_manager
+
+        all_trades = await trade_mgr.get_all_trades()
+        result = []
+        for trade in all_trades:
+            result.append(trade_record_to_dict(trade))
+
+        return {"trades": result}
+
+    async def cancel_trade(self, request: Dict):
+        assert self.service.wallet_state_manager is not None
+
+        wsm = self.service.wallet_state_manager
+        secure = request["secure"]
+        trade_id = hexstr_to_bytes(request["trade_id"])
+
+        if secure:
+            await wsm.trade_manager.cancel_pending_offer_safely(trade_id)
         else:
-            response = {"success": success, "reason": error}
-
-        return response
-
-    async def create_backup(self, request):
-        file_path = Path(request["file_path"])
-        await self.service.wallet_state_manager.create_wallet_backup(file_path)
-        response = {"success": True}
-        return response
+            await wsm.trade_manager.cancel_pending_offer(trade_id)
+        return {}
 
     async def get_backup_info(self, request: Dict):
         file_path = Path(request["file_path"])
@@ -588,233 +719,47 @@ class WalletRpcApi:
                     "error": f"The word '{e.args[0]}' is incorrect.'",
                     "word": e.args[0],
                 }
-            except ValueError as e:
-                return {
-                    "success": False,
-                    "error": e.args[0],
-                }
         elif "fingerprint" in request:
             sk, seed = await self._get_private_key(request["fingerprint"])
 
         if sk is None:
-            return {
-                "success": False,
-                "error": "Unable to decrypt the backup file.",
-            }
+            raise ValueError("Unable to decrypt the backup file.")
         backup_info = get_backup_info(file_path, sk)
-        response = {"success": True, "backup_info": backup_info}
-        return response
+        return {"backup_info": backup_info}
 
-    async def respond_to_offer(self, request):
-        file_path = Path(request["filename"])
-        (
-            success,
-            trade_record,
-            reason,
-        ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-            file_path
+    ##########################################################################################
+    # Rate Limited Wallet
+    ##########################################################################################
+
+    async def rl_set_user_info(self, request):
+        assert self.service.wallet_state_manager is not None
+
+        wallet_id = uint32(int(request["wallet_id"]))
+        rl_user = self.service.wallet_state_manager.wallets[wallet_id]
+        origin = request["origin"]
+        success = await rl_user.set_user_info(
+            uint64(request["interval"]),
+            uint64(request["limit"]),
+            origin["parent_coin_info"],
+            origin["puzzle_hash"],
+            origin["amount"],
+            request["admin_pubkey"],
         )
-        if success:
-            response = {"success": success}
-        else:
-            response = {"success": success, "reason": reason}
-        return response
-
-    async def get_public_keys(self, request: Dict):
-        fingerprints = [
-            (sk.get_g1().get_fingerprint(), seed is not None)
-            for (sk, seed) in self.service.keychain.get_all_private_keys()
-        ]
-        response = {"success": True, "public_key_fingerprints": fingerprints}
-        return response
-
-    async def _get_private_key(
-        self, fingerprint
-    ) -> Tuple[Optional[PrivateKey], Optional[bytes]]:
-        for sk, seed in self.service.keychain.get_all_private_keys():
-            if sk.get_g1().get_fingerprint() == fingerprint:
-                return sk, seed
-        return None, None
-
-    async def get_private_key(self, request):
-        fingerprint = request["fingerprint"]
-        sk, seed = await self._get_private_key(fingerprint)
-        if sk is not None:
-            s = bytes_to_mnemonic(seed) if seed is not None else None
-            return {
-                "success": True,
-                "private_key": {
-                    "fingerprint": fingerprint,
-                    "sk": bytes(sk).hex(),
-                    "pk": bytes(sk.get_g1()).hex(),
-                    "seed": s,
-                },
-            }
-        return {"success": False, "private_key": {"fingerprint": fingerprint}}
-
-    async def log_in(self, request):
-        await self.stop_wallet()
-        fingerprint = request["fingerprint"]
-        type = request["type"]
-        recovery_host = request["host"]
-        testing = False
-        if "testing" in self.service.config and self.service.config["testing"] is True:
-            testing = True
-        if type == "skip":
-            started = await self.service._start(
-                fingerprint=fingerprint, skip_backup_import=True
-            )
-        elif type == "restore_backup":
-            file_path = Path(request["file_path"])
-            started = await self.service._start(
-                fingerprint=fingerprint, backup_file=file_path
-            )
-        else:
-            started = await self.service._start(fingerprint)
-
-        if started is True:
-            return {"success": True}
-        elif testing is True and self.service.backup_initialized is False:
-            response = {"success": False, "error": "not_initialized"}
-            return response
-        elif self.service.backup_initialized is False:
-            backup_info = None
-            backup_path = None
-            try:
-                private_key = self.service.get_key_for_fingerprint(fingerprint)
-                last_recovery = await download_backup(recovery_host, private_key)
-                backup_path = path_from_root(self.service.root_path, "last_recovery")
-                if backup_path.exists():
-                    backup_path.unlink()
-                backup_path.write_text(last_recovery)
-                backup_info = get_backup_info(backup_path, private_key)
-                backup_info["backup_host"] = recovery_host
-                backup_info["downloaded"] = True
-            except Exception as e:
-                log.error(f"error {e}")
-            response = {"success": False, "error": "not_initialized"}
-            if backup_info is not None:
-                response["backup_info"] = backup_info
-                response["backup_path"] = f"{backup_path}"
-            return response
-
-        return {"success": False, "error": "Unknown Error"}
-
-    async def add_key(self, request):
-        if "mnemonic" in request:
-            # Adding a key from 24 word mnemonic
-            mnemonic = request["mnemonic"]
-            passphrase = ""
-            try:
-                sk = self.service.keychain.add_private_key(
-                    " ".join(mnemonic), passphrase
-                )
-            except KeyError as e:
-                return {
-                    "success": False,
-                    "error": f"The word '{e.args[0]}' is incorrect.'",
-                    "word": e.args[0],
-                }
-            except ValueError as e:
-                return {
-                    "success": False,
-                    "error": e.args[0],
-                }
-
-        else:
-            return {"success": False}
-
-        fingerprint = sk.get_g1().get_fingerprint()
-        await self.stop_wallet()
-
-        # Makes sure the new key is added to config properly
-        started = False
-        check_keys(self.service.root_path)
-        type = request["type"]
-        if type == "new_wallet":
-            started = await self.service._start(
-                fingerprint=fingerprint, new_wallet=True
-            )
-        elif type == "skip":
-            started = await self.service._start(
-                fingerprint=fingerprint, skip_backup_import=True
-            )
-        elif type == "restore_backup":
-            file_path = Path(request["file_path"])
-            started = await self.service._start(
-                fingerprint=fingerprint, backup_file=file_path
-            )
-
-        if started is True:
-            return {"success": True}
-        else:
-            return {"success": False}
-
-    async def delete_key(self, request):
-        await self.stop_wallet()
-        fingerprint = request["fingerprint"]
-        self.service.keychain.delete_key_by_fingerprint(fingerprint)
-        path = path_from_root(
-            self.service.root_path,
-            f"{self.service.config['database_path']}-{fingerprint}",
-        )
-        if path.exists():
-            path.unlink()
-        return {"success": True}
-
-    async def clean_all_state(self):
-        self.service.keychain.delete_all_keys()
-        path = path_from_root(
-            self.service.root_path, self.service.config["database_path"]
-        )
-        if path.exists():
-            path.unlink()
-
-    async def stop_wallet(self):
-        if self.service is not None:
-            self.service._close()
-            await self.service._await_closed()
-
-    async def delete_all_keys(self, request: Dict):
-        await self.stop_wallet()
-        await self.clean_all_state()
-        response = {"success": True}
-        return response
-
-    async def generate_mnemonic(self, request: Dict):
-        mnemonic = generate_mnemonic()
-        response = {"success": True, "mnemonic": mnemonic}
-        return response
+        return {"success": success}
 
     async def send_clawback_transaction(self, request):
+        assert self.service.wallet_state_manager is not None
+
         wallet_id = int(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        try:
-            tx = await wallet.clawback_rl_coin_transaction()
-        except Exception as e:
-            data = {
-                "success": False,
-                "reason": f"Failed to generate signed transaction {e}",
-            }
-            return data
+
+        tx = await wallet.clawback_rl_coin_transaction()
         if tx is None:
-            data = {
-                "success": False,
-                "reason": "Failed to generate signed transaction",
-            }
-            return data
-        try:
-            await wallet.push_transaction(tx)
-        except Exception as e:
-            data = {
-                "success": False,
-                "reason": f"Failed to push transaction {e}",
-            }
-            return data
+            raise ValueError("Failed to generate signed transaction")
+        await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
         return {
-            "success": True,
             "transaction": tx,
             "transaction_id": tx.spend_bundle.name(),
         }
