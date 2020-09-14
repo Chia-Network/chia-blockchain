@@ -33,8 +33,8 @@ class RpcClient:
             response.raise_for_status()
             res_json = await response.json()
             if not res_json["success"]:
-                if "reason" in res_json:
-                    raise Exception(res_json["reason"])
+                if "error" in res_json:
+                    raise Exception(res_json["error"])
                 else:
                     raise Exception()
             return res_json

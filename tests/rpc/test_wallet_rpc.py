@@ -1,15 +1,13 @@
 import asyncio
-from secrets import token_bytes
 
 import pytest
 
-from src.protocols import full_node_protocol
-from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint32, uint64
+from src.util.ints import uint16, uint32
 from tests.setup_nodes import setup_simulators_and_wallets, bt
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
-from tests.time_out_assert import time_out_assert, time_out_assert_not_None
+from tests.time_out_assert import time_out_assert
 from src.util.chech32 import encode_puzzle_hash
 from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.rpc.wallet_rpc_api import WalletRpcApi
@@ -95,25 +93,35 @@ class TestWalletRpc:
             async def tx_in_mempool():
                 tx = (await client.get_transaction("1", transaction_id))["transaction"]
                 return tx.is_in_mempool()
+
             await time_out_assert(5, tx_in_mempool, True)
-            await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds - tx_amount)
-            assert (await client.get_wallet_balance("1"))["wallet_balance"]["unconfirmed_wallet_balance"] == initial_funds - tx_amount
-            assert (await client.get_wallet_balance("1"))["wallet_balance"]["confirmed_wallet_balance"] == initial_funds
+            await time_out_assert(
+                5, wallet.get_unconfirmed_balance, initial_funds - tx_amount
+            )
+            assert (await client.get_wallet_balance("1"))["wallet_balance"][
+                "unconfirmed_wallet_balance"
+            ] == initial_funds - tx_amount
+            assert (await client.get_wallet_balance("1"))["wallet_balance"][
+                "confirmed_wallet_balance"
+            ] == initial_funds
 
             for i in range(0, 5):
                 await full_node_1.farm_new_block(FarmNewBlockProtocol(ph_2))
 
             async def eventual_balance():
-                return (await client.get_wallet_balance("1"))["wallet_balance"]["confirmed_wallet_balance"]
+                return (await client.get_wallet_balance("1"))["wallet_balance"][
+                    "confirmed_wallet_balance"
+                ]
 
-            await time_out_assert(5, eventual_balance, initial_funds_eventually - tx_amount)
+            await time_out_assert(
+                5, eventual_balance, initial_funds_eventually - tx_amount
+            )
 
             address = (await client.get_next_address("1"))["address"]
             assert len(address) > 10
 
             txs = (await client.get_transactions("1"))["transactions"]
-
-
+            assert len(txs) > 1
 
         except Exception:
             # Checks that the RPC manages to stop the node

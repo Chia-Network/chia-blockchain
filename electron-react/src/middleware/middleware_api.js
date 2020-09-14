@@ -290,8 +290,8 @@ export const handle_message = (store, payload) => {
     }
   }
   if (payload.data.success === false) {
-    if (payload.data.reason) {
-      store.dispatch(openDialog("Error: ", payload.data.reason));
+    if (payload.data.error) {
+      store.dispatch(openDialog("Error: ", payload.data.error));
     }
   }
 };

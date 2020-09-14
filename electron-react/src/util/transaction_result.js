@@ -19,9 +19,9 @@ function get_transaction_result(transaction) {
   //     } else if (send_transaction_result.status === "PENDING") {
   //       result_message =
   //         "Transaction has sent to a full node and is pending inclusion into the mempool. " +
-  //         send_transaction_result.reason;
+  //         send_transaction_result.error;
   //     } else {
-  //       result_message = "Transaction failed. " + send_transaction_result.reason;
+  //       result_message = "Transaction failed. " + send_transaction_result.error;
   //       result_class = classes.resultFailure;
   //     }
   //   }

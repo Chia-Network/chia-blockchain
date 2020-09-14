@@ -1745,9 +1745,7 @@ class FullNode:
             return
         conns = self.global_connections
         for peer in request.peer_list:
-            conns.peers.add(
-                PeerInfo(peer.host, peer.port)
-            )
+            conns.peers.add(PeerInfo(peer.host, peer.port))
 
         # Pseudo-message to close the connection
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
@@ -1764,9 +1762,7 @@ class FullNode:
             asyncio.create_task(self.server.start_client(target, self._on_connect))
 
     @api_request
-    async def respond_peers_full_node(
-        self, request: full_node_protocol.RespondPeers
-    ):
+    async def respond_peers_full_node(self, request: full_node_protocol.RespondPeers):
         pass
 
     @api_request
@@ -1802,7 +1798,9 @@ class FullNode:
                     tx.transaction
                 )
                 if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
+                    self.log.info(
+                        f"Added transaction to mempool: {tx.transaction.name()}"
+                    )
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     fees = tx.transaction.fees()

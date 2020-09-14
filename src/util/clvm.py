@@ -15,10 +15,5 @@ def run_program(
     pre_eval_f=None,
 ):
     return default_run_program(
-        program,
-        args,
-        quote_kw,
-        operator_lookup,
-        max_cost,
-        pre_eval_f=pre_eval_f,
+        program, args, quote_kw, operator_lookup, max_cost, pre_eval_f=pre_eval_f,
     )

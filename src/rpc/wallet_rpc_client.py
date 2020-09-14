@@ -1,7 +1,7 @@
-from typing import Dict, Optional
+from typing import Dict, List
 from src.rpc.rpc_client import RpcClient
 from src.wallet.transaction_record import TransactionRecord
-from src.util.ints import uint16, uint32, uint64
+from src.util.ints import uint64
 from src.types.sized_bytes import bytes32
 
 
@@ -14,8 +14,8 @@ class WalletRpcClient(RpcClient):
     to the full node.
     """
 
-    async def get_wallet_summaries(self) -> Dict:
-        return await self.fetch("get_wallet_summaries", {})
+    async def get_wallets(self) -> Dict:
+        return (await self.fetch("get_wallets", {}))["wallets"]
 
     async def get_wallet_balance(self, wallet_id: str) -> Dict:
         return await self.fetch("get_wallet_balance", {"wallet_id": wallet_id})
@@ -39,9 +39,7 @@ class WalletRpcClient(RpcClient):
     async def get_next_address(self, wallet_id: str) -> Dict:
         return await self.fetch("get_next_address", {"wallet_id": wallet_id})
 
-    async def get_transaction(
-        self, wallet_id: str, transaction_id: bytes32
-    ) -> Dict:
+    async def get_transaction(self, wallet_id: str, transaction_id: bytes32) -> Dict:
 
         res = await self.fetch(
             "get_transaction",
@@ -50,15 +48,10 @@ class WalletRpcClient(RpcClient):
         res["transaction"] = TransactionRecord.from_json_dict(res["transaction"])
         return res
 
-    async def get_transactions(
-        self, wallet_id: str,
-    ) -> Dict:
-        res = await self.fetch(
-            "get_transactions",
-            {"walled_id": wallet_id},
-        )
-        parsed = [TransactionRecord.from_json_dict(tx) for tx in res["transactions"])
-        res[transactions] = parsed
+    async def get_transactions(self, wallet_id: str,) -> Dict:
+        res = await self.fetch("get_transactions", {"walled_id": wallet_id},)
+        parsed = [TransactionRecord.from_json_dict(tx) for tx in res["transactions"]]
+        res["transactions"] = parsed
         return res
 
     async def log_in(self, fingerprint) -> Dict:
@@ -92,5 +85,5 @@ class WalletRpcClient(RpcClient):
             },
         )
 
-    async def get_keys(self) -> Dict:
-        return await self.fetch("get_public_keys", {})
+    async def get_public_keys(self) -> List:
+        return (await self.fetch("get_public_keys", {}))["public_key_fingerprints"]
