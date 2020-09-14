@@ -1,12 +1,18 @@
-const mempool_inclusion_status = {
+export const mempool_inclusion_status = {
   SUCCESS: 1, // Transaction added to mempool
   PENDING: 2, // Transaction not yet added to mempool
   FAILED: 3 // Transaction was invalid and dropped
 };
 
-function get_transaction_result(transaction) {
+export const get_transaction_result = (transaction) => {
   let success = true;
-  let message = "The transaction result was received";
+  let message = "";
+  if (!transaction) {
+    return {
+      message,
+      success
+    }
+  }
 
   for (let full_node_response of transaction.transaction.sent_to) {
     console.log("full node response", full_node_response);
@@ -30,8 +36,3 @@ function get_transaction_result(transaction) {
     success
   };
 }
-
-module.exports = {
-  mempool_inclusion_status,
-  get_transaction_result
-};

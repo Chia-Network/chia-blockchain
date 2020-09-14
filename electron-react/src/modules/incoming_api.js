@@ -87,8 +87,8 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       };
 
     case "CLEAR_SEND":
-      id = action.message.data.wallet_id;
-      wallet = state.wallets[parseInt(id)];
+      var id = action.message.data.wallet_id;
+      var wallet = state.wallets[parseInt(id)];
       wallet.sending_transaction = false;
       wallet.send_transaction_result = null;
       return {
@@ -116,7 +116,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       const message = action.message;
       const data = message.data;
       const command = message.command;
-      let success, id, wallet, wallets;
+      let success, wallets;
       if (command === "generate_mnemonic") {
         return { ...state, mnemonic: message.data.mnemonic };
       } else if (command === "add_key") {
@@ -153,9 +153,9 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           const wallets = data.wallets;
           var wallets_state = [];
           for (let object of wallets) {
-            id = parseInt(object.id);
-            var wallet_obj = Wallet(id, object.name, object.type, object.data);
-            wallets_state[id] = wallet_obj;
+            var walletid = parseInt(object.id);
+            var wallet_obj = Wallet(walletid, object.name, object.type, object.data);
+            wallets_state[walletid] = wallet_obj;
           }
           return { ...state, wallets: wallets_state };
         }

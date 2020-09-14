@@ -28,7 +28,6 @@ import {
   changeCreateWallet,
   ALL_OPTIONS
 } from "../modules/createWalletReducer";
-import { Fab } from "@material-ui/core";
 const config = require("../config");
 const backup_host = config.backup_host;
 
@@ -133,21 +132,6 @@ export const add_key = (mnemonic, type, file_path) => {
   return action;
 };
 
-export const send_transaction_and_wait = (wallet_id, amount, fee, address) => {
-  return (dispatch) => {
-    try {
-      response = await async_api(dispatch, send_transaction(wallet_id, amount, fee, address), False);
-      if (!response.data.success) {
-        // Do something bad
-        return;
-      }
-        // Do something good
-    } catch (err) {
-        // Do something bad
-        return;
-    }
-  }
-}
 
 export const add_new_key_action = (mnemonic) => {
   return (dispatch) => {

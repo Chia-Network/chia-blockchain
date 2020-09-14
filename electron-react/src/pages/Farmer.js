@@ -336,7 +336,6 @@ const Plots = props => {
 
   const handleCloseDeletePlotYes = () => {
     handleCloseDeletePlot();
-    console.log("deleting plot", deletePlotName);
     dispatch(deletePlot(deletePlotName));
   };
 
