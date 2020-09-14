@@ -340,7 +340,7 @@ async def show_async(args, parser):
                     print(f"{i+1}) {fp[0]}")
                 val = None
                 while val is None:
-                    val = input("Enter number to pick press q to quite: ")
+                    val = input("Enter a number to pick or q to quit: ")
                     if val == "q":
                         return
                     if not val.isdigit():
