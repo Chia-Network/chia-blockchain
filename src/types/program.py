@@ -2,7 +2,8 @@ import io
 from typing import Any, List, Set
 
 from src.types.sized_bytes import bytes32
-from src.util.clvm import run_program, sexp_from_stream, sexp_to_stream, SExp
+from src.util.clvm import run_program, sexp_from_stream, sexp_to_stream
+from clvm import SExp
 from src.util.hash import std_hash
 
 from clvm_tools.curry import curry
