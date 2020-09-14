@@ -281,7 +281,7 @@ class WebSocketServer:
                 self.services.pop(service_name)
                 error = None
             else:
-                error = "already running"
+                error = f"Service {service_name} already running"
         if error is None:
             try:
                 self.log.info(f"Start potting: {command_args}")
@@ -320,7 +320,7 @@ class WebSocketServer:
                 self.services.pop(service_command)
                 error = None
             else:
-                error = "already running"
+                error = f"Service {service_command} already running"
 
         if error is None:
             try:
@@ -541,20 +541,20 @@ def create_server_for_daemon(root_path):
     async def start_service(request):
         service_name = request.query.get("service")
         if not validate_service(service_name):
-            r = "unknown service"
+            r = f"{service_name} unknown service"
             return web.Response(text=str(r))
 
         if is_running(services, service_name):
-            r = "already running"
+            r = f"{service_name} already running"
             return web.Response(text=str(r))
 
         try:
             process, pid_path = launch_service(root_path, service_name)
             services[service_name] = process
-            r = "started"
+            r = f"{service_name} started"
         except (subprocess.SubprocessError, IOError):
             log.exception(f"problem starting {service_name}")
-            r = "start failed"
+            r = f"{service_name} start failed"
 
         return web.Response(text=str(r))
 

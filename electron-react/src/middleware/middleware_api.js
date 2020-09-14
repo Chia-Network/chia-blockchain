@@ -258,7 +258,7 @@ export const handle_message = (store, payload) => {
       } else if (service === service_plotter) {
         track_progress(store, payload.data.out_file);
       }
-    } else if (payload.data.error === "already running") {
+    } else if (payload.data.error.includes("already running")) {
       if (service === service_wallet) {
         ping_wallet(store);
       } else if (service === service_full_node) {
@@ -290,6 +290,9 @@ export const handle_message = (store, payload) => {
     }
   }
   if (payload.data.success === false) {
+    if (payload.data.error.includes("already running")) {
+      return;
+    }
     if (payload.data.error) {
       store.dispatch(openDialog("Error: ", payload.data.error));
     }

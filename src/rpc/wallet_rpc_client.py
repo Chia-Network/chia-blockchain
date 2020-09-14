@@ -122,12 +122,7 @@ class WalletRpcClient(RpcClient):
 
         res = await self.fetch(
             "send_transaction",
-            {
-                "wallet_id": wallet_id,
-                "amount": amount,
-                "puzzle_hash": address,
-                "fee": fee,
-            },
+            {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee},
         )
         return TransactionRecord.from_json_dict(res["transaction"])
 

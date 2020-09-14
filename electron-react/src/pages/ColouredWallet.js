@@ -426,8 +426,8 @@ const SendCard = props => {
   );
 
   const colour = useSelector(state => state.wallet_state.wallets[id].colour);
-
-  result = get_transaction_result(send_transaction_result);
+  const syncing = useSelector(state => state.wallet_state.status.syncing);
+  const result = get_transaction_result(send_transaction_result);
   let result_message = result.message;
   let result_class = result.success ? classes.resultSuccess : classes.resultFailure;
 
@@ -440,6 +440,10 @@ const SendCard = props => {
 
   function send() {
     if (sending_transaction) {
+      return;
+    }
+    if (syncing) {
+      dispatch(openDialog("Please finish syncing before making a transaction"));
       return;
     }
     let address = address_input.value.trim();
