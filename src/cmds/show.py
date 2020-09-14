@@ -329,12 +329,12 @@ async def show_async(args, parser):
                 return
             fingerprint = None
             if len(fingerprints) == 1:
-                fingerprint = fingerprints[0][0]
+                fingerprint = fingerprints[0]
                 log_in_response = await wallet_client.log_in(fingerprint)
             else:
                 print("Choose wallet key:")
                 for i, fp in enumerate(fingerprints):
-                    print(f"{i+1}) {fp[0]}")
+                    print(f"{i+1}) {fp}")
                 val = None
                 while val is None:
                     val = input("Enter a number to pick or q to quit: ")
