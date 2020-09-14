@@ -193,6 +193,29 @@ class PeerConnections:
         if self.local_type == NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
+    def get_local_peerinfo(self):
+        ip = None
+        port = None
+        for c in self._all_connections:
+            if c.connection_type == NodeType.FULL_NODE:
+                port = c.local_port
+                break
+        if port is None:
+            return (None, None)
+        
+        # https://stackoverflow.com/a/28950776
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(('introducer1.beta.chia.net', 8444))
+            ip = s.getsockname()[0]
+        except Exception:
+            ip = None
+        finally:
+            s.close()
+        if ip is None:
+            return (None, None)
+        return (ip, port)
+
     def get_connections(self):
         return self._all_connections
 
@@ -205,24 +228,31 @@ class PeerConnections:
         )
 
     async def successful_handshake(self, connection):
-        if connection.connection_type == NodeType.FULL_NODE and connection.is_outbound:
-            if self.full_node_peers_callback is not None:
-                self.full_node_peers_callback(
-                    "mark_tried",
-                    connection.get_peer_info(),
-                )
-            if self.wallet_callback is not None:
-                self.wallet_callback(
-                    "make_tried",
-                    connection.get_peer_info(),
-                )
-            if connection.is_feeler:
-                connection.close()
-                self.close(connection)
-                return
-            # Request peers after handshake.
-            if connection.local_type == NodeType.FULL_NODE:
-                await connection.send(Message("request_peers", ""))
+        if connection.connection_type == NodeType.FULL_NODE:
+            if connection.is_outbound:
+                if self.full_node_peers_callback is not None:
+                    self.full_node_peers_callback(
+                        "mark_tried",
+                        connection.get_peer_info(),
+                    )
+                if self.wallet_callback is not None:
+                    self.wallet_callback(
+                        "make_tried",
+                        connection.get_peer_info(),
+                    )
+                if connection.is_feeler:
+                    connection.close()
+                    self.close(connection)
+                    return
+                # Request peers after handshake.
+                if connection.local_type == NodeType.FULL_NODE:
+                    await connection.send(Message("request_peers", ""))
+            else:
+                if self.full_node_peers_callback is not None:
+                    self.full_node_peers_callback(
+                        "new_inbound_connection",
+                        connection.get_peer_info(),
+                    )
         yield connection
 
     def failed_handshake(self, connection, e):
@@ -257,7 +287,7 @@ class PeerConnections:
                     peer_info,
                 )
 
-    def pong_received(self, connection):
+    def update_connection_time(self, connection):
         if (
             connection.connection_type == NodeType.FULL_NODE
             and connection.is_outbound
