@@ -194,7 +194,7 @@ class WebSocketServer:
                 sockets = self.connections[service_name]
                 for socket in sockets:
                     try:
-                        self.log.info(f"About to ping: {service_name}:{socket}")
+                        self.log.info(f"About to ping: {service_name}")
                         await socket.ping()
                     except asyncio.CancelledError:
                         self.log.info("Ping task received Cancel")
