@@ -245,6 +245,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         return { ...state };
       }
       if (command === "tx_update") {
+        console.log("Got tx update!", data);
         const id = data.id;
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
