@@ -10,6 +10,8 @@ from src.util.ints import uint16
 from src.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
+from src.types.sized_bytes import bytes32
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
 
 
 @pytest.fixture(scope="module")
@@ -54,7 +56,8 @@ class TestCCWallet:
             {"wallet_type": "rl_wallet", "rl_type": "user", "host": "127.0.0.1:5000"}
         )
         assert isinstance(val, dict)
-        assert val["success"]
+        if "success" in val:
+            assert val["success"]
         assert val["id"]
         assert val["type"] == WalletType.RATE_LIMITED.value
         user_wallet_id = val["id"]
@@ -73,7 +76,8 @@ class TestCCWallet:
             }
         )
         assert isinstance(val, dict)
-        assert val["success"]
+        if "success" in val:
+            assert val["success"]
         assert val["id"]
         assert val["type"] == WalletType.RATE_LIMITED.value
         assert val["origin"]
@@ -82,7 +86,7 @@ class TestCCWallet:
         admin_pubkey = val["pubkey"]
         origin: Coin = val["origin"]
 
-        val = await api_user.rl_set_user_info(
+        await api_user.rl_set_user_info(
             {
                 "wallet_id": user_wallet_id,
                 "interval": 2,
@@ -95,7 +99,6 @@ class TestCCWallet:
                 "admin_pubkey": admin_pubkey,
             }
         )
-        assert val["success"]
 
         assert (await api_user.get_wallet_balance({"wallet_id": user_wallet_id}))[
             "wallet_balance"
@@ -120,15 +123,38 @@ class TestCCWallet:
                 "puzzle_hash": puzzle_hash,
             }
         )
+        assert "transaction_id" in val
 
-        assert val["status"] == "SUCCESS"
+        async def is_transaction_in_mempool(api, tx_id: bytes32) -> bool:
+            try:
+                val = await api.get_transaction(
+                    {"wallet_id": user_wallet_id, "transaction_id": tx_id.hex()}
+                )
+            except ValueError:
+                return False
+            for _, mis, _ in val["transaction"].sent_to:
+                if (
+                    MempoolInclusionStatus(mis) == MempoolInclusionStatus.SUCCESS
+                    or MempoolInclusionStatus(mis) == MempoolInclusionStatus.PENDING
+                ):
+                    return True
+            return False
+
+        await time_out_assert(
+            15, is_transaction_in_mempool, True, api_user, val["transaction_id"]
+        )
+
         for i in range(0, num_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 97, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
 
         val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id})
-        assert val["status"] == "SUCCESS"
+
+        await time_out_assert(
+            15, is_transaction_in_mempool, True, api_admin, val["transaction_id"]
+        )
+
         for i in range(0, num_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 0, api_admin, admin_wallet_id)

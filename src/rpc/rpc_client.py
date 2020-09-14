@@ -33,10 +33,7 @@ class RpcClient:
             response.raise_for_status()
             res_json = await response.json()
             if not res_json["success"]:
-                if "error" in res_json:
-                    raise Exception(res_json["error"])
-                else:
-                    raise Exception()
+                raise ValueError(res_json)
             return res_json
 
     async def get_connections(self) -> List[Dict]:

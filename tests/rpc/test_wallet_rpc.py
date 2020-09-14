@@ -87,21 +87,21 @@ class TestWalletRpc:
                 await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash()
             )
             tx_amount = 15600000
-            tx = (await client.send_transaction("1", tx_amount, addr))["transaction"]
+            tx = (await client.send_transaction("1", tx_amount, addr))
             transaction_id = tx.name()
 
             async def tx_in_mempool():
-                tx = (await client.get_transaction("1", transaction_id))["transaction"]
+                tx = (await client.get_transaction("1", transaction_id))
                 return tx.is_in_mempool()
 
             await time_out_assert(5, tx_in_mempool, True)
             await time_out_assert(
                 5, wallet.get_unconfirmed_balance, initial_funds - tx_amount
             )
-            assert (await client.get_wallet_balance("1"))["wallet_balance"][
+            assert (await client.get_wallet_balance("1"))[
                 "unconfirmed_wallet_balance"
             ] == initial_funds - tx_amount
-            assert (await client.get_wallet_balance("1"))["wallet_balance"][
+            assert (await client.get_wallet_balance("1"))[
                 "confirmed_wallet_balance"
             ] == initial_funds
 
@@ -109,7 +109,7 @@ class TestWalletRpc:
                 await full_node_1.farm_new_block(FarmNewBlockProtocol(ph_2))
 
             async def eventual_balance():
-                return (await client.get_wallet_balance("1"))["wallet_balance"][
+                return (await client.get_wallet_balance("1"))[
                     "confirmed_wallet_balance"
                 ]
 
@@ -117,11 +117,11 @@ class TestWalletRpc:
                 5, eventual_balance, initial_funds_eventually - tx_amount
             )
 
-            address = (await client.get_next_address("1"))["address"]
+            address = (await client.get_next_address("1"))
             assert len(address) > 10
 
-            txs = (await client.get_transactions("1"))["transactions"]
-            assert len(txs) > 1
+            transactions = (await client.get_transactions("1"))
+            assert len(transactions) > 1
 
         except Exception:
             # Checks that the RPC manages to stop the node
@@ -133,25 +133,3 @@ class TestWalletRpc:
         client.close()
         await client.await_closed()
         await rpc_cleanup()
-
-        # tx = await wallet.generate_signed_transaction(
-        #     10,
-        #     await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-        #     0,
-        # )
-        # await wallet.push_transaction(tx)
-
-        # await time_out_assert(5, wallet.get_confirmed_balance, funds)
-        # await time_out_assert(5, wallet.get_unconfirmed_balance, funds - 10)
-
-        # for i in range(0, num_blocks):
-        #     await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
-
-        # new_funds = sum(
-        #     [
-        #         calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-        #         for i in range(1, (2 * num_blocks) - 1)
-        #     ]
-        # )
-        # await time_out_assert(5, wallet.get_confirmed_balance, new_funds - 10)
-        # await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - 10)
