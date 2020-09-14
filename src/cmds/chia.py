@@ -16,6 +16,7 @@ SUBCOMMANDS = [
     "plots",
     "netspace",
     "run_daemon",
+    "wallet",
 ]
 
 
