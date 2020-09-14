@@ -14,7 +14,6 @@ from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
 from src.types.coin import Coin
-from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.types.challenge import Challenge
@@ -716,7 +715,7 @@ class WalletStateManager:
         records = await self.tx_store.get_all_transactions(wallet_id)
         return records
 
-    async def get_transaction(self, tx_id: SpendBundle) -> Optional[TransactionRecord]:
+    async def get_transaction(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         return await self.tx_store.get_transaction_record(tx_id)
 
     def find_fork_point_alternate_chain(self, alternate_chain: List[bytes32]) -> uint32:

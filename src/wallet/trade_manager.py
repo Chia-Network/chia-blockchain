@@ -243,7 +243,7 @@ class TradeManager:
             if wallet is None:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
-            tx = await wallet.generate_signed_transaction(
+            tx: TransactionRecord = await wallet.generate_signed_transaction(
                 coin.amount, new_ph, 0, coins={coin}
             )
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
@@ -286,14 +286,10 @@ class TradeManager:
                             to_exclude: List[Coin] = []
                         else:
                             to_exclude = spend_bundle.removals()
-                        zero_spend_bundle: Optional[
-                            SpendBundle
-                        ] = await wallet.generate_zero_val_coin(False, to_exclude)
+                        zero_spend_bundle: SpendBundle = await wallet.generate_zero_val_coin(
+                            False, to_exclude
+                        )
 
-                        if zero_spend_bundle is None:
-                            raise Exception(
-                                "Failed to generate offer. Zero value coin not created."
-                            )
                         if spend_bundle is None:
                             spend_bundle = zero_spend_bundle
                         else:

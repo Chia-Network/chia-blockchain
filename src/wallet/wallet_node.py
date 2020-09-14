@@ -235,17 +235,32 @@ class WalletNode:
         return result
 
     async def _resend_queue(self):
-        if self.wallet_state_manager is None or self.backup_initialized is False:
-            return
-        if self._shut_down:
-            return
-        if self.server is None:
+        if (
+            self._shut_down
+            or self.server is None
+            or self.wallet_state_manager is None
+            or self.backup_initialized is None
+        ):
             return
 
         for msg in await self._messages_to_resend():
+            if (
+                self._shut_down
+                or self.server is None
+                or self.wallet_state_manager is None
+                or self.backup_initialized is None
+            ):
+                return
             self.server.push_message(msg)
 
         for msg in await self._action_messages():
+            if (
+                self._shut_down
+                or self.server is None
+                or self.wallet_state_manager is None
+                or self.backup_initialized is None
+            ):
+                return
             self.server.push_message(msg)
 
     async def _messages_to_resend(self) -> List[OutboundMessage]:
