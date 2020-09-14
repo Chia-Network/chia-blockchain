@@ -39,7 +39,7 @@ from src.util.ints import uint8, uint32, uint64, uint128, int512
 from src.util.hash import std_hash
 from src.util.path import mkdir
 from src.util.significant_bits import truncate_to_significant_bits
-from src.util.mempool_check_conditions import get_name_puzzle_conditions
+from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.plotting.plot_tools import load_plots
 from src.util.logging import initialize_logging
 from src.util.wallet_tools import WalletTool

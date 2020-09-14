@@ -7,7 +7,7 @@ from src.protocols import (
     wallet_protocol,
 )
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from src.util.bundle_tools import best_solution_program
+from src.full_node.bundle_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock

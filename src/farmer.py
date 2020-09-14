@@ -58,14 +58,14 @@ class Farmer:
             raise RuntimeError(error_str)
 
         # This is the farmer configuration
-        self.wallet_target = decode_puzzle_hash(bytes.fromhex(self.config["xch_target_address"]))
+        self.wallet_target = decode_puzzle_hash(self.config["xch_target_address"])
         self.pool_public_keys = [
             G1Element.from_bytes(bytes.fromhex(pk))
             for pk in self.config["pool_public_keys"]
         ]
 
         # This is the pool configuration, which should be moved out to the pool once it exists
-        self.pool_target = decode_puzzle_hash(bytes.fromhex(pool_config["xch_target_address"]))
+        self.pool_target = decode_puzzle_hash(pool_config["xch_target_address"])
         self.pool_sks_map: Dict = {}
         for key in self._get_private_keys():
             self.pool_sks_map[bytes(key.get_g1())] = key

@@ -270,9 +270,9 @@ async def setup_farmer(
     config = load_config(bt.root_path, "config.yaml", "farmer")
     config_pool = load_config(bt.root_path, "config.yaml", "pool")
 
-    config["xch_target_address"] = encode_puzzle_hash(bt.farmer_ph).hex()
+    config["xch_target_address"] = encode_puzzle_hash(bt.farmer_ph)
     config["pool_public_keys"] = [bytes(pk).hex() for pk in bt.pool_pubkeys]
-    config_pool["xch_target_address"] = encode_puzzle_hash(bt.pool_ph).hex()
+    config_pool["xch_target_address"] = encode_puzzle_hash(bt.pool_ph)
     if full_node_port:
         connect_peers = [PeerInfo(self_hostname, full_node_port)]
     else:
