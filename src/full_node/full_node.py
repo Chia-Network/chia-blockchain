@@ -48,8 +48,8 @@ from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.util.api_decorators import api_request
-from src.util.bundle_tools import best_solution_program
-from src.util.cost_calculator import calculate_cost_of_program
+from src.full_node.bundle_tools import best_solution_program
+from src.full_node.cost_calculator import calculate_cost_of_program
 from src.util.errors import ConsensusError, Err
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128
@@ -613,12 +613,11 @@ class FullNode:
             # Ignore if we have already added this transaction
             if self.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
                 return
-            self.log.warning(f"Adding transaction to mempool: {transaction.transaction_id}")
             cost, status, error = await self.mempool_manager.add_spendbundle(
                 tx.transaction
             )
             if status == MempoolInclusionStatus.SUCCESS:
-                self.log.warning(f"Added transaction to mempool: {transaction.transaction_id}")
+                self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
                 fees = tx.transaction.fees()
                 assert fees >= 0
                 assert cost is not None
