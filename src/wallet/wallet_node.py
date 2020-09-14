@@ -114,6 +114,7 @@ class WalletNode:
         self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
         self.sync_generator_task = None
         self.server = None
+        self.wsm_close_task = None
 
     def get_key_for_fingerprint(self, fingerprint):
         private_keys = self.keychain.get_all_private_keys()
@@ -154,6 +155,7 @@ class WalletNode:
             private_key, self.config, path, self.constants
         )
 
+        self.wsm_close_task = None
         assert self.wallet_state_manager is not None
 
         backup_settings: BackupInitialized = (
@@ -196,7 +198,10 @@ class WalletNode:
                 pass
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
-        await self.wsm_close_task
+        if self.wsm_close_task is not None:
+            await self.wsm_close_task
+            self.wsm_close_task = None
+        self.wallet_state_manager = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback

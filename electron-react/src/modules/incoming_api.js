@@ -118,8 +118,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       const command = message.command;
       let success, id, wallet, wallets;
       if (command === "generate_mnemonic") {
-        var mnemonic_data = message.data.mnemonic;
-        return { ...state, mnemonic: mnemonic_data.split(" ") };
+        return { ...state, mnemonic: message.data.mnemonic };
       } else if (command === "add_key") {
         success = data.success;
         return { ...state, logged_in: success };

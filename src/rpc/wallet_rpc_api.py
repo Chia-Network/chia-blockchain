@@ -120,16 +120,16 @@ class WalletRpcApi:
 
         await self._stop_wallet()
         fingerprint = request["fingerprint"]
-        type = request["type"]
+        log_in_type = request["type"]
         recovery_host = request["host"]
         testing = False
         if "testing" in self.service.config and self.service.config["testing"] is True:
             testing = True
-        if type == "skip":
+        if log_in_type == "skip":
             started = await self.service._start(
                 fingerprint=fingerprint, skip_backup_import=True
             )
-        elif type == "restore_backup":
+        elif log_in_type == "restore_backup":
             file_path = Path(request["file_path"])
             started = await self.service._start(
                 fingerprint=fingerprint, backup_file=file_path
@@ -167,7 +167,7 @@ class WalletRpcApi:
 
     async def get_public_keys(self, request: Dict):
         fingerprints = [
-            (sk.get_g1().get_fingerprint(), seed is not None)
+            sk.get_g1().get_fingerprint()
             for (sk, seed) in self.service.keychain.get_all_private_keys()
         ]
         return {"public_key_fingerprints": fingerprints}
@@ -196,26 +196,23 @@ class WalletRpcApi:
         return {"success": False, "private_key": {"fingerprint": fingerprint}}
 
     async def generate_mnemonic(self, request: Dict):
-        return {"mnemonic": generate_mnemonic()}
+        return {"mnemonic": generate_mnemonic().split(" ")}
 
     async def add_key(self, request):
-        if "mnemonic" in request:
-            # Adding a key from 24 word mnemonic
-            mnemonic = request["mnemonic"]
-            passphrase = ""
-            try:
-                sk = self.service.keychain.add_private_key(
-                    " ".join(mnemonic), passphrase
-                )
-            except KeyError as e:
-                return {
-                    "success": False,
-                    "error": f"The word '{e.args[0]}' is incorrect.'",
-                    "word": e.args[0],
-                }
-
-        else:
+        if "mnemonic" not in request:
             raise ValueError("Mnemonic not in request")
+
+        # Adding a key from 24 word mnemonic
+        mnemonic = request["mnemonic"]
+        passphrase = ""
+        try:
+            sk = self.service.keychain.add_private_key(" ".join(mnemonic), passphrase)
+        except KeyError as e:
+            return {
+                "success": False,
+                "error": f"The word '{e.args[0]}' is incorrect.'",
+                "word": e.args[0],
+            }
 
         fingerprint = sk.get_g1().get_fingerprint()
         await self._stop_wallet()
@@ -223,16 +220,16 @@ class WalletRpcApi:
         # Makes sure the new key is added to config properly
         started = False
         check_keys(self.service.root_path)
-        type = request["type"]
-        if type == "new_wallet":
+        request_type = request["type"]
+        if request_type == "new_wallet":
             started = await self.service._start(
                 fingerprint=fingerprint, new_wallet=True
             )
-        elif type == "skip":
+        elif request_type == "skip":
             started = await self.service._start(
                 fingerprint=fingerprint, skip_backup_import=True
             )
-        elif type == "restore_backup":
+        elif request_type == "restore_backup":
             file_path = Path(request["file_path"])
             started = await self.service._start(
                 fingerprint=fingerprint, backup_file=file_path
@@ -283,8 +280,7 @@ class WalletRpcApi:
         return {"height": height}
 
     async def farm_block(self, request):
-        puzzle_hash = request["puzzle_hash"]
-        raw_puzzle_hash = decode_puzzle_hash(puzzle_hash)
+        raw_puzzle_hash = decode_puzzle_hash(request["address"])
         request = FarmNewBlockProtocol(raw_puzzle_hash)
         msg = OutboundMessage(
             NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
@@ -304,11 +300,10 @@ class WalletRpcApi:
             WalletInfo
         ] = await self.service.wallet_state_manager.get_all_wallets()
 
-        response = {"wallets": wallets}
-
-        return response
+        return {"wallets": wallets}
 
     async def _create_backup_and_upload(self, host):
+        assert self.service.wallet_state_manager is not None
         try:
             if (
                 "testing" in self.service.config
@@ -329,7 +324,7 @@ class WalletRpcApi:
         except Exception as e:
             log.error(f"Exception in upload backup. Error: {e}")
 
-    async def create_new_wallet(self, request):
+    async def create_new_wallet(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
         wallet_state_manager = self.service.wallet_state_manager
@@ -366,6 +361,7 @@ class WalletRpcApi:
                     uint64(int(request["amount"])),
                 )
                 asyncio.ensure_future(self._create_backup_and_upload(host))
+                assert rl_admin.rl_info.admin_pubkey is not None
                 return {
                     "success": success,
                     "id": rl_admin.wallet_info.id,
@@ -377,6 +373,7 @@ class WalletRpcApi:
                 log.info("Create rl user wallet")
                 rl_user: RLWallet = await RLWallet.create_rl_user(wallet_state_manager)
                 asyncio.ensure_future(self._create_backup_and_upload(host))
+                assert rl_user.rl_info.user_pubkey is not None
                 return {
                     "id": rl_user.wallet_info.id,
                     "type": rl_user.wallet_info.type,
@@ -387,7 +384,7 @@ class WalletRpcApi:
     # Wallet
     ##########################################################################################
 
-    async def get_wallet_balance(self, request: Dict):
+    async def get_wallet_balance(self, request: Dict) -> Dict:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
@@ -411,7 +408,7 @@ class WalletRpcApi:
 
         return {"wallet_balance": wallet_balance}
 
-    async def get_transaction(self, request):
+    async def get_transaction(self, request: Dict) -> Dict:
         assert self.service.wallet_state_manager is not None
         transaction_id: bytes32 = bytes32(bytes.fromhex(request["transaction_id"]))
         tr: Optional[
@@ -425,7 +422,7 @@ class WalletRpcApi:
             "transaction_id": tr.name(),
         }
 
-    async def get_transactions(self, request):
+    async def get_transactions(self, request: Dict) -> Dict:
         assert self.service.wallet_state_manager is not None
 
         wallet_id = int(request["wallet_id"])
