@@ -47,7 +47,7 @@
   )
 
   (defun create_fullpuzhash (my_innerpuzhash corehash)
-    (sha256tree0 (qq (r (c (q (unquote my_innerpuzhash)) ((c (q (97 (unquote corehash))) (a)))))))
+    (sha256tree0 (qq (r (c (q (unquote my_innerpuzhash)) ((c (q (97 (unquote corehash))) 1))))))
   )
 
   ; assembles information from the solution to create our own full ID including asserting our parent is a coloured coin
