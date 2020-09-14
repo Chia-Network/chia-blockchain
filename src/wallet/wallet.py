@@ -145,7 +145,7 @@ class Wallet(AbstractWallet):
 
             if amount > spendable_amount:
                 error_msg = (
-                    f"Can't select amount higher than our spendable balance {amount}, spendable"
+                    f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: "
                     f" {spendable_amount}"
                 )
                 self.log.warning(error_msg)
