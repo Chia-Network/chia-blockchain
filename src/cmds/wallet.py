@@ -51,9 +51,7 @@ async def print_balances(wallet_client):
             print(
                 f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['chia']} TXCH"
             )
-            print(
-                f"   -Spendable: {balances['spendable_balance']/units['chia']} TXCH"
-            )
+            print(f"   -Spendable: {balances['spendable_balance']/units['chia']} TXCH")
             print(f"   -Frozen: {balances['frozen_balance']/units['chia']} TXCH")
             print(
                 f"   -Pending change: {balances['pending_change']/units['chia']} TXCH"
