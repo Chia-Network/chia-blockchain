@@ -460,7 +460,7 @@ class TestWalletSimulator:
 
         # Lock up with non DID innerpuz so that we can create two outputs
         # Innerpuz will output the innersol, so we just pass in ((51 0xMyPuz 49) (51 0xMyPuz 51))
-        innerpuz = Program(binutils.assemble("(a)"))
+        innerpuz = Program(binutils.assemble("1"))
         innerpuzhash = innerpuz.get_tree_hash()
 
         puz = did_wallet_puzzles.create_fullpuz(innerpuzhash, did_wallet.did_info.my_core)
