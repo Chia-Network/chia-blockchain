@@ -6,13 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## [Unreleased]
+## [1.0beta13] aka Beta 1.13 - 2020-09-15
 
 ### Added
 
 ### Changed
+- Long_description_content_type is now set to improve chia-blockchian's Pypi entry. Thanks to @altendky for this pull request.
+- A minor edit was made to clarify that excessive was only related to trolling in the Code of Conduct document.
 
 ### Fixed
+- When starting the GUI from an installer or the command line on Linux, if you had not previously generated a key on your machine, the generate new key GUI would not launch and you would be stuck with a spinnner.
+- Farmer display now correctly displays balance.
 
 ## [1.0beta12] aka Beta 1.12 - 2020-09-14
 
