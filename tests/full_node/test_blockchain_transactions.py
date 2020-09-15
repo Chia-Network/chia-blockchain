@@ -698,15 +698,11 @@ class TestBlockchainTransactions:
         spent_block = blocks[1]
         bad_block = blocks[2]
         valid_cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID,
-            spent_block.get_coinbase().name(),
-            None,
+            ConditionOpcode.ASSERT_MY_COIN_ID, spent_block.get_coinbase().name(), None,
         )
         valid_dic = {valid_cvp.opcode: [valid_cvp]}
         bad_cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID,
-            bad_block.get_coinbase().name(),
-            None,
+            ConditionOpcode.ASSERT_MY_COIN_ID, bad_block.get_coinbase().name(), None,
         )
 
         bad_dic = {bad_cvp.opcode: [bad_cvp]}
@@ -780,9 +776,7 @@ class TestBlockchainTransactions:
 
         # This condition requires block2 coinbase to be spent
         block1_cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED,
-            block2.get_coinbase().name(),
-            None,
+            ConditionOpcode.ASSERT_COIN_CONSUMED, block2.get_coinbase().name(), None,
         )
         block1_dic = {block1_cvp.opcode: [block1_cvp]}
         block1_spend_bundle = wallet_a.generate_signed_transaction(
@@ -791,9 +785,7 @@ class TestBlockchainTransactions:
 
         # This condition requires block1 coinbase to be spent
         block2_cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED,
-            block1.get_coinbase().name(),
-            None,
+            ConditionOpcode.ASSERT_COIN_CONSUMED, block1.get_coinbase().name(), None,
         )
         block2_dic = {block2_cvp.opcode: [block2_cvp]}
         block2_spend_bundle = wallet_a.generate_signed_transaction(

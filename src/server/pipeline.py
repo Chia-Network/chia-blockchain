@@ -44,10 +44,7 @@ async def initialize_pipeline(
     # Maps a stream reader, writer and NodeType to a ChiaConnection object
     connections_aiter = map_aiter(
         partial_func.partial_async(
-            stream_reader_writer_to_connection,
-            server_port,
-            local_type,
-            log,
+            stream_reader_writer_to_connection, server_port, local_type, log,
         ),
         join_aiters(srwt_aiter),
     )
@@ -64,11 +61,7 @@ async def initialize_pipeline(
     outbound_handshake = Message(
         "handshake",
         Handshake(
-            network_id,
-            protocol_version,
-            node_id,
-            uint16(server_port),
-            local_type,
+            network_id, protocol_version, node_id, uint16(server_port), local_type,
         ),
     )
 
@@ -90,9 +83,7 @@ async def initialize_pipeline(
     # Handles each message one at a time, and yields responses to send back or broadcast
     responses_aiter = join_aiters(
         map_aiter(
-            partial_func.partial_async_gen(handle_message, api),
-            messages_aiter,
-            100,
+            partial_func.partial_async_gen(handle_message, api), messages_aiter, 100,
         )
     )
 

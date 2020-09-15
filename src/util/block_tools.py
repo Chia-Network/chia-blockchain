@@ -64,9 +64,7 @@ class BlockTools:
     """
 
     def __init__(
-        self,
-        root_path: Optional[Path] = None,
-        real_plots: bool = False,
+        self, root_path: Optional[Path] = None, real_plots: bool = False,
     ):
         self._tempdir = None
         if root_path is None:
@@ -307,10 +305,7 @@ class BlockTools:
                     )
                 )
                 if new_difficulty >= curr_difficulty:
-                    new_difficulty = min(
-                        new_difficulty,
-                        max_diff,
-                    )
+                    new_difficulty = min(new_difficulty, max_diff,)
                 else:
                     new_difficulty = max([uint64(1), new_difficulty, min_diff])
 
@@ -517,8 +512,7 @@ class BlockTools:
         )
 
         plot_pk = ProofOfSpace.generate_plot_public_key(
-            selected_plot_info.local_sk.get_g1(),
-            selected_plot_info.farmer_public_key,
+            selected_plot_info.local_sk.get_g1(), selected_plot_info.farmer_public_key,
         )
         proof_of_space: ProofOfSpace = ProofOfSpace(
             challenge_hash,
@@ -544,29 +538,15 @@ class BlockTools:
         )
 
         output = ClassgroupElement(
+            int512(int.from_bytes(result[0:int_size], "big", signed=True,)),
             int512(
-                int.from_bytes(
-                    result[0:int_size],
-                    "big",
-                    signed=True,
-                )
-            ),
-            int512(
-                int.from_bytes(
-                    result[int_size : 2 * int_size],
-                    "big",
-                    signed=True,
-                )
+                int.from_bytes(result[int_size : 2 * int_size], "big", signed=True,)
             ),
         )
         proof_bytes = result[2 * int_size : 4 * int_size]
 
         proof_of_time = ProofOfTime(
-            challenge_hash,
-            number_iters,
-            output,
-            uint8(0),
-            proof_bytes,
+            challenge_hash, number_iters, output, uint8(0), proof_bytes,
         )
 
         # Use the extension data to create different blocks based on header hash

@@ -155,11 +155,7 @@ class TestFullNodeProtocol:
 
         dic_h = {5: (program, aggsig)}
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            3,
-            blocks[:-1],
-            10,
-            transaction_data_at_height=dic_h,
+            test_constants, 3, blocks[:-1], 10, transaction_data_at_height=dic_h,
         )
         # Already seen
         msgs = [x async for x in full_node_1.new_transaction(new_transaction)]
@@ -230,9 +226,7 @@ class TestFullNodeProtocol:
 
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
         spend_bundle = wallet_a.generate_signed_transaction(
-            100,
-            receiver_puzzlehash,
-            blocks[2].get_coinbase(),
+            100, receiver_puzzlehash, blocks[2].get_coinbase(),
         )
         assert spend_bundle is not None
         respond_transaction = fnp.RespondTransaction(spend_bundle)
@@ -260,9 +254,7 @@ class TestFullNodeProtocol:
 
         # Invalid transaction does not propagate
         spend_bundle = wallet_a.generate_signed_transaction(
-            100000000000000,
-            receiver_puzzlehash,
-            blocks[3].get_coinbase(),
+            100000000000000, receiver_puzzlehash, blocks[3].get_coinbase(),
         )
         assert spend_bundle is not None
         respond_transaction = fnp.RespondTransaction(spend_bundle)
@@ -284,11 +276,7 @@ class TestFullNodeProtocol:
         blocks = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks[:-1],
-            10,
-            seed=b"1212412",
+            test_constants, 1, blocks[:-1], 10, seed=b"1212412",
         )
 
         unf_block = FullBlock(
@@ -352,11 +340,7 @@ class TestFullNodeProtocol:
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks_list,
-            10,
-            seed=b"another seed",
+            test_constants, 1, blocks_list, 10, seed=b"another seed",
         )
         assert blocks_new[-1].proof_of_time is not None
         new_pot = fnp.NewProofOfTime(
@@ -396,11 +380,7 @@ class TestFullNodeProtocol:
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks_list,
-            10,
-            seed=b"another seed 2",
+            test_constants, 1, blocks_list, 10, seed=b"another seed 2",
         )
         assert blocks_new[-1].proof_of_time is not None
         assert blocks_new[-2].proof_of_time is not None
@@ -447,11 +427,7 @@ class TestFullNodeProtocol:
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            2,
-            blocks_list,
-            10,
-            seed=b"another seed 3",
+            test_constants, 2, blocks_list, 10, seed=b"another seed 3",
         )
         # Add one block
         [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-2]))]
@@ -492,11 +468,7 @@ class TestFullNodeProtocol:
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks_list[:],
-            4,
-            seed=b"Another seed 4",
+            test_constants, 1, blocks_list[:], 4, seed=b"Another seed 4",
         )
         for block in blocks_new:
             [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]
@@ -610,10 +582,7 @@ class TestFullNodeProtocol:
         # Don't propagate at old height
         [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(candidates[0]))]
         blocks_new_3 = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks_new[:] + [candidates[0]],
-            10,
+            test_constants, 1, blocks_new[:] + [candidates[0]], 10,
         )
         unf_block_new = FullBlock(
             blocks_new_3[-1].proof_of_space,
@@ -713,11 +682,7 @@ class TestFullNodeProtocol:
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            5,
-            blocks_list[:],
-            10,
-            seed=b"Another seed 5",
+            test_constants, 5, blocks_list[:], 10, seed=b"Another seed 5",
         )
 
         # In sync mode
@@ -778,11 +743,7 @@ class TestFullNodeProtocol:
 
         # If orphan, don't send anything
         blocks_orphan = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks_list[:-5],
-            10,
-            seed=b"Another seed 6",
+            test_constants, 1, blocks_list[:-5], 10, seed=b"Another seed 6",
         )
 
         msgs = [
@@ -830,18 +791,13 @@ class TestWalletProtocol:
         blocks_list = await get_block_path(full_node_1)
 
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            block_list=blocks_list,
-            seed=b"test_request_additions",
+            test_constants, 1, block_list=blocks_list, seed=b"test_request_additions",
         )
         async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-1])):
             pass
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            100,
-            wallet_a.get_new_puzzlehash(),
-            blocks_new[-1].get_coinbase(),
+            100, wallet_a.get_new_puzzlehash(), blocks_new[-1].get_coinbase(),
         )
         spend_bundle_bad = wallet_a.generate_signed_transaction(
             constants.MAX_COIN_AMOUNT,
@@ -1046,9 +1002,7 @@ class TestWalletProtocol:
 
         # If there are no transactions, empty proof and coins
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            10,
-            block_list=blocks_list,
+            test_constants, 10, block_list=blocks_list,
         )
         for block in blocks_new:
             [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]
@@ -1228,9 +1182,7 @@ class TestWalletProtocol:
 
         # If there are no transactions, only cb and fees additions
         blocks_new = bt.get_consecutive_blocks(
-            test_constants,
-            10,
-            block_list=blocks_list,
+            test_constants, 10, block_list=blocks_list,
         )
         for block in blocks_new:
             [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]
@@ -1253,9 +1205,7 @@ class TestWalletProtocol:
         for i in range(5):
             spend_bundles.append(
                 wallet_a.generate_signed_transaction(
-                    100,
-                    puzzle_hashes[i % 2],
-                    blocks_new[i - 8].get_coinbase(),
+                    100, puzzle_hashes[i % 2], blocks_new[i - 8].get_coinbase(),
                 )
             )
         height_with_transactions = len(blocks_new) + 1
