@@ -287,7 +287,9 @@ class WalletRpcApi:
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
         request = FarmNewBlockProtocol(raw_puzzle_hash)
         msg = OutboundMessage(
-            NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
+            NodeType.FULL_NODE,
+            Message("farm_new_block", request),
+            Delivery.BROADCAST,
         )
 
         self.service.server.push_message(msg)

@@ -153,7 +153,11 @@ class WalletStateManager:
                 wallet = await Wallet.create(config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN.value:
-                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
+                wallet = await CCWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.RATE_LIMITED.value:
                 wallet = await RLWallet.create(self, wallet_info)
@@ -228,7 +232,11 @@ class WalletStateManager:
                 wallet = await Wallet.create(self.config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN.value:
-                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
+                wallet = await CCWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
                 self.wallets[wallet_info.id] = wallet
 
     async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
@@ -752,7 +760,9 @@ class WalletStateManager:
             raise ValueError("Invalid genesis block")
 
     async def receive_block(
-        self, block: BlockRecord, header_block: Optional[HeaderBlock] = None,
+        self,
+        block: BlockRecord,
+        header_block: Optional[HeaderBlock] = None,
     ) -> ReceiveBlockResult:
         """
         Adds a new block to the blockchain. It doesn't have to be a new tip, can also be an orphan,
@@ -792,8 +802,8 @@ class WalletStateManager:
 
             # If one of these new additions is ours, generate more puzzle hashes
             phs: List[bytes32] = [addition.puzzle_hash for addition in block.additions]
-            block_includes_our_tx: bool = await self.puzzle_store.one_of_puzzle_hashes_exists(
-                phs
+            block_includes_our_tx: bool = (
+                await self.puzzle_store.one_of_puzzle_hashes_exists(phs)
             )
             if block_includes_our_tx:
                 async with self.puzzle_store.lock:
@@ -997,7 +1007,10 @@ class WalletStateManager:
                 return False
 
         number_of_iters: uint64 = calculate_iterations_quality(
-            quality_str, header_block.proof_of_space.size, difficulty, min_iters,
+            quality_str,
+            header_block.proof_of_space.size,
+            difficulty,
+            min_iters,
         )
 
         if header_block.proof_of_time is None:
@@ -1208,7 +1221,10 @@ class WalletStateManager:
                 )
 
             number_of_iters: uint64 = calculate_iterations_quality(
-                quality_str, header_block.proof_of_space.size, difficulty, min_iters,
+                quality_str,
+                header_block.proof_of_space.size,
+                difficulty,
+                min_iters,
             )
 
             # Validate potime

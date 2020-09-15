@@ -22,7 +22,8 @@ class FullNodeStore:
     unfinished_blocks_leader: Tuple[uint32, uint64]
     # Blocks which we have created, but don't have proof of space yet, old ones are cleared
     candidate_blocks: Dict[
-        bytes32, Tuple[Optional[Program], bytes, HeaderData, ProofOfSpace, uint32],
+        bytes32,
+        Tuple[Optional[Program], bytes, HeaderData, ProofOfSpace, uint32],
     ]
     # Header hashes of unfinished blocks that we have seen recently
     seen_unfinished_blocks: set

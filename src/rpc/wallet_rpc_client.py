@@ -108,8 +108,14 @@ class WalletRpcClient(RpcClient):
         )
         return TransactionRecord.from_json_dict(res["transaction"])
 
-    async def get_transactions(self, wallet_id: str,) -> List[TransactionRecord]:
-        res = await self.fetch("get_transactions", {"wallet_id": wallet_id},)
+    async def get_transactions(
+        self,
+        wallet_id: str,
+    ) -> List[TransactionRecord]:
+        res = await self.fetch(
+            "get_transactions",
+            {"wallet_id": wallet_id},
+        )
         reverted_tx: List[TransactionRecord] = []
         for modified_tx in res["transactions"]:
             # Server returns address instead of ph, but TransactionRecord requires ph
