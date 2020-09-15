@@ -1,6 +1,7 @@
 import base64
 import json
 import time
+from collections import defaultdict
 from pathlib import Path
 
 from typing import Dict, Optional, List, Set, Tuple, Callable, Any
@@ -81,6 +82,7 @@ class WalletStateManager:
 
     state_changed_callback: Optional[Callable]
     pending_tx_callback: Optional[Callable]
+    puzzle_hash_created_callbacks = defaultdict(lambda *x: None)
     db_path: Path
     db_connection: aiosqlite.Connection
 
@@ -382,6 +384,18 @@ class WalletStateManager:
         """
         self.pending_tx_callback = callback
 
+    def set_coin_with_puzzlehash_created_callback(self, puzzlehash, callback: Callable):
+        """
+        Callback to be called when new coin is seen with specified puzzlehash
+        """
+        self.puzzle_hash_created_callbacks[puzzlehash] = callback
+
+    async def puzzle_hash_created(self, coin: Coin):
+        callback = self.puzzle_hash_created_callbacks[coin.puzzle_hash]
+        if callback is None:
+            return
+        await callback(coin)
+
     def state_changed(self, state: str, wallet_id: int = None, data_object={}):
         """
         Calls the callback if it's present.
@@ -523,6 +537,8 @@ class WalletStateManager:
     async def coins_of_interest_received(
         self, removals: List[Coin], additions: List[Coin], height: uint32
     ):
+        for coin in additions:
+            await self.puzzle_hash_created(coin)
         trade_additions = await self.coins_of_interest_added(additions, height)
         trade_removals = await self.coins_of_interest_removed(removals, height)
         if len(trade_additions) > 0 or len(trade_removals) > 0:
