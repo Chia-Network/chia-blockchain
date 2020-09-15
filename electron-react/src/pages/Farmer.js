@@ -613,7 +613,6 @@ const Farmer = props => {
   const classes = props.classes;
 
   const checkRewards = useCallback(async () => {
-    console.log("Checking rewards");
     let totalChia = BigInt(0);
     let biggestHeight = 0;
     for (let wallet of wallets) {
@@ -651,7 +650,7 @@ const Farmer = props => {
         }
       }
     }
-    if (totalChia !== totalChiaFarmed && !didMount) {
+    if (totalChia !== totalChiaFarmed) {
       setTotalChiaFarmed(totalChia);
       setBiggestHeight(biggestHeight);
     }
