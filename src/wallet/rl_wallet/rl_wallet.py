@@ -313,6 +313,7 @@ class RLWallet(AbstractWallet):
                                                                              coin,
                                                                              await self.get_rl_parent(),
                                                                              await self.get_rl_coin())
+
         tx_record = TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -687,7 +688,7 @@ class RLWallet(AbstractWallet):
             raise ValueError("Rl coin record is None")
 
         list_of_coinsolutions = []
-
+        self.rl_coin_record = await self.get_rl_coin_record()
         pubkey, secretkey = await self.get_keys(self.rl_coin_record.coin.puzzle_hash)
         # Spend wallet coin
         puzzle = rl_puzzle_for_pk(
@@ -708,12 +709,13 @@ class RLWallet(AbstractWallet):
             rl_parent.amount,
             rl_parent.parent_coin_info,
         )
-
         # cost, sexp = run_program(puzzle, solution)
 
         signature = AugSchemeMPL.sign(secretkey, solution.get_tree_hash())
+        rl_spend = CoinSolution(self.rl_coin_record.coin, Program.to([puzzle, solution]))
+
         list_of_coinsolutions.append(
-            CoinSolution(self.rl_coin_record.coin, Program.to([puzzle, solution]))
+          rl_spend
         )
 
         # Spend consolidating coin
@@ -723,24 +725,22 @@ class RLWallet(AbstractWallet):
             self.rl_coin_record.coin.parent_coin_info,
             self.rl_coin_record.coin.amount,
         )
-        list_of_coinsolutions.append(
-            CoinSolution(consolidating_coin, Program.to([puzzle, solution]))
-        )
+        agg_spend = CoinSolution(consolidating_coin, Program.to([puzzle, solution]))
+
+        list_of_coinsolutions.append(agg_spend)
         # Spend lock
         puzstring = (
-            "(r (c (q 0x"
-            + hexlify(consolidating_coin.name()).decode("ascii")
-            + ") (q ())))"
+            f"(r (c (q 0x{consolidating_coin.name().hex()}) (q ())))"
         )
 
         puzzle = Program(binutils.assemble(puzstring))
         solution = Program(binutils.assemble("()"))
-        list_of_coinsolutions.append(
-            CoinSolution(
-                Coin(self.rl_coin_record.coin, puzzle.get_tree_hash(), uint64(0)),
+
+        ephemeral = CoinSolution(
+                Coin(self.rl_coin_record.coin.name(), puzzle.get_tree_hash(), uint64(0)),
                 Program.to([puzzle, solution]),
             )
-        )
+        list_of_coinsolutions.append(ephemeral)
 
         aggsig = AugSchemeMPL.aggregate([signature])
 

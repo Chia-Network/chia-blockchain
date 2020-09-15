@@ -20,7 +20,7 @@ def event_loop():
     yield loop
 
 
-class TestCCWallet:
+class TestRLWallet:
     @pytest.fixture(scope="function")
     async def three_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(
@@ -69,7 +69,7 @@ class TestCCWallet:
                 "wallet_type": "rl_wallet",
                 "rl_type": "admin",
                 "interval": 2,
-                "limit": 1,
+                "limit": 10,
                 "pubkey": pubkey,
                 "amount": 100,
                 "host": "127.0.0.1:5000",
@@ -90,7 +90,7 @@ class TestCCWallet:
             {
                 "wallet_id": user_wallet_id,
                 "interval": 2,
-                "limit": 1,
+                "limit": 10,
                 "origin": {
                     "parent_coin_info": origin.parent_coin_info.hex(),
                     "puzzle_hash": origin.puzzle_hash.hex(),
@@ -146,7 +146,7 @@ class TestCCWallet:
         utxo = [c for c in await full_node.coin_store.get_unspent_coin_records() if not c.coinbase]
         val = await api_admin.add_rate_limited_funds({"wallet_id": admin_wallet_id, "amount": 100})
         assert val["status"] == "SUCCESS"
-        for i in range(0, 2*num_blocks):
+        for i in range(0, 50):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 197, api_user, user_wallet_id)
         utxo_2 = [c for c in await full_node.coin_store.get_unspent_coin_records() if not c.coinbase]
@@ -155,7 +155,7 @@ class TestCCWallet:
         val = await api_user.send_transaction(
             {
                 "wallet_id": user_wallet_id,
-                "amount": 3,
+                "amount": 197,
                 "fee": 0,
                 "puzzle_hash": puzzle_hash,
             }
