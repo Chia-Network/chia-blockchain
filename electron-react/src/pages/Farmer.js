@@ -613,6 +613,7 @@ const Farmer = props => {
   const classes = props.classes;
 
   const checkRewards = useCallback(async () => {
+    console.log("Checking rewards");
     let totalChia = BigInt(0);
     let biggestHeight = 0;
     for (let wallet of wallets) {
@@ -624,6 +625,7 @@ const Farmer = props => {
         if (tx.additions.length < 1) {
           continue;
         }
+        console.log("Checking tx", tx);
         // Height here is filled into the whole 256 bits (32 bytes) of the parent
         let hexHeight = arr_to_hex(
           big_int_to_array(BigInt(tx.confirmed_at_index), 32)

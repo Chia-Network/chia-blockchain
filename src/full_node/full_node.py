@@ -55,7 +55,7 @@ from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128
 from src.util.merkle_set import MerkleSet
 from src.util.path import mkdir, path_from_root
-from src.types.peer_info import PeerInfo, TimestampedPeerInfo
+from src.types.peer_info import PeerInfo
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
@@ -1725,11 +1725,7 @@ class FullNode:
     ) -> OutboundMessageGenerator:
         if self.global_connections is None:
             return
-        tmp_connected_peers = self.global_connections.get_full_node_peerinfos()
-        connected_peers = [
-            TimestampedPeerInfo(peer.host, peer.port, uint64(0))
-            for peer in tmp_connected_peers
-        ]
+        connected_peers = self.global_connections.get_full_node_peerinfos()
         unconnected_peers = self.global_connections.peers.get_peers(
             recent_threshold=24 * 60 * 60
         )

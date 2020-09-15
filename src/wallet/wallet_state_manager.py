@@ -790,17 +790,22 @@ class WalletStateManager:
             self.block_records[block.header_hash] = block
             await self.wallet_store.add_block_record(block, False)
 
-            async with self.puzzle_store.lock:
-                for addition in block.additions:
-                    record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
-                        addition.puzzle_hash.hex()
-                    )
-                    if record is None:
-                        continue
-                    index = record.index
-                    await self.puzzle_store.set_used_up_to(index)
-
-                await self.create_more_puzzle_hashes()
+            # If one of these new additions is ours, generate more puzzle hashes
+            phs: List[bytes32] = [addition.puzzle_hash for addition in block.additions]
+            block_includes_our_tx: bool = await self.puzzle_store.one_of_puzzle_hashes_exists(
+                phs
+            )
+            if block_includes_our_tx:
+                async with self.puzzle_store.lock:
+                    for addition in block.additions:
+                        record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+                            addition.puzzle_hash.hex()
+                        )
+                        if record is None:
+                            continue
+                        index = record.index
+                        await self.puzzle_store.set_used_up_to(index)
+                    await self.create_more_puzzle_hashes()
 
             # Genesis case
             if self.lca is None:
