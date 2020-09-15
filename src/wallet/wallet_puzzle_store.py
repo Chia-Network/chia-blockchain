@@ -177,6 +177,24 @@ class WalletPuzzleStore:
 
         return row is not None
 
+    async def one_of_puzzle_hashes_exists(self, puzzle_hashes: List[bytes32]) -> bool:
+        """
+        Checks if one of the passed puzzle_hashes is present in the db.
+        """
+        if len(puzzle_hashes) < 1:
+            return False
+        puzzle_hashes_db = tuple([ph.hex() for ph in puzzle_hashes])
+        formatted_str = (
+            f"SELECT * from derivation_paths WHERE puzzle_hash in "
+            f'({"?," * (len(puzzle_hashes_db) - 1)}?) LIMIT 1'
+        )
+        cursor = await self.db_connection.execute(formatted_str, puzzle_hashes_db)
+
+        row = await cursor.fetchone()
+        await cursor.close()
+
+        return row is not None
+
     async def index_for_pubkey(self, pubkey: G1Element) -> Optional[uint32]:
         """
         Returns derivation paths for the given pubkey.
