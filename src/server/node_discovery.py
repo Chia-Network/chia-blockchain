@@ -2,6 +2,7 @@ import asyncio
 import time
 import math
 import aiosqlite
+import traceback
 from random import Random
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.util.path import path_from_root, mkdir
@@ -20,6 +21,7 @@ from src.protocols import (
 from secrets import randbits
 from src.util.hash import std_hash
 from typing import Optional, AsyncGenerator
+from src.util.ints import uint64
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
@@ -71,7 +73,6 @@ class FullNodeDiscovery:
         self.is_closed = True
         self.connect_peers_task.cancel()
         self.process_messages_task.cancel()
-        self.peer_gossip_task.cancel()
         self.serialize_task.cancel()
         await self.connection.close()
 
@@ -92,16 +93,16 @@ class FullNodeDiscovery:
                 elif message == "update_connection_time":
                     await self.address_manager.connect(peer_info)
                 elif message == "new_inbound_connection":
+                    timestamped_peer_info = TimestampedPeerInfo(
+                        peer_info.host,
+                        peer_info.port,
+                        uint64(int(time.time())),
+                    )
                     await self.address_manager.add_to_new_table(
-                        [peer_info], peer_info, 0
+                        [timestamped_peer_info], peer_info, 0
                     )
                     await self.address_manager.mark_good(peer_info, True)
                     if self.relay_queue is not None:
-                        timestamped_peer_info = TimestampedPeerInfo(
-                            peer_info.host,
-                            peer_info.port,
-                            uint64(int(time.time())),
-                        )
                         self.relay_queue.put_nowait((timestamped_peer_info, 1))
             except Exception as e:
                 self.log.error(f"Exception in process message: {e}")
@@ -307,15 +308,13 @@ class FullNodePeers(FullNodeDiscovery):
         self.self_advertise_task = asyncio.create_task(
             self._periodically_self_advertise()
         )
-        self.address_relay_task = asyncio.task(
-            self._address_releay()
-        )
+        self.address_relay_task = asyncio.create_task(self._address_relay())
         await self.start_tasks()
 
     async def close(self):
         await self._close_common()
         self.self_advertise_task.cancel()
-        self.self.address_relay_task.cancel()
+        self.address_relay_task.cancel()
 
     async def _periodically_self_advertise(self):
         while not self.is_closed:
@@ -326,7 +325,7 @@ class FullNodePeers(FullNodeDiscovery):
                     neighbour.clear()
             # Self advertise every 24 hours.
             peer = self.global_connections.get_local_peerinfo()
-            if peer is (None, None):
+            if peer == (None, None):
                 continue
             timestamped_peer = [
                 TimestampedPeerInfo(
@@ -337,21 +336,23 @@ class FullNodePeers(FullNodeDiscovery):
             ]
             outbound_message = OutboundMessage(
                 NodeType.FULL_NODE,
-                Message("respond_peers_full_node", full_node_protocol.RespondPeers(
-                    timestamped_peer
-                )),
+                Message(
+                    "respond_peers_full_node",
+                    full_node_protocol.RespondPeers([timestamped_peer])
+                ),
                 Delivery.BROADCAST,
             )
             if self.server is not None:
                 self.server.push_message(outbound_message)
 
-    def add_peers_neighbour(self, peers, neighbour_info):
+    async def add_peers_neighbour(self, peers, neighbour_info):
+        neighbour_data = (neighbour_info.host, neighbour_info.port)
         async with self.lock:
             for peer in peers:
-                if neighbour_info not in self.neighbour_known_peers:
-                    self.neighbour_known_peers[neighbour_info] = set()
-                if peer.host not in self.neighbour_known_peers[neighbour_info]:
-                    self.neighbour_known_peers[neighbour_info].add(peer.host)
+                if neighbour_data not in self.neighbour_known_peers:
+                    self.neighbour_known_peers[neighbour_data] = set()
+                if peer.host not in self.neighbour_known_peers[neighbour_data]:
+                    self.neighbour_known_peers[neighbour_data].add(peer.host)
 
     async def request_peers(self, peer_info):
         try:
@@ -380,7 +381,7 @@ class FullNodePeers(FullNodeDiscovery):
                 ),
                 Delivery.RESPOND,
             )
-            self.add_peers_neighbour(peers, peer_info)
+            await self.add_peers_neighbour(peers, peer_info)
             yield outbound_message
         except Exception as e:
             self.log.error(f"Request peers exception: {e}")
@@ -388,12 +389,12 @@ class FullNodePeers(FullNodeDiscovery):
     async def respond_peers(self, request, peer_src, is_full_node):
         await self._respond_peers_common(request, peer_src, is_full_node)
         if is_full_node:
-            self.add_peers_neighbour(request.peer_list, peer_src)
+            await self.add_peers_neighbour(request.peer_list, peer_src)
             if len(request.peer_list) == 1 and self.relay_queue is not None:
                 peer = request.peer_list[0]
                 if peer.timestamp > time.time() - 60 * 10:
                     self.relay_queue.put_nowait((peer, 2))
-    
+
     async def _address_relay(self):
         while not self.is_closed:
             try:
@@ -415,31 +416,36 @@ class FullNodePeers(FullNodeDiscovery):
                         byteorder="big",
                     )
                     hashes.append((cur_hash, connection))
-                hashes.sort(key = lambda x: x[0])
-                for (_, connection), index in enumerate(hashes):
+                hashes.sort(key=lambda x: x[0])
+                for index, (_, connection) in enumerate(hashes):
                     if index >= num_peers:
                         break
                     peer_info = connection.get_peer_info()
+                    pair = (peer_info.host, peer_info.port)
                     async with self.lock:
                         if (
-                            peer_info in self.neighbour_known_peers
-                            and relay_peer.host in self.neighbour_known_peers[peer_info]
+                            pair in self.neighbour_known_peers
+                            and relay_peer.host in self.neighbour_known_peers[pair]
                         ):
                             continue
-                        self.neighbour_known_peers[peer_info].add(relay_peer.host)
+                        if pair not in self.neighbour_known_peers:
+                            self.neighbour_known_peers[pair] = set()
+                        self.neighbour_known_peers[pair].add(relay_peer.host)
                     if connection.node_id is None:
                         continue
                     msg = OutboundMessage(
                         NodeType.FULL_NODE,
-                        Message("respond_peers_full_node", full_node_protocol.RespondPeers(
-                            relay_peer
-                        )),
+                        Message(
+                            "respond_peers_full_node",
+                            full_node_protocol.RespondPeers([relay_peer]),
+                        ),
                         Delivery.SPECIFIC,
                         connection.node_id,
                     )
                     self.server.push_message(msg)
             except Exception as e:
                 self.log.error(f"Exception in address relay: {e}")
+                self.log.error(f"Traceback: {traceback.format_exc()}")
 
 class WalletPeers(FullNodeDiscovery):
     def __init__(

@@ -1,6 +1,7 @@
 import logging
 import time
 import asyncio
+import socket
 from typing import Any, AsyncGenerator, Callable, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
@@ -202,11 +203,11 @@ class PeerConnections:
                 break
         if port is None:
             return (None, None)
-        
+
         # https://stackoverflow.com/a/28950776
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            s.connect(('introducer1.beta.chia.net', 8444))
+            s.connect(("introducer1.beta.chia.net", 8444))
             ip = s.getsockname()[0]
         except Exception:
             ip = None
