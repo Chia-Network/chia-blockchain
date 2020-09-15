@@ -98,7 +98,11 @@ class WalletRpcApi:
             data["wallet_id"] = args[1]
         if args[2] is not None:
             data["additional_data"] = args[2]
-        return [create_payload("state_changed", data, "chia_wallet", "wallet_ui")]
+        return [
+            create_payload(
+                "state_changed", data, "chia_wallet", "wallet_ui", string=False
+            )
+        ]
 
     async def _stop_wallet(self):
         """

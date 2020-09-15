@@ -28,21 +28,29 @@ class FullNodeRpcApi:
             "/get_heaviest_block_seen": self.get_heaviest_block_seen,
         }
 
-    async def _state_changed(self, change: str) -> List[str]:
+    async def _state_changed(self, change: str) -> List[Dict]:
         payloads = []
         if change == "block":
             data = await self.get_latest_block_headers({})
             assert data is not None
             payloads.append(
                 create_payload(
-                    "get_latest_block_headers", data, self.service_name, "wallet_ui"
+                    "get_latest_block_headers",
+                    data,
+                    self.service_name,
+                    "wallet_ui",
+                    string=False,
                 )
             )
             data = await self.get_blockchain_state({})
             assert data is not None
             payloads.append(
                 create_payload(
-                    "get_blockchain_state", data, self.service_name, "wallet_ui"
+                    "get_blockchain_state",
+                    data,
+                    self.service_name,
+                    "wallet_ui",
+                    string=False,
                 )
             )
             return payloads
