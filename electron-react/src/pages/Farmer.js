@@ -650,7 +650,7 @@ const Farmer = props => {
         }
       }
     }
-    if (totalChia !== totalChiaFarmed && !didMount) {
+    if (totalChia !== totalChiaFarmed) {
       setTotalChiaFarmed(totalChia);
       setBiggestHeight(biggestHeight);
     }
