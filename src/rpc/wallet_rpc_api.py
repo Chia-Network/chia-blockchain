@@ -81,6 +81,7 @@ class WalletRpcApi:
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
+            "/add_rate_limited_funds:": self.add_rate_limited_funds,
         }
 
     async def _state_changed(self, *args) -> List[str]:
@@ -702,3 +703,14 @@ class WalletRpcApi:
             "transaction": tx,
             "transaction_id": tx.name(),
         }
+
+        return data
+
+    async def add_rate_limited_funds(self, request):
+        wallet_id = uint32(request["wallet_id"])
+        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        puzzle_hash = wallet.rl_get_aggregation_puzzlehash(wallet.rl_info.rl_puzzle_hash)
+        request['wallet_id'] = 1
+        request['puzzle_hash'] = puzzle_hash
+        await wallet.rl_add_funds(request['amount'], puzzle_hash)
+        return {"status": "SUCCESS"}
