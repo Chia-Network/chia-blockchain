@@ -15,7 +15,7 @@ for setuptools_scm/PEP 440 reasons.
 - A minor edit was made to clarify that excessive was only related to trolling in the Code of Conduct document.
 
 ### Fixed
-- When starting the GUI from an installer or the command line on Linux, if you had not previously generated a key on your machine, the generate new key GUI would not launch and you would be stuck with a spinnner.
+- When starting the GUI from an installer or the command line on Linux, if you had not previously generated a key on your machine, the generate new key GUI would not launch and you would be stuck with a spinner.
 - Farmer display now correctly displays balance.
 
 ## [1.0beta12] aka Beta 1.12 - 2020-09-14
