@@ -55,10 +55,7 @@ class CCWallet:
 
     @staticmethod
     async def create_new_cc(
-        wallet_state_manager: Any,
-        wallet: Wallet,
-        amount: uint64,
-        name: str = None,
+        wallet_state_manager: Any, wallet: Wallet, amount: uint64, name: str = None,
     ):
         self = CCWallet()
         self.base_puzzle_program = None
@@ -433,12 +430,7 @@ class CCWallet:
 
         await self.add_lineage(
             eve_coin.name(),
-            Program.to(
-                (
-                    1,
-                    [eve_coin.parent_coin_info, cc_inner, eve_coin.amount],
-                )
-            ),
+            Program.to((1, [eve_coin.parent_coin_info, cc_inner, eve_coin.amount],)),
         )
         await self.add_lineage(
             eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1]))
@@ -491,10 +483,8 @@ class CCWallet:
         return uint64(amount)
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = (
-            await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-                self.wallet_info.id
-            )
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.wallet_info.id
         )
         addition_amount = 0
 

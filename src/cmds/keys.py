@@ -60,11 +60,7 @@ def make_parser(parser):
         help="Enter mnemonic you want to use",
     )
     parser.add_argument(
-        "-k",
-        "--key",
-        type=str,
-        default=None,
-        help="Enter the raw private key in hex",
+        "-k", "--key", type=str, default=None, help="Enter the raw private key in hex",
     )
     parser.add_argument(
         "-f",
@@ -91,19 +87,11 @@ def make_parser(parser):
     )
 
     parser.add_argument(
-        "-p",
-        "--public_key",
-        type=str,
-        default=None,
-        help="Enter the pk in hex",
+        "-p", "--public_key", type=str, default=None, help="Enter the pk in hex",
     )
 
     parser.add_argument(
-        "-s",
-        "--signature",
-        type=str,
-        default=None,
-        help="Enter the signature in hex",
+        "-s", "--signature", type=str, default=None, help="Enter the signature in hex",
     )
 
     parser.add_argument(

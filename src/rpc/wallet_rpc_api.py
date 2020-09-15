@@ -20,6 +20,7 @@ from src.cmds.init import check_keys
 from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
+from src.types.sized_bytes import bytes32
 from src.wallet.trade_record import TradeRecord
 from src.wallet.util.backup_utils import get_backup_info, download_backup, upload_backup
 from src.wallet.util.trade_utils import trade_record_to_dict
@@ -52,7 +53,6 @@ class WalletRpcApi:
             "/add_key": self.add_key,
             "/delete_key": self.delete_key,
             "/delete_all_keys": self.delete_all_keys,
-
             # Wallet node
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
@@ -283,9 +283,7 @@ class WalletRpcApi:
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
         request = FarmNewBlockProtocol(raw_puzzle_hash)
         msg = OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("farm_new_block", request),
-            Delivery.BROADCAST,
+            NodeType.FULL_NODE, Message("farm_new_block", request), Delivery.BROADCAST,
         )
 
         self.service.server.push_message(msg)

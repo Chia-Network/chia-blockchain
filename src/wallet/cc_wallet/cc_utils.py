@@ -106,9 +106,7 @@ def subtotals_for_deltas(deltas) -> List[int]:
 
 
 def coin_solution_for_lock_coin(
-    prev_coin: Coin,
-    subtotal: int,
-    coin: Coin,
+    prev_coin: Coin, subtotal: int, coin: Coin,
 ) -> CoinSolution:
     puzzle_reveal = curry(LOCK_INNER_PUZZLE, [prev_coin.as_list(), subtotal])
 

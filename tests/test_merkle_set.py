@@ -19,12 +19,7 @@ class TestMerkleSet:
         WalletTool()
 
         num_blocks = 10
-        blocks = bt.get_consecutive_blocks(
-            test_constants,
-            num_blocks,
-            [],
-            10,
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10,)
 
         merkle_set = MerkleSet()
         merkle_set_reverse = MerkleSet()

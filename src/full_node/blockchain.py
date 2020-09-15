@@ -117,9 +117,7 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(
-        self,
-    ) -> None:
+    async def _load_chain_from_store(self,) -> None:
         """
         Initializes the state of the Blockchain class from the database. Sets the LCA, tips,
         headers, height_to_hash, and block_store DiffStores.
@@ -844,10 +842,7 @@ class Blockchain:
         for npc in npc_list:
             unspent = removal_coin_records[npc.coin_name]
             error = blockchain_check_conditions_dict(
-                unspent,
-                removal_coin_records,
-                npc.condition_dict,
-                block.header,
+                unspent, removal_coin_records, npc.condition_dict, block.header,
             )
             if error:
                 return error
