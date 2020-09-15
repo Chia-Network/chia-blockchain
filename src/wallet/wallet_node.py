@@ -144,7 +144,7 @@ class WalletNode:
     ) -> bool:
         private_key = self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
-            raise RuntimeError("Invalid fingerprint {public_key_fingerprint}")
+            return False
 
         db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
         path = path_from_root(
