@@ -210,11 +210,7 @@ class TradeStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from trade_records WHERE sent<? and confirmed=?",
-            (
-                4,
-                0,
-            ),
+            "SELECT * from trade_records WHERE sent<? and confirmed=?", (4, 0,),
         )
         rows = await cursor.fetchall()
         await cursor.close()

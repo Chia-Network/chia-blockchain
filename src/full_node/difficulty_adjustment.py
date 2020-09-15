@@ -135,14 +135,12 @@ def get_next_difficulty(
     # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
     max_diff = uint64(
         truncate_to_significant_bits(
-            constants.DIFFICULTY_FACTOR * Tc,
-            constants.SIGNIFICANT_BITS,
+            constants.DIFFICULTY_FACTOR * Tc, constants.SIGNIFICANT_BITS,
         )
     )
     min_diff = uint64(
         truncate_to_significant_bits(
-            Tc // constants.DIFFICULTY_FACTOR,
-            constants.SIGNIFICANT_BITS,
+            Tc // constants.DIFFICULTY_FACTOR, constants.SIGNIFICANT_BITS,
         )
     )
     if new_difficulty >= Tc:
