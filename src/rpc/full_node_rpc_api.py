@@ -362,8 +362,10 @@ class FullNodeRpcApi:
         else:
             header = None
 
-        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(
-            puzzle_hash, header
+        coin_records = (
+            await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(
+                puzzle_hash, header
+            )
         )
 
         return {"coin_records": coin_records}
