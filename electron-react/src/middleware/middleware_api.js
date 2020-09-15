@@ -290,7 +290,7 @@ export const handle_message = (store, payload) => {
     }
   }
   if (payload.data.success === false) {
-    if (payload.data.error.includes("already running")) {
+    if (payload.data.error.includes("already running") || payload.data.error === "not initialized") {
       return;
     }
     if (payload.data.error) {
