@@ -12,12 +12,16 @@ class FarmerRpcApi:
     def get_routes(self) -> Dict[str, Callable]:
         return {"/get_latest_challenges": self.get_latest_challenges}
 
-    async def _state_changed(self, change: str) -> List[str]:
+    async def _state_changed(self, change: str) -> List[Dict]:
         if change == "challenge":
             data = await self.get_latest_challenges({})
             return [
                 create_payload(
-                    "get_latest_challenges", data, self.service_name, "wallet_ui"
+                    "get_latest_challenges",
+                    data,
+                    self.service_name,
+                    "wallet_ui",
+                    string=False,
                 )
             ]
         return []

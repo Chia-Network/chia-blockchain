@@ -19,10 +19,12 @@ class HarvesterRpcApi:
             "/remove_plot_directory": self.remove_plot_directory,
         }
 
-    async def _state_changed(self, change: str) -> List[str]:
+    async def _state_changed(self, change: str) -> List[Dict]:
         if change == "plots":
             data = await self.get_plots({})
-            payload = create_payload("get_plots", data, self.service_name, "wallet_ui")
+            payload = create_payload(
+                "get_plots", data, self.service_name, "wallet_ui", string=False
+            )
             return [payload]
         return []
 

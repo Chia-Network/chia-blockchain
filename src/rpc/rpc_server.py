@@ -10,6 +10,7 @@ from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
 from src.util.ws_message import create_payload, format_response, pong
+from src.util.json_util import dict_to_json_str
 from src.util.ints import uint16
 
 log = logging.getLogger(__name__)
@@ -37,17 +38,25 @@ class RpcServer:
         change = args[0]
         if self.websocket is None:
             return
-        payloads: List[str] = await self.rpc_api._state_changed(*args)
+        payloads: List[Dict] = await self.rpc_api._state_changed(*args)
 
         if change == "add_connection" or change == "close_connection":
             data = await self.get_connections({})
-            payload = create_payload(
-                "get_connections", data, self.service_name, "wallet_ui"
-            )
-            payloads.append(payload)
+            if data is not None:
+
+                payload = create_payload(
+                    "get_connections",
+                    data,
+                    self.service_name,
+                    "wallet_ui",
+                    string=False,
+                )
+                payloads.append(payload)
         for payload in payloads:
+            if "success" not in payload["data"]:
+                payload["data"]["success"] = True
             try:
-                await self.websocket.send_str(payload)
+                await self.websocket.send_str(dict_to_json_str(payload))
             except Exception as e:
                 self.log.warning(f"Sending data failed. Exception {type(e)}.")
 
