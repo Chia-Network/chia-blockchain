@@ -143,16 +143,37 @@ class TestCCWallet:
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 97, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
+        utxo = [c for c in await full_node.coin_store.get_unspent_coin_records() if not c.coinbase]
+        val = await api_admin.add_rate_limited_funds({"wallet_id": admin_wallet_id, "amount": 100})
+        assert val["status"] == "SUCCESS"
+        for i in range(0, 2*num_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        await time_out_assert(15, check_balance, 197, api_user, user_wallet_id)
+        utxo_2 = [c for c in await full_node.coin_store.get_unspent_coin_records() if not c.coinbase]
 
-        val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id})
+        #test spending
+        val = await api_user.send_transaction(
+            {
+                "wallet_id": user_wallet_id,
+                "amount": 3,
+                "fee": 0,
+                "puzzle_hash": puzzle_hash,
+            }
+        )
 
         await time_out_assert(
             15, is_transaction_in_mempool, True, api_admin, val["transaction_id"]
         )
-
         for i in range(0, num_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
-        await time_out_assert(15, check_balance, 0, api_admin, admin_wallet_id)
         await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
-        final_balance = await wallet.get_confirmed_balance()
-        assert final_balance == fund_owners_initial_balance - 3
+        await time_out_assert(15, receiving_wallet.get_spendable_balance, 200)
+
+        # val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id})
+        # assert val["status"] == "SUCCESS"
+        # for i in range(0, num_blocks):
+        #     await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        # await time_out_assert(15, check_balance, 0, api_admin, admin_wallet_id)
+        # await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
+        # final_balance = await wallet.get_confirmed_balance()
+        # assert final_balance == fund_owners_initial_balance - 3

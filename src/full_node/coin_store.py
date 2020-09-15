@@ -262,3 +262,24 @@ class CoinStore:
         )
         await c2.close()
         await self.coin_record_db.commit()
+
+    async def get_unspent_coin_records(
+        self, header: Header = None
+    ) -> List[CoinRecord]:
+        coins = set()
+        if header is not None and header.header_hash in self.head_diffs:
+            diff_store = self.head_diffs[header.header_hash]
+            for _, record in diff_store.diffs.items():
+                if not record.spent:
+                    coins.add(record)
+        cursor = await self.coin_record_db.execute(
+            "SELECT * from coin_record WHERE spent=0"
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        for row in rows:
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
+            )
+            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4]))
+        return list(coins)
