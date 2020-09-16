@@ -1,16 +1,14 @@
 import time
 from typing import Dict, Optional, List, Set, Any
 import logging
-from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
+from blspy import G1Element, AugSchemeMPL, PrivateKey
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.condition_tools import (
-    conditions_for_solution,
     conditions_dict_for_solution,
-    conditions_by_opcode,
     pkm_pairs_for_conditions_dict,
 )
 from src.util.ints import uint64, uint32
@@ -106,7 +104,9 @@ class Wallet(AbstractWallet):
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
-    async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
+    async def hack_populate_secret_key_for_puzzle_hash(
+        self, puzzle_hash: bytes32
+    ) -> G1Element:
         maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
         if maybe is None:
             error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
@@ -118,7 +118,10 @@ class Wallet(AbstractWallet):
 
         # HACK
         self._pk2sk[bytes(public_key)] = secret_key
+        return public_key
 
+    async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
+        public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
         return puzzle_for_pk(bytes(public_key))
 
     async def get_new_puzzle(self) -> Program:
@@ -134,9 +137,7 @@ class Wallet(AbstractWallet):
             )
         ).puzzle_hash
 
-    def make_solution(
-        self, primaries=None, min_time=0, me=None, consumed=None, fee=0
-    ):
+    def make_solution(self, primaries=None, min_time=0, me=None, consumed=None, fee=0):
         assert fee >= 0
         condition_list = []
         if primaries:
@@ -279,14 +280,18 @@ class Wallet(AbstractWallet):
         signatures = []
 
         for coin_solution in coin_solutions:
+            await self.hack_populate_secret_key_for_puzzle_hash(
+                coin_solution.coin.puzzle_hash
+            )
+
             # Get AGGSIG conditions
-            err, con, cost = conditions_for_solution(coin_solution.solution)
-            if err or not con:
-                error_msg = f"Sign transaction failed, con:{con}, error: {err}"
+            err, conditions_dict, cost = conditions_dict_for_solution(
+                coin_solution.solution
+            )
+            if err or conditions_dict is None:
+                error_msg = f"Sign transaction failed, con:{conditions_dict}, error: {err}"
                 self.log.error(error_msg)
                 raise ValueError(error_msg)
-
-            conditions_dict = conditions_by_opcode(con)
 
             # Create signature
             for _, msg in pkm_pairs_for_conditions_dict(
@@ -294,7 +299,7 @@ class Wallet(AbstractWallet):
             ):
                 secret_key = self.secret_key_for_public_key(_)
                 if secret_key is None:
-                    self.log.error(f"no secret key for for {_}")
+                    self.log.error(f"no secret key for {_}")
                     return None
                 signature = AugSchemeMPL.sign(secret_key, msg)
                 signatures.append(signature)
@@ -346,25 +351,6 @@ class Wallet(AbstractWallet):
         """ Use this API to send transactions. """
         await self.wallet_state_manager.add_pending_transaction(tx)
 
-    # This is also defined in CCWallet as get_sigs()
-    # I think this should be a the default way the wallet gets signatures in sign_transaction()
-    async def get_sigs_for_innerpuz_with_innersol(
-        self, innerpuz: Program, innersol: Program
-    ) -> List[G2Element]:
-        puzzle_hash = innerpuz.get_tree_hash()
-        pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-        sigs: List[G2Element] = []
-        code_ = [innerpuz, innersol]
-        sexp = Program.to(code_)
-        error, conditions, cost = conditions_dict_for_solution(sexp)
-        if conditions is not None:
-            for _, msg in pkm_pairs_for_conditions_dict(conditions):
-                signature = AugSchemeMPL.sign(private, msg)
-                sigs.append(signature)
-        return sigs
-
-        # Create an offer spend bundle for chia given an amount of relative change (i.e -400 or 1000)
-
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(
         self, chia_amount: int, exclude: List[Coin]
@@ -387,7 +373,6 @@ class Wallet(AbstractWallet):
 
         # Create coin solutions for each utxo
         output_created = None
-        sigs: List[G2Element] = []
         for coin in utxos:
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             if output_created is None:
@@ -398,8 +383,6 @@ class Wallet(AbstractWallet):
             else:
                 solution = self.make_solution(consumed=[output_created.name()])
             list_of_solutions.append(CoinSolution(coin, Program.to([puzzle, solution])))
-            new_sigs = await self.get_sigs_for_innerpuz_with_innersol(puzzle, solution)
-            sigs = sigs + new_sigs
 
-        aggsig = AugSchemeMPL.aggregate(sigs)
-        return SpendBundle(list_of_solutions, aggsig)
+        spend_bundle = await self.sign_transaction(list_of_solutions)
+        return spend_bundle

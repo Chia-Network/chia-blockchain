@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict
 
 from blspy import PrivateKey, AugSchemeMPL, G1Element, G2Element
 
@@ -159,38 +159,30 @@ class WalletTool:
             solution = self.make_solution(condition_dic)
         else:
             solution = self.make_solution(condition_dic)
+        puzzle_solution_pair = Program.to([puzzle, solution])
 
-        spends.append((puzzle, CoinSolution(coin, solution)))
+        spends.append(CoinSolution(coin, puzzle_solution_pair))
         return spends
 
-    def sign_transaction(
-        self, spends: List[Tuple[Program, CoinSolution]]
-    ) -> SpendBundle:
+    def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:
         sigs = []
         solution: Program
         puzzle: Program
-        for puzzle, solution in spends:  # type: ignore # noqa
-            pubkey, secretkey = self.get_keys(solution.coin.puzzle_hash)
-            code_ = [puzzle, solution.solution]
-            sexp = Program.to(code_)
-            err, con, cost = conditions_for_solution(sexp)
+        for coin_solution in coin_solutions:  # type: ignore # noqa
+            pubkey, secretkey = self.get_keys(coin_solution.coin.puzzle_hash)
+            err, con, cost = conditions_for_solution(coin_solution.solution)
             if not con:
                 raise ValueError(err)
             conditions_dict = conditions_by_opcode(con)
 
             for _, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, bytes(solution.coin)
+                conditions_dict, bytes(coin_solution.coin)
             ):
                 signature = AugSchemeMPL.sign(secretkey, msg)
                 sigs.append(signature)
         aggsig = AugSchemeMPL.aggregate(sigs)
-        solution_list: List[CoinSolution] = [
-            CoinSolution(
-                coin_solution.coin, Program.to([puzzle, coin_solution.solution])
-            )
-            for (puzzle, coin_solution) in spends
-        ]
-        return SpendBundle(solution_list, aggsig)
+        spend_bundle = SpendBundle(coin_solutions, aggsig)
+        return spend_bundle
 
     def generate_signed_transaction(
         self,
