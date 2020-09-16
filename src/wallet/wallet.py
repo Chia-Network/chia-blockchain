@@ -115,8 +115,9 @@ class Wallet(AbstractWallet):
         ).puzzle_hash
 
     def make_solution(
-        self, primaries=None, min_time=0, me=None, consumed=None, fee=None
+        self, primaries=None, min_time=0, me=None, consumed=None, fee=0
     ):
+        assert fee >= 0
         condition_list = []
         if primaries:
             for primary in primaries:
@@ -248,10 +249,7 @@ class Wallet(AbstractWallet):
                     changepuzzlehash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
-                if fee > 0:
-                    solution = self.make_solution(primaries=primaries, fee=fee)
-                else:
-                    solution = self.make_solution(primaries=primaries)
+                solution = self.make_solution(primaries=primaries, fee=fee)
                 output_created = True
             elif output_created is False and origin_id == coin.name():
                 primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
@@ -259,10 +257,7 @@ class Wallet(AbstractWallet):
                     changepuzzlehash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
-                if fee > 0:
-                    solution = self.make_solution(primaries=primaries, fee=fee)
-                else:
-                    solution = self.make_solution(primaries=primaries)
+                solution = self.make_solution(primaries=primaries, fee=fee)
                 output_created = True
             else:
                 solution = self.make_solution()
