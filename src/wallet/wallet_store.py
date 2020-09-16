@@ -197,6 +197,24 @@ class WalletStore:
             )
         return coins
 
+    async def get_all_coins(self) -> Set[WalletCoinRecord]:
+        """ Returns set of all CoinRecords."""
+        coins = set()
+
+        cursor = await self.db_connection.execute("SELECT * from coin_record")
+        rows = await cursor.fetchall()
+        await cursor.close()
+        for row in rows:
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
+            )
+            coins.add(
+                WalletCoinRecord(
+                    coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
+                )
+            )
+        return coins
+
     async def get_spendable_for_index(
         self, index: int, wallet_id: int
     ) -> Set[WalletCoinRecord]:
