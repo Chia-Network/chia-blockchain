@@ -1,38 +1,21 @@
-import React from "react";
-import SelectKey from "./pages/SelectKey";
-import NewWallet from "./pages/NewWallet";
-import OldWallet from "./pages/OldWallet";
-import Dashboard from "./pages/Dashboard";
+import React from 'react';
+import Router from 'react-router-dom';
+import SelectKey from "../pages/SelectKey";
+import NewWallet from "../pages/NewWallet";
+import OldWallet from "../pages/OldWallet";
+import Dashboard from "../pages/Dashboard";
+import { RestoreBackup } from "../pages/backup/restoreBackup";
 import { useSelector } from "react-redux";
-
-import { ThemeProvider } from "@material-ui/core/styles";
 import {
   presentOldWallet,
   presentNewWallet,
   presentDashboard,
   presentSelectKeys,
   presentRestoreBackup
-} from "./modules/entranceMenu";
-import { CircularProgress } from "@material-ui/core";
-import { ModalDialog, Spinner } from "./pages/ModalDialog";
-import { RestoreBackup } from "./pages/backup/restoreBackup";
-import { useTheme } from "@material-ui/core/styles";
+} from "../modules/entranceMenu";
+import LoadingScreen from './loading/LoadingScreen';
 
-import theme from "./muiTheme";
-
-const LoadingScreen = props => {
-  const theme = useTheme();
-  return (
-    <div style={theme.div}>
-      <div style={theme.center}>
-        <h3 style={theme.h3}>{props.children}</h3>
-        <CircularProgress style={theme.h3} />
-      </div>
-    </div>
-  );
-};
-
-const CustomRouter = () => {
+export default function Router() {
   const logged_in = useSelector(state => state.wallet_state.logged_in);
   const logged_in_received = useSelector(
     state => state.wallet_state.logged_in_received
@@ -63,17 +46,4 @@ const CustomRouter = () => {
       return <RestoreBackup></RestoreBackup>;
     }
   }
-};
-const App = () => {
-  return (
-    <React.Fragment>
-      <ThemeProvider theme={theme}>
-        <ModalDialog></ModalDialog>
-        <Spinner></Spinner>
-        <CustomRouter></CustomRouter>
-      </ThemeProvider>
-    </React.Fragment>
-  );
-};
-
-export default App;
+}
