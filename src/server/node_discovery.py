@@ -447,6 +447,7 @@ class FullNodePeers(FullNodeDiscovery):
                 self.log.error(f"Exception in address relay: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
 
+
 class WalletPeers(FullNodeDiscovery):
     def __init__(
         self,
