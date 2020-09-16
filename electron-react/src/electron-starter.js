@@ -16,14 +16,15 @@ const {
 } = require("electron");
 const openAboutWindow = require("about-window").default;
 const path = require("path");
+const utilConfig = require("./util/config");
 const config = require("./config");
 const dev_config = require("./dev_config");
 const WebSocket = require("ws");
-const daemon_rpc_ws = require("./util/config").daemon_rpc_ws;
 const local_test = config.local_test;
-var url = require("url");
+const url = require("url");
 const os = require("os");
 const crypto = require("crypto");
+const parseArgs = require('minimist');
 
 global.sharedObj = { local_test: local_test };
 
@@ -91,17 +92,17 @@ const createPyProc = () => {
   if (pyProc != null) {
     pyProc.stdout.setEncoding("utf8");
 
-    pyProc.stdout.on("data", function(data) {
+    pyProc.stdout.on("data", function (data) {
       process.stdout.write(data.toString());
     });
 
     pyProc.stderr.setEncoding("utf8");
-    pyProc.stderr.on("data", function(data) {
+    pyProc.stderr.on("data", function (data) {
       //Here is where the error output goes
       process.stdout.write("stderr: " + data.toString());
     });
 
-    pyProc.on("close", function(code) {
+    pyProc.on("close", function (code) {
       //Here you can get the exit code of the script
       console.log("closing code: " + code);
     });
@@ -120,11 +121,11 @@ const closeDaemon = callback => {
 
   try {
     const request_id = crypto.randomBytes(32).toString("hex");
-    ws = new WebSocket(daemon_rpc_ws, {
+    ws = new WebSocket(utilConfig.getDaemonHost(), {
       perMessageDeflate: false
     });
     ws.on("open", function open() {
-      console.log("Opened websocket with", daemon_rpc_ws);
+      console.log("Opened websocket with", utilConfig.getDaemonHost());
       const msg = {
         command: "exit",
         ack: false,
@@ -152,7 +153,7 @@ const closeDaemon = callback => {
   }
 };
 
-const exitPyProc = e => {};
+const exitPyProc = e => { };
 
 app.on("will-quit", exitPyProc);
 
@@ -200,7 +201,7 @@ const createWindow = () => {
 
   mainWindow.loadURL(startUrl);
 
-  mainWindow.once("ready-to-show", function() {
+  mainWindow.once("ready-to-show", function () {
     mainWindow.show();
   });
 
@@ -213,22 +214,32 @@ const createWindow = () => {
       return;
     }
     e.preventDefault();
-    var choice = dialog.showMessageBoxSync({
-      type: "question",
-      buttons: ["No", "Yes"],
-      title: "Confirm",
-      message:
-        "Are you sure you want to quit? GUI Plotting and farming will stop."
-    });
-    if (choice == 0) {
-      return;
+
+    // only ask about closing and exit the daemon when ui and node are on the same machine
+    if (utilConfig.isLocalHost()) {
+      var choice = dialog.showMessageBoxSync({
+        type: "question",
+        buttons: ["No", "Yes"],
+        title: "Confirm",
+        message:
+          "Are you sure you want to quit? GUI Plotting and farming will stop."
+      });
+      if (choice == 0) {
+        return;
+      }
+
+      decidedToClose = true;
+      mainWindow.webContents.send("exit-daemon");
+      mainWindow.setBounds({ height: 500, width: 500 });
+      ipcMain.on("daemon-exited", (event, args) => {
+        mainWindow.close();
+      });
     }
-    decidedToClose = true;
-    mainWindow.webContents.send("exit-daemon");
-    mainWindow.setBounds({ height: 500, width: 500 });
-    ipcMain.on("daemon-exited", (event, args) => {
+    // for remote daemons just exit
+    else {
+      decidedToClose = true;
       mainWindow.close();
-    });
+    }
   });
 };
 
@@ -237,16 +248,27 @@ const createMenu = () => {
   return menu;
 };
 
+// get the host name off the command line if it's there
+const argv = parseArgs(process.argv.slice(1));
+if (argv.selfHostName) {
+  utilConfig.setSelfHostName(argv.selfHostName);
+}
+
 const appReady = async () => {
   app.applicationMenu = createMenu();
-  try {
-    await promisify(closeDaemon)();
-  } catch (e) {
-    console.error("Error in websocket", e);
+  // if the UI is on a different machine, just leave the daemon alone
+  if (utilConfig.isLocalHost()) {
+    try {
+      await promisify(closeDaemon)();
+    } catch (e) {
+      console.error("Error in websocket", e);
+    }
+    createPyProc();
+    if (ws) {
+      ws.terminate();
+    }
   }
 
-  createPyProc();
-  ws.terminate();
   createWindow();
 };
 

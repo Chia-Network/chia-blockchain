@@ -8,15 +8,16 @@ import dev_config from "../dev_config";
 const middleware = [reduxThunk, wsMiddleware];
 
 const store =
-  isElectron() && !dev_config.redux_tool
+  // when using electron wo redux or wo electron (ie in the browser) don't pass extensions to the composer
+  (isElectron() && !dev_config.redux_tool) || !isElectron()
     ? createStore(rootReducer, compose(applyMiddleware(...middleware)))
     : createStore(
-        rootReducer,
-        compose(
-          applyMiddleware(...middleware),
-          window.__REDUX_DEVTOOLS_EXTENSION__ &&
-            window.__REDUX_DEVTOOLS_EXTENSION__()
-        )
-      );
+      rootReducer,
+      compose(
+        applyMiddleware(...middleware),
+        window.__REDUX_DEVTOOLS_EXTENSION__ &&
+        window.__REDUX_DEVTOOLS_EXTENSION__()
+      )
+    );
 
 export default store;
