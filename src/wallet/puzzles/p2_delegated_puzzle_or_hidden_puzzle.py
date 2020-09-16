@@ -15,7 +15,7 @@ This roughly corresponds to bitcoin's taproot.
 """
 import hashlib
 
-from typing import List, Union
+from typing import Union
 
 from blspy import G1Element
 
@@ -69,11 +69,8 @@ def puzzle_for_pk(public_key: PublicKeyProgram) -> Program:
     return MOD.curry(public_key)
 
 
-def solution_with_delegated_puzzle(
-    synthetic_public_key: PublicKeyProgram, delegated_puzzle: Program, solution: Program
-) -> Program:
-    puzzle = puzzle_for_synthetic_public_key(synthetic_public_key)
-    return Program.to([puzzle, [[], delegated_puzzle, solution]])
+def solution_with_delegated_puzzle(delegated_puzzle: Program, solution: Program) -> Program:
+    return Program.to([[], delegated_puzzle, solution])
 
 
 def solution_with_hidden_puzzle(
@@ -90,7 +87,6 @@ def solution_with_hidden_puzzle(
     )
 
 
-def solution_for_conditions(puzzle_reveal: Program, conditions: Program) -> Program:
+def solution_for_conditions(conditions: Program) -> Program:
     delegated_puzzle = puzzle_for_conditions(conditions)
-    solution: List = []
-    return Program.to([puzzle_reveal, [delegated_puzzle, solution]])
+    return solution_with_delegated_puzzle(delegated_puzzle, Program.to(0))
