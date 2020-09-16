@@ -1,15 +1,17 @@
 import io
-from typing import Any, List, Set
+from typing import Any, List, Optional, Set, Tuple
 
 from src.types.sized_bytes import bytes32
 from src.util.clvm import run_program, sexp_from_stream, sexp_to_stream
-from clvm import SExp
 from src.util.hash import std_hash
 
-from clvm_tools.curry import curry
+from clvm import SExp
+from clvm.EvalError import EvalError
+from clvm.casts import int_from_bytes
+from clvm_tools.curry import curry, uncurry
 
 
-class Program(SExp):  # type: ignore # noqa
+class Program(SExp):
     """
     A thin wrapper around s-expression data intended to be invoked with "eval".
     """
@@ -61,14 +63,25 @@ class Program(SExp):  # type: ignore # noqa
         """
         return self._tree_hash(set(args))
 
-    def run(self, args) -> "Program":
+    def run_with_cost(self, args) -> Tuple[int, "Program"]:
         prog_args = Program.to(args)
-        cost, r = run_program(self, prog_args)
+        return run_program(self, prog_args)
+
+    def run(self, args) -> "Program":
+        cost, r = self.run_with_cost(args)
         return Program.to(r)
 
     def curry(self, *args) -> "Program":
         cost, r = curry(self, list(args))
         return Program.to(r)
 
+    def uncurry(self) -> Optional[Tuple["Program", "Program"]]:
+        return uncurry(self)
+
+    def as_int(self) -> int:
+        return int_from_bytes(self.as_atom())
+
     def __deepcopy__(self, memo):
         return type(self).from_bytes(bytes(self))
+
+    EvalError = EvalError

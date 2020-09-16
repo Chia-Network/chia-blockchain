@@ -4,8 +4,6 @@ from clvm import KEYWORD_FROM_ATOM
 
 from clvm_tools.binutils import disassemble as bu_disassemble
 
-from stages.stage_0 import run_program
-
 from src.types.coin import Coin
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
@@ -53,7 +51,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
 
     print("=" * 80)
     for coin_solution in spend_bundle.coin_solutions:
-        coin, solution_pair = coin_solution.coin, coin_solution.solution
+        coin, solution_pair = coin_solution.coin, Program.to(coin_solution.solution)
         puzzle_reveal = solution_pair.first()
         solution = solution_pair.rest().first()
 
@@ -70,7 +68,7 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
             print(f"*** error {error}")
         else:
             print()
-            cost, r = run_program(puzzle_reveal, solution)
+            r = puzzle_reveal.run(solution)
             print(disassemble(r))
             print()
             if conditions and len(conditions) > 0:

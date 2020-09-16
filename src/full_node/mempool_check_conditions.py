@@ -7,7 +7,7 @@ from src.types.coin_record import CoinRecord
 from src.types.name_puzzle_condition import NPC
 from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
-from src.util.clvm import EvalError, int_from_bytes, run_program
+from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
 from src.util.errors import Err
 import time
@@ -96,9 +96,9 @@ def get_name_puzzle_conditions(
     """
     cost_sum = 0
     try:
-        cost_run, sexp = run_program(block_program, [])
+        cost_run, sexp = block_program.run_with_cost([])
         cost_sum += cost_run
-    except EvalError:
+    except Program.EvalError:
         return Err.INVALID_COIN_SOLUTION, [], uint64(0)
 
     npc_list = []
@@ -121,7 +121,7 @@ def get_name_puzzle_conditions(
             cost_sum += cost_run
             if error:
                 return error, [], uint64(cost_sum)
-        except EvalError:
+        except Program.EvalError:
             return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
         if conditions_dict is None:
             conditions_dict = {}
