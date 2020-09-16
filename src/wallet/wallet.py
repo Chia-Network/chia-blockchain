@@ -1,9 +1,5 @@
 import time
-<<<<<<< HEAD
-from typing import Dict, List, Tuple, Set, Any
-=======
 from typing import Dict, Optional, List, Set, Any
->>>>>>> More wallet simplifications. Placeholder for looking up
 import logging
 from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
 from src.types.coin import Coin
@@ -52,13 +48,10 @@ class Wallet(AbstractWallet):
             self.log = logging.getLogger(__name__)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = info
-<<<<<<< HEAD
-=======
 
         # HACK
         self._pk2sk = {}
 
->>>>>>> More wallet simplifications. Placeholder for looking up
         return self
 
     async def get_confirmed_balance(self) -> uint64:
@@ -112,6 +105,21 @@ class Wallet(AbstractWallet):
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
+
+    async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
+        maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
+        if maybe is None:
+            error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
+            self.log.error(error_msg)
+            raise ValueError(error_msg)
+
+        # Get puzzle for pubkey
+        public_key, secret_key = maybe
+
+        # HACK
+        self._pk2sk[bytes(public_key)] = secret_key
+
+        return puzzle_for_pk(bytes(public_key))
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(
@@ -242,17 +250,7 @@ class Wallet(AbstractWallet):
 
         for coin in coins:
             self.log.info(f"coin from coins {coin}")
-            # Get keys for puzzle_hash
-            puzzle_hash = coin.puzzle_hash
-            maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
-            if not maybe:
-                error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
-                self.log.error(error_msg)
-                raise ValueError(error_msg)
-
-            # Get puzzle for pubkey
-            pubkey, secretkey = maybe
-            puzzle: Program = puzzle_for_pk(bytes(pubkey))
+            puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
 
             # Only one coin creates outputs
             if not output_created and origin_id in (None, coin.name()):
@@ -281,17 +279,6 @@ class Wallet(AbstractWallet):
         signatures = []
 
         for coin_solution in coin_solutions:
-            # Get keys
-            keys = await self.wallet_state_manager.get_keys(coin_solution.coin.puzzle_hash)
-            if not keys:
-                error_msg = f"Sign transaction failed, No Keys for puzzlehash {coin_solution.coin.puzzle_hash}"
-                self.log.error(error_msg)
-                raise ValueError(error_msg)
-
-            pubkey, secretkey = keys
-            # HACK
-            self._pk2sk[bytes(pubkey)] = secretkey
-
             # Get AGGSIG conditions
             err, con, cost = conditions_for_solution(coin_solution.solution)
             if err or not con:
@@ -309,30 +296,12 @@ class Wallet(AbstractWallet):
                 if secret_key is None:
                     self.log.error(f"no secret key for for {_}")
                     return None
-                signature = AugSchemeMPL.sign(secretkey, msg)
+                signature = AugSchemeMPL.sign(secret_key, msg)
                 signatures.append(signature)
 
         # Aggregate signatures
         aggsig = AugSchemeMPL.aggregate(signatures)
         return SpendBundle(coin_solutions, aggsig)
-
-    async def generate_signed_transaction_dict(
-        self, data: Dict[str, Any]
-    ) -> Optional[TransactionRecord]:
-        """ Use this to generate transaction. """
-        # Check that both are integers
-        if not isinstance(data["amount"], int) or not isinstance(data["amount"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        amount = uint64(data["amount"])
-
-        if "fee" in data:
-            fee = uint64(data["fee"])
-        else:
-            fee = uint64(0)
-
-        puzzle_hash = decode_puzzle_hash(data["puzzle_hash"])
-
-        return await self.generate_signed_transaction(amount, puzzle_hash, fee)
 
     async def generate_signed_transaction(
         self,
@@ -420,10 +389,7 @@ class Wallet(AbstractWallet):
         output_created = None
         sigs: List[G2Element] = []
         for coin in utxos:
-            pubkey, secretkey = await self.wallet_state_manager.get_keys(
-                coin.puzzle_hash
-            )
-            puzzle = self.puzzle_for_pk(bytes(pubkey))
+            puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             if output_created is None:
                 newpuzhash = await self.get_new_puzzlehash()
                 primaries = [{"puzzlehash": newpuzhash, "amount": chia_amount}]
