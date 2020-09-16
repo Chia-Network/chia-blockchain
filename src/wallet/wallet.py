@@ -13,7 +13,10 @@ from src.util.condition_tools import (
 )
 from src.util.ints import uint64, uint32
 from src.wallet.abstract_wallet import AbstractWallet
-from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk, solution_for_conditions
+from src.wallet.puzzles.p2_delegated_puzzle import (
+    puzzle_for_pk,
+    solution_for_conditions,
+)
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_my_coin_id_condition,
     make_assert_time_exceeds_condition,
@@ -273,9 +276,7 @@ class Wallet(AbstractWallet):
     def secret_key_for_public_key(self, public_key: G1Element) -> Optional[PrivateKey]:
         return self._pk2sk.get(bytes(public_key))
 
-    async def sign_transaction(
-        self, coin_solutions: List[CoinSolution]
-    ) -> SpendBundle:
+    async def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:
         signatures = []
 
         for coin_solution in coin_solutions:
@@ -288,7 +289,9 @@ class Wallet(AbstractWallet):
                 coin_solution.solution
             )
             if err or conditions_dict is None:
-                error_msg = f"Sign transaction failed, con:{conditions_dict}, error: {err}"
+                error_msg = (
+                    f"Sign transaction failed, con:{conditions_dict}, error: {err}"
+                )
                 self.log.error(error_msg)
                 raise ValueError(error_msg)
 
@@ -298,8 +301,9 @@ class Wallet(AbstractWallet):
             ):
                 secret_key = self.secret_key_for_public_key(_)
                 if secret_key is None:
-                    self.log.error(f"no secret key for {_}")
-                    return None
+                    e_msg = f"no secret key for {_}"
+                    self.log.error(e_msg)
+                    raise ValueError(e_msg)
                 signature = AugSchemeMPL.sign(secret_key, msg)
                 signatures.append(signature)
 

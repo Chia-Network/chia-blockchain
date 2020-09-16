@@ -1,6 +1,6 @@
 import asyncio
 from time import time
-from typing import List, Tuple
+from typing import List
 
 import pytest
 
@@ -9,7 +9,6 @@ from src.protocols import full_node_protocol
 from src.types.coin_solution import CoinSolution
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import (
     conditions_for_solution,
@@ -868,25 +867,23 @@ class TestMempool:
         ):
             pass
 
-        unsigned: List[
-            Tuple[Program, CoinSolution]
-        ] = wallet_a.generate_unsigned_transaction(
+        unsigned: List[CoinSolution] = wallet_a.generate_unsigned_transaction(
             1000, receiver_puzzlehash, block.get_coinbase(), {}, 0
         )
         assert len(unsigned) == 1
+        coin_solution = unsigned[0]
 
-        puzzle, solution = unsigned[0]
-        code_ = [puzzle, solution.solution]
-        sexp = Program.to(code_)
-
-        err, con, cost = conditions_for_solution(sexp)
+        err, con, cost = conditions_for_solution(coin_solution.solution)
         assert con is not None
 
+        puzzle, solution = list(coin_solution.solution.as_iter())
         conditions_dict = conditions_by_opcode(con)
-        pkm_pairs = pkm_pairs_for_conditions_dict(conditions_dict, solution.coin.name())
+        pkm_pairs = pkm_pairs_for_conditions_dict(
+            conditions_dict, coin_solution.coin.name()
+        )
         assert len(pkm_pairs) == 1
 
-        assert pkm_pairs[0][1] == solution.solution.first().get_tree_hash()
+        assert pkm_pairs[0][1] == solution.first().get_tree_hash()
 
         spend_bundle = wallet_a.sign_transaction(unsigned)
         assert spend_bundle is not None
