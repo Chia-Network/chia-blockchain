@@ -12,7 +12,6 @@ from src.util.ints import uint32
 
 
 def test_1():
-    puzzle_program_0 = puzzle_program_for_index(uint32(0))
     puzzle_program_1 = puzzle_program_for_index(uint32(1))
     puzzle_program_2 = puzzle_program_for_index(uint32(2))
 
@@ -22,9 +21,7 @@ def test_1():
     ]
 
     assert conditions is not None
-    puzzle_hash_solution = p2_delegated_puzzle.solution_for_conditions(
-        puzzle_program_0, conditions
-    )
+    puzzle_hash_solution = p2_delegated_puzzle.solution_for_conditions(conditions)
 
     error, output_conditions, cost = conditions_for_solution(puzzle_hash_solution)
     assert error is None
