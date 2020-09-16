@@ -13,8 +13,7 @@ from src.util.condition_tools import (
 )
 from src.util.ints import uint64, uint32
 from src.wallet.abstract_wallet import AbstractWallet
-from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
-from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
+from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk, solution_for_conditions
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_my_coin_id_condition,
     make_assert_time_exceeds_condition,
@@ -154,7 +153,7 @@ class Wallet(AbstractWallet):
             condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:
             condition_list.append(make_assert_fee_condition(fee))
-        return Program.to([puzzle_for_conditions(condition_list), []])
+        return solution_for_conditions(condition_list)
 
     async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
         """ Returns a set of coins that can be used for generating a new transaction. """
