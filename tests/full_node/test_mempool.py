@@ -427,7 +427,9 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID, blocks[2].get_coinbase().name(), None,
+            ConditionOpcode.ASSERT_MY_COIN_ID,
+            blocks[2].get_coinbase().name(),
+            None,
         )
         dic = {cvp.opcode: [cvp]}
 
@@ -565,7 +567,9 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED, block2.get_coinbase().name(), None,
+            ConditionOpcode.ASSERT_COIN_CONSUMED,
+            block2.get_coinbase().name(),
+            None,
         )
         dic = {cvp.opcode: [cvp]}
 
@@ -611,7 +615,9 @@ class TestMempool:
                 pass
 
         cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_COIN_CONSUMED, block2.get_coinbase().name(), None,
+            ConditionOpcode.ASSERT_COIN_CONSUMED,
+            block2.get_coinbase().name(),
+            None,
         )
         dic = {cvp.opcode: [cvp]}
 
@@ -652,7 +658,11 @@ class TestMempool:
             ):
                 pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_FEE,
+            int_to_bytes(10),
+            None,
+        )
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
@@ -700,7 +710,11 @@ class TestMempool:
             ):
                 pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_FEE,
+            int_to_bytes(10),
+            None,
+        )
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = wallet_a.generate_signed_transaction(
@@ -752,7 +766,11 @@ class TestMempool:
             ):
                 pass
 
-        cvp = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None,)
+        cvp = ConditionVarPair(
+            ConditionOpcode.ASSERT_FEE,
+            int_to_bytes(10),
+            None,
+        )
         dic = {cvp.opcode: [cvp]}
 
         fee = 9
