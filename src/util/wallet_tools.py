@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 
 from blspy import PrivateKey, AugSchemeMPL, G1Element, G2Element
 
@@ -129,7 +129,7 @@ class WalletTool:
         condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]],
         fee: int = 0,
         secretkey=None,
-    ) -> List[Tuple[Program, CoinSolution]]:
+    ) -> List[CoinSolution]:
         spends = []
         spend_value = coin.amount
         puzzle_hash = coin.puzzle_hash

@@ -69,7 +69,9 @@ def puzzle_for_pk(public_key: PublicKeyProgram) -> Program:
     return MOD.curry(public_key)
 
 
-def solution_with_delegated_puzzle(delegated_puzzle: Program, solution: Program) -> Program:
+def solution_with_delegated_puzzle(
+    delegated_puzzle: Program, solution: Program
+) -> Program:
     return Program.to([[], delegated_puzzle, solution])
 
 
