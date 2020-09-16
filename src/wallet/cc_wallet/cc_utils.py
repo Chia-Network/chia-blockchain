@@ -224,7 +224,7 @@ def uncurry_cc(puzzle: Program) -> Optional[Tuple[Program, Program, Program]]:
     Take a puzzle and return `None` if it's not a `CC_MOD` cc, or
     a triple of `mod_hash, genesis_coin_checker, inner_puzzle` if it is.
     """
-    r = uncurry(puzzle)
+    r = puzzle.uncurry()
     if r is None:
         return r
     inner_f, args = r

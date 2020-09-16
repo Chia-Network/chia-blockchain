@@ -1,7 +1,5 @@
 from typing import Optional
 
-from clvm_tools.curry import curry as ct_curry, uncurry
-
 from src.types.coin import Coin
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
@@ -11,22 +9,13 @@ from src.wallet.puzzles.load_clvm import load_clvm
 MOD = load_clvm("genesis-by-coin-id-with-0.clvm", package_or_requirement=__name__)
 
 
-def curry(*args, **kwargs):
-    """
-    The clvm_tools version of curry returns `cost, program` for now.
-    Eventually it will just return `program`. This placeholder awaits that day.
-    """
-    cost, prog = ct_curry(*args, **kwargs)
-    return Program.to(prog)
-
-
 def create_genesis_or_zero_coin_checker(genesis_coin_id: bytes32) -> Program:
     """
     Given a specific genesis coin id, create a `genesis_coin_mod` that allows
     both that coin id to issue a cc, or anyone to create a cc with amount 0.
     """
     genesis_coin_mod = MOD
-    return curry(genesis_coin_mod, [genesis_coin_id])
+    return genesis_coin_mod.curry(genesis_coin_id)
 
 
 def genesis_coin_id_for_genesis_coin_checker(
@@ -35,7 +24,7 @@ def genesis_coin_id_for_genesis_coin_checker(
     """
     Given a `genesis_coin_checker` program, pull out the genesis coin id.
     """
-    r = uncurry(genesis_coin_checker)
+    r = genesis_coin_checker.uncurry()
     if r is None:
         return r
     f, args = r
