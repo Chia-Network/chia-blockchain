@@ -30,7 +30,6 @@ if [ "$(uname)" = "Linux" ]; then
   if type apt-get; then
     # Debian/Ubuntu
     UBUNTU=true
-    sudo apt-get update
     sudo apt-get install -y npm nodejs
   elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
     # AMZN 2
