@@ -4,15 +4,21 @@ export const wsConnected = host => ({ type: "WS_CONNECTED", host });
 export const wsDisconnect = host => ({ type: "WS_DISCONNECT", host });
 export const wsDisconnected = host => ({ type: "WS_DISCONNECTED", host });
 
-const websocketInitialState = {
+type WebsocketState = {
+  connected: boolean,
+  connecting: boolean,
+  host?: string,
+};
+
+const initialState: WebsocketState = {
   connected: false,
   connecting: false
 };
 
-export const websocketReducer = (
-  state = { ...websocketInitialState },
-  action
-) => {
+export default function websocketReducer(
+  state = { ...initialState },
+  action: any,
+): WebsocketState {
   switch (action.type) {
     case "WS_CONNECTED":
       // console.log("connected now!");
@@ -35,4 +41,4 @@ export const websocketReducer = (
     default:
       return state;
   }
-};
+}

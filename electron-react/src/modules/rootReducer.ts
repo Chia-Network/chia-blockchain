@@ -1,13 +1,13 @@
 import { combineReducers } from "redux";
-import { websocketReducer } from "./websocket";
-import { incomingReducer } from "./incoming_api";
-import { mnemonicReducer } from "./mnemonic_input";
+import websocketReducer from "./websocket";
+import incomingReducer from "./incoming";
+import mnemonicReducer from "./mnemonic";
 import { mainMenuReducer } from "./mainMenu";
-import { walletMenuReducer } from "./walletMenu";
+import walletMenuReducer from "./walletMenu";
 import { createWalletReducer } from "./createWalletReducer";
-import { tradeReducer } from "./TradeReducer";
-import { dialogReducer } from "./dialogReducer";
-import { daemonReducer } from "./daemon_api";
+import tradeReducer from "./trade";
+import dialogReducer from "./dialog";
+import daemonReducer from "./daemon";
 import { entranceReducer } from "./entranceMenu";
 import { fullnodeReducer } from "./fullnode_api";
 import { farmingReducer } from "./farming_api";
@@ -15,7 +15,7 @@ import { plotControlReducer } from "./plotter_control";
 import { farmerMenuReducer } from "./farmer_menu";
 import { tradeMenuReducer } from "./tradeMenu";
 import { progressReducer } from "./progressReducer";
-import { backupReducer } from "./backup_state";
+import backupReducer from "./backup";
 
 const rootReducer = combineReducers({
   daemon_state: daemonReducer,

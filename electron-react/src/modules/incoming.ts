@@ -1,41 +1,8 @@
 import { service_wallet } from '../util/service_names';
 import type Wallet from '../types/Wallet';
-import type Transaction from '../types/Transaction';
-import type SpendBundle from '../types/SpendBundle';
-import type Coin from '../types/Coin';
-import createWallet from '../utils/createWallet';
+import createWallet from '../util/createWallet';
 
-export const transaction = (
-  confirmed_at_index: number,
-  created_at_time: number,
-  to_address: string,
-  amount: number,
-  fee_amount: number,
-  incoming: boolean,
-  confirmed: boolean,
-  sent: number,
-  spend_bundle: SpendBundle,
-  additions: Coin[],
-  removals: Coin[],
-  wallet_id: number,
-): Transaction => ({
-  confirmed_at_index,
-  created_at_time,
-  to_address,
-  amount,
-  fee_amount,
-  incoming,
-  confirmed,
-  sent,
-  spend_bundle,
-  additions,
-  removals,
-  wallet_id,
-});
-
-// export const initial_wallet = createWallet(0, "Chia Wallet", "STANDARD_WALLET", "");
-
-export interface IncomingState {
+type IncomingState = {
   mnemonic: string[],
   public_key_fingerprints: string[],
   selected_fingerprint: null,
@@ -69,7 +36,7 @@ const initialState: IncomingState = {
   show_create_backup: false
 };
 
-export function incomingReducer(state = { ...initialState }, action: any): IncomingState {
+export default function incomingReducer(state = { ...initialState }, action: any): IncomingState {
   switch (action.type) {
     case "SHOW_CREATE_BACKUP":
       return {
@@ -274,4 +241,4 @@ export function incomingReducer(state = { ...initialState }, action: any): Incom
     default:
       return state;
   }
-};
+}
