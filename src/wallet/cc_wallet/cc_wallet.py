@@ -624,7 +624,9 @@ class CCWallet:
         outgoing_amount = uint64(sum(amounts))
 
         if coins is None:
-            selected_coins: Set[Coin] = await self.select_coins(uint64(outgoing_amount + fee))
+            selected_coins: Set[Coin] = await self.select_coins(
+                uint64(outgoing_amount + fee)
+            )
         else:
             selected_coins = coins
 
