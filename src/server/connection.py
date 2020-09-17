@@ -205,14 +205,12 @@ class PeerConnections:
             return (None, None)
 
         # https://stackoverflow.com/a/28950776
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(("introducer1.beta.chia.net", 8444))
-            ip = s.getsockname()[0]
-        except Exception:
-            ip = None
-        finally:
-            s.close()
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            try:
+                s.connect(("introducer.beta.chia.net", 8444))
+                ip = s.getsockname()[0]
+            except Exception:
+                ip = None
         if ip is None:
             return (None, None)
         return (ip, port)
@@ -276,26 +274,26 @@ class PeerConnections:
                 )
 
     def failed_connection(self, peer_info):
-        if self.local_type == NodeType.FULL_NODE:
+        if self.full_node_peers_callback is not None:
+            self.full_node_peers_callback(
+                "mark_attempted",
+                peer_info,
+            )
+        if self.wallet_callback is not None:
+            self.wallet_callback(
+                "mark_attempted",
+                peer_info,
+            )
+
+    def update_connection_time(self, connection):
+        if connection.connection_type == NodeType.FULL_NODE and connection.is_outbound:
             if self.full_node_peers_callback is not None:
                 self.full_node_peers_callback(
-                    "mark_attempted",
-                    peer_info,
+                    "update_connection_time",
+                    connection.get_peer_info(),
                 )
             if self.wallet_callback is not None:
                 self.wallet_callback(
-                    "mark_attempted",
-                    peer_info,
-                )
-
-    def update_connection_time(self, connection):
-        if (
-            connection.connection_type == NodeType.FULL_NODE
-            and connection.is_outbound
-            and connection.local_type == NodeType.FULL_NODE
-        ):
-            if self.full_node_peers_callback is not None:
-                self.full_node_peers_callback(
                     "update_connection_time",
                     connection.get_peer_info(),
                 )
