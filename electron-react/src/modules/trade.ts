@@ -1,31 +1,31 @@
 import { service_wallet } from "../util/service_names";
 
-export const addTrade = trade => ({ type: "TRADE_ADDED", trade });
+export const addTrade = (trade: any) => ({ type: "TRADE_ADDED", trade });
 export const resetTrades = () => ({ type: "RESET_TRADE" });
-export const presentTrade = trade => ({ type: "PRESENT_TRADES", trade });
+export const presentTrade = (trade: any) => ({ type: "PRESENT_TRADES", trade });
 export const presetOverview = () => ({ type: "PRESENT_OVERVIEW" });
 
-export const newBuy = (amount, id) => ({
-  amount: amount,
+export const newBuy = (amount: number, id: number) => ({
+  amount,
   wallet_id: id,
   side: "buy"
 });
 
-export const newSell = (amount, id) => ({
-  amount: amount,
+export const newSell = (amount: number, id: number) => ({
+  amount,
   wallet_id: id,
   side: "sell"
 });
 
-export const offerParsed = offer => ({
+export const offerParsed = (offer: any) => ({
   type: "OFFER_PARSING",
   status: parsingStateParsed,
-  offer: offer
+  offer,
 });
-export const offerParsingName = (name, path) => ({
+export const offerParsingName = (name: string, path: string) => ({
   type: "OFFER_NAME",
-  name: name,
-  path: path
+  name,
+  path,
 });
 export const parsingStarted = () => ({
   type: "OFFER_PARSING",
@@ -37,19 +37,33 @@ export const parsingStatePending = "PENDING";
 export const parsingStateParsed = "PARSED";
 export const parsingStateReset = "RESET";
 
-const initial_state = {
+type TradeState = {
+  trades: any[],
+  show_offer: boolean,
+  parsing_state: 'NONE' | 'PENDING' | 'PARSED' | 'RESET',
+  parsed_offer: any,
+  parsed_offer_name: string,
+  parsed_offer_path: string,
+  pending_trades: Object[],
+  trade_history: Object[],
+  showing_trade: boolean,
+  trade_showed?: boolean | null,
+};
+
+const initialState: TradeState = {
   trades: [],
   show_offer: false,
   parsing_state: parsingStateNone,
   parsed_offer: null,
   parsed_offer_name: "",
+  parsed_offer_path: '',
   pending_trades: [],
   trade_history: [],
   showing_trade: false,
-  trade_showed: null
+  trade_showed: null,
 };
 
-export const tradeReducer = (state = { ...initial_state }, action) => {
+export default function tradeReducer(state = { ...initialState }, action: any): TradeState {
   let trade;
   switch (action.type) {
     case "INCOMING_MESSAGE":
@@ -84,14 +98,14 @@ export const tradeReducer = (state = { ...initial_state }, action) => {
       }
       return state;
     case "LOG_OUT":
-      return { ...initial_state };
+      return { ...initialState };
     case "TRADE_ADDED":
       trade = action.trade;
       const new_trades = [...state.trades];
       new_trades.push(trade);
       return { ...state, trades: new_trades };
     case "RESET_TRADE":
-      return { ...initial_state };
+      return { ...initialState };
     case "OFFER_PARSING":
       var status = action.status;
       if (status === parsingStateParsed) {
@@ -116,13 +130,13 @@ export const tradeReducer = (state = { ...initial_state }, action) => {
       return {
         ...state,
         parsed_offer_name: action.name,
-        parsed_offer_path: action.path
+        parsed_offer_path: action.path,
       };
     case "PRESENT_OVERVIEW":
       return {
         ...state,
         showing_trade: false,
-        trade_showed: null
+        trade_showed: null,
       };
     case "PRESENT_TRADES":
       return {
@@ -133,4 +147,4 @@ export const tradeReducer = (state = { ...initial_state }, action) => {
     default:
       return state;
   }
-};
+}

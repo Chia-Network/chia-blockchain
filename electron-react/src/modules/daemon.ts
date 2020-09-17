@@ -8,7 +8,22 @@ import {
   service_plotter
 } from "../util/service_names";
 
-const initial_state = {
+type DeamonState = {
+  daemon_running: boolean,
+  daemon_connected: boolean,
+  wallet_running: boolean,
+  wallet_connected: boolean,
+  full_node_running: boolean,
+  full_node_connected: boolean,
+  farmer_running: boolean,
+  farmer_connected: boolean,
+  harvester_running: boolean,
+  harvester_connected: boolean,
+  plotter_running: boolean,
+  exiting: boolean,
+};
+
+const initialState: DeamonState = {
   daemon_running: false,
   daemon_connected: false,
   wallet_running: false,
@@ -23,7 +38,7 @@ const initial_state = {
   exiting: false
 };
 
-export const daemonReducer = (state = { ...initial_state }, action) => {
+export default function daemonReducer(state = { ...initialState }, action: any): DeamonState {
   switch (action.type) {
     case "INCOMING_MESSAGE":
       if (
@@ -95,8 +110,8 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
       }
       return state;
     case "WS_DISCONNECTED":
-      return initial_state;
+      return initialState;
     default:
       return state;
   }
-};
+}
