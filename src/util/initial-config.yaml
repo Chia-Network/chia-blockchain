@@ -114,7 +114,7 @@ full_node:
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v19.db
-  peer_db_path: db/peer_table.db
+  peer_db_path: db/peer_table_node.db
   simulator_database_path: sim_db/simulator_blockchain_v19.db
 
   # If True, starts an RPC server at the following port
@@ -196,6 +196,7 @@ wallet:
   starting_height: 0
   num_sync_batches: 50
   initial_num_public_keys: 100
+  peer_db_path: db/peer_table_wallet.db
 
   full_node_peer:
     host: *self_hostname

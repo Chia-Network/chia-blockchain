@@ -334,7 +334,7 @@ class TestWalletSimulator:
             )
 
         await time_out_assert(
-            60,
+            2 * 60,
             has_full_node,
             True,
         )
