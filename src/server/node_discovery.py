@@ -338,7 +338,7 @@ class FullNodePeers(FullNodeDiscovery):
                 NodeType.FULL_NODE,
                 Message(
                     "respond_peers_full_node",
-                    full_node_protocol.RespondPeers([timestamped_peer])
+                    full_node_protocol.RespondPeers([timestamped_peer]),
                 ),
                 Delivery.BROADCAST,
             )
