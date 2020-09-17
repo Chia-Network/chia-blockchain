@@ -27,10 +27,12 @@ def service_kwargs_for_wallet(root_path):
 
     api = WalletNode(config, keychain, root_path, consensus_constants=wallet_constants)
 
-    connect_peers = [
-        PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
-    ]
-
+    if "full_node_peer" in config:
+        connect_peers = [
+            PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
+        ]
+    else:
+        connect_peers = []
     async def start_callback():
         await api._start()
 

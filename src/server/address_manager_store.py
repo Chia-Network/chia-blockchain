@@ -72,9 +72,9 @@ class AddressManagerStore:
         metadata = await self.get_metadata()
         if "key" not in metadata:
             return True
-        if metadata.get("new_count", 0) > 0:
+        if int(metadata.get("new_count", 0)) > 0:
             return False
-        if metadata.get("tried_count", 0) > 0:
+        if int(metadata.get("tried_count", 0)) > 0:
             return False
         return True
 

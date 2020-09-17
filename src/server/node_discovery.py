@@ -58,7 +58,7 @@ class FullNodeDiscovery:
         self.connection = await aiosqlite.connect(self.peer_db_path)
         self.address_manager_store = await AddressManagerStore.create(self.connection)
         if not await self.address_manager_store.is_empty():
-            self.address_manager = self.address_manager_store.deserialize()
+            self.address_manager = await self.address_manager_store.deserialize()
         else:
             await self.address_manager_store.clear()
             self.address_manager = AddressManager()
@@ -373,6 +373,7 @@ class FullNodePeers(FullNodeDiscovery):
             if is_outbound:
                 return
             peers = await self.address_manager.get_peers()
+            await self.add_peers_neighbour(peers, peer_info)
             outbound_message = OutboundMessage(
                 NodeType.FULL_NODE,
                 Message(
@@ -381,8 +382,16 @@ class FullNodePeers(FullNodeDiscovery):
                 ),
                 Delivery.RESPOND,
             )
-            await self.add_peers_neighbour(peers, peer_info)
             yield outbound_message
+            outbound_message2 = OutboundMessage(
+                NodeType.WALLET,
+                Message(
+                    "respond_peers_full_node",
+                    full_node_protocol.RespondPeers(peers),
+                ),
+                Delivery.RESPOND,
+            )
+            yield outbound_message2
         except Exception as e:
             self.log.error(f"Request peers exception: {e}")
 

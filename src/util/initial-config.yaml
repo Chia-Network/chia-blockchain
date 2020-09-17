@@ -196,14 +196,13 @@ wallet:
   starting_height: 0
   num_sync_batches: 50
   initial_num_public_keys: 100
-  peer_db_path: db/peer_table_wallet.db
 
   full_node_peer:
     host: *self_hostname
     port: 8444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v18.db
+  database_path: wallet/db/blockchain_wallet_v19.db
   wallet_peers_path: wallet/db/wallet_peers.db
 
   logging: *logging

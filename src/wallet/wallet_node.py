@@ -194,6 +194,7 @@ class WalletNode:
             self.log,
         )
         await self.wallet_peers.start()
+        asyncio.create_task(self._periodically_check_full_node())
         return True
 
     def _close(self):
@@ -308,6 +309,15 @@ class WalletNode:
         for msg in messages:
             yield msg
 
+    async def _periodically_check_full_node(self):
+        tries = 0
+        while not self._shut_down and tries < 5:
+            if self._has_full_node():
+                await self.wallet_peers.ensure_is_closed()
+                break
+            tries += 1
+            await asyncio.sleep(180)
+
     def _has_full_node(self) -> bool:
         if "full_node_peer" in self.config:
             full_node_peer = PeerInfo(
@@ -322,6 +332,18 @@ class WalletNode:
                 socket.gethostbyname(full_node_peer.host), full_node_peer.port
             )
             if full_node_peer in peers or full_node_resolved in peers:
+                self.log.info(
+                    f"Will not attempt to connect to other nodes, already connected to {full_node_peer}"
+                )
+                for connection in self.global_connections.get_full_node_connections():
+                    if (
+                        connection.get_peer_info() != full_node_peer
+                        and connection.get_peer_info() != full_node_resolved
+                    ):
+                        self.log.info(
+                            f"Closing unnecessary connection to {connection.get_peer_info()}."
+                        )
+                        self.global_connections.close(connection)
                 return True
         return False
 
