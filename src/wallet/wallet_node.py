@@ -599,6 +599,7 @@ class WalletNode:
                     [],
                     total_iters,
                     None,
+                    uint64(0),
                 )
                 res = await self.wallet_state_manager.receive_block(block_record, None)
                 assert (
@@ -903,6 +904,7 @@ class WalletNode:
                 None,
                 response.header_block.header.data.total_iters,
                 response.header_block.challenge.get_hash(),
+                response.header_block.header.data.timestamp,
             )
 
             if self.wallet_state_manager.sync_mode:
@@ -970,6 +972,7 @@ class WalletNode:
                 [],
                 block_record.total_iters,
                 block_record.new_challenge_hash,
+                block_record.timestamp,
             )
             respond_header_msg: Optional[
                 wallet_protocol.RespondHeader
@@ -1074,6 +1077,7 @@ class WalletNode:
             None,
             block_record.total_iters,
             header_block.challenge.get_hash(),
+            header_block.header.data.timestamp,
         )
         self.cached_blocks[response.header_hash] = (
             new_br,
@@ -1128,6 +1132,7 @@ class WalletNode:
                 [],
                 new_br.total_iters,
                 new_br.new_challenge_hash,
+                new_br.timestamp,
             )
             respond_header_msg: Optional[
                 wallet_protocol.RespondHeader
@@ -1210,6 +1215,7 @@ class WalletNode:
             all_coins,
             block_record.total_iters,
             header_block.challenge.get_hash(),
+            header_block.header.data.timestamp,
         )
 
         self.cached_blocks[response.header_hash] = (

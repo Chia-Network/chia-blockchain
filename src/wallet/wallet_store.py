@@ -43,7 +43,7 @@ class WalletStore:
         )
         await self.db_connection.execute(
             "CREATE TABLE IF NOT EXISTS block_records(header_hash text PRIMARY KEY, height int,"
-            " in_lca_path tinyint, block blob)"
+            " in_lca_path tinyint, timestamp int, block blob)"
         )
 
         # Useful for reorg lookups
@@ -69,6 +69,22 @@ class WalletStore:
 
         await self.db_connection.execute(
             "CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)"
+        )
+
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS header_hash on block_records(header_hash)"
+        )
+
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS timestamp on block_records(timestamp)"
+        )
+
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS height on block_records(height)"
+        )
+
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS in_lca_path on block_records(in_lca_path)"
         )
 
         await self.db_connection.commit()
@@ -350,7 +366,7 @@ class WalletStore:
         hash_to_br: Dict = {}
         max_height = -1
         for row in rows:
-            br = BlockRecord.from_bytes(row[3])
+            br = BlockRecord.from_bytes(row[4])
             hash_to_br[bytes.fromhex(row[0])] = br
             assert row[0] == br.header_hash.hex()
             assert row[1] == br.height
@@ -366,11 +382,12 @@ class WalletStore:
         to the chain, but it may or may not be in the LCA path.
         """
         cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?, ?)",
             (
                 block_record.header_hash.hex(),
                 block_record.height,
                 in_lca_path,
+                block_record.timestamp,
                 bytes(block_record),
             ),
         )
@@ -385,7 +402,7 @@ class WalletStore:
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            return BlockRecord.from_bytes(row[3])
+            return BlockRecord.from_bytes(row[4])
         else:
             return None
 
