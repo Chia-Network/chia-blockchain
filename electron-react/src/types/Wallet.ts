@@ -11,10 +11,9 @@ interface Wallet {
   balance_frozen: number,
   balance_change: number,
   transactions: [],
-  address: string,
+  puzzle_hash: string,
   colour: string,
-  sending_transaction: boolean,
-  send_transaction_result?: string | null,
+  send_transaction_result: string,
 };
 
 export default Wallet;
