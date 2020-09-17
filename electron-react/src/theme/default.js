@@ -4,8 +4,14 @@ const defaultTheme = createMuiTheme();
 
 export default createMuiTheme({
   palette: {
-    primary: { main: "#5DA962", contrastText: "#ffffff" },
-    secondary: { main: "#000000", contrastText: "#ffffff" }
+    primary: { 
+      main: "#5DA962", 
+      contrastText: "#ffffff",
+    },
+    secondary: { 
+      main: "#000000", 
+      contrastText: "#ffffff",
+    },
   },
   root: {
     background: "linear-gradient(45deg, #333333 30%, #333333 90%)",
@@ -62,6 +68,7 @@ export default createMuiTheme({
     marginLeft: defaultTheme.spacing(4),
     fontSize: 35
   },
+  /*
   div: {
     height: "100%",
     background: "linear-gradient(45deg, #222222 30%, #333333 90%)",
@@ -81,4 +88,5 @@ export default createMuiTheme({
   h3: {
     color: "white"
   }
+  */
 });
