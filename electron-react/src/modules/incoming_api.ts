@@ -1,23 +1,24 @@
-import { service_wallet } from "../util/service_names";
+import { service_wallet } from '../util/service_names';
+import type Wallet from '../types/Wallet';
+import type Transaction from '../types/Transaction';
+import type SpendBundle from '../types/SpendBundle';
+import type Coin from '../types/Coin';
+import createWallet from '../utils/createWallet';
 
-export const Wallet = (id, name, type, data) => ({
-  id: id,
-  name: name,
-  type: type,
-  data: data,
-  balance_total: 0,
-  balance_pending: 0,
-  balance_spendable: 0,
-  balance_frozen: 0,
-  balance_change: 0,
-  transactions: [],
-  address: "",
-  colour: "",
-  sending_transaction: false,
-  send_transaction_result: ""
-});
-
-export const Transaction = (
+export const transaction = (
+  confirmed_at_index: number,
+  created_at_time: number,
+  to_address: string,
+  amount: number,
+  fee_amount: number,
+  incoming: boolean,
+  confirmed: boolean,
+  sent: number,
+  spend_bundle: SpendBundle,
+  additions: Coin[],
+  removals: Coin[],
+  wallet_id: number,
+): Transaction => ({
   confirmed_at_index,
   created_at_time,
   to_address,
@@ -29,25 +30,31 @@ export const Transaction = (
   spend_bundle,
   additions,
   removals,
-  wallet_id
-) => ({
-  confirmed_at_index: confirmed_at_index,
-  created_at_time: created_at_time,
-  to_address: to_address,
-  amount: amount,
-  fee_amount: fee_amount,
-  incoming: incoming,
-  confirmed: confirmed,
-  sent: sent,
-  spend_bundle: spend_bundle,
-  additions: additions,
-  removals: removals,
-  wallet_id: wallet_id
+  wallet_id,
 });
 
-// export const initial_wallet = Wallet(0, "Chia Wallet", "STANDARD_WALLET", "");
+// export const initial_wallet = createWallet(0, "Chia Wallet", "STANDARD_WALLET", "");
 
-const initial_state = {
+export interface IncomingState {
+  mnemonic: string[],
+  public_key_fingerprints: string[],
+  selected_fingerprint: null,
+  logged_in_received: boolean,
+  logged_in: boolean,
+  wallets: Wallet[],
+  status: {
+    connections: [],
+    connection_count: number,
+    syncing: boolean,
+    height?: number,
+  },
+  sending_transaction: boolean,
+  send_transaction_result?: string | null,
+  show_create_backup: boolean,
+  server_started?: boolean,
+};
+
+const initialState: IncomingState = {
   mnemonic: [],
   public_key_fingerprints: [],
   selected_fingerprint: null,
@@ -59,20 +66,21 @@ const initial_state = {
     connection_count: 0,
     syncing: false
   },
+  sending_transaction: false,
   show_create_backup: false
 };
 
-export const incomingReducer = (state = { ...initial_state }, action) => {
+export function incomingReducer(state = { ...initialState }, action: any): IncomingState {
   switch (action.type) {
     case "SHOW_CREATE_BACKUP":
       return {
         ...state,
-        show_create_backup: action.show
+        show_create_backup: action.show,
       };
     case "SELECT_FINGERPRINT":
       return {
         ...state,
-        selected_fingerprint: action.fingerprint
+        selected_fingerprint: action.fingerprint,
       };
     case "UNSELECT_FINGERPRINT":
       return {
@@ -81,9 +89,9 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       };
     case "LOG_OUT":
       return {
-        ...initial_state,
+        ...initialState,
         logged_in_received: true,
-        public_key_fingerprints: state.public_key_fingerprints
+        public_key_fingerprints: state.public_key_fingerprints,
       };
 
     case "CLEAR_SEND":
@@ -150,11 +158,11 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         return { ...state, server_started: started };
       } else if (command === "get_wallets") {
         if (data.success) {
-          const wallets = data.wallets;
+          const wallets: Wallet[] = data.wallets;
           var wallets_state = [];
           for (let object of wallets) {
-            var walletid = parseInt(object.id);
-            var wallet_obj = Wallet(
+            var walletid = Number(object.id);
+            var wallet_obj = createWallet(
               walletid,
               object.name,
               object.type,
@@ -220,7 +228,13 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           };
         }
       } else if (command === "get_height_info") {
-        return { ...state, status: { ...state.status, height: data.height } };
+        return {
+          ...state,
+          status: {
+            ...state.status,
+            height: data.height,
+          },
+        };
       } else if (command === "get_sync_status") {
         if (data.success) {
           return {

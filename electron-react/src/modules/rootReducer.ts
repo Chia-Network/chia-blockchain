@@ -37,4 +37,6 @@ const rootReducer = combineReducers({
   backup_state: backupReducer
 });
 
+export type RootState = ReturnType<typeof rootReducer>;
+
 export default rootReducer;
