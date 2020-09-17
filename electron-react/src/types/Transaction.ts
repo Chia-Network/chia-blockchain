@@ -4,7 +4,7 @@ import type SpendBundle from './SpendBundle';
 type Transaction = {
   confirmed_at_index: number,
   created_at_time: number,
-  to_puzzle_hash: string,
+  to_address: string,
   amount: number,
   fee_amount: number,
   incoming: boolean,

@@ -48,7 +48,6 @@ export interface IncomingState {
     syncing: boolean,
     height?: number,
   },
-  sending_transaction: boolean,
   send_transaction_result?: string | null,
   show_create_backup: boolean,
   server_started?: boolean,
