@@ -300,6 +300,8 @@ class CCWallet:
         except Program.EvalError:
             return False
 
+        parents = []
+
         for name_solution in sexp.as_iter():
             _ = name_solution.as_python()
             if len(_) != 2:
@@ -355,11 +357,10 @@ class CCWallet:
                         lineage_proof = get_lineage_proof_from_coin_and_puz(
                             coin, puzzle_program
                         )
+                        parents.append(lineage_proof)
                         await self.add_lineage(coin_name, lineage_proof)
 
-                return True
-
-        return False
+        return len(parents) > 0
 
     async def generator_received(
         self, height: uint32, header_hash: bytes32, generator: Program, action_id: int
@@ -611,8 +612,8 @@ class CCWallet:
 
     async def generate_signed_transaction(
         self,
-        amount: uint64,
-        to_address: bytes32,
+        amounts: List[uint64],
+        puzzle_hashes: List[bytes32],
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
@@ -620,20 +621,28 @@ class CCWallet:
         sigs: List[G2Element] = []
 
         # Get coins and calculate amount of change required
+        outgoing_amount = uint64(sum(amounts))
+
         if coins is None:
-            selected_coins: Set[Coin] = await self.select_coins(amount)
+            selected_coins: Set[Coin] = await self.select_coins(uint64(outgoing_amount + fee))
         else:
             selected_coins = coins
 
         total_amount = sum([x.amount for x in selected_coins])
-        change = total_amount - amount
+        change = total_amount - outgoing_amount - fee
+        primaries = []
+        for amount, puzzle_hash in zip(amounts, puzzle_hashes):
+            primaries.append({"puzzlehash": puzzle_hash, "amount": amount})
 
-        primaries = [{"puzzlehash": to_address, "amount": amount}]
         if change > 0:
             changepuzzlehash = await self.get_new_inner_hash()
             primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
-        innersol = self.standard_wallet.make_solution(primaries=primaries)
+        if fee > 0:
+            innersol = self.standard_wallet.make_solution(primaries=primaries, fee=fee)
+        else:
+            innersol = self.standard_wallet.make_solution(primaries=primaries)
+
         coin = selected_coins.pop()
         inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
 
@@ -663,11 +672,12 @@ class CCWallet:
             innersol_list,
             sigs,
         )
+        # TODO add support for array in stored records
         return TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=to_address,
-            amount=uint64(amount),
+            to_puzzle_hash=puzzle_hashes[0],
+            amount=uint64(outgoing_amount),
             fee_amount=uint64(0),
             incoming=False,
             confirmed=False,

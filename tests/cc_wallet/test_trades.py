@@ -112,7 +112,7 @@ class TestCCTrades:
 
         # send cc_wallet 2 a coin
         cc_hash = await cc_wallet_2.get_new_inner_hash()
-        tx_record = await cc_wallet.generate_signed_transaction(uint64(1), cc_hash)
+        tx_record = await cc_wallet.generate_signed_transaction([uint64(1)], [cc_hash])
         await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
         for i in range(0, buffer_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))

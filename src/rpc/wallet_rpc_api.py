@@ -541,7 +541,7 @@ class WalletRpcApi:
             fee = uint64(0)
 
         tx: TransactionRecord = await wallet.generate_signed_transaction(
-            amount, puzzle_hash, fee
+            [amount], [puzzle_hash], fee
         )
         await wallet.wallet_state_manager.add_pending_transaction(tx)
 
