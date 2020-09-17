@@ -8,7 +8,7 @@ import createWallet from '../utils/createWallet';
 export const transaction = (
   confirmed_at_index: number,
   created_at_time: number,
-  to_puzzle_hash: string,
+  to_address: string,
   amount: number,
   fee_amount: number,
   incoming: boolean,
@@ -48,7 +48,6 @@ export interface IncomingState {
     syncing: boolean,
     height?: number,
   },
-  sending_transaction: boolean,
   send_transaction_result?: string | null,
   show_create_backup: boolean,
   server_started?: boolean,
