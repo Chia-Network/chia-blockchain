@@ -28,10 +28,10 @@ from src.types.full_block import FullBlock, additions_for_npc
 from src.types.header import Header
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
+from src.full_node.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
-from src.util.cost_calculator import calculate_cost_of_program
+from src.full_node.cost_calculator import calculate_cost_of_program
 from src.util.errors import ConsensusError, Err
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64

@@ -5,7 +5,7 @@ from binascii import hexlify
 from dataclasses import dataclass
 import time
 from secrets import token_bytes
-from typing import Optional, List, Tuple, Any, Dict
+from typing import Optional, List, Tuple, Any
 
 import json
 from blspy import PrivateKey, AugSchemeMPL, G1Element
@@ -16,7 +16,6 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
-from src.util.chech32 import decode_puzzle_hash
 from src.util.ints import uint64, uint32
 from src.util.streamable import streamable, Streamable
 from src.wallet.abstract_wallet import AbstractWallet
@@ -54,7 +53,7 @@ class RLInfo(Streamable):
 class RLWallet(AbstractWallet):
     wallet_state_manager: Any
     wallet_info: WalletInfo
-    rl_coin_record: WalletCoinRecord
+    rl_coin_record: Optional[WalletCoinRecord]
     rl_info: RLInfo
     main_wallet: Wallet
     private_key: PrivateKey
@@ -242,8 +241,7 @@ class RLWallet(AbstractWallet):
         origin_puzzle_hash: str,
         origin_amount: uint64,
         admin_pubkey: str,
-    ):
-
+    ) -> None:
         admin_pubkey_bytes = hexstr_to_bytes(admin_pubkey)
 
         assert self.rl_info.user_pubkey is not None
@@ -277,7 +275,7 @@ class RLWallet(AbstractWallet):
         if await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(
             rl_puzzle_hash
         ):
-            raise Exception(
+            raise ValueError(
                 "Cannot create multiple Rate Limited wallets under the same keys. This will change in a future release."
             )
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(
@@ -301,15 +299,15 @@ class RLWallet(AbstractWallet):
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
-        return True
 
-    async def rl_available_balance(self):
-        self.rl_coin_record = await self.get_rl_coin_record()
+    async def rl_available_balance(self) -> uint64:
+        self.rl_coin_record = await self._get_rl_coin_record()
         if self.rl_coin_record is None:
-            return 0
+            return uint64(0)
         lca_header_hash = self.wallet_state_manager.lca
         lca = self.wallet_state_manager.block_records[lca_header_hash]
         height = lca.height
+        assert self.rl_info.limit is not None
         unlocked = int(
             (
                 (height - self.rl_coin_record.confirmed_block_index)
@@ -319,7 +317,7 @@ class RLWallet(AbstractWallet):
         )
         total_amount = self.rl_coin_record.coin.amount
         available_amount = min(unlocked, total_amount)
-        return available_amount
+        return uint64(available_amount)
 
     async def get_confirmed_balance(self) -> uint64:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
@@ -370,7 +368,15 @@ class RLWallet(AbstractWallet):
 
         return uint64(addition_amount)
 
-    def get_new_puzzle(self):
+    def get_new_puzzle(self) -> Program:
+        if (
+            self.rl_info.limit is None
+            or self.rl_info.interval is None
+            or self.rl_info.user_pubkey is None
+            or self.rl_info.admin_pubkey is None
+            or self.rl_info.rl_origin_id is None
+        ):
+            raise ValueError("One or more of the RL info fields is None")
         return rl_puzzle_for_pk(
             pubkey=self.rl_info.user_pubkey,
             rate_amount=self.rl_info.limit,
@@ -379,14 +385,22 @@ class RLWallet(AbstractWallet):
             clawback_pk=self.rl_info.admin_pubkey,
         )
 
-    def get_new_puzzlehash(self):
+    def get_new_puzzlehash(self) -> bytes32:
         return self.get_new_puzzle().get_tree_hash()
 
-    async def can_generate_rl_puzzle_hash(self, hash):
+    async def can_generate_rl_puzzle_hash(self, hash) -> bool:
         return await self.wallet_state_manager.puzzle_store.puzzle_hash_exists(hash)
 
-    def puzzle_for_pk(self, pk):
+    def puzzle_for_pk(self, pk) -> Optional[Program]:
         if self.rl_info.initialized is False:
+            return None
+        if (
+            self.rl_info.limit is None
+            or self.rl_info.interval is None
+            or self.rl_info.user_pubkey is None
+            or self.rl_info.admin_pubkey is None
+            or self.rl_info.rl_origin_id is None
+        ):
             return None
         return rl_puzzle_for_pk(
             pubkey=self.rl_info.user_pubkey,
@@ -396,7 +410,7 @@ class RLWallet(AbstractWallet):
             clawback_pk=self.rl_info.admin_pubkey,
         )
 
-    async def get_keys(self, puzzle_hash: bytes32):
+    async def get_keys(self, puzzle_hash: bytes32) -> Tuple[G1Element, PrivateKey]:
         """
         Returns keys for puzzle_hash.
         """
@@ -404,7 +418,7 @@ class RLWallet(AbstractWallet):
             puzzle_hash, self.wallet_info.id
         )
         if index_for_puzzlehash is None:
-            raise Exception("index_for_puzzlehash is None")
+            raise ValueError(f"index_for_puzzlehash is None ph {puzzle_hash}")
         private = master_sk_to_wallet_sk(self.private_key, index_for_puzzlehash)
         pubkey = private.get_g1()
         return pubkey, private
@@ -419,13 +433,13 @@ class RLWallet(AbstractWallet):
             )
         )
         if index_for_pubkey is None:
-            raise Exception("index_for_pubkey is None")
+            raise ValueError(f"index_for_pubkey is None pk {clawback_pubkey.hex()}")
         private = master_sk_to_wallet_sk(self.private_key, index_for_pubkey)
         pubkey = private.get_g1()
 
         return pubkey, private
 
-    async def get_rl_coin(self) -> Optional[Coin]:
+    async def _get_rl_coin(self) -> Optional[Coin]:
         rl_coins = await self.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
@@ -435,7 +449,7 @@ class RLWallet(AbstractWallet):
 
         return None
 
-    async def get_rl_coin_record(self) -> Optional[WalletCoinRecord]:
+    async def _get_rl_coin_record(self) -> Optional[WalletCoinRecord]:
         rl_coins = await self.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
@@ -445,7 +459,9 @@ class RLWallet(AbstractWallet):
 
         return None
 
-    async def get_rl_parent(self) -> Optional[Coin]:
+    async def _get_rl_parent(self) -> Optional[Coin]:
+        if not self.rl_coin_record:
+            return None
         rl_parent_id = self.rl_coin_record.coin.parent_coin_info
         if rl_parent_id == self.rl_info.rl_origin_id:
             return self.rl_info.rl_origin
@@ -459,12 +475,14 @@ class RLWallet(AbstractWallet):
 
         return rl_parent.coin
 
-    async def rl_generate_unsigned_transaction(self, to_puzzlehash, amount):
+    async def rl_generate_unsigned_transaction(self, to_puzzlehash, amount, fee):
         spends = []
         coin = self.rl_coin_record.coin
         puzzle_hash = coin.puzzle_hash
         pubkey = self.rl_info.user_pubkey
-        rl_parent: Coin = await self.get_rl_parent()
+        rl_parent: Optional[Coin] = await self._get_rl_parent()
+        if rl_parent is None:
+            raise ValueError("No RL parent coin")
 
         puzzle = rl_puzzle_for_pk(
             bytes(pubkey),
@@ -489,18 +507,22 @@ class RLWallet(AbstractWallet):
         spends.append((puzzle, CoinSolution(coin, solution)))
         return spends
 
-    async def rl_generate_signed_transaction(self, amount, to_puzzle_hash):
-        self.rl_coin_record = await self.get_rl_coin_record()
+    async def generate_signed_transaction(
+        self, amount, to_puzzle_hash, fee: uint64 = uint64(0)
+    ) -> TransactionRecord:
+        self.rl_coin_record = await self._get_rl_coin_record()
+        if not self.rl_coin_record:
+            raise ValueError("No unspent coin (zero balance)")
         if amount > self.rl_coin_record.coin.amount:
-            return None
+            raise ValueError(
+                f"Coin value not sufficient: {amount} > {self.rl_coin_record.coin.amount}"
+            )
         transaction = await self.rl_generate_unsigned_transaction(
-            to_puzzle_hash, amount
+            to_puzzle_hash, amount, fee
         )
         spend_bundle = await self.rl_sign_transaction(transaction)
-        if spend_bundle is None:
-            return None
 
-        tx_record = TransactionRecord(
+        return TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=to_puzzle_hash,
@@ -517,9 +539,9 @@ class RLWallet(AbstractWallet):
             trade_id=None,
         )
 
-        return tx_record
-
-    async def rl_sign_transaction(self, spends: List[Tuple[Program, CoinSolution]]):
+    async def rl_sign_transaction(
+        self, spends: List[Tuple[Program, CoinSolution]]
+    ) -> SpendBundle:
         sigs = []
         for puzzle, solution in spends:
             pubkey, secretkey = await self.get_keys(solution.coin.puzzle_hash)
@@ -538,8 +560,7 @@ class RLWallet(AbstractWallet):
                 )
             )
 
-        spend_bundle = SpendBundle(solution_list, aggsig)
-        return spend_bundle
+        return SpendBundle(solution_list, aggsig)
 
     def generate_unsigned_clawback_transaction(
         self, clawback_coin: Coin, clawback_puzzle_hash: bytes32
@@ -550,7 +571,7 @@ class RLWallet(AbstractWallet):
             or self.rl_info.user_pubkey is None
             or self.rl_info.admin_pubkey is None
         ):
-            raise Exception("One ore more of the elements of rl_info is None")
+            raise ValueError("One ore more of the elements of rl_info is None")
         spends = []
         coin = clawback_coin
         if self.rl_info.rl_origin is None:
@@ -568,7 +589,7 @@ class RLWallet(AbstractWallet):
 
     async def sign_clawback_transaction(
         self, spends: List[Tuple[Program, CoinSolution]], clawback_pubkey
-    ):
+    ) -> SpendBundle:
         sigs = []
         for puzzle, solution in spends:
             pubkey, secretkey = await self.get_keys_pk(clawback_pubkey)
@@ -585,29 +606,24 @@ class RLWallet(AbstractWallet):
                 )
             )
 
-        spend_bundle = SpendBundle(solution_list, aggsig)
-        return spend_bundle
+        return SpendBundle(solution_list, aggsig)
 
-    async def clawback_rl_coin(self, clawback_puzzle_hash: bytes32):
-        rl_coin = await self.get_rl_coin()
+    async def clawback_rl_coin(self, clawback_puzzle_hash: bytes32) -> SpendBundle:
+        rl_coin = await self._get_rl_coin()
         if rl_coin is None:
-            raise Exception("rl_coin is None")
+            raise ValueError("rl_coin is None")
         transaction = self.generate_unsigned_clawback_transaction(
             rl_coin, clawback_puzzle_hash
         )
-        if transaction is None:
-            return None
         return await self.sign_clawback_transaction(
             transaction, self.rl_info.admin_pubkey
         )
 
-    async def clawback_rl_coin_transaction(self):
+    async def clawback_rl_coin_transaction(self) -> TransactionRecord:
         to_puzzle_hash = await self.main_wallet.get_new_puzzlehash()
         spend_bundle = await self.clawback_rl_coin(to_puzzle_hash)
-        if spend_bundle is None:
-            return None
 
-        tx_record = TransactionRecord(
+        return TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=to_puzzle_hash,
@@ -624,8 +640,6 @@ class RLWallet(AbstractWallet):
             trade_id=None,
         )
 
-        return tx_record
-
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2
     async def rl_generate_signed_aggregation_transaction(
         self, rl_info: RLInfo, consolidating_coin: Coin, rl_parent: Coin, rl_coin: Coin
@@ -633,12 +647,12 @@ class RLWallet(AbstractWallet):
         if (
             rl_info.limit is None
             or rl_info.interval is None
-            or rl_info.limit is None
-            or rl_info.interval is None
             or rl_info.user_pubkey is None
             or rl_info.admin_pubkey is None
         ):
-            raise Exception("One ore more of the elements of rl_info is None")
+            raise ValueError("One or more of the elements of rl_info is None")
+        if self.rl_coin_record is None:
+            raise ValueError("Rl coin record is None")
 
         list_of_coinsolutions = []
 
@@ -702,15 +716,6 @@ class RLWallet(AbstractWallet):
         puzzle_hash = rl_make_aggregation_puzzle(wallet_puzzle).get_tree_hash()
 
         return puzzle_hash
-
-    async def generate_signed_transaction_dict(
-        self, data: Dict[str, Any]
-    ) -> Optional[TransactionRecord]:
-        if not isinstance(data["amount"], int) or not isinstance(data["amount"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        amount = uint64(data["amount"])
-        puzzle_hash = decode_puzzle_hash(data["puzzle_hash"])
-        return await self.rl_generate_signed_transaction(amount, puzzle_hash)
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """ Use this API to send transactions. """

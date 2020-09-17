@@ -31,7 +31,10 @@ class RpcClient:
     async def fetch(self, path, request_json):
         async with self.session.post(self.url + path, json=request_json) as response:
             response.raise_for_status()
-            return await response.json()
+            res_json = await response.json()
+            if not res_json["success"]:
+                raise ValueError(res_json)
+            return res_json
 
     async def get_connections(self) -> List[Dict]:
         response = await self.fetch("get_connections", {})

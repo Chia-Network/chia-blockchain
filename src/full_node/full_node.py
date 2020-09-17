@@ -47,8 +47,8 @@ from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.util.api_decorators import api_request
-from src.util.bundle_tools import best_solution_program
-from src.util.cost_calculator import calculate_cost_of_program
+from src.full_node.bundle_tools import best_solution_program
+from src.full_node.cost_calculator import calculate_cost_of_program
 from src.util.errors import ConsensusError, Err
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128
@@ -600,7 +600,7 @@ class FullNode:
         if self.mempool_manager.seen(transaction.transaction_id):
             return
 
-        elif self.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
+        if self.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
             requestTX = full_node_protocol.RequestTransaction(
                 transaction.transaction_id
             )
@@ -657,6 +657,7 @@ class FullNode:
                 tx.transaction
             )
             if status == MempoolInclusionStatus.SUCCESS:
+                self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
                 fees = tx.transaction.fees()
                 assert fees >= 0
                 assert cost is not None
@@ -1813,6 +1814,9 @@ class FullNode:
                     tx.transaction
                 )
                 if status == MempoolInclusionStatus.SUCCESS:
+                    self.log.info(
+                        f"Added transaction to mempool: {tx.transaction.name()}"
+                    )
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     fees = tx.transaction.fees()

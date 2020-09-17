@@ -16,14 +16,14 @@ import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 
 import { send_transaction, rl_set_user_info_action } from "../modules/message";
-import ExpansionPanel from "@material-ui/core/ExpansionPanel";
-import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
-import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
+import Accordion from "@material-ui/core/Accordion";
+import AccordionSummary from "@material-ui/core/AccordionSummary";
+import AccordionDetails from "@material-ui/core/AccordionDetails";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import { Tooltip } from "@material-ui/core";
 import HelpIcon from "@material-ui/icons/Help";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
-
+import { get_transaction_result } from "../util/transaction_result";
 import { unix_to_short_date } from "../util/utils";
 
 import { openDialog } from "../modules/dialogReducer";
@@ -595,8 +595,8 @@ const BalanceCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <ExpansionPanel className={classes.front}>
-                  <ExpansionPanelSummary
+                <Accordion className={classes.front}>
+                  <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     aria-controls="panel1a-content"
                     id="panel1a-header"
@@ -604,8 +604,8 @@ const BalanceCard = props => {
                     <Typography className={classes.heading}>
                       View pending balances
                     </Typography>
-                  </ExpansionPanelSummary>
-                  <ExpansionPanelDetails>
+                  </AccordionSummary>
+                  <AccordionDetails>
                     <Grid container spacing={0}>
                       <BalanceCardSubSection
                         title="Pending Total Balance"
@@ -623,8 +623,8 @@ const BalanceCard = props => {
                         tooltip={""}
                       />
                     </Grid>
-                  </ExpansionPanelDetails>
-                </ExpansionPanel>
+                  </AccordionDetails>
+                </Accordion>
               </Box>
             </Box>
           </div>
@@ -643,34 +643,27 @@ const SendCard = props => {
   const dispatch = useDispatch();
 
   const sending_transaction = useSelector(
-    state => state.wallet_state.sending_transaction
+    state => state.wallet_state.wallets[id].sending_transaction
   );
+  const syncing = useSelector(state => state.wallet_state.status.syncing);
 
   const send_transaction_result = useSelector(
     state => state.wallet_state.wallets[id].send_transaction_result
   );
 
-  let result_message = "";
-  let result_class = classes.resultSuccess;
-  if (send_transaction_result) {
-    if (send_transaction_result.status === "SUCCESS") {
-      result_message =
-        "Transaction has successfully been sent to a full node and included in the mempool.";
-    } else if (send_transaction_result.status === "PENDING") {
-      result_message =
-        "Transaction has sent to a full node and is pending inclusion into the mempool. " +
-        send_transaction_result.reason;
-    } else {
-      result_message = "Transaction failed. " + send_transaction_result.reason;
-      result_class = classes.resultFailure;
-    }
-  }
+  const result = get_transaction_result(send_transaction_result);
+  let result_message = result.message;
+  let result_class = result.success ? classes.resultSuccess : classes.resultFailure;
 
   function send() {
     if (sending_transaction) {
       return;
     }
-    let puzzle_hash = address_input.value.trim();
+    if (syncing) {
+      dispatch(openDialog("Please finish syncing before making a transaction"));
+      return;
+    }
+    let address = address_input.value.trim();
     if (
       amount_input.value === "" ||
       Number(amount_input.value) === 0 ||
@@ -687,14 +680,18 @@ const SendCard = props => {
     const amount = chia_to_mojo(amount_input.value);
     const fee = chia_to_mojo(fee_input.value);
 
-    if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
-      puzzle_hash = puzzle_hash.substring(2);
+    if (address.startsWith("0x") || address.startsWith("0X")) {
+      address = address.substring(2);
     }
 
     const amount_value = parseFloat(Number(amount));
     const fee_value = parseFloat(Number(fee));
+    if (fee_value !== 0) {
+      dispatch(openDialog("Please enter 0 fee. Positive fees not supported yet for RL."));
+      return;
+    }
 
-    dispatch(send_transaction(id, amount_value, fee_value, puzzle_hash));
+    dispatch(send_transaction(id, amount_value, fee_value, address));
     address_input.value = "";
     amount_input.value = "";
     fee_input.value = "";
@@ -898,7 +895,7 @@ const TransactionTable = props => {
           {transactions.map(tx => (
             <TableRow
               className={classes.row}
-              key={tx.to_puzzle_hash + tx.created_at_time + tx.amount}
+              key={tx.to_address + tx.created_at_time + tx.amount}
             >
               <TableCell className={classes.cell_short}>
                 {incoming_string(tx.incoming)}
@@ -907,7 +904,7 @@ const TransactionTable = props => {
                 style={{ maxWidth: "150px" }}
                 className={classes.cell_short}
               >
-                {tx.to_puzzle_hash}
+                {tx.to_address}
               </TableCell>
               <TableCell className={classes.cell_short}>
                 {unix_to_short_date(tx.created_at_time)}

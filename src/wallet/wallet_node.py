@@ -17,11 +17,7 @@ from src.util.merkle_set import (
     confirm_not_included_already_hashed,
     MerkleSet,
 )
-from src.protocols import (
-    introducer_protocol,
-    wallet_protocol,
-    full_node_protocol,
-)
+from src.protocols import introducer_protocol, wallet_protocol, full_node_protocol
 from src.consensus.constants import ConsensusConstants
 from src.server.connection import PeerConnections
 from src.server.server import ChiaServer
@@ -118,6 +114,7 @@ class WalletNode:
         self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
         self.sync_generator_task = None
         self.server = None
+        self.wsm_close_task = None
 
     def get_key_for_fingerprint(self, fingerprint):
         private_keys = self.keychain.get_all_private_keys()
@@ -158,6 +155,7 @@ class WalletNode:
             private_key, self.config, path, self.constants
         )
 
+        self.wsm_close_task = None
         assert self.wallet_state_manager is not None
 
         backup_settings: BackupInitialized = (
@@ -215,7 +213,10 @@ class WalletNode:
                 pass
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
-        await self.wsm_close_task
+        if self.wsm_close_task is not None:
+            await self.wsm_close_task
+            self.wsm_close_task = None
+        self.wallet_state_manager = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -254,17 +255,32 @@ class WalletNode:
         return result
 
     async def _resend_queue(self):
-        if self.wallet_state_manager is None or self.backup_initialized is False:
-            return
-        if self._shut_down:
-            return
-        if self.server is None:
+        if (
+            self._shut_down
+            or self.server is None
+            or self.wallet_state_manager is None
+            or self.backup_initialized is None
+        ):
             return
 
         for msg in await self._messages_to_resend():
+            if (
+                self._shut_down
+                or self.server is None
+                or self.wallet_state_manager is None
+                or self.backup_initialized is None
+            ):
+                return
             self.server.push_message(msg)
 
         for msg in await self._action_messages():
+            if (
+                self._shut_down
+                or self.server is None
+                or self.wallet_state_manager is None
+                or self.backup_initialized is None
+            ):
+                return
             self.server.push_message(msg)
 
     async def _messages_to_resend(self) -> List[OutboundMessage]:
@@ -370,9 +386,7 @@ class WalletNode:
             await self.wallet_peers.ensure_is_closed()
 
     @api_request
-    async def respond_peers_full_node(
-        self, request: full_node_protocol.RespondPeers
-    ):
+    async def respond_peers_full_node(self, request: full_node_protocol.RespondPeers):
         pass
 
     async def _sync(self):
@@ -591,6 +605,7 @@ class WalletNode:
                     [],
                     total_iters,
                     None,
+                    uint64(0),
                 )
                 res = await self.wallet_state_manager.receive_block(block_record, None)
                 assert (
@@ -706,9 +721,6 @@ class WalletNode:
         """
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return None
-        self.log.info(
-            f"Finishing block {block_record.header_hash} at height {block_record.height}"
-        )
         assert block_record.prev_header_hash in self.wallet_state_manager.block_records
         assert block_record.additions is not None and block_record.removals is not None
 
@@ -898,6 +910,7 @@ class WalletNode:
                 None,
                 response.header_block.header.data.total_iters,
                 response.header_block.challenge.get_hash(),
+                response.header_block.header.data.timestamp,
             )
 
             if self.wallet_state_manager.sync_mode:
@@ -965,6 +978,7 @@ class WalletNode:
                 [],
                 block_record.total_iters,
                 block_record.new_challenge_hash,
+                block_record.timestamp,
             )
             respond_header_msg: Optional[
                 wallet_protocol.RespondHeader
@@ -1069,6 +1083,7 @@ class WalletNode:
             None,
             block_record.total_iters,
             header_block.challenge.get_hash(),
+            header_block.header.data.timestamp,
         )
         self.cached_blocks[response.header_hash] = (
             new_br,
@@ -1123,6 +1138,7 @@ class WalletNode:
                 [],
                 new_br.total_iters,
                 new_br.new_challenge_hash,
+                new_br.timestamp,
             )
             respond_header_msg: Optional[
                 wallet_protocol.RespondHeader
@@ -1205,6 +1221,7 @@ class WalletNode:
             all_coins,
             block_record.total_iters,
             header_block.challenge.get_hash(),
+            header_block.header.data.timestamp,
         )
 
         self.cached_blocks[response.header_hash] = (

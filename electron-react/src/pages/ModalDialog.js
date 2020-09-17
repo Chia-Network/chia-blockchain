@@ -22,7 +22,6 @@ export const DialogItem = props => {
   const handleClose = () => {
     dispatch(closeDialog(id));
   };
-  console.log(dialog);
   return (
     <div>
       <Dialog
@@ -53,7 +52,7 @@ export const ModalDialog = () => {
   return (
     <div>
       {dialogs.map(dialog => (
-        <DialogItem dialog={dialog} key={dialog}></DialogItem>
+        <DialogItem dialog={dialog} key={dialog.id}></DialogItem>
       ))}
     </div>
   );

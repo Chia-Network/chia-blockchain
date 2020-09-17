@@ -23,3 +23,4 @@ class BlockRecord(Streamable):
     removals: Optional[List[Coin]]  # A block record without removals is not finished
     total_iters: Optional[uint64]
     new_challenge_hash: Optional[bytes32]
+    timestamp: uint64

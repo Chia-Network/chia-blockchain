@@ -1,5 +1,5 @@
 import {
-  get_puzzle_hash,
+  get_address,
   format_message,
   incomingMessage,
   get_balance_for_wallet,
@@ -201,7 +201,7 @@ export const handle_message = (store, payload) => {
         store.dispatch(get_balance_for_wallet(wallet.id));
         store.dispatch(get_transactions(wallet.id));
         if (wallet.type === COLOURED_COIN || wallet.type === STANDARD_WALLET) {
-          store.dispatch(get_puzzle_hash(wallet.id));
+          store.dispatch(get_address(wallet.id));
         }
         if (wallet.type === COLOURED_COIN) {
           store.dispatch(get_colour_name(wallet.id));
@@ -258,7 +258,7 @@ export const handle_message = (store, payload) => {
       } else if (service === service_plotter) {
         track_progress(store, payload.data.out_file);
       }
-    } else if (payload.data.error === "already running") {
+    } else if (payload.data.error.includes("already running")) {
       if (service === service_wallet) {
         ping_wallet(store);
       } else if (service === service_full_node) {
@@ -290,8 +290,11 @@ export const handle_message = (store, payload) => {
     }
   }
   if (payload.data.success === false) {
-    if (payload.data.reason) {
-      store.dispatch(openDialog("Error: ", payload.data.reason));
+    if (payload.data.error.includes("already running") || payload.data.error === "not initialized") {
+      return;
+    }
+    if (payload.data.error) {
+      store.dispatch(openDialog("Error: ", payload.data.error));
     }
   }
 };

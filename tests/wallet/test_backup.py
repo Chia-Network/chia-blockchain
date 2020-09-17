@@ -66,10 +66,11 @@ class TestCCWalletBackup:
         await wallet_node.wallet_state_manager.create_wallet_backup(file_path)
 
         # Close wallet and restart
+        db_path = wallet_node.wallet_state_manager.db_path
         wallet_node._close()
         await wallet_node._await_closed()
 
-        wallet_node.wallet_state_manager.db_path.unlink()
+        db_path.unlink()
 
         started = await wallet_node._start()
         assert started is False

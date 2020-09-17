@@ -14,20 +14,17 @@ import TableCell from "@material-ui/core/TableCell";
 
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
-import {
-  get_puzzle_hash,
-  send_transaction,
-  farm_block
-} from "../modules/message";
-import ExpansionPanel from "@material-ui/core/ExpansionPanel";
-import ExpansionPanelSummary from "@material-ui/core/ExpansionPanelSummary";
-import ExpansionPanelDetails from "@material-ui/core/ExpansionPanelDetails";
+import { get_address, send_transaction, farm_block } from "../modules/message";
+import Accordion from "@material-ui/core/Accordion";
+import AccordionSummary from "@material-ui/core/AccordionSummary";
+import AccordionDetails from "@material-ui/core/AccordionDetails";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
 import { openDialog } from "../modules/dialogReducer";
 import { Tooltip } from "@material-ui/core";
 import HelpIcon from "@material-ui/icons/Help";
+import { get_transaction_result } from "../util/transaction_result";
 const config = require("../config");
 const drawerWidth = 240;
 
@@ -265,8 +262,8 @@ const BalanceCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <ExpansionPanel className={classes.front}>
-                  <ExpansionPanelSummary
+                <Accordion className={classes.front}>
+                  <AccordionSummary
                     expandIcon={<ExpandMoreIcon />}
                     aria-controls="panel1a-content"
                     id="panel1a-header"
@@ -274,8 +271,8 @@ const BalanceCard = props => {
                     <Typography className={classes.heading}>
                       View pending balances
                     </Typography>
-                  </ExpansionPanelSummary>
-                  <ExpansionPanelDetails>
+                  </AccordionSummary>
+                  <AccordionDetails>
                     <Grid container spacing={0}>
                       <BalanceCardSubSection
                         title="Pending Total Balance"
@@ -306,8 +303,8 @@ const BalanceCard = props => {
                         }
                       />
                     </Grid>
-                  </ExpansionPanelDetails>
-                </ExpansionPanel>
+                  </AccordionDetails>
+                </Accordion>
               </Box>
             </Box>
           </div>
@@ -326,27 +323,17 @@ const SendCard = props => {
   const dispatch = useDispatch();
 
   const sending_transaction = useSelector(
-    state => state.wallet_state.sending_transaction
+    state => state.wallet_state.wallets[id].sending_transaction
   );
 
   const send_transaction_result = useSelector(
     state => state.wallet_state.wallets[id].send_transaction_result
   );
-  let result_message = "";
-  let result_class = classes.resultSuccess;
-  if (send_transaction_result) {
-    if (send_transaction_result.status === "SUCCESS") {
-      result_message =
-        "Transaction has successfully been sent to a full node and included in the mempool.";
-    } else if (send_transaction_result.status === "PENDING") {
-      result_message =
-        "Transaction has sent to a full node and is pending inclusion into the mempool. " +
-        send_transaction_result.reason;
-    } else {
-      result_message = "Transaction failed. " + send_transaction_result.reason;
-      result_class = classes.resultFailure;
-    }
-  }
+  const syncing = useSelector(state => state.wallet_state.status.syncing);
+
+  const result = get_transaction_result(send_transaction_result);
+  let result_message = result.message;
+  let result_class = result.success ? classes.resultSuccess : classes.resultFailure;
 
   function farm() {
     var address = address_input.value;
@@ -359,7 +346,12 @@ const SendCard = props => {
     if (sending_transaction) {
       return;
     }
-    let puzzle_hash = address_input.value.trim();
+    if (syncing) {
+      dispatch(openDialog("Please finish syncing before making a transaction"));
+      return;
+    }
+
+    let address = address_input.value.trim();
     if (
       amount_input.value === "" ||
       Number(amount_input.value) === 0 ||
@@ -376,24 +368,24 @@ const SendCard = props => {
     const amount = chia_to_mojo(amount_input.value);
     const fee = chia_to_mojo(fee_input.value);
 
-    if (puzzle_hash.includes("colour")) {
+    if (address.includes("colour")) {
       dispatch(
         openDialog(
           "Error: Cannot send chia to coloured address. Please enter a chia address."
         )
       );
       return;
-    } else if (puzzle_hash.substring(0, 12) === "chia_addr://") {
-      puzzle_hash = puzzle_hash.substring(12);
+    } else if (address.substring(0, 12) === "chia_addr://") {
+      address = address.substring(12);
     }
-    if (puzzle_hash.startsWith("0x") || puzzle_hash.startsWith("0X")) {
-      puzzle_hash = puzzle_hash.substring(2);
+    if (address.startsWith("0x") || address.startsWith("0X")) {
+      address = address.substring(2);
     }
 
     const amount_value = parseFloat(Number(amount));
     const fee_value = parseFloat(Number(fee));
 
-    dispatch(send_transaction(id, amount_value, fee_value, puzzle_hash));
+    dispatch(send_transaction(id, amount_value, fee_value, address));
     address_input.value = "";
     amount_input.value = "";
     fee_input.value = "";
@@ -565,7 +557,7 @@ const TransactionTable = props => {
             <TableRow
               className={classes.row}
               key={
-                tx.to_puzzle_hash +
+                tx.to_address +
                 tx.created_at_time +
                 tx.amount +
                 (tx.removals.length > 0 ? tx.removals[0].parent_coin_info : "")
@@ -578,7 +570,7 @@ const TransactionTable = props => {
                 style={{ maxWidth: "150px" }}
                 className={classes.cell_short}
               >
-                {tx.to_puzzle_hash}
+                {tx.to_address}
               </TableCell>
               <TableCell className={classes.cell_short}>
                 {unix_to_short_date(tx.created_at_time)}
@@ -602,18 +594,18 @@ const TransactionTable = props => {
 
 const AddressCard = props => {
   var id = props.wallet_id;
-  const puzzle_hash = useSelector(
-    state => state.wallet_state.wallets[id].puzzle_hash
+  const address = useSelector(
+    state => state.wallet_state.wallets[id].address
   );
   const classes = useStyles();
   const dispatch = useDispatch();
 
   function newAddress() {
-    dispatch(get_puzzle_hash(id));
+    dispatch(get_address(id));
   }
 
   function copy() {
-    navigator.clipboard.writeText(puzzle_hash);
+    navigator.clipboard.writeText(address);
   }
 
   return (
@@ -634,7 +626,7 @@ const AddressCard = props => {
                   disabled
                   fullWidth
                   label="Address"
-                  value={puzzle_hash}
+                  value={address}
                   variant="outlined"
                 />
               </Box>
