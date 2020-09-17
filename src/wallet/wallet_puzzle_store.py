@@ -19,6 +19,7 @@ class WalletPuzzleStore:
     db_connection: aiosqlite.Connection
     lock: asyncio.Lock
     cache_size: uint32
+    all_puzzle_hashes: Set[bytes32]
 
     @classmethod
     async def create(
@@ -68,14 +69,14 @@ class WalletPuzzleStore:
         await self.db_connection.commit()
         # Lock
         self.lock = asyncio.Lock()  # external
+        await self._init_cache()
         return self
 
     async def close(self):
         await self.db_connection.close()
 
     async def _init_cache(self):
-        # TODO create cache
-        print("init cache here")
+        self.all_puzzle_hashes = await self.get_all_puzzle_hashes()
 
     async def _clear_database(self):
         cursor = await self.db_connection.execute("DELETE FROM derivation_paths")
@@ -88,6 +89,7 @@ class WalletPuzzleStore:
         """
         sql_records = []
         for record in records:
+            self.all_puzzle_hashes.add(record.puzzle_hash)
             sql_records.append(
                 (
                     record.index,
@@ -188,17 +190,12 @@ class WalletPuzzleStore:
         """
         if len(puzzle_hashes) < 1:
             return False
-        puzzle_hashes_db = tuple([ph.hex() for ph in puzzle_hashes])
-        formatted_str = (
-            f"SELECT * from derivation_paths WHERE puzzle_hash in "
-            f'({"?," * (len(puzzle_hashes_db) - 1)}?) LIMIT 1'
-        )
-        cursor = await self.db_connection.execute(formatted_str, puzzle_hashes_db)
 
-        row = await cursor.fetchone()
-        await cursor.close()
+        for ph in puzzle_hashes:
+            if ph in self.all_puzzle_hashes:
+                return True
 
-        return row is not None
+        return False
 
     async def index_for_pubkey(self, pubkey: G1Element) -> Optional[uint32]:
         """
