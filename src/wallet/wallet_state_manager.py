@@ -206,6 +206,7 @@ class WalletStateManager:
                     [],
                     genesis_hb.header.data.total_iters,
                     genesis_challenge.get_hash(),
+                    genesis_hb.header.data.timestamp,
                 ),
                 genesis_hb,
             )
