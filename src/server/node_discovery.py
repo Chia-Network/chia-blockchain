@@ -148,7 +148,7 @@ class FullNodeDiscovery:
             size = await self.address_manager.size()
             if size == 0 or empty_tables:
                 await self._introducer_client()
-                await asyncio.sleep(15)
+                await asyncio.sleep(min(15, self.peer_connect_interval))
                 continue
 
             # Only connect out to one peer per network group (/16 for IPv4).
@@ -189,7 +189,7 @@ class FullNodeDiscovery:
             addr: Optional[PeerInfo] = None
             max_tries = 50 if len(connected) >= 3 else 10
             while not got_peer and not self.is_closed:
-                await asyncio.sleep(15)
+                await asyncio.sleep(min(15, self.peer_connect_interval))
                 tries += 1
                 if tries > max_tries:
                     addr = None

@@ -33,6 +33,7 @@ def service_kwargs_for_wallet(root_path):
         ]
     else:
         connect_peers = []
+
     async def start_callback():
         await api._start()
 
