@@ -1290,7 +1290,7 @@ class WalletStateManager:
             for addition in new_block.additions:
                 unspent_coin_names.add(addition.name())
 
-        my_puzzle_hashes = await self.puzzle_store.get_all_puzzle_hashes()
+        my_puzzle_hashes = self.puzzle_store.all_puzzle_hashes
 
         removals_of_interest: bytes32 = []
         additions_of_interest: bytes32 = []
@@ -1321,7 +1321,7 @@ class WalletStateManager:
         """ Returns the list of coins that are relevant to us.(We can spend them) """
 
         result: List[Coin] = []
-        my_puzzle_hashes: Set[bytes32] = await self.puzzle_store.get_all_puzzle_hashes()
+        my_puzzle_hashes: Set[bytes32] = self.puzzle_store.all_puzzle_hashes
 
         for coin in additions:
             if coin.puzzle_hash in my_puzzle_hashes:
