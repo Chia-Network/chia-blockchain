@@ -1,5 +1,4 @@
 import React, { ReactNode } from 'react';
-import { useTheme } from '@material-ui/core/styles';
 import { CircularProgress, Typography, Box } from '@material-ui/core';
 import styled from 'styled-components';
 
@@ -23,10 +22,14 @@ type Props = {
 
 export default function LoadingScreen(props: Props) {
   const { children } = props;
-  const theme = useTheme();
 
   return (
-    <StyledWrapper display="flex" flexDirection="column" justifyContent="center" alignItems="center">
+    <StyledWrapper
+      display="flex"
+      flexDirection="column"
+      justifyContent="center"
+      alignItems="center"
+    >
       <StyledTypography variant="h6">
         {children}
       </StyledTypography>
