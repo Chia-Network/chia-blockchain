@@ -16,7 +16,7 @@ import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
 import FormHelperText from "@material-ui/core/FormHelperText";
-import { openDialog } from "../modules/dialogReducer";
+import { openDialog } from "../modules/dialog";
 import isElectron from "is-electron";
 import {
   workspaceSelected,

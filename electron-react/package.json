@@ -4,12 +4,26 @@
   "description": "GUI for Chia Blockchain",
   "productName": "Chia Blockchain",
   "private": true,
+  "homepage": "./",
+  "main": "src/electron-starter.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject",
+    "electron": "electron .",
+    "dev": "nf start -p 3000",
+    "format": "prettier-eslint --write $PWD/\"src/**/*.js\"",
+    "styleguide": "styleguidist server",
+    "styleguide:build": "styleguidist build"
+  },
   "dependencies": {
     "@material-ui/core": "^4.11.0",
     "@material-ui/icons": "^4.9.1",
     "about-window": "^1.13.4",
     "is-electron": "^2.2.0",
     "npm-audit-resolver": "^2.2.1",
+    "polished": "^3.6.6",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-redux": "^7.2.1",
@@ -42,19 +56,6 @@
     "redux-devtools-extension": "^2.13.8",
     "terser-webpack-plugin": "^4.2.1",
     "typescript": "^4.0.2"
-  },
-  "homepage": "./",
-  "main": "src/electron-starter.js",
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject",
-    "electron": "electron .",
-    "dev": "nf start -p 3000",
-    "format": "prettier-eslint --write $PWD/\"src/**/*.js\"",
-    "styleguide": "styleguidist server",
-    "styleguide:build": "styleguidist build"
   },
   "browserslist": {
     "production": [

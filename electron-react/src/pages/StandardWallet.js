@@ -21,7 +21,7 @@ import AccordionDetails from "@material-ui/core/AccordionDetails";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
-import { openDialog } from "../modules/dialogReducer";
+import { openDialog } from "../modules/dialog";
 import { Tooltip } from "@material-ui/core";
 import HelpIcon from "@material-ui/icons/Help";
 import { get_transaction_result } from "../util/transaction_result";
