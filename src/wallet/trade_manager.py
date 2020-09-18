@@ -34,6 +34,7 @@ from src.wallet.cc_wallet.cc_utils import (
     spend_bundle_for_spendable_ccs,
     CC_MOD,
 )
+from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -243,9 +244,14 @@ class TradeManager:
             if wallet is None:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
-            tx: TransactionRecord = await wallet.generate_signed_transaction(
-                coin.amount, new_ph, 0, coins={coin}
-            )
+            if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
+                tx = await wallet.generate_signed_transaction(
+                    [coin.amount], [new_ph], 0, coins={coin}
+                )
+            else:
+                tx = await wallet.generate_signed_transaction(
+                    coin.amount, new_ph, 0, coins={coin}
+                )
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
 
         await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL)
