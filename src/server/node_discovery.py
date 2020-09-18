@@ -143,7 +143,9 @@ class FullNodeDiscovery:
     async def _connect_to_peers(self, random):
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
         empty_tables = False
-        local_peerinfo: Optional[PeerInfo] = self.global_connections.get_local_peerinfo()
+        local_peerinfo: Optional[
+            PeerInfo
+        ] = self.global_connections.get_local_peerinfo()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
         while not self.is_closed:
             # We don't know any address, connect to the introducer to get some.
