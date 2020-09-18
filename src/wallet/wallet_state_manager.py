@@ -644,6 +644,7 @@ class WalletStateManager:
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
+            breakpoint()
             records = await self.tx_store.tx_with_addition_coin(coin.name(), wallet_id)
 
             if len(records) > 0:
@@ -790,7 +791,7 @@ class WalletStateManager:
         """
         assert block.additions is not None
         assert block.removals is not None
-
+        breakpoint()
         async with self.lock:
             if block.header_hash in self.block_records:
                 return ReceiveBlockResult.ALREADY_HAVE_BLOCK

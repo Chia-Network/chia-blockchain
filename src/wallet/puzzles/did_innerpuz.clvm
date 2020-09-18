@@ -1,8 +1,8 @@
-(mod (MY_PUBKEY identities_corehash_list mode amount message my_id my_puzhash parent_innerpuzhash_amounts_for_recovery_ids)
+(mod (MOD_HASH MY_PUBKEY RECOVERY_DID_LIST mode amount message my_id my_puzhash parent_innerpuzhash_amounts_for_recovery_ids)
   ;message is the new puzzle in the recovery and standard spend cases
 
-  ;identities_corehash_list and MY_PUBKEY are curried into the puzzle
-  ;EXAMPLE SOLUTION (1 100 (q "source code") 0xdeadbeef 0xcafef00d ((0xdadadada 0xdad5dad5 200) (0xfafafafa 0xfaf5faf5 200) (0xbabababa 0xbab5bab5 200)))
+  ;MOD_HASH, MY_PUBKEY, RECOVERY_DID_LIST are curried into the puzzle
+  ;EXAMPLE SOLUTION (0xcafef00d 0x4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a 0x12341234 (0x22222222 0x33333333 0x44444444) 1 100 (q "source code") 0xdeadbeef 0xcafef00d ((0xdadadada 0xdad5dad5 200) (0xfafafafa 0xfaf5faf5 200) (0xbabababa 0xbab5bab5 200)))
 
   (defconstant OP_AGG_SIG 50)
   (defconstant OP_CREATE_COIN 51)
@@ -20,6 +20,17 @@
 
   (defmacro not (ARGS)
       (qq (if (unquote ARGS) 0 1))
+  )
+
+  (defun is-in-list (atom items)
+    ;; returns 1 iff `atom` is in the list of `items`
+    (if items
+      (if (= atom (f items))
+        1
+        (is-in-list atom (r items))
+      )
+      0
+    )
   )
 
   ; takes a lisp tree and returns the hash of it
@@ -55,6 +66,27 @@
   ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
   (defun curry (func . args) (curry_args func args))
 
+  ;; hash a tree with escape values representing already-hashed subtrees
+  ;; This optimization can be useful if you know the puzzle hash of a sub-expression.
+  ;; You probably actually want to use `curry_and_hash` though.
+  (defun sha256tree_esc_list
+         (TREE LITERALS)
+         (if (l TREE)
+             (sha256 2 (sha256tree_esc_list (f TREE) LITERALS) (sha256tree_esc_list (r TREE) LITERALS))
+             (if (is-in-list TREE LITERALS)
+                 TREE
+                 (sha256 1 TREE)
+             )
+         )
+  )
+
+  ;; hash a tree with escape values representing already-hashed subtrees
+  ;; This optimization can be useful if you know the tree hash of a sub-expression.
+  (defun sha256tree_esc
+     (TREE . LITERAL)
+     (sha256tree_esc_list TREE LITERAL)
+  )
+
   ;recovery message module - gets values curried in to make the puzzle
   (defun message_mod (recovering_coin newpuz)
     (r (r (c recovering_coin (c newpuz (q ())))))
@@ -69,13 +101,16 @@
     (list OP_ASSERT_CONSUMED (sha256 coin_id (sha256tree1 (create_message my_id new_innerpuz)) 0))
   )
 
-  ; takes a hash of the innerpuzzle and a hash of the core and creates a hash of the full puzzle using the sha256tree with escape
-  (defun create_fullpuzhash (innerpuzzlehash corehash)
-    (sha256tree0 (qq (r (c (q (unquote innerpuzzlehash)) ((c (q (97 (unquote corehash))) 1))))))
+  ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
+  (defun create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
+    (sha256tree_esc (curry mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
+                    mod_hash
+                    mod_hash_hash
+                    inner_puzzle_hash)
   )
 
-  (defun create_coin_ID_for_recovery (identity_corehash parent innerpuzhash amount)
-    (sha256 parent (create_fullpuzhash innerpuzhash identity_corehash) amount)
+  (defun create_coin_ID_for_recovery (mod_hash mod_hash_hash did parent innerpuzhash amount)
+    (sha256 parent (create_fullpuzhash mod_hash mod_hash_hash did innerpuzhash) amount)
   )
 
   (defmacro attest_to_id_and_newpuz (identity new_innerpuz)
@@ -90,9 +125,31 @@
     (qq (c OP_CREATE_COIN (c (unquote new_puz) (c (unquote amount) (q ())))))
   )
 
-  (defun check_messages_from_identities (identities my_id output new_puz parent_innerpuzhash_amounts_for_recovery_ids)
+  (defun check_messages_from_identities (mod_hash mod_hash_hash identities my_id output new_puz parent_innerpuzhash_amounts_for_recovery_ids)
     (if identities
-      (check_messages_from_identities (r identities) my_id (c (create_consume_message (create_coin_ID_for_recovery (f identities) (f (f parent_innerpuzhash_amounts_for_recovery_ids)) (f (r (f parent_innerpuzhash_amounts_for_recovery_ids))) (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids))))) my_id new_puz) output) new_puz (r parent_innerpuzhash_amounts_for_recovery_ids))
+
+      (check_messages_from_identities
+        mod_hash
+        mod_hash_hash
+        (r identities)
+        my_id
+        (c
+          (create_consume_message
+            ; create coin_id from DID
+            (create_coin_ID_for_recovery
+              mod_hash
+              mod_hash_hash
+              (f identities)
+              (f (f parent_innerpuzhash_amounts_for_recovery_ids))
+              (f (r (f parent_innerpuzhash_amounts_for_recovery_ids)))
+              (f (r (r (f parent_innerpuzhash_amounts_for_recovery_ids)))))
+            my_id
+            new_puz)
+          output)
+        new_puz
+        (r parent_innerpuzhash_amounts_for_recovery_ids))
+
+      ;if we're out of identites to check for, return our output
       output
     )
   )
@@ -115,8 +172,8 @@
       (list (recreate_self my_puzhash amount) (list OP_CREATE_COIN message 0) (list OP_AGG_SIG_ME MY_PUBKEY message))
     ; mode two - recovery
     ; check that recovery list is not empty
-      (if identities_corehash_list
-        (check_messages_from_identities identities_corehash_list my_id (list (create_new_coin amount message)) message parent_innerpuzhash_amounts_for_recovery_ids)
+      (if RECOVERY_DID_LIST
+        (check_messages_from_identities MOD_HASH (sha256tree1 MOD_HASH) RECOVERY_DID_LIST my_id (list (create_new_coin amount message)) message parent_innerpuzhash_amounts_for_recovery_ids)
         (x)
       )
     )
@@ -125,6 +182,9 @@
   )
 
   ;HERE BE TESTS
+
+  ; (check_messages_from_identities MOD_HASH (sha256tree1 MOD_HASH) RECOVERY_DID_LIST my_id (list (create_new_coin amount message)) message parent_innerpuzhash_amounts_for_recovery_ids)
+
   ;(create_new_coin amount new_puz)
   ;(list OP_AGG_SIG_ME (q "PUBKEY") new_puz)
   ;(list (create_new_coin amount new_puz) (list OP_AGG_SIG_ME (q "PUBKEY") new_puz))

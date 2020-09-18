@@ -1,6 +1,8 @@
-(mod (genesis_id corehash parent_info my_amount innerpuz_reveal solution)
+(mod (mod_hash genesis_id innerpuz parent_info my_amount solution)
 
-; EXAMPLE SOLUTION '(0xfadeddab (0xdeadbeef 0xcafef00d 200) 50 (a) ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
+;mod_hash, genesis_id, innerpuz are curried in
+
+; EXAMPLE SOLUTION '(0xfadeddab 0xdeadbeef 1 (0xdeadbeef 0xcafef00d 200) 50 ((51 0xfadeddab 100) (60 "trash") (51 deadbeef 0)))'
 
 ; 51 = CREATE_COIN
 ; 52 = ASSERT_CONSUMED
@@ -23,6 +25,17 @@
     (qq (if (unquote ARGS) 0 1))
   )
 
+  (defun is-in-list (atom items)
+    ;; returns 1 iff `atom` is in the list of `items`
+    (if items
+      (if (= atom (f items))
+        1
+        (is-in-list atom (r items))
+      )
+      0
+    )
+  )
+
   ; takes a lisp tree and returns the hash of it, but allows for escape character 97 so i precomputed hash value can be used
   (defun sha256tree0 (TREE)
     (if (l TREE)
@@ -42,29 +55,63 @@
       )
   )
 
+  ;; utility function used by `curry_args`
+  (defun fix_curry_args (items core)
+    (if items
+        (qq (c (q (unquote (f items))) (unquote (fix_curry_args (r items) core))))
+        core
+    )
+  )
+
+  ; (curry_args sum (list 50 60)) => returns a function that is like (sum 50 60 ...)
+  (defun curry_args (func list_of_args) (qq ((c (q (unquote func)) (unquote (fix_curry_args list_of_args (q 1)))))))
+
+  ;; (curry sum 50 60) => returns a function that is like (sum 50 60 ...)
+  (defun curry (func . args) (curry_args func args))
+
+  ;; hash a tree with escape values representing already-hashed subtrees
+  ;; This optimization can be useful if you know the puzzle hash of a sub-expression.
+  ;; You probably actually want to use `curry_and_hash` though.
+  (defun sha256tree_esc_list
+         (TREE LITERALS)
+         (if (l TREE)
+             (sha256 2 (sha256tree_esc_list (f TREE) LITERALS) (sha256tree_esc_list (r TREE) LITERALS))
+             (if (is-in-list TREE LITERALS)
+                 TREE
+                 (sha256 1 TREE)
+             )
+         )
+  )
+
+  ;; hash a tree with escape values representing already-hashed subtrees
+  ;; This optimization can be useful if you know the tree hash of a sub-expression.
+  (defun sha256tree_esc
+     (TREE . LITERAL)
+     (sha256tree_esc_list TREE LITERAL)
+  )
+
+  ;; return the puzzle hash for a cc with the given `genesis-coin-checker-hash` & `inner-puzzle`
+  (defun create_fullpuzhash (mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
+    (sha256tree_esc (curry mod_hash mod_hash_hash genesis_id inner_puzzle_hash)
+                    mod_hash
+                    mod_hash_hash
+                    inner_puzzle_hash)
+  )
+
   (defmacro create_outputs (puzreveal solution)
       (qq ((c (unquote puzreveal) (unquote solution))))
   )
 
-  (defun create_fullpuzhash (my_innerpuzhash corehash)
-    (sha256tree0 (qq (r (c (q (unquote my_innerpuzhash)) ((c (q (97 (unquote corehash))) 1))))))
-  )
-
   ; assembles information from the solution to create our own full ID including asserting our parent is a coloured coin
-  (defmacro create_my_ID ((parent_parent parent_innerpuz parent_amount) my_innerpuzhash my_amount corehash)
-    (qq (sha256 (sha256 (unquote parent_parent) (create_fullpuzhash (unquote parent_innerpuz) (unquote corehash)) (unquote parent_amount)) (create_fullpuzhash (unquote my_innerpuzhash) (unquote corehash)) (unquote my_amount)))
+  (defun-inline create_my_ID (mod_hash mod_hash_hash genesis_id innerpuzhash (parent_parent parent_innerpuz parent_amount) my_amount)
+    (sha256 (sha256 parent_parent (create_fullpuzhash mod_hash mod_hash_hash genesis_id parent_innerpuz) parent_amount) (create_fullpuzhash mod_hash mod_hash_hash genesis_id my_innerpuzhash) my_amount)
   )
 
-  ; asserts that the information in the solution about ourselves is correct, and that our parent is a coloured coin
-  (defmacro assert_my_id (my_ID)
-    (qq (c (q 53) (c (unquote my_ID) (q ()))))
-  )
-
-  (defun check_my_amount_and_ID (genesis_id parent_info my_innerpuzhash my_value corehash)
+  (defun check_my_amount_and_ID (mod_hash mod_hash_hash genesis_id my_innerpuzhash parent_info my_value)
     (if (> my_value 0)
       (if (l parent_info)
-        (assert_my_id (create_my_ID ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) my_innerpuzhash my_value corehash))
-        (list OP_ASSERT_MY_ID (sha256 genesis_id (create_fullpuzhash my_innerpuzhash corehash) my_value))
+        (list OP_ASSERT_MY_ID (create_my_ID mod_hash mod_hash_hash genesis_id my_innerpuzhash ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) my_value))
+        (list OP_ASSERT_MY_ID (sha256 genesis_id (create_fullpuzhash mod_hash mod_hash_hash genesis_id my_innerpuzhash) my_value))
       )
       (x "my_amount_and_id fail")
     )
@@ -86,24 +133,19 @@
     )
   )
 
-  (defun check_id_and_check_outputs (genesis_id corehash parent_info my_amount innerpuzhash outputs)
+  (defun check_id_and_check_outputs (mod_hash mod_hash_hash genesis_id parent_info innerpuzhash my_amount outputs)
     (if (check_outputs_value outputs 0)
-      (c (check_my_amount_and_ID genesis_id parent_info innerpuzhash my_amount corehash) outputs)
+      (c (check_my_amount_and_ID mod_hash mod_hash_hash genesis_id innerpuzhash parent_info my_amount) outputs)
       (x "check_id_and_check_outputs fail")
     )
   )
 
   ;tests
-  ;(f (f (create_outputs innerpuz_reveal solution)))
-  ;(list corehash parent_info my_amount innerpuz_reveal (create_outputs innerpuz_reveal solution))
-  ;(check_outputs_value (create_outputs innerpuz_reveal solution) 0)
-  ;(check_my_amount_and_ID genesis_id parent_info innerpuz_reveal my_amount corehash)
-  ;(create_fullpuzhash my_innerpuz corehash)
-  ;(assert_parent_is_genesis my_innerpuz my_amount corehash)
-
+  ;(list OP_ASSERT_MY_ID (create_my_ID mod_hash (sha256tree1 mod_hash) genesis_id innerpuz ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) my_amount))
+  ;(create_my_ID mod_hash (sha256tree1 mod_hash) genesis_id innerpuz ((f parent_info) (f (r parent_info)) (f (r (r parent_info)))) my_amount)
 
 
   ;main
-  (check_id_and_check_outputs genesis_id corehash parent_info my_amount (sha256tree1 innerpuz_reveal) (create_outputs innerpuz_reveal solution))
+  (check_id_and_check_outputs mod_hash (sha256tree1 mod_hash) genesis_id parent_info (sha256tree1 innerpuz) my_amount (create_outputs innerpuz solution))
 
 )
