@@ -1,3 +1,0 @@
-(mod (innerpuzhash core)
-  ((c (qq (r (c (q (unquote innerpuzhash)) ((c (q (unquote core)) (a)))))) (a)))
-)
