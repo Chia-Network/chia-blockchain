@@ -28,7 +28,7 @@ import {
 } from "../util/chia";
 import { unix_to_short_date } from "../util/utils";
 import Accordion from "../components/Accordion";
-import { openDialog } from "../modules/dialogReducer";
+import { openDialog } from "../modules/dialog";
 import { get_transaction_result } from "../util/transaction_result";
 const config = require("../config");
 

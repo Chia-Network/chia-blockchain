@@ -26,7 +26,7 @@ import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { get_transaction_result } from "../util/transaction_result";
 import { unix_to_short_date } from "../util/utils";
 
-import { openDialog } from "../modules/dialogReducer";
+import { openDialog } from "../modules/dialog";
 
 const drawerWidth = 240;
 

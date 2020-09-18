@@ -18,13 +18,13 @@ import {
   newSell,
   addTrade,
   resetTrades
-} from "../../modules/TradeReducer";
+} from "../../modules/trade";
 import {
   chia_to_mojo,
   mojo_to_chia_string,
   colouredcoin_to_mojo
 } from "../../util/chia";
-import { openDialog } from "../../modules/dialogReducer";
+import { openDialog } from "../../modules/dialog";
 import isElectron from "is-electron";
 import { create_trade_action } from "../../modules/trade_messages";
 import { COLOURED_COIN } from "../../util/wallet_types";

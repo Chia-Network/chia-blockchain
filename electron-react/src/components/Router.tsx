@@ -1,6 +1,6 @@
 import React from 'react';
 import { HashRouter, Switch, Route } from 'react-router-dom';
-import SelectKey from "../pages/SelectKey";
+import SelectKey from "./selectKey/SelectKey";
 import NewWallet from "../pages/NewWallet";
 import OldWallet from "../pages/OldWallet";
 import Dashboard from "../pages/Dashboard";
@@ -36,11 +36,13 @@ export default function Router() {
     return <Dashboard></Dashboard>;
   } 
 
+  console.log('presentView', presentView);
+
   return (
     <HashRouter>
       <Switch>
         <Route path="/">
-          <LoadingScreen>Logging in</LoadingScreen>
+          <SelectKey />
         </Route>
       </Switch>
     </HashRouter>

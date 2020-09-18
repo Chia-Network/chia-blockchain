@@ -13,9 +13,9 @@ import {
   resetTrades,
   offerParsingName,
   parsingStarted
-} from "../../modules/TradeReducer";
+} from "../../modules/trade";
 import { mojo_to_chia_string } from "../../util/chia";
-import { parsingStatePending } from "../../modules/TradeReducer";
+import { parsingStatePending } from "../../modules/trade";
 import {
   accept_trade_action,
   parse_trade_action

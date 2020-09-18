@@ -1,3 +1,5 @@
+import createDialog from '../util/createDialog';
+
 export const openDialog = (title: string, text: string) => {
   return {
     type: "DIALOG_CONTROL",

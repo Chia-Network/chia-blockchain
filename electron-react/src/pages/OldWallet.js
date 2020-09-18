@@ -10,7 +10,7 @@ import { useSelector } from "react-redux";
 import { withRouter } from "react-router-dom";
 import CssTextField from "../components/cssTextField";
 import { useDispatch } from "react-redux";
-import { mnemonic_word_added, resetMnemonic } from "../modules/mnemonic_input";
+import { mnemonic_word_added, resetMnemonic } from "../modules/mnemonic";
 import { unselectFingerprint } from "../modules/message";
 import {
   changeEntranceMenu,
