@@ -143,6 +143,8 @@ class FullNodeDiscovery:
     async def _connect_to_peers(self, random):
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
         empty_tables = False
+        local_peerinfo: Optional[PeerInfo] = self.global_connections.get_local_peerinfo()
+        last_timestamp_local_info: uint64 = uint64(int(time.time()))
         while not self.is_closed:
             # We don't know any address, connect to the introducer to get some.
             size = await self.address_manager.size()
@@ -216,6 +218,11 @@ class FullNodeDiscovery:
                     continue
                 # only consider very recently tried nodes after 30 failed attempts
                 if now - info.last_try < 1800 and tries < 30:
+                    continue
+                if time.time() - last_timestamp_local_info > 1800:
+                    local_peerinfo = self.global_connections.get_local_peerinfo()
+                    last_timestamp_local_info = uint64(int(time.time()))
+                if local_peerinfo is not None and addr == local_peerinfo:
                     continue
                 got_peer = True
 
@@ -325,7 +332,7 @@ class FullNodePeers(FullNodeDiscovery):
                     neighbour.clear()
             # Self advertise every 24 hours.
             peer = self.global_connections.get_local_peerinfo()
-            if peer == (None, None):
+            if peer is None:
                 continue
             timestamped_peer = [
                 TimestampedPeerInfo(

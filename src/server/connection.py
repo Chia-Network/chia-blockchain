@@ -194,7 +194,7 @@ class PeerConnections:
         if self.local_type == NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
-    def get_local_peerinfo(self):
+    def get_local_peerinfo(self) -> Optional[PeerInfo]:
         ip = None
         port = None
         for c in self._all_connections:
@@ -202,7 +202,7 @@ class PeerConnections:
                 port = c.local_port
                 break
         if port is None:
-            return (None, None)
+            return None
 
         # https://stackoverflow.com/a/28950776
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -212,8 +212,8 @@ class PeerConnections:
             except Exception:
                 ip = None
         if ip is None:
-            return (None, None)
-        return (ip, port)
+            return None
+        return PeerInfo(str(ip), uint16(port))
 
     def get_connections(self):
         return self._all_connections
