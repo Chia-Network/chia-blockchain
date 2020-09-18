@@ -5,7 +5,7 @@ import DialogActions from "@material-ui/core/DialogActions";
 import DialogContent from "@material-ui/core/DialogContent";
 import DialogContentText from "@material-ui/core/DialogContentText";
 import DialogTitle from "@material-ui/core/DialogTitle";
-import { closeDialog } from "../modules/dialogReducer";
+import { closeDialog } from "../modules/dialog";
 import { useDispatch, useSelector } from "react-redux";
 import { Backdrop } from "@material-ui/core";
 import { CircularProgress } from "@material-ui/core";

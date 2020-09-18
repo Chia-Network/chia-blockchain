@@ -19,7 +19,7 @@ import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./CreateWallet";
 import { create_rl_admin_action } from "../modules/message";
 import { chia_to_mojo } from "../util/chia";
-import { openDialog } from "../modules/dialogReducer";
+import { openDialog } from "../modules/dialog";
 
 export const customStyles = makeStyles(theme => ({
   input: {

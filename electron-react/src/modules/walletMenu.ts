@@ -5,10 +5,10 @@ export const createWallet = "CREATE_WALLET";
 export const CCWallet = "CC_WALLET";
 export const RLWallet = "RL_WALLET";
 
-export const changeWalletMenu = (item, id) => ({
+export const changeWalletMenu = (item: unknown, id: number) => ({
   type: "WALLET_MENU",
-  item: item,
-  id: id
+  item,
+  id,
 });
 
 type WalletMenuState = {
@@ -18,7 +18,7 @@ type WalletMenuState = {
 
 const initialState: WalletMenuState  = {
   view: WalletType.STANDARD_WALLET,
-  id: 1
+  id: 1,
 };
 
 export default function walletMenuReducer(state = { ...initialState }, action: any): WalletMenuState {
@@ -26,9 +26,12 @@ export default function walletMenuReducer(state = { ...initialState }, action: a
     case "LOG_OUT":
       return { ...initialState };
     case "WALLET_MENU":
-      var item = action.item;
-      var id = action.id;
-      return { ...state, view: item, id: id };
+      const { item, id } = action;
+      return { 
+        ...state, 
+        view: item, 
+        id,
+      };
     default:
       return state;
   }

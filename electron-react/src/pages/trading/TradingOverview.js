@@ -1,16 +1,14 @@
 import { useDispatch, useSelector } from "react-redux";
 import React from "react";
 import { makeStyles } from "@material-ui/core/styles";
-import { Paper, Button, Tooltip, Divider } from "@material-ui/core";
+import { Paper, Button, Tooltip, Divider, ListItem } from "@material-ui/core";
 import { unix_to_short_date } from "../../util/utils";
 import { Box, Typography } from "@material-ui/core";
-import { presetOverview, presentTrade } from "../../modules/TradeReducer";
+import { presetOverview, presentTrade } from "../../modules/trade";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import Grid from "@material-ui/core/Grid";
 import HelpIcon from "@material-ui/icons/Help";
 import { mojo_to_chia_string } from "../../util/chia";
-
-import { ListItem } from "@material-ui/core";
 import {
   get_all_trades,
   cancel_trade_with_spend_action,

@@ -5,7 +5,7 @@ import { Button } from "@material-ui/core";
 import { useSelector, useDispatch } from "react-redux";
 import { showCreateBackup, create_backup_action } from "../../modules/message";
 import isElectron from "is-electron";
-import { openDialog } from "../../modules/dialogReducer";
+import { openDialog } from "../../modules/dialog";
 
 function getModalStyle() {
   const top = 50;

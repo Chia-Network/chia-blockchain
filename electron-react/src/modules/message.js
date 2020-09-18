@@ -1,13 +1,13 @@
 import { service_wallet } from "../util/service_names";
 import { openProgress, closeProgress } from "./progressReducer";
 import { refreshAllState } from "../middleware/middleware_api";
-import { setIncorrectWord, resetMnemonic } from "./mnemonic_input";
+import { setIncorrectWord, resetMnemonic } from "./mnemonic";
 import {
   changeEntranceMenu,
   presentRestoreBackup,
   presentOldWallet
 } from "./entranceMenu";
-import { openDialog } from "./dialogReducer";
+import { openDialog } from "./dialog";
 import { createState } from "./createWalletReducer";
 import {
   addPlotDirectory,
@@ -21,7 +21,7 @@ import {
   changeBackupView,
   presentBackupInfo,
   selectFilePath
-} from "./backup_state";
+} from "./backup";
 import { exitDaemon } from "./daemon_messages";
 import { wsDisconnect } from "./websocket";
 import {
