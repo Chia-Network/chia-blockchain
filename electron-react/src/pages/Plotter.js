@@ -194,9 +194,9 @@ const useStyles = makeStyles(theme => ({
 
 const plot_size_options = [
   { label: "600MiB", value: 25, workspace: "1.8GiB" },
-  { label: "1.3GiB", value: 26, workspace: "4.9GiB" },
-  { label: "2.7GiB", value: 27, workspace: "10.7GiB" },
-  { label: "5.6GiB", value: 28, workspace: "21.3GiB" },
+  { label: "1.3GiB", value: 26, workspace: "3.6GiB" },
+  { label: "2.7GiB", value: 27, workspace: "9.2GiB" },
+  { label: "5.6GiB", value: 28, workspace: "18GiB" },
   { label: "11.5GiB", value: 29, workspace: "41.1GiB" },
   { label: "23.8GiB", value: 30, workspace: "77.3GiB" },
   { label: "49.1GiB", value: 31, workspace: "145GiB" },
