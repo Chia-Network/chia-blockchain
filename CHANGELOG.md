@@ -17,6 +17,7 @@ for setuptools_scm/PEP 440 reasons.
 - Wallet has had various sync speed ups added.
 - The rpc interfaces of all chia services has been refactored, simplified, and had various additional functionality added.
 - Block timestamps are now stored in the wallet database. Both database versions were incremented and databases from previous versions will not work with Beta 14. However, upon re-sync all test chia should appear in your wallet.
+- All vestigial references to plots.yaml have been removed.
 
 ### Fixed
 - Temporary space required for each k size was updated with more accurate estimates.
