@@ -9,10 +9,18 @@ for setuptools_scm/PEP 440 reasons.
 ## Unreleased
 
 ### Added
+- For 'git clone' installs there is now a separate install-gui.sh which speeds up running install.sh for those who wish to run headless and makes docker and other automation simpler.
 
 ### Changed
+- `sh install.sh` was upgraded so that on Ubuntu it will install any needed OS dependencies.
+- Wallet and puzzlehash generation have been refactored and simplified.
+- Wallet has had various sync speed ups added.
+- The rpc interfaces of all chia services has been refactored, simplified, and had various additional functionality added.
+- Block timestamps are now stored in the wallet database. Both database versions were incremented and databases from previous versions will not work with Beta 14. However, upon re-sync all test chia should appear in your wallet.
 
 ### Fixed
+- Temporary space required for each k size was updated with more accurate estimates.
+- Tables in the README.MD were not rendering correctly on Pypi. Thanks again @altendky.
 
 ## [1.0beta13] aka Beta 1.13 - 2020-09-15
 
