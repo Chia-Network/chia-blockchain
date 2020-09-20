@@ -1,4 +1,5 @@
 import React from 'react';
+import styled from 'styled-components';
 import { Link as BaseLink, LinkProps as BaseLinkProps } from "@material-ui/core";
 import { Link as RouterLink, LinkProps as RouterLinkProps } from 'react-router-dom'; 
 
@@ -7,8 +8,12 @@ type Props = BaseLinkProps & RouterLinkProps & {
   fullWidth?: boolean,
 };
 
+const StyledBadeLink = styled(({ fullWidth, ...rest}) => <BaseLink {...rest} />)`
+  width: ${({ fullWidth }) => fullWidth ? '100%' : 'inherit'};
+`;
+
 export default function Link(props: Props) {
   return (
-    <BaseLink  {...props} fullWidth />
+    <StyledBadeLink component={RouterLink} {...props} fullWidth />
   );
 }
