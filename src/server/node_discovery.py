@@ -221,7 +221,10 @@ class FullNodeDiscovery:
                 # only consider very recently tried nodes after 30 failed attempts
                 if now - info.last_try < 1800 and tries < 30:
                     continue
-                if time.time() - last_timestamp_local_info > 1800:
+                if (
+                    time.time() - last_timestamp_local_info > 1800 
+                    or local_peerinfo is None
+                ):
                     local_peerinfo = self.global_connections.get_local_peerinfo()
                     last_timestamp_local_info = uint64(int(time.time()))
                 if local_peerinfo is not None and addr == local_peerinfo:
