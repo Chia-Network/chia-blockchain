@@ -1,7 +1,7 @@
 import React from 'react';
 import { HashRouter, Switch, Route } from 'react-router-dom';
 import SelectKey from "./selectKey/SelectKey";
-import NewWallet from "../pages/NewWallet";
+import NewWallet from "./newWallet/NewWallet";
 import OldWallet from "../pages/OldWallet";
 import Dashboard from "../pages/Dashboard";
 import { RestoreBackup } from "../pages/backup/restoreBackup";
@@ -41,8 +41,11 @@ export default function Router() {
   return (
     <HashRouter>
       <Switch>
-        <Route path="/">
+        <Route path="/" exact>
           <SelectKey />
+        </Route>
+        <Route path="/wallet">
+          <NewWallet />
         </Route>
       </Switch>
     </HashRouter>
