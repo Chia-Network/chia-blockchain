@@ -653,7 +653,9 @@ const SendCard = props => {
 
   const result = get_transaction_result(send_transaction_result);
   let result_message = result.message;
-  let result_class = result.success ? classes.resultSuccess : classes.resultFailure;
+  let result_class = result.success
+    ? classes.resultSuccess
+    : classes.resultFailure;
 
   function send() {
     if (sending_transaction) {
@@ -687,7 +689,11 @@ const SendCard = props => {
     const amount_value = parseFloat(Number(amount));
     const fee_value = parseFloat(Number(fee));
     if (fee_value !== 0) {
-      dispatch(openDialog("Please enter 0 fee. Positive fees not supported yet for RL."));
+      dispatch(
+        openDialog(
+          "Please enter 0 fee. Positive fees not supported yet for RL."
+        )
+      );
       return;
     }
 

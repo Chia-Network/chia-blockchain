@@ -333,7 +333,9 @@ const SendCard = props => {
 
   const result = get_transaction_result(send_transaction_result);
   let result_message = result.message;
-  let result_class = result.success ? classes.resultSuccess : classes.resultFailure;
+  let result_class = result.success
+    ? classes.resultSuccess
+    : classes.resultFailure;
 
   function farm() {
     var address = address_input.value;
@@ -594,9 +596,7 @@ const TransactionTable = props => {
 
 const AddressCard = props => {
   var id = props.wallet_id;
-  const address = useSelector(
-    state => state.wallet_state.wallets[id].address
-  );
+  const address = useSelector(state => state.wallet_state.wallets[id].address);
   const classes = useStyles();
   const dispatch = useDispatch();
 

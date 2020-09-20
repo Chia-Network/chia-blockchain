@@ -145,18 +145,14 @@ const SelectKey = () => {
       <ListItem
         button
         onClick={handleClick(fingerprint)}
-        key={
-          fingerprint.toString()
-        }
+        key={fingerprint.toString()}
       >
         <ListItemText
           className={classes.rightPadding}
           primary={
             "Private key with public fingerprint " + fingerprint.toString()
           }
-          secondary={
-            "Can be backed up to mnemonic seed"
-          }
+          secondary={"Can be backed up to mnemonic seed"}
         />
         <ListItemSecondaryAction>
           <Tooltip title="See private key">
