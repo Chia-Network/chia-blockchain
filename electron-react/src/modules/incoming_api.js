@@ -92,7 +92,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       wallet.sending_transaction = false;
       wallet.send_transaction_result = null;
       return {
-        ...state,
+        ...state
       };
     case "OUTGOING_MESSAGE":
       if (
@@ -104,7 +104,7 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
         wallet.sending_transaction = false;
         wallet.send_transaction_result = null;
         return {
-          ...state,
+          ...state
         };
       }
       return state;
@@ -154,7 +154,12 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           var wallets_state = [];
           for (let object of wallets) {
             var walletid = parseInt(object.id);
-            var wallet_obj = Wallet(walletid, object.name, object.type, object.data);
+            var wallet_obj = Wallet(
+              walletid,
+              object.name,
+              object.type,
+              object.data
+            );
             wallets_state[walletid] = wallet_obj;
           }
           return { ...state, wallets: wallets_state };

@@ -109,7 +109,7 @@ export const send_transaction = (wallet_id, amount, fee, address) => {
     wallet_id: wallet_id,
     amount: amount,
     fee: fee,
-    address: address,
+    address: address
   };
   return action;
 };
@@ -132,9 +132,8 @@ export const add_key = (mnemonic, type, file_path) => {
   return action;
 };
 
-
-export const add_new_key_action = (mnemonic) => {
-  return (dispatch) => {
+export const add_new_key_action = mnemonic => {
+  return dispatch => {
     return async_api(
       dispatch,
       add_key(mnemonic, "new_wallet", null),
@@ -389,14 +388,14 @@ export const get_transactions = wallet_id => {
   return action;
 };
 
-export const get_address = (wallet_id) => {
+export const get_address = wallet_id => {
   var action = walletMessage();
   action.message.command = "get_next_address";
   action.message.data = { wallet_id: wallet_id };
   return action;
 };
 
-export const farm_block = (address) => {
+export const farm_block = address => {
   var action = walletMessage();
   action.message.command = "farm_block";
   action.message.data = { address: address };

@@ -429,7 +429,9 @@ const SendCard = props => {
   const syncing = useSelector(state => state.wallet_state.status.syncing);
   const result = get_transaction_result(send_transaction_result);
   let result_message = result.message;
-  let result_class = result.success ? classes.resultSuccess : classes.resultFailure;
+  let result_class = result.success
+    ? classes.resultSuccess
+    : classes.resultFailure;
 
   function farm() {
     var address = address_input.value;
@@ -464,10 +466,7 @@ const SendCard = props => {
     const amount = colouredcoin_to_mojo(amount_input.value);
     const fee = colouredcoin_to_mojo(fee_input.value);
 
-    if (
-      address.includes("chia_addr") ||
-      address.includes("colour_desc")
-    ) {
+    if (address.includes("chia_addr") || address.includes("colour_desc")) {
       dispatch(
         openDialog(
           "Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address"
@@ -496,7 +495,11 @@ const SendCard = props => {
     const fee_value = parseFloat(Number(fee));
 
     if (fee_value !== 0) {
-      dispatch(openDialog("Please enter 0 fee. Positive fees not supported yet for coloured coins."));
+      dispatch(
+        openDialog(
+          "Please enter 0 fee. Positive fees not supported yet for coloured coins."
+        )
+      );
       return;
     }
 
@@ -700,9 +703,7 @@ const TransactionTable = props => {
 
 const AddressCard = props => {
   var id = props.wallet_id;
-  const address = useSelector(
-    state => state.wallet_state.wallets[id].address
-  );
+  const address = useSelector(state => state.wallet_state.wallets[id].address);
   const classes = useStyles();
   const dispatch = useDispatch();
 
