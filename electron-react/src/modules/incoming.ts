@@ -32,7 +32,6 @@ const initialState: IncomingState = {
     connection_count: 0,
     syncing: false
   },
-  sending_transaction: false,
   show_create_backup: false
 };
 
