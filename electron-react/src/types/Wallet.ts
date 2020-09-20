@@ -1,4 +1,5 @@
-import WalletType from "./WalletType";
+import type Transaction from "./Transaction";
+import type WalletType from "./WalletType";
 
 interface Wallet {
   id: number,
@@ -10,7 +11,7 @@ interface Wallet {
   balance_spendable: number,
   balance_frozen: number,
   balance_change: number,
-  transactions: [],
+  transactions: Transaction[],
   address: string,
   colour: string,
   sending_transaction: boolean,

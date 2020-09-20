@@ -6,8 +6,6 @@ export default {
   palette: {
     primary: { 
       main: "#5DA962", 
-      light: 'white',
-      dark: 'orange',
       contrastText: "#ffffff",
     },
     secondary: { 
