@@ -2,10 +2,12 @@ import { createMuiTheme } from "@material-ui/core/styles";
 
 const defaultTheme = createMuiTheme();
 
-export default createMuiTheme({
+export default {
   palette: {
     primary: { 
       main: "#5DA962", 
+      light: 'white',
+      dark: 'orange',
       contrastText: "#ffffff",
     },
     secondary: { 
@@ -19,10 +21,6 @@ export default createMuiTheme({
   },
   root: {
     background: "linear-gradient(45deg, #333333 30%, #333333 90%)",
-    height: "100%"
-  },
-  app_root: {
-    background: "linear-gradient(45deg, #142229 30%, #112240 90%)",
     height: "100%"
   },
   paper: {
@@ -72,4 +70,4 @@ export default createMuiTheme({
     marginLeft: defaultTheme.spacing(4),
     fontSize: 35
   },
-});
+}
