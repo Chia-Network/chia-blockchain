@@ -1,11 +1,8 @@
 import React, { ReactNode } from 'react';
-import { CircularProgress, Typography } from '@material-ui/core';
+import { Typography } from '@material-ui/core';
 import styled from 'styled-components';
 import LayoutHero from '../layout/LayoutHero';
-
-const StyledCircularProgress = styled(CircularProgress)`
-  color: white;
-`;
+import Loading from './Loading';
 
 const StyledTypography = styled(Typography)`
   color: white;
@@ -23,7 +20,7 @@ export default function LoadingScreen(props: Props) {
       <StyledTypography variant="h6">
         {children}
       </StyledTypography>
-      <StyledCircularProgress />
+      <Loading />
     </LayoutHero>
   );
 }

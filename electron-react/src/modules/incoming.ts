@@ -92,7 +92,11 @@ export default function incomingReducer(state = { ...initialState }, action: any
       const command = message.command;
       let success, wallets;
       if (command === "generate_mnemonic") {
-        return { ...state, mnemonic: message.data.mnemonic };
+        const mnemonic = typeof message.data.mnemonic === 'string'
+          ? message.data.mnemonic.split(' ')
+          : message.data.mnemonic;
+
+        return { ...state, mnemonic };
       } else if (command === "add_key") {
         success = data.success;
         return { ...state, logged_in: success };
@@ -165,7 +169,7 @@ export default function incomingReducer(state = { ...initialState }, action: any
           id = data.wallet_id;
           var transactions = data.transactions;
           wallets = state.wallets;
-          wallet = wallets[parseInt(id)];
+          wallet = wallets[Number(id)];
           if (!wallet) {
             return state;
           }
@@ -176,7 +180,7 @@ export default function incomingReducer(state = { ...initialState }, action: any
         id = data.wallet_id;
         var address = data.address;
         wallets = state.wallets;
-        wallet = wallets[parseInt(id)];
+        wallet = wallets[Number(id)];
         if (!wallet) {
           return state;
         }
@@ -212,7 +216,7 @@ export default function incomingReducer(state = { ...initialState }, action: any
         id = data.wallet_id;
         const colour = data.colour;
         wallets = state.wallets;
-        wallet = wallets[parseInt(id)];
+        wallet = wallets[Number(id)];
         if (!wallet) {
           return state;
         }
@@ -222,7 +226,7 @@ export default function incomingReducer(state = { ...initialState }, action: any
         const id = data.wallet_id;
         const name = data.name;
         wallets = state.wallets;
-        wallet = wallets[parseInt(id)];
+        wallet = wallets[Number(id)];
         if (!wallet) {
           return state;
         }
@@ -232,7 +236,7 @@ export default function incomingReducer(state = { ...initialState }, action: any
       if (command === "state_changed" && data.state === "tx_update") {
         const id = data.wallet_id;
         wallets = state.wallets;
-        wallet = wallets[parseInt(id)];
+        wallet = wallets[Number(id)];
         wallet.sending_transaction = false;
         wallet.send_transaction_result = message.data.additional_data;
         return { ...state };

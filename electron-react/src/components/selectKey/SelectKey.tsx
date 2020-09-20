@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Tooltip, List, ListItem, ListItemText, IconButton } from "@material-ui/core";
+import { Card, Typography, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Tooltip, List, ListItem, ListItemText, IconButton } from "@material-ui/core";
 import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import { Delete as DeleteIcon, Visibility as VisibilityIcon } from "@material-ui/icons";
 import Button from '../button/Button';
 import { makeStyles } from "@material-ui/core/styles";
-import logo from "../../assets/img/chia_logo.svg";
 import LayoutHero from '../layout/LayoutHero';
+import Flex from '../flex/Flex';
+import Logo from '../logo/Logo';
 import {
   login_action,
   delete_key,
@@ -21,15 +22,9 @@ import {
   presentNewWallet
 } from "../../modules/entranceMenu";
 import { resetMnemonic } from "../../modules/mnemonic";
-import { RootState } from "../../modules/rootReducer";
+import type { RootState } from "../../modules/rootReducer";
 
 const useStyles = makeStyles(theme => ({
-  paper: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    height: "100%"
-  },
   centeredSpan: {
     display: "flex",
     flexDirection: "column",
@@ -37,29 +32,6 @@ const useStyles = makeStyles(theme => ({
   },
   textField: {
     borderColor: "#ffffff"
-  },
-  topButton: {
-    width: 400,
-    height: 45,
-    marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(1)
-  },
-  bottomButton: {
-    width: 400,
-    height: 45,
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(1)
-  },
-  bottomButtonRed: {
-    width: 400,
-    height: 45,
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(1),
-    color: "red"
-  },
-  logo: {
-    marginTop: theme.spacing(8),
-    marginBottom: theme.spacing(3)
   },
   whiteText: {
     color: "white"
@@ -79,7 +51,7 @@ const useStyles = makeStyles(theme => ({
 export default function SelectKey() {
   const dispatch = useDispatch();
   const classes = useStyles();
-  const public_key_fingerprints = useSelector(
+  const publicKeyFingerprints = useSelector(
     (state: RootState) => state.wallet_state.public_key_fingerprints
   );
 
@@ -122,92 +94,100 @@ export default function SelectKey() {
     dispatch(changeEntranceMenu(presentNewWallet));
   };
 
-  const list_items = public_key_fingerprints.map(fingerprint => {
-    return (
-      <ListItem
-        button
-        onClick={handleClick(fingerprint)}
-        key={fingerprint.toString()}
-      >
-        <ListItemText
-          className={classes.rightPadding}
-          primary={`Private key with public fingerprint ${fingerprint.toString()}`}
-          secondary="Can be backed up to mnemonic seed"
-        />
-        <ListItemSecondaryAction>
-          <Tooltip title="See private key">
-            <IconButton
-              edge="end"
-              aria-label="delete"
-              onClick={showKey(fingerprint)}
-            >
-              <VisibilityIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="DANGER: permanantly delete private key">
-            <IconButton
-              edge="end"
-              aria-label="delete"
-              onClick={handleDelete(fingerprint)}
-            >
-              <DeleteIcon />
-            </IconButton>
-          </Tooltip>
-        </ListItemSecondaryAction>
-      </ListItem>
-    );
-  });
+  const hasFingerprints = publicKeyFingerprints && !!publicKeyFingerprints.length;
 
   return (
     <LayoutHero>
-      <Container component="main" maxWidth="xs">
-        <div className={classes.paper}>
-          <img className={classes.logo} src={logo} alt="Logo" />
-          {public_key_fingerprints && public_key_fingerprints.length > 0 ? (
+      <Container maxWidth="xs">
+        <Flex flexDirection="column" alignItems="center" gap={3}>
+          <Logo />
+          {hasFingerprints ? (
             <h1 className={classes.whiteText}>Select Key</h1>
           ) : (
-            <span className={classes.centeredSpan}>
-              <h2 className={classes.whiteText}>Sign In</h2>
-              <p className={classes.whiteP}>
+            <>
+              <Typography variant="h5" component="h1" color="primary" gutterBottom>
+                Sign In
+              </Typography>
+              <Typography variant="subtitle1">
                 Welcome to Chia. Please log in with an existing key, or create a
                 a new key.
-              </p>
-            </span>
+              </Typography>
+            </>
           )}
-          <div className={classes.demo}>
-            <List>{list_items}</List>
-          </div>
-          <Link onClick={goToMnemonics} to="/mnemonics" fullWidth>
+          <Flex flexDirection="column" gap={3} alignItems="stretch" alignSelf="stretch">
+            {hasFingerprints && (
+              <Card>
+                <List>
+                  {publicKeyFingerprints.map((fingerprint) => (
+                    <ListItem
+                      button
+                      onClick={handleClick(fingerprint)}
+                      key={fingerprint.toString()}
+                    >
+                      <ListItemText
+                        className={classes.rightPadding}
+                        primary={`Private key with public fingerprint ${fingerprint.toString()}`}
+                        secondary="Can be backed up to mnemonic seed"
+                      />
+                      <ListItemSecondaryAction>
+                        <Tooltip title="See private key">
+                          <IconButton
+                            edge="end"
+                            aria-label="delete"
+                            onClick={showKey(fingerprint)}
+                          >
+                            <VisibilityIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="DANGER: permanantly delete private key">
+                          <IconButton
+                            edge="end"
+                            aria-label="delete"
+                            onClick={handleDelete(fingerprint)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                ))}
+                </List>
+              </Card>
+            )}
+            <Link onClick={goToMnemonics} to="/mnemonics">
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                size="large"
+                fullWidth
+              >
+                Import from Mnemonics (24 words)
+              </Button>
+            </Link>
+            <Link to="/wallet">
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                size="large"
+                fullWidth
+              >
+                Create a new private key
+              </Button>
+            </Link>
             <Button
+              onClick={handleClickOpen}
               type="submit"
               variant="contained"
-              color="primary"
+              color="danger"
               size="large"
               fullWidth
             >
-              Import from Mnemonics (24 words)
+              Delete all keys
             </Button>
-          </Link>
-          <Link onClick={goToNewWallet} to="/wallet" fullWidth>
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              fullWidth
-            >
-              Create a new private key
-            </Button>
-          </Link>
-          <Button
-            onClick={handleClickOpen}
-            type="submit"
-            variant="contained"
-            color="danger"
-            fullWidth
-          >
-            Delete all keys
-          </Button>
-        </div>
+          </Flex>
+        </Flex>
       </Container>
       <Dialog
         open={open}
