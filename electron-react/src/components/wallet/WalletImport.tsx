@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Typography, Container, Button, Grid } from "@material-ui/core";
 import { ArrowBackIos as ArrowBackIosIcon } from "@material-ui/icons";
 import { useSelector, useDispatch } from "react-redux";
+import { useHistory } from "react-router";
 import TextField from "../form/TextField";
 import Logo from '../logo/Logo';
 import Flex from '../flex/Flex';
@@ -86,12 +87,15 @@ function Iterator(props: any) {
 
 export default function WalletImport() {
   const dispatch = useDispatch();
+  const history = useHistory()
   const [submitted, setSubmitted] = useState<boolean>(false);
   const mnemonic = useSelector((state: RootState) => state.mnemonic_state.mnemonic_input);
 
-  function goBack() {
+  function handleBack() {
     dispatch(resetMnemonic());
     dispatch(changeEntranceMenu(presentSelectKeys));
+
+    history.push('/');
   }
 
   function handleSubmit() {
@@ -108,9 +112,7 @@ export default function WalletImport() {
   return (
     <LayoutHero>
       <Container maxWidth="xl">
-        <Link to="/">
-          <ArrowBackIosIcon fontSize="large" color="secondary" />
-        </Link>
+        <ArrowBackIosIcon onClick={handleBack} fontSize="large" color="secondary" />
       </Container>
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
