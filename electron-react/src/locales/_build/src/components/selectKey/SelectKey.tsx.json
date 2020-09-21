@@ -1,0 +1,29 @@
+{
+  "SelectKey.title": {
+    "defaults": "Select Key",
+    "origin": [
+      [
+        "src/components/selectKey/SelectKey.tsx",
+        51
+      ]
+    ]
+  },
+  "SelectKey.signInTitle": {
+    "defaults": "Sign In",
+    "origin": [
+      [
+        "src/components/selectKey/SelectKey.tsx",
+        56
+      ]
+    ]
+  },
+  "SelectKey.signInDescription": {
+    "defaults": "Welcome to Chia. Please log in with an existing key, or create a a new key.",
+    "origin": [
+      [
+        "src/components/selectKey/SelectKey.tsx",
+        61
+      ]
+    ]
+  }
+}
