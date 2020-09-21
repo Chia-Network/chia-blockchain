@@ -49,7 +49,6 @@ class TestRLWallet:
         await full_node.farm_new_block(FarmNewBlockProtocol(ph))
         for i in range(0, num_blocks + 1):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
-        fund_owners_initial_balance = await wallet.get_confirmed_balance()
 
         api_user = WalletRpcApi(wallet_node_1)
         val = await api_user.create_new_wallet(
@@ -143,15 +142,13 @@ class TestRLWallet:
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 97, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
-        utxo = [c for c in await full_node.coin_store.get_unspent_coin_records() if not c.coinbase]
         val = await api_admin.add_rate_limited_funds({"wallet_id": admin_wallet_id, "amount": 100})
         assert val["status"] == "SUCCESS"
         for i in range(0, 50):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 197, api_user, user_wallet_id)
-        utxo_2 = [c for c in await full_node.coin_store.get_unspent_coin_records() if not c.coinbase]
 
-        #test spending
+        # test spending
         val = await api_user.send_transaction(
             {
                 "wallet_id": user_wallet_id,
