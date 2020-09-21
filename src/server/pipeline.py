@@ -207,13 +207,13 @@ async def perform_handshake(
         ):
             raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-        if inbound_handshake.node_id == outbound_handshake.data.node_id:
-            raise ProtocolError(Err.SELF_CONNECTION)
-
         # Makes sure that we only start one connection with each peer
         connection.node_id = inbound_handshake.node_id
         connection.peer_server_port = int(inbound_handshake.server_port)
         connection.connection_type = inbound_handshake.node_type
+
+        if inbound_handshake.node_id == outbound_handshake.data.node_id:
+            raise ProtocolError(Err.SELF_CONNECTION)
 
         if srwt_aiter.is_stopped():
             raise Exception("No longer accepting handshakes, closing.")

@@ -222,7 +222,7 @@ class FullNodeDiscovery:
                 if now - info.last_try < 1800 and tries < 30:
                     continue
                 if (
-                    time.time() - last_timestamp_local_info > 1800 
+                    time.time() - last_timestamp_local_info > 1800
                     or local_peerinfo is None
                 ):
                     local_peerinfo = self.global_connections.get_local_peerinfo()
