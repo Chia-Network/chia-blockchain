@@ -377,28 +377,28 @@ export const get_backup_info_action = (file_path, fingerprint, words) => {
 export const get_private_key = fingerprint => {
   var action = walletMessage();
   action.message.command = "get_private_key";
-  action.message.data = { fingerprint: fingerprint };
+  action.message.data = { fingerprint };
   return action;
 };
 
 export const get_transactions = wallet_id => {
   var action = walletMessage();
   action.message.command = "get_transactions";
-  action.message.data = { wallet_id: wallet_id };
+  action.message.data = { wallet_id };
   return action;
 };
 
 export const get_address = wallet_id => {
   var action = walletMessage();
   action.message.command = "get_next_address";
-  action.message.data = { wallet_id: wallet_id };
+  action.message.data = { wallet_id };
   return action;
 };
 
 export const farm_block = address => {
   var action = walletMessage();
   action.message.command = "farm_block";
-  action.message.data = { address: address };
+  action.message.data = { address };
   return action;
 };
 

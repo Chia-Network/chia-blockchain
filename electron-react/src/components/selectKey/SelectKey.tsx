@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useHistory } from "react-router";
 import { Card, Typography, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Tooltip, List, ListItem, ListItemText, IconButton } from "@material-ui/core";
 import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import { Delete as DeleteIcon, Visibility as VisibilityIcon } from "@material-ui/icons";
@@ -20,6 +21,7 @@ import type { RootState } from "../../modules/rootReducer";
 import type Fingerprint from "../../types/Fingerprint";
 
 export default function SelectKey() {
+  const history = useHistory();
   const dispatch = useDispatch();
   const [open, setOpen] = useState<boolean>(false);
   const publicKeyFingerprints = useSelector(
@@ -31,6 +33,8 @@ export default function SelectKey() {
     dispatch(resetMnemonic());
     dispatch(selectFingerprint(fingerprint));
     dispatch(login_action(fingerprint));
+
+    history.push('/dashboard');
   };
 
   function handleClickOpen() {
