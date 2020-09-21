@@ -1,7 +1,6 @@
 import logging
 
 # RLWallet is subclass of Wallet
-from binascii import hexlify
 from dataclasses import dataclass
 import time
 from secrets import token_bytes
@@ -9,7 +8,6 @@ from typing import Optional, List, Tuple, Any
 
 import json
 from blspy import PrivateKey, AugSchemeMPL, G1Element
-from src.util.clvm import run_program
 from clvm_tools import binutils
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
@@ -342,10 +340,7 @@ class RLWallet(AbstractWallet):
         height = lca.height
         assert self.rl_info.limit is not None
         unlocked = int(
-            (
-                    (height - self.rl_coin_record.confirmed_block_index)
-                    / self.rl_info.interval
-            )
+            ((height - self.rl_coin_record.confirmed_block_index) / self.rl_info.interval)
             * int(self.rl_info.limit)
         )
         total_amount = self.rl_coin_record.coin.amount
@@ -675,13 +670,13 @@ class RLWallet(AbstractWallet):
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2
     async def rl_generate_signed_aggregation_transaction(
-        self, rl_info: RLInfo, consolidating_coin: Coin, rl_parent: Coin, rl_coin: Coin
+            self, rl_info: RLInfo, consolidating_coin: Coin, rl_parent: Coin, rl_coin: Coin
     ):
         if (
-            rl_info.limit is None
-            or rl_info.interval is None
-            or rl_info.user_pubkey is None
-            or rl_info.admin_pubkey is None
+                 rl_info.limit is None
+                or rl_info.interval is None
+                or rl_info.user_pubkey is None
+                or rl_info.admin_pubkey is None
         ):
             raise ValueError("One or more of the elements of rl_info is None")
         if self.rl_coin_record is None:
@@ -713,7 +708,7 @@ class RLWallet(AbstractWallet):
         rl_spend = CoinSolution(self.rl_coin_record.coin, Program.to([puzzle, solution]))
 
         list_of_coinsolutions.append(
-          rl_spend
+            rl_spend
         )
 
         # Spend consolidating coin
@@ -735,9 +730,9 @@ class RLWallet(AbstractWallet):
         solution = Program(binutils.assemble("()"))
 
         ephemeral = CoinSolution(
-                Coin(self.rl_coin_record.coin.name(), puzzle.get_tree_hash(), uint64(0)),
-                Program.to([puzzle, solution]),
-            )
+            Coin(self.rl_coin_record.coin.name(), puzzle.get_tree_hash(), uint64(0)),
+            Program.to([puzzle, solution]),
+        )
         list_of_coinsolutions.append(ephemeral)
 
         aggsig = AugSchemeMPL.aggregate([signature])
