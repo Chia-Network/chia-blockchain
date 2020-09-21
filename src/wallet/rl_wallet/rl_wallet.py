@@ -709,8 +709,6 @@ class RLWallet(AbstractWallet):
             rl_parent.amount,
             rl_parent.parent_coin_info,
         )
-        # cost, sexp = run_program(puzzle, solution)
-
         signature = AugSchemeMPL.sign(secretkey, solution.get_tree_hash())
         rl_spend = CoinSolution(self.rl_coin_record.coin, Program.to([puzzle, solution]))
 
