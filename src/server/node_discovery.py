@@ -234,6 +234,7 @@ class FullNodeDiscovery:
             disconnect_after_handshake = is_feeler
             if self._num_needed_peers() == 0:
                 disconnect_after_handshake = True
+                empty_tables = False
             initiate_connection = (
                 self._num_needed_peers() > 0 or has_collision or is_feeler
             )
