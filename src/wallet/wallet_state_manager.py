@@ -82,7 +82,7 @@ class WalletStateManager:
 
     state_changed_callback: Optional[Callable]
     pending_tx_callback: Optional[Callable]
-    puzzle_hash_created_callbacks = defaultdict(lambda *x: None)
+    puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
     db_connection: aiosqlite.Connection
 
