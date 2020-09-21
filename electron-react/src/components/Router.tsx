@@ -1,8 +1,8 @@
 import React from 'react';
 import { HashRouter, Switch, Route } from 'react-router-dom';
 import SelectKey from "./selectKey/SelectKey";
-import NewWallet from "./newWallet/NewWallet";
-import OldWallet from "../pages/OldWallet";
+import WalletAdd from "./wallet/WalletAdd";
+import WalletImport from "./wallet/WalletImport";
 import Dashboard from "../pages/Dashboard";
 import { RestoreBackup } from "../pages/backup/restoreBackup";
 import { useSelector } from "react-redux";
@@ -44,21 +44,18 @@ export default function Router() {
         <Route path="/" exact>
           <SelectKey />
         </Route>
-        <Route path="/wallet">
-          <NewWallet />
+        <Route path="/wallet/add" exact>
+          <WalletAdd />
+        </Route>
+        <Route path="/wallet/import" exact>
+          <WalletImport />
         </Route>
       </Switch>
     </HashRouter>
   );
 
 /*
-    if (presentView === presentSelectKeys) {
-      return <SelectKey></SelectKey>;
-    } else if (presentView === presentOldWallet) {
-      return <OldWallet></OldWallet>;
-    } else if (presentView === presentNewWallet) {
-      return <NewWallet></NewWallet>;
-    } else if (presentView === presentDashboard) {
+    else if (presentView === presentDashboard) {
       return <Dashboard></Dashboard>;
     } else if (presentView === presentRestoreBackup) {
       return <RestoreBackup></RestoreBackup>;

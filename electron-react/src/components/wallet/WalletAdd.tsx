@@ -5,12 +5,12 @@ import { useSelector, useDispatch } from "react-redux";
 import { useEffectOnce } from 'react-use';
 import { genereate_mnemonics, add_new_key_action } from "../../modules/message";
 import TextField from "../form/TextField";
-import type { RootState } from "../../modules/rootReducer";
 import Logo from '../logo/Logo';
 import Flex from '../flex/Flex';
 import Loading from '../loading/Loading';
 import Link from '../router/Link';
 import LayoutHero from "../layout/LayoutHero";
+import type { RootState } from "../../modules/rootReducer";
 
 const MnemonicField = (props: any) => {
   return (
@@ -32,7 +32,7 @@ const MnemonicField = (props: any) => {
   );
 };
 
-export default function NewWallet() {
+export default function WalletAdd() {
   const dispatch = useDispatch();
   const words = useSelector((state: RootState) => state.wallet_state.mnemonic);
 
@@ -66,8 +66,13 @@ export default function NewWallet() {
           </Typography>
           {!!words.length ? (
             <Grid container spacing={2}>
-              {words.map((word, i) => (
-                <MnemonicField key={i} word={word} id={"id_" + (i + 1)} index={i + 1} />
+              {words.map((word: string, index: number) => (
+                <MnemonicField
+                  key={index}
+                  word={word}
+                  id={`id_${index + 1}`}
+                  index={index + 1}
+                />
               ))}
             </Grid>
           ) : (
