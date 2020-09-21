@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Trans } from '@lingui/macro';
 import { useSelector, useDispatch } from "react-redux";
 import { useHistory } from "react-router";
 import { Card, Typography, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Tooltip, List, ListItem, ListItemText, IconButton } from "@material-ui/core";
@@ -65,16 +66,22 @@ export default function SelectKey() {
           <Logo />
           {hasFingerprints ? (
             <Typography variant="h5" component="h1" color="primary" gutterBottom>
-              Select Key
+              <Trans id="SelectKey.title">
+                Select Key
+              </Trans>
             </Typography>
           ) : (
             <>
               <Typography variant="h5" component="h1" color="primary" gutterBottom>
-                Sign In
+                <Trans id="SelectKey.signInTitle">
+                  Sign In
+                </Trans>
               </Typography>
               <Typography variant="subtitle1">
-                Welcome to Chia. Please log in with an existing key, or create a
-                a new key.
+                <Trans id="SelectKey.signInDescription">
+                  Welcome to Chia. Please log in with an existing key, or create a
+                  a new key.
+                </Trans>
               </Typography>
             </>
           )}
