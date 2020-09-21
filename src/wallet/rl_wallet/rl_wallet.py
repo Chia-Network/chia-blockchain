@@ -312,10 +312,12 @@ class RLWallet(AbstractWallet):
                                                                              await self.get_rl_parent(),
                                                                              await self.get_rl_coin())
 
+        rl_coin = (await self.get_rl_coin())
+        puzzle_hash = rl_coin.puzzle_hash if rl_coin is not None else None
         tx_record = TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=(await self.get_rl_coin()).puzzle_hash,
+            to_puzzle_hash=puzzle_hash,
             amount=uint64(0),
             fee_amount=uint64(0),
             incoming=False,
@@ -670,8 +672,7 @@ class RLWallet(AbstractWallet):
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2
     async def rl_generate_signed_aggregation_transaction(
-            self, rl_info: RLInfo, consolidating_coin: Coin, rl_parent: Coin, rl_coin: Coin
-    ):
+            self, rl_info, consolidating_coin, rl_parent, rl_coin):
         if (
                  rl_info.limit is None
                 or rl_info.interval is None
