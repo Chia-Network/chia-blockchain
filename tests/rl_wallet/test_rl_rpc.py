@@ -168,12 +168,3 @@ class TestRLWallet:
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 200)
-
-        # val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id})
-        # assert val["status"] == "SUCCESS"
-        # for i in range(0, num_blocks):
-        #     await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
-        # await time_out_assert(15, check_balance, 0, api_admin, admin_wallet_id)
-        # await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
-        # final_balance = await wallet.get_confirmed_balance()
-        # assert final_balance == fund_owners_initial_balance - 3
