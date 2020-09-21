@@ -4,7 +4,6 @@ import { Card, Typography, Container, Dialog, DialogActions, DialogContent, Dial
 import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import { Delete as DeleteIcon, Visibility as VisibilityIcon } from "@material-ui/icons";
 import Button from '../button/Button';
-import { makeStyles } from "@material-ui/core/styles";
 import LayoutHero from '../layout/LayoutHero';
 import Flex from '../flex/Flex';
 import Logo from '../logo/Logo';
@@ -16,85 +15,44 @@ import {
   delete_all_keys,
 } from "../../modules/message";
 import Link from '../router/Link';
-import {
-  changeEntranceMenu,
-  presentOldWallet,
-  presentNewWallet
-} from "../../modules/entranceMenu";
 import { resetMnemonic } from "../../modules/mnemonic";
 import type { RootState } from "../../modules/rootReducer";
-
-const useStyles = makeStyles(theme => ({
-  centeredSpan: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center"
-  },
-  textField: {
-    borderColor: "#ffffff"
-  },
-  whiteText: {
-    color: "white"
-  },
-  whiteP: {
-    color: "white",
-    fontSize: "18px"
-  },
-  demo: {
-    backgroundColor: theme.palette.background.paper
-  },
-  rightPadding: {
-    paddingRight: theme.spacing(3)
-  }
-}));
+import type Fingerprint from "../../types/Fingerprint";
 
 export default function SelectKey() {
   const dispatch = useDispatch();
-  const classes = useStyles();
+  const [open, setOpen] = useState<boolean>(false);
   const publicKeyFingerprints = useSelector(
-    (state: RootState) => state.wallet_state.public_key_fingerprints
+    (state: RootState) => state.wallet_state.public_key_fingerprints,
   );
+  const hasFingerprints = publicKeyFingerprints && !!publicKeyFingerprints.length;
 
-  const [open, setOpen] = useState(false);
-
-  const handleClick = (fingerprint: string) => {
-    return () => {
-      dispatch(resetMnemonic());
-      dispatch(selectFingerprint(fingerprint));
-      dispatch(login_action(fingerprint));
-    };
+  function handleClick(fingerprint: Fingerprint) {
+    dispatch(resetMnemonic());
+    dispatch(selectFingerprint(fingerprint));
+    dispatch(login_action(fingerprint));
   };
 
-  const handleClickOpen = () => {
+  function handleClickOpen() {
     setOpen(true);
   };
 
-  const handleClose = () => {
+  function handleClose() {
     setOpen(false);
-  };
+  }
 
-  const handleCloseDelete = () => {
+  function handleCloseDelete() {
     handleClose();
     dispatch(delete_all_keys());
+  }
+
+  function handleShowKey(fingerprint: Fingerprint) {
+    dispatch(get_private_key(fingerprint));
   };
 
-  const showKey = (fingerprint: string) => {
-    return () => dispatch(get_private_key(fingerprint));
-  };
-
-  const handleDelete = (fingerprint: string) => {
-    return () => dispatch(delete_key(fingerprint));
-  };
-
-  const goToMnemonics = () => {
-    dispatch(changeEntranceMenu(presentOldWallet));
-  };
-
-  const goToNewWallet = () => {
-    dispatch(changeEntranceMenu(presentNewWallet));
-  };
-
-  const hasFingerprints = publicKeyFingerprints && !!publicKeyFingerprints.length;
+  function handleDelete(fingerprint: Fingerprint) {
+    dispatch(delete_key(fingerprint));
+  }
 
   return (
     <LayoutHero>
@@ -102,7 +60,9 @@ export default function SelectKey() {
         <Flex flexDirection="column" alignItems="center" gap={3}>
           <Logo />
           {hasFingerprints ? (
-            <h1 className={classes.whiteText}>Select Key</h1>
+            <Typography variant="h5" component="h1" color="primary" gutterBottom>
+              Select Key
+            </Typography>
           ) : (
             <>
               <Typography variant="h5" component="h1" color="primary" gutterBottom>
@@ -118,15 +78,14 @@ export default function SelectKey() {
             {hasFingerprints && (
               <Card>
                 <List>
-                  {publicKeyFingerprints.map((fingerprint) => (
+                  {publicKeyFingerprints.map((fingerprint: Fingerprint) => (
                     <ListItem
                       button
-                      onClick={handleClick(fingerprint)}
+                      onClick={() => handleClick(fingerprint)}
                       key={fingerprint.toString()}
                     >
                       <ListItemText
-                        className={classes.rightPadding}
-                        primary={`Private key with public fingerprint ${fingerprint.toString()}`}
+                        primary={`Private key with public fingerprint ${fingerprint[0]}`}
                         secondary="Can be backed up to mnemonic seed"
                       />
                       <ListItemSecondaryAction>
@@ -134,7 +93,7 @@ export default function SelectKey() {
                           <IconButton
                             edge="end"
                             aria-label="delete"
-                            onClick={showKey(fingerprint)}
+                            onClick={() => handleShowKey(fingerprint)}
                           >
                             <VisibilityIcon />
                           </IconButton>
@@ -143,7 +102,7 @@ export default function SelectKey() {
                           <IconButton
                             edge="end"
                             aria-label="delete"
-                            onClick={handleDelete(fingerprint)}
+                            onClick={() => handleDelete(fingerprint)}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -154,7 +113,7 @@ export default function SelectKey() {
                 </List>
               </Card>
             )}
-            <Link onClick={goToMnemonics} to="/mnemonics">
+            <Link to="/wallet/import">
               <Button
                 type="submit"
                 variant="contained"
@@ -165,7 +124,7 @@ export default function SelectKey() {
                 Import from Mnemonics (24 words)
               </Button>
             </Link>
-            <Link to="/wallet">
+            <Link to="/wallet/add">
               <Button
                 type="submit"
                 variant="contained"

@@ -1,10 +1,11 @@
 import { service_wallet } from '../util/service_names';
 import type Wallet from '../types/Wallet';
+import type Fingerprint from '../types/Fingerprint';
 import createWallet from '../util/createWallet';
 
 type IncomingState = {
   mnemonic: string[],
-  public_key_fingerprints: string[],
+  public_key_fingerprints: Fingerprint[],
   selected_fingerprint: null,
   logged_in_received: boolean,
   logged_in: boolean,
