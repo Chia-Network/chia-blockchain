@@ -52,8 +52,8 @@ else
     # If Ubuntu version is older than 20.04LTS then upgrade CMake
     ubuntu_cmake_install
     # Install remaining needed development tools - assumes venv and prior run of install.sh
-    echo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev -y
-    sudo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev -y
+    echo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev build-essential -y
+    sudo apt-get install libgmp-dev libboost-python-dev lib"$PYTHON_VERSION"-dev libboost-system-dev build-essential -y
     echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
     venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
     symlink_vdf_bench "$PYTHON_VERSION"
