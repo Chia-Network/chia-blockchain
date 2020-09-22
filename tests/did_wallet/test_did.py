@@ -466,13 +466,24 @@ class TestWalletSimulator:
         innerpuz = Program(binutils.assemble("1"))
         innerpuzhash = innerpuz.get_tree_hash()
 
-        puz = did_wallet_puzzles.create_fullpuz(innerpuzhash, did_wallet.did_info.my_did)
+        puz = did_wallet_puzzles.create_fullpuz(
+            innerpuzhash, did_wallet.did_info.my_did
+        )
 
         # Add the hacked puzzle to the puzzle store so that it is recognised as "our" puzzle
-        old_devrec = await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)
-        devrec = DerivationRecord(old_devrec.index, puz.get_tree_hash(), old_devrec.pubkey,
-                                  old_devrec.wallet_type, old_devrec.wallet_id)
-        await did_wallet.wallet_state_manager.puzzle_store.add_derivation_paths([devrec])
+        old_devrec = await did_wallet.wallet_state_manager.get_unused_derivation_record(
+            did_wallet.wallet_info.id
+        )
+        devrec = DerivationRecord(
+            old_devrec.index,
+            puz.get_tree_hash(),
+            old_devrec.pubkey,
+            old_devrec.wallet_type,
+            old_devrec.wallet_id,
+        )
+        await did_wallet.wallet_state_manager.puzzle_store.add_derivation_paths(
+            [devrec]
+        )
         await did_wallet.create_spend(puz.get_tree_hash())
 
         for i in range(1, num_blocks):
@@ -488,15 +499,21 @@ class TestWalletSimulator:
         innersol = Program.to([[51, coin.puzzle_hash, 45], [51, coin.puzzle_hash, 55]])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         parent_info = await did_wallet.get_parent_for_coin(coin)
-        fullsol = Program.to([
-            [parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount],
-            coin.amount,
-            innersol,
-        ])
+        fullsol = Program.to(
+            [
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
+                coin.amount,
+                innersol,
+            ]
+        )
         try:
             cost, result = puz.run_with_cost(fullsol)
         except Exception as e:
-            assert e.args == ('clvm raise',)
+            assert e.args == ("clvm raise",)
         else:
             assert False
 
@@ -560,45 +577,36 @@ class TestWalletSimulator:
 
         # Write spend by hand
         # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol = Program.to(
-            [
-                0,
-                coin.amount,
-                ph,
-                coin.name(),
-                coin.puzzle_hash
-            ]
-        )
+        innersol = Program.to([0, coin.amount, ph, coin.name(), coin.puzzle_hash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = did_wallet.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz,
-            did_wallet.did_info.my_did,
+            innerpuz, did_wallet.did_info.my_did,
         )
         fullsol = Program.to(
             [
-                [parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount],
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
                 coin.amount,
-                innersol
+                innersol,
             ]
         )
 
         list_of_solutions = [
-            CoinSolution(
-                coin,
-                clvm.to_sexp_f(
-                    [
-                        full_puzzle,
-                        fullsol,
-                    ]
-                ),
-            )
+            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol,]),)
         ]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())
         pubkey = did_wallet_puzzles.get_pubkey_from_innerpuz(innerpuz)
-        index = await did_wallet.wallet_state_manager.puzzle_store.index_for_pubkey(pubkey)
-        private = master_sk_to_wallet_sk(did_wallet.wallet_state_manager.private_key, index)
+        index = await did_wallet.wallet_state_manager.puzzle_store.index_for_pubkey(
+            pubkey
+        )
+        private = master_sk_to_wallet_sk(
+            did_wallet.wallet_state_manager.private_key, index
+        )
         signature = AugSchemeMPL.sign(private, message)
         sigs = [signature]
         aggsig = AugSchemeMPL.aggregate(sigs)
@@ -618,7 +626,7 @@ class TestWalletSimulator:
             removals=spend_bundle.removals(),
             wallet_id=did_wallet.wallet_info.id,
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
 
         await did_wallet.standard_wallet.push_transaction(did_record)
