@@ -251,7 +251,9 @@ class DIDWallet:
         await self.save_info(new_info)
 
         future_parent = CCParent(
-            coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount,
+            coin.parent_coin_info,
+            inner_puzzle.get_tree_hash(),
+            coin.amount,
         )
 
         await self.add_parent(coin.name(), future_parent)
@@ -345,7 +347,11 @@ class DIDWallet:
 
                 if coin is not None:
                     if did_wallet_puzzles.check_is_did_puzzle(puzzle_program):
-                        inner_puzzle_hash = did_wallet_puzzles.get_innerpuzzle_from_puzzle(puzzle_program)
+                        inner_puzzle_hash = (
+                            did_wallet_puzzles.get_innerpuzzle_from_puzzle(
+                                puzzle_program
+                            )
+                        )
                         self.log.info(
                             f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle_hash.hex()}"
                         )
@@ -679,10 +685,7 @@ class DIDWallet:
         await self.save_info(did_info)
 
         eve_spend = await self.generate_eve_spend(
-            eve_coin,
-            did_puz,
-            origin_id,
-            did_inner
+            eve_coin, did_puz, origin_id, did_inner
         )
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
         return full_spend
