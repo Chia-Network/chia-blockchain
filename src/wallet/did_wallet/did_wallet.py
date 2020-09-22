@@ -414,7 +414,8 @@ class DIDWallet:
         innerpuz = self.did_info.current_inner
 
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz, self.did_info.my_did,
+            innerpuz,
+            self.did_info.my_did,
         )
         parent_info = await self.get_parent_for_coin(coin)
 
@@ -483,7 +484,8 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = self.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz, self.did_info.my_did,
+            innerpuz,
+            self.did_info.my_did,
         )
         parent_info = await self.get_parent_for_coin(coin)
 
@@ -567,7 +569,8 @@ class DIDWallet:
         # full solution is (parent_info my_amount solution)
         innerpuz = self.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz, self.did_info.my_did,
+            innerpuz,
+            self.did_info.my_did,
         )
         parent_info = await self.get_parent_for_coin(coin)
         fullsol = Program.to(
@@ -676,10 +679,14 @@ class DIDWallet:
         )
         eve_coin = Coin(origin_id, did_puzzle_hash, amount)
         future_parent = CCParent(
-            eve_coin.parent_coin_info, did_inner_hash, eve_coin.amount
+            eve_coin.parent_coin_info,
+            did_inner_hash,
+            eve_coin.amount,
         )
         eve_parent = CCParent(
-            origin.parent_coin_info, origin.puzzle_hash, origin.amount
+            origin.parent_coin_info,
+            origin.puzzle_hash,
+            origin.amount,
         )
         await self.add_parent(eve_coin.parent_coin_info, eve_parent)
         await self.add_parent(eve_coin.name(), future_parent)
@@ -689,12 +696,18 @@ class DIDWallet:
 
         # Only want to save this information if the transaction is valid
         did_info: DIDInfo = DIDInfo(
-            origin_id, self.did_info.backup_ids, self.did_info.parent_info, did_inner,
+            origin_id,
+            self.did_info.backup_ids,
+            self.did_info.parent_info,
+            did_inner,
         )
         await self.save_info(did_info)
 
         eve_spend = await self.generate_eve_spend(
-            eve_coin, did_puz, origin_id, did_inner
+            eve_coin,
+            did_puz,
+            origin_id,
+            did_inner
         )
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
         return full_spend
@@ -729,8 +742,10 @@ class DIDWallet:
         return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
     async def get_spendable_balance(self) -> uint64:
-        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.wallet_info.id
+        spendable_am = (
+            await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+                self.wallet_info.id
+            )
         )
         return spendable_am
 
