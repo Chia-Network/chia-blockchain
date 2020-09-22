@@ -573,11 +573,18 @@ class TestWalletSimulator:
 
         # Write spend by hand
         # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol = Program.to([0, coin.amount, ph, coin.name(), coin.puzzle_hash])
+        innersol = Program.to([
+            0,
+            coin.amount,
+            ph,
+            coin.name(),
+            coin.puzzle_hash
+        ])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = did_wallet.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz, did_wallet.did_info.my_did,
+            innerpuz,
+            did_wallet.did_info.my_did,
         )
         fullsol = Program.to(
             [
