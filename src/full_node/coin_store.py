@@ -263,9 +263,7 @@ class CoinStore:
         await c2.close()
         await self.coin_record_db.commit()
 
-    async def get_unspent_coin_records(
-        self, header: Header = None
-    ) -> List[CoinRecord]:
+    async def get_unspent_coin_records(self, header: Header = None) -> List[CoinRecord]:
         coins = set()
         if header is not None and header.header_hash in self.head_diffs:
             diff_store = self.head_diffs[header.header_hash]
