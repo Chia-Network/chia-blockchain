@@ -31,6 +31,7 @@ from src.wallet.did_wallet.did_wallet import DIDWallet
 from src.wallet.wallet_info import WalletInfo
 from src.wallet.wallet_node import WalletNode
 from src.wallet.transaction_record import TransactionRecord
+from src.types.spend_bundle import SpendBundle
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30

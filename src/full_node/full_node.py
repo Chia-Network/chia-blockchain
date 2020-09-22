@@ -55,7 +55,7 @@ from src.util.ints import uint32, uint64, uint128
 from src.util.merkle_set import MerkleSet
 from src.util.path import mkdir, path_from_root
 from src.server.node_discovery import FullNodePeers
-from src.types.peer_info import PeerInfo
+from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
