@@ -31,9 +31,8 @@ def fullpuz_hash_for_inner_puzzle_hash(
     """
     gid_hash = genesis_id.get_tree_hash()
     return mod_code.curry(
-        mod_code.get_tree_hash(),
-        gid_hash,
-        inner_puzzle_hash).get_tree_hash(gid_hash, inner_puzzle_hash)
+        mod_code.get_tree_hash(), gid_hash, inner_puzzle_hash
+    ).get_tree_hash(gid_hash, inner_puzzle_hash)
 
 
 def get_pubkey_from_innerpuz(innerpuz: Program) -> G1Element:
