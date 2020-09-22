@@ -704,8 +704,6 @@ class WalletRpcApi:
             "transaction_id": tx.name(),
         }
 
-        return data
-
     async def add_rate_limited_funds(self, request):
         wallet_id = uint32(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]

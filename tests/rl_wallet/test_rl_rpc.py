@@ -49,6 +49,7 @@ class TestRLWallet:
         await full_node.farm_new_block(FarmNewBlockProtocol(ph))
         for i in range(0, num_blocks + 1):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        fund_owners_initial_balance = await wallet.get_confirmed_balance()
 
         api_user = WalletRpcApi(wallet_node_1)
         val = await api_user.create_new_wallet(
@@ -149,19 +150,30 @@ class TestRLWallet:
         await time_out_assert(15, check_balance, 197, api_user, user_wallet_id)
 
         # test spending
+        puzzle_hash = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash())
         val = await api_user.send_transaction(
             {
                 "wallet_id": user_wallet_id,
-                "amount": 197,
+                "amount": 105,
                 "fee": 0,
-                "puzzle_hash": puzzle_hash,
+                "address": puzzle_hash,
             }
         )
+        await time_out_assert(
+            15, is_transaction_in_mempool, True, api_user, val["transaction_id"]
+        )
+        for i in range(0, num_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        await time_out_assert(15, check_balance, 92, api_user, user_wallet_id)
+        await time_out_assert(15, receiving_wallet.get_spendable_balance, 108)
 
+        val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id})
         await time_out_assert(
             15, is_transaction_in_mempool, True, api_admin, val["transaction_id"]
         )
         for i in range(0, num_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
-        await time_out_assert(15, receiving_wallet.get_spendable_balance, 200)
+        await time_out_assert(15, check_balance, 0, api_admin, user_wallet_id)
+        final_balance = await wallet.get_confirmed_balance()
+        assert final_balance == fund_owners_initial_balance - 108
