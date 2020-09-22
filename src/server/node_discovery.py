@@ -131,10 +131,7 @@ class FullNodeDiscovery:
             msg = Message("request_peers", introducer_protocol.RequestPeers())
             yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
 
-        # The first time connecting to introducer, keep trying to connect
-        if self.global_connections.count_outbound_connections() == 0:
-            await self.server.start_client(self.introducer_info, on_connect)
-
+        await self.server.start_client(self.introducer_info, on_connect)
         # If we are still connected to introducer, disconnect
         for connection in self.global_connections.get_connections():
             if connection.connection_type == NodeType.INTRODUCER:
@@ -153,12 +150,12 @@ class FullNodeDiscovery:
             if size == 0 or empty_tables:
                 await self._introducer_client()
                 await asyncio.sleep(min(15, self.peer_connect_interval))
+                empty_tables = False
                 continue
 
             # Only connect out to one peer per network group (/16 for IPv4).
             groups = []
             connected = self.global_connections.get_full_node_peerinfos()
-            empty_tables = False
             for conn in self.global_connections.get_outbound_connections():
                 peer = conn.get_peer_info()
                 group = peer.get_group()
