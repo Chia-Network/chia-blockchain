@@ -18,7 +18,6 @@ from blspy import AugSchemeMPL
 from src.types.spend_bundle import SpendBundle
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.derive_keys import master_sk_to_wallet_sk
-from src.util.clvm import run_program
 
 
 @pytest.fixture(scope="module")
@@ -491,7 +490,7 @@ class TestWalletSimulator:
             innersol,
         ])
         try:
-            cost, result = run_program(puz, fullsol)
+            cost, result = puz.run_with_cost(fullsol)
         except Exception as e:
             assert e.args == ('clvm raise',)
         else:
