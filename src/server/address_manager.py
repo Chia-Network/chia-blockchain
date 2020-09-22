@@ -4,7 +4,7 @@ from random import randrange, choice
 
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.util.ints import uint16, uint64
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from asyncio import Lock
 
 import time
@@ -49,7 +49,7 @@ class ExtendedPeerInfo:
         self.num_attempts: int = 0
         self.last_count_attempt: int = 0
 
-    def to_string(self):
+    def to_string(self) -> str:
         assert self.src is not None
         out = (
             self.peer_info.host
@@ -70,7 +70,7 @@ class ExtendedPeerInfo:
         src_peer = PeerInfo(blobs[2], uint16(int(blobs[3])))
         return cls(peer_info, src_peer)
 
-    def get_tried_bucket(self, key: int):
+    def get_tried_bucket(self, key: int) -> int:
         hash1 = int.from_bytes(
             bytes(
                 std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_key())[
@@ -92,7 +92,7 @@ class ExtendedPeerInfo:
         )
         return hash2 % TRIED_BUCKET_COUNT
 
-    def get_new_bucket(self, key: int, src_peer: Optional[PeerInfo] = None):
+    def get_new_bucket(self, key: int, src_peer: Optional[PeerInfo] = None) -> int:
         if src_peer is None:
             src_peer = self.src
         assert src_peer is not None
@@ -119,7 +119,7 @@ class ExtendedPeerInfo:
         )
         return hash2 % NEW_BUCKET_COUNT
 
-    def get_bucket_position(self, key: int, is_new: bool, nBucket: int):
+    def get_bucket_position(self, key: int, is_new: bool, nBucket: int) -> int:
         ch = "N" if is_new else "K"
         hash1 = int.from_bytes(
             bytes(
@@ -134,7 +134,7 @@ class ExtendedPeerInfo:
         )
         return hash1 % BUCKET_SIZE
 
-    def is_terrible(self, now: Optional[int] = None):
+    def is_terrible(self, now: Optional[int] = None) -> bool:
         if now is None:
             now = int(math.floor(time.time()))
         # never remove things tried in the last minute
@@ -212,7 +212,11 @@ class AddressManager:
         self.last_good = 1
         self.tried_collisions = []
 
-    def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]):
+    def create_(
+        self,
+        addr: TimestampedPeerInfo,
+        addr_src: Optional[PeerInfo]
+    ) -> Tuple[ExtendedPeerInfo, int]:
         self.id_count += 1
         node_id = self.id_count
         self.map_info[node_id] = ExtendedPeerInfo(addr, addr_src)
@@ -221,7 +225,9 @@ class AddressManager:
         self.random_pos.append(node_id)
         return (self.map_info[node_id], node_id)
 
-    def find_(self, addr: PeerInfo):
+    def find_(self, addr: PeerInfo) -> Tuple[
+        Optional[ExtendedPeerInfo], Optional[int]
+    ]:
         if addr.host not in self.map_addr:
             return (None, None)
         node_id = self.map_addr[addr.host]
@@ -284,6 +290,8 @@ class AddressManager:
         (info, node_id) = self.find_(addr)
         if info is None:
             return
+        if node_id is None:
+            return
 
         if not (info.peer_info.host == addr.host and info.peer_info.port == addr.port):
             return
@@ -344,7 +352,7 @@ class AddressManager:
 
     def add_to_new_table_(
         self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int
-    ):
+    ) -> bool:
         is_unique = False
         peer_info = PeerInfo(
             addr.host,
@@ -407,10 +415,12 @@ class AddressManager:
             if add_to_new:
                 self.clear_new_(new_bucket, new_bucket_pos)
                 info.ref_count += 1
-                self.new_matrix[new_bucket][new_bucket_pos] = node_id
+                if node_id is not None:
+                    self.new_matrix[new_bucket][new_bucket_pos] = node_id
             else:
                 if info.ref_count == 0:
-                    self.delete_new_entry_(node_id)
+                    if node_id is not None:
+                        self.delete_new_entry_(node_id)
         return is_unique
 
     def attempt_(self, addr: PeerInfo, count_failures: bool, timestamp: int):
@@ -517,8 +527,8 @@ class AddressManager:
         old_id = self.tried_matrix[tried_bucket][tried_bucket_pos]
         return self.map_info[old_id]
 
-    def get_peers_(self):
-        addr = []
+    def get_peers_(self) -> List[TimestampedPeerInfo]:
+        addr: List[TimestampedPeerInfo] = []
         num_nodes = math.ceil(23 * len(self.random_pos) / 100)
         if num_nodes > 1000:
             num_nodes = 1000
@@ -552,7 +562,7 @@ class AddressManager:
         if timestamp - info.timestamp > update_interval:
             info.timestamp = timestamp
 
-    async def size(self):
+    async def size(self) -> int:
         async with self.lock:
             return len(self.random_pos)
 
@@ -561,7 +571,7 @@ class AddressManager:
         addresses: List[TimestampedPeerInfo],
         source: Optional[PeerInfo] = None,
         penalty: int = 0,
-    ):
+    ) -> bool:
         is_added = False
         async with self.lock:
             for addr in addresses:
@@ -595,17 +605,20 @@ class AddressManager:
             self.resolve_tried_collisions_()
 
     # Randomly select an address in tried that another address is attempting to evict.
-    async def select_tried_collision(self):
+    async def select_tried_collision(self) -> Optional[ExtendedPeerInfo]:
         async with self.lock:
             return self.select_tried_collision_()
 
     # Choose an address to connect to.
-    async def select_peer(self, new_only: bool = False):
+    async def select_peer(
+        self,
+        new_only: bool = False
+    ) -> Optional[ExtendedPeerInfo]:
         async with self.lock:
             return self.select_peer_(new_only)
 
     # Return a bunch of addresses, selected at random.
-    async def get_peers(self):
+    async def get_peers(self) -> List[TimestampedPeerInfo]:
         async with self.lock:
             return self.get_peers_()
 

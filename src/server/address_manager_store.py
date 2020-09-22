@@ -1,3 +1,5 @@
+import logging
+import aiosqlite
 from src.server.address_manager import (
     AddressManager,
     ExtendedPeerInfo,
@@ -5,9 +7,7 @@ from src.server.address_manager import (
     BUCKET_SIZE,
     NEW_BUCKETS_PER_ADDRESS,
 )
-
-import logging
-import aiosqlite
+from typing import Dict, List, Tuple
 
 log = logging.getLogger(__name__)
 
@@ -62,13 +62,13 @@ class AddressManagerStore:
         await cursor.close()
         await self.db.commit()
 
-    async def get_metadata(self):
+    async def get_metadata(self) -> Dict[str, str]:
         cursor = await self.db.execute("SELECT key, value from peer_metadata")
         metadata = await cursor.fetchall()
         await cursor.close()
         return {key: value for key, value in metadata}
 
-    async def is_empty(self):
+    async def is_empty(self) -> bool:
         metadata = await self.get_metadata()
         if "key" not in metadata:
             return True
@@ -78,7 +78,7 @@ class AddressManagerStore:
             return False
         return True
 
-    async def get_nodes(self):
+    async def get_nodes(self) -> List[Tuple[int, ExtendedPeerInfo]]:
         cursor = await self.db.execute("SELECT node_id, value from peer_nodes")
         nodes_id = await cursor.fetchall()
         await cursor.close()
@@ -87,7 +87,7 @@ class AddressManagerStore:
             for node_id, info_str in nodes_id
         ]
 
-    async def get_new_table(self):
+    async def get_new_table(self) -> List[Tuple[int, int]]:
         cursor = await self.db.execute("SELECT node_id, bucket from peer_new_table")
         entries = await cursor.fetchall()
         await cursor.close()

@@ -20,7 +20,7 @@ from src.protocols import (
 )
 from secrets import randbits
 from src.util.hash import std_hash
-from typing import Optional, AsyncGenerator
+from typing import Dict, Optional, AsyncGenerator
 from src.util.ints import uint64
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -80,6 +80,7 @@ class FullNodeDiscovery:
         self.message_queue.put_nowait((message, data))
 
     async def _process_messages(self):
+        connection_time_pretest: Dict = {}
         while not self.is_closed:
             try:
                 message, peer_info = await self.message_queue.get()
@@ -91,7 +92,11 @@ class FullNodeDiscovery:
                 elif message == "mark_attempted":
                     await self.address_manager.attempt(peer_info, True)
                 elif message == "update_connection_time":
-                    await self.address_manager.connect(peer_info)
+                    if peer_info.host not in connection_time_pretest:
+                        connection_time_pretest[peer_info.host] = time.time()
+                    if time.time() - connection_time_pretest[peer_info.host] > 60:
+                        await self.address_manager.connect(peer_info)
+                        connection_time_pretest[peer_info.host] = time.time()
                 elif message == "new_inbound_connection":
                     timestamped_peer_info = TimestampedPeerInfo(
                         peer_info.host,
