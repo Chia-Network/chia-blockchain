@@ -28,7 +28,6 @@ from src.wallet.wallet_info import WalletInfo
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.did_wallet import did_wallet_puzzles
 from src.wallet.derive_keys import master_sk_to_wallet_sk
-from src.util.clvm import run_program
 
 
 class DIDWallet:
@@ -298,7 +297,7 @@ class DIDWallet:
         """
         cost_sum = 0
         try:
-            cost_run, sexp = run_program(block_program, [])
+            cost_run, sexp = block_program.run_with_cost([])
             cost_sum += cost_run
         except EvalError:
             return False

@@ -14,8 +14,14 @@ from tests.setup_nodes import setup_simulators_and_wallets
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.wallet.did_wallet.did_wallet import DIDWallet
 from src.wallet.did_wallet import did_wallet_puzzles
-from src.wallet.wallet_coin_record import WalletCoinRecord
-from typing import List
+from clvm_tools import binutils
+from src.types.program import Program
+from src.wallet.derivation_record import DerivationRecord
+from src.types.coin_solution import CoinSolution
+from blspy import AugSchemeMPL
+from src.types.spend_bundle import SpendBundle
+from src.wallet.transaction_record import TransactionRecord
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 
 
 @pytest.fixture(scope="module")
@@ -488,7 +494,7 @@ class TestWalletSimulator:
             innersol,
         ])
         try:
-            cost, result = run_program(puz, fullsol)
+            cost, result = puz.run_with_cost(fullsol)
         except Exception as e:
             assert e.args == ('clvm raise',)
         else:
