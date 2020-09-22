@@ -577,13 +577,7 @@ class TestWalletSimulator:
 
         # Write spend by hand
         # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol = Program.to([
-            0,
-            coin.amount,
-            ph,
-            coin.name(),
-            coin.puzzle_hash
-        ])
+        innersol = Program.to([0, coin.amount, ph, coin.name(), coin.puzzle_hash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = did_wallet.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
@@ -603,7 +597,10 @@ class TestWalletSimulator:
         )
 
         list_of_solutions = [
-            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
+            CoinSolution(
+                coin,
+                clvm.to_sexp_f([full_puzzle, fullsol]),
+            )
         ]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())
