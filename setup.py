@@ -8,7 +8,7 @@ dependencies = [
     "chiabip158==0.16",  # bip158-style wallet filters
     "chiapos==0.12.28",  # proof of space
     "clvm==0.5.1",
-    "clvm_tools==0.1.5",
+    "clvm_tools==0.1.6",
     "aiohttp==3.6.2",  # HTTP server for full node rpc
     "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@28cb5754deec562ac931da8fca799fb82df97a12#egg=aiosqlite",
     # asyncio wrapper for sqlite, to store blocks
