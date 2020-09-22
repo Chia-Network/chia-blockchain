@@ -257,7 +257,7 @@ class PeerConnections:
     def failed_handshake(self, connection, e):
         if connection.connection_type == NodeType.FULL_NODE and connection.is_outbound:
             if isinstance(e, ProtocolError) and e.code == Err.DUPLICATE_CONNECTION:
-                    return
+                return
 
             if self.full_node_peers_callback is not None:
                 self.full_node_peers_callback(
