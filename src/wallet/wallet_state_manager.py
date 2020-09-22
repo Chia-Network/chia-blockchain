@@ -1,6 +1,7 @@
 import base64
 import json
 import time
+from collections import defaultdict
 from pathlib import Path
 
 from typing import Dict, Optional, List, Set, Tuple, Callable, Any
@@ -14,7 +15,6 @@ from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
 from src.types.coin import Coin
-from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.types.challenge import Challenge
@@ -82,6 +82,7 @@ class WalletStateManager:
 
     state_changed_callback: Optional[Callable]
     pending_tx_callback: Optional[Callable]
+    puzzle_hash_created_callbacks: Dict = defaultdict(lambda *x: None)
     db_path: Path
     db_connection: aiosqlite.Connection
 
@@ -154,7 +155,11 @@ class WalletStateManager:
                 wallet = await Wallet.create(config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN.value:
-                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
+                wallet = await CCWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.RATE_LIMITED.value:
                 wallet = await RLWallet.create(self, wallet_info)
@@ -203,6 +208,7 @@ class WalletStateManager:
                     [],
                     genesis_hb.header.data.total_iters,
                     genesis_challenge.get_hash(),
+                    genesis_hb.header.data.timestamp,
                 ),
                 genesis_hb,
             )
@@ -229,7 +235,11 @@ class WalletStateManager:
                 wallet = await Wallet.create(self.config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN.value:
-                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
+                wallet = await CCWallet.create(
+                    self,
+                    self.main_wallet,
+                    wallet_info,
+                )
                 self.wallets[wallet_info.id] = wallet
 
     async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
@@ -306,7 +316,10 @@ class WalletStateManager:
                 start_index = 0
 
             for index in range(start_index, unused + to_generate):
-                if target_wallet.wallet_info.type == WalletType.RATE_LIMITED:
+                if (
+                    WalletType(target_wallet.wallet_info.type)
+                    == WalletType.RATE_LIMITED
+                ):
                     if target_wallet.rl_info.initialized is False:
                         break
                     type = target_wallet.rl_info.type
@@ -339,10 +352,13 @@ class WalletStateManager:
                 pubkey: G1Element = self.get_public_key(uint32(index))
                 puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
                 if puzzle is None:
-                    continue
+                    self.log.warning(
+                        f"Unable to create puzzles with wallet {target_wallet}"
+                    )
+                    break
                 puzzlehash: bytes32 = puzzle.get_tree_hash()
                 self.log.info(
-                    f"Puzzle at index {index} wid {wallet_id} puzzle hash {puzzlehash.hex()}"
+                    f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}"
                 )
                 derivation_paths.append(
                     DerivationRecord(
@@ -399,13 +415,25 @@ class WalletStateManager:
         """
         self.pending_tx_callback = callback
 
-    def state_changed(self, state: str, wallet_id: int = None):
+    def set_coin_with_puzzlehash_created_callback(self, puzzlehash, callback: Callable):
+        """
+        Callback to be called when new coin is seen with specified puzzlehash
+        """
+        self.puzzle_hash_created_callbacks[puzzlehash] = callback
+
+    async def puzzle_hash_created(self, coin: Coin):
+        callback = self.puzzle_hash_created_callbacks[coin.puzzle_hash]
+        if callback is None:
+            return
+        await callback(coin)
+
+    def state_changed(self, state: str, wallet_id: int = None, data_object={}):
         """
         Calls the callback if it's present.
         """
         if self.state_changed_callback is None:
             return
-        self.state_changed_callback(state, wallet_id)
+        self.state_changed_callback(state, wallet_id, data_object)
 
     def tx_pending_changed(self):
         """
@@ -540,6 +568,8 @@ class WalletStateManager:
     async def coins_of_interest_received(
         self, removals: List[Coin], additions: List[Coin], height: uint32
     ):
+        for coin in additions:
+            await self.puzzle_hash_created(coin)
         trade_additions = await self.coins_of_interest_added(additions, height)
         trade_removals = await self.coins_of_interest_removed(removals, height)
         if len(trade_additions) > 0 or len(trade_removals) > 0:
@@ -723,8 +753,13 @@ class WalletStateManager:
         """
         Full node received our transaction, no need to keep it in queue anymore
         """
-        await self.tx_store.increment_sent(spendbundle_id, name, send_status, error)
-        self.state_changed("tx_sent")
+        updated = await self.tx_store.increment_sent(
+            spendbundle_id, name, send_status, error
+        )
+        if updated:
+            tx: Optional[TransactionRecord] = await self.get_transaction(spendbundle_id)
+            if tx is not None:
+                self.state_changed("tx_update", tx.wallet_id, {"transaction": tx})
 
     async def get_send_queue(self) -> List[TransactionRecord]:
         """
@@ -740,7 +775,7 @@ class WalletStateManager:
         records = await self.tx_store.get_all_transactions(wallet_id)
         return records
 
-    async def get_transaction(self, tx_id: SpendBundle) -> Optional[TransactionRecord]:
+    async def get_transaction(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         return await self.tx_store.get_transaction_record(tx_id)
 
     def find_fork_point_alternate_chain(self, alternate_chain: List[bytes32]) -> uint32:
@@ -776,7 +811,9 @@ class WalletStateManager:
             raise ValueError("Invalid genesis block")
 
     async def receive_block(
-        self, block: BlockRecord, header_block: Optional[HeaderBlock] = None,
+        self,
+        block: BlockRecord,
+        header_block: Optional[HeaderBlock] = None,
     ) -> ReceiveBlockResult:
         """
         Adds a new block to the blockchain. It doesn't have to be a new tip, can also be an orphan,
@@ -813,17 +850,22 @@ class WalletStateManager:
             self.block_records[block.header_hash] = block
             await self.wallet_store.add_block_record(block, False)
 
-            async with self.puzzle_store.lock:
-                for addition in block.additions:
-                    record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
-                        addition.puzzle_hash.hex()
-                    )
-                    if record is None:
-                        continue
-                    index = record.index
-                    await self.puzzle_store.set_used_up_to(index)
-
-                await self.create_more_puzzle_hashes()
+            # If one of these new additions is ours, generate more puzzle hashes
+            phs: List[bytes32] = [addition.puzzle_hash for addition in block.additions]
+            block_includes_our_tx: bool = (
+                await self.puzzle_store.one_of_puzzle_hashes_exists(phs)
+            )
+            if block_includes_our_tx:
+                async with self.puzzle_store.lock:
+                    for addition in block.additions:
+                        record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+                            addition.puzzle_hash.hex()
+                        )
+                        if record is None:
+                            continue
+                        index = record.index
+                        await self.puzzle_store.set_used_up_to(index)
+                    await self.create_more_puzzle_hashes()
 
             # Genesis case
             if self.lca is None:
@@ -1015,7 +1057,10 @@ class WalletStateManager:
                 return False
 
         number_of_iters: uint64 = calculate_iterations_quality(
-            quality_str, header_block.proof_of_space.size, difficulty, min_iters,
+            quality_str,
+            header_block.proof_of_space.size,
+            difficulty,
+            min_iters,
         )
 
         if header_block.proof_of_time is None:
@@ -1226,7 +1271,10 @@ class WalletStateManager:
                 )
 
             number_of_iters: uint64 = calculate_iterations_quality(
-                quality_str, header_block.proof_of_space.size, difficulty, min_iters,
+                quality_str,
+                header_block.proof_of_space.size,
+                difficulty,
+                min_iters,
             )
 
             # Validate potime
@@ -1291,7 +1339,7 @@ class WalletStateManager:
             for addition in new_block.additions:
                 unspent_coin_names.add(addition.name())
 
-        my_puzzle_hashes = await self.puzzle_store.get_all_puzzle_hashes()
+        my_puzzle_hashes = self.puzzle_store.all_puzzle_hashes
 
         removals_of_interest: bytes32 = []
         additions_of_interest: bytes32 = []
@@ -1322,7 +1370,7 @@ class WalletStateManager:
         """ Returns the list of coins that are relevant to us.(We can spend them) """
 
         result: List[Coin] = []
-        my_puzzle_hashes: Set[bytes32] = await self.puzzle_store.get_all_puzzle_hashes()
+        my_puzzle_hashes: Set[bytes32] = self.puzzle_store.all_puzzle_hashes
 
         for coin in additions:
             if coin.puzzle_hash in my_puzzle_hashes:
@@ -1556,13 +1604,3 @@ class WalletStateManager:
                     if callback_str is not None:
                         callback = getattr(wallet, callback_str)
                         await callback(height, header_hash, program, action.id)
-
-    async def get_transaction_status(
-        self, tx_id: bytes32
-    ) -> List[Tuple[str, MempoolInclusionStatus, Optional[str]]]:
-        tr: Optional[TransactionRecord] = await self.get_transaction(tx_id)
-        ret_list = []
-        if tr is not None:
-            for (name, ss, err) in tr.sent_to:
-                ret_list.append((name, MempoolInclusionStatus(ss), err))
-        return ret_list

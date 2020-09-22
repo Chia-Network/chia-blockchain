@@ -28,10 +28,10 @@ from src.types.full_block import FullBlock, additions_for_npc
 from src.types.header import Header
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.util.blockchain_check_conditions import blockchain_check_conditions_dict
+from src.full_node.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
-from src.util.cost_calculator import calculate_cost_of_program
+from src.full_node.cost_calculator import calculate_cost_of_program
 from src.util.errors import ConsensusError, Err
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
@@ -117,7 +117,9 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self,) -> None:
+    async def _load_chain_from_store(
+        self,
+    ) -> None:
         """
         Initializes the state of the Blockchain class from the database. Sets the LCA, tips,
         headers, height_to_hash, and block_store DiffStores.
@@ -842,7 +844,10 @@ class Blockchain:
         for npc in npc_list:
             unspent = removal_coin_records[npc.coin_name]
             error = blockchain_check_conditions_dict(
-                unspent, removal_coin_records, npc.condition_dict, block.header,
+                unspent,
+                removal_coin_records,
+                npc.condition_dict,
+                block.header,
             )
             if error:
                 return error

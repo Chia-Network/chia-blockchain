@@ -8,7 +8,6 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.program import Program
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
-from src.util.clvm import run_program
 from src.util.wallet_tools import WalletTool
 from src.util.ints import uint32
 from src.wallet.derive_keys import master_sk_to_wallet_sk
@@ -42,7 +41,7 @@ def run_and_return_cost_time(chialisp):
     clvm_loop_solution = f"(1000 {chialisp})"
     solution_program = Program(binutils.assemble(clvm_loop_solution))
 
-    cost, sexp = run_program(loop_program, solution_program)
+    cost, sexp = loop_program.run_with_cost(solution_program)
 
     end = time.time()
     total_time = end - start
@@ -156,7 +155,7 @@ if __name__ == "__main__":
     puzzle_start = time.time()
     clvm_cost = 0
     for i in range(0, 1000):
-        cost_run, sexp = run_program(puzzles[i], solutions[i])
+        cost_run, sexp = puzzles[i].run_with_cost(solutions[i])
         clvm_cost += cost_run
 
     puzzle_end = time.time()

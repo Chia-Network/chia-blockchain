@@ -16,7 +16,7 @@ from src.types.peer_info import PeerInfo
 from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.spend_bundle import SpendBundle
-from src.util.bundle_tools import best_solution_program
+from src.full_node.bundle_tools import best_solution_program
 from src.util.ints import uint16, uint32, uint64, uint8
 from src.util.hash import std_hash
 from src.full_node.full_node import FullNode

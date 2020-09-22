@@ -5,7 +5,7 @@ on: [push, pull_request]
 
 jobs:
   build:
-    name: MacOS-latest on Pyton 3.7
+    name: MacOS-latest on Python 3.7
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:

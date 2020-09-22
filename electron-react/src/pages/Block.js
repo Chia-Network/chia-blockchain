@@ -77,7 +77,11 @@ const Block = props => {
   const fetchHeaderIfNecessary = useCallback(async () => {
     if (props.prevHeader) {
       const phh = await hash_header(props.prevHeader);
-      if (phh !== props.block.header.data.prev_header_hash) {
+      let phh_expected = props.block.header.data.prev_header_hash;
+      if (phh_expected.startsWith("0x") || phh_expected.startsWith("0X")) {
+        phh_expected = phh_expected.substring(2);
+      }
+      if (phh !== phh_expected) {
         handleGetHeader(props.block.header.data.prev_header_hash);
       }
     } else {

@@ -144,28 +144,22 @@ const SelectKey = () => {
     return (
       <ListItem
         button
-        onClick={handleClick(fingerprint[0])}
-        key={
-          fingerprint[0].toString() + (fingerprint[1] ? "has_seed" : "no_seed")
-        }
+        onClick={handleClick(fingerprint)}
+        key={fingerprint.toString()}
       >
         <ListItemText
           className={classes.rightPadding}
           primary={
-            "Private key with public fingerprint " + fingerprint[0].toString()
+            "Private key with public fingerprint " + fingerprint.toString()
           }
-          secondary={
-            fingerprint[1]
-              ? "Can be backed up to mnemonic seed"
-              : "Raw key, cannot be backed up"
-          }
+          secondary={"Can be backed up to mnemonic seed"}
         />
         <ListItemSecondaryAction>
           <Tooltip title="See private key">
             <IconButton
               edge="end"
               aria-label="delete"
-              onClick={showKey(fingerprint[0])}
+              onClick={showKey(fingerprint)}
             >
               <VisibilityIcon />
             </IconButton>
@@ -174,7 +168,7 @@ const SelectKey = () => {
             <IconButton
               edge="end"
               aria-label="delete"
-              onClick={handleDelete(fingerprint[0])}
+              onClick={handleDelete(fingerprint)}
             >
               <DeleteIcon />
             </IconButton>

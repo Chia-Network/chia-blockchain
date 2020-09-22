@@ -1,5 +1,5 @@
 import {
-  get_puzzle_hash,
+  get_address,
   format_message,
   incomingMessage,
   get_balance_for_wallet,
@@ -49,7 +49,11 @@ import {
 import isElectron from "is-electron";
 import { startService, isServiceRunning } from "../modules/daemon_messages";
 import { get_all_trades } from "../modules/trade_messages";
-import { COLOURED_COIN, STANDARD_WALLET } from "../util/wallet_types";
+import {
+  COLOURED_COIN,
+  STANDARD_WALLET,
+  RATE_LIMITED
+} from "../util/wallet_types";
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -198,10 +202,20 @@ export const handle_message = (store, payload) => {
     if (payload.data.success) {
       const wallets = payload.data.wallets;
       for (let wallet of wallets) {
-        store.dispatch(get_balance_for_wallet(wallet.id));
+        if (wallet.type === RATE_LIMITED) {
+          const data = JSON.parse(wallet.data);
+          wallet.data = data;
+          if (data.initialized === true) {
+            store.dispatch(get_balance_for_wallet(wallet.id));
+          } else {
+            console.log("RL wallet has not been initalized yet");
+          }
+        } else {
+          store.dispatch(get_balance_for_wallet(wallet.id));
+        }
         store.dispatch(get_transactions(wallet.id));
         if (wallet.type === COLOURED_COIN || wallet.type === STANDARD_WALLET) {
-          store.dispatch(get_puzzle_hash(wallet.id));
+          store.dispatch(get_address(wallet.id));
         }
         if (wallet.type === COLOURED_COIN) {
           store.dispatch(get_colour_name(wallet.id));
@@ -258,7 +272,7 @@ export const handle_message = (store, payload) => {
       } else if (service === service_plotter) {
         track_progress(store, payload.data.out_file);
       }
-    } else if (payload.data.error === "already running") {
+    } else if (payload.data.error.includes("already running")) {
       if (service === service_wallet) {
         ping_wallet(store);
       } else if (service === service_full_node) {
@@ -290,8 +304,15 @@ export const handle_message = (store, payload) => {
     }
   }
   if (payload.data.success === false) {
-    if (payload.data.reason) {
-      store.dispatch(openDialog("Error: ", payload.data.reason));
+    debugger;
+    if (
+      payload.data.error.includes("already running") ||
+      payload.data.error === "not_initialized"
+    ) {
+      return;
+    }
+    if (payload.data.error) {
+      store.dispatch(openDialog("Error: ", payload.data.error));
     }
   }
 };

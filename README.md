@@ -1,5 +1,6 @@
 # chia-blockchain
 ![Alt text](https://www.chia.net/img/chia_logo.svg)
+
 | Current Release/master | Development Branch/dev |
 |         :---:          |          :---:         |
 | ![Build Ubuntu and MacOS](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Ubuntu%20and%20MacOS/badge.svg) ![Build Windows Installer](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Windows%20Installer/badge.svg) |  ![Build Ubuntu and MacOS](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Ubuntu%20and%20MacOS/badge.svg?branch=dev) ![Build Windows Installer](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Windows%20Installer/badge.svg?branch=dev) |

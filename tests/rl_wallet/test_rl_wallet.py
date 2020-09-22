@@ -78,7 +78,7 @@ class TestCCWallet:
         await time_out_assert(15, rl_user.get_confirmed_balance, 100)
         balance = await rl_user.rl_available_balance()
 
-        tx_record = await rl_user.rl_generate_signed_transaction(1, 32 * b"\0")
+        tx_record = await rl_user.generate_signed_transaction(1, 32 * b"\0")
 
         await wallet_node_1.wallet_state_manager.main_wallet.push_transaction(tx_record)
 

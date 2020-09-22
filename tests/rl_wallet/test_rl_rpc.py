@@ -10,6 +10,8 @@ from src.util.ints import uint16
 from src.wallet.util.wallet_types import WalletType
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
+from src.types.sized_bytes import bytes32
+from src.types.mempool_inclusion_status import MempoolInclusionStatus
 
 
 @pytest.fixture(scope="module")
@@ -18,7 +20,7 @@ def event_loop():
     yield loop
 
 
-class TestCCWallet:
+class TestRLWallet:
     @pytest.fixture(scope="function")
     async def three_wallet_nodes(self):
         async for _ in setup_simulators_and_wallets(
@@ -54,7 +56,8 @@ class TestCCWallet:
             {"wallet_type": "rl_wallet", "rl_type": "user", "host": "127.0.0.1:5000"}
         )
         assert isinstance(val, dict)
-        assert val["success"]
+        if "success" in val:
+            assert val["success"]
         assert val["id"]
         assert val["type"] == WalletType.RATE_LIMITED.value
         user_wallet_id = val["id"]
@@ -66,14 +69,15 @@ class TestCCWallet:
                 "wallet_type": "rl_wallet",
                 "rl_type": "admin",
                 "interval": 2,
-                "limit": 1,
+                "limit": 10,
                 "pubkey": pubkey,
                 "amount": 100,
                 "host": "127.0.0.1:5000",
             }
         )
         assert isinstance(val, dict)
-        assert val["success"]
+        if "success" in val:
+            assert val["success"]
         assert val["id"]
         assert val["type"] == WalletType.RATE_LIMITED.value
         assert val["origin"]
@@ -82,11 +86,11 @@ class TestCCWallet:
         admin_pubkey = val["pubkey"]
         origin: Coin = val["origin"]
 
-        val = await api_user.rl_set_user_info(
+        await api_user.rl_set_user_info(
             {
                 "wallet_id": user_wallet_id,
                 "interval": 2,
-                "limit": 1,
+                "limit": 10,
                 "origin": {
                     "parent_coin_info": origin.parent_coin_info.hex(),
                     "puzzle_hash": origin.puzzle_hash.hex(),
@@ -95,7 +99,6 @@ class TestCCWallet:
                 "admin_pubkey": admin_pubkey,
             }
         )
-        assert val["success"]
 
         assert (await api_user.get_wallet_balance({"wallet_id": user_wallet_id}))[
             "wallet_balance"
@@ -110,28 +113,69 @@ class TestCCWallet:
 
         await time_out_assert(15, check_balance, 100, api_user, user_wallet_id)
         receiving_wallet = wallet_node_2.wallet_state_manager.main_wallet
-        puzzle_hash = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash())
+        address = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash())
         assert await receiving_wallet.get_spendable_balance() == 0
         val = await api_user.send_transaction(
-            {
-                "wallet_id": user_wallet_id,
-                "amount": 3,
-                "fee": 0,
-                "puzzle_hash": puzzle_hash,
-            }
+            {"wallet_id": user_wallet_id, "amount": 3, "fee": 0, "address": address}
+        )
+        assert "transaction_id" in val
+
+        async def is_transaction_in_mempool(api, tx_id: bytes32) -> bool:
+            try:
+                val = await api.get_transaction(
+                    {"wallet_id": user_wallet_id, "transaction_id": tx_id.hex()}
+                )
+            except ValueError:
+                return False
+            for _, mis, _ in val["transaction"].sent_to:
+                if (
+                    MempoolInclusionStatus(mis) == MempoolInclusionStatus.SUCCESS
+                    or MempoolInclusionStatus(mis) == MempoolInclusionStatus.PENDING
+                ):
+                    return True
+            return False
+
+        await time_out_assert(
+            15, is_transaction_in_mempool, True, api_user, val["transaction_id"]
         )
 
-        assert val["status"] == "SUCCESS"
         for i in range(0, num_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 97, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
-
-        val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id})
+        val = await api_admin.add_rate_limited_funds(
+            {"wallet_id": admin_wallet_id, "amount": 100}
+        )
         assert val["status"] == "SUCCESS"
+        for i in range(0, 50):
+            await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+        await time_out_assert(15, check_balance, 197, api_user, user_wallet_id)
+
+        # test spending
+        puzzle_hash = encode_puzzle_hash(await receiving_wallet.get_new_puzzlehash())
+        val = await api_user.send_transaction(
+            {
+                "wallet_id": user_wallet_id,
+                "amount": 105,
+                "fee": 0,
+                "address": puzzle_hash,
+            }
+        )
+        await time_out_assert(
+            15, is_transaction_in_mempool, True, api_user, val["transaction_id"]
+        )
         for i in range(0, num_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
-        await time_out_assert(15, check_balance, 0, api_admin, admin_wallet_id)
+        await time_out_assert(15, check_balance, 92, api_user, user_wallet_id)
+        await time_out_assert(15, receiving_wallet.get_spendable_balance, 108)
+
+        val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id})
+        await time_out_assert(
+            15, is_transaction_in_mempool, True, api_admin, val["transaction_id"]
+        )
+        for i in range(0, num_blocks):
+            await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
+        await time_out_assert(15, check_balance, 0, api_admin, user_wallet_id)
         final_balance = await wallet.get_confirmed_balance()
-        assert final_balance == fund_owners_initial_balance - 3
+        assert final_balance == fund_owners_initial_balance - 108

@@ -7,7 +7,7 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.coin import Coin
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
-from src.util.clvm import EvalError, int_from_bytes, run_program
+from src.util.clvm import int_from_bytes
 from src.util.ints import uint64
 from src.util.errors import Err, ConsensusError
 
@@ -121,15 +121,15 @@ def conditions_dict_for_solution(
 
 
 def conditions_for_solution(
-    solution_program, run_program=run_program
+    solution_program,
 ) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
     args = Program.to(solution_program)
     try:
         puzzle_sexp = args.first()
         solution_sexp = args.rest().first()
-        cost, r = run_program(puzzle_sexp, solution_sexp)
+        cost, r = puzzle_sexp.run_with_cost(solution_sexp)
         error, result = parse_sexp_to_conditions(r)
         return error, result, cost
-    except EvalError:
+    except Program.EvalError:
         return Err.SEXP_ERROR, None, uint64(0)

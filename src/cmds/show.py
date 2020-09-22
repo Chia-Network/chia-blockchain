@@ -8,13 +8,11 @@ from typing import List, Optional
 from src.server.connection import NodeType
 from src.types.header_block import HeaderBlock
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
-from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.wallet.util.wallet_types import WalletType
-from src.cmds.units import units
+from src.util.chech32 import encode_puzzle_hash
 
 
 def make_parser(parser):
@@ -100,15 +98,6 @@ def make_parser(parser):
         default=9256,
     )
 
-    parser.add_argument(
-        "-w",
-        "--wallet-balances",
-        help="Display wallet balances.",
-        type=str2bool,
-        nargs="?",
-        const=True,
-        default=False,
-    )
     parser.set_defaults(function=show)
 
 
@@ -304,156 +293,13 @@ async def show_async(args, parser):
                     f"Tx Filter Hash         {b'block.transactions_filter'.hex()}\n"
                     f"Tx Generator Hash      {block.transactions_generator}\n"
                     f"Coinbase Amount        {block.get_coinbase().amount/1000000000000}\n"
-                    f"Coinbase Puzzle Hash   0x{block.get_coinbase().puzzle_hash}\n"
+                    f"Coinbase Address       {encode_puzzle_hash(block.get_coinbase().puzzle_hash)}\n"
                     f"Fees Amount            {block.get_fees_coin().amount/1000000000000}\n"
-                    f"Fees Puzzle Hash       0x{block.get_fees_coin().puzzle_hash}\n"
+                    f"Fees Address           {encode_puzzle_hash(block.get_fees_coin().puzzle_hash)}\n"
                     f"Aggregated Signature   {aggregated_signature}"
                 )
             else:
                 print("Block with header hash", args.block_by_header_hash, "not found.")
-
-        if args.wallet_balances:
-            if "wallet_rpc_port" not in args or args.wallet_rpc_port is None:
-                wallet_rpc_port = config["wallet"]["rpc_port"]
-            else:
-                wallet_rpc_port = args.wallet_rpc_port
-            wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port)
-            get_keys_response = await wallet_client.get_keys()
-            if (
-                "public_key_fingerprints" not in get_keys_response
-                or len(get_keys_response["public_key_fingerprints"]) == 0
-            ):
-                print("Error, no keys loaded")
-                wallet_client.close()
-                await wallet_client.await_closed()
-                client.close()
-                await client.await_closed()
-                return
-            fingerprints = get_keys_response["public_key_fingerprints"]
-            fingerprint = None
-            if len(fingerprints) == 1:
-                fingerprint = fingerprints[0][0]
-                log_in_response = await wallet_client.log_in(fingerprint)
-            else:
-                print("Choose wallet key:")
-                for i, fp in enumerate(fingerprints):
-                    print(f"{i+1}) {fp[0]}")
-                val = None
-                while val is None:
-                    val = input("Enter number to pick press q to quite: ")
-                    if val == "q":
-                        return
-                    if not val.isdigit():
-                        val = None
-                    else:
-                        index = int(val) - 1
-                        if index >= len(fingerprints):
-                            print("Invalid value")
-                            val = None
-                            continue
-                        else:
-                            fingerprint = fingerprints[index][0]
-                log_in_response = await wallet_client.log_in(fingerprint)
-
-            if log_in_response["success"] is False:
-                if log_in_response["error"] == "not_initialized":
-                    use_cloud = True
-                    if "backup_path" in log_in_response:
-                        path = log_in_response["backup_path"]
-                        print(
-                            f"Backup file from backup.chia.net downloaded and written to: {path}"
-                        )
-                        val = input(
-                            "Do you want to use this file to restore from backup? (Y/N) "
-                        )
-                        if val.lower() == "y":
-                            log_in_response = await wallet_client.log_in_and_restore(
-                                fingerprint, path
-                            )
-                        else:
-                            use_cloud = False
-
-                    if "backup_path" not in log_in_response or use_cloud is False:
-                        if use_cloud is True:
-                            val = input(
-                                "No online backup file found, \n Press S to skip restore from backup"
-                                " \n Press F to use your own backup file: "
-                            )
-                        else:
-                            val = input(
-                                "Cloud backup declined, \n Press S to skip restore from backup"
-                                " \n Press F to use your own backup file: "
-                            )
-
-                        if val.lower() == "s":
-                            log_in_response = await wallet_client.log_in_and_skip(
-                                fingerprint
-                            )
-                        elif val.lower() == "f":
-                            val = input(
-                                "Please provide the full path to your backup file: "
-                            )
-                            log_in_response = await wallet_client.log_in_and_restore(
-                                fingerprint, val
-                            )
-
-            if "success" not in log_in_response or log_in_response["success"] is False:
-                if "error" in log_in_response:
-                    error = log_in_response["error"]
-                    print(f"Error: {log_in_response[error]}")
-
-            summaries_response = await wallet_client.get_wallet_summaries()
-            if "wallet_summaries" not in summaries_response:
-                print("Wallet summary cannot be displayed")
-            else:
-                print("Balances")
-                for wallet_id, summary in summaries_response[
-                    "wallet_summaries"
-                ].items():
-                    balances_response = await wallet_client.get_wallet_balance(
-                        wallet_id
-                    )
-                    if "wallet_balance" not in balances_response:
-                        print("Balances cannot be displayed")
-                        continue
-                    balances = balances_response["wallet_balance"]
-                    typ = WalletType(int(summary["type"])).name
-                    if "name" in summary:
-                        print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
-                        print(
-                            f"   -Confirmed: {balances['confirmed_wallet_balance']/units['colouredcoin']}"
-                        )
-                        print(
-                            f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}"
-                        )
-                        print(
-                            f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}"
-                        )
-                        print(
-                            f"   -Frozen: {balances['frozen_balance']/units['colouredcoin']}"
-                        )
-                        print(
-                            f"   -Pending change: {balances['pending_change']/units['colouredcoin']}"
-                        )
-                    else:
-                        print(f"Wallet ID {wallet_id} type {typ}")
-                        print(
-                            f"   -Confirmed: {balances['confirmed_wallet_balance']/units['chia']} TXCH"
-                        )
-                        print(
-                            f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['chia']} TXCH"
-                        )
-                        print(
-                            f"   -Spendable: {balances['spendable_balance']/units['chia']} TXCH"
-                        )
-                        print(
-                            f"   -Frozen: {balances['frozen_balance']/units['chia']} TXCH"
-                        )
-                        print(
-                            f"   -Pending change: {balances['pending_change']/units['chia']} TXCH"
-                        )
-            wallet_client.close()
-            await wallet_client.await_closed()
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):

@@ -48,14 +48,14 @@ from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.util.api_decorators import api_request
-from src.util.bundle_tools import best_solution_program
-from src.util.cost_calculator import calculate_cost_of_program
+from src.full_node.bundle_tools import best_solution_program
+from src.full_node.cost_calculator import calculate_cost_of_program
 from src.util.errors import ConsensusError, Err
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128
 from src.util.merkle_set import MerkleSet
 from src.util.path import mkdir, path_from_root
-from src.types.peer_info import PeerInfo, TimestampedPeerInfo
+from src.types.peer_info import PeerInfo
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
@@ -377,7 +377,8 @@ class FullNode:
                 phr = self.sync_store.get_potential_hashes_received()
                 assert phr is not None
                 await asyncio.wait_for(
-                    phr.wait(), timeout=sleep_interval,
+                    phr.wait(),
+                    timeout=sleep_interval,
                 )
                 break
             # https://github.com/python/cpython/pull/13528
@@ -410,7 +411,10 @@ class FullNode:
 
         # Start processing blocks that we have received (no block yet)
         block_processor = SyncBlocksProcessor(
-            self.sync_store, fork_point_height, uint32(tip_height), self.blockchain,
+            self.sync_store,
+            fork_point_height,
+            uint32(tip_height),
+            self.blockchain,
         )
         block_processor_task = asyncio.create_task(block_processor.process())
         lca = self.blockchain.lca_block
@@ -447,7 +451,9 @@ class FullNode:
             new_lca = self.blockchain.lca_block
             if new_lca != lca:
                 new_lca_req = wallet_protocol.NewLCA(
-                    new_lca.header_hash, new_lca.height, new_lca.weight,
+                    new_lca.header_hash,
+                    new_lca.height,
+                    new_lca.weight,
                 )
                 yield OutboundMessage(
                     NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST
@@ -554,7 +560,7 @@ class FullNode:
         if self.mempool_manager.seen(transaction.transaction_id):
             return
 
-        elif self.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
+        if self.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
             requestTX = full_node_protocol.RequestTransaction(
                 transaction.transaction_id
             )
@@ -611,11 +617,14 @@ class FullNode:
                 tx.transaction
             )
             if status == MempoolInclusionStatus.SUCCESS:
+                self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
                 fees = tx.transaction.fees()
                 assert fees >= 0
                 assert cost is not None
                 new_tx = full_node_protocol.NewTransaction(
-                    tx.transaction.name(), cost, uint64(tx.transaction.fees()),
+                    tx.transaction.name(),
+                    cost,
+                    uint64(tx.transaction.fees()),
                 )
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
@@ -805,14 +814,16 @@ class FullNode:
             yield _
 
     async def _respond_compact_proof_of_time(
-        self, proof: ProofOfTime,
+        self,
+        proof: ProofOfTime,
     ) -> OutboundMessageGenerator:
         """
         A proof of time, received by a peer full node. If we have the rest of the block,
         we can complete it. Otherwise, we just verify and propagate the proof.
         """
         height: Optional[uint32] = self.block_store.get_height_proof_of_time(
-            proof.challenge_hash, proof.number_of_iterations,
+            proof.challenge_hash,
+            proof.number_of_iterations,
         )
         if height is None:
             self.log.info("No block for compact proof of time.")
@@ -838,7 +849,8 @@ class FullNode:
                     block.transactions_filter,
                 )
                 if self.block_store.seen_compact_proof(
-                    proof.challenge_hash, proof.number_of_iterations,
+                    proof.challenge_hash,
+                    proof.number_of_iterations,
                 ):
                     return
                 await self.block_store.add_block(block_new)
@@ -889,13 +901,19 @@ class FullNode:
 
                     if block.proof_of_time.witness_type != 0:
                         challenge_msg = timelord_protocol.ChallengeStart(
-                            block.proof_of_time.challenge_hash, block.weight,
+                            block.proof_of_time.challenge_hash,
+                            block.weight,
                         )
                         pos_info_msg = timelord_protocol.ProofOfSpaceInfo(
                             block.proof_of_time.challenge_hash,
                             block.proof_of_time.number_of_iterations,
                         )
-                        broadcast_list.append((challenge_msg, pos_info_msg,))
+                        broadcast_list.append(
+                            (
+                                challenge_msg,
+                                pos_info_msg,
+                            )
+                        )
                         # Scan only since the first uncompact block we know about.
                         # No block earlier than this will be uncompact in the future,
                         # unless a reorg happens. The range to scan next time
@@ -1328,7 +1346,9 @@ class FullNode:
             target_tip.height + 1, request.pool_target.puzzle_hash, cb_reward
         )
         fees_coin = create_fees_coin(
-            target_tip.height + 1, request.farmer_rewards_puzzle_hash, full_fee_reward,
+            target_tip.height + 1,
+            request.farmer_rewards_puzzle_hash,
+            full_fee_reward,
         )
 
         # Create addition Merkle set
@@ -1629,7 +1649,8 @@ class FullNode:
                 difficulty,
             )
             timelord_request = timelord_protocol.ChallengeStart(
-                challenge_hash, respond_block.block.weight,
+                challenge_hash,
+                respond_block.block.weight,
             )
             # Tell timelord to stop previous challenge and start with new one
             yield OutboundMessage(
@@ -1665,7 +1686,9 @@ class FullNode:
             new_lca = self.blockchain.lca_block
             if new_lca != prev_lca:
                 new_lca_req = wallet_protocol.NewLCA(
-                    new_lca.header_hash, new_lca.height, new_lca.weight,
+                    new_lca.header_hash,
+                    new_lca.height,
+                    new_lca.weight,
                 )
                 yield OutboundMessage(
                     NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST
@@ -1801,13 +1824,18 @@ class FullNode:
                     tx.transaction
                 )
                 if status == MempoolInclusionStatus.SUCCESS:
+                    self.log.info(
+                        f"Added transaction to mempool: {tx.transaction.name()}"
+                    )
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     fees = tx.transaction.fees()
                     assert fees >= 0
                     assert cost is not None
                     new_tx = full_node_protocol.NewTransaction(
-                        tx.transaction.name(), cost, uint64(tx.transaction.fees()),
+                        tx.transaction.name(),
+                        cost,
+                        uint64(tx.transaction.fees()),
                     )
                     yield OutboundMessage(
                         NodeType.FULL_NODE,
@@ -1953,7 +1981,9 @@ class FullNode:
             request.height, request.header_hash
         )
         yield OutboundMessage(
-            NodeType.WALLET, Message("reject_header_request", reject), Delivery.RESPOND,
+            NodeType.WALLET,
+            Message("reject_header_request", reject),
+            Delivery.RESPOND,
         )
 
     @api_request
@@ -2025,7 +2055,9 @@ class FullNode:
             )
 
         yield OutboundMessage(
-            NodeType.WALLET, Message("respond_removals", response), Delivery.RESPOND,
+            NodeType.WALLET,
+            Message("respond_removals", response),
+            Delivery.RESPOND,
         )
 
     @api_request
@@ -2100,7 +2132,9 @@ class FullNode:
             )
 
         yield OutboundMessage(
-            NodeType.WALLET, Message("respond_additions", response), Delivery.RESPOND,
+            NodeType.WALLET,
+            Message("respond_additions", response),
+            Delivery.RESPOND,
         )
 
     @api_request

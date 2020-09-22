@@ -1,23 +1,22 @@
 import time
-from typing import Dict, Optional, List, Tuple, Set, Any
+from typing import Dict, Optional, List, Set, Any
 import logging
-from blspy import G2Element, AugSchemeMPL
+from blspy import G1Element, AugSchemeMPL, PrivateKey
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
-from src.util.chech32 import decode_puzzle_hash
 from src.util.condition_tools import (
-    conditions_for_solution,
     conditions_dict_for_solution,
-    conditions_by_opcode,
     pkm_pairs_for_conditions_dict,
 )
 from src.util.ints import uint64, uint32
 from src.wallet.abstract_wallet import AbstractWallet
-from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
-from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
+from src.wallet.puzzles.p2_delegated_puzzle import (
+    puzzle_for_pk,
+    solution_for_conditions,
+)
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_my_coin_id_condition,
     make_assert_time_exceeds_condition,
@@ -34,21 +33,24 @@ class Wallet(AbstractWallet):
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
+    _pk2sk: Dict[G1Element, PrivateKey]
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any, info: WalletInfo, name: str = None,
+        wallet_state_manager: Any,
+        info: WalletInfo,
+        name: str = None,
     ):
         self = Wallet()
-
         if name:
             self.log = logging.getLogger(name)
         else:
             self.log = logging.getLogger(__name__)
-
         self.wallet_state_manager = wallet_state_manager
-
         self.wallet_info = info
+
+        # HACK
+        self._pk2sk = {}
 
         return self
 
@@ -66,14 +68,18 @@ class Wallet(AbstractWallet):
         return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
     async def get_spendable_balance(self) -> uint64:
-        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.wallet_info.id
+        spendable_am = (
+            await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+                self.wallet_info.id
+            )
         )
         return spendable_am
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            self.wallet_info.id
+        unconfirmed_tx = (
+            await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+                self.wallet_info.id
+            )
         )
         addition_amount = 0
 
@@ -100,6 +106,26 @@ class Wallet(AbstractWallet):
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
+    async def hack_populate_secret_key_for_puzzle_hash(
+        self, puzzle_hash: bytes32
+    ) -> G1Element:
+        maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
+        if maybe is None:
+            error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
+            self.log.error(error_msg)
+            raise ValueError(error_msg)
+
+        # Get puzzle for pubkey
+        public_key, secret_key = maybe
+
+        # HACK
+        self._pk2sk[bytes(public_key)] = secret_key
+        return public_key
+
+    async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
+        public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
+        return puzzle_for_pk(bytes(public_key))
+
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(
             self.wallet_info.id
@@ -113,9 +139,8 @@ class Wallet(AbstractWallet):
             )
         ).puzzle_hash
 
-    def make_solution(
-        self, primaries=None, min_time=0, me=None, consumed=None, fee=None
-    ):
+    def make_solution(self, primaries=None, min_time=0, me=None, consumed=None, fee=0):
+        assert fee >= 0
         condition_list = []
         if primaries:
             for primary in primaries:
@@ -131,11 +156,9 @@ class Wallet(AbstractWallet):
             condition_list.append(make_assert_my_coin_id_condition(me["id"]))
         if fee:
             condition_list.append(make_assert_fee_condition(fee))
-        return Program.to([puzzle_for_conditions(condition_list), []])
+        return solution_for_conditions(condition_list)
 
-    async def select_coins(
-        self, amount, exclude: List[Coin] = None
-    ) -> Optional[Set[Coin]]:
+    async def select_coins(self, amount, exclude: List[Coin] = None) -> Set[Coin]:
         """ Returns a set of coins that can be used for generating a new transaction. """
         async with self.wallet_state_manager.lock:
             if exclude is None:
@@ -144,10 +167,12 @@ class Wallet(AbstractWallet):
             spendable_amount = await self.get_spendable_balance()
 
             if amount > spendable_amount:
-                self.log.warning(
-                    f"Can't select amount higher than our spendable balance {amount}, spendable {spendable_amount}"
+                error_msg = (
+                    f"Can't select amount higher than our spendable balance.  Amount: {amount}, spendable: "
+                    f" {spendable_amount}"
                 )
-                return None
+                self.log.warning(error_msg)
+                raise ValueError(error_msg)
 
             self.log.info(f"About to select coins for amount {amount}")
             unspent: List[WalletCoinRecord] = list(
@@ -211,130 +236,80 @@ class Wallet(AbstractWallet):
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-    ) -> List[Tuple[Program, CoinSolution]]:
+    ) -> List[CoinSolution]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         """
         if coins is None:
             coins = await self.select_coins(amount + fee)
-        if coins is None:
-            self.log.info("coins is None")
-            return []
+        assert len(coins) > 0
 
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
         change = spend_value - amount - fee
 
-        spends: List[Tuple[Program, CoinSolution]] = []
+        spends: List[CoinSolution] = []
         output_created = False
 
         for coin in coins:
             self.log.info(f"coin from coins {coin}")
-            # Get keys for puzzle_hash
-            puzzle_hash = coin.puzzle_hash
-            maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
-            if not maybe:
-                self.log.error(
-                    f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
-                )
-                return []
-
-            # Get puzzle for pubkey
-            pubkey, secretkey = maybe
-            puzzle: Program = puzzle_for_pk(bytes(pubkey))
+            puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
 
             # Only one coin creates outputs
-            if output_created is False and origin_id is None:
+            if not output_created and origin_id in (None, coin.name()):
                 primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
                 if change > 0:
                     changepuzzlehash = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
 
-                if fee > 0:
-                    solution = self.make_solution(primaries=primaries, fee=fee)
-                else:
-                    solution = self.make_solution(primaries=primaries)
-                output_created = True
-            elif output_created is False and origin_id == coin.name():
-                primaries = [{"puzzlehash": newpuzzlehash, "amount": amount}]
-                if change > 0:
-                    changepuzzlehash = await self.get_new_puzzlehash()
-                    primaries.append({"puzzlehash": changepuzzlehash, "amount": change})
-
-                if fee > 0:
-                    solution = self.make_solution(primaries=primaries, fee=fee)
-                else:
-                    solution = self.make_solution(primaries=primaries)
+                solution = self.make_solution(primaries=primaries, fee=fee)
                 output_created = True
             else:
                 solution = self.make_solution()
 
-            spends.append((puzzle, CoinSolution(coin, solution)))
+            puzzle_solution_pair = Program.to([puzzle, solution])
+            spends.append(CoinSolution(coin, puzzle_solution_pair))
 
         self.log.info(f"Spends is {spends}")
         return spends
 
-    async def sign_transaction(
-        self, spends: List[Tuple[Program, CoinSolution]]
-    ) -> Optional[SpendBundle]:
-        signatures = []
-        for puzzle, solution in spends:
-            # Get keys
-            keys = await self.wallet_state_manager.get_keys(solution.coin.puzzle_hash)
-            if not keys:
-                self.log.error(
-                    f"Sign transaction failed, No Keys for puzzlehash {solution.coin.puzzle_hash}"
-                )
-                return None
+    def secret_key_for_public_key(self, public_key: G1Element) -> Optional[PrivateKey]:
+        return self._pk2sk.get(bytes(public_key))
 
-            pubkey, secretkey = keys
-            code_ = [puzzle, solution.solution]
-            sexp = Program.to(code_)
+    async def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:
+        signatures = []
+
+        for coin_solution in coin_solutions:
+            await self.hack_populate_secret_key_for_puzzle_hash(
+                coin_solution.coin.puzzle_hash
+            )
 
             # Get AGGSIG conditions
-            err, con, cost = conditions_for_solution(sexp)
-            if err or not con:
-                self.log.error(f"Sign transaction failed, con:{con}, error: {err}")
-                return None
-
-            conditions_dict = conditions_by_opcode(con)
+            err, conditions_dict, cost = conditions_dict_for_solution(
+                coin_solution.solution
+            )
+            if err or conditions_dict is None:
+                error_msg = (
+                    f"Sign transaction failed, con:{conditions_dict}, error: {err}"
+                )
+                self.log.error(error_msg)
+                raise ValueError(error_msg)
 
             # Create signature
             for _, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, bytes(solution.coin)
+                conditions_dict, bytes(coin_solution.coin)
             ):
-                signature = AugSchemeMPL.sign(secretkey, msg)
+                secret_key = self.secret_key_for_public_key(_)
+                if secret_key is None:
+                    e_msg = f"no secret key for {_}"
+                    self.log.error(e_msg)
+                    raise ValueError(e_msg)
+                signature = AugSchemeMPL.sign(secret_key, msg)
                 signatures.append(signature)
 
         # Aggregate signatures
         aggsig = AugSchemeMPL.aggregate(signatures)
-        solution_list: List[CoinSolution] = [
-            CoinSolution(
-                coin_solution.coin, Program.to([puzzle, coin_solution.solution])
-            )
-            for (puzzle, coin_solution) in spends
-        ]
-        spend_bundle = SpendBundle(solution_list, aggsig)
-
-        return spend_bundle
-
-    async def generate_signed_transaction_dict(
-        self, data: Dict[str, Any]
-    ) -> Optional[TransactionRecord]:
-        """ Use this to generate transaction. """
-        # Check that both are integers
-        if not isinstance(data["amount"], int) or not isinstance(data["amount"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        amount = uint64(data["amount"])
-
-        if "fee" in data:
-            fee = uint64(data["fee"])
-        else:
-            fee = uint64(0)
-
-        puzzle_hash = decode_puzzle_hash(data["puzzle_hash"])
-
-        return await self.generate_signed_transaction(amount, puzzle_hash, fee)
+        return SpendBundle(coin_solutions, aggsig)
 
     async def generate_signed_transaction(
         self,
@@ -343,31 +318,22 @@ class Wallet(AbstractWallet):
         fee: uint64 = uint64(0),
         origin_id: bytes32 = None,
         coins: Set[Coin] = None,
-    ) -> Optional[TransactionRecord]:
+    ) -> TransactionRecord:
         """ Use this to generate transaction. """
 
         transaction = await self.generate_unsigned_transaction(
             amount, puzzle_hash, fee, origin_id, coins
         )
-        if len(transaction) == 0:
-            self.log.info("Unsigned transaction not generated")
-            return None
+        assert len(transaction) > 0
 
         self.log.info("About to sign a transaction")
-        spend_bundle: Optional[SpendBundle] = await self.sign_transaction(transaction)
-        if spend_bundle is None:
-            return None
+        spend_bundle: SpendBundle = await self.sign_transaction(transaction)
 
         now = uint64(int(time.time()))
-        add_list: List[Coin] = []
-        rem_list: List[Coin] = []
+        add_list: List[Coin] = list(spend_bundle.additions())
+        rem_list: List[Coin] = list(spend_bundle.removals())
 
-        for add in spend_bundle.additions():
-            add_list.append(add)
-        for rem in spend_bundle.removals():
-            rem_list.append(rem)
-
-        tx_record = TransactionRecord(
+        return TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=now,
             to_puzzle_hash=puzzle_hash,
@@ -384,35 +350,14 @@ class Wallet(AbstractWallet):
             trade_id=None,
         )
 
-        return tx_record
-
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """ Use this API to send transactions. """
         await self.wallet_state_manager.add_pending_transaction(tx)
 
-    # This is also defined in CCWallet as get_sigs()
-    # I think this should be a the default way the wallet gets signatures in sign_transaction()
-    async def get_sigs_for_innerpuz_with_innersol(
-        self, innerpuz: Program, innersol: Program
-    ) -> List[G2Element]:
-        puzzle_hash = innerpuz.get_tree_hash()
-        pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
-        sigs: List[G2Element] = []
-        code_ = [innerpuz, innersol]
-        sexp = Program.to(code_)
-        error, conditions, cost = conditions_dict_for_solution(sexp)
-        if conditions is not None:
-            for _, msg in pkm_pairs_for_conditions_dict(conditions):
-                signature = AugSchemeMPL.sign(private, msg)
-                sigs.append(signature)
-        return sigs
-
-        # Create an offer spend bundle for chia given an amount of relative change (i.e -400 or 1000)
-
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
     async def create_spend_bundle_relative_chia(
         self, chia_amount: int, exclude: List[Coin]
-    ) -> Optional[SpendBundle]:
+    ) -> SpendBundle:
         list_of_solutions = []
         utxos = None
 
@@ -423,8 +368,7 @@ class Wallet(AbstractWallet):
         else:
             utxos = await self.select_coins(0, exclude)
 
-        if utxos is None:
-            return None
+        assert len(utxos) > 0
 
         # Calculate output amount given sum of utxos
         spend_value = sum([coin.amount for coin in utxos])
@@ -432,12 +376,8 @@ class Wallet(AbstractWallet):
 
         # Create coin solutions for each utxo
         output_created = None
-        sigs: List[G2Element] = []
         for coin in utxos:
-            pubkey, secretkey = await self.wallet_state_manager.get_keys(
-                coin.puzzle_hash
-            )
-            puzzle = self.puzzle_for_pk(bytes(pubkey))
+            puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             if output_created is None:
                 newpuzhash = await self.get_new_puzzlehash()
                 primaries = [{"puzzlehash": newpuzhash, "amount": chia_amount}]
@@ -446,9 +386,6 @@ class Wallet(AbstractWallet):
             else:
                 solution = self.make_solution(consumed=[output_created.name()])
             list_of_solutions.append(CoinSolution(coin, Program.to([puzzle, solution])))
-            new_sigs = await self.get_sigs_for_innerpuz_with_innersol(puzzle, solution)
-            sigs = sigs + new_sigs
 
-        aggsig = AugSchemeMPL.aggregate(sigs)
-        spend_bundle = SpendBundle(list_of_solutions, aggsig)
+        spend_bundle = await self.sign_transaction(list_of_solutions)
         return spend_bundle

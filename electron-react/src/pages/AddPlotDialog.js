@@ -98,7 +98,7 @@ const AddPlotDialog = props => {
         <Box display="flex">
           <List dense={true} className={classes.dirList}>
             {directories.map(dir => (
-              <ListItem>
+              <ListItem key={dir}>
                 <ListItemAvatar>
                   <Avatar>
                     <FolderIcon />

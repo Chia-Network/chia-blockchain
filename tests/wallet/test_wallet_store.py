@@ -150,6 +150,7 @@ class TestWalletStore:
                 None,
                 None,
                 None,
+                uint64(0),
             )
             assert await store.get_block_record(br_1.header_hash) is None
             await store.add_block_record(br_1, False)
@@ -171,6 +172,7 @@ class TestWalletStore:
                 None,
                 None,
                 None,
+                uint64(0),
             )
             await store.add_block_record(br_2, False)
             assert len(await store.get_lca_path()) == 1
@@ -187,6 +189,7 @@ class TestWalletStore:
                 None,
                 None,
                 None,
+                uint64(0),
             )
             await store.add_block_record(br_3, True)
             assert len(await store.get_lca_path()) == 3

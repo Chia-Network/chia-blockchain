@@ -102,14 +102,14 @@ export const get_balance_for_wallet = id => {
   return action;
 };
 
-export const send_transaction = (wallet_id, amount, fee, puzzle_hash) => {
+export const send_transaction = (wallet_id, amount, fee, address) => {
   var action = walletMessage();
   action.message.command = "send_transaction";
   action.message.data = {
     wallet_id: wallet_id,
     amount: amount,
     fee: fee,
-    puzzle_hash: puzzle_hash
+    address: address
   };
   return action;
 };
@@ -388,17 +388,17 @@ export const get_transactions = wallet_id => {
   return action;
 };
 
-export const get_puzzle_hash = wallet_id => {
+export const get_address = wallet_id => {
   var action = walletMessage();
-  action.message.command = "get_next_puzzle_hash";
+  action.message.command = "get_next_address";
   action.message.data = { wallet_id: wallet_id };
   return action;
 };
 
-export const farm_block = puzzle_hash => {
+export const farm_block = address => {
   var action = walletMessage();
   action.message.command = "farm_block";
-  action.message.data = { puzzle_hash: puzzle_hash };
+  action.message.data = { address: address };
   return action;
 };
 
@@ -536,12 +536,12 @@ export const rename_cc_wallet = (wallet_id, name) => {
   return action;
 };
 
-export const cc_spend = (wallet_id, puzzle_hash, amount, fee) => {
+export const cc_spend = (wallet_id, address, amount, fee) => {
   var action = walletMessage();
   action.message.command = "cc_spend";
   action.message.data = {
     wallet_id: wallet_id,
-    innerpuzhash: puzzle_hash,
+    inner_address: address,
     amount: amount,
     fee: fee
   };

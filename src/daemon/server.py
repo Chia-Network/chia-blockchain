@@ -6,11 +6,10 @@ import signal
 import subprocess
 import sys
 import traceback
-from asyncio import CancelledError
 from typing import Dict, Any, List, Tuple, Optional
 from sys import platform
 
-from websockets import ConnectionClosedOK, WebSocketException
+from websockets import serve, ConnectionClosedOK, WebSocketException
 
 try:
     from aiohttp import web
@@ -20,8 +19,6 @@ except ModuleNotFoundError:
     )
     quit()
 
-
-import websockets
 
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
@@ -102,7 +99,7 @@ class WebSocketServer:
         except NotImplementedError:
             self.log.info("Not implemented")
 
-        self.websocket_server = await websockets.serve(
+        self.websocket_server = await serve(
             self.safe_handle,
             self.self_hostname,
             self.daemon_port,
@@ -120,9 +117,8 @@ class WebSocketServer:
         if task is not None:
             try:
                 task.cancel()
-            except BaseException as e:
+            except Exception as e:
                 self.log.error(f"Error while canceling task.{e} {task}")
-                pass
 
     async def stop(self):
         self.cancel_task_safe(self.ping_job)
@@ -148,7 +144,7 @@ class WebSocketServer:
                     for socket in sockets_to_use:
                         try:
                             await socket.send(response)
-                        except BaseException as e:
+                        except Exception as e:
                             tb = traceback.format_exc()
                             self.log.error(
                                 f"Unexpected exception trying to send to websocket: {e} {tb}"
@@ -198,9 +194,9 @@ class WebSocketServer:
                 sockets = self.connections[service_name]
                 for socket in sockets:
                     try:
-                        self.log.info(f"About to ping: {service_name}:{socket}")
+                        self.log.info(f"About to ping: {service_name}")
                         await socket.ping()
-                    except CancelledError:
+                    except asyncio.CancelledError:
                         self.log.info("Ping task received Cancel")
                         restart = False
                         break
@@ -285,7 +281,7 @@ class WebSocketServer:
                 self.services.pop(service_name)
                 error = None
             else:
-                error = "already running"
+                error = f"Service {service_name} already running"
         if error is None:
             try:
                 self.log.info(f"Start potting: {command_args}")
@@ -324,7 +320,7 @@ class WebSocketServer:
                 self.services.pop(service_command)
                 error = None
             else:
-                error = "already running"
+                error = f"Service {service_command} already running"
 
         if error is None:
             try:
@@ -545,20 +541,20 @@ def create_server_for_daemon(root_path):
     async def start_service(request):
         service_name = request.query.get("service")
         if not validate_service(service_name):
-            r = "unknown service"
+            r = f"{service_name} unknown service"
             return web.Response(text=str(r))
 
         if is_running(services, service_name):
-            r = "already running"
+            r = f"{service_name} already running"
             return web.Response(text=str(r))
 
         try:
             process, pid_path = launch_service(root_path, service_name)
             services[service_name] = process
-            r = "started"
+            r = f"{service_name} started"
         except (subprocess.SubprocessError, IOError):
             log.exception(f"problem starting {service_name}")
-            r = "start failed"
+            r = f"{service_name} start failed"
 
         return web.Response(text=str(r))
 

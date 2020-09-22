@@ -6,11 +6,12 @@ from src.types.program import Program
 from src.types.name_puzzle_condition import NPC
 from src.util.errors import Err
 from src.util.ints import uint64
-from src.util.mempool_check_conditions import get_name_puzzle_conditions
+from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 
 
 def calculate_cost_of_program(
-    program: Program, clvm_cost_ratio_constant: int,
+    program: Program,
+    clvm_cost_ratio_constant: int,
 ) -> Tuple[Optional[Err], List[NPC], uint64]:
     """
     This function calculates the total cost of either block or a spendbundle
