@@ -143,7 +143,9 @@ class TestRLWallet:
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 97, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
-        val = await api_admin.add_rate_limited_funds({"wallet_id": admin_wallet_id, "amount": 100})
+        val = await api_admin.add_rate_limited_funds(
+            {"wallet_id": admin_wallet_id, "amount": 100}
+        )
         assert val["status"] == "SUCCESS"
         for i in range(0, 50):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
