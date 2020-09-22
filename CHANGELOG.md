@@ -10,6 +10,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 - For 'git clone' installs there is now a separate install-gui.sh which speeds up running install.sh for those who wish to run headless and makes docker and other automation simpler.
+- The rate limited wallet library now supports coin aggregation for adding additional funds after the time of creation.
 
 ### Changed
 - `sh install.sh` was upgraded so that on Ubuntu it will install any needed OS dependencies.
