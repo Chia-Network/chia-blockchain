@@ -213,9 +213,7 @@ class AddressManager:
         self.tried_collisions = []
 
     def create_(
-        self,
-        addr: TimestampedPeerInfo,
-        addr_src: Optional[PeerInfo]
+        self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]
     ) -> Tuple[ExtendedPeerInfo, int]:
         self.id_count += 1
         node_id = self.id_count
@@ -225,9 +223,7 @@ class AddressManager:
         self.random_pos.append(node_id)
         return (self.map_info[node_id], node_id)
 
-    def find_(self, addr: PeerInfo) -> Tuple[
-        Optional[ExtendedPeerInfo], Optional[int]
-    ]:
+    def find_(self, addr: PeerInfo) -> Tuple[Optional[ExtendedPeerInfo], Optional[int]]:
         if addr.host not in self.map_addr:
             return (None, None)
         node_id = self.map_addr[addr.host]
@@ -584,8 +580,10 @@ class AddressManager:
         self,
         addr: PeerInfo,
         test_before_evict: bool = True,
-        timestamp: int = math.floor(time.time()),
+        timestamp: int = -1,
     ):
+        if timestamp == -1:
+            timestamp = math.floor(time.time())
         async with self.lock:
             self.mark_good_(addr, test_before_evict, timestamp)
 
@@ -594,8 +592,10 @@ class AddressManager:
         self,
         addr: PeerInfo,
         count_failures: bool,
-        timestamp: int = math.floor(time.time()),
+        timestamp: int = -1,
     ):
+        if timestamp == -1:
+            timestamp = math.floor(time.time())
         async with self.lock:
             self.attempt_(addr, count_failures, timestamp)
 
@@ -610,10 +610,7 @@ class AddressManager:
             return self.select_tried_collision_()
 
     # Choose an address to connect to.
-    async def select_peer(
-        self,
-        new_only: bool = False
-    ) -> Optional[ExtendedPeerInfo]:
+    async def select_peer(self, new_only: bool = False) -> Optional[ExtendedPeerInfo]:
         async with self.lock:
             return self.select_peer_(new_only)
 
@@ -622,6 +619,8 @@ class AddressManager:
         async with self.lock:
             return self.get_peers_()
 
-    async def connect(self, addr: PeerInfo, timestamp: int = math.floor(time.time())):
+    async def connect(self, addr: PeerInfo, timestamp: int = -1):
+        if timestamp == -1:
+            timestamp = math.floor(time.time())
         async with self.lock:
             return self.connect_(addr, timestamp)

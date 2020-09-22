@@ -193,7 +193,7 @@ class FullNodeDiscovery:
             now = time.time()
             got_peer = False
             addr: Optional[PeerInfo] = None
-            max_tries = 50 if len(connected) >= 3 else 10
+            max_tries = 50 if len(groups) >= 3 else 10
             while not got_peer and not self.is_closed:
                 await asyncio.sleep(min(15, self.peer_connect_interval))
                 tries += 1
