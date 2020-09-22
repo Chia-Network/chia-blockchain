@@ -708,7 +708,7 @@ class DIDWallet:
             [0, coin.amount, coin.puzzle_hash, coin.name(), coin.puzzle_hash, []]
         )
         # full solution is (parent_info my_amount innersolution)
-        fullsol = Program.to([coin.parent_coin_info, coin.amount, innersol,])
+        fullsol = Program.to([coin.parent_coin_info, coin.amount, innersol])
         list_of_solutions = [
             CoinSolution(
                 coin,
