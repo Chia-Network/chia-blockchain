@@ -309,10 +309,10 @@ class RLWallet(AbstractWallet):
     async def aggregate_this_coin(self, coin: Coin):
         spend_bundle = await self.rl_generate_signed_aggregation_transaction(self.rl_info,
                                                                              coin,
-                                                                             await self.get_rl_parent(),
-                                                                             await self.get_rl_coin())
+                                                                             await self._get_rl_parent(),
+                                                                             await self._get_rl_coin())
 
-        rl_coin = (await self.get_rl_coin())
+        rl_coin = (await self._get_rl_coin())
         puzzle_hash = rl_coin.puzzle_hash if rl_coin is not None else None
         tx_record = TransactionRecord(
             confirmed_at_index=uint32(0),
@@ -490,6 +490,7 @@ class RLWallet(AbstractWallet):
         return None
 
     async def _get_rl_parent(self) -> Optional[Coin]:
+        self.rl_coin_record = await self._get_rl_coin_record()
         if not self.rl_coin_record:
             return None
         rl_parent_id = self.rl_coin_record.coin.parent_coin_info
@@ -674,7 +675,7 @@ class RLWallet(AbstractWallet):
     async def rl_generate_signed_aggregation_transaction(
             self, rl_info, consolidating_coin, rl_parent, rl_coin):
         if (
-                 rl_info.limit is None
+                rl_info.limit is None
                 or rl_info.interval is None
                 or rl_info.user_pubkey is None
                 or rl_info.admin_pubkey is None
@@ -684,7 +685,7 @@ class RLWallet(AbstractWallet):
             raise ValueError("Rl coin record is None")
 
         list_of_coinsolutions = []
-        self.rl_coin_record = await self.get_rl_coin_record()
+        self.rl_coin_record = await self._get_rl_coin_record()
         pubkey, secretkey = await self.get_keys(self.rl_coin_record.coin.puzzle_hash)
         # Spend wallet coin
         puzzle = rl_puzzle_for_pk(
@@ -753,15 +754,6 @@ class RLWallet(AbstractWallet):
             return False
 
         await self.main_wallet.push_transaction(spend_bundle)
-
-    async def generate_signed_transaction_dict(
-            self, data: Dict[str, Any]
-    ) -> Optional[TransactionRecord]:
-        if not isinstance(data["amount"], int) or not isinstance(data["amount"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        amount = uint64(data["amount"])
-        puzzle_hash = decode_puzzle_hash(data["puzzle_hash"])
-        return await self.rl_generate_signed_transaction(amount, puzzle_hash)
 
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """ Use this API to send transactions. """
