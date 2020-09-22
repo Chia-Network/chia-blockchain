@@ -28,10 +28,7 @@ def curry(*args, **kwargs):
 
 
 def create_innerpuz(pubkey: bytes, identities: List[bytes]) -> Program:
-    id_list = []
-    for id in identities:
-        id_list.append(id)
-    return curry(DID_INNERPUZ_MOD, [DID_CORE_MOD, pubkey, id_list])
+    return curry(DID_INNERPUZ_MOD, [DID_CORE_MOD.get_tree_hash(), pubkey, identities])
 
 
 # def create_fullpuz(innerpuzhash, core) -> Program:
