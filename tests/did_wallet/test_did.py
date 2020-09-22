@@ -596,7 +596,7 @@ class TestWalletSimulator:
         )
 
         list_of_solutions = [
-            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol,]),)
+            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
         ]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())
