@@ -18,9 +18,7 @@ from src.util.merkle_set import (
     confirm_not_included_already_hashed,
     MerkleSet,
 )
-from src.protocols import (
-    introducer_protocol, wallet_protocol, full_node_protocol
-)
+from src.protocols import introducer_protocol, wallet_protocol, full_node_protocol
 from src.consensus.constants import ConsensusConstants
 from src.server.connection import PeerConnections
 from src.server.server import ChiaServer
@@ -341,9 +339,7 @@ class WalletNode:
             return
         conns = self.global_connections
         for peer in request.peer_list:
-            conns.peers.add(
-                PeerInfo(peer.host, uint16(peer.port))
-            )
+            conns.peers.add(PeerInfo(peer.host, uint16(peer.port)))
 
         # Pseudo-message to close the connection
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
@@ -364,9 +360,7 @@ class WalletNode:
         await asyncio.gather(*tasks)
 
     @api_request
-    async def respond_peers_full_node(
-        self, request: full_node_protocol.RespondPeers
-    ):
+    async def respond_peers_full_node(self, request: full_node_protocol.RespondPeers):
         pass
 
     async def _sync(self):

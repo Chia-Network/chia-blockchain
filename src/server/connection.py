@@ -215,9 +215,7 @@ class Peers:
         self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999
     ) -> List[TimestampedPeerInfo]:
         target_peers = [
-            TimestampedPeerInfo(
-                peer.host, uint16(peer.port), uint64(0)
-            )
+            TimestampedPeerInfo(peer.host, uint16(peer.port), uint64(0))
             for peer in self._peers
             if time.time() - self.time_added[peer.get_hash()] < recent_threshold
         ]

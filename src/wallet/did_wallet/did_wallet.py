@@ -71,6 +71,7 @@ class DIDWallet:
         spend_bundle = await self.generate_new_decentralised_id(amount)
         if spend_bundle is None:
             raise ValueError("failed to generate ID for wallet")
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         # Change and actual coloured coin
         non_ephemeral_spends: List[Coin] = spend_bundle.not_ephemeral_additions()
         did_coin = None
@@ -112,11 +113,8 @@ class DIDWallet:
             sent_to=[],
             trade_id=None,
         )
-        breakpoint()
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(did_record)
-        breakpoint()
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         return self
 
     @staticmethod
@@ -380,11 +378,9 @@ class DIDWallet:
                 await self.wallet_state_manager.set_action_done(action_id)
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
-        innerpuzhash = did_wallet_puzzles.create_innerpuz(
-            pubkey, self.did_info.backup_ids
-        ).get_tree_hash()
+        innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
         did = self.did_info.my_did
-        return did_wallet_puzzles.create_fullpuz(innerpuzhash, did)
+        return did_wallet_puzzles.create_fullpuz(innerpuz, did)
 
     async def get_new_puzzle(self) -> Program:
         devrec = await self.wallet_state_manager.get_unused_derivation_record(
@@ -392,10 +388,9 @@ class DIDWallet:
         )
         return self.puzzle_for_pk(bytes(devrec.pubkey))
 
-    def get_my_ID(self):
+    def get_my_ID(self) -> str:
         core = self.did_info.my_did
-        ret = did_wallet_puzzles.get_genesis_from_core(core)
-        return ret.hex()
+        return core.hex()
 
     # This is used to cash out, or update the id_list
     async def create_spend(self, puzhash):
@@ -407,7 +402,7 @@ class DIDWallet:
         innerpuz = self.did_info.current_inner
 
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz.get_tree_hash(), self.did_info.my_did,
+            innerpuz, self.did_info.my_did,
         )
         parent_info = await self.get_parent_for_coin(coin)
 
@@ -467,7 +462,7 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = self.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz.get_tree_hash(), self.did_info.my_did,
+            innerpuz, self.did_info.my_did,
         )
         parent_info = await self.get_parent_for_coin(coin)
 
@@ -489,10 +484,6 @@ class DIDWallet:
             coin.name(), identity, newpuz
         )
 
-        # # spend the message coin
-        # list_of_solutions.append(
-        #     message_spend
-        # )
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
         # sign for AGG_SIG_ME
         message = bytes(innermessage) + bytes(coin.name())
@@ -549,10 +540,10 @@ class DIDWallet:
                 parent_innerpuzhash_amounts_for_recovery_ids,
             ]
         )
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
+        # full solution is (parent_info my_amount solution)
         innerpuz = self.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz.get_tree_hash(), self.did_info.my_did,
+            innerpuz, self.did_info.my_did,
         )
         parent_info = await self.get_parent_for_coin(coin)
         fullsol = Program.to(
@@ -674,9 +665,6 @@ class DIDWallet:
         eve_spend = await self.generate_eve_spend(
             eve_coin, did_puz, origin_id, did_inner
         )
-        # from src.wallet.cc_wallet.debug_spend_bundle import debug_spend_bundle
-        # debug_spend_bundle(eve_spend)
-        breakpoint()
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend])
         return full_spend
 
@@ -688,13 +676,7 @@ class DIDWallet:
             [0, coin.amount, coin.puzzle_hash, coin.name(), coin.puzzle_hash, []]
         )
         # full solution is (parent_info my_amount innersolution)
-        fullsol = Program.to(
-            [
-                coin.parent_coin_info,
-                coin.amount,
-                innersol,
-            ]
-        )
+        fullsol = Program.to([coin.parent_coin_info, coin.amount, innersol,])
         list_of_solutions = [
             CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
         ]
@@ -730,7 +712,7 @@ class DIDWallet:
         )
         await self.save_info(did_info)
 
-    async def update_recovery_list(self, recover_list):
+    async def update_recovery_list(self, recover_list: List[bytes]):
         did_info: DIDInfo = DIDInfo(
             self.did_info.my_did,
             recover_list,

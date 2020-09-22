@@ -37,7 +37,8 @@ from src.wallet.cc_wallet.cc_utils import (
 from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
     create_genesis_or_zero_coin_checker,
     lineage_proof_for_genesis,
-    genesis_coin_id_for_genesis_coin_checker)
+    genesis_coin_id_for_genesis_coin_checker,
+)
 from dataclasses import replace
 
 

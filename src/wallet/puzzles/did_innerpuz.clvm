@@ -2,7 +2,7 @@
   ;message is the new puzzle in the recovery and standard spend cases
 
   ;MOD_HASH, MY_PUBKEY, RECOVERY_DID_LIST are curried into the puzzle
-  ;EXAMPLE SOLUTION (0xcafef00d 0x4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a 0x12341234 (0x22222222 0x33333333 0x44444444) 1 100 (q "source code") 0xdeadbeef 0xcafef00d ((0xdadadada 0xdad5dad5 200) (0xfafafafa 0xfaf5faf5 200) (0xbabababa 0xbab5bab5 200)))
+  ;EXAMPLE SOLUTION (0xcafef00d 0x12341234 (0x22222222 0x33333333 0x44444444) 1 100 (q "source code") 0xdeadbeef 0xcafef00d ((0xdadadada 0xdad5dad5 200) (0xfafafafa 0xfaf5faf5 200) (0xbabababa 0xbab5bab5 200)))
 
   (defconstant OP_AGG_SIG 50)
   (defconstant OP_CREATE_COIN 51)
@@ -174,7 +174,7 @@
     ; check that recovery list is not empty
       (if RECOVERY_DID_LIST
         (check_messages_from_identities MOD_HASH (sha256tree1 MOD_HASH) RECOVERY_DID_LIST my_id (list (create_new_coin amount message)) message parent_innerpuzhash_amounts_for_recovery_ids)
-        (x)
+        (x "DID recovery disabled")
       )
     )
     ; mode zero - normal spend

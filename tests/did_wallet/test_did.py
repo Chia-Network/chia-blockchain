@@ -463,7 +463,7 @@ class TestWalletSimulator:
         innerpuz = Program(binutils.assemble("1"))
         innerpuzhash = innerpuz.get_tree_hash()
 
-        puz = did_wallet_puzzles.create_fullpuz(innerpuzhash, did_wallet.did_info.my_core)
+        puz = did_wallet_puzzles.create_fullpuz(innerpuzhash, did_wallet.did_info.my_did)
 
         # Add the hacked puzzle to the puzzle store so that it is recognised as "our" puzzle
         old_devrec = await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)
@@ -486,10 +486,8 @@ class TestWalletSimulator:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         parent_info = await did_wallet.get_parent_for_coin(coin)
         fullsol = Program.to([
-            did_wallet.did_info.my_core.get_tree_hash(),
             [parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount],
             coin.amount,
-            innerpuz,
             innersol,
         ])
         try:
@@ -571,15 +569,13 @@ class TestWalletSimulator:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = did_wallet.did_info.current_inner
         full_puzzle: str = did_wallet_puzzles.create_fullpuz(
-            innerpuz.get_tree_hash(),
-            did_wallet.did_info.my_core,
+            innerpuz,
+            did_wallet.did_info.my_did,
         )
         fullsol = Program.to(
             [
-                did_wallet.did_info.my_core.get_tree_hash(),
                 [parent_info.parent_name, parent_info.inner_puzzle_hash, parent_info.amount],
                 coin.amount,
-                innerpuz,
                 innersol
             ]
         )
