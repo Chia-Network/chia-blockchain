@@ -4,6 +4,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import { Redirect, Route, Switch, useRouteMatch, useHistory } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import clsx from "clsx";
+import Flex from '../flex/Flex';
 import DashboardTitle from '../dashboard/DashboardTitle';
 import StandardWallet from "./standard/WalletStandard";
 import {
@@ -22,10 +23,6 @@ import WalletType from '../../types/WalletType';
 const drawerWidth = 180;
 
 const useStyles = makeStyles(theme => ({
-  root: {
-    display: "flex",
-    paddingLeft: "0px"
-  },
   menuButton: {
     marginRight: 36
   },
@@ -54,16 +51,6 @@ const useStyles = makeStyles(theme => ({
     [theme.breakpoints.up("sm")]: {
       width: theme.spacing(9)
     }
-  },
-  content: {
-    flexGrow: 1,
-    height: "calc(100vh - 64px)",
-    overflowX: "hidden"
-  },
-  container: {
-    paddingTop: theme.spacing(0),
-    paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0)
   },
   paper: {
     padding: theme.spacing(0),
@@ -234,7 +221,7 @@ export default function Wallets() {
     return <Redirect to="/" />;
   }
   return (
-    <div className={classes.root}>
+    <Flex overflow="hidden">
       <DashboardTitle>
         Wallets
       </DashboardTitle>
@@ -253,16 +240,15 @@ export default function Wallets() {
         </List>
         <CreateWallet />
       </Drawer>
-      <main className={classes.content}>
-        <Container maxWidth="lg" className={classes.container}>
+      <Flex flexDirection="column" flexGrow={1} height="100%" overflow="auto">
+        <Container maxWidth="lg">
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <WalletViewSwitch></WalletViewSwitch>
             </Grid>
-            <Grid item xs={12}></Grid>
           </Grid>
         </Container>
-      </main>
-    </div>
+      </Flex>
+    </Flex>
   );
 }
