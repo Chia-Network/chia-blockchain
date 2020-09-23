@@ -4,7 +4,7 @@ import { ArrowBackIos as ArrowBackIosIcon } from "@material-ui/icons";
 import { useSelector, useDispatch } from "react-redux";
 import { useHistory } from "react-router";
 import TextField from "../form/TextField";
-import Logo from '../logo/Logo';
+import Brand from '../brand/Brand';
 import Flex from '../flex/Flex';
 import Link from '../router/Link';
 import LayoutHero from "../layout/LayoutHero";
@@ -116,7 +116,7 @@ export default function WalletImport() {
       </Container>
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
-          <Logo />
+          <Brand />
           <Typography variant="h4" component="h1" gutterBottom>
             Import Wallet from Mnemonics
           </Typography>

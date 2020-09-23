@@ -34,6 +34,7 @@
     "react-router": "^5.2.0",
     "react-router-dom": "^5.2.0",
     "react-use": "^15.3.4",
+    "react-teleporter": "^2.1.1",
     "redux": "^4.0.5",
     "redux-thunk": "^2.3.0",
     "stringify": "^5.2.0",
