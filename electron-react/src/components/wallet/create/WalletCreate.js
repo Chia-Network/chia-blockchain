@@ -6,12 +6,11 @@ import {
   Grid,
   List,
   Button,
-  Box
+  Box,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
 } from "@material-ui/core";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemIcon from "@material-ui/core/ListItemIcon";
-import ListItemText from "@material-ui/core/ListItemText";
-
 import {
   changeCreateWallet,
   ALL_OPTIONS,
@@ -21,14 +20,13 @@ import {
   CREATE_RL_WALLET_OPTIONS,
   CREATE_RL_ADMIN,
   CREATE_RL_USER
-} from "../modules/createWalletReducer";
+} from "../../../modules/createWalletReducer";
 import { useDispatch, useSelector } from "react-redux";
-import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
+import { ArrowBackIos as ArrowBackIosIcon, InvertColors as InvertColorsIcon } from "@material-ui/icons";
 import { CreateNewCCWallet } from "./createNewColouredCoin";
 import { CreateExistingCCWallet } from "./createExistingColouredCoin";
 import { CreateRLAdminWallet } from "./createRLAdmin";
 import { CreateRLUserWallet } from "./createRLUser";
-import InvertColorsIcon from "@material-ui/icons/InvertColors";
 
 export const useStyles = makeStyles(theme => ({
   walletContainer: {

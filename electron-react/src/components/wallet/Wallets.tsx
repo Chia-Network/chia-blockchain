@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import DashboardTitle from '../dashboard/DashboardTitle';
 import { Box, Grid, Container, Drawer, List, Divider, ListItem, ListItemText, Typography } from "@material-ui/core";
 import { makeStyles } from "@material-ui/core/styles";
-import { Redirect } from "react-router-dom";
+import { Redirect, Route, Switch, useRouteMatch, useHistory } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import clsx from "clsx";
+import DashboardTitle from '../dashboard/DashboardTitle';
 import StandardWallet from "./standard/WalletStandard";
 import {
   changeWalletMenu,
@@ -155,29 +155,33 @@ const WalletList = () => {
 };
 
 const WalletViewSwitch = () => {
-  const toPresent = useSelector((state: RootState) => state.wallet_menu.view);
+  const { path } = useRouteMatch();
   const id = useSelector((state: RootState) => state.wallet_menu.id);
 
-  /*
-  if (toPresent === standardWallet) {
-    return <StandardWallet wallet_id={id}></StandardWallet>;
-  } else if (toPresent === createWallet) {
-    return <CreateWalletView></CreateWalletView>;
-  } else if (toPresent === CCWallet) {
-    return <ColouredWallet wallet_id={id}> </ColouredWallet>;
-  } else if (toPresent === RLWallet) {
-    return <RateLimitedWallet wallet_id={id}> </RateLimitedWallet>;
-  }
-  */
-  return <div></div>;
+  return (
+    <Switch>
+      <Route path={path} exact>
+        <StandardWallet wallet_id={id} />
+      </Route>
+      <Route path={`${path}/create`} exact>
+        <CreateWalletView />
+      </Route>
+      <Route path={`${path}/coloured`} exact>
+        <ColouredWallet wallet_id={id} />
+      </Route>
+      <Route path={`${path}/rate-limited`} exact>
+        <RateLimitedWallet wallet_id={id} />
+      </Route>
+    </Switch>
+  );
 };
 
 const CreateWallet = () => {
-  const dispatch = useDispatch();
+  const history = useHistory();
   const classes = useStyles();
 
   function presentCreateWallet() {
-    // dispatch(changeWalletMenu(createWallet));
+    history.push('/dashboard/wallets/create')
   }
 
   return (
@@ -252,7 +256,6 @@ export default function Wallets() {
       <main className={classes.content}>
         <Container maxWidth="lg" className={classes.container}>
           <Grid container spacing={3}>
-
             <Grid item xs={12}>
               <WalletViewSwitch></WalletViewSwitch>
             </Grid>

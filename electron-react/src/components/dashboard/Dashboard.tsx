@@ -132,7 +132,7 @@ const ComopnentSwitch = () => {
 */
 
 export default function Dashboard() {
-  let { path, url } = useRouteMatch();
+  const { path } = useRouteMatch();
 
 
   /*
@@ -172,7 +172,7 @@ export default function Dashboard() {
             <ToolbarSpacing />
             <Container maxWidth="md">
               <Switch>
-                <Route path={path} exact>
+                <Route path={`${path}/wallets`} exact>
                   <Wallets />
                 </Route>
               </Switch>
