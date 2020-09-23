@@ -1,15 +1,15 @@
 import React from 'react';
 import { HashRouter, Switch } from 'react-router-dom';
-import SelectKey from "./selectKey/SelectKey";
-import WalletAdd from "./wallet/WalletAdd";
-import WalletImport from "./wallet/WalletImport";
-import PrivateRoute from './router/PrivateRoute';
-import GuestRoute from './router/GuestRoute';
-import Dashboard from './dashboard/Dashboard';
-import { RestoreBackup } from "../pages/backup/restoreBackup";
+import SelectKey from "../selectKey/SelectKey";
+import WalletAdd from "../wallet/WalletAdd";
+import WalletImport from "../wallet/WalletImport";
+import PrivateRoute from './PrivateRoute';
+import GuestRoute from './GuestRoute';
+import Dashboard from '../dashboard/Dashboard';
+import { RestoreBackup } from "../../pages/backup/restoreBackup";
 import { useSelector } from "react-redux";
-import type { RootState } from '../modules/rootReducer';
-import LoadingScreen from './loading/LoadingScreen';
+import type { RootState } from '../../modules/rootReducer';
+import LoadingScreen from '../loading/LoadingScreen';
 
 export default function Router() {
   const loggedInReceived = useSelector(
