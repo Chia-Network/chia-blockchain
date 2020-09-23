@@ -4,12 +4,12 @@ import { Trans } from '@lingui/macro';
 import { useDispatch } from "react-redux";
 import { List } from "@material-ui/core";
 import { logOut } from "../../modules/message";
-import { ReactComponent as WalletsIcon} from "../../assets/img/wallet_sidebar.svg";
-import { ReactComponent as FarmIcon } from "../../assets/img/farm_sidebar.svg";
-import { ReactComponent as KeysIcon } from "../../assets/img/help_sidebar.svg";
-import { ReactComponent as HomeIcon } from "../../assets/img/home_sidebar.svg";
-import { ReactComponent as PlotIcon } from "../../assets/img/plot_sidebar.svg";
-import { ReactComponent as TradeIcon } from "../../assets/img/pool_sidebar.svg";
+import { ReactComponent as WalletsIcon} from "./images/wallet.svg";
+import { ReactComponent as FarmIcon } from "./images/farm.svg";
+import { ReactComponent as KeysIcon } from "./images/help.svg";
+import { ReactComponent as HomeIcon } from "./images/home.svg";
+import { ReactComponent as PlotIcon } from "./images/plot.svg";
+import { ReactComponent as TradeIcon } from "./images/pool.svg";
 import SideBarItem from '../sideBar/SideBarItem';
 import Flex from '../flex/Flex';
 
