@@ -8,7 +8,7 @@ import { Delete as DeleteIcon, Visibility as VisibilityIcon } from "@material-ui
 import Button from '../button/Button';
 import LayoutHero from '../layout/LayoutHero';
 import Flex from '../flex/Flex';
-import Logo from '../logo/Logo';
+import Brand from '../brand/Brand';
 import {
   login_action,
   delete_key,
@@ -63,7 +63,7 @@ export default function SelectKey() {
     <LayoutHero>
       <Container maxWidth="xs">
         <Flex flexDirection="column" alignItems="center" gap={3}>
-          <Logo />
+          <Brand />
           {hasFingerprints ? (
             <Typography variant="h5" component="h1" color="primary" gutterBottom>
               <Trans id="SelectKey.title">
