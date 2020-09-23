@@ -10,6 +10,7 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Added
 - For 'git clone' installs there is now a separate install-gui.sh which speeds up running install.sh for those who wish to run headless and makes docker and other automation simpler.
+- Node peers are now gossiped between nodes with logic to keep connected nodes on disparate internet networks to partially protect from eclipse attacks. This is the second to last step to remove our temporary introducer and migrate to DNS introducers with peer gossip modeled directly off of Bitcoin. This adds a new database of valid peer nodes that will persist across node restarts. This also makes changes to config.yaml's contents.
 - The rate limited wallet library now supports coin aggregation for adding additional funds after the time of creation.
 
 ### Changed
@@ -17,7 +18,7 @@ for setuptools_scm/PEP 440 reasons.
 - Wallet and puzzlehash generation have been refactored and simplified.
 - Wallet has had various sync speed ups added.
 - The rpc interfaces of all chia services has been refactored, simplified, and had various additional functionality added.
-- Block timestamps are now stored in the wallet database. Both database versions were incremented and databases from previous versions will not work with Beta 14. However, upon re-sync all test chia should appear in your wallet.
+- Block timestamps are now stored in the wallet database. Both database versions were incremented and databases from previous versions will not work with Beta 14. However, upon re-sync all test chia since Beta 12 should appear in your wallet.
 - All vestigial references to plots.yaml have been removed.
 
 ### Fixed
