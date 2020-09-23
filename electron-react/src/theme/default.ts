@@ -17,6 +17,11 @@ export default {
       contrastText: "#ffffff",
     },
   },
+  drawer: {
+    width: '100px',
+    zIndex: 1301,
+  },
+  /*
   root: {
     background: "linear-gradient(45deg, #333333 30%, #333333 90%)",
     height: "100%"
@@ -68,4 +73,6 @@ export default {
     marginLeft: defaultTheme.spacing(4),
     fontSize: 35
   },
+  
+  */
 }

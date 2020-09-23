@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useEffectOnce } from 'react-use';
 import { genereate_mnemonics, add_new_key_action } from "../../modules/message";
 import TextField from "../form/TextField";
-import Logo from '../logo/Logo';
+import Brand from '../brand/Brand';
 import Flex from '../flex/Flex';
 import Loading from '../loading/Loading';
 import Link from '../router/Link';
@@ -54,7 +54,7 @@ export default function WalletAdd() {
       </Container>
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
-          <Logo />
+          <Brand />
           <Typography variant="h4" component="h1" gutterBottom>
             New Wallet
           </Typography>
