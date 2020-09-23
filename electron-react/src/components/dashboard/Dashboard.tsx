@@ -168,16 +168,14 @@ export default function Dashboard() {
         <DashboardSideBar />
       </StyledDrawer>
       <Flex flexGrow={1} flexDirection="column">
-          <StyledBody flexGrow={1} flexDirection="column">
-            <ToolbarSpacing />
-            <Container maxWidth="md">
-              <Switch>
-                <Route path={`${path}/wallets`} exact>
-                  <Wallets />
-                </Route>
-              </Switch>
-            </Container>
-          </StyledBody>
+        <StyledBody flexGrow={1} flexDirection="column" overflow="auto">
+          <ToolbarSpacing />
+          <Switch>
+            <Route path={`${path}/wallets`} exact>
+              <Wallets />
+            </Route>
+          </Switch>
+        </StyledBody>
         {/*
         <CreateBackup />
         */}
