@@ -6,7 +6,6 @@ import time
 import random
 from pathlib import Path
 from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
-
 import aiosqlite
 from chiabip158 import PyBIP158
 from chiapos import Verifier
@@ -55,6 +54,7 @@ from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128
 from src.util.merkle_set import MerkleSet
 from src.util.path import mkdir, path_from_root
+from src.server.node_discovery import FullNodePeers
 from src.types.peer_info import PeerInfo
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -63,6 +63,7 @@ OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 class FullNode:
     block_store: BlockStore
     full_node_store: FullNodeStore
+    full_node_peers: FullNodePeers
     sync_store: SyncStore
     coin_store: CoinStore
     mempool_manager: MempoolManager
@@ -108,6 +109,19 @@ class FullNode:
         self.full_node_store = await FullNodeStore.create(self.connection)
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.connection)
+        self.full_node_peers = FullNodePeers(
+            self.server,
+            self.root_path,
+            self.global_connections,
+            self.config["target_peer_count"]
+            - self.config["target_outbound_peer_count"],
+            self.config["target_outbound_peer_count"],
+            self.config["peer_db_path"],
+            self.config["introducer_peer"],
+            self.config["peer_connect_interval"],
+            self.log,
+        )
+        await self.full_node_peers.start()
 
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(
@@ -288,6 +302,31 @@ class FullNode:
         async for msg in self._send_tips_to_farmers(Delivery.RESPOND):
             yield msg
 
+    @api_request
+    async def request_peers_with_peer_info(
+        self,
+        request: full_node_protocol.RequestPeers,
+        peer_info: PeerInfo,
+    ):
+        async for msg in self.full_node_peers.request_peers(peer_info):
+            yield msg
+
+    @api_request
+    async def respond_peers_with_peer_info(
+        self,
+        request: introducer_protocol.RespondPeers,
+        peer_info: PeerInfo,
+    ):
+        await self.full_node_peers.respond_peers(request, peer_info, False)
+
+    @api_request
+    async def respond_peers_full_node_with_peer_info(
+        self,
+        request: full_node_protocol.RespondPeers,
+        peer_info: PeerInfo,
+    ):
+        await self.full_node_peers.respond_peers(request, peer_info, True)
+
     def _num_needed_peers(self) -> int:
         assert self.global_connections is not None
         diff = self.config["target_peer_count"] - len(
@@ -298,6 +337,7 @@ class FullNode:
     def _close(self):
         self._shut_down = True
         self.blockchain.shut_down()
+        asyncio.create_task(self.full_node_peers.close())
 
     async def _await_closed(self):
         await self.connection.close()
@@ -1740,52 +1780,6 @@ class FullNode:
             yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
         for _ in []:
             yield _
-
-    @api_request
-    async def request_peers(
-        self, request: full_node_protocol.RequestPeers
-    ) -> OutboundMessageGenerator:
-        if self.global_connections is None:
-            return
-        connected_peers = self.global_connections.get_full_node_peerinfos()
-        unconnected_peers = self.global_connections.peers.get_peers(
-            recent_threshold=24 * 60 * 60
-        )
-        peers = list(set(connected_peers + unconnected_peers))
-
-        yield OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("respond_peers_full_node", full_node_protocol.RespondPeers(peers)),
-            Delivery.RESPOND,
-        )
-
-    @api_request
-    async def respond_peers(
-        self, request: introducer_protocol.RespondPeers
-    ) -> OutboundMessageGenerator:
-        if self.server is None or self.global_connections is None:
-            return
-        conns = self.global_connections
-        for peer in request.peer_list:
-            conns.peers.add(PeerInfo(peer.host, peer.port))
-
-        # Pseudo-message to close the connection
-        yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
-
-        unconnected = conns.get_unconnected_peers(
-            recent_threshold=self.config["recent_peer_threshold"]
-        )
-        to_connect = unconnected[: self._num_needed_peers()]
-        if not len(to_connect):
-            return
-
-        self.log.info(f"Trying to connect to peers: {to_connect}")
-        for target in to_connect:
-            asyncio.create_task(self.server.start_client(target, self._on_connect))
-
-    @api_request
-    async def respond_peers_full_node(self, request: full_node_protocol.RespondPeers):
-        pass
 
     @api_request
     async def request_mempool_transactions(

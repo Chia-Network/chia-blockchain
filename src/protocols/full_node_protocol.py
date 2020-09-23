@@ -10,7 +10,6 @@ from src.util.cbor_message import cbor_message
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.peer_info import TimestampedPeerInfo
 
-
 """
 Protocol between full nodes.
 """

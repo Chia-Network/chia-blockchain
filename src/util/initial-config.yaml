@@ -114,6 +114,7 @@ full_node:
 
   # Run multiple nodes with different databases by changing the database_path
   database_path: db/blockchain_v20.db
+  peer_db_path: db/peer_table_node.db
   simulator_database_path: sim_db/simulator_blockchain_v20.db
 
   # If True, starts an RPC server at the following port
@@ -131,9 +132,11 @@ full_node:
   sync_blocks_behind_threshold: 20
 
   # How often to connect to introducer if we need to learn more peers
-  introducer_connect_interval: 500
-  # Continue trying to connect to more peers until this number of connections
-  target_peer_count: 15
+  peer_connect_interval: 50
+  # Accept peers until this number of connections
+  target_peer_count: 60
+  # Initiate outbound connections until this number is hit.
+  target_outbound_peer_count: 10
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
   recent_peer_threshold: 6000
 
@@ -200,11 +203,12 @@ wallet:
 
   testing: False
   database_path: wallet/db/blockchain_wallet_v20.db
+  wallet_peers_path: wallet/db/wallet_peers.db
 
   logging: *logging
 
   target_peer_count: 5
-  introducer_connect_interval: 60
+  peer_connect_interval: 60
   # The introducer will only return peers who it has seen in the last
   # recent_peer_threshold seconds
   recent_peer_threshold: 6000

@@ -9,7 +9,6 @@ from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.server.upnp import upnp_remap_port
 
-from src.types.peer_info import PeerInfo
 
 # See: https://bugs.python.org/issue29288
 u"".encode("idna")
@@ -20,9 +19,6 @@ def service_kwargs_for_full_node(root_path):
     config = load_config_cli(root_path, "config.yaml", service_name)
 
     api = FullNode(config, root_path=root_path, consensus_constants=constants)
-
-    introducer = config["introducer_peer"]
-    peer_info = PeerInfo(introducer["host"], introducer["port"])
 
     async def start_callback():
         if config["enable_upnp"]:
@@ -46,11 +42,6 @@ def service_kwargs_for_full_node(root_path):
         start_callback=start_callback,
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
-        periodic_introducer_poll=(
-            peer_info,
-            config["introducer_connect_interval"],
-            config["target_peer_count"],
-        ),
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])
