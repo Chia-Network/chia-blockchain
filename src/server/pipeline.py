@@ -4,7 +4,6 @@ import logging
 import random
 import ssl
 from typing import Any, AsyncGenerator, List, Optional, Tuple
-
 from aiter import aiter_forker, iter_to_aiter, join_aiters, map_aiter, push_aiter
 
 from src.protocols.shared_protocol import (
@@ -149,7 +148,7 @@ async def initialize_pipeline(
 
 
 async def stream_reader_writer_to_connection(
-    swrt: Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc],
+    swrt: Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc, bool, bool],
     server_port: int,
     local_type: NodeType,
     log: logging.Logger,
@@ -158,8 +157,10 @@ async def stream_reader_writer_to_connection(
     Maps a tuple of (StreamReader, StreamWriter, on_connect) to a ChiaConnection object,
     which also stores the type of connection (str). It is also added to the global list.
     """
-    sr, sw, on_connect = swrt
-    con = ChiaConnection(local_type, None, sr, sw, server_port, on_connect, log)
+    sr, sw, on_connect, is_outbound, is_feeler = swrt
+    con = ChiaConnection(
+        local_type, None, sr, sw, server_port, on_connect, log, is_outbound, is_feeler
+    )
 
     con.log.info(f"Connection with {con.get_peername()} established")
     return con
@@ -206,23 +207,22 @@ async def perform_handshake(
         ):
             raise ProtocolError(Err.INVALID_HANDSHAKE)
 
-        if inbound_handshake.node_id == outbound_handshake.data.node_id:
-            raise ProtocolError(Err.SELF_CONNECTION)
-
         # Makes sure that we only start one connection with each peer
         connection.node_id = inbound_handshake.node_id
         connection.peer_server_port = int(inbound_handshake.server_port)
         connection.connection_type = inbound_handshake.node_type
 
+        if inbound_handshake.node_id == outbound_handshake.data.node_id:
+            raise ProtocolError(Err.SELF_CONNECTION)
+
         if srwt_aiter.is_stopped():
             raise Exception("No longer accepting handshakes, closing.")
 
-        if not global_connections.add(connection):
-            raise ProtocolError(Err.DUPLICATE_CONNECTION, [False])
+        # Tries adding the connection, and raises an exception on failure.
+        global_connections.add(connection)
 
         # Send Ack message
         await connection.send(Message("handshake_ack", HandshakeAck()))
-
         # Read Ack message
         full_message = await connection.read_one_message()
         if full_message.function != "handshake_ack":
@@ -241,10 +241,13 @@ async def perform_handshake(
                 f" established"
             )
         )
+
         # Only yield a connection if the handshake is succesful and the connection is not a duplicate.
-        yield connection, global_connections
+        async for conn in global_connections.successful_handshake(connection):
+            yield conn, global_connections
     except Exception as e:
         connection.log.warning(f"{e}, handshake not completed. Connection not created.")
+        global_connections.failed_handshake(connection, e)
         # Make sure to close the connection even if it's not in global connections
         connection.close()
         # Remove the conenction from global connections
@@ -323,15 +326,19 @@ async def handle_message(
                 Message("pong", Pong(ping_msg.nonce)),
                 Delivery.RESPOND,
             )
+            global_connections.update_connection_time(connection)
             yield connection, outbound_message, global_connections
             return
         elif full_message.function == "pong":
+            global_connections.update_connection_time(connection)
             return
 
         f_with_peer_name = getattr(api, full_message.function + "_with_peer_name", None)
-
+        f_with_peer_info = getattr(api, full_message.function + "_with_peer_info", None)
         if f_with_peer_name is not None:
             result = f_with_peer_name(full_message.data, connection.get_peername())
+        elif f_with_peer_info is not None:
+            result = f_with_peer_info(full_message.data, connection.get_peer_info())
         else:
             f = getattr(api, full_message.function, None)
 
@@ -347,6 +354,8 @@ async def handle_message(
                 yield connection, outbound_message, global_connections
         else:
             await result
+
+        global_connections.update_connection_time(connection)
     except Exception:
         tb = traceback.format_exc()
         connection.log.error(f"Error, closing connection {connection}. {tb}")

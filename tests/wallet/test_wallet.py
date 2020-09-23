@@ -7,7 +7,14 @@ from src.protocols import full_node_protocol
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
-from tests.setup_nodes import setup_simulators_and_wallets
+from tests.setup_nodes import (
+    setup_simulators_and_wallets,
+    test_constants,
+    setup_full_node,
+    setup_wallet_node,
+    setup_introducer,
+    _teardown_nodes,
+)
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from tests.time_out_assert import time_out_assert, time_out_assert_not_None
 
@@ -297,6 +304,41 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet_0.get_confirmed_balance, new_funds - 5)
         await time_out_assert(5, wallet_0.get_unconfirmed_balance, new_funds - 5)
         await time_out_assert(5, wallet_1.get_confirmed_balance, 5)
+
+    @pytest.mark.asyncio
+    async def test_wallet_finds_full_node(self):
+        node_iters = [
+            setup_full_node(
+                test_constants,
+                "blockchain_test.db",
+                11234,
+                introducer_port=11236,
+                simulator=False,
+            ),
+            setup_wallet_node(
+                11235,
+                test_constants,
+                None,
+                introducer_port=11236,
+            ),
+            setup_introducer(11236),
+        ]
+
+        full_node, s1 = await node_iters[0].__anext__()
+        wallet, s2 = await node_iters[1].__anext__()
+        introducer, introducer_server = await node_iters[2].__anext__()
+
+        async def has_full_node():
+            return (
+                wallet.wallet_peers.global_connections.count_outbound_connections() > 0
+            )
+
+        await time_out_assert(
+            2 * 60,
+            has_full_node,
+            True,
+        )
+        await _teardown_nodes(node_iters)
 
     # @pytest.mark.asyncio
     # async def test_wallet_make_transaction_with_fee(self, two_wallet_nodes):

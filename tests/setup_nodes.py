@@ -73,13 +73,11 @@ async def setup_full_node(
     config = load_config(bt.root_path, "config.yaml", "full_node")
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
-    periodic_introducer_poll = None
+    config["peer_connect_interval"] = 3
+    config["introducer_peer"]["host"] = "::1"
     if introducer_port is not None:
-        periodic_introducer_poll = (
-            PeerInfo(self_hostname, introducer_port),
-            30,
-            config["target_peer_count"],
-        )
+        config["introducer_peer"]["port"] = introducer_port
+
     if not simulator:
         api: FullNode = FullNode(
             config=config,
@@ -121,7 +119,6 @@ async def setup_full_node(
         start_callback=start_callback,
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
-        periodic_introducer_poll=periodic_introducer_poll,
         parse_cli_args=False,
     )
 
@@ -169,13 +166,11 @@ async def setup_wallet_node(
         consensus_constants=consensus_constants,
         name="wallet1",
     )
-    periodic_introducer_poll = None
+    config["introducer_peer"]["host"] = "::1"
     if introducer_port is not None:
-        periodic_introducer_poll = (
-            PeerInfo(self_hostname, introducer_port),
-            30,
-            config["target_peer_count"],
-        )
+        config["introducer_peer"]["port"] = introducer_port
+        config["peer_connect_interval"] = 10
+
     connect_peers: List[PeerInfo] = []
     if full_node_port is not None:
         connect_peers = [PeerInfo(self_hostname, full_node_port)]
@@ -206,7 +201,6 @@ async def setup_wallet_node(
         start_callback=start_callback,
         stop_callback=stop_callback,
         await_closed_callback=await_closed_callback,
-        periodic_introducer_poll=periodic_introducer_poll,
         parse_cli_args=False,
     )
 

@@ -37,11 +37,12 @@ async def start_server(
 
     def add_connection_type(
         srw: Tuple[asyncio.StreamReader, asyncio.StreamWriter]
-    ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc]:
+    ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc, bool, bool]:
         ssl_object = srw[1].get_extra_info(name="ssl_object")
         peer_cert = ssl_object.getpeercert()
         self.log.info(f"Client authed as {peer_cert}")
-        return (srw[0], srw[1], on_connect)
+        # Inbound peer, not a feeler.
+        return (srw[0], srw[1], on_connect, False, False)
 
     srwt_aiter = map_aiter(add_connection_type, aiter)
 
@@ -66,7 +67,7 @@ class ChiaServer:
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
-        self.global_connections: PeerConnections = PeerConnections([])
+        self.global_connections: PeerConnections = PeerConnections(local_type, [])
 
         self._port = port  # TCP port to identify our node
         self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
@@ -116,25 +117,32 @@ class ChiaServer:
 
         self.root_path = root_path
         self.config = config
+        self._pending_connections: List = []
 
     async def start_client(
         self,
         target_node: PeerInfo,
         on_connect: OnConnectFunc = None,
         auth: bool = False,
+        is_feeler: bool = False,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
+        self.log.info(f"Trying to connect with {target_node}.")
         if self._pipeline_task.done():
-            self.log.warning("Starting client after server closed")
+            self.log.error("Starting client after server closed")
             return False
 
         ssl_context = ssl_context_for_client(self.root_path, self.config, auth=auth)
         try:
             # Sometimes open_connection takes a long time, so we add it as a task, and cancel
             # the task in the event of closing the node.
+            peer_info = (target_node.host, target_node.port)
+            if peer_info in self._pending_connections:
+                return False
+            self._pending_connections.append(peer_info)
             oc_task: asyncio.Task = asyncio.create_task(
                 asyncio.open_connection(
                     target_node.host, int(target_node.port), ssl=ssl_context
@@ -142,15 +150,22 @@ class ChiaServer:
             )
             self._oc_tasks.append(oc_task)
             reader, writer = await oc_task
+            self._pending_connections.remove(peer_info)
             self._oc_tasks.remove(oc_task)
         except Exception as e:
             self.log.warning(
                 f"Could not connect to {target_node}. {type(e)}{str(e)}. Aborting and removing peer."
             )
-            self.global_connections.peers.remove(target_node)
+            self.global_connections.failed_connection(target_node)
+            if self.global_connections.introducer_peers is not None:
+                self.global_connections.introducer_peers.remove(target_node)
+            if peer_info in self._pending_connections:
+                self._pending_connections.remove(peer_info)
             return False
         if not self._srwt_aiter.is_stopped():
-            self._srwt_aiter.push(iter_to_aiter([(reader, writer, on_connect)]))
+            self._srwt_aiter.push(
+                iter_to_aiter([(reader, writer, on_connect, True, is_feeler)])
+            )
 
         ssl_object = writer.get_extra_info(name="ssl_object")
         peer_cert = ssl_object.getpeercert()

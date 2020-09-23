@@ -4,15 +4,14 @@ import logging.config
 import signal
 
 from sys import platform
-from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 try:
     import uvloop
 except ImportError:
     uvloop = None
 
-from src.protocols import introducer_protocol
-from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer, start_server
 from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
@@ -23,8 +22,6 @@ from src.server.connection import OnConnectFunc
 
 from .reconnect_task import start_reconnect_task
 
-OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
-
 
 stopped_by_signal = False
 
@@ -32,43 +29,6 @@ stopped_by_signal = False
 def global_signal_handler(*args):
     global stopped_by_signal
     stopped_by_signal = True
-
-
-def create_periodic_introducer_poll_task(
-    server,
-    peer_info,
-    global_connections,
-    introducer_connect_interval,
-    target_peer_count,
-):
-    """
-
-    Start a background task connecting periodically to the introducer and
-    requesting the peer list.
-    """
-
-    def _num_needed_peers() -> int:
-        diff = target_peer_count - len(global_connections.get_full_node_connections())
-        return diff if diff >= 0 else 0
-
-    async def introducer_client():
-        async def on_connect() -> OutboundMessageGenerator:
-            msg = Message("request_peers", introducer_protocol.RequestPeers())
-            yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
-
-        while True:
-            # If we are still connected to introducer, disconnect
-            for connection in global_connections.get_connections():
-                if connection.connection_type == NodeType.INTRODUCER:
-                    global_connections.close(connection)
-            # The first time connecting to introducer, keep trying to connect
-            if _num_needed_peers():
-                if not await server.start_client(peer_info, on_connect):
-                    await asyncio.sleep(5)
-                    continue
-            await asyncio.sleep(introducer_connect_interval)
-
-    return asyncio.create_task(introducer_client())
 
 
 class Service:
@@ -87,7 +47,6 @@ class Service:
         start_callback: Optional[Callable] = None,
         stop_callback: Optional[Callable] = None,
         await_closed_callback: Optional[Callable] = None,
-        periodic_introducer_poll: Optional[Tuple[PeerInfo, int, int]] = None,
         parse_cli_args=True,
     ):
         net_config = load_config(root_path, "config.yaml")
@@ -136,7 +95,6 @@ class Service:
         self._is_stopping = False
         self._stopped_by_rpc = False
 
-        self._periodic_introducer_poll = periodic_introducer_poll
         self._on_connect_callback = on_connect_callback
         self._start_callback = start_callback
         self._stop_callback = stop_callback
@@ -151,21 +109,6 @@ class Service:
         async def _run():
             if self._start_callback:
                 await self._start_callback()
-
-            self._introducer_poll_task = None
-            if self._periodic_introducer_poll:
-                (
-                    peer_info,
-                    introducer_connect_interval,
-                    target_peer_count,
-                ) = self._periodic_introducer_poll
-                self._introducer_poll_task = create_periodic_introducer_poll_task(
-                    self._server,
-                    peer_info,
-                    self._server.global_connections,
-                    introducer_connect_interval,
-                    target_peer_count,
-                )
 
             self._rpc_task = None
             self._rpc_close_task = None
@@ -223,9 +166,6 @@ class Service:
             self._log.info("Closing connections")
             self._server.close_all()
             self._api._shut_down = True
-            self._log.info("Stopping introducer task")
-            if self._introducer_poll_task:
-                self._introducer_poll_task.cancel()
 
             self._log.info("Calling service stop callback")
             if self._stop_callback:

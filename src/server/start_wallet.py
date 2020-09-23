@@ -27,11 +27,12 @@ def service_kwargs_for_wallet(root_path):
 
     api = WalletNode(config, keychain, root_path, consensus_constants=wallet_constants)
 
-    introducer = config["introducer_peer"]
-    peer_info = PeerInfo(introducer["host"], introducer["port"])
-    connect_peers = [
-        PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
-    ]
+    if "full_node_peer" in config:
+        connect_peers = [
+            PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
+        ]
+    else:
+        connect_peers = []
 
     async def start_callback():
         await api._start()
@@ -56,11 +57,6 @@ def service_kwargs_for_wallet(root_path):
         rpc_info=(WalletRpcApi, config["rpc_port"]),
         connect_peers=connect_peers,
         auth_connect_peers=False,
-        periodic_introducer_poll=(
-            peer_info,
-            config["introducer_connect_interval"],
-            config["target_peer_count"],
-        ),
     )
     return kwargs
 
