@@ -1,14 +1,15 @@
 import logging
-import random
 import time
 import asyncio
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
+import socket
+from typing import Any, AsyncGenerator, Callable, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
-from src.types.peer_info import PeerInfo, TimestampedPeerInfo
-from src.types.sized_bytes import bytes32
+from src.types.peer_info import PeerInfo
 from src.util import cbor
-from src.util.ints import uint16, uint64
+from src.util.ints import uint16
+from src.server.introducer_peers import IntroducerPeers
+from src.util.errors import Err, ProtocolError
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 4
@@ -33,6 +34,9 @@ class ChiaConnection:
         server_port: int,
         on_connect: OnConnectFunc,
         log: logging.Logger,
+        is_outbound: bool,
+        # Special type of connection, that disconnects after the handshake.
+        is_feeler: bool,
     ):
         self.local_type = local_type
         self.connection_type = connection_type
@@ -47,6 +51,8 @@ class ChiaConnection:
         self.node_id = None
         self.on_connect = on_connect
         self.log = log
+        self.is_outbound = is_outbound
+        self.is_feeler = is_feeler
 
         # ChiaConnection metrics
         self.creation_time = time.time()
@@ -120,31 +126,53 @@ class ChiaConnection:
 
 
 class PeerConnections:
-    def __init__(self, all_connections: List[ChiaConnection] = []):
+    def __init__(
+        self, local_type: NodeType, all_connections: List[ChiaConnection] = []
+    ):
         self._all_connections = all_connections
-        # Only full node peers are added to `peers`
-        self.peers = Peers()
-        for c in all_connections:
-            if c.connection_type == NodeType.FULL_NODE:
-                self.peers.add(c.get_peer_info())
+        self.local_type = local_type
+        self.introducer_peers = None
+        self.connection = None
+        if local_type == NodeType.INTRODUCER:
+            self.introducer_peers = IntroducerPeers()
+            for c in all_connections:
+                if c.connection_type == NodeType.FULL_NODE:
+                    self.introducer_peers.add(c.get_peer_info())
         self.state_changed_callback: Optional[Callable] = None
+        self.full_node_peers_callback: Optional[Callable] = None
+        self.wallet_callback: Optional[Callable] = None
+        self.max_inbound_count = 0
 
     def set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
+
+    def set_full_node_peers_callback(self, callback: Callable):
+        self.full_node_peers_callback = callback
+
+    def set_wallet_callback(self, callback: Callable):
+        self.wallet_callback = callback
 
     def _state_changed(self, state: str):
         if self.state_changed_callback is not None:
             self.state_changed_callback(state)
 
     def add(self, connection: ChiaConnection) -> bool:
+        if not connection.is_outbound:
+            if (
+                connection.connection_type is not None
+                and not self.accept_inbound_connections(connection.connection_type)
+            ):
+                raise ProtocolError(Err.MAX_INBOUND_CONNECTIONS_REACHED)
+
         for c in self._all_connections:
             if c.node_id == connection.node_id:
-                return False
+                raise ProtocolError(Err.DUPLICATE_CONNECTION, [False])
         self._all_connections.append(connection)
 
         if connection.connection_type == NodeType.FULL_NODE:
             self._state_changed("add_connection")
-            return self.peers.add(connection.get_peer_info())
+            if self.introducer_peers is not None:
+                return self.introducer_peers.add(connection.get_peer_info())
         self._state_changed("add_connection")
         return True
 
@@ -155,14 +183,37 @@ class PeerConnections:
             connection.close()
             self._state_changed("close_connection")
             if not keep_peer:
-                self.peers.remove(info)
+                if self.introducer_peers is not None:
+                    self.introducer_peers.remove(info)
 
     def close_all_connections(self):
         for connection in self._all_connections:
             connection.close()
             self._state_changed("close_connection")
         self._all_connections = []
-        self.peers = Peers()
+        if self.local_type == NodeType.INTRODUCER:
+            self.introducer_peers = IntroducerPeers()
+
+    def get_local_peerinfo(self) -> Optional[PeerInfo]:
+        ip = None
+        port = None
+        for c in self._all_connections:
+            if c.connection_type == NodeType.FULL_NODE:
+                port = c.local_port
+                break
+        if port is None:
+            return None
+
+        # https://stackoverflow.com/a/28950776
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            try:
+                s.connect(("introducer.beta.chia.net", 8444))
+                ip = s.getsockname()[0]
+            except Exception:
+                ip = None
+        if ip is None:
+            return None
+        return PeerInfo(str(ip), uint16(port))
 
     def get_connections(self):
         return self._all_connections
@@ -175,52 +226,98 @@ class PeerConnections:
             filter(None, map(ChiaConnection.get_peer_info, self._all_connections))
         )
 
-    def get_unconnected_peers(self, max_peers=0, recent_threshold=9999999):
-        connected = self.get_full_node_peerinfos()
-        peers = self.peers.get_peers(recent_threshold=recent_threshold)
-        unconnected = list(filter(lambda peer: peer not in connected, peers))
-        if not max_peers:
-            max_peers = len(unconnected)
-        return unconnected[:max_peers]
+    async def successful_handshake(self, connection):
+        if connection.connection_type == NodeType.FULL_NODE:
+            if connection.is_outbound:
+                if self.full_node_peers_callback is not None:
+                    self.full_node_peers_callback(
+                        "mark_tried",
+                        connection.get_peer_info(),
+                    )
+                if self.wallet_callback is not None:
+                    self.wallet_callback(
+                        "make_tried",
+                        connection.get_peer_info(),
+                    )
+                if connection.is_feeler:
+                    connection.close()
+                    self.close(connection)
+                    return
+                # Request peers after handshake.
+                if connection.local_type == NodeType.FULL_NODE:
+                    await connection.send(Message("request_peers", ""))
+            else:
+                if self.full_node_peers_callback is not None:
+                    self.full_node_peers_callback(
+                        "new_inbound_connection",
+                        connection.get_peer_info(),
+                    )
+        yield connection
 
+    def failed_handshake(self, connection, e):
+        if connection.connection_type == NodeType.FULL_NODE and connection.is_outbound:
+            if isinstance(e, ProtocolError) and e.code == Err.DUPLICATE_CONNECTION:
+                return
 
-class Peers:
-    """
-    Has the list of known full node peers that are already connected or may be
-    connected to, and the time that they were last added.
-    """
+            if self.full_node_peers_callback is not None:
+                self.full_node_peers_callback(
+                    "mark_attempted",
+                    connection.get_peer_info(),
+                )
+            if self.wallet_callback is not None:
+                self.wallet_callback(
+                    "mark_attempted",
+                    connection.get_peer_info(),
+                )
 
-    def __init__(self):
-        self._peers: List[PeerInfo] = []
-        self.time_added: Dict[bytes32, uint64] = {}
+    def failed_connection(self, peer_info):
+        if self.full_node_peers_callback is not None:
+            self.full_node_peers_callback(
+                "mark_attempted",
+                peer_info,
+            )
+        if self.wallet_callback is not None:
+            self.wallet_callback(
+                "mark_attempted",
+                peer_info,
+            )
 
-    def add(self, peer: Optional[PeerInfo]) -> bool:
-        if peer is None or not peer.port:
-            return False
-        if peer not in self._peers:
-            self._peers.append(peer)
-        self.time_added[peer.get_hash()] = uint64(int(time.time()))
-        return True
+    def update_connection_time(self, connection):
+        if connection.connection_type == NodeType.FULL_NODE and connection.is_outbound:
+            if self.full_node_peers_callback is not None:
+                self.full_node_peers_callback(
+                    "update_connection_time",
+                    connection.get_peer_info(),
+                )
+            if self.wallet_callback is not None:
+                self.wallet_callback(
+                    "update_connection_time",
+                    connection.get_peer_info(),
+                )
 
-    def remove(self, peer: Optional[PeerInfo]) -> bool:
-        if peer is None or not peer.port:
-            return False
-        try:
-            self._peers.remove(peer)
-            return True
-        except ValueError:
-            return False
+    # Functions related to outbound and inbound connections for the full node.
+    def count_outbound_connections(self):
+        return len(self.get_outbound_connections())
 
-    def get_peers(
-        self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999
-    ) -> List[TimestampedPeerInfo]:
-        target_peers = [
-            TimestampedPeerInfo(peer.host, uint16(peer.port), uint64(0))
-            for peer in self._peers
-            if time.time() - self.time_added[peer.get_hash()] < recent_threshold
+    def get_outbound_connections(self):
+        return [
+            conn
+            for conn in self._all_connections
+            if conn.is_outbound and conn.connection_type == NodeType.FULL_NODE
         ]
-        if not max_peers or max_peers > len(target_peers):
-            max_peers = len(target_peers)
-        if randomize:
-            random.shuffle(target_peers)
-        return target_peers[:max_peers]
+
+    def accept_inbound_connections(self, node_type: NodeType):
+        if not self.local_type == NodeType.FULL_NODE:
+            return True
+        inbound_count = len(
+            [
+                conn
+                for conn in self._all_connections
+                if not conn.is_outbound and conn.connection_type == node_type
+            ]
+        )
+        if node_type == NodeType.FULL_NODE:
+            return inbound_count < self.max_inbound_count
+        if node_type == NodeType.WALLET:
+            return inbound_count < 20
+        return inbound_count < 10

@@ -10,7 +10,6 @@ import logging
 import traceback
 from blspy import PrivateKey
 
-from src.full_node.full_node import OutboundMessageGenerator
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.merkle_set import (
@@ -23,7 +22,8 @@ from src.consensus.constants import ConsensusConstants
 from src.server.connection import PeerConnections
 from src.server.server import ChiaServer
 from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
-from src.util.ints import uint16, uint32, uint64
+from src.server.node_discovery import WalletPeers
+from src.util.ints import uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
 from src.wallet.derivation_record import DerivationRecord
@@ -49,7 +49,7 @@ class WalletNode:
     constants: ConsensusConstants
     server: Optional[ChiaServer]
     log: logging.Logger
-
+    wallet_peers: WalletPeers
     # Maintains the state of the wallet (blockchain and transactions), handles DB connections
     wallet_state_manager: Optional[WalletStateManager]
 
@@ -181,6 +181,18 @@ class WalletNode:
 
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
+        self.wallet_peers = WalletPeers(
+            self.server,
+            self.root_path,
+            self.global_connections,
+            self.config["target_peer_count"],
+            self.config["wallet_peers_path"],
+            self.config["introducer_peer"],
+            self.config["peer_connect_interval"],
+            self.log,
+        )
+        await self.wallet_peers.start()
+        asyncio.create_task(self._periodically_check_full_node())
         return True
 
     def _close(self):
@@ -191,6 +203,9 @@ class WalletNode:
             self.wallet_state_manager.close_all_stores()
         )
         self.global_connections.close_all_connections()
+        self.wallet_peers_task = asyncio.create_task(
+            self.wallet_peers.ensure_is_closed()
+        )
 
     async def _await_closed(self):
         if self.sync_generator_task is not None:
@@ -310,16 +325,16 @@ class WalletNode:
         for msg in messages:
             yield msg
 
-    def _num_needed_peers(self) -> int:
-        if self.wallet_state_manager is None or self.backup_initialized is False:
-            return 0
-        assert self.server is not None
-        diff = self.config["target_peer_count"] - len(
-            self.global_connections.get_full_node_connections()
-        )
-        if diff < 0:
-            return 0
+    async def _periodically_check_full_node(self):
+        tries = 0
+        while not self._shut_down and tries < 5:
+            if self._has_full_node():
+                await self.wallet_peers.ensure_is_closed()
+                break
+            tries += 1
+            await asyncio.sleep(180)
 
+    def _has_full_node(self) -> bool:
         if "full_node_peer" in self.config:
             full_node_peer = PeerInfo(
                 self.config["full_node_peer"]["host"],
@@ -345,39 +360,30 @@ class WalletNode:
                             f"Closing unnecessary connection to {connection.get_peer_info()}."
                         )
                         self.global_connections.close(connection)
-                return 0
-        return diff
+                return True
+        return False
 
     @api_request
-    async def respond_peers(
-        self, request: introducer_protocol.RespondPeers
-    ) -> OutboundMessageGenerator:
-        """
-        We have received a list of full node peers that we can connect to.
-        """
-        if self.server is None or self.wallet_state_manager is None:
-            return
-        conns = self.global_connections
-        for peer in request.peer_list:
-            conns.peers.add(PeerInfo(peer.host, uint16(peer.port)))
+    async def respond_peers_with_peer_info(
+        self,
+        request: introducer_protocol.RespondPeers,
+        peer_info: PeerInfo,
+    ):
+        if not self._has_full_node():
+            await self.wallet_peers.respond_peers(request, peer_info, False)
+        else:
+            await self.wallet_peers.ensure_is_closed()
 
-        # Pseudo-message to close the connection
-        yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
-
-        unconnected = conns.get_unconnected_peers(
-            recent_threshold=self.config["recent_peer_threshold"]
-        )
-        to_connect = unconnected[: self._num_needed_peers()]
-        if not len(to_connect):
-            return
-
-        self.log.info(f"Trying to connect to peers: {to_connect}")
-        tasks = []
-        for target in to_connect:
-            tasks.append(
-                asyncio.create_task(self.server.start_client(target, self._on_connect))
-            )
-        await asyncio.gather(*tasks)
+    @api_request
+    async def respond_peers_full_node_with_peer_info(
+        self,
+        request: full_node_protocol.RespondPeers,
+        peer_info: PeerInfo,
+    ):
+        if not self._has_full_node():
+            await self.wallet_peers.respond_peers(request, peer_info, True)
+        else:
+            await self.wallet_peers.ensure_is_closed()
 
     @api_request
     async def respond_peers_full_node(self, request: full_node_protocol.RespondPeers):
