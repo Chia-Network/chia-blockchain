@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { Route, Switch, useRouteMatch } from 'react-router';
 import { AppBar, Toolbar, Drawer, Typography, Divider, Container } from "@material-ui/core";
 import Wallets from "../wallet/Wallets";
+import FullNode from '../fullNode/FullNode';
 import Brand from '../brand/Brand';
 import Flex from '../flex/Flex';
 import DashboardSideBar from './DashboardSideBar';
@@ -170,11 +171,16 @@ export default function Dashboard() {
       <Flex flexGrow={1} flexDirection="column">
         <StyledBody flexGrow={1} flexDirection="column" overflow="auto">
           <ToolbarSpacing />
-          <Switch>
-            <Route path={`${path}/wallets`} exact>
-              <Wallets />
-            </Route>
-          </Switch>
+          <Flex overflow="hidden">
+            <Switch>
+              <Route path={`${path}`} exact>
+                <FullNode />
+              </Route>
+              <Route path={`${path}/wallets`} exact>
+                <Wallets />
+              </Route>
+            </Switch>
+          </Flex>
         </StyledBody>
         {/*
         <CreateBackup />
