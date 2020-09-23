@@ -1,6 +1,6 @@
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict
 
-from blspy import PrivateKey, AugSchemeMPL, G1Element, G2Element
+from blspy import PrivateKey, AugSchemeMPL, G2Element
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
@@ -15,8 +15,10 @@ from src.util.condition_tools import (
     conditions_for_solution,
 )
 from src.util.ints import uint32, uint64
-from src.wallet.puzzles.p2_conditions import puzzle_for_conditions
-from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
+from src.wallet.puzzles.p2_delegated_puzzle import (
+    puzzle_for_pk,
+    solution_for_conditions,
+)
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_coin_consumed_condition,
     make_assert_my_coin_id_condition,
@@ -54,22 +56,19 @@ class WalletTool:
         self.next_address = uint32(self.next_address + 1)
         return self.next_address
 
-    def get_keys(self, puzzle_hash) -> Tuple[G1Element, PrivateKey]:
+    def get_private_key_for_puzzle_hash(self, puzzle_hash) -> PrivateKey:
         if puzzle_hash in self.puzzle_pk_cache:
             child = self.puzzle_pk_cache[puzzle_hash]
             private = master_sk_to_wallet_sk(self.private_key, uint32(child))
             pubkey = private.get_g1()
-            return pubkey, private
+            return private
         else:
             for child in range(self.next_address):
                 pubkey = master_sk_to_wallet_sk(
                     self.private_key, uint32(child)
                 ).get_g1()
                 if puzzle_hash == puzzle_for_pk(bytes(pubkey)).get_tree_hash():
-                    return (
-                        pubkey,
-                        master_sk_to_wallet_sk(self.private_key, uint32(child)),
-                    )
+                    return master_sk_to_wallet_sk(self.private_key, uint32(child))
         raise ValueError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
@@ -119,7 +118,7 @@ class WalletTool:
                 if cvp.opcode == ConditionOpcode.ASSERT_FEE:
                     ret.append(make_assert_fee_condition(cvp.var1))
 
-        return Program.to([puzzle_for_conditions(ret), []])
+        return solution_for_conditions(ret)
 
     def generate_unsigned_transaction(
         self,
@@ -134,9 +133,8 @@ class WalletTool:
         spend_value = coin.amount
         puzzle_hash = coin.puzzle_hash
         if secretkey is None:
-            pubkey, secretkey = self.get_keys(puzzle_hash)
-        else:
-            pubkey = secretkey.get_g1()
+            secretkey = self.get_private_key_for_puzzle_hash(puzzle_hash)
+        pubkey = secretkey.get_g1()
         puzzle = puzzle_for_pk(bytes(pubkey))
         if ConditionOpcode.CREATE_COIN not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN] = []
@@ -169,7 +167,9 @@ class WalletTool:
         solution: Program
         puzzle: Program
         for coin_solution in coin_solutions:  # type: ignore # noqa
-            pubkey, secretkey = self.get_keys(coin_solution.coin.puzzle_hash)
+            secretkey = self.get_private_key_for_puzzle_hash(
+                coin_solution.coin.puzzle_hash
+            )
             err, con, cost = conditions_for_solution(coin_solution.solution)
             if not con:
                 raise ValueError(err)
