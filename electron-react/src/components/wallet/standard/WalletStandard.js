@@ -14,18 +14,18 @@ import TableCell from "@material-ui/core/TableCell";
 
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
-import { get_address, send_transaction, farm_block } from "../modules/message";
+import { get_address, send_transaction, farm_block } from "../../../modules/message";
 import Accordion from "@material-ui/core/Accordion";
 import AccordionSummary from "@material-ui/core/AccordionSummary";
 import AccordionDetails from "@material-ui/core/AccordionDetails";
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
-import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
-import { unix_to_short_date } from "../util/utils";
-import { openDialog } from "../modules/dialog";
+import { mojo_to_chia_string, chia_to_mojo } from "../../../util/chia";
+import { unix_to_short_date } from "../../../util/utils";
+import { openDialog } from "../../../modules/dialog";
 import { Tooltip } from "@material-ui/core";
 import HelpIcon from "@material-ui/icons/Help";
-import { get_transaction_result } from "../util/transaction_result";
-const config = require("../config");
+import { get_transaction_result } from "../../../util/transaction_result";
+import config from '../../../config/config';
 const drawerWidth = 240;
 
 const useStyles = makeStyles(theme => ({
