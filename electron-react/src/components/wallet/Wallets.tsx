@@ -217,11 +217,9 @@ export default function Wallets() {
   const logged_in = useSelector((state: RootState) => state.wallet_state.logged_in);
 
   const [open] = useState(true);
-  if (!logged_in) {
-    return <Redirect to="/" />;
-  }
+
   return (
-    <Flex overflow="hidden">
+    <>
       <DashboardTitle>
         Wallets
       </DashboardTitle>
@@ -235,7 +233,7 @@ export default function Wallets() {
         <Divider />
         <StatusCard />
         <Divider />
-        <List>
+        <List disablePadding>
           <WalletList />
         </List>
         <CreateWallet />
@@ -249,6 +247,6 @@ export default function Wallets() {
           </Grid>
         </Container>
       </Flex>
-    </Flex>
+    </>
   );
 }
