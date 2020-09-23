@@ -47,26 +47,26 @@ def calculate_synthetic_offset(
 
 
 def calculate_synthetic_public_key(
-    public_key: PublicKeyProgram, hidden_puzzle: Program
-) -> Program:
-    r = SYNTHETIC_MOD.run([public_key, hidden_puzzle.tree_hash()])
-    return r
+    public_key: G1Element, hidden_puzzle: Program
+) -> G1Element:
+    r = SYNTHETIC_MOD.run([bytes(public_key), hidden_puzzle.get_tree_hash()])
+    return G1Element.from_bytes(r.as_atom())
 
 
-def puzzle_for_synthetic_public_key(synthetic_public_key: PublicKeyProgram) -> Program:
-    return MOD.curry(synthetic_public_key)
+def puzzle_for_synthetic_public_key(synthetic_public_key: G1Element) -> Program:
+    return MOD.curry(bytes(synthetic_public_key))
 
 
 def puzzle_for_public_key_and_hidden_puzzle(
-    public_key: PublicKeyProgram, hidden_puzzle: Program = DEFAULT_HIDDEN_PUZZLE
+    public_key: G1Element, hidden_puzzle: Program
 ) -> Program:
     synthetic_public_key = calculate_synthetic_public_key(public_key, hidden_puzzle)
 
     return puzzle_for_synthetic_public_key(synthetic_public_key)
 
 
-def puzzle_for_pk(public_key: PublicKeyProgram) -> Program:
-    return MOD.curry(public_key)
+def puzzle_for_pk(public_key: G1Element) -> Program:
+    return puzzle_for_public_key_and_hidden_puzzle(public_key, DEFAULT_HIDDEN_PUZZLE)
 
 
 def solution_with_delegated_puzzle(
@@ -76,7 +76,7 @@ def solution_with_delegated_puzzle(
 
 
 def solution_with_hidden_puzzle(
-    hidden_public_key: PublicKeyProgram,
+    hidden_public_key: G1Element,
     hidden_puzzle: Program,
     solution_to_hidden_puzzle: Program,
 ) -> Program:
