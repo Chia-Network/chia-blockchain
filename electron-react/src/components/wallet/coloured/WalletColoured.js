@@ -20,17 +20,17 @@ import {
   cc_spend,
   farm_block,
   rename_cc_wallet
-} from "../modules/message";
+} from "../../../modules/message";
 import {
   mojo_to_chia_string,
   mojo_to_colouredcoin_string,
   colouredcoin_to_mojo
-} from "../util/chia";
-import { unix_to_short_date } from "../util/utils";
-import Accordion from "../components/Accordion";
-import { openDialog } from "../modules/dialog";
-import { get_transaction_result } from "../util/transaction_result";
-const config = require("../config");
+} from "../../../util/chia";
+import { unix_to_short_date } from "../../../util/utils";
+import Accordion from "../../accordion/Accordion";
+import { openDialog } from "../../../modules/dialog";
+import { get_transaction_result } from "../../../util/transaction_result";
+import config from '../../../config/config';
 
 const drawerWidth = 240;
 
