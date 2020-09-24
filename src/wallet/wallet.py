@@ -24,6 +24,7 @@ from src.wallet.puzzles.puzzle_utils import (
     make_assert_fee_condition,
 )
 from src.wallet.transaction_record import TransactionRecord
+from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 
@@ -52,6 +53,10 @@ class Wallet:
         self._pk2sk = {}
 
         return self
+
+    @classmethod
+    def type(cls):
+        return WalletType.STANDARD_WALLET
 
     async def get_confirmed_balance(self) -> uint64:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
