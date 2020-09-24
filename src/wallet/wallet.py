@@ -12,7 +12,6 @@ from src.util.condition_tools import (
     pkm_pairs_for_conditions_dict,
 )
 from src.util.ints import uint64, uint32
-from src.wallet.abstract_wallet import AbstractWallet
 from src.wallet.puzzles.p2_delegated_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
@@ -29,7 +28,7 @@ from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
 
 
-class Wallet(AbstractWallet):
+class Wallet:
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo

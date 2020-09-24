@@ -17,7 +17,6 @@ from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint64, uint32
 from src.util.streamable import streamable, Streamable
-from src.wallet.abstract_wallet import AbstractWallet
 from src.wallet.rl_wallet.rl_wallet_puzzles import (
     rl_puzzle_for_pk,
     rl_make_aggregation_puzzle,
@@ -49,7 +48,7 @@ class RLInfo(Streamable):
     initialized: bool
 
 
-class RLWallet(AbstractWallet):
+class RLWallet:
     wallet_state_manager: Any
     wallet_info: WalletInfo
     rl_coin_record: Optional[WalletCoinRecord]
