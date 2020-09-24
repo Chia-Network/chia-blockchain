@@ -72,6 +72,7 @@ class TestRLWallet:
                 "limit": 10,
                 "pubkey": pubkey,
                 "amount": 100,
+                "fee": 1,
                 "host": "127.0.0.1:5000",
             }
         )
@@ -105,6 +106,8 @@ class TestRLWallet:
         ]["confirmed_wallet_balance"] == 0
         for i in range(0, 2 * num_blocks):
             await full_node.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+
+        assert await wallet.get_confirmed_balance() == fund_owners_initial_balance - 101
 
         async def check_balance(api, wallet_id):
             balance_response = await api.get_wallet_balance({"wallet_id": wallet_id})
@@ -178,4 +181,4 @@ class TestRLWallet:
         await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
         await time_out_assert(15, check_balance, 0, api_admin, user_wallet_id)
         final_balance = await wallet.get_confirmed_balance()
-        assert final_balance == fund_owners_initial_balance - 108
+        assert final_balance == fund_owners_initial_balance - 109

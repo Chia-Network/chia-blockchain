@@ -366,6 +366,7 @@ class WalletRpcApi:
                     uint64(int(request["limit"])),
                     request["pubkey"],
                     uint64(int(request["amount"])),
+                    uint64(int(request["fee"])) if "fee" in request else 0
                 )
                 asyncio.ensure_future(self._create_backup_and_upload(host))
                 assert rl_admin.rl_info.admin_pubkey is not None

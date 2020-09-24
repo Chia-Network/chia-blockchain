@@ -172,7 +172,7 @@ class RLWallet:
         return self.wallet_info.id
 
     async def admin_create_coin(
-        self, interval: uint64, limit: uint64, user_pubkey: str, amount: uint64
+        self, interval: uint64, limit: uint64, user_pubkey: str, amount: uint64, fee: uint64
     ) -> bool:
         coins = await self.wallet_state_manager.main_wallet.select_coins(amount)
         if coins is None:
@@ -209,7 +209,7 @@ class RLWallet:
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
         spend_bundle = await self.main_wallet.generate_signed_transaction(
-            amount, rl_puzzle_hash, uint64(0), origin_id, coins
+            amount, rl_puzzle_hash, fee, origin_id, coins
         )
         if spend_bundle is None:
             return False
