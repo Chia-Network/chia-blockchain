@@ -164,6 +164,10 @@ class RLWallet:
         self.main_wallet = wallet_state_manager.main_wallet
         return self
 
+    @classmethod
+    def type(cls):
+        return WalletType.RATE_LIMITED
+
     async def admin_create_coin(
         self, interval: uint64, limit: uint64, user_pubkey: str, amount: uint64
     ) -> bool:
