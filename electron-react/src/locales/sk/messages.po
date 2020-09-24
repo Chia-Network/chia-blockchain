@@ -13,14 +13,38 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: src/components/dashboard/DashboardSideBar.tsx:38
+msgid "DashboardSideBar.farm"
+msgstr "Farma"
+
+#: src/components/dashboard/DashboardSideBar.tsx:29
+msgid "DashboardSideBar.home"
+msgstr "Domov"
+
+#: src/components/dashboard/DashboardSideBar.tsx:44
+msgid "DashboardSideBar.keys"
+msgstr "Kľúče"
+
+#: src/components/dashboard/DashboardSideBar.tsx:35
+msgid "DashboardSideBar.plot"
+msgstr "Disky"
+
+#: src/components/dashboard/DashboardSideBar.tsx:41
+msgid "DashboardSideBar.trade"
+msgstr "Obchody"
+
+#: src/components/dashboard/DashboardSideBar.tsx:32
+msgid "DashboardSideBar.wallets"
+msgstr "Peňaženky"
+
 #: src/components/selectKey/SelectKey.tsx:61
 msgid "SelectKey.signInDescription"
-msgstr ""
+msgstr "Vitaj v Chia. Prosím prihlás sa s existujúcim kľúčom, alebo si vytvor nový."
 
 #: src/components/selectKey/SelectKey.tsx:56
 msgid "SelectKey.signInTitle"
-msgstr ""
+msgstr "Prihlás sa"
 
 #: src/components/selectKey/SelectKey.tsx:51
 msgid "SelectKey.title"
-msgstr ""
+msgstr "Vyber kľúč"

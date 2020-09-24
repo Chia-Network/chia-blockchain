@@ -13,6 +13,7 @@ import { DashboardTitleTarget } from './DashboardTitle';
 import ToolbarSpacing from '../toolbar/ToolbarSpacing';
 import TradeManager from "../trading/TradeManager";
 import DarkModeToggle from '../darkMode/DarkModeToggle';
+import LocaleToggle from '../locale/LocaleToggle';
 
 // import { CreateBackup } from "./backup/createBackup";
 
@@ -65,6 +66,7 @@ export default function Dashboard() {
         <Toolbar>
           <DashboardTitleTarget />
           <Flex flexGrow={1} />
+          <LocaleToggle />
           <DarkModeToggle />
         </Toolbar>
       </StyledAppBar>

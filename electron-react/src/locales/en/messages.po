@@ -13,6 +13,30 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: src/components/dashboard/DashboardSideBar.tsx:38
+msgid "DashboardSideBar.farm"
+msgstr "Farm"
+
+#: src/components/dashboard/DashboardSideBar.tsx:29
+msgid "DashboardSideBar.home"
+msgstr "Full Node"
+
+#: src/components/dashboard/DashboardSideBar.tsx:44
+msgid "DashboardSideBar.keys"
+msgstr "Keys"
+
+#: src/components/dashboard/DashboardSideBar.tsx:35
+msgid "DashboardSideBar.plot"
+msgstr "Plot"
+
+#: src/components/dashboard/DashboardSideBar.tsx:41
+msgid "DashboardSideBar.trade"
+msgstr "Trade"
+
+#: src/components/dashboard/DashboardSideBar.tsx:32
+msgid "DashboardSideBar.wallets"
+msgstr "Wallets"
+
 #: src/components/selectKey/SelectKey.tsx:61
 msgid "SelectKey.signInDescription"
 msgstr "Welcome to Chia. Please log in with an existing key, or create a a new key."
