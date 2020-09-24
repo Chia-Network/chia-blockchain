@@ -73,7 +73,7 @@ class CCWallet:
         self.cc_info = CCInfo(None, [])
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "CC Wallet", WalletType.COLOURED_COIN.value, info_as_string
+            "CC Wallet", WalletType.COLOURED_COIN, info_as_string
         )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
@@ -162,7 +162,7 @@ class CCWallet:
         )
         info_as_string = bytes(self.cc_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "CC Wallet", WalletType.COLOURED_COIN.value, info_as_string
+            "CC Wallet", WalletType.COLOURED_COIN, info_as_string
         )
         if self.wallet_info is None:
             raise Exception("wallet_info is None")
@@ -194,7 +194,7 @@ class CCWallet:
 
     @classmethod
     def type(cls) -> uint8:
-        return uint8(WalletType.COLOURED_COIN.value)
+        return uint8(WalletType.COLOURED_COIN)
 
     def id(self):
         return self.wallet_info.id

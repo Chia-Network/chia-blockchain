@@ -49,9 +49,7 @@ class WalletUserStore:
     async def init_wallet(self):
         all_wallets = await self.get_all_wallet_info_entries()
         if len(all_wallets) == 0:
-            await self.create_wallet(
-                "Chia Wallet", WalletType.STANDARD_WALLET.value, ""
-            )
+            await self.create_wallet("Chia Wallet", WalletType.STANDARD_WALLET, "")
 
     async def _clear_database(self):
         cursor = await self.db_connection.execute("DELETE FROM users_wallets")

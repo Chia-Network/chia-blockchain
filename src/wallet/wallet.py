@@ -56,7 +56,7 @@ class Wallet:
 
     @classmethod
     def type(cls) -> uint8:
-        return uint8(WalletType.STANDARD_WALLET.value)
+        return uint8(WalletType.STANDARD_WALLET)
 
     def id(self):
         return self.wallet_id
