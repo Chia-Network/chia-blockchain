@@ -1,6 +1,5 @@
 import { walletMessage, async_api } from "./message";
-import { closeProgress } from "./progressReducer";
-import { changeTradeMenu, tradingOverview } from "./tradeMenu";
+import { closeProgress } from "./progress";
 
 export const cancel_trade = trade_id => {
   var action = walletMessage();
@@ -78,12 +77,12 @@ export const accept_trade_offer = filepath => {
   return action;
 };
 
-export function create_trade_action(trades, filepath) {
+export function create_trade_action(trades, filepath, history) {
   return dispatch => {
     return async_api(dispatch, create_trade_offer(trades, filepath)).then(
       response => {
         dispatch(get_all_trades());
-        dispatch(changeTradeMenu(tradingOverview));
+        history.push('/dashboard/trade');
         dispatch(closeProgress());
       }
     );

@@ -10,11 +10,6 @@ import Link from '../router/Link';
 import LayoutHero from "../layout/LayoutHero";
 import { mnemonic_word_added, resetMnemonic } from "../../modules/mnemonic";
 import { unselectFingerprint } from "../../modules/message";
-import {
-  changeEntranceMenu,
-  presentSelectKeys,
-  presentRestoreBackup
-} from "../../modules/entranceMenu";
 import type { RootState } from "../../modules/rootReducer";
 
 function MnemonicField(props: any) {
@@ -93,7 +88,6 @@ export default function WalletImport() {
 
   function handleBack() {
     dispatch(resetMnemonic());
-    dispatch(changeEntranceMenu(presentSelectKeys));
 
     history.push('/');
   }
@@ -106,7 +100,7 @@ export default function WalletImport() {
       }
     }
     dispatch(unselectFingerprint());
-    dispatch(changeEntranceMenu(presentRestoreBackup));
+    history.push('/wallet/restore');
   }
 
   return (

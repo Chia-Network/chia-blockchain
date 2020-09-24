@@ -6,34 +6,43 @@ export const CREATE_RL_ADMIN = "CREATE_RL_ADMIN";
 export const CREATE_RL_USER = "CREATE_RL_USER";
 export const ALL_OPTIONS = "ALL_OPTIONS";
 
-export const changeCreateWallet = item => ({
+export const changeCreateWallet = (item: string) => ({
   type: "CREATE_OPTIONS",
-  item: item
-});
-export const createState = (created, pending) => ({
-  type: "CREATE_STATE",
-  created: created,
-  pending: pending
+  item,
 });
 
-const initial_state = {
-  view: ALL_OPTIONS,
-  created: false,
-  pending: false
+export const createState = (created: boolean, pending: boolean) => ({
+  type: "CREATE_STATE",
+  created,
+  pending,
+});
+
+type CreateWalletState = {
+  view: string,
+  created: boolean,
+  pending: boolean,
 };
 
-export const createWalletReducer = (state = { ...initial_state }, action) => {
+const initialState: CreateWalletState = {
+  view: ALL_OPTIONS,
+  created: false,
+  pending: false,
+};
+
+export default function createWalletReducer(state: CreateWalletState = { ...initialState }, action: any): CreateWalletState {
   switch (action.type) {
     case "LOG_OUT":
-      return { ...initial_state };
+      return { ...initialState };
     case "CREATE_OPTIONS":
       var item = action.item;
       return { ...state, view: item };
     case "CREATE_STATE":
-      const created = action.created;
-      const pending = action.pending;
-      return { ...state, created: created, pending: pending };
+      return { 
+        ...state, 
+        created: action.created, 
+        pending: action.pending, 
+      };
     default:
       return state;
   }
-};
+}
