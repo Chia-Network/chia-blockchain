@@ -285,10 +285,7 @@ class WalletStateManager:
                 start_index = 0
 
             for index in range(start_index, unused + to_generate):
-                if (
-                    WalletType(target_wallet.wallet_info.type)
-                    == WalletType.RATE_LIMITED
-                ):
+                if WalletType(target_wallet.type()) == WalletType.RATE_LIMITED:
                     if target_wallet.rl_info.initialized is False:
                         break
                     type = target_wallet.rl_info.type
@@ -312,8 +309,8 @@ class WalletStateManager:
                             uint32(rl_index),
                             puzzle_hash,
                             rl_pubkey,
-                            target_wallet.wallet_info.type,
-                            uint32(target_wallet.wallet_info.id),
+                            target_wallet.type(),
+                            uint32(target_wallet.id()),
                         )
                     )
                     break
@@ -334,8 +331,8 @@ class WalletStateManager:
                         uint32(index),
                         puzzlehash,
                         pubkey,
-                        target_wallet.wallet_info.type,
-                        uint32(target_wallet.wallet_info.id),
+                        target_wallet.type(),
+                        uint32(target_wallet.id()),
                     )
                 )
 
@@ -1479,7 +1476,7 @@ class WalletStateManager:
     async def get_wallet_for_colour(self, colour):
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
-            if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
+            if wallet.type() == WalletType.COLOURED_COIN.value:
                 if bytes(wallet.cc_info.my_genesis_checker).hex() == colour:
                     return wallet
         return None

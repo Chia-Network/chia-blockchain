@@ -15,7 +15,7 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
-from src.util.ints import uint64, uint32
+from src.util.ints import uint8, uint64, uint32
 from src.util.streamable import streamable, Streamable
 from src.wallet.rl_wallet.rl_wallet_puzzles import (
     rl_puzzle_for_pk,
@@ -98,7 +98,7 @@ class RLWallet:
         await wallet_state_manager.puzzle_store.set_used_up_to(unused)
 
         self = await RLWallet.create(wallet_state_manager, wallet_info)
-        await wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await wallet_state_manager.add_new_wallet(self, self.id())
         return self
 
     @staticmethod
@@ -148,7 +148,7 @@ class RLWallet:
             )
             await wallet_state_manager.puzzle_store.set_used_up_to(unused)
 
-            await wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+            await wallet_state_manager.add_new_wallet(self, self.id())
             return self
 
     @staticmethod
@@ -165,8 +165,11 @@ class RLWallet:
         return self
 
     @classmethod
-    def type(cls):
-        return WalletType.RATE_LIMITED
+    def type(cls) -> uint8:
+        return uint8(WalletType.RATE_LIMITED.value)
+
+    def id(self):
+        return self.wallet_info.id
 
     async def admin_create_coin(
         self, interval: uint64, limit: uint64, user_pubkey: str, amount: uint64
@@ -201,7 +204,7 @@ class RLWallet:
             rl_puzzle_hash,
             self.rl_info.admin_pubkey,
             WalletType.RATE_LIMITED,
-            self.wallet_info.id,
+            self.id(),
         )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
@@ -226,10 +229,10 @@ class RLWallet:
 
         data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(
-            self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str
+            self.id(), self.wallet_info.name, self.type(), data_str
         )
         await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self, self.id())
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
 
@@ -289,7 +292,7 @@ class RLWallet:
             rl_puzzle_hash,
             self.rl_info.user_pubkey,
             WalletType.RATE_LIMITED,
-            self.wallet_info.id,
+            self.id(),
         )
 
         aggregation_puzzlehash = self.rl_get_aggregation_puzzlehash(
@@ -300,7 +303,7 @@ class RLWallet:
             aggregation_puzzlehash,
             self.rl_info.user_pubkey,
             WalletType.RATE_LIMITED,
-            self.wallet_info.id,
+            self.id(),
         )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths(
             [record, record2]
@@ -311,10 +314,10 @@ class RLWallet:
 
         data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(
-            self.wallet_info.id, self.wallet_info.name, self.wallet_info.type, data_str
+            self.id(), self.wallet_info.name, self.type(), data_str
         )
         await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self, self.id())
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
 
@@ -337,7 +340,7 @@ class RLWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
+            wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
         )
@@ -365,21 +368,19 @@ class RLWallet:
 
     async def get_confirmed_balance(self) -> uint64:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
-            self.wallet_info.id
+            self.id()
         )
 
     async def get_unconfirmed_balance(self) -> uint64:
-        return await self.wallet_state_manager.get_unconfirmed_balance(
-            self.wallet_info.id
-        )
+        return await self.wallet_state_manager.get_unconfirmed_balance(self.id())
 
     async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
+        return await self.wallet_state_manager.get_frozen_balance(self.id())
 
     async def get_spendable_balance(self) -> uint64:
         spendable_am = (
             await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-                self.wallet_info.id
+                self.id()
             )
         )
         return spendable_am
@@ -387,7 +388,7 @@ class RLWallet:
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = (
             await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-                self.wallet_info.id
+                self.id()
             )
         )
         addition_amount = 0
@@ -396,7 +397,7 @@ class RLWallet:
             our_spend = False
             for coin in record.removals:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(
-                    coin, self.wallet_info.id
+                    coin, self.id()
                 ):
                     our_spend = True
                     break
@@ -406,7 +407,7 @@ class RLWallet:
 
             for coin in record.additions:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(
-                    coin, self.wallet_info.id
+                    coin, self.id()
                 ):
                     addition_amount += coin.amount
 
@@ -459,7 +460,7 @@ class RLWallet:
         Returns keys for puzzle_hash.
         """
         index_for_puzzlehash = await self.wallet_state_manager.puzzle_store.index_for_puzzle_hash_and_wallet(
-            puzzle_hash, self.wallet_info.id
+            puzzle_hash, self.id()
         )
         if index_for_puzzlehash is None:
             raise ValueError(f"index_for_puzzlehash is None ph {puzzle_hash}")
@@ -579,7 +580,7 @@ class RLWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
+            wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
         )
@@ -680,7 +681,7 @@ class RLWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
+            wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
         )

@@ -11,7 +11,7 @@ from src.util.condition_tools import (
     conditions_dict_for_solution,
     pkm_pairs_for_conditions_dict,
 )
-from src.util.ints import uint64, uint32
+from src.util.ints import uint8, uint64, uint32
 from src.wallet.puzzles.p2_delegated_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
@@ -32,7 +32,7 @@ from src.wallet.wallet_info import WalletInfo
 class Wallet:
     wallet_state_manager: Any
     log: logging.Logger
-    wallet_info: WalletInfo
+    wallet_id: uint32
     _pk2sk: Dict[G1Element, PrivateKey]
 
     @staticmethod
@@ -47,7 +47,7 @@ class Wallet:
         else:
             self.log = logging.getLogger(__name__)
         self.wallet_state_manager = wallet_state_manager
-        self.wallet_info = info
+        self.wallet_id = info.id
 
         # HACK
         self._pk2sk = {}
@@ -55,26 +55,27 @@ class Wallet:
         return self
 
     @classmethod
-    def type(cls):
-        return WalletType.STANDARD_WALLET
+    def type(cls) -> uint8:
+        return uint8(WalletType.STANDARD_WALLET.value)
+
+    def id(self):
+        return self.wallet_id
 
     async def get_confirmed_balance(self) -> uint64:
         return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
-            self.wallet_info.id
+            self.id()
         )
 
     async def get_unconfirmed_balance(self) -> uint64:
-        return await self.wallet_state_manager.get_unconfirmed_balance(
-            self.wallet_info.id
-        )
+        return await self.wallet_state_manager.get_unconfirmed_balance(self.id())
 
     async def get_frozen_amount(self) -> uint64:
-        return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
+        return await self.wallet_state_manager.get_frozen_balance(self.id())
 
     async def get_spendable_balance(self) -> uint64:
         spendable_am = (
             await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-                self.wallet_info.id
+                self.id()
             )
         )
         return spendable_am
@@ -82,7 +83,7 @@ class Wallet:
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = (
             await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-                self.wallet_info.id
+                self.id()
             )
         )
         addition_amount = 0
@@ -91,7 +92,7 @@ class Wallet:
             our_spend = False
             for coin in record.removals:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(
-                    coin, self.wallet_info.id
+                    coin, self.id()
                 ):
                     our_spend = True
                     break
@@ -101,7 +102,7 @@ class Wallet:
 
             for coin in record.additions:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(
-                    coin, self.wallet_info.id
+                    coin, self.id()
                 ):
                     addition_amount += coin.amount
 
@@ -131,16 +132,12 @@ class Wallet:
         return puzzle_for_pk(bytes(public_key))
 
     async def get_new_puzzle(self) -> Program:
-        dr = await self.wallet_state_manager.get_unused_derivation_record(
-            self.wallet_info.id
-        )
+        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
         return puzzle_for_pk(bytes(dr.pubkey))
 
     async def get_new_puzzlehash(self) -> bytes32:
         return (
-            await self.wallet_state_manager.get_unused_derivation_record(
-                self.wallet_info.id
-            )
+            await self.wallet_state_manager.get_unused_derivation_record(self.id())
         ).puzzle_hash
 
     def make_solution(self, primaries=None, min_time=0, me=None, consumed=None, fee=0):
@@ -181,7 +178,7 @@ class Wallet:
             self.log.info(f"About to select coins for amount {amount}")
             unspent: List[WalletCoinRecord] = list(
                 await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                    self.wallet_info.id
+                    self.id()
                 )
             )
             sum_value = 0
@@ -195,7 +192,7 @@ class Wallet:
             unconfirmed_removals: Dict[
                 bytes32, Coin
             ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-                self.wallet_info.id
+                self.id()
             )
             for coinrecord in unspent:
                 if sum_value >= amount and len(used_coins) > 0:
@@ -218,7 +215,7 @@ class Wallet:
                 )
                 # TODO(straya): remove this
                 # unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
-                #     self.wallet_info.id
+                #     self.id()
                 # )
                 # for coin in unconfirmed_additions.values():
                 #     if sum_value > amount:
@@ -349,7 +346,7 @@ class Wallet:
             spend_bundle=spend_bundle,
             additions=add_list,
             removals=rem_list,
-            wallet_id=self.wallet_info.id,
+            wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
         )
