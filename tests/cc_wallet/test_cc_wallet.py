@@ -240,7 +240,7 @@ class TestCCWallet:
 
         unspent: List[WalletCoinRecord] = list(
             await cc_wallet_2.wallet_state_manager.get_spendable_coins_for_wallet(
-                cc_wallet_2.wallet_info.id
+                cc_wallet_2.id()
             )
         )
         assert len(unspent) == 1
@@ -320,7 +320,7 @@ class TestCCWallet:
         for i in range(0, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-        id = cc_wallet_2.wallet_info.id
+        id = cc_wallet_2.id()
         wsm = cc_wallet_2.wallet_state_manager
         await time_out_assert(15, wsm.get_confirmed_balance_for_wallet, 70, id)
         await time_out_assert(15, cc_wallet_2.get_confirmed_balance, 60)

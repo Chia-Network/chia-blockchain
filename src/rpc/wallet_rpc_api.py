@@ -345,16 +345,16 @@ class WalletRpcApi:
                 colour = cc_wallet.get_colour()
                 asyncio.ensure_future(self._create_backup_and_upload(host))
                 return {
-                    "type": cc_wallet.wallet_info.type,
+                    "type": cc_wallet.type(),
                     "colour": colour,
-                    "wallet_id": cc_wallet.wallet_info.id,
+                    "wallet_id": cc_wallet.id(),
                 }
             elif request["mode"] == "existing":
                 cc_wallet = await CCWallet.create_wallet_for_cc(
                     wallet_state_manager, main_wallet, request["colour"]
                 )
                 asyncio.ensure_future(self._create_backup_and_upload(host))
-                return {"type": cc_wallet.wallet_info.type}
+                return {"type": cc_wallet.type()}
         if request["wallet_type"] == "rl_wallet":
             if request["rl_type"] == "admin":
                 log.info("Create rl admin wallet")
@@ -371,8 +371,8 @@ class WalletRpcApi:
                 assert rl_admin.rl_info.admin_pubkey is not None
                 return {
                     "success": success,
-                    "id": rl_admin.wallet_info.id,
-                    "type": rl_admin.wallet_info.type,
+                    "id": rl_admin.id(),
+                    "type": rl_admin.type(),
                     "origin": rl_admin.rl_info.rl_origin,
                     "pubkey": rl_admin.rl_info.admin_pubkey.hex(),
                 }
@@ -382,8 +382,8 @@ class WalletRpcApi:
                 asyncio.ensure_future(self._create_backup_and_upload(host))
                 assert rl_user.rl_info.user_pubkey is not None
                 return {
-                    "id": rl_user.wallet_info.id,
-                    "type": rl_user.wallet_info.type,
+                    "id": rl_user.id(),
+                    "type": rl_user.type(),
                     "pubkey": rl_user.rl_info.user_pubkey.hex(),
                 }
 
@@ -399,7 +399,7 @@ class WalletRpcApi:
         pending_balance = await wallet.get_unconfirmed_balance()
         spendable_balance = await wallet.get_spendable_balance()
         pending_change = await wallet.get_pending_change_balance()
-        if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
+        if wallet.type() == WalletType.COLOURED_COIN.value:
             frozen_balance = 0
         else:
             frozen_balance = await wallet.get_frozen_amount()
@@ -457,16 +457,14 @@ class WalletRpcApi:
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        if wallet.wallet_info.type == WalletType.STANDARD_WALLET.value:
+        if wallet.type() == WalletType.STANDARD_WALLET.value:
             raw_puzzle_hash = await wallet.get_new_puzzlehash()
             address = encode_puzzle_hash(raw_puzzle_hash)
-        elif wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
+        elif wallet.type() == WalletType.COLOURED_COIN.value:
             raw_puzzle_hash = await wallet.get_new_inner_hash()
             address = encode_puzzle_hash(raw_puzzle_hash)
         else:
-            raise ValueError(
-                f"Wallet type {wallet.wallet_info.type} cannot create puzzle hashes"
-            )
+            raise ValueError(f"Wallet type {wallet.type()} cannot create puzzle hashes")
 
         return {
             "wallet_id": wallet_id,

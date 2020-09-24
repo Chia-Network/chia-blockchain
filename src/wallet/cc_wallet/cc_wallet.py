@@ -16,7 +16,7 @@ from src.util.condition_tools import (
     pkm_pairs_for_conditions_dict,
 )
 from src.util.json_util import dict_to_json_str
-from src.util.ints import uint64, uint32
+from src.util.ints import uint8, uint64, uint32
 from src.wallet.block_record import BlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
 from src.wallet.transaction_record import TransactionRecord
@@ -81,10 +81,10 @@ class CCWallet:
         try:
             spend_bundle = await self.generate_new_coloured_coin(amount)
         except Exception:
-            await wallet_state_manager.user_store.delete_wallet(self.wallet_info.id)
+            await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
 
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self, self.id())
 
         # Change and actual coloured coin
         non_ephemeral_spends: List[Coin] = spend_bundle.not_ephemeral_additions()
@@ -96,7 +96,7 @@ class CCWallet:
             if info is None:
                 raise ValueError("Internal Error")
             id, wallet_type = info
-            if id == self.wallet_info.id:
+            if id == self.id():
                 cc_coin = c
 
         if cc_coin is None:
@@ -114,7 +114,7 @@ class CCWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_state_manager.main_wallet.wallet_info.id,
+            wallet_id=self.wallet_state_manager.main_wallet.id(),
             sent_to=[],
             trade_id=None,
         )
@@ -130,7 +130,7 @@ class CCWallet:
             spend_bundle=None,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
+            wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
         )
@@ -167,7 +167,7 @@ class CCWallet:
         if self.wallet_info is None:
             raise Exception("wallet_info is None")
 
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        await self.wallet_state_manager.add_new_wallet(self, self.id())
         return self
 
     @staticmethod
@@ -193,14 +193,17 @@ class CCWallet:
         return self
 
     @classmethod
-    def type(cls):
-        return WalletType.COLOURED_COIN
+    def type(cls) -> uint8:
+        return uint8(WalletType.COLOURED_COIN.value)
+
+    def id(self):
+        return self.wallet_info.id
 
     async def get_confirmed_balance(self) -> uint64:
         record_list: Set[
             WalletCoinRecord
         ] = await self.wallet_state_manager.wallet_store.get_unspent_coins_for_wallet(
-            self.wallet_info.id
+            self.id()
         )
 
         amount: uint64 = uint64(0)
@@ -209,9 +212,7 @@ class CCWallet:
             if lineage is not None:
                 amount = uint64(amount + record.coin.amount)
 
-        self.log.info(
-            f"Confirmed balance for cc wallet {self.wallet_info.id} is {amount}"
-        )
+        self.log.info(f"Confirmed balance for cc wallet {self.id()} is {amount}")
         return uint64(amount)
 
     async def get_unconfirmed_balance(self) -> uint64:
@@ -219,7 +220,7 @@ class CCWallet:
         unconfirmed_tx: List[
             TransactionRecord
         ] = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            self.wallet_info.id
+            self.id()
         )
         addition_amount = 0
         removal_amount = 0
@@ -232,9 +233,7 @@ class CCWallet:
 
         result = confirmed - removal_amount + addition_amount
 
-        self.log.info(
-            f"Unconfirmed balance for cc wallet {self.wallet_info.id} is {result}"
-        )
+        self.log.info(f"Unconfirmed balance for cc wallet {self.id()} is {result}")
         return uint64(result)
 
     async def get_name(self):
@@ -282,8 +281,8 @@ class CCWallet:
             data_str = dict_to_json_str(data)
             await self.wallet_state_manager.create_action(
                 name="request_generator",
-                wallet_id=self.wallet_info.id,
-                type=self.wallet_info.type,
+                wallet_id=self.id(),
+                type=self.type(),
                 callback="generator_received",
                 done=False,
                 data=data_str,
@@ -342,7 +341,7 @@ class CCWallet:
                     continue
 
                 wallet_id, wallet_type = result
-                if wallet_id != self.wallet_info.id:
+                if wallet_id != self.id():
                     continue
 
                 coin = None
@@ -400,9 +399,7 @@ class CCWallet:
 
     async def get_new_cc_puzzle_hash(self):
         return (
-            await self.wallet_state_manager.get_unused_derivation_record(
-                self.wallet_info.id
-            )
+            await self.wallet_state_manager.get_unused_derivation_record(self.id())
         ).puzzle_hash
 
     # Create a new coin of value 0 with a given colour
@@ -477,7 +474,7 @@ class CCWallet:
                 spend_bundle=full_spend,
                 additions=full_spend.additions(),
                 removals=full_spend.removals(),
-                wallet_id=self.wallet_info.id,
+                wallet_id=self.id(),
                 sent_to=[],
                 trade_id=None,
             )
@@ -497,7 +494,7 @@ class CCWallet:
     async def get_pending_change_balance(self) -> uint64:
         unconfirmed_tx = (
             await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-                self.wallet_info.id
+                self.id()
             )
         )
         addition_amount = 0
@@ -509,7 +506,7 @@ class CCWallet:
                 if coin.parent_coin_info.hex() == self.get_colour():
                     continue
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(
-                    coin, self.wallet_info.id
+                    coin, self.id()
                 ):
                     our_spend = True
                     break
@@ -519,7 +516,7 @@ class CCWallet:
 
             for coin in record.additions:
                 if await self.wallet_state_manager.does_coin_belong_to_wallet(
-                    coin, self.wallet_info.id
+                    coin, self.id()
                 ):
                     addition_amount += coin.amount
 
@@ -530,9 +527,7 @@ class CCWallet:
 
         record_list: Set[
             WalletCoinRecord
-        ] = await self.wallet_state_manager.get_spendable_coins_for_wallet(
-            self.wallet_info.id
-        )
+        ] = await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
 
         for record in record_list:
             lineage = await self.get_lineage_proof_for_coin(record.coin)
@@ -565,7 +560,7 @@ class CCWallet:
             unconfirmed_removals: Dict[
                 bytes32, Coin
             ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
-                self.wallet_info.id
+                self.id()
             )
             for coinrecord in spendable:
                 if sum >= amount and len(used_coins) > 0:
@@ -691,7 +686,7 @@ class CCWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_info.id,
+            wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
         )

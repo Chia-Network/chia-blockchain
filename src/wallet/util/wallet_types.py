@@ -1,15 +1,13 @@
-from enum import Enum
-
-from src.util.ints import uint8
+from enum import IntEnum
 
 
-class WalletType(Enum):
+class WalletType(IntEnum):
     # Condition Costs
-    STANDARD_WALLET = uint8(0)
-    RATE_LIMITED = uint8(1)
-    ATOMIC_SWAP = uint8(2)
-    AUTHORIZED_PAYEE = uint8(3)
-    MULTI_SIG = uint8(4)
-    CUSTODY = uint8(5)
-    COLOURED_COIN = uint8(6)
-    RECOVERABLE = uint8(7)
+    STANDARD_WALLET = 0
+    RATE_LIMITED = 1
+    ATOMIC_SWAP = 2
+    AUTHORIZED_PAYEE = 3
+    MULTI_SIG = 4
+    CUSTODY = 5
+    COLOURED_COIN = 6
+    RECOVERABLE = 7

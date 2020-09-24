@@ -364,7 +364,7 @@ class TestCCTrades:
         )
         cc_balance = await cc_a_4.get_confirmed_balance()
         cc_balance_2 = await cc_b_4.get_confirmed_balance()
-        offer_dict = {1: -30, cc_a_4.wallet_info.id: 50}
+        offer_dict = {1: -30, cc_a_4.id(): 50}
 
         file = "test_offer_file.offer"
         file_path = Path(file)
@@ -424,7 +424,7 @@ class TestCCTrades:
 
         spendable_chia_after = await wallet_a.get_spendable_balance()
 
-        locked_coin = await trade_manager_a.get_locked_coins(wallet_a.wallet_info.id)
+        locked_coin = await trade_manager_a.get_locked_coins(wallet_a.id())
         locked_sum = 0
         for name, record in locked_coin.items():
             locked_sum += record.coin.amount
@@ -472,7 +472,7 @@ class TestCCTrades:
 
         spendable_chia_after = await wallet_a.get_spendable_balance()
 
-        locked_coin = await trade_manager_a.get_locked_coins(wallet_a.wallet_info.id)
+        locked_coin = await trade_manager_a.get_locked_coins(wallet_a.id())
         locked_sum = 0
         for name, record in locked_coin.items():
             locked_sum += record.coin.amount
