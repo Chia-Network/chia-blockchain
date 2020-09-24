@@ -14,6 +14,7 @@ import ThemeProvider from '../theme/ThemeProvider';
 import en from '../../locales/en/messages';
 import sk from '../../locales/sk/messages';
 import styles from './App.module.css';
+import useLocale from '../../hooks/useLocale';
 
 const catalogs = {
   en,
@@ -22,10 +23,13 @@ const catalogs = {
 
 export default function App() {
   const { value: darkMode } = useDarkMode(false);
+  const [locale] = useLocale('en');
+
+  console.log('locale', locale);
 
   return (
     <Provider store={store}>
-      <I18nProvider language="en" catalogs={catalogs}>
+      <I18nProvider language={locale || 'en'} catalogs={catalogs}>
         <WebSocketConnection host={daemon_rpc_ws}>
           <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
             <CssBaseline />
