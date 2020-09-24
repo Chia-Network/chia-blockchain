@@ -244,7 +244,7 @@ class TradeManager:
             if wallet is None:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
-            if wallet.wallet_info.type == WalletType.COLOURED_COIN.value:
+            if wallet.type() == WalletType.COLOURED_COIN.value:
                 tx = await wallet.generate_signed_transaction(
                     [coin.amount], [new_ph], 0, coins={coin}
                 )
@@ -438,7 +438,7 @@ class TradeManager:
                     ] = await self.wallet_state_manager.get_wallet_for_colour(colour)
                 unspent = (
                     await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                        wallets[colour].wallet_info.id
+                        wallets[colour].id()
                     )
                 )
                 if coinsol.coin in [record.coin for record in unspent]:
@@ -686,7 +686,7 @@ class TradeManager:
                     spend_bundle=spend_bundle,
                     additions=spend_bundle.additions(),
                     removals=spend_bundle.removals(),
-                    wallet_id=wallet.wallet_info.id,
+                    wallet_id=wallet.id(),
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                 )
@@ -703,7 +703,7 @@ class TradeManager:
                     spend_bundle=spend_bundle,
                     additions=spend_bundle.additions(),
                     removals=spend_bundle.removals(),
-                    wallet_id=wallet.wallet_info.id,
+                    wallet_id=wallet.id(),
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
                 )
