@@ -86,3 +86,4 @@ electron-react/src/dev_config.js
 electron-react/build
 build_scripts/dist
 build_scripts/*.Dmg
+electron-react/src/locales/_build
