@@ -399,7 +399,7 @@ class WalletRpcApi:
         pending_balance = await wallet.get_unconfirmed_balance()
         spendable_balance = await wallet.get_spendable_balance()
         pending_change = await wallet.get_pending_change_balance()
-        if wallet.type() == WalletType.COLOURED_COIN.value:
+        if wallet.type() == WalletType.COLOURED_COIN:
             frozen_balance = 0
         else:
             frozen_balance = await wallet.get_frozen_amount()
@@ -457,10 +457,10 @@ class WalletRpcApi:
         wallet_id = uint32(int(request["wallet_id"]))
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        if wallet.type() == WalletType.STANDARD_WALLET.value:
+        if wallet.type() == WalletType.STANDARD_WALLET:
             raw_puzzle_hash = await wallet.get_new_puzzlehash()
             address = encode_puzzle_hash(raw_puzzle_hash)
-        elif wallet.type() == WalletType.COLOURED_COIN.value:
+        elif wallet.type() == WalletType.COLOURED_COIN:
             raw_puzzle_hash = await wallet.get_new_inner_hash()
             address = encode_puzzle_hash(raw_puzzle_hash)
         else:

@@ -149,19 +149,19 @@ class WalletStateManager:
 
         for wallet_info in await self.get_all_wallet_info_entries():
             # self.log.info(f"wallet_info {wallet_info}")
-            if wallet_info.type == WalletType.STANDARD_WALLET.value:
+            if wallet_info.type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
                 wallet = await Wallet.create(config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
-            elif wallet_info.type == WalletType.COLOURED_COIN.value:
+            elif wallet_info.type == WalletType.COLOURED_COIN:
                 wallet = await CCWallet.create(
                     self,
                     self.main_wallet,
                     wallet_info,
                 )
                 self.wallets[wallet_info.id] = wallet
-            elif wallet_info.type == WalletType.RATE_LIMITED.value:
+            elif wallet_info.type == WalletType.RATE_LIMITED:
                 wallet = await RLWallet.create(self, wallet_info)
                 self.wallets[wallet_info.id] = wallet
 
@@ -229,12 +229,12 @@ class WalletStateManager:
         for wallet_info in await self.get_all_wallet_info_entries():
             if wallet_info.id in self.wallets:
                 continue
-            if wallet_info.type == WalletType.STANDARD_WALLET.value:
+            if wallet_info.type == WalletType.STANDARD_WALLET:
                 if wallet_info.id == 1:
                     continue
                 wallet = await Wallet.create(self.config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
-            elif wallet_info.type == WalletType.COLOURED_COIN.value:
+            elif wallet_info.type == WalletType.COLOURED_COIN:
                 wallet = await CCWallet.create(
                     self,
                     self.main_wallet,
@@ -1476,7 +1476,7 @@ class WalletStateManager:
     async def get_wallet_for_colour(self, colour):
         for wallet_id in self.wallets:
             wallet = self.wallets[wallet_id]
-            if wallet.type() == WalletType.COLOURED_COIN.value:
+            if wallet.type() == WalletType.COLOURED_COIN:
                 if bytes(wallet.cc_info.my_genesis_checker).hex() == colour:
                     return wallet
         return None
