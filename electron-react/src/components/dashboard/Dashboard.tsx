@@ -12,6 +12,7 @@ import DashboardSideBar from './DashboardSideBar';
 import { DashboardTitleTarget } from './DashboardTitle';
 import ToolbarSpacing from '../toolbar/ToolbarSpacing';
 import TradeManager from "../trading/TradeManager";
+import DarkModeToggle from '../darkMode/DarkModeToggle';
 
 // import { CreateBackup } from "./backup/createBackup";
 
@@ -21,7 +22,7 @@ const StyledRoot = styled(Flex)`
 `;
 
 const StyledAppBar = styled(AppBar)`
-  background-color: white;
+  background-color: ${({ theme }) => theme.palette.type === 'dark' ? '#424242' : 'white' } ;
   box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.2);
   width: ${({ theme }) => `calc(100% - ${theme.drawer.width})`};
   margin-left: ${({ theme }) => theme.drawer.width};
@@ -63,6 +64,8 @@ export default function Dashboard() {
       >
         <Toolbar>
           <DashboardTitleTarget />
+          <Flex flexGrow={1} />
+          <DarkModeToggle />
         </Toolbar>
       </StyledAppBar>
       <StyledDrawer variant="permanent">
