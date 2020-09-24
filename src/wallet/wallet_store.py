@@ -159,6 +159,19 @@ class WalletStore:
             )
         return None
 
+    async def get_first_coin_height(self) -> Optional[uint32]:
+        """ Returns height of first confirmed coin"""
+        cursor = await self.db_connection.execute(
+            "SELECT MIN(confirmed_index) FROM coin_record;"
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+
+        if row is not None and row[0] is not None:
+            return uint32(row[0])
+
+        return None
+
     async def get_unspent_coins_at_height(
         self, height: Optional[uint32] = None
     ) -> Set[WalletCoinRecord]:
