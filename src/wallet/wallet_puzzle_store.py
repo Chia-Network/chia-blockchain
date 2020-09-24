@@ -95,7 +95,7 @@ class WalletPuzzleStore:
                     record.index,
                     bytes(record.pubkey).hex(),
                     record.puzzle_hash.hex(),
-                    record.wallet_type.value,
+                    record.wallet_type,
                     record.wallet_id,
                     0,
                 ),
