@@ -192,6 +192,10 @@ class CCWallet:
         self.base_inner_puzzle_hash = None
         return self
 
+    @classmethod
+    def type(cls):
+        return WalletType.COLOURED_COIN
+
     async def get_confirmed_balance(self) -> uint64:
         record_list: Set[
             WalletCoinRecord
