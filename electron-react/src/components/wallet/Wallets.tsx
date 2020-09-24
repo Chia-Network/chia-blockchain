@@ -126,43 +126,6 @@ const WalletItem = (props: any) => {
   );
 };
 
-const WalletList = () => {
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
-
-  return (
-    <>
-      {wallets.map((wallet) => (
-        <span key={wallet.id}>
-          <WalletItem wallet_id={wallet.id} key={wallet.id}></WalletItem>
-          <Divider />
-        </span>
-      ))}
-    </>
-  );
-};
-
-const WalletViewSwitch = () => {
-  const { path } = useRouteMatch();
-  const id = useSelector((state: RootState) => state.wallet_menu.id);
-
-  return (
-    <Switch>
-      <Route path={path} exact>
-        <StandardWallet wallet_id={id} />
-      </Route>
-      <Route path={`${path}/create`} exact>
-        <CreateWalletView />
-      </Route>
-      <Route path={`${path}/coloured`} exact>
-        <ColouredWallet wallet_id={id} />
-      </Route>
-      <Route path={`${path}/rate-limited`} exact>
-        <RateLimitedWallet wallet_id={id} />
-      </Route>
-    </Switch>
-  );
-};
-
 const CreateWallet = () => {
   const history = useHistory();
   const classes = useStyles();
@@ -214,8 +177,9 @@ export const StatusCard = () => {
 
 export default function Wallets() {
   const classes = useStyles();
-  const logged_in = useSelector((state: RootState) => state.wallet_state.logged_in);
-
+  const { path } = useRouteMatch();
+  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
+  const id = useSelector((state: RootState) => state.wallet_menu.id);
   const [open] = useState(true);
 
   return (
@@ -234,7 +198,12 @@ export default function Wallets() {
         <StatusCard />
         <Divider />
         <List disablePadding>
-          <WalletList />
+          {wallets.map((wallet) => (
+            <span key={wallet.id}>
+              <WalletItem wallet_id={wallet.id} key={wallet.id}></WalletItem>
+              <Divider />
+            </span>
+          ))}
         </List>
         <CreateWallet />
       </Drawer>
@@ -242,7 +211,20 @@ export default function Wallets() {
         <Container maxWidth="lg">
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <WalletViewSwitch></WalletViewSwitch>
+              <Switch>
+                <Route path={path} exact>
+                  <StandardWallet wallet_id={id} />
+                </Route>
+                <Route path={`${path}/create`} exact>
+                  <CreateWalletView />
+                </Route>
+                <Route path={`${path}/coloured`} exact>
+                  <ColouredWallet wallet_id={id} />
+                </Route>
+                <Route path={`${path}/rate-limited`} exact>
+                  <RateLimitedWallet wallet_id={id} />
+                </Route>
+              </Switch>
             </Grid>
           </Grid>
         </Container>

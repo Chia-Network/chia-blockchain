@@ -1,5 +1,5 @@
 import { service_wallet } from "../util/service_names";
-import { openProgress, closeProgress } from "./progressReducer";
+import { openProgress, closeProgress } from "./progress";
 import { refreshAllState } from "../middleware/middleware_api";
 import { setIncorrectWord, resetMnemonic } from "./mnemonic";
 import {
@@ -8,7 +8,7 @@ import {
   presentOldWallet
 } from "./entranceMenu";
 import { openDialog } from "./dialog";
-import { createState } from "./createWalletReducer";
+import { createState } from "./createWallet";
 import {
   addPlotDirectory,
   getPlotDirectories,
@@ -27,7 +27,7 @@ import { wsDisconnect } from "./websocket";
 import {
   changeCreateWallet,
   ALL_OPTIONS
-} from "../modules/createWalletReducer";
+} from "../modules/createWallet";
 const config = require("../config");
 const backup_host = config.backup_host;
 

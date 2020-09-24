@@ -36,7 +36,7 @@ const initialState: IncomingState = {
   show_create_backup: false
 };
 
-export default function incomingReducer(state = { ...initialState }, action: any): IncomingState {
+export default function incomingReducer(state: IncomingState = { ...initialState }, action: any): IncomingState {
   switch (action.type) {
     case "SHOW_CREATE_BACKUP":
       return {
