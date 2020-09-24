@@ -1,17 +1,27 @@
-const initial_state = {
+type PlotterControlState = {
+  plotting_in_proggress: boolean,
+  workspace_location: string,
+  t2: string,
+  final_location: string,
+  progress_location: string,
+  progress: string,
+  plotting_stopped: boolean,
+};
+
+const initialState: PlotterControlState = {
   plotting_in_proggress: false,
   workspace_location: "",
   t2: "",
   final_location: "",
   progress_location: "",
   progress: "",
-  plotting_stopped: false
+  plotting_stopped: false,
 };
 
-export const plotControlReducer = (state = { ...initial_state }, action) => {
+export default function plotControlReducer(state: PlotterControlState = { ...initialState }, action: any): PlotterControlState  {
   switch (action.type) {
     case "LOG_OUT":
-      return { ...initial_state };
+      return { ...initialState };
     case "PLOTTER_CONTROL":
       if (action.command === "workspace_location") {
         return { ...state, workspace_location: action.location };
@@ -36,4 +46,4 @@ export const plotControlReducer = (state = { ...initial_state }, action) => {
     default:
       return state;
   }
-};
+}

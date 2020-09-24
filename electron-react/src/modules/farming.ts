@@ -1,10 +1,24 @@
 import { service_farmer, service_harvester } from "../util/service_names";
 
-const initial_state = {
+type FarmingState = {
+  farmer: {
+    latest_challenges: string[],
+    connections: string[],
+    open_connection_error?: string,
+  },
+  harvester: {
+    plots: string[],
+    not_found_filenames: string[],
+    failed_to_open_filenames: string[],
+    plot_directories: string[]
+  }
+};
+
+const initialState: FarmingState  = {
   farmer: {
     latest_challenges: [],
     connections: [],
-    open_connection_error: ""
+    open_connection_error: "",
   },
   harvester: {
     plots: [],
@@ -14,10 +28,10 @@ const initial_state = {
   }
 };
 
-export const farmingReducer = (state = { ...initial_state }, action) => {
+export default function farmingReducer(state: FarmingState = { ...initialState }, action: any): FarmingState {
   switch (action.type) {
     case "LOG_OUT":
-      return { ...initial_state };
+      return { ...initialState };
     case "INCOMING_MESSAGE":
       if (
         action.message.origin !== service_farmer &&
@@ -100,4 +114,4 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
     default:
       return state;
   }
-};
+}

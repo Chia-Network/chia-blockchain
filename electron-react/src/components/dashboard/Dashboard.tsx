@@ -11,7 +11,7 @@ import Flex from '../flex/Flex';
 import DashboardSideBar from './DashboardSideBar';
 import { DashboardTitleTarget } from './DashboardTitle';
 import ToolbarSpacing from '../toolbar/ToolbarSpacing';
-import { TradeManger } from "../trading/TradeManager";
+import TradeManager from "../trading/TradeManager";
 
 // import { CreateBackup } from "./backup/createBackup";
 
@@ -80,17 +80,17 @@ export default function Dashboard() {
               <Route path={`${path}`} exact>
                 <FullNode />
               </Route>
-              <Route path={`${path}/wallets`} exact>
+              <Route path={`${path}/wallets`}>
                 <Wallets />
               </Route>
-              <Route path={`${path}/plot`} exact>
+              <Route path={`${path}/plot`}>
                 <Plotter />
               </Route>
-              <Route path={`${path}/farm`} exact>
+              <Route path={`${path}/farm`}>
                 <Farmer />
               </Route>
-              <Route path={`${path}/trade`} exact>
-                <TradeManger />
+              <Route path={`${path}/trade`}>
+                <TradeManager />
               </Route>
             </Switch>
           </Flex>

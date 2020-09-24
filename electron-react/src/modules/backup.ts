@@ -28,7 +28,7 @@ const initialState: BackupState = {
   selected_file_path: null
 };
 
-export default function backupReducer(state = { ...initialState }, action: any): BackupState {
+export default function backupReducer(state: BackupState = { ...initialState }, action: any): BackupState {
   switch (action.type) {
     case "BACKUP_VIEW":
       return { 

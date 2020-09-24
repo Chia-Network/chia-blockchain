@@ -1,6 +1,30 @@
 import { service_full_node } from "../util/service_names";
+import type Connection from '../types/Connection';
+import type Plot from '../types/Plot';
 
-const initial_blockchain = {
+type FullNodeState = {
+  blockchain_state: {
+    difficulty: number,
+    ips: number,
+    lca?: Plot | null,
+    min_iters: number,
+    sync: {
+      sync_mode: boolean,
+      sync_progress_height: number,
+      sync_tip_height: number,
+    },
+    tip_hashes?: string[] | null,
+    tips?: Plot[] | null,
+    space: number,
+  },
+  connections: Connection[],
+  open_connection_error?: string,
+  headers: Plot[],
+  block?: string | null, // If not null, page is changed to block page
+  header?: string | null
+};
+
+const initialBlockchain = {
   difficulty: 0,
   ips: 0,
   lca: null,
@@ -12,21 +36,22 @@ const initial_blockchain = {
   },
   tip_hashes: null,
   tips: null,
-  space: 0
+  space: 0,
 };
-const initial_state = {
-  blockchain_state: initial_blockchain,
+
+const initialState: FullNodeState = {
+  blockchain_state: initialBlockchain,
   connections: [],
   open_connection_error: "",
   headers: [],
   block: null, // If not null, page is changed to block page
-  header: null
+  header: null,
 };
 
-export const fullnodeReducer = (state = { ...initial_state }, action) => {
+export default function fullnodeReducer(state: FullNodeState = { ...initialState }, action: any): FullNodeState {
   switch (action.type) {
     case "LOG_OUT":
-      return { ...initial_state };
+      return { ...initialState };
     case "CLEAR_BLOCK":
       return { ...state, block: null };
     case "INCOMING_MESSAGE":
@@ -66,4 +91,4 @@ export const fullnodeReducer = (state = { ...initial_state }, action) => {
     default:
       return state;
   }
-};
+}

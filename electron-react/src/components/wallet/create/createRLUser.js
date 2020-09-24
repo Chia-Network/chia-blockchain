@@ -12,7 +12,7 @@ import {
   createState,
   changeCreateWallet,
   CREATE_RL_WALLET_OPTIONS
-} from "../../../modules/createWalletReducer";
+} from "../../../modules/createWallet";
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { useStyles } from "./WalletCreate";

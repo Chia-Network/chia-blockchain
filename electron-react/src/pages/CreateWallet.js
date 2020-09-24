@@ -21,7 +21,7 @@ import {
   CREATE_RL_WALLET_OPTIONS,
   CREATE_RL_ADMIN,
   CREATE_RL_USER
-} from "../modules/createWalletReducer";
+} from "../modules/createWallet";
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { CreateNewCCWallet } from "./createNewColouredCoin";

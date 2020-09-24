@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import React from "react";
+import { useHistory } from 'react-router';
 import {
   Box,
   Typography,
@@ -30,10 +31,6 @@ import { create_trade_action } from "../../modules/trade_messages";
 import { COLOURED_COIN } from "../../util/wallet_types";
 
 const useStyles = makeStyles(theme => ({
-  root: {
-    display: "flex",
-    paddingLeft: "0px"
-  },
   toolbar: {
     paddingRight: 24 // keep right padding when drawer closed
   },
@@ -54,9 +51,6 @@ const useStyles = makeStyles(theme => ({
   paper: {
     margin: theme.spacing(3),
     padding: theme.spacing(0),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column"
   },
   balancePaper: {
     marginTop: theme.spacing(2)
@@ -187,10 +181,11 @@ const TradeList = () => {
   );
 };
 
-export const CreateOffer = () => {
+export default function CreateOffer() {
   const wallets = useSelector(state => state.wallet_state.wallets);
   const classes = useStyles();
   const dispatch = useDispatch();
+  const history = useHistory();
   var amount_input = null;
   var buy_or_sell = null;
   var wallet_id = null;
@@ -240,7 +235,7 @@ export const CreateOffer = () => {
           offer[trade.wallet_id] = -trade.amount;
         }
       }
-      dispatch(create_trade_action(offer, filePath));
+      dispatch(create_trade_action(offer, filePath, history));
     } else {
       dispatch(
         openDialog("", "This feature is available only from electron app")
@@ -361,4 +356,4 @@ export const CreateOffer = () => {
       </Grid>
     </Paper>
   );
-};
+}

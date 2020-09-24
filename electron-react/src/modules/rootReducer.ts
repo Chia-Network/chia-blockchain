@@ -2,19 +2,16 @@ import { combineReducers } from "redux";
 import websocketReducer from "./websocket";
 import incomingReducer from "./incoming";
 import mnemonicReducer from "./mnemonic";
-import { mainMenuReducer } from "./mainMenu";
 import walletMenuReducer from "./walletMenu";
-import { createWalletReducer } from "./createWalletReducer";
+import createWallet from "./createWallet";
 import tradeReducer from "./trade";
 import dialogReducer from "./dialog";
 import daemonReducer from "./daemon";
 import { entranceReducer } from "./entranceMenu";
-import { fullnodeReducer } from "./fullnode_api";
-import { farmingReducer } from "./farming_api";
-import { plotControlReducer } from "./plotter_control";
-import { farmerMenuReducer } from "./farmer_menu";
-import { tradeMenuReducer } from "./tradeMenu";
-import { progressReducer } from "./progressReducer";
+import fullnodeReducer from "./fullnode";
+import farmingReducer from "./farming";
+import plotControlReducer from "./plotterControl";
+import progressReducer from "./progress";
 import backupReducer from "./backup";
 
 const rootReducer = combineReducers({
@@ -22,17 +19,14 @@ const rootReducer = combineReducers({
   websocket: websocketReducer,
   wallet_state: incomingReducer,
   mnemonic_state: mnemonicReducer,
-  main_menu: mainMenuReducer,
   wallet_menu: walletMenuReducer,
-  create_options: createWalletReducer,
+  create_options: createWallet,
   trade_state: tradeReducer,
   dialog_state: dialogReducer,
   entrance_menu: entranceReducer,
   full_node_state: fullnodeReducer,
   farming_state: farmingReducer,
   plot_control: plotControlReducer,
-  farmer_menu: farmerMenuReducer,
-  trade_menu: tradeMenuReducer,
   progress: progressReducer,
   backup_state: backupReducer
 });
