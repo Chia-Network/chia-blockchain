@@ -8,7 +8,7 @@ import tradeReducer from "./trade";
 import dialogReducer from "./dialog";
 import daemonReducer from "./daemon";
 import { entranceReducer } from "./entranceMenu";
-import fullnodeReducer from "./fullnode";
+import fullNodeReducer from "./fullNode";
 import farmingReducer from "./farming";
 import plotControlReducer from "./plotterControl";
 import progressReducer from "./progress";
@@ -24,7 +24,7 @@ const rootReducer = combineReducers({
   trade_state: tradeReducer,
   dialog_state: dialogReducer,
   entrance_menu: entranceReducer,
-  full_node_state: fullnodeReducer,
+  full_node_state: fullNodeReducer,
   farming_state: farmingReducer,
   plot_control: plotControlReducer,
   progress: progressReducer,
