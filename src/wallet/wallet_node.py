@@ -29,6 +29,7 @@ from src.util.api_decorators import api_request
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.settings.settings_objects import BackupInitialized
 from src.wallet.transaction_record import TransactionRecord
+from src.wallet.util.backup_utils import open_backup_file
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_state_manager import WalletStateManager
@@ -164,6 +165,7 @@ class WalletNode:
         if backup_settings.user_initialized is False:
             if new_wallet is True:
                 await self.wallet_state_manager.user_settings.user_created_new_wallet()
+                self.wallet_state_manager.new_wallet = True
             elif skip_backup_import is True:
                 await self.wallet_state_manager.user_settings.user_skipped_backup_import()
             elif backup_file is not None:
@@ -175,6 +177,17 @@ class WalletNode:
                 return False
 
         self.backup_initialized = True
+        if backup_file is not None:
+            json_dict = open_backup_file(
+                backup_file, self.wallet_state_manager.private_key
+            )
+            if "start_height" in json_dict["data"]:
+                start_height = json_dict["data"]["start_height"]
+                self.config["starting_height"] = start_height
+            else:
+                self.config["starting_height"] = 0
+        else:
+            self.config["starting_height"] = 0
 
         if self.state_changed_callback is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
@@ -436,7 +449,6 @@ class WalletNode:
             )
         )
         fork_point_hash: bytes32 = self.header_hashes[fork_point_height]
-
         # Sync a little behind, in case there is a short reorg
         tip_height = (
             len(self.header_hashes) - 5
@@ -450,7 +462,10 @@ class WalletNode:
             self.potential_blocks_received[uint32(height)] = asyncio.Event()
 
         header_validate_start_height: uint32
-        if self.config["starting_height"] == 0:
+        if (
+            self.config["starting_height"] == 0
+            and self.wallet_state_manager.new_wallet is False
+        ):
             header_validate_start_height = fork_point_height
         else:
             # Request all proof hashes
@@ -579,6 +594,11 @@ class WalletNode:
 
             # Add blockrecords one at a time, to catch up to starting height
             weight = self.wallet_state_manager.block_records[fork_point_hash].weight
+
+            # Fly sync to tip - 100 if this is a new wallet
+            if self.wallet_state_manager.new_wallet:
+                self.config["starting_height"] = max(0, tip_height - 100)
+
             header_validate_start_height = min(
                 max(fork_point_height, self.config["starting_height"] - 1),
                 tip_height + 1,
@@ -592,9 +612,14 @@ class WalletNode:
                 fork_point_parent_weight = self.wallet_state_manager.block_records[
                     fork_point_parent_hash
                 ]
-                difficulty = uint64(weight - fork_point_parent_weight)
-            for height in range(fork_point_height + 1, header_validate_start_height):
+                difficulty = uint64(weight - fork_point_parent_weight.weight)
+
+            for height in range(
+                fork_point_height + 1, header_validate_start_height + 1
+            ):
                 _, difficulty_change, total_iters = self.proof_hashes[height]
+                if difficulty_change is not None:
+                    difficulty = difficulty_change
                 weight += difficulty
                 block_record = BlockRecord(
                     self.header_hashes[height],
@@ -613,7 +638,7 @@ class WalletNode:
                     or res == ReceiveBlockResult.ADDED_AS_ORPHAN
                 )
             self.log.info(
-                f"Fast sync successful up to height {header_validate_start_height - 1}"
+                f"Fast sync successful up to height {header_validate_start_height}"
             )
 
         # Download headers in batches, and verify them as they come in. We download a few batches ahead,
@@ -697,10 +722,10 @@ class WalletNode:
                     if hh in self.wallet_state_manager.block_records:
                         break
                     else:
-                        self.log.warning(
-                            "Received header, but it has not been added to chain. Retrying."
-                        )
                         _, hb, tfilter = self.cached_blocks[hh]
+                        self.log.warning(
+                            f"Received header, but it has not been added to chain. Retrying. {hb.height}"
+                        )
                         respond_header_msg = wallet_protocol.RespondHeader(hb, tfilter)
                         async for msg in self.respond_header(respond_header_msg):
                             yield msg
@@ -914,8 +939,9 @@ class WalletNode:
             )
 
             if self.wallet_state_manager.sync_mode:
-                self.potential_blocks_received[uint32(block.height)].set()
-                self.potential_header_hashes[block.height] = block.header_hash
+                if uint32(block.height) in self.potential_blocks_received:
+                    self.potential_blocks_received[uint32(block.height)].set()
+                    self.potential_header_hashes[block.height] = block.header_hash
 
             # Caches the block so we can finalize it when additions and removals arrive
             self.cached_blocks[block_record.header_hash] = (

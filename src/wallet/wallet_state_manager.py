@@ -91,7 +91,7 @@ class WalletStateManager:
     private_key: PrivateKey
 
     trade_manager: TradeManager
-    generate_count: int
+    new_wallet: bool
     user_settings: UserSettings
 
     @staticmethod
@@ -101,9 +101,9 @@ class WalletStateManager:
         db_path: Path,
         constants: ConsensusConstants,
         name: str = None,
-        testing: bool = False,
     ):
         self = WalletStateManager()
+        self.new_wallet = False
         self.config = config
         self.constants = constants
 
@@ -133,10 +133,7 @@ class WalletStateManager:
         self.pending_tx_callback = None
         self.difficulty_resets_prev = {}
         self.db_path = db_path
-        if testing is True:
-            self.generate_count = 10
-        else:
-            self.generate_count = 100
+
         main_wallet_info = await self.user_store.get_wallet_by_id(1)
         assert main_wallet_info is not None
 
@@ -265,7 +262,10 @@ class WalletStateManager:
                 # This handles the case where the database is empty
                 unused = uint32(0)
 
-        to_generate = self.config["initial_num_public_keys"]
+        if self.new_wallet:
+            to_generate = 5
+        else:
+            to_generate = self.config["initial_num_public_keys"]
 
         for wallet_id in targets:
             target_wallet = self.wallets[wallet_id]
@@ -1234,11 +1234,14 @@ class WalletStateManager:
                     )
                 )
 
+            trunc = truncate_to_significant_bits(
+                min_iters, self.constants.SIGNIFICANT_BITS
+            )
             number_of_iters: uint64 = calculate_iterations_quality(
                 quality_str,
                 header_block.proof_of_space.size,
                 difficulty,
-                min_iters,
+                trunc,
             )
 
             # Validate potime
@@ -1435,6 +1438,14 @@ class WalletStateManager:
         data["version"] = __version__
         data["fingerprint"] = self.private_key.get_g1().get_fingerprint()
         data["timestamp"] = now
+        first_coin_height = await self.wallet_store.get_first_coin_height()
+        if first_coin_height is None:
+            start_height = max(0, self.block_records[self.lca].height - 100)
+        elif first_coin_height > 100:
+            start_height = first_coin_height - 100
+        else:
+            start_height = 0
+        data["start_height"] = start_height
         key_base_64 = base64.b64encode(bytes(backup_pk))
         f = Fernet(key_base_64)
         data_bytes = json.dumps(data).encode()
