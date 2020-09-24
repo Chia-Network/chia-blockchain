@@ -305,7 +305,7 @@ class WalletRpcApi:
 
         wallets: List[
             WalletInfo
-        ] = await self.service.wallet_state_manager.get_all_wallets()
+        ] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
 
         return {"wallets": wallets}
 

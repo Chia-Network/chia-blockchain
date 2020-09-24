@@ -147,7 +147,7 @@ class WalletStateManager:
         self.wallets = {}
         self.wallets[main_wallet_info.id] = self.main_wallet
 
-        for wallet_info in await self.get_all_wallets():
+        for wallet_info in await self.get_all_wallet_info_entries():
             # self.log.info(f"wallet_info {wallet_info}")
             if wallet_info.type == WalletType.STANDARD_WALLET.value:
                 if wallet_info.id == 1:
@@ -226,7 +226,7 @@ class WalletStateManager:
         return master_sk_to_wallet_sk(self.private_key, index).get_g1()
 
     async def load_wallets(self):
-        for wallet_info in await self.get_all_wallets():
+        for wallet_info in await self.get_all_wallet_info_entries():
             if wallet_info.id in self.wallets:
                 continue
             if wallet_info.type == WalletType.STANDARD_WALLET.value:
@@ -1418,11 +1418,11 @@ class WalletStateManager:
     def unlink_db(self):
         Path(self.db_path).unlink()
 
-    async def get_all_wallets(self) -> List[WalletInfo]:
-        return await self.user_store.get_all_wallets()
+    async def get_all_wallet_info_entries(self) -> List[WalletInfo]:
+        return await self.user_store.get_all_wallet_info_entries()
 
     async def create_wallet_backup(self, file_path: Path):
-        all_wallets = await self.get_all_wallets()
+        all_wallets = await self.get_all_wallet_info_entries()
         for wallet in all_wallets:
             if wallet.id == 1:
                 all_wallets.remove(wallet)
