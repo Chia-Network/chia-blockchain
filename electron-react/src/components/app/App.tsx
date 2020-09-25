@@ -25,11 +25,9 @@ export default function App() {
   const { value: darkMode } = useDarkMode();
   const [locale] = useLocale('en');
 
-  console.log('locale', locale);
-
   return (
     <Provider store={store}>
-      <I18nProvider language={locale || 'en'} catalogs={catalogs}>
+      <I18nProvider language={locale} catalogs={catalogs}>
         <WebSocketConnection host={daemon_rpc_ws}>
           <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
             <CssBaseline />
