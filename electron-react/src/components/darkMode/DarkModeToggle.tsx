@@ -4,7 +4,7 @@ import { IconButton } from "@material-ui/core";
 import { Brightness4, Brightness7 } from '@material-ui/icons';
 
 export default function DarkModeToggle() {
-  const { enable, disable, value: darkMode } = useDarkMode(false);
+  const { enable, disable, value: darkMode } = useDarkMode();
 
   function handleClick() {
     if (darkMode) {
