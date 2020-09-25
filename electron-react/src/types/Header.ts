@@ -1,4 +1,4 @@
-type Plot = {
+type Header = {
   data: {
     additions_root: string,
     aggregated_signature: string,
@@ -26,4 +26,4 @@ type Plot = {
   plot_signature: string,
 };
 
-export default Plot;
+export default Header;
