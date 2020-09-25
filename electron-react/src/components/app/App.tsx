@@ -22,7 +22,7 @@ const catalogs = {
 };
 
 export default function App() {
-  const { value: darkMode } = useDarkMode(false);
+  const { value: darkMode } = useDarkMode();
   const [locale] = useLocale('en');
 
   console.log('locale', locale);
