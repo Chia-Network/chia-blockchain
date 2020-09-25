@@ -1,9 +1,11 @@
-import { useLocalStorage } from 'react-use';
+import { useLocalStorage, writeStorage } from '@rehooks/local-storage';
 
-export type Locales = 'en' | 'sk';
+export default function useLocale(defaultLocale: string): [string, (locale: string) => void] {
+  const [locale] = useLocalStorage('locale');
 
-export default function useLocale(defaultLocale: Locales): [Locales, (locale: Locales) => void] {
-  const [locale, setLocale] = useLocalStorage<Locales>('locale', defaultLocale);
+  function handleSetLocale(locale: string) {
+    writeStorage('locale', locale);
+  }
 
-  return [locale || defaultLocale, setLocale];
+  return [locale ?? defaultLocale, handleSetLocale];
 }
