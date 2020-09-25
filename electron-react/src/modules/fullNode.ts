@@ -1,12 +1,12 @@
 import { service_full_node } from "../util/service_names";
 import type Connection from '../types/Connection';
-import type Plot from '../types/Plot';
+import type Header from '../types/Header';
 
 type FullNodeState = {
   blockchain_state: {
     difficulty: number,
     ips: number,
-    lca?: Plot | null,
+    lca?: Header | null,
     min_iters: number,
     sync: {
       sync_mode: boolean,
@@ -14,12 +14,12 @@ type FullNodeState = {
       sync_tip_height: number,
     },
     tip_hashes?: string[] | null,
-    tips?: Plot[] | null,
+    tips?: Header[] | null,
     space: number,
   },
   connections: Connection[],
   open_connection_error?: string,
-  headers: Plot[],
+  headers: Header[],
   block?: string | null, // If not null, page is changed to block page
   header?: string | null
 };
