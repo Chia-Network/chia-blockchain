@@ -263,7 +263,7 @@ class WalletStateManager:
                 unused = uint32(0)
 
         if self.new_wallet:
-            to_generate = 5
+            to_generate = self.config["initial_num_public_keys_new_wallet"]
         else:
             to_generate = self.config["initial_num_public_keys"]
 
@@ -1421,6 +1421,20 @@ class WalletStateManager:
     async def get_all_wallet_info_entries(self) -> List[WalletInfo]:
         return await self.user_store.get_all_wallet_info_entries()
 
+    async def get_start_height(self):
+        """
+        If we have coin use that as starting height next time,
+        otherwise use the lca height - some buffer(100)
+        """
+
+        first_coin_height = await self.wallet_store.get_first_coin_height()
+        if first_coin_height is None:
+            start_height = self.block_records[self.lca].height
+        else:
+            start_height = first_coin_height
+
+        return start_height
+
     async def create_wallet_backup(self, file_path: Path):
         all_wallets = await self.get_all_wallet_info_entries()
         for wallet in all_wallets:
@@ -1438,14 +1452,7 @@ class WalletStateManager:
         data["version"] = __version__
         data["fingerprint"] = self.private_key.get_g1().get_fingerprint()
         data["timestamp"] = now
-        first_coin_height = await self.wallet_store.get_first_coin_height()
-        if first_coin_height is None:
-            start_height = max(0, self.block_records[self.lca].height - 100)
-        elif first_coin_height > 100:
-            start_height = first_coin_height - 100
-        else:
-            start_height = 0
-        data["start_height"] = start_height
+        data["start_height"] = await self.get_start_height()
         key_base_64 = base64.b64encode(bytes(backup_pk))
         f = Fernet(key_base_64)
         data_bytes = json.dumps(data).encode()
