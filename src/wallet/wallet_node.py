@@ -43,6 +43,8 @@ from src.util.errors import Err
 from src.util.path import path_from_root, mkdir
 from src.util.keychain import Keychain
 
+OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
+
 
 class WalletNode:
     key_config: Dict
