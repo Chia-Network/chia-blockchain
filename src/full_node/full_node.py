@@ -316,8 +316,10 @@ class FullNode:
         self,
         request: introducer_protocol.RespondPeers,
         peer_info: PeerInfo,
-    ):
+    ) -> OutboundMessageGenerator:
         await self.full_node_peers.respond_peers(request, peer_info, False)
+        # Pseudo-message to close the connection
+        yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
 
     @api_request
     async def respond_peers_full_node_with_peer_info(

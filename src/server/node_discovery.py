@@ -154,7 +154,7 @@ class FullNodeDiscovery:
             size = await self.address_manager.size()
             if size == 0 or empty_tables:
                 await self._introducer_client()
-                await asyncio.sleep(min(15, self.peer_connect_interval))
+                await asyncio.sleep(min(10, self.peer_connect_interval))
                 empty_tables = False
                 continue
 
@@ -193,9 +193,15 @@ class FullNodeDiscovery:
             now = time.time()
             got_peer = False
             addr: Optional[PeerInfo] = None
-            max_tries = 50 if len(groups) >= 3 else 10
+            max_tries = 50
+            if len(groups) < 3:
+                max_tries = 10
+            elif len(groups) <= 5:
+                max_tries = 25
             while not got_peer and not self.is_closed:
-                await asyncio.sleep(min(15, self.peer_connect_interval))
+                sleep_interval = min(15, self.peer_connect_interval)
+                sleep_interval = min(sleep_interval, 1 + len(groups) * 3)
+                await asyncio.sleep(sleep_interval)
                 tries += 1
                 if tries > max_tries:
                     addr = None
@@ -221,7 +227,7 @@ class FullNodeDiscovery:
                     addr = None
                     continue
                 # only consider very recently tried nodes after 30 failed attempts
-                if now - info.last_try < 1800 and tries < 30:
+                if now - info.last_try < 3600 and tries < 30:
                     continue
                 if (
                     time.time() - last_timestamp_local_info > 1800
@@ -246,7 +252,7 @@ class FullNodeDiscovery:
                         addr, None, None, disconnect_after_handshake
                     )
                 )
-            sleep_interval = 5 + len(connected) * 10
+            sleep_interval = 5 + len(groups) * 5
             sleep_interval = min(sleep_interval, self.peer_connect_interval)
             await asyncio.sleep(sleep_interval)
 
