@@ -102,17 +102,17 @@ class DaemonProxy:
         return await self._get(request)
 
 
-async def connect_to_daemon(self_hostname: str, daemon_port: int, net_config: Dict, root_path: Path):
+async def connect_to_daemon(self_hostname: str, daemon_port: int, net_config: Dict, root_path: Path, auth: bool = False):
     """
     Connect to the local daemon.
     """
 
     client = DaemonProxy(f"wss://{self_hostname}:{daemon_port}", net_config, root_path)
-    await client.start()
+    await client.start(auth=auth)
     return client
 
 
-async def connect_to_daemon_and_validate(root_path):
+async def connect_to_daemon_and_validate(root_path, auth: bool = False):
     """
     Connect to the local daemon and do a ping to ensure that something is really
     there and running.
@@ -120,7 +120,7 @@ async def connect_to_daemon_and_validate(root_path):
     try:
         net_config = load_config(root_path, "config.yaml")
         connection = await connect_to_daemon(
-            net_config["self_hostname"], net_config["daemon_port"], net_config, root_path
+            net_config["self_hostname"], net_config["daemon_port"], net_config, root_path, auth=auth
         )
         r = await connection.ping()
 

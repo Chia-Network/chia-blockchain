@@ -39,7 +39,7 @@ async def stop_daemon(daemon):
 
 
 async def async_stop(args, parser):
-    daemon = await connect_to_daemon_and_validate(args.root_path)
+    daemon = await connect_to_daemon_and_validate(args.root_path, auth=True)
     if daemon is None:
         print("couldn't connect to chia daemon")
         return 1
