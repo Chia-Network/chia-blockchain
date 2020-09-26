@@ -183,7 +183,9 @@ class WalletNode:
             )
             if "start_height" in json_dict["data"]:
                 start_height = json_dict["data"]["start_height"]
-                self.config["starting_height"] = start_height
+                self.config["starting_height"] = max(
+                    0, start_height - self.config["start_height_buffer"]
+                )
             else:
                 self.config["starting_height"] = 0
         else:
@@ -595,9 +597,11 @@ class WalletNode:
             # Add blockrecords one at a time, to catch up to starting height
             weight = self.wallet_state_manager.block_records[fork_point_hash].weight
 
-            # Fly sync to tip - 100 if this is a new wallet
+            # Fly sync to tip - buffer(100) if this is a new wallet
             if self.wallet_state_manager.new_wallet:
-                self.config["starting_height"] = max(0, tip_height - 100)
+                self.config["starting_height"] = max(
+                    0, tip_height - self.config["start_height_buffer"]
+                )
 
             header_validate_start_height = min(
                 max(fork_point_height, self.config["starting_height"] - 1),
