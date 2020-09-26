@@ -156,6 +156,7 @@ const closeDaemon = callback => {
 const exitPyProc = e => { };
 
 app.on("will-quit", exitPyProc);
+app.commandLine.appendSwitch('client-certificate', 'C:/Users/dkack/.chia/beta-1.0b14.dev80/config/trusted.crt');
 
 /*************************************************************
  * window management
