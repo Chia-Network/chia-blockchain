@@ -99,9 +99,12 @@ timelord:
   logging: *logging
   # Set 'True' if clients connecting to this timelord have a high number of CPUs.
   fast_algorithm: False
+  # Bluebox (sanatizing Timelord)
   # If set 'True', the timelord will create compact proofs of time, instead of
   # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
   # is running in sanitizer_mode.
+  # You must set 'send_uncompact_interval' in 'full_node' > 0 below to have
+  # full_node send existing time proofs to be sanitized.
   sanitizer_mode: False
 
   ssl:
@@ -140,9 +143,10 @@ full_node:
   # Only connect to peers who we have heard about in the last recent_peer_threshold seconds
   recent_peer_threshold: 6000
 
-  # Send to the timelords uncompact blocks once every 'send_uncompact_interval' seconds
-  # Set to 0 if you don't use this feature. The recommended value is
-  # send_uncompact_interval=1800
+  # Send to a Bluebox (sanatizing timelord) uncompact blocks once every
+  # 'send_uncompact_interval' seconds. The recommended value is
+  # send_uncompact_interval=1800. This sends 50 proofs every 30 minutes.
+  # Set to 0 if you don't use this feature.
   send_uncompact_interval: 0
 
   farmer_peer:
