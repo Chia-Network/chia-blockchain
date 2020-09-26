@@ -383,11 +383,12 @@ class WalletNode:
         self,
         request: introducer_protocol.RespondPeers,
         peer_info: PeerInfo,
-    ):
+    ) -> OutboundMessageGenerator:
         if not self._has_full_node():
             await self.wallet_peers.respond_peers(request, peer_info, False)
         else:
             await self.wallet_peers.ensure_is_closed()
+        yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
 
     @api_request
     async def respond_peers_full_node_with_peer_info(
