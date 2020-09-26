@@ -36,6 +36,7 @@ from src.util.config import load_config
 from src.util.logging import initialize_logging
 from src.util.path import mkdir
 from src.util.service_groups import validate_service
+from src.server.ssl_context import ssl_context_for_server
 
 log = logging.getLogger(__name__)
 
@@ -79,9 +80,9 @@ class WebSocketServer:
         self.connections: Dict[str, List[Any]] = dict()  # service_name : [WebSocket]
         self.remote_address_map: Dict[str, str] = dict()  # remote_address: service_name
         self.ping_job = None
-        net_config = load_config(root_path, "config.yaml")
-        self.self_hostname = net_config["self_hostname"]
-        self.daemon_port = net_config["daemon_port"]
+        self.net_config = load_config(root_path, "config.yaml")
+        self.self_hostname = self.net_config["self_hostname"]
+        self.daemon_port = self.net_config["daemon_port"]
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -99,6 +100,10 @@ class WebSocketServer:
         except NotImplementedError:
             self.log.info("Not implemented")
 
+        ssl_context = ssl_context_for_server(
+            self.root_path, self.net_config, require_cert=True
+        )
+
         self.websocket_server = await serve(
             self.safe_handle,
             self.self_hostname,
@@ -106,6 +111,7 @@ class WebSocketServer:
             max_size=None,
             ping_interval=500,
             ping_timeout=300,
+            ssl=ssl_context
         )
 
         self.log.info("Waiting Daemon WebSocketServer closure")

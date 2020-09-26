@@ -12,7 +12,7 @@ module.exports = {
     return self_hostname === "localhost";
   },
   getDaemonHost: () => {
-    return "ws://" + self_hostname + ":55400";
+    return "wss://" + self_hostname + ":55400";
   },
   self_hostname,
   wallet_rpc_host_and_port,
