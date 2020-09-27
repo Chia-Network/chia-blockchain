@@ -214,7 +214,7 @@ class AddressManagerStore:
                     info.ref_count += 1
                     address_manager.new_matrix[bucket][bucket_pos] = node_id
 
-        for node_id, info in address_manager.map_info.items():
+        for node_id, info in list(address_manager.map_info.items()):
             if not info.is_tried and info.ref_count == 0:
                 address_manager.delete_new_entry_(node_id)
         return address_manager
