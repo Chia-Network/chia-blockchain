@@ -19,7 +19,7 @@ def rl_puzzle_for_pk(
     """
     Solution to this puzzle must be in format:
     (1 my_parent_id, my_puzzlehash, my_amount, outgoing_puzzle_hash, outgoing_amount,
-     min_block_time, parent_parent_id, parent_amount)
+     min_block_time, parent_parent_id, parent_amount, fee)
     RATE LIMIT LOGIC:
     M - chia_per_interval
     N - interval_blocks
@@ -113,7 +113,7 @@ def solution_for_rl(
 ):
     """
     Solution is (1 my_parent_id, my_puzzlehash, my_amount, outgoing_puzzle_hash, outgoing_amount,
-    min_block_time, parent_parent_id, parent_amount)
+    min_block_time, parent_parent_id, parent_amount, fee)
     min block time = Math.ceil((new_amount * self.interval) / self.limit)
     """
 
