@@ -1,16 +1,22 @@
 {
-  "eslintConfig": {
-    "extends": ["react-app", "shared-config"],
-    "rules": {
-      "additional-rule": "warn"
-    },
-    "overrides": [
-      {
-        "files": ["**/*.ts?(x)"],
-        "rules": {
-          "additional-typescript-only-rule": "warn"
-        }
+  "extends": [
+    "airbnb-typescript",
+    "airbnb/hooks",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking"
+  ],
+  "rules": {
+    "additional-rule": "warn"
+  },
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.[jt]s?(x)"],
+      "rules": {
+        "additional-typescript-only-rule": "warn"
       }
-    ]
-  }
+    }
+  ]
 }
