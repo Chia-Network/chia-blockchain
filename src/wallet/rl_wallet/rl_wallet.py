@@ -172,7 +172,12 @@ class RLWallet:
         return self.wallet_info.id
 
     async def admin_create_coin(
-        self, interval: uint64, limit: uint64, user_pubkey: str, amount: uint64, fee: uint64
+        self,
+        interval: uint64,
+        limit: uint64,
+        user_pubkey: str,
+        amount: uint64,
+        fee: uint64,
     ) -> bool:
         coins = await self.wallet_state_manager.main_wallet.select_coins(amount)
         if coins is None:
@@ -548,7 +553,7 @@ class RLWallet:
             rl_parent.amount,
             self.rl_info.interval,
             self.rl_info.limit,
-            fee
+            fee,
         )
 
         spends.append((puzzle, CoinSolution(coin, solution)))
@@ -630,7 +635,9 @@ class RLWallet:
             self.rl_info.rl_origin.name(),
             self.rl_info.admin_pubkey,
         )
-        solution = make_clawback_solution(clawback_puzzle_hash, clawback_coin.amount, fee)
+        solution = make_clawback_solution(
+            clawback_puzzle_hash, clawback_coin.amount, fee
+        )
         spends.append((puzzle, CoinSolution(coin, solution)))
         return spends
 
