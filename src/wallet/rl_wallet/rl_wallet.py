@@ -610,7 +610,7 @@ class RLWallet:
         return SpendBundle(solution_list, aggsig)
 
     def generate_unsigned_clawback_transaction(
-        self, clawback_coin: Coin, clawback_puzzle_hash: bytes32
+        self, clawback_coin: Coin, clawback_puzzle_hash: bytes32, fee
     ):
         if (
             self.rl_info.limit is None
@@ -630,7 +630,7 @@ class RLWallet:
             self.rl_info.rl_origin.name(),
             self.rl_info.admin_pubkey,
         )
-        solution = make_clawback_solution(clawback_puzzle_hash, clawback_coin.amount)
+        solution = make_clawback_solution(clawback_puzzle_hash, clawback_coin.amount, fee)
         spends.append((puzzle, CoinSolution(coin, solution)))
         return spends
 
@@ -655,27 +655,27 @@ class RLWallet:
 
         return SpendBundle(solution_list, aggsig)
 
-    async def clawback_rl_coin(self, clawback_puzzle_hash: bytes32) -> SpendBundle:
+    async def clawback_rl_coin(self, clawback_puzzle_hash: bytes32, fee) -> SpendBundle:
         rl_coin = await self._get_rl_coin()
         if rl_coin is None:
             raise ValueError("rl_coin is None")
         transaction = self.generate_unsigned_clawback_transaction(
-            rl_coin, clawback_puzzle_hash
+            rl_coin, clawback_puzzle_hash, fee
         )
         return await self.sign_clawback_transaction(
             transaction, self.rl_info.admin_pubkey
         )
 
-    async def clawback_rl_coin_transaction(self) -> TransactionRecord:
+    async def clawback_rl_coin_transaction(self, fee) -> TransactionRecord:
         to_puzzle_hash = await self.main_wallet.get_new_puzzlehash()
-        spend_bundle = await self.clawback_rl_coin(to_puzzle_hash)
+        spend_bundle = await self.clawback_rl_coin(to_puzzle_hash, fee)
 
         return TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),
             to_puzzle_hash=to_puzzle_hash,
             amount=uint64(0),
-            fee_amount=uint64(0),
+            fee_amount=fee,
             incoming=False,
             confirmed=False,
             sent=uint32(0),

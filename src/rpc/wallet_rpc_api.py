@@ -694,7 +694,8 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        tx = await wallet.clawback_rl_coin_transaction()
+        fee = int(request["fee"])
+        tx = await wallet.clawback_rl_coin_transaction(fee)
         await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
