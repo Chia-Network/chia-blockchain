@@ -55,7 +55,7 @@ class TestCCWallet:
         limit = uint64(1)
         amount = uint64(100)
         await rl_admin.admin_create_coin(
-            interval, limit, rl_user.rl_info.user_pubkey.hex(), amount
+            interval, limit, rl_user.rl_info.user_pubkey.hex(), amount, 0
         )
         origin = rl_admin.rl_info.rl_origin
         admin_pubkey = rl_admin.rl_info.admin_pubkey
