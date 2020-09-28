@@ -12,9 +12,7 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
 from src.util.byte_types import hexstr_to_bytes
-from src.util.condition_tools import (
-    conditions_dict_for_solution
-)
+from src.util.condition_tools import conditions_dict_for_solution
 from src.util.json_util import dict_to_json_str
 from src.util.ints import uint64, uint32, uint8
 from src.wallet.block_record import BlockRecord
@@ -97,7 +95,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_state_manager.main_wallet.id(),
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
         did_record = TransactionRecord(
             confirmed_at_index=uint32(0),
@@ -113,7 +111,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(did_record)
@@ -414,15 +412,7 @@ class DIDWallet:
         coins = await self.select_coins(1)
         coin = coins.pop()
         # innerpuz solution is (mode amount new_puz identity my_puz)
-        innersol = Program.to(
-            [
-                0,
-                coin.amount,
-                puzhash,
-                coin.name(),
-                coin.puzzle_hash
-            ]
-        )
+        innersol = Program.to([0, coin.amount, puzhash, coin.name(), coin.puzzle_hash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = self.did_info.current_inner
 
@@ -474,7 +464,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -486,13 +476,7 @@ class DIDWallet:
         innermessage = message.get_tree_hash()
         # innerpuz solution is (mode amount new_puz identity my_puz)
         innersol = Program.to(
-            [
-                1,
-                coin.amount,
-                innermessage,
-                identity,
-                coin.puzzle_hash
-            ]
+            [1, coin.amount, innermessage, identity, coin.puzzle_hash]
         )
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = self.did_info.current_inner
@@ -548,7 +532,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
         await self.standard_wallet.push_transaction(did_record)
         return message_spend_bundle
@@ -576,7 +560,7 @@ class DIDWallet:
                 puzhash,
                 coin.name(),
                 coin.puzzle_hash,
-                parent_innerpuzhash_amounts_for_recovery_ids
+                parent_innerpuzhash_amounts_for_recovery_ids,
             ]
         )
         # full solution is (parent_info my_amount solution)
@@ -626,7 +610,7 @@ class DIDWallet:
             removals=spend_bundle.removals(),
             wallet_id=self.wallet_info.id,
             sent_to=[],
-            trade_id=None
+            trade_id=None,
         )
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
@@ -636,9 +620,7 @@ class DIDWallet:
             self.standard_wallet.id()
         )
         pubkey = bytes(devrec.pubkey)
-        innerpuz = did_wallet_puzzles.create_innerpuz(
-            pubkey, self.did_info.backup_ids
-        )
+        innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
 
         return innerpuz
 
@@ -647,9 +629,7 @@ class DIDWallet:
         return innerpuz.get_tree_hash()
 
     async def get_innerhash_for_pubkey(self, pubkey: bytes):
-        innerpuz = did_wallet_puzzles.create_innerpuz(
-            pubkey, self.did_info.backup_ids
-        )
+        innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
         return innerpuz.get_tree_hash()
 
     async def inner_puzzle_for_did_puzzle(self, did_hash: bytes32) -> Program:
