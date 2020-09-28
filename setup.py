@@ -70,6 +70,7 @@ kwargs = dict(
         "src.wallet.cc_wallet",
         "src.wallet.util",
         "src.wallet.trading",
+        "src.wallet.did_wallet",
         "src.ssl",
     ],
     entry_points={

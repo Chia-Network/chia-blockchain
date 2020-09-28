@@ -68,7 +68,7 @@ class DIDWallet:
         if amount > bal:
             raise ValueError("Not enough balance")
 
-        spend_bundle = await self.generate_new_decentralised_id(amount)
+        spend_bundle = await self.generate_new_decentralised_id(uint64(amount))
         if spend_bundle is None:
             raise ValueError("failed to generate ID for wallet")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
@@ -79,7 +79,7 @@ class DIDWallet:
             did_coin = c
             break
         if did_coin is None:
-            raise ValueError("Internal Error, unable to generate new coloured coin")
+            raise ValueError("Internal Error, unable to generate new did coin")
 
         regular_record = TransactionRecord(
             confirmed_at_index=uint32(0),
@@ -397,9 +397,9 @@ class DIDWallet:
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
             bytes(
-                await self.wallet_state_manager.get_unused_derivation_record(
+                (await self.wallet_state_manager.get_unused_derivation_record(
                     self.wallet_info.id
-                ).pubkey
+                )).pubkey
             )
         )
 
@@ -416,7 +416,7 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = self.did_info.current_inner
 
-        full_puzzle: str = did_wallet_puzzles.create_fullpuz(
+        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
             self.did_info.my_did,
         )
@@ -480,7 +480,7 @@ class DIDWallet:
         )
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = self.did_info.current_inner
-        full_puzzle: str = did_wallet_puzzles.create_fullpuz(
+        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
             self.did_info.my_did,
         )
@@ -565,7 +565,7 @@ class DIDWallet:
         )
         # full solution is (parent_info my_amount solution)
         innerpuz = self.did_info.current_inner
-        full_puzzle: str = did_wallet_puzzles.create_fullpuz(
+        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
             self.did_info.my_did,
         )
