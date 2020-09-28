@@ -3,13 +3,34 @@
     "airbnb-typescript",
     "airbnb/hooks",
     "plugin:@typescript-eslint/recommended",
-    "plugin:@typescript-eslint/recommended-requiring-type-checking"
+    "prettier",
+    "prettier/react",
+    "prettier/@typescript-eslint"
   ],
-  "rules": {
-    "additional-rule": "warn"
+  "plugins": ["react", "jsx-a11y", "import", "prettier", "@typescript-eslint"],
+  "env": {
+    "browser": true,
+    "es6": true,
+    "jest": true
   },
+  "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": "./tsconfig.json"
+    "sourceType": "module",
+    "project": "./tsconfig.json",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "rules": {
+    "additional-rule": "warn",
+    "linebreak-style": "off",
+    "prettier/prettier": [
+      "error",
+      {
+        "endOfLine": "auto"
+      }
+    ],
+    "react/jsx-props-no-spreading": ["error", { "custom" : "ignore" }]
   },
   "overrides": [
     {
