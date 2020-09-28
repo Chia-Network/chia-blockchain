@@ -12,6 +12,7 @@ for setuptools_scm/PEP 440 reasons.
 - For 'git clone' installs there is now a separate install-gui.sh which speeds up running install.sh for those who wish to run headless and makes docker and other automation simpler.
 - Node peers are now gossiped between nodes with logic to keep connected nodes on disparate internet networks to partially protect from eclipse attacks. This is the second to last step to remove our temporary introducer and migrate to DNS introducers with peer gossip modeled directly off of Bitcoin. This adds a new database of valid peer nodes that will persist across node restarts. This also makes changes to config.yaml's contents.
 - The rate limited wallet library now supports coin aggregation for adding additional funds after the time of creation.
+- Fees are now used in all applicable rate limited wallet calls
 
 ### Changed
 - `sh install.sh` was upgraded so that on Ubuntu it will install any needed OS dependencies.
