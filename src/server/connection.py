@@ -11,6 +11,19 @@ from src.util.ints import uint16
 from src.server.introducer_peers import IntroducerPeers
 from src.util.errors import Err, ProtocolError
 
+import logging
+import time
+import asyncio
+import socket
+from typing import Any, AsyncGenerator, Callable, List, Optional
+
+from src.server.outbound_message import Message, NodeType, OutboundMessage
+from src.types.peer_info import PeerInfo
+from src.util import cbor
+from src.util.ints import uint16
+from src.server.introducer_peers import IntroducerPeers
+from src.util.errors import Err, ProtocolError
+
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 4
 log = logging.getLogger(__name__)
@@ -309,19 +322,15 @@ class PeerConnections:
     def accept_inbound_connections(self, node_type: NodeType):
         if not self.local_type == NodeType.FULL_NODE:
             return True
-        except ValueError:
-            return False
-
-    def get_peers(
-        self, max_peers: int = 0, randomize: bool = False, recent_threshold=9999999
-    ) -> List[TimestampedPeerInfo]:
-        target_peers = [
-            TimestampedPeerInfo(peer.host, uint16(peer.port), uint64(0))
-            for peer in self._peers
-            if time.time() - self.time_added[peer.get_hash()] < recent_threshold
-        ]
-        if not max_peers or max_peers > len(target_peers):
-            max_peers = len(target_peers)
-        if randomize:
-            random.shuffle(target_peers)
-        return target_peers[:max_peers]
+        inbound_count = len(
+            [
+                conn
+                for conn in self._all_connections
+                if not conn.is_outbound and conn.connection_type == node_type
+            ]
+        )
+        if node_type == NodeType.FULL_NODE:
+            return inbound_count < self.max_inbound_count
+        if node_type == NodeType.WALLET:
+            return inbound_count < 20
+        return inbound_count < 10

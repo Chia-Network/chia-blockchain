@@ -1,15 +1,10 @@
 import asyncio
 import time
-from pathlib import Path
-from secrets import token_bytes
-
+import clvm
 import pytest
-
-from src.protocols import full_node_protocol
-from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32, uint64
-from src.wallet.trade_manager import TradeManager
 from tests.setup_nodes import setup_simulators_and_wallets
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.wallet.did_wallet.did_wallet import DIDWallet
@@ -580,7 +575,7 @@ class TestWalletSimulator:
         innersol = Program.to([0, coin.amount, ph, coin.name(), coin.puzzle_hash])
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = did_wallet.did_info.current_inner
-        full_puzzle: str = did_wallet_puzzles.create_fullpuz(
+        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
             did_wallet.did_info.my_did,
         )

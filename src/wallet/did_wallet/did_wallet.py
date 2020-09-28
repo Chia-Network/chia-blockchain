@@ -16,7 +16,7 @@ from src.util.condition_tools import (
     conditions_dict_for_solution
 )
 from src.util.json_util import dict_to_json_str
-from src.util.ints import uint64, uint32
+from src.util.ints import uint64, uint32, uint8
 from src.wallet.block_record import BlockRecord
 from src.wallet.did_wallet.did_info import DIDInfo
 from src.wallet.cc_wallet.ccparent import CCParent
@@ -38,6 +38,7 @@ class DIDWallet:
     standard_wallet: Wallet
     base_puzzle_program: Optional[bytes]
     base_inner_puzzle_hash: Optional[bytes32]
+    wallet_id: int
 
     @staticmethod
     async def create_new_did_wallet(
@@ -64,7 +65,7 @@ class DIDWallet:
         )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
-
+        self.wallet_id = self.wallet_info.id
         bal = await self.standard_wallet.get_confirmed_balance()
         if amount > bal:
             raise ValueError("Not enough balance")
@@ -94,7 +95,7 @@ class DIDWallet:
             spend_bundle=spend_bundle,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),
-            wallet_id=self.wallet_state_manager.main_wallet.wallet_info.id,
+            wallet_id=self.wallet_state_manager.main_wallet.id(),
             sent_to=[],
             trade_id=None
         )
@@ -134,11 +135,19 @@ class DIDWallet:
 
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
+        self.wallet_id = wallet_info.id
         self.standard_wallet = wallet
         self.did_info = DIDInfo.from_bytes(hexstr_to_bytes(self.wallet_info.data))
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         return self
+
+    @classmethod
+    def type(cls) -> uint8:
+        return uint8(WalletType.DISTRIBUTED_ID)
+
+    def id(self):
+        return self.wallet_id
 
     async def get_confirmed_balance(self) -> uint64:
         record_list: Set[
@@ -624,7 +633,7 @@ class DIDWallet:
 
     async def get_new_innerpuz(self) -> Program:
         devrec = await self.wallet_state_manager.get_unused_derivation_record(
-            self.standard_wallet.wallet_info.id
+            self.standard_wallet.id()
         )
         pubkey = bytes(devrec.pubkey)
         innerpuz = did_wallet_puzzles.create_innerpuz(
