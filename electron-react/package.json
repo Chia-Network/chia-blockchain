@@ -18,10 +18,9 @@
     "locale:add": "lingui add-locale",
     "locale:extract": "lingui extract",
     "locale:compile": "lingui compile",
-    "eslint": "node ./node_modules/.bin/eslint --ext .js,.jsx,.ts,.tsx,.graphql ./src",
-    "eslint:autofix": "node ./node_modules/.bin/eslint --fix --ext .js,.jsx,.ts,.tsx,.graphql ./src",
-    "format": "prettier --write src/**/*.ts{,x}",
-    "lint": "tsc --noEmit && eslint src/**/*.ts{,x}"
+    "eslint": "eslint src/**/*.[jt]s{,x}",
+    "format": "prettier --write src/**/*.[jt]s{,x} && eslint --fix src/**/*.[jt]s{,x}",
+    "lint": "tsc --noEmit && npm run eslint"
   },
   "dependencies": {
     "@lingui/react": "^2.9.2",
@@ -67,7 +66,7 @@
     "electron": "^10.1.2",
     "electron-osx-sign": "github:electron/electron-osx-sign#master",
     "electron-winstaller": "^4.0.1",
-    "eslint-config-airbnb-typescript": "^10.0.0",
+    "eslint-config-airbnb-typescript": "^11.0.0",
     "eslint-config-prettier": "^6.12.0",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-jsx-a11y": "^6.3.1",
