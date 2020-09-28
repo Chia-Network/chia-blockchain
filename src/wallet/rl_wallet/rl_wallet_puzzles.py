@@ -42,7 +42,7 @@ def rl_puzzle_for_pk(
     TEMPLATE_SINGLETON_RL = f'((c (i (i (= {TEMPLATE_MY_PARENT_ID} (f 1)) (q 1) (= (f 1) (q 0x{origin_id}))) (q ()) (q (x (q "Parent doesnt satisfy RL conditions")))) 1))'  # noqa: E501
     TEMPLATE_BLOCK_AGE = f'((c (i (i (= (* (f (r (r (r (r (r 1)))))) (q {rate_amount})) (* (f (r (r (r (r 1))))) (q {interval_time}))) (q 1) (q (> (* (f (r (r (r (r (r 1)))))) (q {rate_amount})) (* (f (r (r (r (r 1)))))) (q {interval_time})))) (q (c (q 0x{opcode_coin_block_age}) (c (f (r (r (r (r (r 1)))))) (q ())))) (q (x (q "wrong min block time")))) 1 ))'  # noqa: E501
     TEMPLATE_MY_ID = f"(c (q 0x{opcode_myid}) (c (sha256 (f 1) (f (r 1)) (f (r (r 1)))) (q ())))"  # noqa: E501
-    CREATE_CHANGE = f"(c (q 0x{opcode_create}) (c (f (r 1)) (c (- (f (r (r 1))) (f (r (r (r (r 1)))))) (q ()))))"  # noqa: E501
+    CREATE_CHANGE = f"(c (q 0x{opcode_create}) (c (f (r 1)) (c (- (f (r (r 1))) (+ (f (r (r (r (r 1))))) (f (r (r (r (r (r (r (r (r 1))))))))))) (q ()))))"  # noqa: E501
     CREATE_NEW_COIN = f"(c (q 0x{opcode_create}) (c (f (r (r (r 1)))) (c (f (r (r (r (r 1))))) (q ()))))"  # noqa: E501
     RATE_LIMIT_PUZZLE = f"(c {TEMPLATE_SINGLETON_RL} (c {TEMPLATE_BLOCK_AGE} (c {CREATE_CHANGE} (c {TEMPLATE_MY_ID} (c {CREATE_NEW_COIN} (q ()))))))"  # noqa: E501
 
@@ -109,6 +109,7 @@ def solution_for_rl(
     parent_amount: uint64,
     interval,
     limit,
+    fee,
 ):
     """
     Solution is (1 my_parent_id, my_puzzlehash, my_amount, outgoing_puzzle_hash, outgoing_amount,
@@ -119,7 +120,7 @@ def solution_for_rl(
     min_block_count = math.ceil((out_amount * interval) / limit)
     solution = (
         f"(1 0x{my_parent_id.hex()} 0x{my_puzzlehash.hex()} {my_amount} 0x{out_puzzlehash.hex()} {out_amount}"
-        f" {min_block_count} 0x{my_parent_parent_id.hex()} {parent_amount})"
+        f" {min_block_count} 0x{my_parent_parent_id.hex()} {parent_amount} {fee})"
     )
     return Program(binutils.assemble(solution))
 
