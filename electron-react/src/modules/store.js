@@ -1,10 +1,10 @@
-import reduxThunk from "redux-thunk";
-import { createStore, applyMiddleware, compose } from "redux";
-import isElectron from "is-electron";
-import rootReducer from "./rootReducer";
-import wsMiddleware from "../middleware/middleware";
-import dev_config from "../dev_config";
-import { exit_and_close } from "./message";
+import reduxThunk from 'redux-thunk';
+import { createStore, applyMiddleware, compose } from 'redux';
+import isElectron from 'is-electron';
+import rootReducer from './rootReducer';
+import wsMiddleware from '../middleware/middleware';
+import dev_config from '../dev_config';
+import { exit_and_close } from './message';
 
 const middleware = [reduxThunk, wsMiddleware];
 
@@ -14,9 +14,10 @@ const store =
     : createStore(
         rootReducer,
         compose(
-          applyMiddleware(...middleware),  /* preloadedState, */
-          window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__()
-        )
+          applyMiddleware(...middleware),
+          window.__REDUX_DEVTOOLS_EXTENSION__ &&
+            window.__REDUX_DEVTOOLS_EXTENSION__(),
+        ),
       );
 
 window.onload = () => {

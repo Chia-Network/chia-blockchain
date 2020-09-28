@@ -1,19 +1,19 @@
-import React, { useEffect, useState } from "react";
-import Button from "@material-ui/core/Button";
-import CssBaseline from "@material-ui/core/CssBaseline";
-import Grid from "@material-ui/core/Grid";
-import { withTheme } from "@material-ui/styles";
-import Container from "@material-ui/core/Container";
-import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
-import { useSelector, useDispatch } from "react-redux";
-import { genereate_mnemonics, add_new_key_action } from "../modules/message";
-import { withRouter } from "react-router-dom";
-import CssTextField from "../components/cssTextField";
-import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
-import logo from "../assets/img/chia_logo.svg";
-import myStyle from "./style";
+import React, { useEffect, useState } from 'react';
+import Button from '@material-ui/core/Button';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import Grid from '@material-ui/core/Grid';
+import { withTheme } from '@material-ui/styles';
+import Container from '@material-ui/core/Container';
+import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
+import { useSelector, useDispatch } from 'react-redux';
+import { withRouter } from 'react-router-dom';
+import { genereate_mnemonics, add_new_key_action } from '../modules/message';
+import CssTextField from '../components/cssTextField';
+import { changeEntranceMenu, presentSelectKeys } from '../modules/entranceMenu';
+import logo from '../assets/img/chia_logo.svg';
+import myStyle from './style';
 
-const MnemonicField = props => {
+const MnemonicField = (props) => {
   return (
     <Grid item xs={2}>
       <CssTextField
@@ -33,14 +33,14 @@ const MnemonicField = props => {
     </Grid>
   );
 };
-const Iterator = props => {
+const Iterator = (props) => {
   return props.mnemonic.map((word, i) => (
-    <MnemonicField key={i} word={word} id={"id_" + (i + 1)} index={i + 1} />
+    <MnemonicField key={i} word={word} id={`id_${i + 1}`} index={i + 1} />
   ));
 };
 
-const UIPart = props => {
-  var words = useSelector(state => state.wallet_state.mnemonic);
+const UIPart = (props) => {
+  let words = useSelector((state) => state.wallet_state.mnemonic);
   const dispatch = useDispatch();
   const classes = myStyle();
   if (!words) {
@@ -58,7 +58,7 @@ const UIPart = props => {
   return (
     <div className={classes.root}>
       <ArrowBackIosIcon onClick={goBack} className={classes.navigator}>
-        {" "}
+        {' '}
       </ArrowBackIosIcon>
       <div className={classes.grid_wrap}>
         <img className={classes.logo} src={logo} alt="Logo" />
@@ -71,7 +71,7 @@ const UIPart = props => {
             (Order is important)
           </p>
           <Grid container spacing={2}>
-            <Iterator mnemonic={words}></Iterator>
+            <Iterator mnemonic={words} />
           </Grid>
         </Container>
       </div>
@@ -94,7 +94,7 @@ const UIPart = props => {
   );
 };
 
-const NewWallet = props => {
+const NewWallet = (props) => {
   const [didMount, setDidMount] = useState(false);
 
   const dispatch = useDispatch();
@@ -107,7 +107,7 @@ const NewWallet = props => {
     }
   }, [didMount, setDidMount, dispatch]);
 
-  return <UIPart props={props}></UIPart>;
+  return <UIPart props={props} />;
 };
 
 export default withTheme(withRouter(NewWallet));

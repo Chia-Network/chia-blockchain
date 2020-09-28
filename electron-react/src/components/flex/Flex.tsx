@@ -10,35 +10,39 @@ function getGap(gap: GAP_SIZE, theme: any): string {
   }
 
   switch (gap) {
-    case 'small': 
+    case 'small':
       return '0.5rem';
-    case 'normal': 
+    case 'normal':
       return '1rem';
-    case 'large': 
+    case 'large':
       return '2rem';
     default:
       return String(gap);
   }
 }
 
-const StyledGapBox = styled(({ rowGap, columnGap, ...rest }) => <Box {...rest} />)`
-  margin: ${({ rowGap, columnGap }) => `calc(${rowGap} / -2) calc(${columnGap} / -2)`};
+const StyledGapBox = styled(({ rowGap, columnGap, ...rest }) => (
+  <Box {...rest} />
+))`
+  margin: ${({ rowGap, columnGap }) =>
+    `calc(${rowGap} / -2) calc(${columnGap} / -2)`};
 
   > * {
-    margin: ${({ rowGap, columnGap }) => `calc(${rowGap} / 2) calc(${columnGap} / 2)`};
+    margin: ${({ rowGap, columnGap }) =>
+      `calc(${rowGap} / 2) calc(${columnGap} / 2)`};
   }
 `;
 
 type Props = BoxProps & {
-  gap?: GAP_SIZE,
-  rowGap?: GAP_SIZE,
-  columnGap?: GAP_SIZE,
+  gap?: GAP_SIZE;
+  rowGap?: GAP_SIZE;
+  columnGap?: GAP_SIZE;
 };
 
 export default function Flex(props: Props) {
-  const { 
-    gap = '0px', 
-    flexDirection, 
+  const {
+    gap = '0px',
+    flexDirection,
     rowGap = gap,
     columnGap = gap,
     ...rest
@@ -46,13 +50,11 @@ export default function Flex(props: Props) {
 
   const theme = useTheme();
 
-  const rowGapValue = flexDirection === 'column'
-    ? getGap(rowGap, theme)
-    : '0px';
+  const rowGapValue =
+    flexDirection === 'column' ? getGap(rowGap, theme) : '0px';
 
-  const columnGapValue = flexDirection !== 'column'
-    ? getGap(columnGap, theme)
-    : '0px';
+  const columnGapValue =
+    flexDirection !== 'column' ? getGap(columnGap, theme) : '0px';
 
   return (
     <StyledGapBox
@@ -60,7 +62,7 @@ export default function Flex(props: Props) {
       display="flex"
       rowGap={rowGapValue}
       columnGap={columnGapValue}
-      {...rest} 
+      {...rest}
     />
   );
 }

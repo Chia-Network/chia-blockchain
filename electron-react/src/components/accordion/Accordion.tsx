@@ -1,30 +1,30 @@
-import React, { useState, useRef } from "react";
-import { Typography } from "@material-ui/core";
-import { ChevronRight as ChevronRightIcon } from "@material-ui/icons";
-import "./Accordion.css";
+import React, { useState, useRef } from 'react';
+import { Typography } from '@material-ui/core';
+import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
+import './Accordion.css';
 
 type Props = {
-  content: string,
+  content: string;
 };
 
 export default function Accordion(props: Props) {
-  const [setActive, setActiveState] = useState("");
-  const [setHeight, setHeightState] = useState("0px");
-  const [setRotate, setRotateState] = useState("accordion__icon");
-  const [setTitle, setTitleState] = useState("View pending balances...");
+  const [setActive, setActiveState] = useState('');
+  const [setHeight, setHeightState] = useState('0px');
+  const [setRotate, setRotateState] = useState('accordion__icon');
+  const [setTitle, setTitleState] = useState('View pending balances...');
   const content = useRef<HTMLDivElement>(null);
   function toggleAccordion() {
-    setActiveState(setActive === "" ? "active" : "");
+    setActiveState(setActive === '' ? 'active' : '');
     setHeightState(
-      setActive === "active" ? "0px" : `${content.current?.scrollHeight}px`
+      setActive === 'active' ? '0px' : `${content.current?.scrollHeight}px`,
     );
     setRotateState(
-      setActive === "active" ? "accordion__icon" : "accordion__icon rotate"
+      setActive === 'active' ? 'accordion__icon' : 'accordion__icon rotate',
     );
     setTitleState(
-      setActive === "active"
-        ? "View pending balances..."
-        : "Hide pending balances"
+      setActive === 'active'
+        ? 'View pending balances...'
+        : 'Hide pending balances',
     );
   }
   return (

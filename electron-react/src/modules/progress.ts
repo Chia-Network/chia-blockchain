@@ -1,4 +1,4 @@
-const progressControl = () => ({ type: "PROGRESS_CONTROL" });
+const progressControl = () => ({ type: 'PROGRESS_CONTROL' });
 
 export const openProgress = () => {
   return {
@@ -15,16 +15,19 @@ export const closeProgress = (id: string) => {
 };
 
 type ProgressState = {
-  progress_indicator: boolean,
+  progress_indicator: boolean;
 };
 
 const initialState: ProgressState = {
-  progress_indicator: false
+  progress_indicator: false,
 };
 
-export default function progressReducer(state: ProgressState  = { ...initialState }, action: any): ProgressState {
+export default function progressReducer(
+  state: ProgressState = { ...initialState },
+  action: any,
+): ProgressState {
   switch (action.type) {
-    case "PROGRESS_CONTROL":
+    case 'PROGRESS_CONTROL':
       return { ...state, progress_indicator: action.open };
     default:
       return state;

@@ -1,112 +1,112 @@
-import React, { useEffect, useState, useCallback } from "react";
-import Grid from "@material-ui/core/Grid";
-import { makeStyles, withStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import { useSelector, useDispatch } from "react-redux";
-import Typography from "@material-ui/core/Typography";
-import Box from "@material-ui/core/Box";
+import React, { useEffect, useState, useCallback } from 'react';
+import Grid from '@material-ui/core/Grid';
+import { makeStyles, withStyles } from '@material-ui/core/styles';
+import Container from '@material-ui/core/Container';
+import { useSelector, useDispatch } from 'react-redux';
+import Typography from '@material-ui/core/Typography';
+import Box from '@material-ui/core/Box';
 import {
   Paper,
   TableRow,
   List,
   ListItem,
   ListItemText,
-  Tooltip
-} from "@material-ui/core";
-import Button from "@material-ui/core/Button";
-import Table from "@material-ui/core/Table";
-import TableBody from "@material-ui/core/TableBody";
-import TableCell from "@material-ui/core/TableCell";
-import TableContainer from "@material-ui/core/TableContainer";
-import TableHead from "@material-ui/core/TableHead";
-import DeleteForeverIcon from "@material-ui/icons/DeleteForever";
-import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
-import IconButton from "@material-ui/core/IconButton";
-import Dialog from "@material-ui/core/Dialog";
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogContentText from "@material-ui/core/DialogContentText";
-import DialogTitle from "@material-ui/core/DialogTitle";
+  Tooltip,
+} from '@material-ui/core';
+import Button from '@material-ui/core/Button';
+import Table from '@material-ui/core/Table';
+import TableBody from '@material-ui/core/TableBody';
+import TableCell from '@material-ui/core/TableCell';
+import TableContainer from '@material-ui/core/TableContainer';
+import TableHead from '@material-ui/core/TableHead';
+import DeleteForeverIcon from '@material-ui/icons/DeleteForever';
+import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
+import IconButton from '@material-ui/core/IconButton';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogContentText from '@material-ui/core/DialogContentText';
+import DialogTitle from '@material-ui/core/DialogTitle';
 
-import { closeConnection, openConnection } from "../modules/farmerMessages";
+import TablePagination from '@material-ui/core/TablePagination';
+import RefreshIcon from '@material-ui/icons/Refresh';
+import HelpIcon from '@material-ui/icons/Help';
+import { closeConnection, openConnection } from '../modules/farmerMessages';
 import {
   refreshPlots,
   deletePlot,
-  getPlotDirectories
-} from "../modules/harvesterMessages";
+  getPlotDirectories,
+} from '../modules/harvesterMessages';
 
-import TablePagination from "@material-ui/core/TablePagination";
-import RefreshIcon from "@material-ui/icons/Refresh";
-import Connections from "./Connections";
+import Connections from './Connections';
 
-import { big_int_to_array, arr_to_hex, sha256 } from "../util/utils";
-import { mojo_to_chia_string } from "../util/chia";
-import HelpIcon from "@material-ui/icons/Help";
-import { clearSend } from "../modules/message";
-import AddPlotDialog from "./AddPlotDialog";
+import { big_int_to_array, arr_to_hex, sha256 } from '../util/utils';
+import { mojo_to_chia_string } from '../util/chia';
+import { clearSend } from '../modules/message';
+import AddPlotDialog from './AddPlotDialog';
 
 /* global BigInt */
 
 const drawerWidth = 180;
 
-const styles = theme => ({
+const styles = (theme) => ({
   root: {
-    display: "flex",
-    paddingLeft: "0px"
+    display: 'flex',
+    paddingLeft: '0px',
   },
   tabs: {
     flexGrow: 1,
-    marginTop: 40
+    marginTop: 40,
   },
   clickable: {
-    cursor: "pointer"
+    cursor: 'pointer',
   },
   refreshButton: {
-    marginLeft: "20px"
+    marginLeft: '20px',
   },
   content: {
-    height: "calc(100vh - 64px)",
-    overflowX: "hidden",
-    padding: "0px"
+    height: 'calc(100vh - 64px)',
+    overflowX: 'hidden',
+    padding: '0px',
   },
   noPadding: {
-    padding: "0px"
+    padding: '0px',
   },
   container: {
     paddingTop: theme.spacing(3),
     paddingRight: theme.spacing(6),
     paddingLeft: theme.spacing(6),
-    paddingBottom: theme.spacing(3)
+    paddingBottom: theme.spacing(3),
   },
   balancePaper: {
     padding: theme.spacing(2),
-    marginTop: theme.spacing(2)
+    marginTop: theme.spacing(2),
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   cardSubSection: {
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1)
+    paddingTop: theme.spacing(1),
   },
   table: {
-    minWidth: 650
+    minWidth: 650,
   },
   drawerPaper: {
-    position: "relative",
-    whiteSpace: "nowrap",
+    position: 'relative',
+    whiteSpace: 'nowrap',
     width: drawerWidth,
-    transition: theme.transitions.create("width", {
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   addPlotButton: {
-    marginLeft: theme.spacing(2)
-  }
+    marginLeft: theme.spacing(2),
+  },
 });
 
 const useStyles = makeStyles(styles);
@@ -116,22 +116,22 @@ const getStatusItems = (
   farmerSpace,
   totalChia,
   biggestHeight,
-  totalNetworkSpace
+  totalNetworkSpace,
 ) => {
-  var status_items = [];
+  const status_items = [];
 
   if (connected) {
     const item = {
-      label: "Connection Status ",
-      value: "Connected",
-      colour: "green"
+      label: 'Connection Status ',
+      value: 'Connected',
+      colour: 'green',
     };
     status_items.push(item);
   } else {
     const item = {
-      label: "Connection Status ",
-      value: "Not connected",
-      colour: "red"
+      label: 'Connection Status ',
+      value: 'Not connected',
+      colour: 'red',
     };
     status_items.push(item);
   }
@@ -139,42 +139,41 @@ const getStatusItems = (
   const totalHours = 5.0 / proportion / 60;
 
   status_items.push({
-    label: "Total size of local plots",
-    value: Math.floor(farmerSpace / Math.pow(1024, 3)).toString() + " GiB",
-    tooltip:
-      "You have " +
-      (proportion * 100).toFixed(6) +
-      "% of the space on the network, so farming a block will take " +
-      totalHours.toFixed(3) +
-      " hours in expectation"
+    label: 'Total size of local plots',
+    value: `${Math.floor(farmerSpace / Math.pow(1024, 3)).toString()} GiB`,
+    tooltip: `You have ${(proportion * 100).toFixed(
+      6,
+    )}% of the space on the network, so farming a block will take ${totalHours.toFixed(
+      3,
+    )} hours in expectation`,
   });
 
   status_items.push({
-    label: "Total chia farmed",
-    value: mojo_to_chia_string(totalChia)
+    label: 'Total chia farmed',
+    value: mojo_to_chia_string(totalChia),
   });
   if (biggestHeight === 0) {
     status_items.push({
-      label: "Last height farmed",
-      value: "No blocks farmed yet"
+      label: 'Last height farmed',
+      value: 'No blocks farmed yet',
     });
   } else {
     status_items.push({
-      label: "Last height farmed",
-      value: biggestHeight
+      label: 'Last height farmed',
+      value: biggestHeight,
     });
   }
 
   return status_items;
 };
 
-const StatusCell = props => {
+const StatusCell = (props) => {
   const classes = useStyles();
-  const item = props.item;
-  const label = item.label;
-  const value = item.value;
-  const colour = item.colour;
-  const tooltip = item.tooltip;
+  const { item } = props;
+  const { label } = item;
+  const { value } = item;
+  const { colour } = item;
+  const { tooltip } = item;
   return (
     <Grid item xs={6}>
       <div className={classes.cardSubSection}>
@@ -188,10 +187,10 @@ const StatusCell = props => {
             </Typography>
             {tooltip ? (
               <Tooltip title={tooltip}>
-                <HelpIcon style={{ color: "#c8c8c8", fontSize: 12 }}></HelpIcon>
+                <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
               </Tooltip>
             ) : (
-              ""
+              ''
             )}
           </Box>
         </Box>
@@ -200,24 +199,24 @@ const StatusCell = props => {
   );
 };
 
-const FarmerStatus = props => {
-  const plots = useSelector(state => state.farming_state.harvester.plots);
+const FarmerStatus = (props) => {
+  const plots = useSelector((state) => state.farming_state.harvester.plots);
   const totalNetworkSpace = useSelector(
-    state => state.full_node_state.blockchain_state.space
+    (state) => state.full_node_state.blockchain_state.space,
   );
 
-  var farmerSpace = 0;
+  let farmerSpace = 0;
   if (plots !== undefined) {
-    farmerSpace = plots.map(p => p.file_size).reduce((a, b) => a + b, 0);
+    farmerSpace = plots.map((p) => p.file_size).reduce((a, b) => a + b, 0);
   }
 
-  const connected = useSelector(state => state.daemon_state.farmer_connected);
+  const connected = useSelector((state) => state.daemon_state.farmer_connected);
   const statusItems = getStatusItems(
     connected,
     farmerSpace,
     props.totalChiaFarmed,
     props.biggestHeight,
-    totalNetworkSpace
+    totalNetworkSpace,
   );
 
   const classes = useStyles();
@@ -231,18 +230,18 @@ const FarmerStatus = props => {
             </Typography>
           </div>
         </Grid>
-        {statusItems.map(item => (
-          <StatusCell item={item} key={item.label}></StatusCell>
+        {statusItems.map((item) => (
+          <StatusCell item={item} key={item.label} />
         ))}
       </Grid>
     </Paper>
   );
 };
 
-const Challenges = props => {
+const Challenges = (props) => {
   const classes = useStyles();
-  var latest_challenges = useSelector(
-    state => state.farming_state.farmer.latest_challenges
+  let latest_challenges = useSelector(
+    (state) => state.farming_state.farmer.latest_challenges,
   );
 
   if (!latest_challenges) {
@@ -272,7 +271,7 @@ const Challenges = props => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {latest_challenges.map(item => (
+                {latest_challenges.map((item) => (
                   <TableRow key={item.challenge}>
                     <TableCell component="th" scope="row">
                       {item.challenge.substring(0, 10)}...
@@ -281,10 +280,10 @@ const Challenges = props => {
                     <TableCell align="right">{item.estimates.length}</TableCell>
                     <TableCell align="right">
                       {item.estimates.length > 0
-                        ? Math.floor(
-                            Math.min.apply(Math, item.estimates) / 60
-                          ).toString() + " minutes"
-                        : ""}
+                        ? `${Math.floor(
+                            Math.min.apply(Math, item.estimates) / 60,
+                          ).toString()} minutes`
+                        : ''}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -297,28 +296,28 @@ const Challenges = props => {
   );
 };
 
-const Plots = props => {
+const Plots = (props) => {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const plots = useSelector(state => state.farming_state.harvester.plots);
+  const plots = useSelector((state) => state.farming_state.harvester.plots);
   const not_found_filenames = useSelector(
-    state => state.farming_state.harvester.not_found_filenames
+    (state) => state.farming_state.harvester.not_found_filenames,
   );
   const failed_to_open_filenames = useSelector(
-    state => state.farming_state.harvester.failed_to_open_filenames
+    (state) => state.farming_state.harvester.failed_to_open_filenames,
   );
   plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
   const [addDirectoryOpen, addDirectorySetOpen] = React.useState(false);
-  const [deletePlotName, deletePlotSetName] = React.useState("");
+  const [deletePlotName, deletePlotSetName] = React.useState('');
   const [deletePlotOpen, deletePlotSetOpen] = React.useState(false);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = event => {
+  const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
@@ -368,7 +367,7 @@ const Plots = props => {
               </Button>
               <AddPlotDialog
                 classes={{
-                  paper: classes.paper
+                  paper: classes.paper,
                 }}
                 id="ringtone-menu"
                 keepMounted
@@ -397,7 +396,7 @@ const Plots = props => {
               <TableBody>
                 {plots
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map(item => (
+                  .map((item) => (
                     <TableRow key={item.filename}>
                       <TableCell component="th" scope="row">
                         <Tooltip title={item.filename} interactive>
@@ -407,13 +406,13 @@ const Plots = props => {
                       <TableCell align="right">
                         {item.size} (
                         {Math.round(
-                          (item.file_size * 1000) / (1024 * 1024 * 1024)
+                          (item.file_size * 1000) / (1024 * 1024 * 1024),
                         ) / 1000}
                         GiB)
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title={item["plot-seed"]} interactive>
-                          <span>{item["plot-seed"].substring(0, 10)}</span>
+                        <Tooltip title={item['plot-seed']} interactive>
+                          <span>{item['plot-seed'].substring(0, 10)}</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">
@@ -438,7 +437,7 @@ const Plots = props => {
                         }}
                         align="right"
                       >
-                        <DeleteForeverIcon fontSize="small"></DeleteForeverIcon>
+                        <DeleteForeverIcon fontSize="small" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -467,7 +466,7 @@ const Plots = props => {
                 that the storage devices are properly connected.
               </p>
               <List dense={classes.dense}>
-                {not_found_filenames.map(filename => (
+                {not_found_filenames.map((filename) => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
                     <ListItemSecondaryAction>
@@ -484,10 +483,10 @@ const Plots = props => {
                     </ListItemSecondaryAction>
                   </ListItem>
                 ))}
-              </List>{" "}
+              </List>{' '}
             </span>
           ) : (
-            ""
+            ''
           )}
           {failed_to_open_filenames.length > 0 ? (
             <span>
@@ -500,7 +499,7 @@ const Plots = props => {
                 These plots are invalid, you might want to delete them forever.
               </p>
               <List dense={classes.dense}>
-                {failed_to_open_filenames.map(filename => (
+                {failed_to_open_filenames.map((filename) => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
                     <ListItemSecondaryAction>
@@ -520,7 +519,7 @@ const Plots = props => {
               </List>
             </span>
           ) : (
-            ""
+            ''
           )}
         </Grid>
       </Grid>
@@ -530,7 +529,7 @@ const Plots = props => {
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
       >
-        <DialogTitle id="alert-dialog-title">{"Delete all keys"}</DialogTitle>
+        <DialogTitle id="alert-dialog-title">Delete all keys</DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
             Are you sure you want to delete the plot? The plot cannot be
@@ -554,22 +553,22 @@ const Plots = props => {
   );
 };
 
-const FarmerContent = props => {
+const FarmerContent = (props) => {
   const classes = useStyles();
   const dispatch = useDispatch();
 
   const connections = useSelector(
-    state => state.farming_state.farmer.connections
+    (state) => state.farming_state.farmer.connections,
   );
 
   const connectionError = useSelector(
-    state => state.farming_state.farmer.open_connection_error
+    (state) => state.farming_state.farmer.open_connection_error,
   );
 
   const openConnectionCallback = (host, port) => {
     dispatch(openConnection(host, port));
   };
-  const closeConnectionCallback = node_id => {
+  const closeConnectionCallback = (node_id) => {
     dispatch(closeConnection(node_id));
   };
   return (
@@ -580,13 +579,13 @@ const FarmerContent = props => {
           <FarmerStatus
             totalChiaFarmed={props.totalChiaFarmed}
             biggestHeight={props.biggestHeight}
-          ></FarmerStatus>
+          />
         </Grid>
         <Grid item xs={12}>
-          <Challenges></Challenges>
+          <Challenges />
         </Grid>
         <Grid item xs={12}>
-          <Plots></Plots>
+          <Plots />
         </Grid>
         <Grid item xs={12}>
           <Connections
@@ -594,47 +593,47 @@ const FarmerContent = props => {
             connectionError={connectionError}
             openConnection={openConnectionCallback}
             closeConnection={closeConnectionCallback}
-          ></Connections>
+          />
         </Grid>
       </Grid>
     </Container>
   );
 };
 
-const Farmer = props => {
+const Farmer = (props) => {
   const dispatch = useDispatch();
 
   const [totalChiaFarmed, setTotalChiaFarmed] = useState(BigInt(0));
   const [biggestHeight, setBiggestHeight] = useState(0);
   const [didMount, setDidMount] = useState(false);
 
-  const wallets = useSelector(state => state.wallet_state.wallets);
+  const wallets = useSelector((state) => state.wallet_state.wallets);
 
-  const classes = props.classes;
+  const { classes } = props;
 
   const checkRewards = useCallback(async () => {
     let totalChia = BigInt(0);
     let biggestHeight = 0;
-    for (let wallet of wallets) {
+    for (const wallet of wallets) {
       if (!wallet) {
         continue;
       }
-      for (let tx of wallet.transactions) {
+      for (const tx of wallet.transactions) {
         if (!didMount) return;
         if (tx.additions.length < 1) {
           continue;
         }
-        console.log("Checking tx", tx);
+        console.log('Checking tx', tx);
         // Height here is filled into the whole 256 bits (32 bytes) of the parent
-        let hexHeight = arr_to_hex(
-          big_int_to_array(BigInt(tx.confirmed_at_index), 32)
+        const hexHeight = arr_to_hex(
+          big_int_to_array(BigInt(tx.confirmed_at_index), 32),
         );
         // Height is a 32 bit int so hashing it requires serializing it to 4 bytes
-        let hexHeightHashBytes = await sha256(
-          big_int_to_array(BigInt(tx.confirmed_at_index), 4)
+        const hexHeightHashBytes = await sha256(
+          big_int_to_array(BigInt(tx.confirmed_at_index), 4),
         );
-        let hexHeightDoubleHashBytes = await sha256(hexHeightHashBytes);
-        let hexHeightDoubleHash = arr_to_hex(hexHeightDoubleHashBytes);
+        const hexHeightDoubleHashBytes = await sha256(hexHeightHashBytes);
+        const hexHeightDoubleHash = arr_to_hex(hexHeightDoubleHashBytes);
 
         if (
           hexHeight === tx.additions[0].parent_coin_info ||
@@ -673,7 +672,7 @@ const Farmer = props => {
           <FarmerContent
             totalChiaFarmed={totalChiaFarmed}
             biggestHeight={biggestHeight}
-          ></FarmerContent>
+          />
         </Container>
       </main>
     </div>

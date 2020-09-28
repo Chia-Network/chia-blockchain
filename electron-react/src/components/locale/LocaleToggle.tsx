@@ -2,7 +2,7 @@ import React from 'react';
 import { useToggle } from 'react-use';
 import { Button, Menu, MenuItem } from '@material-ui/core';
 import { Translate, ExpandMore } from '@material-ui/icons';
-import useLocale from "../../hooks/useLocale";
+import useLocale from '../../hooks/useLocale';
 
 const locales: { [char: string]: string } = {
   en: 'English',
@@ -32,9 +32,9 @@ export default function LocaleToggle() {
 
   return (
     <>
-      <Button 
-        aria-controls="simple-menu" 
-        aria-haspopup="true" 
+      <Button
+        aria-controls="simple-menu"
+        aria-haspopup="true"
         onClick={handleClick}
         startIcon={<Translate />}
         endIcon={<ExpandMore />}
@@ -50,7 +50,7 @@ export default function LocaleToggle() {
       >
         <MenuItem onClick={() => handleSelect('en')}>English</MenuItem>
         <MenuItem onClick={() => handleSelect('sk')}>Slovak</MenuItem>
-        <MenuItem >Help to translate</MenuItem>
+        <MenuItem>Help to translate</MenuItem>
       </Menu>
     </>
   );

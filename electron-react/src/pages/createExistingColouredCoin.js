@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   makeStyles,
   Typography,
@@ -6,68 +6,68 @@ import {
   Box,
   TextField,
   Backdrop,
-  CircularProgress
-} from "@material-ui/core";
+  CircularProgress,
+} from '@material-ui/core';
 
+import { useDispatch, useSelector } from 'react-redux';
+import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
 import {
   createState,
   changeCreateWallet,
-  CREATE_CC_WALLET_OPTIONS
-} from "../modules/createWallet";
-import { useDispatch, useSelector } from "react-redux";
-import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
-import { useStyles } from "./CreateWallet";
-import { chia_to_mojo } from "../util/chia";
-import { create_cc_for_colour_action } from "../modules/message";
-import { openDialog } from "../modules/dialog";
+  CREATE_CC_WALLET_OPTIONS,
+} from '../modules/createWallet';
+import { useStyles } from './CreateWallet';
+import { chia_to_mojo } from '../util/chia';
+import { create_cc_for_colour_action } from '../modules/message';
+import { openDialog } from '../modules/dialog';
 
-export const customStyles = makeStyles(theme => ({
+export const customStyles = makeStyles((theme) => ({
   input: {
     marginLeft: theme.spacing(3),
     marginRight: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    height: 56
+    height: 56,
   },
   send: {
-    paddingLeft: "0px",
+    paddingLeft: '0px',
     marginLeft: theme.spacing(6),
     marginRight: theme.spacing(2),
 
     height: 56,
-    width: 150
+    width: 150,
   },
   card: {
     paddingTop: theme.spacing(10),
-    height: 200
+    height: 200,
   },
   backdrop: {
     zIndex: theme.zIndex.drawer + 1,
-    color: "#fff"
-  }
+    color: '#fff',
+  },
 }));
 
 export const CreateExistingCCWallet = () => {
   const classes = useStyles();
   const custom = customStyles();
   const dispatch = useDispatch();
-  var colour_string = null;
-  var fee_input = null;
-  var open = false;
-  var pending = useSelector(state => state.create_options.pending);
-  var created = useSelector(state => state.create_options.created);
+  let colour_string = null;
+  let fee_input = null;
+  const open = false;
+  const pending = useSelector((state) => state.create_options.pending);
+  const created = useSelector((state) => state.create_options.created);
 
   function goBack() {
     dispatch(changeCreateWallet(CREATE_CC_WALLET_OPTIONS));
   }
 
   function create() {
-    if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
-      dispatch(openDialog("Please enter a valid numeric fee"));
+    if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
+      dispatch(openDialog('Please enter a valid numeric fee'));
       return;
     }
     dispatch(createState(true, true));
     const colour = colour_string.value;
-    var fee = chia_to_mojo(fee_input.value);
+    const fee = chia_to_mojo(fee_input.value);
     dispatch(create_cc_for_colour_action(colour, fee));
   }
 
@@ -96,7 +96,7 @@ export const CreateExistingCCWallet = () => {
               variant="filled"
               color="secondary"
               fullWidth
-              inputRef={input => {
+              inputRef={(input) => {
                 colour_string = input;
               }}
               label="Colour String"
@@ -109,7 +109,7 @@ export const CreateExistingCCWallet = () => {
               variant="filled"
               color="secondary"
               fullWidth
-              inputRef={input => {
+              inputRef={(input) => {
                 fee_input = input;
               }}
               label="Fee"

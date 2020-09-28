@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import styled from 'styled-components';
 import { useHistory, useRouteMatch } from 'react-router-dom';
-import { ListItem, ListItemIcon, ListItemText } from "@material-ui/core";
+import { ListItem, ListItemIcon, ListItemText } from '@material-ui/core';
 
 const StyledListItem = styled(ListItem)`
   display: flex;
@@ -17,11 +17,11 @@ const StyledListItemIcon = styled(ListItemIcon)`
 `;
 
 type Props = {
-  to: string,
-  title: ReactNode,
-  icon: ReactNode,
-  exact?: boolean,
-  onSelect?: () => void,
+  to: string;
+  title: ReactNode;
+  icon: ReactNode;
+  exact?: boolean;
+  onSelect?: () => void;
 };
 
 export default function SideBarItem(props: Props) {
@@ -29,9 +29,7 @@ export default function SideBarItem(props: Props) {
   const history = useHistory();
   const match = useRouteMatch(to);
 
-  const isSelected = exact 
-    ? !!match && match.isExact
-    : !!match;
+  const isSelected = exact ? !!match && match.isExact : !!match;
 
   async function handleClick() {
     if (onSelect) {
@@ -42,9 +40,7 @@ export default function SideBarItem(props: Props) {
 
   return (
     <StyledListItem button selected={isSelected} onClick={() => handleClick()}>
-      <StyledListItemIcon>
-        {icon}
-      </StyledListItemIcon>
+      <StyledListItemIcon>{icon}</StyledListItemIcon>
       <ListItemText primary={title} />
     </StyledListItem>
   );

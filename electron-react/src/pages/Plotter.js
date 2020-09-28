@@ -1,195 +1,195 @@
-import React from "react";
-import Grid from "@material-ui/core/Grid";
-import { makeStyles } from "@material-ui/core/styles";
-import { withRouter } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
-import Typography from "@material-ui/core/Typography";
-import Box from "@material-ui/core/Box";
+import React from 'react';
+import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core/styles';
+import { withRouter } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import Typography from '@material-ui/core/Typography';
+import Box from '@material-ui/core/Box';
 import {
   Paper,
   FormControl,
   InputLabel,
   Select,
-  MenuItem
-} from "@material-ui/core";
-import Button from "@material-ui/core/Button";
-import TextField from "@material-ui/core/TextField";
-import InputAdornment from "@material-ui/core/InputAdornment";
-import FormHelperText from "@material-ui/core/FormHelperText";
-import { openDialog } from "../modules/dialog";
-import isElectron from "is-electron";
+  MenuItem,
+} from '@material-ui/core';
+import Button from '@material-ui/core/Button';
+import TextField from '@material-ui/core/TextField';
+import InputAdornment from '@material-ui/core/InputAdornment';
+import FormHelperText from '@material-ui/core/FormHelperText';
+import isElectron from 'is-electron';
+import Input from '@material-ui/core/Input';
+import { openDialog } from '../modules/dialog';
 import {
   workspaceSelected,
   finalSelected,
   startPlotting,
-  resetProgress
-} from "../modules/plotter_messages";
-import { stopService } from "../modules/daemon_messages";
-import { service_plotter } from "../util/service_names";
-import Input from "@material-ui/core/Input";
+  resetProgress,
+} from '../modules/plotter_messages';
+import { stopService } from '../modules/daemon_messages';
+import { service_plotter } from '../util/service_names';
 
 const drawerWidth = 180;
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   root: {
-    display: "flex",
-    paddingLeft: "0px"
+    display: 'flex',
+    paddingLeft: '0px',
   },
   tabs: {
-    flexGrow: 1
+    flexGrow: 1,
   },
   form: {
-    margin: theme.spacing(1)
+    margin: theme.spacing(1),
   },
   clickable: {
-    cursor: "pointer"
+    cursor: 'pointer',
   },
   error: {
-    color: "red"
+    color: 'red',
   },
   refreshButton: {
-    marginLeft: "20px"
+    marginLeft: '20px',
   },
   menuButton: {
-    marginRight: 36
+    marginRight: 36,
   },
   menuButtonHidden: {
-    display: "none"
+    display: 'none',
   },
   title: {
-    flexGrow: 1
+    flexGrow: 1,
   },
   drawerPaper: {
-    position: "relative",
-    whiteSpace: "nowrap",
+    position: 'relative',
+    whiteSpace: 'nowrap',
     width: drawerWidth,
-    transition: theme.transitions.create("width", {
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   drawerPaperClose: {
-    overflowX: "hidden",
-    transition: theme.transitions.create("width", {
+    overflowX: 'hidden',
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
+      duration: theme.transitions.duration.leavingScreen,
     }),
     width: theme.spacing(7),
-    [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9)
-    }
+    [theme.breakpoints.up('sm')]: {
+      width: theme.spacing(9),
+    },
   },
   content: {
     marginTop: theme.spacing(3),
     paddingBottom: theme.spacing(6),
-    height: "calc(100vh - 64px)",
-    overflowX: "hidden"
+    height: 'calc(100vh - 64px)',
+    overflowX: 'hidden',
   },
   container: {
     paddingTop: theme.spacing(0),
     paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0)
+    paddingRight: theme.spacing(0),
   },
   paper: {
     padding: theme.spacing(0),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column"
+    display: 'flex',
+    overflow: 'auto',
+    flexDirection: 'column',
   },
   fixedHeight: {
-    height: 240
+    height: 240,
   },
   drawerWallet: {
-    position: "relative",
-    whiteSpace: "nowrap",
+    position: 'relative',
+    whiteSpace: 'nowrap',
     width: drawerWidth,
-    height: "100%",
-    transition: theme.transitions.create("width", {
+    height: '100%',
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   balancePaper: {
     marginTop: theme.spacing(2),
     marginLeft: theme.spacing(2),
-    marginRight: theme.spacing(2)
+    marginRight: theme.spacing(2),
   },
   bottomOptions: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
-    width: "100%"
+    width: '100%',
   },
   cardTitle: {
     paddingLeft: theme.spacing(3),
     paddingTop: theme.spacing(2),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   cardSubSection: {
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1)
+    paddingTop: theme.spacing(1),
   },
   table: {
-    minWidth: 650
+    minWidth: 650,
   },
   selectButton: {
     width: 80,
     paddingLeft: theme.spacing(2),
-    height: 56
+    height: 56,
   },
   input: {
     paddingRight: theme.spacing(2),
-    cursor: "pointer"
+    cursor: 'pointer',
   },
   createButton: {
-    float: "right",
+    float: 'right',
     width: 150,
     paddingLeft: theme.spacing(2),
     height: 56,
     marginTop: theme.spacing(4),
     marginBottom: theme.spacing(2),
-    background: "linear-gradient(45deg, #0a6b19 30%, #6ff196 90%)",
-    boxShadow: "0 3px 5px 2px rgba(255, 105, 135, .3)",
-    color: "white"
+    background: 'linear-gradient(45deg, #0a6b19 30%, #6ff196 90%)',
+    boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+    color: 'white',
   },
   logContainer: {
     marginLeft: theme.spacing(3),
     marginRight: theme.spacing(3),
     minHeight: 400,
     maxHeight: 400,
-    maxWidth: "100%",
-    backgroundColor: "#f1f1f1",
-    border: "1px solid #888888",
-    whiteSpace: "pre-wrap",
+    maxWidth: '100%',
+    backgroundColor: '#f1f1f1',
+    border: '1px solid #888888',
+    whiteSpace: 'pre-wrap',
     paddingTop: theme.spacing(1),
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
     paddingBottom: theme.spacing(3),
-    overflowY: "auto",
-    overflowWrap: "break-word",
-    lineHeight: 1.8
+    overflowY: 'auto',
+    overflowWrap: 'break-word',
+    lineHeight: 1.8,
   },
   logPaper: {
-    maxWidth: "100%",
+    maxWidth: '100%',
     marginBottom: theme.spacing(3),
-    marginTop: theme.spacing(3)
+    marginTop: theme.spacing(3),
   },
   cancelButton: {
-    float: "right",
+    float: 'right',
     width: 150,
     paddingLeft: theme.spacing(2),
     height: 56,
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2)
+    marginBottom: theme.spacing(2),
   },
   clearButton: {
-    float: "right",
+    float: 'right',
     width: 150,
     marginRight: theme.spacing(2),
     height: 56,
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2)
-  }
+    marginBottom: theme.spacing(2),
+  },
 }));
 
 const plot_size_options = [
@@ -211,21 +211,21 @@ const WorkLocation = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const work_location = useSelector(
-    state => state.plot_control.workspace_location
+    (state) => state.plot_control.workspace_location,
   );
   async function select() {
     if (isElectron()) {
       const dialogOptions = {
-        properties: ["openDirectory", "showHiddenFiles"]
+        properties: ['openDirectory', 'showHiddenFiles'],
       };
       const result = await window.remote.dialog.showOpenDialog(dialogOptions);
-      const filePath = result["filePaths"][0];
+      const filePath = result.filePaths[0];
       if (filePath) {
         dispatch(workspaceSelected(filePath));
       }
     } else {
       dispatch(
-        openDialog("", "This feature is available only from electron app")
+        openDialog('', 'This feature is available only from electron app'),
       );
     }
   }
@@ -242,8 +242,8 @@ const WorkLocation = () => {
               fullWidth
               onClick={select}
               label={
-                work_location === ""
-                  ? "Temporary folder location"
+                work_location === ''
+                  ? 'Temporary folder location'
                   : work_location
               }
             />
@@ -268,21 +268,21 @@ const FinalLocation = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const final_location = useSelector(
-    state => state.plot_control.final_location
+    (state) => state.plot_control.final_location,
   );
   async function select() {
     if (isElectron()) {
       const dialogOptions = {
-        properties: ["openDirectory", "showHiddenFiles"]
+        properties: ['openDirectory', 'showHiddenFiles'],
       };
       const result = await window.remote.dialog.showOpenDialog(dialogOptions);
-      const filePath = result["filePaths"][0];
+      const filePath = result.filePaths[0];
       if (filePath) {
         dispatch(finalSelected(filePath));
       }
     } else {
       dispatch(
-        openDialog("", "This feature is available only from electron app")
+        openDialog('', 'This feature is available only from electron app'),
       );
     }
   }
@@ -298,7 +298,7 @@ const FinalLocation = () => {
               onClick={select}
               fullWidth
               label={
-                final_location === "" ? "Final folder location" : final_location
+                final_location === '' ? 'Final folder location' : final_location
               }
               variant="outlined"
             />
@@ -323,20 +323,17 @@ const CreatePlot = () => {
   const dispatch = useDispatch();
   const classes = useStyles();
   const work_location = useSelector(
-    state => state.plot_control.workspace_location
+    (state) => state.plot_control.workspace_location,
   );
-  let t2 = useSelector(state => state.plot_control.t2);
+  let t2 = useSelector((state) => state.plot_control.t2);
   const final_location = useSelector(
-    state => state.plot_control.final_location
+    (state) => state.plot_control.final_location,
   );
   const [plotSize, setPlotSize] = React.useState(32);
   const [plotCount, setPlotCount] = React.useState(1);
-  const [maxRam, setMaxRam] = React.useState(3072);
-  const [numThreads, setNumThreads] = React.useState(2);
-  const [numBuckets, setNumBuckets] = React.useState(0);
-  const [stripeSize, setStripeSize] = React.useState(65536);
+  const [maxRam, setMaxRam] = React.useState(2000);
 
-  const changePlotSize = event => {
+  const changePlotSize = (event) => {
     setPlotSize(event.target.value);
     for (let pso of plot_size_options) {
         if (pso.value === event.target.value) {
@@ -344,25 +341,16 @@ const CreatePlot = () => {
         }
     }
   };
-  const changePlotCount = event => {
+  const changePlotCount = (event) => {
     setPlotCount(event.target.value);
   };
-  const handleSetMaxRam = event => {
+  const handleSetMaxRam = (event) => {
     setMaxRam(event.target.value);
-  };
-  const handleSetNumBuckets = event => {
-    setNumBuckets(event.target.value);
-  };
-  const handleSetNumThreads = event => {
-    setNumThreads(event.target.value);
-  };
-  const handleSetStripeSize = event => {
-    setStripeSize(event.target.value);
   };
 
   function create() {
     if (!work_location || !final_location) {
-      dispatch(openDialog("Please specify a temporary and final directory"));
+      dispatch(openDialog('Please specify a temporary and final directory'));
       return;
     }
     const N = plotCount;
@@ -370,11 +358,11 @@ const CreatePlot = () => {
     if (!t2 || t2 === "") {
       t2 = work_location;
     }
-    dispatch(startPlotting(K, N, work_location, t2, final_location, maxRam, numBuckets, numThreads, stripeSize));
+    dispatch(startPlotting(K, N, work_location, t2, final_location, maxRam));
   }
 
-  var plot_count_options = [];
-  for (var i = 1; i < 30; i++) {
+  const plot_count_options = [];
+  for (let i = 1; i < 30; i++) {
     plot_count_options.push(i);
   }
 
@@ -390,7 +378,7 @@ const CreatePlot = () => {
         </Grid>
         <Grid className={classes.cardTitle} item xs={12}>
           <p>
-            {" "}
+            {' '}
             Using this tool, you can create plots, which are allocated space on
             your hard drive used to farm and earn Chia. Also, temporary files
             are created during the plotting process, which exceed the size of
@@ -414,12 +402,12 @@ const CreatePlot = () => {
                     onChange={changePlotSize}
                     label="Plot Size"
                   >
-                    {plot_size_options.map(option => (
+                    {plot_size_options.map((option) => (
                       <MenuItem
                         value={option.value}
-                        key={"size" + option.value}
+                        key={`size${option.value}`}
                       >
-                        {option.label} (k={option.value}, temporary space:{" "}
+                        {option.label} (k={option.value}, temporary space:{' '}
                         {option.workspace})
                       </MenuItem>
                     ))}
@@ -438,8 +426,8 @@ const CreatePlot = () => {
                     onChange={changePlotCount}
                     label="Colour"
                   >
-                    {plot_count_options.map(option => (
-                      <MenuItem value={option} key={"count" + option}>
+                    {plot_count_options.map((option) => (
+                      <MenuItem value={option} key={`count${option}`}>
                         {option}
                       </MenuItem>
                     ))}
@@ -468,60 +456,10 @@ const CreatePlot = () => {
                 </FormControl>
               </Grid>
             </Grid>
-            <Grid container spacing={2}>
-            <Grid item xs={4}>
-              <FormControl
-                fullWidth
-                variant="outlined"
-                className={classes.formControl}
-              >
-                <InputLabel>Number of threads</InputLabel>
-                <Input
-                value={numThreads}
-                onChange={handleSetNumThreads}
-                label="Colour"
-                type="number"
-              />
-              </FormControl>
-            </Grid>
-            <Grid item xs={4}>
-              <FormControl
-                fullWidth
-                variant="outlined"
-                className={classes.formControl}
-              >
-                <InputLabel>Number of buckets</InputLabel>
-                <Input
-                  value={numBuckets}
-                  onChange={handleSetNumBuckets}
-                  label="Colour"
-                  type="number"
-                />
-              <FormHelperText id="standard-weight-helper-text">
-              0 automatically chooses bucket count
-              </FormHelperText>
-              </FormControl>
-            </Grid>
-            <Grid item xs={4}>
-              <FormControl
-                fullWidth
-                variant="outlined"
-                className={classes.formControl}
-              >
-                <InputLabel>Stripe Size</InputLabel>
-                <Input
-                  value={stripeSize}
-                  onChange={handleSetStripeSize}
-                  label="Colour"
-                  type="number"
-                />
-              </FormControl>
-            </Grid>
-          </Grid>
           </div>
         </Grid>
-        <WorkLocation></WorkLocation>
-        <FinalLocation></FinalLocation>
+        <WorkLocation />
+        <FinalLocation />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Grid container spacing={2}>
@@ -544,7 +482,7 @@ const CreatePlot = () => {
 };
 
 const Proggress = () => {
-  const progress = useSelector(state => state.plot_control.progress);
+  const progress = useSelector((state) => state.plot_control.progress);
   const classes = useStyles();
   const dispatch = useDispatch();
   function clearLog() {
@@ -554,7 +492,7 @@ const Proggress = () => {
     dispatch(stopService(service_plotter));
   }
   const plotting_stopped = useSelector(
-    state => state.plot_control.plotting_stopped
+    (state) => state.plot_control.plotting_stopped,
   );
   return (
     <div>
@@ -570,7 +508,7 @@ const Proggress = () => {
           </Box>
         </div>
         <div className={classes.cardSubSection}>
-          {plotting_stopped ? <p>Plotting stopped succesfully.</p> : ""}
+          {plotting_stopped ? <p>Plotting stopped succesfully.</p> : ''}
           <Grid container spacing={2}>
             <Grid item xs={12}>
               {!plotting_stopped ? (
@@ -583,7 +521,7 @@ const Proggress = () => {
                   Cancel
                 </Button>
               ) : (
-                ""
+                ''
               )}
               <Button
                 onClick={clearLog}
@@ -603,15 +541,15 @@ const Proggress = () => {
 
 const Plotter = () => {
   const in_progress = useSelector(
-    state => state.plot_control.plotting_in_proggress
+    (state) => state.plot_control.plotting_in_proggress,
   );
   const plotting_stopped = useSelector(
-    state => state.plot_control.plotting_stopped
+    (state) => state.plot_control.plotting_stopped,
   );
   return (
     <div>
-      <CreatePlot></CreatePlot>
-      {in_progress || plotting_stopped ? <Proggress></Proggress> : <div></div>}
+      <CreatePlot />
+      {in_progress || plotting_stopped ? <Proggress /> : <div />}
     </div>
   );
 };

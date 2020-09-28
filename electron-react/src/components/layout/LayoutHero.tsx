@@ -8,7 +8,7 @@ const StyledWrapper = styled(Box)`
 `;
 
 type Props = {
-  children: ReactNode,
+  children: ReactNode;
 };
 
 export default function LayoutHero(props: Props) {

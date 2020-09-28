@@ -1,4 +1,3 @@
-type Program = {
-};
+type Program = {};
 
 export default Program;

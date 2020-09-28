@@ -9,7 +9,7 @@ const StyledTypography = styled(Typography)`
 `;
 
 type Props = {
-  children: ReactNode,
+  children: ReactNode;
 };
 
 export default function LoadingScreen(props: Props) {
@@ -17,9 +17,7 @@ export default function LoadingScreen(props: Props) {
 
   return (
     <LayoutHero>
-      <StyledTypography variant="h6">
-        {children}
-      </StyledTypography>
+      <StyledTypography variant="h6">{children}</StyledTypography>
       <Loading />
     </LayoutHero>
   );
