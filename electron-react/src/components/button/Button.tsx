@@ -1,7 +1,7 @@
-import React from "react";
+import React from 'react';
 import styled from 'styled-components';
 import { darken } from 'polished';
-import { Button as BaseButton, ButtonProps } from "@material-ui/core";
+import { Button as BaseButton, ButtonProps } from '@material-ui/core';
 
 const DangerButton = styled(BaseButton)`
   color: ${({ theme }) => theme.palette.danger.contrastText};
@@ -14,7 +14,7 @@ const DangerButton = styled(BaseButton)`
 `;
 
 type Props = Omit<ButtonProps, 'color'> & {
-  color?: 'primary' | 'danger' | 'secondary',
+  color?: 'primary' | 'danger' | 'secondary';
 };
 
 export default function Button(props: Props) {
@@ -24,16 +24,10 @@ export default function Button(props: Props) {
     case 'danger':
       return <DangerButton {...rest} />;
     case 'primary':
-      return (
-        <BaseButton color="primary" {...rest} />
-      );
+      return <BaseButton color="primary" {...rest} />;
     case 'secondary':
-      return (
-        <BaseButton color="secondary" {...rest} />
-      );
+      return <BaseButton color="secondary" {...rest} />;
     default:
-      return (
-        <BaseButton {...rest} />
-      );
+      return <BaseButton {...rest} />;
   }
 }

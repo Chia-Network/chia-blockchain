@@ -1,111 +1,131 @@
-import React, { useState } from "react";
-import { Box, Grid, Container, Drawer, List, Divider, ListItem, ListItemText, Typography } from "@material-ui/core";
-import { makeStyles } from "@material-ui/core/styles";
-import { Redirect, Route, Switch, useRouteMatch, useHistory } from "react-router";
-import { useDispatch, useSelector } from "react-redux";
-import clsx from "clsx";
+import React, { useState } from 'react';
+import {
+  Box,
+  Grid,
+  Container,
+  Drawer,
+  List,
+  Divider,
+  ListItem,
+  ListItemText,
+  Typography,
+} from '@material-ui/core';
+import { makeStyles } from '@material-ui/core/styles';
+import {
+  Redirect,
+  Route,
+  Switch,
+  useRouteMatch,
+  useHistory,
+} from 'react-router';
+import { useDispatch, useSelector } from 'react-redux';
+import clsx from 'clsx';
 import Flex from '../flex/Flex';
 import DashboardTitle from '../dashboard/DashboardTitle';
-import StandardWallet from "./standard/WalletStandard";
+import StandardWallet from './standard/WalletStandard';
 import {
   changeWalletMenu,
   createWallet,
   standardWallet,
   CCWallet,
-  RLWallet
-} from "../../modules/walletMenu";
-import { CreateWalletView } from "./create/WalletCreate";
-import ColouredWallet from "./coloured/WalletColoured";
-import RateLimitedWallet from "./rateLimited/WalletRateLimited";
-import type { RootState } from "../../modules/rootReducer";
+  RLWallet,
+} from '../../modules/walletMenu';
+import { CreateWalletView } from './create/WalletCreate';
+import ColouredWallet from './coloured/WalletColoured';
+import RateLimitedWallet from './rateLimited/WalletRateLimited';
+import type { RootState } from '../../modules/rootReducer';
 import WalletType from '../../types/WalletType';
 
 const drawerWidth = 180;
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   menuButton: {
-    marginRight: 36
+    marginRight: 36,
   },
   menuButtonHidden: {
-    display: "none"
+    display: 'none',
   },
   title: {
-    flexGrow: 1
+    flexGrow: 1,
   },
   drawerPaper: {
-    position: "relative",
-    whiteSpace: "nowrap",
+    position: 'relative',
+    whiteSpace: 'nowrap',
     width: drawerWidth,
-    transition: theme.transitions.create("width", {
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   drawerPaperClose: {
-    overflowX: "hidden",
-    transition: theme.transitions.create("width", {
+    overflowX: 'hidden',
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
+      duration: theme.transitions.duration.leavingScreen,
     }),
     width: theme.spacing(7),
-    [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9)
-    }
+    [theme.breakpoints.up('sm')]: {
+      width: theme.spacing(9),
+    },
   },
   paper: {
     padding: theme.spacing(0),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column"
+    display: 'flex',
+    overflow: 'auto',
+    flexDirection: 'column',
   },
   fixedHeight: {
-    height: 240
+    height: 240,
   },
   drawerWallet: {
-    position: "relative",
-    whiteSpace: "nowrap",
+    position: 'relative',
+    whiteSpace: 'nowrap',
     width: drawerWidth,
-    height: "100%",
-    transition: theme.transitions.create("width", {
+    height: '100%',
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   balancePaper: {
     height: 200,
-    marginTop: theme.spacing(2)
+    marginTop: theme.spacing(2),
   },
   bottomOptions: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
-    width: "100%"
-  }
+    width: '100%',
+  },
 }));
 
 const WalletItem = (props: any) => {
   const dispatch = useDispatch();
   const id = props.wallet_id;
 
-  const wallet = useSelector((state: RootState) => state.wallet_state.wallets[id]);
-  var name = useSelector((state: RootState) => state.wallet_state.wallets[id].name);
+  const wallet = useSelector(
+    (state: RootState) => state.wallet_state.wallets[id],
+  );
+  let name = useSelector(
+    (state: RootState) => state.wallet_state.wallets[id].name,
+  );
   if (!name) {
-    name = "";
+    name = '';
   }
-  var mainLabel = "";
+  let mainLabel = '';
   if (wallet.type === WalletType.STANDARD_WALLET) {
-    mainLabel = "Chia Wallet";
-    name = "Chia";
+    mainLabel = 'Chia Wallet';
+    name = 'Chia';
   } else if (wallet.type === WalletType.COLOURED_COIN) {
-    mainLabel = "CC Wallet";
+    mainLabel = 'CC Wallet';
     if (name.length > 18) {
       name = name.substring(0, 18);
-      name = name.concat("...");
+      name = name.concat('...');
     }
   } else if (wallet.type === WalletType.RATE_LIMITED) {
-    mainLabel = "RL Wallet";
+    mainLabel = 'RL Wallet';
     if (name.length > 18) {
       name = name.substring(0, 18);
-      name = name.concat("...");
+      name = name.concat('...');
     }
   }
 
@@ -131,7 +151,7 @@ const CreateWallet = () => {
   const classes = useStyles();
 
   function presentCreateWallet() {
-    history.push('/dashboard/wallets/create')
+    history.push('/dashboard/wallets/create');
   }
 
   return (
@@ -146,10 +166,14 @@ const CreateWallet = () => {
 };
 
 export const StatusCard = () => {
-  const syncing = useSelector((state: RootState) => state.wallet_state.status.syncing);
-  const height = useSelector((state: RootState) => state.wallet_state.status.height);
+  const syncing = useSelector(
+    (state: RootState) => state.wallet_state.status.syncing,
+  );
+  const height = useSelector(
+    (state: RootState) => state.wallet_state.status.height,
+  );
   const connection_count = useSelector(
-    (state: RootState) => state.wallet_state.status.connection_count
+    (state: RootState) => state.wallet_state.status.connection_count,
   );
 
   return (
@@ -160,7 +184,7 @@ export const StatusCard = () => {
       <div style={{ marginLeft: 8 }}>
         <Box display="flex">
           <Box flexGrow={1}>status:</Box>
-          <Box>{syncing ? "syncing" : "synced"}</Box>
+          <Box>{syncing ? 'syncing' : 'synced'}</Box>
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>height:</Box>
@@ -184,13 +208,11 @@ export default function Wallets() {
 
   return (
     <>
-      <DashboardTitle>
-        Wallets
-      </DashboardTitle>
+      <DashboardTitle>Wallets</DashboardTitle>
       <Drawer
         variant="permanent"
         classes={{
-          paper: clsx(classes.drawerPaper, !open && classes.drawerPaperClose)
+          paper: clsx(classes.drawerPaper, !open && classes.drawerPaperClose),
         }}
         open={open}
       >
@@ -200,7 +222,7 @@ export default function Wallets() {
         <List disablePadding>
           {wallets.map((wallet) => (
             <span key={wallet.id}>
-              <WalletItem wallet_id={wallet.id} key={wallet.id}></WalletItem>
+              <WalletItem wallet_id={wallet.id} key={wallet.id} />
               <Divider />
             </span>
           ))}

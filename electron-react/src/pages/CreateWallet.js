@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   makeStyles,
   Typography,
@@ -6,12 +6,15 @@ import {
   Grid,
   List,
   Button,
-  Box
-} from "@material-ui/core";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemIcon from "@material-ui/core/ListItemIcon";
-import ListItemText from "@material-ui/core/ListItemText";
+  Box,
+} from '@material-ui/core';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemIcon from '@material-ui/core/ListItemIcon';
+import ListItemText from '@material-ui/core/ListItemText';
 
+import { useDispatch, useSelector } from 'react-redux';
+import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
+import InvertColorsIcon from '@material-ui/icons/InvertColors';
 import {
   changeCreateWallet,
   ALL_OPTIONS,
@@ -20,62 +23,59 @@ import {
   CREATE_NEW_CC,
   CREATE_RL_WALLET_OPTIONS,
   CREATE_RL_ADMIN,
-  CREATE_RL_USER
-} from "../modules/createWallet";
-import { useDispatch, useSelector } from "react-redux";
-import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
-import { CreateNewCCWallet } from "./createNewColouredCoin";
-import { CreateExistingCCWallet } from "./createExistingColouredCoin";
-import { CreateRLAdminWallet } from "./createRLAdmin";
-import { CreateRLUserWallet } from "./createRLUser";
-import InvertColorsIcon from "@material-ui/icons/InvertColors";
+  CREATE_RL_USER,
+} from '../modules/createWallet';
+import { CreateNewCCWallet } from './createNewColouredCoin';
+import { CreateExistingCCWallet } from './createExistingColouredCoin';
+import { CreateRLAdminWallet } from './createRLAdmin';
+import { CreateRLUserWallet } from './createRLUser';
 
-export const useStyles = makeStyles(theme => ({
+export const useStyles = makeStyles((theme) => ({
   walletContainer: {
-    marginBottom: theme.spacing(5)
+    marginBottom: theme.spacing(5),
   },
   root: {
-    display: "flex",
-    paddingLeft: "0px",
-    color: "#000000"
+    display: 'flex',
+    paddingLeft: '0px',
+    color: '#000000',
   },
   appBarSpacer: theme.mixins.toolbar,
   content: {
     flexGrow: 1,
-    height: "100vh",
-    overflow: "auto"
+    height: '100vh',
+    overflow: 'auto',
   },
   container: {
     paddingTop: theme.spacing(0),
     paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0)
+    paddingRight: theme.spacing(0),
   },
   paper: {
     marginTop: theme.spacing(2),
     padding: theme.spacing(2),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column",
-    minWidth: "100%"
+    display: 'flex',
+    overflow: 'auto',
+    flexDirection: 'column',
+    minWidth: '100%',
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   title: {
-    paddingTop: 6
+    paddingTop: 6,
   },
   sendButton: {
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
     width: 150,
-    height: 50
+    height: 50,
   },
   backdrop: {
     zIndex: 3000,
-    color: "#fff"
-  }
+    color: '#fff',
+  },
 }));
 
 export const MainWalletList = () => {
@@ -226,22 +226,28 @@ export const RLListItems = () => {
 };
 
 const CreateViewSwitch = () => {
-  const view = useSelector(state => state.create_options.view);
+  const view = useSelector((state) => state.create_options.view);
 
   if (view === ALL_OPTIONS) {
-    return <MainWalletList></MainWalletList>;
-  } else if (view === CREATE_CC_WALLET_OPTIONS) {
-    return <CCListItems></CCListItems>;
-  } else if (view === CREATE_NEW_CC) {
-    return <CreateNewCCWallet></CreateNewCCWallet>;
-  } else if (view === CREATE_EXISTING_CC) {
-    return <CreateExistingCCWallet></CreateExistingCCWallet>;
-  } else if (view === CREATE_RL_WALLET_OPTIONS) {
-    return <RLListItems></RLListItems>;
-  } else if (view === CREATE_RL_ADMIN) {
-    return <CreateRLAdminWallet></CreateRLAdminWallet>;
-  } else if (view === CREATE_RL_USER) {
-    return <CreateRLUserWallet></CreateRLUserWallet>;
+    return <MainWalletList />;
+  }
+  if (view === CREATE_CC_WALLET_OPTIONS) {
+    return <CCListItems />;
+  }
+  if (view === CREATE_NEW_CC) {
+    return <CreateNewCCWallet />;
+  }
+  if (view === CREATE_EXISTING_CC) {
+    return <CreateExistingCCWallet />;
+  }
+  if (view === CREATE_RL_WALLET_OPTIONS) {
+    return <RLListItems />;
+  }
+  if (view === CREATE_RL_ADMIN) {
+    return <CreateRLAdminWallet />;
+  }
+  if (view === CREATE_RL_USER) {
+    return <CreateRLUserWallet />;
   }
 };
 
@@ -251,7 +257,7 @@ export const CreateWalletView = () => {
   return (
     <Grid className={classes.walletContainer} item xs={12}>
       <Paper className={classes.paper}>
-        <CreateViewSwitch></CreateViewSwitch>
+        <CreateViewSwitch />
       </Paper>
     </Grid>
   );

@@ -1,16 +1,16 @@
-import React, { useState } from "react";
-import { Typography, Container, Button, Grid } from "@material-ui/core";
-import { ArrowBackIos as ArrowBackIosIcon } from "@material-ui/icons";
-import { useSelector, useDispatch } from "react-redux";
-import { useHistory } from "react-router";
-import TextField from "../form/TextField";
+import React, { useState } from 'react';
+import { Typography, Container, Button, Grid } from '@material-ui/core';
+import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
+import { useSelector, useDispatch } from 'react-redux';
+import { useHistory } from 'react-router';
+import TextField from '../form/TextField';
 import Brand from '../brand/Brand';
 import Flex from '../flex/Flex';
 import Link from '../router/Link';
-import LayoutHero from "../layout/LayoutHero";
-import { mnemonic_word_added, resetMnemonic } from "../../modules/mnemonic";
-import { unselectFingerprint } from "../../modules/message";
-import type { RootState } from "../../modules/rootReducer";
+import LayoutHero from '../layout/LayoutHero';
+import { mnemonic_word_added, resetMnemonic } from '../../modules/mnemonic';
+import { unselectFingerprint } from '../../modules/message';
+import type { RootState } from '../../modules/rootReducer';
 
 function MnemonicField(props: any) {
   return (
@@ -41,15 +41,17 @@ function Iterator(props: any) {
     (state: RootState) => state.mnemonic_state.incorrect_word,
   );
 
-  function handleTextFieldChange(e: InputEvent & { target: { id: number, value: string }}) {
+  function handleTextFieldChange(
+    e: InputEvent & { target: { id: number; value: string } },
+  ) {
     if (!e.target) {
       return;
     }
 
-    var id = e.target.id + "";
-    var clean_id = id.replace("id_", "");
-    var int_val = parseInt(clean_id) - 1;
-    var data = { 
+    const id = `${e.target.id}`;
+    const clean_id = id.replace('id_', '');
+    const int_val = parseInt(clean_id) - 1;
+    const data = {
       word: e.target.value,
       id: int_val,
     };
@@ -63,28 +65,26 @@ function Iterator(props: any) {
         onChange={handleTextFieldChange}
         key={i}
         error={
-          (props.submitted && mnemonic_state.mnemonic_input[i] === "") ||
+          (props.submitted && mnemonic_state.mnemonic_input[i] === '') ||
           mnemonic_state.mnemonic_input[i] === incorrect_word
         }
         value={mnemonic_state.mnemonic_input[i]}
         autofocus={focus}
-        id={"id_" + (i + 1)}
+        id={`id_${i + 1}`}
         index={i + 1}
-      />
+      />,
     );
   }
-  return (
-    <>
-      {indents}
-    </>
-  );
+  return <>{indents}</>;
 }
 
 export default function WalletImport() {
   const dispatch = useDispatch();
-  const history = useHistory()
+  const history = useHistory();
   const [submitted, setSubmitted] = useState<boolean>(false);
-  const mnemonic = useSelector((state: RootState) => state.mnemonic_state.mnemonic_input);
+  const mnemonic = useSelector(
+    (state: RootState) => state.mnemonic_state.mnemonic_input,
+  );
 
   function handleBack() {
     dispatch(resetMnemonic());
@@ -94,8 +94,8 @@ export default function WalletImport() {
 
   function handleSubmit() {
     setSubmitted(true);
-    for (var i = 0; i < mnemonic.length; i++) {
-      if (mnemonic[i] === "") {
+    for (let i = 0; i < mnemonic.length; i++) {
+      if (mnemonic[i] === '') {
         return;
       }
     }
@@ -106,7 +106,11 @@ export default function WalletImport() {
   return (
     <LayoutHero>
       <Container maxWidth="xl">
-        <ArrowBackIosIcon onClick={handleBack} fontSize="large" color="secondary" />
+        <ArrowBackIosIcon
+          onClick={handleBack}
+          fontSize="large"
+          color="secondary"
+        />
       </Container>
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">

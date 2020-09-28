@@ -1,26 +1,26 @@
-export const CREATE_CC_WALLET_OPTIONS = "CREATE_CC_WALLET_OPTIONS";
-export const CREATE_NEW_CC = "CREATE_NEW_CC";
-export const CREATE_EXISTING_CC = "CREATE_EXISTING_CC";
-export const CREATE_RL_WALLET_OPTIONS = "CREATE_RL_WALLET_OPTIONS";
-export const CREATE_RL_ADMIN = "CREATE_RL_ADMIN";
-export const CREATE_RL_USER = "CREATE_RL_USER";
-export const ALL_OPTIONS = "ALL_OPTIONS";
+export const CREATE_CC_WALLET_OPTIONS = 'CREATE_CC_WALLET_OPTIONS';
+export const CREATE_NEW_CC = 'CREATE_NEW_CC';
+export const CREATE_EXISTING_CC = 'CREATE_EXISTING_CC';
+export const CREATE_RL_WALLET_OPTIONS = 'CREATE_RL_WALLET_OPTIONS';
+export const CREATE_RL_ADMIN = 'CREATE_RL_ADMIN';
+export const CREATE_RL_USER = 'CREATE_RL_USER';
+export const ALL_OPTIONS = 'ALL_OPTIONS';
 
 export const changeCreateWallet = (item: string) => ({
-  type: "CREATE_OPTIONS",
+  type: 'CREATE_OPTIONS',
   item,
 });
 
 export const createState = (created: boolean, pending: boolean) => ({
-  type: "CREATE_STATE",
+  type: 'CREATE_STATE',
   created,
   pending,
 });
 
 type CreateWalletState = {
-  view: string,
-  created: boolean,
-  pending: boolean,
+  view: string;
+  created: boolean;
+  pending: boolean;
 };
 
 const initialState: CreateWalletState = {
@@ -29,18 +29,21 @@ const initialState: CreateWalletState = {
   pending: false,
 };
 
-export default function createWalletReducer(state: CreateWalletState = { ...initialState }, action: any): CreateWalletState {
+export default function createWalletReducer(
+  state: CreateWalletState = { ...initialState },
+  action: any,
+): CreateWalletState {
   switch (action.type) {
-    case "LOG_OUT":
+    case 'LOG_OUT':
       return { ...initialState };
-    case "CREATE_OPTIONS":
-      var item = action.item;
+    case 'CREATE_OPTIONS':
+      var { item } = action;
       return { ...state, view: item };
-    case "CREATE_STATE":
-      return { 
-        ...state, 
-        created: action.created, 
-        pending: action.pending, 
+    case 'CREATE_STATE':
+      return {
+        ...state,
+        created: action.created,
+        pending: action.pending,
       };
     default:
       return state;

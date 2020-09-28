@@ -1,109 +1,110 @@
-import React from "react";
-import CssBaseline from "@material-ui/core/CssBaseline";
-import List from "@material-ui/core/List";
-import ListItem from "@material-ui/core/ListItem";
-import ListItemText from "@material-ui/core/ListItemText";
-import { Tooltip } from "@material-ui/core";
-import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
-import DeleteIcon from "@material-ui/icons/Delete";
-import IconButton from "@material-ui/core/IconButton";
-import { makeStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
-import { withRouter } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
+import React from 'react';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
+import ListItemText from '@material-ui/core/ListItemText';
+import { Tooltip } from '@material-ui/core';
+import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
+import DeleteIcon from '@material-ui/icons/Delete';
+import IconButton from '@material-ui/core/IconButton';
+import { makeStyles } from '@material-ui/core/styles';
+import Container from '@material-ui/core/Container';
+import { withRouter } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
+import Link from '@material-ui/core/Link';
+import Button from '@material-ui/core/Button';
+import VisibilityIcon from '@material-ui/icons/Visibility';
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogContentText from '@material-ui/core/DialogContentText';
+import DialogTitle from '@material-ui/core/DialogTitle';
 import {
+  delete_all_keys,
   login_action,
   delete_key,
   get_private_key,
-  selectFingerprint
-} from "../modules/message";
-import Link from "@material-ui/core/Link";
-import Button from "@material-ui/core/Button";
-import VisibilityIcon from "@material-ui/icons/Visibility";
-import { delete_all_keys } from "../modules/message";
-import Dialog from "@material-ui/core/Dialog";
-import DialogActions from "@material-ui/core/DialogActions";
-import DialogContent from "@material-ui/core/DialogContent";
-import DialogContentText from "@material-ui/core/DialogContentText";
-import DialogTitle from "@material-ui/core/DialogTitle";
+  selectFingerprint,
+} from '../modules/message';
+
+import logo from '../assets/img/chia_logo.svg'; // Tell webpack this JS file uses this image
 import {
   changeEntranceMenu,
   presentOldWallet,
-  presentNewWallet
-} from "../modules/entranceMenu";
-import { resetMnemonic } from "../modules/mnemonic_input";
+  presentNewWallet,
+} from '../modules/entranceMenu';
+import { resetMnemonic } from '../modules/mnemonic_input';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   root: {
-    background: "linear-gradient(45deg, #181818 30%, #333333 90%)",
-    height: "100%"
+    background: 'linear-gradient(45deg, #181818 30%, #333333 90%)',
+    height: '100%',
   },
   paper: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    height: "100%"
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    height: '100%',
   },
   centeredSpan: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center"
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
   },
   textField: {
-    borderColor: "#ffffff"
+    borderColor: '#ffffff',
   },
   topButton: {
     width: 400,
     height: 45,
     marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   bottomButton: {
     width: 400,
     height: 45,
     marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   bottomButtonRed: {
     width: 400,
     height: 45,
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(1),
-    color: "red"
+    color: 'red',
   },
   logo: {
     marginTop: theme.spacing(8),
-    marginBottom: theme.spacing(3)
+    marginBottom: theme.spacing(3),
   },
   main: {
-    height: "100%"
+    height: '100%',
   },
   whiteText: {
-    color: "white"
+    color: 'white',
   },
   whiteP: {
-    color: "white",
-    fontSize: "18px"
+    color: 'white',
+    fontSize: '18px',
   },
   demo: {
-    backgroundColor: theme.palette.background.paper
+    backgroundColor: theme.palette.background.paper,
   },
   rightPadding: {
-    paddingRight: theme.spacing(3)
-  }
+    paddingRight: theme.spacing(3),
+  },
 }));
 
 const SelectKey = () => {
   const dispatch = useDispatch();
   const classes = useStyles();
   const public_key_fingerprints = useSelector(
-    state => state.wallet_state.public_key_fingerprints
+    (state) => state.wallet_state.public_key_fingerprints,
   );
 
   const [open, setOpen] = React.useState(false);
 
-  const handleClick = fingerprint => {
+  const handleClick = (fingerprint) => {
     return () => {
       dispatch(resetMnemonic());
       dispatch(selectFingerprint(fingerprint));
@@ -124,11 +125,11 @@ const SelectKey = () => {
     dispatch(delete_all_keys());
   };
 
-  const showKey = fingerprint => {
+  const showKey = (fingerprint) => {
     return () => dispatch(get_private_key(fingerprint));
   };
 
-  const handleDelete = fingerprint => {
+  const handleDelete = (fingerprint) => {
     return () => dispatch(delete_key(fingerprint));
   };
 
@@ -140,7 +141,7 @@ const SelectKey = () => {
     dispatch(changeEntranceMenu(presentNewWallet));
   };
 
-  const list_items = public_key_fingerprints.map(fingerprint => {
+  const list_items = public_key_fingerprints.map((fingerprint) => {
     return (
       <ListItem
         button
@@ -149,10 +150,8 @@ const SelectKey = () => {
       >
         <ListItemText
           className={classes.rightPadding}
-          primary={
-            "Private key with public fingerprint " + fingerprint.toString()
-          }
-          secondary={"Can be backed up to mnemonic seed"}
+          primary={`Private key with public fingerprint ${fingerprint.toString()}`}
+          secondary="Can be backed up to mnemonic seed"
         />
         <ListItemSecondaryAction>
           <Tooltip title="See private key">
@@ -239,7 +238,7 @@ const SelectKey = () => {
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
       >
-        <DialogTitle id="alert-dialog-title">{"Delete all keys"}</DialogTitle>
+        <DialogTitle id="alert-dialog-title">Delete all keys</DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
             Deleting all keys will permanatly remove the keys from your

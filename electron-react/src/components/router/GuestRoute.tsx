@@ -1,19 +1,17 @@
 import React from 'react';
-import { useSelector } from "react-redux";
+import { useSelector } from 'react-redux';
 import { Route, Redirect, RouteProps } from 'react-router-dom';
-import type { RootState } from "../../modules/rootReducer";
+import type { RootState } from '../../modules/rootReducer';
 
 type Props = RouteProps;
 
 export default function GuestRoute(props: Props) {
-  const loggedIn = useSelector((state: RootState) => state.wallet_state.logged_in);
+  const loggedIn = useSelector(
+    (state: RootState) => state.wallet_state.logged_in,
+  );
   if (loggedIn) {
-    return (
-      <Redirect to="/dashboard" />
-    );
+    return <Redirect to="/dashboard" />;
   }
 
-  return (
-    <Route {...props} />
-  );
+  return <Route {...props} />;
 }

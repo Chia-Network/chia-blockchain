@@ -10,7 +10,5 @@ const useStyles = makeStyles((theme: Theme) =>
 export default function ToolbarSpacing() {
   const classes = useStyles();
 
-  return (
-    <div className={classes.toolbar} />
-  );
+  return <div className={classes.toolbar} />;
 }

@@ -1,53 +1,53 @@
-import { service_wallet } from "../util/service_names";
+import { service_wallet } from '../util/service_names';
 
-export const addTrade = (trade: any) => ({ type: "TRADE_ADDED", trade });
-export const resetTrades = () => ({ type: "RESET_TRADE" });
-export const presentTrade = (trade: any) => ({ type: "PRESENT_TRADES", trade });
-export const presetOverview = () => ({ type: "PRESENT_OVERVIEW" });
+export const addTrade = (trade: any) => ({ type: 'TRADE_ADDED', trade });
+export const resetTrades = () => ({ type: 'RESET_TRADE' });
+export const presentTrade = (trade: any) => ({ type: 'PRESENT_TRADES', trade });
+export const presetOverview = () => ({ type: 'PRESENT_OVERVIEW' });
 
 export const newBuy = (amount: number, id: number) => ({
   amount,
   wallet_id: id,
-  side: "buy"
+  side: 'buy',
 });
 
 export const newSell = (amount: number, id: number) => ({
   amount,
   wallet_id: id,
-  side: "sell"
+  side: 'sell',
 });
 
 export const offerParsed = (offer: any) => ({
-  type: "OFFER_PARSING",
+  type: 'OFFER_PARSING',
   status: parsingStateParsed,
   offer,
 });
 export const offerParsingName = (name: string, path: string) => ({
-  type: "OFFER_NAME",
+  type: 'OFFER_NAME',
   name,
   path,
 });
 export const parsingStarted = () => ({
-  type: "OFFER_PARSING",
-  status: parsingStatePending
+  type: 'OFFER_PARSING',
+  status: parsingStatePending,
 });
 
-export const parsingStateNone = "NONE";
-export const parsingStatePending = "PENDING";
-export const parsingStateParsed = "PARSED";
-export const parsingStateReset = "RESET";
+export const parsingStateNone = 'NONE';
+export const parsingStatePending = 'PENDING';
+export const parsingStateParsed = 'PARSED';
+export const parsingStateReset = 'RESET';
 
 type TradeState = {
-  trades: any[],
-  show_offer: boolean,
-  parsing_state: 'NONE' | 'PENDING' | 'PARSED' | 'RESET',
-  parsed_offer: any,
-  parsed_offer_name: string,
-  parsed_offer_path: string,
-  pending_trades: Object[],
-  trade_history: Object[],
-  showing_trade: boolean,
-  trade_showed?: boolean | null,
+  trades: any[];
+  show_offer: boolean;
+  parsing_state: 'NONE' | 'PENDING' | 'PARSED' | 'RESET';
+  parsed_offer: any;
+  parsed_offer_name: string;
+  parsed_offer_path: string;
+  pending_trades: Object[];
+  trade_history: Object[];
+  showing_trade: boolean;
+  trade_showed?: boolean | null;
 };
 
 const initialState: TradeState = {
@@ -55,7 +55,7 @@ const initialState: TradeState = {
   show_offer: false,
   parsing_state: parsingStateNone,
   parsed_offer: null,
-  parsed_offer_name: "",
+  parsed_offer_name: '',
   parsed_offer_path: '',
   pending_trades: [],
   trade_history: [],
@@ -63,27 +63,30 @@ const initialState: TradeState = {
   trade_showed: null,
 };
 
-export default function tradeReducer(state = { ...initialState }, action: any): TradeState {
+export default function tradeReducer(
+  state = { ...initialState },
+  action: any,
+): TradeState {
   let trade;
   switch (action.type) {
-    case "INCOMING_MESSAGE":
+    case 'INCOMING_MESSAGE':
       if (action.message.origin !== service_wallet) {
         return state;
       }
 
-      const message = action.message;
-      const data = message.data;
-      const command = message.command;
-      const success = data.success;
+      const { message } = action;
+      const { data } = message;
+      const { command } = message;
+      const { success } = data;
 
-      if (command === "get_all_trades" && success === true) {
+      if (command === 'get_all_trades' && success === true) {
         const all_trades = data.trades;
-        var pending_trades = [];
-        var trade_history = [];
-        for (var i = 0; i < all_trades.length; i++) {
+        const pending_trades = [];
+        const trade_history = [];
+        for (let i = 0; i < all_trades.length; i++) {
           const trade = all_trades[i];
           const my_trade = trade.my_offer;
-          const confirmed_at_index = trade.confirmed_at_index;
+          const { confirmed_at_index } = trade;
           if (my_trade === true && confirmed_at_index === 0) {
             pending_trades.push(trade);
           } else {
@@ -92,57 +95,58 @@ export default function tradeReducer(state = { ...initialState }, action: any): 
         }
         return {
           ...state,
-          trade_history: trade_history,
-          pending_trades: pending_trades
+          trade_history,
+          pending_trades,
         };
       }
       return state;
-    case "LOG_OUT":
+    case 'LOG_OUT':
       return { ...initialState };
-    case "TRADE_ADDED":
+    case 'TRADE_ADDED':
       trade = action.trade;
       const new_trades = [...state.trades];
       new_trades.push(trade);
       return { ...state, trades: new_trades };
-    case "RESET_TRADE":
+    case 'RESET_TRADE':
       return { ...initialState };
-    case "OFFER_PARSING":
-      var status = action.status;
+    case 'OFFER_PARSING':
+      var { status } = action;
       if (status === parsingStateParsed) {
         return {
           ...state,
           parsing_state: status,
           parsed_offer: action.offer,
-          show_offer: true
+          show_offer: true,
         };
-      } else if (status === parsingStateReset) {
+      }
+      if (status === parsingStateReset) {
         return {
           ...state,
           parsing_state: parsingStatePending,
-          show_offer: false
+          show_offer: false,
         };
       }
       return {
         ...state,
-        parsing_state: status
+        parsing_state: status,
       };
-    case "OFFER_NAME":
+    case 'OFFER_NAME':
       return {
         ...state,
         parsed_offer_name: action.name,
         parsed_offer_path: action.path,
       };
-    case "PRESENT_OVERVIEW":
+    case 'PRESENT_OVERVIEW':
       return {
         ...state,
         showing_trade: false,
         trade_showed: null,
       };
-    case "PRESENT_TRADES":
+    case 'PRESENT_TRADES':
       return {
         ...state,
         showing_trade: true,
-        trade_showed: action.trade
+        trade_showed: action.trade,
       };
     default:
       return state;

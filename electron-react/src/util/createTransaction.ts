@@ -28,6 +28,6 @@ export default function createTransaction(
     spend_bundle,
     additions,
     removals,
-    wallet_id
+    wallet_id,
   };
 }

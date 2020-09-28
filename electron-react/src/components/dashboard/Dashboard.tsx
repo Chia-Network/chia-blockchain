@@ -1,8 +1,8 @@
-import React from "react";
+import React from 'react';
 import styled from 'styled-components';
 import { Route, Switch, useRouteMatch } from 'react-router';
-import { AppBar, Toolbar, Drawer, Divider } from "@material-ui/core";
-import Wallets from "../wallet/Wallets";
+import { AppBar, Toolbar, Drawer, Divider } from '@material-ui/core';
+import Wallets from '../wallet/Wallets';
 import FullNode from '../fullNode/FullNode';
 import Plotter from '../plotter/Plotter';
 import Farmer from '../farmer/Farmer';
@@ -11,7 +11,7 @@ import Flex from '../flex/Flex';
 import DashboardSideBar from './DashboardSideBar';
 import { DashboardTitleTarget } from './DashboardTitle';
 import ToolbarSpacing from '../toolbar/ToolbarSpacing';
-import TradeManager from "../trading/TradeManager";
+import TradeManager from '../trading/TradeManager';
 import DarkModeToggle from '../darkMode/DarkModeToggle';
 import LocaleToggle from '../locale/LocaleToggle';
 
@@ -23,7 +23,8 @@ const StyledRoot = styled(Flex)`
 `;
 
 const StyledAppBar = styled(AppBar)`
-  background-color: ${({ theme }) => theme.palette.type === 'dark' ? '#424242' : 'white' } ;
+  background-color: ${({ theme }) =>
+    theme.palette.type === 'dark' ? '#424242' : 'white'};
   box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.2);
   width: ${({ theme }) => `calc(100% - ${theme.drawer.width})`};
   margin-left: ${({ theme }) => theme.drawer.width};
@@ -58,11 +59,7 @@ export default function Dashboard() {
 
   return (
     <StyledRoot>
-      <StyledAppBar
-        position="fixed"
-        color="transparent"
-        elevation={0}
-      >
+      <StyledAppBar position="fixed" color="transparent" elevation={0}>
         <Toolbar>
           <DashboardTitleTarget />
           <Flex flexGrow={1} />
@@ -72,7 +69,7 @@ export default function Dashboard() {
       </StyledAppBar>
       <StyledDrawer variant="permanent">
         <StyledBrandWrapper>
-          <Brand width={2/3}/>
+          <Brand width={2 / 3} />
         </StyledBrandWrapper>
         <Divider />
         <DashboardSideBar />

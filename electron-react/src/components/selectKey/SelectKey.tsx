@@ -1,10 +1,27 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { useSelector, useDispatch } from "react-redux";
-import { useHistory } from "react-router";
-import { Card, Typography, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Tooltip, List, ListItem, ListItemText, IconButton } from "@material-ui/core";
-import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
-import { Delete as DeleteIcon, Visibility as VisibilityIcon } from "@material-ui/icons";
+import { useSelector, useDispatch } from 'react-redux';
+import { useHistory } from 'react-router';
+import {
+  Card,
+  Typography,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Tooltip,
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+} from '@material-ui/core';
+import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
+import {
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon,
+} from '@material-ui/icons';
 import Button from '../button/Button';
 import LayoutHero from '../layout/LayoutHero';
 import Flex from '../flex/Flex';
@@ -15,11 +32,11 @@ import {
   get_private_key,
   selectFingerprint,
   delete_all_keys,
-} from "../../modules/message";
+} from '../../modules/message';
 import Link from '../router/Link';
-import { resetMnemonic } from "../../modules/mnemonic";
-import type { RootState } from "../../modules/rootReducer";
-import type Fingerprint from "../../types/Fingerprint";
+import { resetMnemonic } from '../../modules/mnemonic';
+import type { RootState } from '../../modules/rootReducer';
+import type Fingerprint from '../../types/Fingerprint';
 
 export default function SelectKey() {
   const history = useHistory();
@@ -28,7 +45,8 @@ export default function SelectKey() {
   const publicKeyFingerprints = useSelector(
     (state: RootState) => state.wallet_state.public_key_fingerprints,
   );
-  const hasFingerprints = publicKeyFingerprints && !!publicKeyFingerprints.length;
+  const hasFingerprints =
+    publicKeyFingerprints && !!publicKeyFingerprints.length;
 
   function handleClick(fingerprint: Fingerprint) {
     dispatch(resetMnemonic());
@@ -36,11 +54,11 @@ export default function SelectKey() {
     dispatch(login_action(fingerprint));
 
     history.push('/dashboard');
-  };
+  }
 
   function handleClickOpen() {
     setOpen(true);
-  };
+  }
 
   function handleClose() {
     setOpen(false);
@@ -53,7 +71,7 @@ export default function SelectKey() {
 
   function handleShowKey(fingerprint: Fingerprint) {
     dispatch(get_private_key(fingerprint));
-  };
+  }
 
   function handleDelete(fingerprint: Fingerprint) {
     dispatch(delete_key(fingerprint));
@@ -65,27 +83,38 @@ export default function SelectKey() {
         <Flex flexDirection="column" alignItems="center" gap={3}>
           <Brand />
           {hasFingerprints ? (
-            <Typography variant="h5" component="h1" color="primary" gutterBottom>
-              <Trans id="SelectKey.title">
-                Select Key
-              </Trans>
+            <Typography
+              variant="h5"
+              component="h1"
+              color="primary"
+              gutterBottom
+            >
+              <Trans id="SelectKey.title">Select Key</Trans>
             </Typography>
           ) : (
             <>
-              <Typography variant="h5" component="h1" color="primary" gutterBottom>
-                <Trans id="SelectKey.signInTitle">
-                  Sign In
-                </Trans>
+              <Typography
+                variant="h5"
+                component="h1"
+                color="primary"
+                gutterBottom
+              >
+                <Trans id="SelectKey.signInTitle">Sign In</Trans>
               </Typography>
               <Typography variant="subtitle1">
                 <Trans id="SelectKey.signInDescription">
-                  Welcome to Chia. Please log in with an existing key, or create a
-                  a new key.
+                  Welcome to Chia. Please log in with an existing key, or create
+                  a a new key.
                 </Trans>
               </Typography>
             </>
           )}
-          <Flex flexDirection="column" gap={3} alignItems="stretch" alignSelf="stretch">
+          <Flex
+            flexDirection="column"
+            gap={3}
+            alignItems="stretch"
+            alignSelf="stretch"
+          >
             {hasFingerprints && (
               <Card>
                 <List>
@@ -120,7 +149,7 @@ export default function SelectKey() {
                         </Tooltip>
                       </ListItemSecondaryAction>
                     </ListItem>
-                ))}
+                  ))}
                 </List>
               </Card>
             )}
@@ -165,9 +194,7 @@ export default function SelectKey() {
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
       >
-        <DialogTitle id="alert-dialog-title">
-          Delete all keys
-        </DialogTitle>
+        <DialogTitle id="alert-dialog-title">Delete all keys</DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
             Deleting all keys will permanatly remove the keys from your

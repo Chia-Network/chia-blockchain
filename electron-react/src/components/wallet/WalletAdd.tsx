@@ -1,16 +1,16 @@
-import React from "react";
-import { Typography, Button, Grid, Container } from "@material-ui/core";
-import { ArrowBackIos as ArrowBackIosIcon } from "@material-ui/icons";
-import { useSelector, useDispatch } from "react-redux";
+import React from 'react';
+import { Typography, Button, Grid, Container } from '@material-ui/core';
+import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
+import { useSelector, useDispatch } from 'react-redux';
 import { useEffectOnce } from 'react-use';
-import { genereate_mnemonics, add_new_key_action } from "../../modules/message";
-import TextField from "../form/TextField";
+import { genereate_mnemonics, add_new_key_action } from '../../modules/message';
+import TextField from '../form/TextField';
 import Brand from '../brand/Brand';
 import Flex from '../flex/Flex';
 import Loading from '../loading/Loading';
 import Link from '../router/Link';
-import LayoutHero from "../layout/LayoutHero";
-import type { RootState } from "../../modules/rootReducer";
+import LayoutHero from '../layout/LayoutHero';
+import type { RootState } from '../../modules/rootReducer';
 
 const MnemonicField = (props: any) => {
   return (
@@ -64,7 +64,7 @@ export default function WalletAdd() {
             Write down each word along with the order number next to them.
             (Order is important)
           </Typography>
-          {!!words.length ? (
+          {words.length ? (
             <Grid container spacing={2}>
               {words.map((word: string, index: number) => (
                 <MnemonicField

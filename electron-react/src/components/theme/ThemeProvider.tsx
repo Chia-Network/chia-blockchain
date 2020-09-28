@@ -1,10 +1,13 @@
 import React, { ReactNode } from 'react';
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
-import { ThemeProvider as MaterialThemeProvider, StylesProvider } from "@material-ui/core";
+import {
+  ThemeProvider as MaterialThemeProvider,
+  StylesProvider,
+} from '@material-ui/core';
 
 type Props = {
-  children: ReactNode,
-  theme: Object,
+  children: ReactNode;
+  theme: Object;
 };
 
 export default function ThemeProvider(props: Props) {
@@ -13,9 +16,7 @@ export default function ThemeProvider(props: Props) {
   return (
     <StylesProvider injectFirst>
       <StyledThemeProvider theme={theme}>
-        <MaterialThemeProvider theme={theme}>
-          {children}
-        </MaterialThemeProvider>
+        <MaterialThemeProvider theme={theme}>{children}</MaterialThemeProvider>
       </StyledThemeProvider>
     </StylesProvider>
   );

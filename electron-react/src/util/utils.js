@@ -1,23 +1,19 @@
 /* global BigInt */
 
 export function unix_to_short_date(unix_timestamp) {
-  let d = new Date(unix_timestamp * 1000);
-  return (
-    d.toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric"
-    }) +
-    " " +
-    d.toLocaleTimeString()
-  );
+  const d = new Date(unix_timestamp * 1000);
+  return `${d.toLocaleDateString('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })} ${d.toLocaleTimeString()}`;
 }
 
 export function get_query_variable(variable) {
-  var query = global.location.search.substring(1);
-  var vars = query.split("&");
-  for (var i = 0; i < vars.length; i++) {
-    var pair = vars[i].split("=");
+  const query = global.location.search.substring(1);
+  const vars = query.split('&');
+  for (let i = 0; i < vars.length; i++) {
+    const pair = vars[i].split('=');
     if (decodeURIComponent(pair[0]) === variable) {
       return decodeURIComponent(pair[1]);
     }
@@ -25,8 +21,8 @@ export function get_query_variable(variable) {
 }
 
 export function big_int_to_array(x, num_bytes) {
-  var truncated = BigInt.asUintN(num_bytes * 8, x);
-  var arr = [];
+  let truncated = BigInt.asUintN(num_bytes * 8, x);
+  const arr = [];
   for (let i = 0; i < num_bytes; i++) {
     arr.splice(0, 0, Number(truncated & BigInt(255)));
     truncated >>= BigInt(8);
@@ -35,11 +31,11 @@ export function big_int_to_array(x, num_bytes) {
 }
 
 export function hex_to_array(hexString) {
-  if (hexString.substr(0, 2) === "0x" || hexString.substr(0, 2) === "0X") {
+  if (hexString.substr(0, 2) === '0x' || hexString.substr(0, 2) === '0X') {
     hexString = hexString.slice(2);
   }
-  var arr = [];
-  for (var i = 0; i < hexString.length; i += 2) {
+  const arr = [];
+  for (let i = 0; i < hexString.length; i += 2) {
     arr.push(parseInt(hexString.substr(i, 2), 16));
   }
   return arr;
@@ -48,10 +44,10 @@ export function hex_to_array(hexString) {
 export function arr_to_hex(buffer) {
   // buffer is an ArrayBuffer
   return Array.prototype.map
-    .call(new Uint8Array(buffer), x => ("00" + x.toString(16)).slice(-2))
-    .join("");
+    .call(new Uint8Array(buffer), (x) => `00${x.toString(16)}`.slice(-2))
+    .join('');
 }
 
 export async function sha256(buf) {
-  return await window.crypto.subtle.digest("SHA-256", new Uint8Array(buf));
+  return await window.crypto.subtle.digest('SHA-256', new Uint8Array(buf));
 }

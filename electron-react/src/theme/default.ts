@@ -1,20 +1,20 @@
-import { createMuiTheme } from "@material-ui/core/styles";
+import { createMuiTheme } from '@material-ui/core/styles';
 
 const defaultTheme = createMuiTheme();
 
 export default {
   palette: {
-    primary: { 
-      main: "#5DA962", 
-      contrastText: "#ffffff",
+    primary: {
+      main: '#5DA962',
+      contrastText: '#ffffff',
     },
-    secondary: { 
-      main: "#000000", 
-      contrastText: "#ffffff",
+    secondary: {
+      main: '#000000',
+      contrastText: '#ffffff',
     },
     danger: {
       main: '#dc3545',
-      contrastText: "#ffffff",
+      contrastText: '#ffffff',
     },
   },
   drawer: {
@@ -75,4 +75,4 @@ export default {
   },
   
   */
-}
+};

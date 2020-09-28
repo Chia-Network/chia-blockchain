@@ -1,18 +1,18 @@
-import { combineReducers } from "redux";
-import websocketReducer from "./websocket";
-import incomingReducer from "./incoming";
-import mnemonicReducer from "./mnemonic";
-import walletMenuReducer from "./walletMenu";
-import createWallet from "./createWallet";
-import tradeReducer from "./trade";
-import dialogReducer from "./dialog";
-import daemonReducer from "./daemon";
-import { entranceReducer } from "./entranceMenu";
-import fullNodeReducer from "./fullNode";
-import farmingReducer from "./farming";
-import plotControlReducer from "./plotterControl";
-import progressReducer from "./progress";
-import backupReducer from "./backup";
+import { combineReducers } from 'redux';
+import websocketReducer from './websocket';
+import incomingReducer from './incoming';
+import mnemonicReducer from './mnemonic';
+import walletMenuReducer from './walletMenu';
+import createWallet from './createWallet';
+import tradeReducer from './trade';
+import dialogReducer from './dialog';
+import daemonReducer from './daemon';
+import { entranceReducer } from './entranceMenu';
+import fullNodeReducer from './fullNode';
+import farmingReducer from './farming';
+import plotControlReducer from './plotterControl';
+import progressReducer from './progress';
+import backupReducer from './backup';
 
 const rootReducer = combineReducers({
   daemon_state: daemonReducer,
@@ -28,7 +28,7 @@ const rootReducer = combineReducers({
   farming_state: farmingReducer,
   plot_control: plotControlReducer,
   progress: progressReducer,
-  backup_state: backupReducer
+  backup_state: backupReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;
