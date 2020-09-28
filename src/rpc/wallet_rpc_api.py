@@ -711,5 +711,5 @@ class WalletRpcApi:
         )
         request["wallet_id"] = 1
         request["puzzle_hash"] = puzzle_hash
-        await wallet.rl_add_funds(request["amount"], puzzle_hash)
+        await wallet.rl_add_funds(request["amount"], puzzle_hash, request["fee"])
         return {"status": "SUCCESS"}
