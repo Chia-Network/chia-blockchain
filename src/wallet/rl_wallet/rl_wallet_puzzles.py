@@ -73,9 +73,9 @@ def rl_make_aggregation_solution(myid, wallet_coin_primary_input, wallet_coin_am
     return Program(binutils.assemble(sol))
 
 
-def make_clawback_solution(puzzlehash, amount):
+def make_clawback_solution(puzzlehash, amount, fee):
     opcode_create = hexlify(ConditionOpcode.CREATE_COIN).decode("ascii")
-    solution = f"(3 (0x{opcode_create} 0x{puzzlehash} {amount}))"
+    solution = f"(3 (0x{opcode_create} 0x{puzzlehash} {amount - fee}))"
     return Program(binutils.assemble(solution))
 
 

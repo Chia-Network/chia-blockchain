@@ -172,7 +172,7 @@ class TestRLWallet:
         await time_out_assert(15, check_balance, 90, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 108)
 
-        val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id})
+        val = await api_admin.send_clawback_transaction({"wallet_id": admin_wallet_id, "fee": 11})
         await time_out_assert(
             15, is_transaction_in_mempool, True, api_admin, val["transaction_id"]
         )
@@ -181,4 +181,4 @@ class TestRLWallet:
         await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
         await time_out_assert(15, check_balance, 0, api_admin, user_wallet_id)
         final_balance = await wallet.get_confirmed_balance()
-        assert final_balance == fund_owners_initial_balance - 118
+        assert final_balance == fund_owners_initial_balance - 129
