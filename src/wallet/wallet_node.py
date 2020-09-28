@@ -386,17 +386,22 @@ class WalletNode:
         request: introducer_protocol.RespondPeers,
         peer_info: PeerInfo,
     ) -> OutboundMessageGenerator:
-        """
-        We have received a list of full node peers that we can connect to.
-        """
-        if self.server is None or self.wallet_state_manager is None:
-            return
-        conns = self.global_connections
-        for peer in request.peer_list:
-            conns.peers.add(PeerInfo(peer.host, uint16(peer.port)))
-
-        # Pseudo-message to close the connection
+        if not self._has_full_node():
+            await self.wallet_peers.respond_peers(request, peer_info, False)
+        else:
+            await self.wallet_peers.ensure_is_closed()
         yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
+
+    @api_request
+    async def respond_peers_full_node_with_peer_info(
+        self,
+        request: full_node_protocol.RespondPeers,
+        peer_info: PeerInfo,
+    ):
+        if not self._has_full_node():
+            await self.wallet_peers.respond_peers(request, peer_info, True)
+        else:
+            await self.wallet_peers.ensure_is_closed()
 
     @api_request
     async def respond_peers_full_node(self, request: full_node_protocol.RespondPeers):

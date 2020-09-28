@@ -11,19 +11,6 @@ from src.util.ints import uint16
 from src.server.introducer_peers import IntroducerPeers
 from src.util.errors import Err, ProtocolError
 
-import logging
-import time
-import asyncio
-import socket
-from typing import Any, AsyncGenerator, Callable, List, Optional
-
-from src.server.outbound_message import Message, NodeType, OutboundMessage
-from src.types.peer_info import PeerInfo
-from src.util import cbor
-from src.util.ints import uint16
-from src.server.introducer_peers import IntroducerPeers
-from src.util.errors import Err, ProtocolError
-
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 LENGTH_BYTES: int = 4
 log = logging.getLogger(__name__)
