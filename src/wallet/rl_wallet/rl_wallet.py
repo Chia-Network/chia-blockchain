@@ -761,9 +761,9 @@ class RLWallet:
 
         return puzzle_hash
 
-    async def rl_add_funds(self, amount, puzzle_hash):
+    async def rl_add_funds(self, amount, puzzle_hash, fee):
         spend_bundle = await self.main_wallet.generate_signed_transaction(
-            amount, puzzle_hash, uint64(0)
+            amount, puzzle_hash, fee
         )
         if spend_bundle is None:
             return False

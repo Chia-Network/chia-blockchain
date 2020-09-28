@@ -147,7 +147,7 @@ class TestRLWallet:
         await time_out_assert(15, check_balance, 95, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
         val = await api_admin.add_rate_limited_funds(
-            {"wallet_id": admin_wallet_id, "amount": 100}
+            {"wallet_id": admin_wallet_id, "amount": 100, "fee": 7}
         )
         assert val["status"] == "SUCCESS"
         for i in range(0, 50):
@@ -181,4 +181,4 @@ class TestRLWallet:
         await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
         await time_out_assert(15, check_balance, 0, api_admin, user_wallet_id)
         final_balance = await wallet.get_confirmed_balance()
-        assert final_balance == fund_owners_initial_balance - 111
+        assert final_balance == fund_owners_initial_balance - 118
