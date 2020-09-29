@@ -21,7 +21,7 @@ import {
   presentPlotter
 } from "../modules/mainMenu";
 import FullNode from "./FullNode";
-import Farmer from "./Farmer";
+import Farmer from "./farm/Farm";
 import { TradeManger } from "./trading/TradeManager";
 import { CreateBackup } from "./backup/createBackup";
 

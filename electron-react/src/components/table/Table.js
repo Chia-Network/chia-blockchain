@@ -10,7 +10,9 @@ import TableRow from "@material-ui/core/TableRow";
 import TableCell from "@material-ui/core/TableCell";
 import Paper from "@material-ui/core/Paper";
 
-const StyledTableCell = withStyles(theme => ({
+import Tooltip from "../tooltip";
+
+const StyledTableCell = withStyles((theme) => ({
   head: {
     backgroundColor: theme.palette.grey[200],
     padding: "20px",
@@ -21,7 +23,6 @@ const StyledTableCell = withStyles(theme => ({
     letterSpacing: "0.685741px",
 
     color: "#111111",
-    whiteSpace: "nowrap"
   },
   body: {
     fontWeight: "normal",
@@ -30,29 +31,47 @@ const StyledTableCell = withStyles(theme => ({
     textAlign: "center",
     letterSpacing: "0.575px",
 
-    color: "#66666B"
-  }
+    color: "#66666B",
+
+    whiteSpace: "nowrap",
+  },
+  root: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
 }))(TableCell);
 
-export const SingleRowTableCell = withStyles(theme => ({
+export const SingleRowTableCell = withStyles((theme) => ({
   root: {
     border: "1px solid",
-    borderColor: theme.palette.grey[200]
-  }
+    borderColor: theme.palette.grey[200],
+  },
 }))(StyledTableCell);
 
-export const StyledTableRow = withStyles(theme => ({
+export const StyledTableRow = withStyles((theme) => ({
   root: {
     "&:nth-of-type(even)": {
-      backgroundColor: "#FAFAFA"
-    }
-  }
+      backgroundColor: "#FAFAFA",
+    },
+  },
 }))(TableRow);
 
 const useStyles = makeStyles({
   table: {
-    minWidth: 700
-  }
+    width: "100%",
+    tableLayout: "fixed",
+    overflow: "hidden",
+  },
+  tooltip: {
+    fontFamily: "Avenir Next Condensed, sans-serif",
+    fontWeight: "600",
+    fontSize: "16px",
+  },
+  cellAnnotation: {
+    fontSize: "16px",
+    lineHeight: "19px",
+    whiteSpace: "pre-wrap",
+  },
 });
 
 /**
@@ -74,7 +93,7 @@ function Table(props) {
       <MUITable className={classes.table}>
         <TableHead>
           <TableRow>
-            {header.map(h => (
+            {header.map((h) => (
               <StyledTableCell key={h} align="center">
                 {h}
               </StyledTableCell>
@@ -82,11 +101,36 @@ function Table(props) {
           </TableRow>
         </TableHead>
         <TableBody>
-          {rowData.map(row => (
-            <StyledTableRow>
-              {row.map(entry => (
-                <TableCellComp align="center">{entry}</TableCellComp>
-              ))}
+          {rowData.map((row, rowIdx) => (
+            <StyledTableRow key={rowIdx}>
+              {row.map((entry, cellIdx) => {
+                let cellContent = entry;
+                let cellAnnotation;
+
+                if (typeof entry === "object") {
+                  cellContent = entry.content;
+                  cellAnnotation = entry.annotation;
+                }
+
+                return (
+                  <Tooltip
+                    key={`${rowIdx}_${cellIdx}`}
+                    arrow
+                    placement="bottom"
+                    interactive
+                    title={<div className={classes.tooltip}>{cellContent}</div>}
+                  >
+                    <TableCellComp align="center">
+                      {cellContent}
+                      {cellAnnotation && (
+                        <div className={classes.cellAnnotation}>
+                          {cellAnnotation}
+                        </div>
+                      )}
+                    </TableCellComp>
+                  </Tooltip>
+                );
+              })}
             </StyledTableRow>
           ))}
         </TableBody>
@@ -96,10 +140,12 @@ function Table(props) {
 }
 
 Table.propTypes = {
-  header: PropTypes.arrayOf(PropTypes.string).isRequired,
+  header: PropTypes.arrayOf(
+    PropTypes.oneOfType([PropTypes.string, PropTypes.object])
+  ).isRequired,
   data: PropTypes.arrayOf(
     PropTypes.arrayOf(PropTypes.oneOfType([PropTypes.string, PropTypes.number]))
-  ).isRequired
+  ).isRequired,
 };
 
 export default Table;
