@@ -46,9 +46,7 @@ def make_parser(parser):
     parser.add_argument(
         "-u", "--buckets", help="Number of buckets", type=int, default=0
     )
-    parser.add_argument(
-        "-s", "--stripe_size", help="Stripe size", type=int, default=0
-    )
+    parser.add_argument("-s", "--stripe_size", help="Stripe size", type=int, default=0)
     parser.add_argument(
         "-f",
         "--farmer_public_key",
