@@ -143,6 +143,9 @@ def create_plots(
                 plot_memo,
                 plot_id,
                 args.buffer,
+                args.buckets,
+                args.stripe_size,
+                args.num_threads,
             )
             finished_filenames.append(filename)
         else:
