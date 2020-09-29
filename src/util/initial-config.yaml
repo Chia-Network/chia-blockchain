@@ -208,7 +208,7 @@ wallet:
     port: 8444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v20.db
+  database_path: wallet/db/blockchain_wallet_v21.db
   wallet_peers_path: wallet/db/wallet_peers.db
 
   logging: *logging
