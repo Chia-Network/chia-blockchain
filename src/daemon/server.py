@@ -261,6 +261,9 @@ class WebSocketServer:
         t2 = request["t2"]
         d = request["d"]
         b = request["b"]
+        u = request["u"]
+        r = request["r"]
+        s = request["s"]
 
         command_args: List[str] = []
         command_args += service_name.split(" ")
@@ -270,6 +273,9 @@ class WebSocketServer:
         command_args.append(f"-2={t2}")
         command_args.append(f"-d={d}")
         command_args.append(f"-b={b}")
+        command_args.append(f"-u={u}")
+        command_args.append(f"-r={r}")
+        command_args.append(f"-s={s}")
 
         error = None
         success = False

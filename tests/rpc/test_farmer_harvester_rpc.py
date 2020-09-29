@@ -106,6 +106,9 @@ class TestRpc:
                 ),
                 token_bytes(32),
                 128,
+                0,
+                0,
+                0
             )
 
             res_2 = await client_2.get_plots()
