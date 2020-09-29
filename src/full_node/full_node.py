@@ -109,20 +109,6 @@ class FullNode:
         self.full_node_store = await FullNodeStore.create(self.connection)
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.connection)
-        self.full_node_peers = FullNodePeers(
-            self.server,
-            self.root_path,
-            self.global_connections,
-            self.config["target_peer_count"]
-            - self.config["target_outbound_peer_count"],
-            self.config["target_outbound_peer_count"],
-            self.config["peer_db_path"],
-            self.config["introducer_peer"],
-            self.config["peer_connect_interval"],
-            self.log,
-        )
-        await self.full_node_peers.start()
-
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(
             self.coin_store, self.block_store, self.constants
@@ -134,6 +120,22 @@ class FullNode:
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
         self.state_changed_callback = None
+        try:
+            self.full_node_peers = FullNodePeers(
+                self.server,
+                self.root_path,
+                self.global_connections,
+                self.config["target_peer_count"]
+                - self.config["target_outbound_peer_count"],
+                self.config["target_outbound_peer_count"],
+                self.config["peer_db_path"],
+                self.config["introducer_peer"],
+                self.config["peer_connect_interval"],
+                self.log,
+            )
+            await self.full_node_peers.start()
+        except Exception as e:
+            self.log.error(f"Exception in peer discovery: {e}")
         uncompact_interval = self.config["send_uncompact_interval"]
         if uncompact_interval > 0:
             self.broadcast_uncompact_task = asyncio.create_task(
