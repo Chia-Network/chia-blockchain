@@ -198,13 +198,13 @@ const plot_size_options = [
   { label: "2.7GiB", value: 27, workspace: "9.2GiB" },
   { label: "5.6GiB", value: 28, workspace: "19GiB" },
   { label: "11.5GiB", value: 29, workspace: "38GiB" },
-  { label: "23.8GiB", value: 30, workspace: "77.3GiB" },
-  { label: "49.1GiB", value: 31, workspace: "145GiB" },
-  { label: "101.4GiB", value: 32, workspace: "313GiB" },
-  { label: "208.8GiB", value: 33, workspace: "598GiB" },
+  { label: "23.8GiB", value: 30, workspace: "83GiB" },
+  { label: "49.1GiB", value: 31, workspace: "165GiB" },
+  { label: "101.4GiB", value: 32, workspace: "331GiB" },
+  { label: "208.8GiB", value: 33, workspace: "660GiB" },
   // workspace are guesses using 55.35% - rounded up - past here
-  { label: "429.8GiB", value: 34, workspace: "1266GiB" },
-  { label: "884.1GiB", value: 35, workspace: "2586GiB" }
+  { label: "429.8GiB", value: 34, workspace: "1300GiB" },
+  { label: "884.1GiB", value: 35, workspace: "2600GiB" }
 ];
 
 const WorkLocation = () => {
@@ -331,7 +331,10 @@ const CreatePlot = () => {
   );
   const [plotSize, setPlotSize] = React.useState(25);
   const [plotCount, setPlotCount] = React.useState(1);
-  const [maxRam, setMaxRam] = React.useState(2000);
+  const [maxRam, setMaxRam] = React.useState(3072);
+  const [numThreads, setNumThreads] = React.useState(2);
+  const [numBuckets, setNumBuckets] = React.useState(0);
+  const [stripeSize, setStripeSize] = React.useState(0);
 
   const changePlotSize = event => {
     setPlotSize(event.target.value);
@@ -341,6 +344,15 @@ const CreatePlot = () => {
   };
   const handleSetMaxRam = event => {
     setMaxRam(event.target.value);
+  };
+  const handleSetNumBuckets = event => {
+    setNumBuckets(event.target.value);
+  };
+  const handleSetNumThreads = event => {
+    setNumThreads(event.target.value);
+  };
+  const handleSetStripeSize = event => {
+    setStripeSize(event.target.value);
   };
 
   function create() {
@@ -353,7 +365,7 @@ const CreatePlot = () => {
     if (!t2 || t2 === "") {
       t2 = final_location;
     }
-    dispatch(startPlotting(K, N, work_location, t2, final_location, maxRam));
+    dispatch(startPlotting(K, N, work_location, t2, final_location, maxRam, numBuckets, numThreads, stripeSize));
   }
 
   var plot_count_options = [];
@@ -451,6 +463,59 @@ const CreatePlot = () => {
                 </FormControl>
               </Grid>
             </Grid>
+            <Grid container spacing={2}>
+            <Grid item xs={4}>
+              <FormControl
+                fullWidth
+                variant="outlined"
+                className={classes.formControl}
+              >
+                <InputLabel>Number of threads</InputLabel>
+                <Input
+                value={numThreads}
+                onChange={handleSetNumThreads}
+                label="Colour"
+                type="number"
+              />
+              </FormControl>
+            </Grid>
+            <Grid item xs={4}>
+              <FormControl
+                fullWidth
+                variant="outlined"
+                className={classes.formControl}
+              >
+                <InputLabel>Number of buckets</InputLabel>
+                <Input
+                  value={numBuckets}
+                  onChange={handleSetNumBuckets}
+                  label="Colour"
+                  type="number"
+                />
+              <FormHelperText id="standard-weight-helper-text">
+              0 is default (recommended)
+              </FormHelperText>
+              </FormControl>
+            </Grid>
+            <Grid item xs={4}>
+              <FormControl
+                fullWidth
+                variant="outlined"
+                className={classes.formControl}
+              >
+                <InputLabel>Stripe Size</InputLabel>
+                <Input
+                  value={stripeSize}
+                  onChange={handleSetStripeSize}
+                  label="Colour"
+                  type="number"
+                />
+              <FormHelperText id="standard-weight-helper-text">
+              0 is default (recommended)
+              </FormHelperText>
+              </FormControl>
+            </Grid>
+          </Grid>
           </div>
         </Grid>
         <WorkLocation></WorkLocation>

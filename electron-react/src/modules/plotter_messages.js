@@ -5,7 +5,7 @@ export const plotControl = () => ({
   type: "PLOTTER_CONTROL"
 });
 
-export const startPlotting = (k, n, t, t2, d, b) => {
+export const startPlotting = (k, n, t, t2, d, b, u, r, s) => {
   var action = daemonMessage();
   action.message.command = "start_plotting";
   action.message.data = {
@@ -15,7 +15,10 @@ export const startPlotting = (k, n, t, t2, d, b) => {
     t,
     t2,
     d,
-    b
+    b,
+    u,
+    r,
+    s
   };
   return action;
 };
