@@ -342,7 +342,7 @@ class FullNodePeers(FullNodeDiscovery):
     async def _periodically_self_advertise(self):
         while not self.is_closed:
             try:
-                await asyncio.sleep(300)
+                await asyncio.sleep(24 * 3600)
                 # Clean up known nodes for neighbours every 24 hours.
                 async with self.lock:
                     for neighbour in list(self.neighbour_known_peers.keys()):
