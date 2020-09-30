@@ -260,16 +260,18 @@ class PeerConnections:
             if isinstance(e, ProtocolError) and (
                 e.code == Err.DUPLICATE_CONNECTION or e.code == Err.SELF_CONNECTION
             ):
-                # Updates last try timestamp, but doesn't count it as a failure. 
+                # Updates last try timestamp, but doesn't count it as a failure.
                 message = "mark_attempted_soft"
 
             if self.full_node_peers_callback is not None:
                 self.full_node_peers_callback(
-                    message, connection.get_peer_info(),
+                    message,
+                    connection.get_peer_info(),
                 )
             if self.wallet_callback is not None:
                 self.wallet_callback(
-                    message, connection.get_peer_info(),
+                    message,
+                    connection.get_peer_info(),
                 )
 
     def failed_connection(self, peer_info):
