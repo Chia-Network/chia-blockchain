@@ -100,7 +100,7 @@ class BlockTools:
             args.size = 18
             # Uses many plots for testing, in order to guarantee proofs of space at every height
             args.num = 40
-            args.buffer = 32
+            args.buffer = 100
             args.farmer_public_key = bytes(self.farmer_pk).hex()
             args.pool_public_key = bytes(self.pool_pk).hex()
             args.tmp_dir = temp_dir
@@ -108,6 +108,9 @@ class BlockTools:
             args.final_dir = plot_dir
             args.plotid = None
             args.memo = None
+            args.buckets = 0
+            args.stripe_size = 2000
+            args.num_threads = 0
             test_private_keys = [
                 AugSchemeMPL.key_gen(std_hash(bytes([i]))) for i in range(args.num)
             ]

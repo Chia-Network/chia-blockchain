@@ -13,6 +13,7 @@ for setuptools_scm/PEP 440 reasons.
 - Node peers are now gossiped between nodes with logic to keep connected nodes on disparate internet networks to partially protect from eclipse attacks. This is the second to last step to remove our temporary introducer and migrate to DNS introducers with peer gossip modeled directly off of Bitcoin. This adds a new database of valid peer nodes that will persist across node restarts. This also makes changes to config.yaml's contents.
 - The rate limited wallet library now supports coin aggregation for adding additional funds after the time of creation.
 - Fees are now used in all applicable rate limited wallet calls
+- New parameters for plotting: -r (number of threads) -s (stripe size) -u (number of buckets) in cli and GUI
 
 ### Changed
 - `sh install.sh` was upgraded so that on Ubuntu it will install any needed OS dependencies.
@@ -21,10 +22,16 @@ for setuptools_scm/PEP 440 reasons.
 - The rpc interfaces of all chia services has been refactored, simplified, and had various additional functionality added.
 - Block timestamps are now stored in the wallet database. Both database versions were incremented and databases from previous versions will not work with Beta 14. However, upon re-sync all test chia since Beta 12 should appear in your wallet.
 - All vestigial references to plots.yaml have been removed.
+- The correct amount of memory is used for plotting
+- Multithreading support in chiapos, as well as a new algorithm which is faster and does 70% less IO.
+- Default -b changed to 3072 to improve performance
 
 ### Fixed
 - Temporary space required for each k size was updated with more accurate estimates.
 - Tables in the README.MD were not rendering correctly on Pypi. Thanks again @altendky.
+- Chiapos issue where memory was spiking and increasing
+- Fixed working space estimates so they are exact
+- Log all errors in chiapos
 
 ## [1.0beta13] aka Beta 1.13 - 2020-09-15
 
