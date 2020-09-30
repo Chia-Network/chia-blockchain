@@ -74,7 +74,7 @@ class TestRpc:
             async def have_connections():
                 return len(await client.get_connections()) > 0
 
-            await time_out_assert(5, have_connections, True)
+            await time_out_assert(15, have_connections, True)
 
             await client.get_latest_challenges()
 
