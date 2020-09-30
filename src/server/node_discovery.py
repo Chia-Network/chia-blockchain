@@ -91,6 +91,8 @@ class FullNodeDiscovery:
                     await self.address_manager.connect(peer_info)
                 elif message == "mark_attempted":
                     await self.address_manager.attempt(peer_info, True)
+                elif message == "mark_attempted_soft":
+                    await self.address_manager.attempt(peer_info, False)
                 elif message == "update_connection_time":
                     if peer_info.host not in connection_time_pretest:
                         connection_time_pretest[peer_info.host] = time.time()
@@ -339,32 +341,36 @@ class FullNodePeers(FullNodeDiscovery):
 
     async def _periodically_self_advertise(self):
         while not self.is_closed:
-            await asyncio.sleep(3600 * 24)
-            # Clean up known nodes for neighbours every 24 hours.
-            async with self.lock:
-                for neighbour in self.neighbour_known_peers:
-                    neighbour.clear()
-            # Self advertise every 24 hours.
-            peer = self.global_connections.get_local_peerinfo()
-            if peer is None:
-                continue
-            timestamped_peer = [
-                TimestampedPeerInfo(
-                    peer.host,
-                    peer.port,
-                    uint64(int(time.time())),
+            try:
+                await asyncio.sleep(300)
+                # Clean up known nodes for neighbours every 24 hours.
+                async with self.lock:
+                    for neighbour in list(self.neighbour_known_peers.keys()):
+                        self.neighbour_known_peers[neighbour].clear()
+                # Self advertise every 24 hours.
+                peer = self.global_connections.get_local_peerinfo()
+                if peer is None:
+                    continue
+                timestamped_peer = [
+                    TimestampedPeerInfo(
+                        peer.host,
+                        peer.port,
+                        uint64(int(time.time())),
+                    )
+                ]
+                outbound_message = OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message(
+                        "respond_peers_full_node",
+                        full_node_protocol.RespondPeers(timestamped_peer),
+                    ),
+                    Delivery.BROADCAST,
                 )
-            ]
-            outbound_message = OutboundMessage(
-                NodeType.FULL_NODE,
-                Message(
-                    "respond_peers_full_node",
-                    full_node_protocol.RespondPeers([timestamped_peer]),
-                ),
-                Delivery.BROADCAST,
-            )
-            if self.server is not None:
-                self.server.push_message(outbound_message)
+                if self.server is not None:
+                    self.server.push_message(outbound_message)
+            except Exception as e:
+                self.log.error(f"Exception in self advertise: {e}")
+                self.log.error(f"Traceback: {traceback.format_exc()}")
 
     async def add_peers_neighbour(self, peers, neighbour_info):
         neighbour_data = (neighbour_info.host, neighbour_info.port)

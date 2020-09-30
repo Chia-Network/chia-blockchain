@@ -256,18 +256,20 @@ class PeerConnections:
 
     def failed_handshake(self, connection, e):
         if connection.connection_type == NodeType.FULL_NODE and connection.is_outbound:
-            if isinstance(e, ProtocolError) and e.code == Err.DUPLICATE_CONNECTION:
-                return
+            message = "mark_attempted"
+            if isinstance(e, ProtocolError) and (
+                e.code == Err.DUPLICATE_CONNECTION or e.code == Err.SELF_CONNECTION
+            ):
+                # Updates last try timestamp, but doesn't count it as a failure. 
+                message = "mark_attempted_soft"
 
             if self.full_node_peers_callback is not None:
                 self.full_node_peers_callback(
-                    "mark_attempted",
-                    connection.get_peer_info(),
+                    message, connection.get_peer_info(),
                 )
             if self.wallet_callback is not None:
                 self.wallet_callback(
-                    "mark_attempted",
-                    connection.get_peer_info(),
+                    message, connection.get_peer_info(),
                 )
 
     def failed_connection(self, peer_info):
