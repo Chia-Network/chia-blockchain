@@ -334,7 +334,7 @@ const CreatePlot = () => {
   const [maxRam, setMaxRam] = React.useState(3072);
   const [numThreads, setNumThreads] = React.useState(2);
   const [numBuckets, setNumBuckets] = React.useState(0);
-  const [stripeSize, setStripeSize] = React.useState(0);
+  const [stripeSize, setStripeSize] = React.useState(65536);
 
   const changePlotSize = event => {
     setPlotSize(event.target.value);
@@ -493,7 +493,7 @@ const CreatePlot = () => {
                   type="number"
                 />
               <FormHelperText id="standard-weight-helper-text">
-              0 is default (recommended)
+              0 automatically chooses bucket count
               </FormHelperText>
               </FormControl>
             </Grid>
@@ -510,9 +510,6 @@ const CreatePlot = () => {
                   label="Colour"
                   type="number"
                 />
-              <FormHelperText id="standard-weight-helper-text">
-              0 is default (recommended)
-              </FormHelperText>
               </FormControl>
             </Grid>
           </Grid>
