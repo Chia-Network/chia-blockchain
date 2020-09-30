@@ -2,11 +2,11 @@ import asyncio
 import pytest
 from typing import List
 from tests.setup_nodes import setup_full_system
-from src.util.ints import uint32
+from src.util.ints import uint16, uint32
 from src.types.full_block import FullBlock
 from src.util.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
-
+from src.types.peer_info import PeerInfo
 
 test_constants, bt = make_test_constants_with_genesis(
     {
@@ -37,10 +37,11 @@ class TestSimulation:
 
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation):
-        node1, node2, _, _, _, _, _, _, _ = simulation
-
+        node1, node2, _, _, _, _, _, _, _, server1 = simulation
+        await asyncio.sleep(10)
+        await server1.start_client(PeerInfo("::1", uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
-        await time_out_assert(1000, node_height_at_least, True, node2, 10)
+        await time_out_assert(500, node_height_at_least, True, node2, 10)
 
         # Wait additional 2 minutes to get a compact block.
         max_height = node1.blockchain.lca_block.height

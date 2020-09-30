@@ -504,10 +504,10 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         setup_vdf_clients(8000),
         setup_timelord(21236, 21237, False, consensus_constants),
         setup_full_node(
-            consensus_constants, "blockchain_test.db", 21237, 21233, False, 10
+            consensus_constants, "blockchain_test.db", 21237, 21232, False, 10
         ),
         setup_full_node(
-            consensus_constants, "blockchain_test_2.db", 21238, 21233, False, 10
+            consensus_constants, "blockchain_test_2.db", 21238, 21232, False, 10
         ),
         setup_vdf_clients(7999),
         setup_timelord(21239, 21238, True, consensus_constants),
@@ -539,6 +539,7 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         vdf,
         sanitizer,
         vdf_sanitizer,
+        node1_server,
     )
 
     await _teardown_nodes(node_iters)
