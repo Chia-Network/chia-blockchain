@@ -2,7 +2,6 @@ import logging
 import time
 import asyncio
 import aiohttp
-import socket
 from typing import Any, AsyncGenerator, Callable, List, Optional
 
 from src.server.outbound_message import Message, NodeType, OutboundMessage
@@ -207,7 +206,7 @@ class PeerConnections:
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get('http://checkip.amazonaws.com/') as resp:
+                async with session.get("http://checkip.amazonaws.com/") as resp:
                     ip = str(await resp.text())
                     ip = ip.rstrip()
         except Exception:
