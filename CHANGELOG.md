@@ -14,6 +14,7 @@ for setuptools_scm/PEP 440 reasons.
 - The rate limited wallet library now supports coin aggregation for adding additional funds after the time of creation.
 - Fees are now used in all applicable rate limited wallet calls
 - New parameters for plotting: -r (number of threads) -s (stripe size) -u (number of buckets) in cli and GUI
+- chiavdf now has full IFMA optimizations for processors that support it.
 
 ### Changed
 - `sh install.sh` was upgraded so that on Ubuntu it will install any needed OS dependencies.
@@ -32,6 +33,7 @@ for setuptools_scm/PEP 440 reasons.
 - Chiapos issue where memory was spiking and increasing
 - Fixed working space estimates so they are exact
 - Log all errors in chiapos
+- Fixed a bug that was causing Bluebox vdfs to fail.
 
 ## [1.0beta13] aka Beta 1.13 - 2020-09-15
 
