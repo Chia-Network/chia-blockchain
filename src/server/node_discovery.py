@@ -149,7 +149,7 @@ class FullNodeDiscovery:
         empty_tables = False
         local_peerinfo: Optional[
             PeerInfo
-        ] = self.global_connections.get_local_peerinfo()
+        ] = await self.global_connections.get_local_peerinfo()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
         while not self.is_closed:
             # We don't know any address, connect to the introducer to get some.
@@ -235,7 +235,7 @@ class FullNodeDiscovery:
                     time.time() - last_timestamp_local_info > 1800
                     or local_peerinfo is None
                 ):
-                    local_peerinfo = self.global_connections.get_local_peerinfo()
+                    local_peerinfo = await self.global_connections.get_local_peerinfo()
                     last_timestamp_local_info = uint64(int(time.time()))
                 if local_peerinfo is not None and addr == local_peerinfo:
                     continue
@@ -348,7 +348,7 @@ class FullNodePeers(FullNodeDiscovery):
                     for neighbour in list(self.neighbour_known_peers.keys()):
                         self.neighbour_known_peers[neighbour].clear()
                 # Self advertise every 24 hours.
-                peer = self.global_connections.get_local_peerinfo()
+                peer = await self.global_connections.get_local_peerinfo()
                 if peer is None:
                     continue
                 timestamped_peer = [

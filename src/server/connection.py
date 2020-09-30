@@ -1,6 +1,7 @@
 import logging
 import time
 import asyncio
+import aiohttp
 import socket
 from typing import Any, AsyncGenerator, Callable, List, Optional
 
@@ -194,7 +195,7 @@ class PeerConnections:
         if self.local_type == NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
-    def get_local_peerinfo(self) -> Optional[PeerInfo]:
+    async def get_local_peerinfo(self) -> Optional[PeerInfo]:
         ip = None
         port = None
         for c in self._all_connections:
@@ -204,16 +205,16 @@ class PeerConnections:
         if port is None:
             return None
 
-        # https://stackoverflow.com/a/28950776
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            try:
-                s.connect(("introducer.beta.chia.net", 8444))
-                ip = s.getsockname()[0]
-            except Exception:
-                ip = None
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get('http://checkip.amazonaws.com/') as resp:
+                    ip = str(await resp.text())
+                    ip = ip.rstrip()
+        except Exception:
+            ip = None
         if ip is None:
             return None
-        return PeerInfo(str(ip), uint16(port))
+        return PeerInfo(ip, uint16(port))
 
     def get_connections(self):
         return self._all_connections
