@@ -63,7 +63,7 @@ class TestDIDWallet:
                 return
             await asyncio.sleep(1)
         assert False
-    """
+
     @pytest.mark.asyncio
     async def test_identity_creation(self, two_wallet_nodes):
         num_blocks = 10
@@ -189,7 +189,9 @@ class TestDIDWallet:
         coins = await did_wallet_2.select_coins(1)
         coin = coins.pop()
         info = await did_wallet.get_info_for_recovery()
-        pubkey = (await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)).pubkey
+        pubkey = (
+            await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
+        ).pubkey
         message_spend_bundle = await did_wallet.create_attestment(coin.name(), ph, pubkey)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
@@ -287,7 +289,7 @@ class TestDIDWallet:
         await self.time_out_assert(15, wallet.get_unconfirmed_balance, 400000000000000)
         await self.time_out_assert(15, did_wallet.get_confirmed_balance, 0)
         await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 0)
-    """
+
     @pytest.mark.asyncio
     async def test_did_recovery_with_empty_set(self, two_wallet_nodes):
         num_blocks = 10
@@ -326,7 +328,9 @@ class TestDIDWallet:
         coin = coins.pop()
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
-        spend_bundle = await did_wallet.recovery_spend(coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([])))
+        spend_bundle = await did_wallet.recovery_spend(
+            coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([]))
+        )
         additions = spend_bundle.additions()
         assert additions == []
 
@@ -396,7 +400,9 @@ class TestDIDWallet:
         coins = await did_wallet_2.select_coins(1)
         coin = coins.pop()
         info = await did_wallet.get_info_for_recovery()
-        pubkey = (await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)).pubkey
+        pubkey = (
+            await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
+        ).pubkey
         message_spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph, pubkey)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
