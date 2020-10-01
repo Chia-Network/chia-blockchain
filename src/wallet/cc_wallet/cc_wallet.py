@@ -57,16 +57,12 @@ class CCWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         amount: uint64,
-        name: str = None,
     ):
         self = CCWallet()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
 
@@ -143,17 +139,13 @@ class CCWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         genesis_checker_hex: str,
-        name: str = None,
     ) -> CCWallet:
 
         self = CCWallet()
         self.base_puzzle_program = None
         self.base_inner_puzzle_hash = None
         self.standard_wallet = wallet
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
 
@@ -175,14 +167,10 @@ class CCWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         wallet_info: WalletInfo,
-        name: str = None,
     ) -> CCWallet:
         self = CCWallet()
 
-        if name:
-            self.log = logging.getLogger(name)
-        else:
-            self.log = logging.getLogger(__name__)
+        self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
         self.wallet_info = wallet_info
