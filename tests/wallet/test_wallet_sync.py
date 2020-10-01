@@ -8,7 +8,6 @@ from src.util.ints import uint16, uint64, uint32
 from tests.setup_nodes import setup_node_and_wallet, test_constants, bt
 from src.types.spend_bundle import SpendBundle
 from src.full_node.bundle_tools import best_solution_program
-from src.util.wallet_tools import WalletTool
 from src.types.coin import Coin
 from src.consensus.coinbase import create_coinbase_coin
 from tests.time_out_assert import time_out_assert
@@ -108,14 +107,14 @@ class TestWalletSync:
 
     @pytest.mark.asyncio
     async def test_short_sync_with_transactions_wallet(self, wallet_node):
+        BURN_PUZZLE_HASH_1 = b"0" * 32
+        BURN_PUZZLE_HASH_2 = b"1" * 32
         full_node_1, wallet_node, server_1, server_2 = wallet_node
         wallet_a = wallet_node.wallet_state_manager.main_wallet
-        wallet_a_dummy = WalletTool()
-        wallet_b = WalletTool()
         coinbase_puzzlehash = await wallet_a.get_new_puzzlehash()
-        coinbase_puzzlehash_rest = wallet_b.get_new_puzzlehash()
+        coinbase_puzzlehash_rest = BURN_PUZZLE_HASH_1
         puzzle_hashes = [await wallet_a.get_new_puzzlehash() for _ in range(10)]
-        puzzle_hashes.append(wallet_b.get_new_puzzlehash())
+        puzzle_hashes.append(BURN_PUZZLE_HASH_2)
 
         blocks = bt.get_consecutive_blocks(
             test_constants, 3, [], 10, b"", coinbase_puzzlehash
@@ -136,8 +135,8 @@ class TestWalletSync:
         prev_coin = blocks[1].get_coinbase()
         for i in range(11):
             pk, sk = await wallet_a.wallet_state_manager.get_keys(prev_coin.puzzle_hash)
-            transaction_unsigned = wallet_a_dummy.generate_unsigned_transaction(
-                1000, puzzle_hashes[i], prev_coin, {}, 0, secretkey=sk
+            transaction_unsigned = await wallet_a.generate_unsigned_transaction(
+                1000, puzzle_hashes[i], coins=[prev_coin]
             )
             spend_bundle = await wallet_a.sign_transaction(transaction_unsigned)
             block_spendbundle = SpendBundle.aggregate([spend_bundle])
@@ -162,10 +161,13 @@ class TestWalletSync:
 
         server_2.global_connections.close_all_connections()
 
-        # 2 block rewards and 3 fees
-        assert await wallet_a.get_confirmed_balance() == (
-            blocks[1].get_coinbase().amount * 2
-        ) + (blocks[1].get_fees_coin().amount * 3)
+        # 3 block rewards and 3 fees - 1000 coins spent
+        assert (
+            await wallet_a.get_confirmed_balance()
+            == (blocks[1].get_coinbase().amount * 3)
+            + (blocks[1].get_fees_coin().amount * 3)
+            - 1000
+        )
         # All of our coins are spent and puzzle hashes present
         for puzzle_hash in puzzle_hashes[:-1]:
             records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
@@ -179,8 +181,10 @@ class TestWalletSync:
         prev_coin = blocks[1].get_coinbase()
         for i in range(11):
             pk, sk = await wallet_a.wallet_state_manager.get_keys(prev_coin.puzzle_hash)
-            transaction_unsigned = wallet_a_dummy.generate_unsigned_transaction(
-                1000, puzzle_hashes[i], prev_coin, {}, 0, secretkey=sk
+            transaction_unsigned = await wallet_a.generate_unsigned_transaction(
+                1000,
+                puzzle_hashes[i],
+                coins=[prev_coin],
             )
             spend_bundle = await wallet_a.sign_transaction(transaction_unsigned)
             block_spendbundle = SpendBundle.aggregate([spend_bundle])
@@ -212,10 +216,13 @@ class TestWalletSync:
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 28)
         server_2.global_connections.close_all_connections()
 
-        # 2 block rewards and 3 fees
-        assert await wallet_a.get_confirmed_balance() == (
-            blocks[1].get_coinbase().amount * 2
-        ) + (blocks[1].get_fees_coin().amount * 3)
+        # 3 block rewards and 3 fees - 1000 coins spent
+        assert (
+            await wallet_a.get_confirmed_balance()
+            == (blocks[1].get_coinbase().amount * 3)
+            + (blocks[1].get_fees_coin().amount * 3)
+            - 1000
+        )
         # All of our coins are spent and puzzle hashes present
         for puzzle_hash in puzzle_hashes[:-1]:
             records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
@@ -233,8 +240,10 @@ class TestWalletSync:
         coinbase_coin = create_coinbase_coin(
             uint32(25), new_coinbase_puzzlehash, uint64(14000000000000)
         )
-        transaction_unsigned = wallet_a_dummy.generate_unsigned_transaction(
-            7000000000000, another_puzzlehash, coinbase_coin, {}, 0, secretkey=sk
+        transaction_unsigned = await wallet_a.generate_unsigned_transaction(
+            7000000000000,
+            another_puzzlehash,
+            coins=[coinbase_coin],
         )
         spend_bundle = await wallet_a.sign_transaction(transaction_unsigned)
         block_spendbundle = SpendBundle.aggregate([spend_bundle])
@@ -271,12 +280,12 @@ class TestWalletSync:
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 38)
 
-        # 2 block rewards and 4 fees, plus 7000000000000 coins
+        # 4 block rewards and 4 fees - 1000 coins spent
         assert (
             await wallet_a.get_confirmed_balance()
-            == (blocks[1].get_coinbase().amount * 2)
+            == (blocks[1].get_coinbase().amount * 4)
             + (blocks[1].get_fees_coin().amount * 4)
-            + 7000000000000
+            - 1000
         )
         records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
             new_coinbase_puzzlehash
