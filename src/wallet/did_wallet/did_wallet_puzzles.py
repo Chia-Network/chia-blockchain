@@ -1,3 +1,4 @@
+from clvm_tools import binutils
 from src.types.sized_bytes import bytes32
 from src.types.program import Program
 from typing import List, Optional, Tuple
@@ -36,7 +37,11 @@ def fullpuz_hash_for_inner_puzzle_hash(
 
 
 def get_pubkey_from_innerpuz(innerpuz: Program) -> G1Element:
-    pubkey_program, id_list = uncurry_innerpuz(innerpuz)
+    ret = uncurry_innerpuz(innerpuz)
+    if ret is not None:
+        pubkey_program = ret[0]
+    else:
+        raise ValueError("Unable to extract pubkey")
     pubkey = G1Element.from_bytes(pubkey_program.as_atom())
     return pubkey
 
@@ -68,10 +73,10 @@ def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
     return pubkey, id_list
 
 
-def get_innerpuzzle_from_puzzle(puzzle: Program) -> Program:
+def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
     r = puzzle.uncurry()
     if r is None:
-        return r
+        return None
     inner_f, args = r
     if not is_did_core(inner_f):
         return None
@@ -79,23 +84,15 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Program:
     return inner_puzzle
 
 
-def get_genesis_from_puzzle(puzzle: Program):
-    r = puzzle.uncurry()
-    if r is None:
-        return r
-    inner_f, args = r
-    if not is_did_core(inner_f):
-        return None
-    mod_hash, genesis_id, inner_puzzle = list(args.as_iter())
-    return genesis_id.as_atom()
+def create_recovery_message_puzzle(recovering_coin, newpuz, pubkey):
+    puzstring = f"(r (c (q 0x{recovering_coin}) (q ((50 0x{pubkey} 0x{newpuz})))))"
+    puz = binutils.assemble(puzstring)
+    # return DID_RECOVERY_MESSAGE_MOD.curry(recovering_coin, newpuz, pubkey)
+    return Program(puz)
 
 
-def get_recovery_message_puzzle(recovering_coin, newpuz):
-    return DID_RECOVERY_MESSAGE_MOD.curry(recovering_coin, newpuz)
-
-
-def create_spend_for_message(parent_of_message, recovering_coin, newpuz):
-    puzzle = get_recovery_message_puzzle(recovering_coin, newpuz)
+def create_spend_for_message(parent_of_message, recovering_coin, newpuz, pubkey):
+    puzzle = create_recovery_message_puzzle(recovering_coin, newpuz, pubkey)
     coin = Coin(parent_of_message, puzzle.get_tree_hash(), uint64(0))
     solution = Program.to([])
     coinsol = CoinSolution(coin, clvm.to_sexp_f([puzzle, solution]))
