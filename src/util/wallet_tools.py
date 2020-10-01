@@ -60,7 +60,7 @@ class WalletTool:
         if puzzle_hash in self.puzzle_pk_cache:
             child = self.puzzle_pk_cache[puzzle_hash]
             private = master_sk_to_wallet_sk(self.private_key, uint32(child))
-            pubkey = private.get_g1()
+            #  pubkey = private.get_g1()
             return private
         else:
             for child in range(self.next_address):

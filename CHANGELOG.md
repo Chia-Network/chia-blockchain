@@ -6,26 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased
+## [1.0beta14] aka Beta 1.14 - 2020-10-01
 
 ### Added
-- For 'git clone' installs there is now a separate install-gui.sh which speeds up running install.sh for those who wish to run headless and makes docker and other automation simpler.
 - Node peers are now gossiped between nodes with logic to keep connected nodes on disparate internet networks to partially protect from eclipse attacks. This is the second to last step to remove our temporary introducer and migrate to DNS introducers with peer gossip modeled directly off of Bitcoin. This adds a new database of valid peer nodes that will persist across node restarts. This also makes changes to config.yaml's contents.
+- For 'git clone' installs there is now a separate install-gui.sh which speeds up running install.sh for those who wish to run headless and makes docker and other automation simpler.
 - The rate limited wallet library now supports coin aggregation for adding additional funds after the time of creation.
 - Fees are now used in all applicable rate limited wallet calls
 - New parameters for plotting: -r (number of threads) -s (stripe size) -u (number of buckets) in cli and GUI
 - chiavdf now has full IFMA optimizations for processors that support it.
 
 ### Changed
+- Multithreading support in chiapos, as well as a new algorithm which is faster and does 70% less IO. This is a significant improvement in speed, much lower total writing, and configurability for different hardware environments.
+- Default -b changed to 3072 to improve performance
+- The correct amount of memory is used for plotting
 - `sh install.sh` was upgraded so that on Ubuntu it will install any needed OS dependencies.
 - Wallet and puzzlehash generation have been refactored and simplified.
 - Wallet has had various sync speed ups added.
-- The rpc interfaces of all chia services has been refactored, simplified, and had various additional functionality added.
+- The rpc interfaces of all chia services have been refactored, simplified, and had various additional functionality added.
 - Block timestamps are now stored in the wallet database. Both database versions were incremented and databases from previous versions will not work with Beta 14. However, upon re-sync all test chia since Beta 12 should appear in your wallet.
 - All vestigial references to plots.yaml have been removed.
-- The correct amount of memory is used for plotting
-- Multithreading support in chiapos, as well as a new algorithm which is faster and does 70% less IO.
-- Default -b changed to 3072 to improve performance
 
 ### Fixed
 - Temporary space required for each k size was updated with more accurate estimates.

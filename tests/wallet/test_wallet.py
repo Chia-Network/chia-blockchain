@@ -324,9 +324,9 @@ class TestWalletSimulator:
             setup_introducer(11236),
         ]
 
-        full_node, s1 = await node_iters[0].__anext__()
+        await node_iters[0].__anext__()
         wallet, s2 = await node_iters[1].__anext__()
-        introducer, introducer_server = await node_iters[2].__anext__()
+        await node_iters[2].__anext__()
 
         async def has_full_node():
             return (
