@@ -3,7 +3,7 @@ from typing import Tuple
 from clvm import KEYWORD_FROM_ATOM
 
 from clvm_tools.binutils import disassemble as bu_disassemble
-from blspy import G1Element, G2Element, AugSchemeMPL
+from blspy import AugSchemeMPL
 from src.types.coin import Coin
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
@@ -11,8 +11,6 @@ from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import conditions_dict_for_solution
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
-from src.full_node.cost_calculator import calculate_cost_of_program
-from src.full_node.bundle_tools import best_solution_program
 
 
 CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())
@@ -72,10 +70,8 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
         )
         if error:
             print(f"*** error {error}")
-        else:
-            for pk, m in pkm_pairs_for_conditions_dict(
-                conditions, coin.name()
-            ):
+        elif conditions is not None:
+            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin.name()):
                 pks.append(pk)
                 msgs.append(m)
             print()
