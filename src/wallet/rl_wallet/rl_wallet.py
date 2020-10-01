@@ -1,5 +1,3 @@
-import logging
-
 # RLWallet is subclass of Wallet
 from dataclasses import dataclass
 import time
@@ -55,7 +53,6 @@ class RLWallet:
     rl_info: RLInfo
     main_wallet: Wallet
     private_key: PrivateKey
-    log: logging.Logger
 
     @staticmethod
     async def create_rl_admin(
