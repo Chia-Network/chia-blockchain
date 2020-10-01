@@ -93,9 +93,6 @@ jobs:
         . ./activate
         venv/bin/python -m pip install -r requirements-dev.txt
 
-    - name: Setup kernel for react native, increase watchers
-      run: echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
-
     - name: Setup Node 12.x
       uses: actions/setup-node@v2.1.1
       with:
@@ -104,6 +101,7 @@ jobs:
     - name: Build MacOS DMG in Catalina
       run: |
         . ./activate
+        clang --version
         cd ./electron-react
         npm install
         npm audit fix

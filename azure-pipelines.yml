@@ -50,6 +50,7 @@ steps:
 
   - script: |
       . ./activate
+      clang --version
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
     displayName: "Build wheels"
 
