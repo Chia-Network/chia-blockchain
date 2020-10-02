@@ -3,7 +3,8 @@ import {
   registerService,
   startService,
   isServiceRunning,
-  startServiceTest
+  startServiceTest,
+  getCertPaths
 } from "../modules/daemon_messages";
 import { handle_message } from "./middleware_api";
 import {
@@ -12,10 +13,20 @@ import {
   service_simulator,
   service_plotter
 } from "../util/service_names";
+
+import isElectron from "is-electron";
+import config_util from "../util/config";
+import { openDialog } from "../modules/dialogReducer";
+
+if (isElectron()) {
+  var remote = window.require("electron").remote;
+  var fs = remote.require("fs");
+  const WebSocket = window.require("ws").remote;
+}
+
 const config = require("../config");
-
 const crypto = require("crypto");
-
+const default_daemon_host = config_util.default_daemon_host;
 const callback_map = {};
 
 const outgoing_message = (command, data, destination) => ({
@@ -46,6 +57,7 @@ const socketMiddleware = () => {
       start_node = startService(service_full_node);
     }
     store.dispatch(isServiceRunning(service_plotter));
+    store.dispatch(getCertPaths());
     store.dispatch(start_wallet);
     store.dispatch(start_node);
   };
@@ -73,13 +85,39 @@ const socketMiddleware = () => {
         if (socket !== null) {
           socket.close();
         }
-
-        // connect to the remote host
-        try {
-          socket = new WebSocket(action.host);
-        } catch {
-          console.log("Failed connection to", action.host);
-          break;
+        if (action.host != default_daemon_host) {
+          if (!isElectron()) {
+            // Show error message, can't connect to remote host from browser
+            store.dispatch(
+              openDialog(
+                "Error!",
+                "Web browser can't be used to connect to remote daemon"
+              )
+            );
+          } else {
+            var options = {
+              cert: fs.readFileSync(
+                "/Users/yostra/.chia/beta-1.0b14.dev66+gfb874487.d20200923/config/trusted.crt"
+              ),
+              key: fs.readFileSync(
+                "/Users/yostra/.chia/beta-1.0b14.dev66+gfb874487.d20200923/config/trusted.key"
+              )
+            };
+            try {
+              socket = new WebSocket(action.host, options);
+            } catch (e) {
+              console.log("Failed connection to", action.host);
+              break;
+            }
+          }
+        } else {
+          // connect using regular ws
+          try {
+            socket = new WebSocket(action.host);
+          } catch (e) {
+            console.log("Failed connection to", action.host);
+            break;
+          }
         }
 
         // websocket handlers

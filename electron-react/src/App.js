@@ -11,7 +11,8 @@ import {
   presentNewWallet,
   presentDashboard,
   presentSelectKeys,
-  presentRestoreBackup
+  presentRestoreBackup,
+  presentDaemonSettings
 } from "./modules/entranceMenu";
 import { CircularProgress } from "@material-ui/core";
 import { ModalDialog, Spinner } from "./pages/ModalDialog";
@@ -19,6 +20,7 @@ import { RestoreBackup } from "./pages/backup/restoreBackup";
 import { useTheme } from "@material-ui/core/styles";
 
 import theme from "./muiTheme";
+import { DaemonSettings } from "./pages/DaemonSettings";
 
 const LoadingScreen = props => {
   const theme = useTheme();
@@ -61,6 +63,8 @@ const CustomRouter = () => {
       return <Dashboard></Dashboard>;
     } else if (presentView === presentRestoreBackup) {
       return <RestoreBackup></RestoreBackup>;
+    } else if (presentView === presentDaemonSettings) {
+      return <DaemonSettings></DaemonSettings>;
     }
   }
 };

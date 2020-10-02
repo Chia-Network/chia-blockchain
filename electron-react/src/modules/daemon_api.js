@@ -8,6 +8,8 @@ import {
   service_plotter
 } from "../util/service_names";
 
+import config from "../util/config";
+
 const initial_state = {
   daemon_running: false,
   daemon_connected: false,
@@ -20,11 +22,21 @@ const initial_state = {
   harvester_running: false,
   harvester_connected: false,
   plotter_running: false,
-  exiting: false
+  exiting: false,
+  cert_path: null,
+  key_path: null,
+  daemon_host: config.default_daemon_host
 };
+
+export const changeDaemonHost = host => ({
+  type: "CHANGE_DAEMON_HOST",
+  host: host
+});
 
 export const daemonReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
+    case "CHANGE_DAEMON_HOST":
+      return { ...state, daemon_host: action.host };
     case "INCOMING_MESSAGE":
       if (
         action.message.origin !== service_daemon &&
@@ -83,6 +95,14 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
           if (data.service_name === service_plotter) {
             return { ...state, plotter_running: false };
           }
+        }
+      } else if (command === "get_cert_paths") {
+        if (data.success) {
+          return {
+            ...state,
+            key_path: data.key_path,
+            cert_path: data.cert_path
+          };
         }
       }
       return state;

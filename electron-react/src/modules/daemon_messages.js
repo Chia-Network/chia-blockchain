@@ -45,3 +45,9 @@ export const exitDaemon = () => {
   action.message.command = "exit";
   return action;
 };
+
+export const getCertPaths = () => {
+  var action = daemonMessage();
+  action.message.command = "get_cert_paths";
+  return action;
+};

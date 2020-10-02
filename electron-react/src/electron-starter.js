@@ -24,7 +24,7 @@ const local_test = config.local_test;
 const url = require("url");
 const os = require("os");
 const crypto = require("crypto");
-const parseArgs = require('minimist');
+const parseArgs = require("minimist");
 
 global.sharedObj = { local_test: local_test };
 
@@ -92,17 +92,17 @@ const createPyProc = () => {
   if (pyProc != null) {
     pyProc.stdout.setEncoding("utf8");
 
-    pyProc.stdout.on("data", function (data) {
+    pyProc.stdout.on("data", function(data) {
       process.stdout.write(data.toString());
     });
 
     pyProc.stderr.setEncoding("utf8");
-    pyProc.stderr.on("data", function (data) {
+    pyProc.stderr.on("data", function(data) {
       //Here is where the error output goes
       process.stdout.write("stderr: " + data.toString());
     });
 
-    pyProc.on("close", function (code) {
+    pyProc.on("close", function(code) {
       //Here you can get the exit code of the script
       console.log("closing code: " + code);
     });
@@ -153,10 +153,9 @@ const closeDaemon = callback => {
   }
 };
 
-const exitPyProc = e => { };
+const exitPyProc = e => {};
 
 app.on("will-quit", exitPyProc);
-app.commandLine.appendSwitch('client-certificate', 'C:/Users/dkack/.chia/beta-1.0b14.dev80/config/trusted.crt');
 
 /*************************************************************
  * window management
@@ -202,7 +201,7 @@ const createWindow = () => {
 
   mainWindow.loadURL(startUrl);
 
-  mainWindow.once("ready-to-show", function () {
+  mainWindow.once("ready-to-show", function() {
     mainWindow.show();
   });
 

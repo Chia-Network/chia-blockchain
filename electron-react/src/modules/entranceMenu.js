@@ -3,6 +3,7 @@ export const presentOldWallet = "OLD_WALLET";
 export const presentDashboard = "DASHBOARD";
 export const presentSelectKeys = "SELECT_KEYS";
 export const presentRestoreBackup = "RESTORE_BACKUP";
+export const presentDaemonSettings = "DAEMON_SETTINGS";
 
 export const changeEntranceMenu = item => ({
   type: "ENTRANCE_MENU",

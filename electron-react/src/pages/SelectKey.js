@@ -7,7 +7,6 @@ import { Tooltip } from "@material-ui/core";
 import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import DeleteIcon from "@material-ui/icons/Delete";
 import IconButton from "@material-ui/core/IconButton";
-import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import logo from "../assets/img/chia_logo.svg"; // Tell webpack this JS file uses this image
 import { withRouter } from "react-router-dom";
@@ -30,69 +29,12 @@ import DialogTitle from "@material-ui/core/DialogTitle";
 import {
   changeEntranceMenu,
   presentOldWallet,
-  presentNewWallet
+  presentNewWallet,
+  presentDaemonSettings
 } from "../modules/entranceMenu";
 import { resetMnemonic } from "../modules/mnemonic_input";
-
-const useStyles = makeStyles(theme => ({
-  root: {
-    background: "linear-gradient(45deg, #181818 30%, #333333 90%)",
-    height: "100%"
-  },
-  paper: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    height: "100%"
-  },
-  centeredSpan: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center"
-  },
-  textField: {
-    borderColor: "#ffffff"
-  },
-  topButton: {
-    width: 400,
-    height: 45,
-    marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(1)
-  },
-  bottomButton: {
-    width: 400,
-    height: 45,
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(1)
-  },
-  bottomButtonRed: {
-    width: 400,
-    height: 45,
-    marginTop: theme.spacing(2),
-    marginBottom: theme.spacing(1),
-    color: "red"
-  },
-  logo: {
-    marginTop: theme.spacing(8),
-    marginBottom: theme.spacing(3)
-  },
-  main: {
-    height: "100%"
-  },
-  whiteText: {
-    color: "white"
-  },
-  whiteP: {
-    color: "white",
-    fontSize: "18px"
-  },
-  demo: {
-    backgroundColor: theme.palette.background.paper
-  },
-  rightPadding: {
-    paddingRight: theme.spacing(3)
-  }
-}));
+import SettingsIcon from "@material-ui/icons/Settings";
+import { useStyles } from "./selectKeyStyles";
 
 const SelectKey = () => {
   const dispatch = useDispatch();
@@ -178,9 +120,19 @@ const SelectKey = () => {
     );
   });
 
+  function daemon_settings() {
+    dispatch(changeEntranceMenu(presentDaemonSettings));
+  }
+
   return (
     <div className={classes.root}>
       <Container className={classes.main} component="main" maxWidth="xs">
+        <Button
+          onClick={daemon_settings}
+          style={{ position: "absolute", top: 20, right: 20, color: "white" }}
+        >
+          <SettingsIcon></SettingsIcon>
+        </Button>
         <CssBaseline />
         <div className={classes.paper}>
           <img className={classes.logo} src={logo} alt="Logo" />
