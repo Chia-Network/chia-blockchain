@@ -20,6 +20,8 @@ from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
 
+BURN_PUZZLE_HASH = b"0" * 32
+
 
 @pytest.fixture(scope="module")
 def event_loop():
@@ -44,8 +46,7 @@ class TestMempool:
     async def test_basic_mempool(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -75,8 +76,7 @@ class TestMempool:
     async def test_coinbase_freeze(self, two_nodes_small_freeze):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes_small_freeze
@@ -122,8 +122,7 @@ class TestMempool:
     async def test_double_spend(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -168,8 +167,7 @@ class TestMempool:
     async def test_double_spend_with_higher_fee(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -213,8 +211,7 @@ class TestMempool:
     async def test_invalid_block_index(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -253,8 +250,7 @@ class TestMempool:
     async def test_correct_block_index(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -293,8 +289,7 @@ class TestMempool:
     async def test_invalid_block_age(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -331,8 +326,7 @@ class TestMempool:
     async def test_correct_block_age(self, two_nodes):
         num_blocks = 4
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -371,8 +365,7 @@ class TestMempool:
     async def test_correct_my_id(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -411,8 +404,7 @@ class TestMempool:
     async def test_invalid_my_id(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -453,8 +445,7 @@ class TestMempool:
     async def test_assert_time_exceeds(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -495,8 +486,7 @@ class TestMempool:
     async def test_assert_time_exceeds_both_cases(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -550,8 +540,7 @@ class TestMempool:
     async def test_correct_coin_consumed(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -598,8 +587,7 @@ class TestMempool:
     async def test_invalid_coin_consumed(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -643,8 +631,7 @@ class TestMempool:
     async def test_assert_fee_condition(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -695,8 +682,7 @@ class TestMempool:
     async def test_assert_fee_condition_wrong_fee(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -748,7 +734,7 @@ class TestMempool:
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
         wallet_receiver = bt.get_farmer_wallet_tool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
 
@@ -814,8 +800,7 @@ class TestMempool:
     async def test_double_spend_same_bundle(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -855,8 +840,7 @@ class TestMempool:
     async def test_agg_sig_condition(self, two_nodes):
         num_blocks = 2
         wallet_a = bt.get_pool_wallet_tool()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
