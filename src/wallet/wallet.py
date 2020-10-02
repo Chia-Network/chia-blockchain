@@ -1,16 +1,12 @@
 import time
-from typing import Dict, Optional, List, Set, Any
+from typing import Dict, List, Set, Any
 import logging
-from blspy import G1Element, AugSchemeMPL, PrivateKey
+from blspy import G1Element
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
-from src.util.condition_tools import (
-    conditions_dict_for_solution,
-    pkm_pairs_for_conditions_dict,
-)
 from src.util.ints import uint8, uint64, uint32
 from src.wallet.puzzles.p2_delegated_puzzle import (
     puzzle_for_pk,
@@ -23,6 +19,8 @@ from src.wallet.puzzles.puzzle_utils import (
     make_create_coin_condition,
     make_assert_fee_condition,
 )
+from src.wallet.secret_key_store import SecretKeyStore
+from src.wallet.sign_coin_solutions import sign_coin_solutions
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -33,7 +31,7 @@ class Wallet:
     wallet_state_manager: Any
     log: logging.Logger
     wallet_id: uint32
-    _pk2sk: Dict[G1Element, PrivateKey]
+    secret_key_store: SecretKeyStore
 
     @staticmethod
     async def create(
@@ -48,9 +46,7 @@ class Wallet:
             self.log = logging.getLogger(__name__)
         self.wallet_state_manager = wallet_state_manager
         self.wallet_id = info.id
-
-        # HACK
-        self._pk2sk = {}
+        self.secret_key_store = SecretKeyStore()
 
         return self
 
@@ -124,8 +120,20 @@ class Wallet:
         public_key, secret_key = maybe
 
         # HACK
-        self._pk2sk[bytes(public_key)] = secret_key
+        self.secret_key_store.save_secret_key(secret_key)
         return public_key
+
+    async def hack_populate_secret_keys_for_coin_solutions(
+        self, coin_solutions: List[CoinSolution]
+    ) -> None:
+        """
+        This hack forces secret keys into the `_pk2sk` lookup. This should eventually be replaced
+        by a persistent DB table that can do this look-up directly.
+        """
+        for coin_solution in coin_solutions:
+            await self.hack_populate_secret_key_for_puzzle_hash(
+                coin_solution.coin.puzzle_hash
+            )
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
@@ -274,43 +282,10 @@ class Wallet:
         self.log.info(f"Spends is {spends}")
         return spends
 
-    def secret_key_for_public_key(self, public_key: G1Element) -> Optional[PrivateKey]:
-        return self._pk2sk.get(bytes(public_key))
-
     async def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:
-        signatures = []
-
-        for coin_solution in coin_solutions:
-            await self.hack_populate_secret_key_for_puzzle_hash(
-                coin_solution.coin.puzzle_hash
-            )
-
-            # Get AGGSIG conditions
-            err, conditions_dict, cost = conditions_dict_for_solution(
-                coin_solution.solution
-            )
-            if err or conditions_dict is None:
-                error_msg = (
-                    f"Sign transaction failed, con:{conditions_dict}, error: {err}"
-                )
-                self.log.error(error_msg)
-                raise ValueError(error_msg)
-
-            # Create signature
-            for _, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, bytes(coin_solution.coin)
-            ):
-                secret_key = self.secret_key_for_public_key(_)
-                if secret_key is None:
-                    e_msg = f"no secret key for {_}"
-                    self.log.error(e_msg)
-                    raise ValueError(e_msg)
-                signature = AugSchemeMPL.sign(secret_key, msg)
-                signatures.append(signature)
-
-        # Aggregate signatures
-        aggsig = AugSchemeMPL.aggregate(signatures)
-        return SpendBundle(coin_solutions, aggsig)
+        return await sign_coin_solutions(
+            coin_solutions, self.secret_key_store.secret_key_for_public_key
+        )
 
     async def generate_signed_transaction(
         self,
@@ -328,7 +303,10 @@ class Wallet:
         assert len(transaction) > 0
 
         self.log.info("About to sign a transaction")
-        spend_bundle: SpendBundle = await self.sign_transaction(transaction)
+        self.hack_populate_secret_keys_for_coin_solutions(transaction)
+        spend_bundle: SpendBundle = await sign_coin_solutions(
+            transaction, self.secret_key_store.secret_key_for_public_key
+        )
 
         now = uint64(int(time.time()))
         add_list: List[Coin] = list(spend_bundle.additions())
@@ -388,5 +366,8 @@ class Wallet:
                 solution = self.make_solution(consumed=[output_created.name()])
             list_of_solutions.append(CoinSolution(coin, Program.to([puzzle, solution])))
 
-        spend_bundle = await self.sign_transaction(list_of_solutions)
+        self.hack_populate_secret_keys_for_coin_solutions(list_of_solutions)
+        spend_bundle = await sign_coin_solutions(
+            list_of_solutions, self.secret_key_store.secret_key_for_public_key
+        )
         return spend_bundle
