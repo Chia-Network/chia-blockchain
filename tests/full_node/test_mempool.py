@@ -18,9 +18,9 @@ from src.util.condition_tools import (
 from src.util.clvm import int_to_bytes
 from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
-from src.util.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = b"0" * 32
+BURN_PUZZLE_HASH_2 = b"1" * 32
 
 
 @pytest.fixture(scope="module")
@@ -146,9 +146,8 @@ class TestMempool:
             # Maybe transaction means that it's accepted in mempool
             assert outbound.message.function == "new_transaction"
 
-        other_receiver = WalletTool()
         spend_bundle2 = wallet_a.generate_signed_transaction(
-            1000, other_receiver.get_new_puzzlehash(), block.get_coinbase()
+            1000, BURN_PUZZLE_HASH_2, block.get_coinbase()
         )
         assert spend_bundle2 is not None
         tx2: full_node_protocol.RespondTransaction = (
@@ -817,9 +816,8 @@ class TestMempool:
 
         assert spend_bundle1 is not None
 
-        other_receiver = WalletTool()
         spend_bundle2 = wallet_a.generate_signed_transaction(
-            1000, other_receiver.get_new_puzzlehash(), block.get_coinbase()
+            1000, BURN_PUZZLE_HASH_2, block.get_coinbase()
         )
 
         assert spend_bundle2 is not None

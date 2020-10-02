@@ -182,10 +182,10 @@ class BlockTools:
                 return AugSchemeMPL.sign(sk_child, bytes(pool_target))
         return None
 
-    def get_farmer_wallet_tool(self):
+    def get_farmer_wallet_tool(self) -> WalletTool:
         return WalletTool(self.farmer_master_sk)
 
-    def get_pool_wallet_tool(self):
+    def get_pool_wallet_tool(self) -> WalletTool:
         return WalletTool(self.pool_master_sk)
 
     def get_consecutive_blocks(

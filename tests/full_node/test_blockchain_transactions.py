@@ -22,6 +22,9 @@ from src.util.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = b"0" * 32
 
+WALLET_A = WalletTool()
+WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
+
 
 @pytest.fixture(scope="module")
 def event_loop():
@@ -45,8 +48,8 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_basic_blockchain_tx(self, two_nodes):
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
@@ -128,8 +131,8 @@ class TestBlockchainTransactions:
     async def test_validate_blockchain_with_double_spend(self, two_nodes):
 
         num_blocks = 5
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
@@ -171,8 +174,8 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_validate_blockchain_duplicate_output(self, two_nodes):
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
@@ -214,8 +217,8 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_validate_blockchain_with_reorg_double_spend(self, two_nodes):
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
@@ -374,11 +377,11 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_validate_blockchain_spend_reorg_coin(self, two_nodes):
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        receiver_1_puzzlehash = wallet_a.get_new_puzzlehash()
-        receiver_2_puzzlehash = wallet_a.get_new_puzzlehash()
-        receiver_3_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
+        receiver_2_puzzlehash = WALLET_A_PUZZLE_HASHES[2]
+        receiver_3_puzzlehash = WALLET_A_PUZZLE_HASHES[3]
 
         blocks = bt.get_consecutive_blocks(
             test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
@@ -492,9 +495,9 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_validate_blockchain_spend_reorg_cb_coin(self, two_nodes):
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        receiver_1_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
 
         blocks = bt.get_consecutive_blocks(
             test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
@@ -564,9 +567,9 @@ class TestBlockchainTransactions:
         self, two_nodes_standard_freeze
     ):
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        receiver_1_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
 
         blocks = bt.get_consecutive_blocks(
             test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
@@ -617,9 +620,9 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_validate_blockchain_spend_reorg_since_genesis(self, two_nodes):
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        receiver_1_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
 
         blocks = bt.get_consecutive_blocks(
             test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
@@ -675,8 +678,8 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_assert_my_coin_id(self, two_nodes):
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
@@ -754,8 +757,8 @@ class TestBlockchainTransactions:
     async def test_assert_coin_consumed(self, two_nodes):
 
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
@@ -840,8 +843,8 @@ class TestBlockchainTransactions:
     async def test_assert_block_index_exceeds(self, two_nodes):
 
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
@@ -911,8 +914,8 @@ class TestBlockchainTransactions:
     async def test_assert_block_age_exceeds(self, two_nodes):
 
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
@@ -983,8 +986,8 @@ class TestBlockchainTransactions:
     async def test_assert_time_exceeds(self, two_nodes):
 
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
@@ -1057,8 +1060,8 @@ class TestBlockchainTransactions:
     @pytest.mark.asyncio
     async def test_invalid_filter(self, two_nodes):
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
@@ -1151,8 +1154,8 @@ class TestBlockchainTransactions:
     async def test_assert_fee_condition(self, two_nodes):
 
         num_blocks = 10
-        wallet_a = WalletTool()
-        coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
