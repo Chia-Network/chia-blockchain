@@ -20,6 +20,8 @@ from src.util.ints import uint64
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
 
+BURN_PUZZLE_HASH = b"0" * 32
+
 
 @pytest.fixture(scope="module")
 def event_loop():
@@ -45,8 +47,7 @@ class TestBlockchainTransactions:
         num_blocks = 10
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
             test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
@@ -129,8 +130,7 @@ class TestBlockchainTransactions:
         num_blocks = 5
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
             test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
@@ -173,8 +173,7 @@ class TestBlockchainTransactions:
         num_blocks = 10
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
             test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
@@ -217,8 +216,7 @@ class TestBlockchainTransactions:
         num_blocks = 10
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
             test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
@@ -679,8 +677,7 @@ class TestBlockchainTransactions:
         num_blocks = 10
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
@@ -759,8 +756,7 @@ class TestBlockchainTransactions:
         num_blocks = 10
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
@@ -846,8 +842,7 @@ class TestBlockchainTransactions:
         num_blocks = 10
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
@@ -918,8 +913,7 @@ class TestBlockchainTransactions:
         num_blocks = 10
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
@@ -991,8 +985,7 @@ class TestBlockchainTransactions:
         num_blocks = 10
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
@@ -1066,8 +1059,7 @@ class TestBlockchainTransactions:
         num_blocks = 10
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         blocks = bt.get_consecutive_blocks(
             test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash
@@ -1161,8 +1153,7 @@ class TestBlockchainTransactions:
         num_blocks = 10
         wallet_a = WalletTool()
         coinbase_puzzlehash = wallet_a.get_new_puzzlehash()
-        wallet_receiver = WalletTool()
-        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
         # Farm blocks
         blocks = bt.get_consecutive_blocks(

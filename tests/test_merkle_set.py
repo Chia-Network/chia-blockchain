@@ -4,7 +4,6 @@ import pytest
 
 from src.util.merkle_set import MerkleSet, confirm_included_already_hashed
 from tests.setup_nodes import test_constants, bt
-from src.util.wallet_tools import WalletTool
 
 
 @pytest.fixture(scope="module")
@@ -16,8 +15,6 @@ def event_loop():
 class TestMerkleSet:
     @pytest.mark.asyncio
     async def test_basics(self):
-        WalletTool()
-
         num_blocks = 10
         blocks = bt.get_consecutive_blocks(
             test_constants,
