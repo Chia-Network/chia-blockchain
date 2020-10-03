@@ -68,7 +68,8 @@ class Service:
         else:
             config = load_config(root_path, "config.yaml", service_name)
         initialize_logging(service_name, config["logging"], root_path)
-
+        self.config = config
+        self.root_path = root_path
         self._rpc_info = rpc_info
 
         self._server = ChiaServer(
@@ -122,6 +123,8 @@ class Service:
                         self.daemon_port,
                         rpc_port,
                         self.stop,
+                        self.root_path,
+                        self.config,
                     )
                 )
 

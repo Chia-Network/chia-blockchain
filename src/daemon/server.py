@@ -36,7 +36,7 @@ from src.util.config import load_config
 from src.util.logging import initialize_logging
 from src.util.path import mkdir
 from src.util.service_groups import validate_service
-from src.server.ssl_context import ssl_context_for_server
+from src.server.ssl_context import ssl_context_for_server, load_ssl_paths
 
 log = logging.getLogger(__name__)
 
@@ -100,9 +100,12 @@ class WebSocketServer:
         except NotImplementedError:
             self.log.info("Not implemented")
 
-        ssl_context = ssl_context_for_server(
-            self.root_path, self.net_config, require_cert=True
-        )
+        if self.self_hostname != "127.0.0.1" and self.self_hostname != "localhost":
+            self.ssl_context = ssl_context_for_server(
+                self.root_path, self.net_config, require_cert=True
+            )
+        else:
+            self.ssl_context = None
 
         self.websocket_server = await serve(
             self.safe_handle,
@@ -111,7 +114,7 @@ class WebSocketServer:
             max_size=None,
             ping_interval=500,
             ping_timeout=300,
-            ssl=ssl_context
+            ssl=self.ssl_context,
         )
 
         self.log.info("Waiting Daemon WebSocketServer closure")
@@ -178,6 +181,8 @@ class WebSocketServer:
             await websocket.close()
 
     def remove_connection(self, websocket):
+        if websocket is None:
+            return
         remote_address = websocket.remote_address[1]
         service_name = None
         if remote_address in self.remote_address_map:
@@ -214,6 +219,12 @@ class WebSocketServer:
         if restart is True:
             self.ping_job = asyncio.create_task(self.ping_task())
 
+    def get_cert_paths(self):
+        paths = load_ssl_paths(self.root_path, self.net_config)
+        cert, key = paths
+        response = {"success": True, "cert": f"{cert}", "key": f"{key}"}
+        return response
+
     async def handle_message(
         self, websocket, message
     ) -> Tuple[Optional[str], List[Any]]:
@@ -248,6 +259,8 @@ class WebSocketServer:
             response = await self.stop()
         elif command == "register_service":
             response = await self.register_service(websocket, data)
+        elif command == "get_cert_paths":
+            response = self.get_cert_paths()
         else:
             self.log.error(f"UK>> {message}")
             response = {"success": False, "error": f"unknown_command {command}"}
@@ -333,6 +346,11 @@ class WebSocketServer:
                 exe_command = service_command
                 if testing is True:
                     exe_command = f"{service_command} --testing=true"
+                if self.ssl_context is not None:
+                    exe_command = f"{exe_command} --daemon_ssl=true"
+                else:
+                    exe_command = f"{exe_command} --daemon_ssl=false"
+
                 process, pid_path = launch_service(self.root_path, exe_command)
                 self.services[service_command] = process
                 success = True

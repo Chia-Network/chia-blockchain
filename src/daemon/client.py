@@ -28,7 +28,9 @@ class DaemonProxy:
 
     async def start(self, auth: bool = False):
         ssl_context = ssl_context_for_client(self.root_path, self.net_config, auth=auth)
-        self.websocket = await websockets.connect(self._uri, max_size=None, ssl=ssl_context)
+        self.websocket = await websockets.connect(
+            self._uri, max_size=None, ssl=ssl_context
+        )
 
         async def listener():
             while True:
@@ -102,7 +104,13 @@ class DaemonProxy:
         return await self._get(request)
 
 
-async def connect_to_daemon(self_hostname: str, daemon_port: int, net_config: Dict, root_path: Path, auth: bool = False):
+async def connect_to_daemon(
+    self_hostname: str,
+    daemon_port: int,
+    net_config: Dict,
+    root_path: Path,
+    auth: bool = False,
+):
     """
     Connect to the local daemon.
     """
@@ -120,7 +128,11 @@ async def connect_to_daemon_and_validate(root_path, auth: bool = False):
     try:
         net_config = load_config(root_path, "config.yaml")
         connection = await connect_to_daemon(
-            net_config["self_hostname"], net_config["daemon_port"], net_config, root_path, auth=auth
+            net_config["self_hostname"],
+            net_config["daemon_port"],
+            net_config,
+            root_path,
+            auth=auth,
         )
         r = await connection.ping()
 

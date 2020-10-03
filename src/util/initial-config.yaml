@@ -3,6 +3,8 @@ network_id: testnet  # testnet/mainnet
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
 daemon_port: 55400
+daemon_ssl: false
+
 ssl:
   crt: "trusted.crt"
   key: "trusted.key"
@@ -29,6 +31,7 @@ harvester:
   # Plots are searched for in the following directories
   plot_directories: []
 
+  daemon_ssl: false
   ssl:
     crt: "trusted.crt"
     key: "trusted.key"
@@ -66,6 +69,7 @@ farmer:
   propagate_threshold: 50000
   logging: *logging
 
+  daemon_ssl: false
   ssl:
     crt: "trusted.crt"
     key: "trusted.key"
@@ -107,6 +111,7 @@ timelord:
   # is running in sanitizer_mode.
   sanitizer_mode: False
 
+  daemon_ssl: false
   ssl:
     crt: "trusted.crt"
     key: "trusted.key"
@@ -162,6 +167,7 @@ full_node:
     port: 8449
   logging: *logging
 
+  daemon_ssl: false
   ssl:
     crt: "trusted.crt"
     key: "trusted.key"
@@ -186,6 +192,7 @@ introducer:
   recent_peer_threshold: 6000
   logging: *logging
 
+  daemon_ssl: false
   ssl:
     crt: "trusted.crt"
     key: "trusted.key"
@@ -222,6 +229,7 @@ wallet:
     host: introducer.beta.chia.net  # Chia AWS introducer IPv4/IPv6
     port: 8444
 
+  daemon_ssl: false
   ssl:
     crt: "trusted.crt"
     key: "trusted.key"
