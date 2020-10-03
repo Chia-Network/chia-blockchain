@@ -6,7 +6,7 @@ import { useStyles } from "./selectKeyStyles";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
 import { withRouter } from "react-router-dom";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
-import { changeDaemonHost } from "../modules/daemon_api";
+import { changeDaemonHost, disconnectFromDaemon } from "../modules/daemon_api";
 
 import { Button, Box, TextField } from "@material-ui/core";
 
@@ -18,6 +18,7 @@ export const DaemonSettings = () => {
 
   function change_daemon_host() {
     dispatch(changeDaemonHost(host_input.value));
+    dispatch(disconnectFromDaemon())
   }
 
   function goBack() {
@@ -44,7 +45,7 @@ export const DaemonSettings = () => {
               host_input = input;
             }}
             label="Host Name"
-            value={current_host}
+            defaultValue={current_host}
           />
           <Link onClick={change_daemon_host}>
             <Button

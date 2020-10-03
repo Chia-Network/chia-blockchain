@@ -6,7 +6,7 @@ import asyncio
 import json
 import traceback
 
-from src.server.ssl_context import ssl_context_for_server
+from src.server.ssl_context import ssl_context_for_server, ssl_context_for_client
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
@@ -237,9 +237,9 @@ class RpcServer:
                 if self.shut_down:
                     break
                 session = aiohttp.ClientSession()
-                if self.config["daemon_ssl"] == "true":
-                    ssl_context = ssl_context_for_server(
-                        self.root_path, self.config, require_cert=True
+                if self.config["daemon_ssl"] is True:
+                    ssl_context = ssl_context_for_client(
+                        self.root_path, self.config
                     )
                     daemon_host = f"ws://{self_hostname}:{daemon_port}"
                 else:

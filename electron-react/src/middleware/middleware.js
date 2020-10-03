@@ -21,7 +21,7 @@ import { openDialog } from "../modules/dialogReducer";
 if (isElectron()) {
   var remote = window.require("electron").remote;
   var fs = remote.require("fs");
-  const WebSocket = window.require("ws").remote;
+  var WS = window.require('ws');
 }
 
 const config = require("../config");
@@ -56,8 +56,11 @@ const socketMiddleware = () => {
       start_wallet = startService(service_wallet);
       start_node = startService(service_full_node);
     }
+    const state = store.getState()
+    if (state.daemon_state.daemon_host === default_daemon_host)  {
+      store.dispatch(getCertPaths());
+    }
     store.dispatch(isServiceRunning(service_plotter));
-    store.dispatch(getCertPaths());
     store.dispatch(start_wallet);
     store.dispatch(start_node);
   };
@@ -95,17 +98,19 @@ const socketMiddleware = () => {
               )
             );
           } else {
+            const state = store.getState()
+            const key_path = state.daemon_state.key_path
+            const cert_path = state.daemon_state.cert_path
             var options = {
-              cert: fs.readFileSync(
-                "/Users/yostra/.chia/beta-1.0b14.dev66+gfb874487.d20200923/config/trusted.crt"
-              ),
-              key: fs.readFileSync(
-                "/Users/yostra/.chia/beta-1.0b14.dev66+gfb874487.d20200923/config/trusted.key"
-              )
+              cert: fs.readFileSync(cert_path),
+              key: fs.readFileSync(key_path),
+              rejectUnauthorized: false
             };
             try {
-              socket = new WebSocket(action.host, options);
+              socket = new WS(action.host, options);
             } catch (e) {
+              connected = false
+              store.dispatch(actions.wsDisconnected());
               console.log("Failed connection to", action.host);
               break;
             }
@@ -115,7 +120,9 @@ const socketMiddleware = () => {
           try {
             socket = new WebSocket(action.host);
           } catch (e) {
+            connected = false
             console.log("Failed connection to", action.host);
+            store.dispatch(actions.wsDisconnected());
             break;
           }
         }
