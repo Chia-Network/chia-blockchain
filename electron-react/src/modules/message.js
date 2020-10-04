@@ -658,6 +658,72 @@ export const remove_plot_directory_and_refresh = dir => {
   };
 };
 
+const add_rate_limited_funds = (
+  wallet_id,
+  amount,
+  fee,
+) => {
+  var action = walletMessage();
+  action.message.command = "add_rate_limited_funds";
+  action.message.data = {
+    wallet_id,
+    amount,
+    fee,
+  };
+  return action;
+};
+
+export const addRateLimitedFunds = (  
+  walletId,
+  amount,
+  fee,
+) => {
+  return dispatch => {
+    return async_api(dispatch, add_rate_limited_funds(
+      walletId,
+      amount,
+      fee,
+    ), true).then(response => {
+      dispatch(closeProgress());
+      if (!response.data.success) {
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
+};
+
+const send_clawback_transaction = (
+  walletId,
+  fee,
+) => {
+  var action = walletMessage();
+  action.message.command = "send_clawback_transaction";
+  action.message.data = {
+    wallet_id: walletId,
+    fee,
+  };
+  return action;
+};
+
+export const sendClawbackTransaction = (  
+  walletId,
+  fee,
+) => {
+  return dispatch => {
+    return async_api(dispatch, send_clawback_transaction(
+      walletId,
+      fee,
+    ), true).then(response => {
+      dispatch(closeProgress());
+      if (!response.data.success) {
+        const error = response.data.error;
+        dispatch(openDialog("Error", error));
+      }
+    });
+  };
+};
+
 export const rl_set_user_info = (
   wallet_id,
   interval,
@@ -703,10 +769,6 @@ export const rl_set_user_info_action = (
       }
     });
   };
-};
-
-export const clawback_rl_coin = wallet_id => {
-  // THIS IS A PLACEHOLDER FOR RL CLAWBACK FUNCTIONALITY
 };
 
 export const exit_and_close = event => {

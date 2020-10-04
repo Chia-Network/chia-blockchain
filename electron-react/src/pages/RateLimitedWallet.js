@@ -4,7 +4,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import { withRouter } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
-import Typography from "@material-ui/core/Typography";
+import { Typography, Card, CardContent } from "@material-ui/core";
 import Paper from "@material-ui/core/Paper";
 import Box from "@material-ui/core/Box";
 import TextField from "@material-ui/core/TextField";
@@ -25,6 +25,8 @@ import HelpIcon from "@material-ui/icons/Help";
 import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
 import { get_transaction_result } from "../util/transaction_result";
 import { unix_to_short_date } from "../util/utils";
+import RateLimitedAddFunds from '../components/rateLimited/RateLimitedAddFunds';
+import RateLimitedClawback from '../components/rateLimited/RateLimitedClawback';
 
 import { openDialog } from "../modules/dialogReducer";
 
@@ -400,15 +402,11 @@ const RLDetailsCard = props => {
   const classes = useStyles();
   if (type === "user") {
     return (
-      <Paper className={classes.paper}>
-        <Grid container spacing={0}>
-          <Grid item xs={12}>
-            <div className={classes.cardTitle}>
-              <Typography component="h6" variant="h6">
-                Rate Limited Info
-              </Typography>
-            </div>
-          </Grid>
+      <Card>
+        <CardContent>
+          <Typography component="h6" variant="h6" gutterBottom>
+            Rate Limited Info
+          </Typography>
           <Grid item xs={12}>
             <div className={classes.cardSubSection}>
               <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
@@ -452,20 +450,16 @@ const RLDetailsCard = props => {
               </Box>
             </div>
           </Grid>
-        </Grid>
-      </Paper>
+        </CardContent>
+      </Card>
     );
   } else if (type === "admin") {
     return (
-      <Paper className={classes.paper}>
-        <Grid container spacing={0}>
-          <Grid item xs={12}>
-            <div className={classes.cardTitle}>
-              <Typography component="h6" variant="h6">
-                Rate Limited Info
-              </Typography>
-            </div>
-          </Grid>
+      <Card>
+        <CardContent>
+          <Typography component="h6" variant="h6" gutterBottom>
+            Rate Limited Info
+          </Typography>
           <Grid item xs={12}>
             <div className={classes.cardSubSection}>
               <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
@@ -517,8 +511,8 @@ const RLDetailsCard = props => {
               </Box>
             </div>
           </Grid>
-        </Grid>
-      </Paper>
+        </CardContent>
+      </Card>
     );
   }
 };
@@ -555,6 +549,8 @@ const BalanceCardSubSection = props => {
 };
 
 const BalanceCard = props => {
+  const { type } = props;
+
   var id = props.wallet_id;
   const balance = useSelector(
     state => state.wallet_state.wallets[id].balance_total
@@ -572,15 +568,11 @@ const BalanceCard = props => {
   const classes = useStyles();
 
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              Balance
-            </Typography>
-          </div>
-        </Grid>
+    <Card>
+      <CardContent>
+        <Typography component="h6" variant="h6" gutterBottom>
+          Balance
+        </Typography>
         <BalanceCardSubSection
           title="Total Balance"
           balance={balance}
@@ -629,8 +621,8 @@ const BalanceCard = props => {
             </Box>
           </div>
         </Grid>
-      </Grid>
-    </Paper>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -704,15 +696,11 @@ const SendCard = props => {
   }
 
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              Create Transaction
-            </Typography>
-          </div>
-        </Grid>
+    <Card>
+      <CardContent>
+        <Typography component="h6" variant="h6" gutterBottom>
+          Create Transaction
+        </Typography>
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <p className={result_class}>{result_message}</p>
@@ -787,78 +775,25 @@ const SendCard = props => {
             </Box>
           </div>
         </Grid>
-      </Grid>
-    </Paper>
+      </CardContent>
+    </Card>
   );
 };
-
-// TODO(lipa): use this / clean up
-// const ClawbackCard = props => {
-//   var id = props.wallet_id;
-//   const classes = useStyles();
-//   const dispatch = useDispatch();
-
-//   function clawback() {
-//     dispatch(clawback_rl_coin(id));
-//   }
-//   return (
-//     <Paper className={classes.paper}>
-//       <Grid container spacing={0}>
-//         <Grid item xs={12}>
-//           <div className={classes.cardTitle}>
-//             <Typography component="h6" variant="h6">
-//               Clawback Rate Limited Coin
-//             </Typography>
-//           </div>
-//         </Grid>
-//         <Grid item xs={12}>
-//           <div className={classes.cardSubSection}>
-//             <Box display="flex" style={{ marginTop: 20 }}>
-//               <Box flexGrow={1}>
-//                 <Typography variant="subtitle1">You may use the clawback feature to retrieve your coin at any time. If you do so, your Rate Limited User will no longer be able to spend the coin.</Typography>
-//               </Box>
-//             </Box>
-//           </div>
-//         </Grid>
-//         <Grid item xs={12}>
-//           <div className={classes.cardSubSection}>
-//             <Box display="flex">
-//               <Box>
-//                 <Button
-//                   onClick={clawback}
-//                   className={classes.clawbackButton}
-//                   variant="contained"
-//                   color="primary"
-//                 >
-//                   Clawback Coin
-//                 </Button>
-//               </Box>
-//             </Box>
-//           </div>
-//         </Grid>
-//       </Grid>
-//     </Paper>
-//   );
-// };
 
 const HistoryCard = props => {
   var id = props.wallet_id;
   const classes = useStyles();
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              History
-            </Typography>
-          </div>
-        </Grid>
+    <Card>
+      <CardContent>
+        <Typography component="h6" variant="h6" gutterBottom>
+          History
+        </Typography>
         <Grid item xs={12}>
           <TransactionTable wallet_id={id}> </TransactionTable>
         </Grid>
-      </Grid>
-    </Paper>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -945,9 +880,13 @@ const RateLimitedWallet = props => {
     if (init_status) {
       return wallets.length > props.wallet_id ? (
         <Grid className={classes.walletContainer} item xs={12}>
+          <Box m={2} />
           <RLDetailsCard wallet_id={id}></RLDetailsCard>
+          <Box m={2} />
           <BalanceCard wallet_id={id}></BalanceCard>
+          <Box m={2} />
           <SendCard wallet_id={id}></SendCard>
+          <Box m={2} />
           <HistoryCard wallet_id={id}></HistoryCard>
         </Grid>
       ) : (
@@ -965,8 +904,14 @@ const RateLimitedWallet = props => {
   } else if (type === "admin") {
     return wallets.length > props.wallet_id ? (
       <Grid className={classes.walletContainer} item xs={12}>
-        <RLDetailsCard wallet_id={id}></RLDetailsCard>
-        <BalanceCard wallet_id={id}></BalanceCard>
+        <Box m={2} />
+        <RLDetailsCard wallet_id={id} />
+        <Box m={2} />
+        <BalanceCard wallet_id={id} />
+        <Box m={2} />
+        <RateLimitedAddFunds walletId={id} />
+        <Box m={2} />
+        <RateLimitedClawback walletId={id} />
       </Grid>
     ) : (
       ""
