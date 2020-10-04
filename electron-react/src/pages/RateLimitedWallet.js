@@ -549,8 +549,6 @@ const BalanceCardSubSection = props => {
 };
 
 const BalanceCard = props => {
-  const { type } = props;
-
   var id = props.wallet_id;
   const balance = useSelector(
     state => state.wallet_state.wallets[id].balance_total
@@ -782,7 +780,6 @@ const SendCard = props => {
 
 const HistoryCard = props => {
   var id = props.wallet_id;
-  const classes = useStyles();
   return (
     <Card>
       <CardContent>
