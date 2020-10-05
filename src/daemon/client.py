@@ -29,7 +29,7 @@ class DaemonProxy:
     async def start(self, auth: bool = False):
         ssl_context = ssl_context_for_client(self.root_path, self.net_config, auth=auth)
         self.websocket = await websockets.connect(
-            self._uri, max_size=None, ssl=ssl_context
+            self._uri, max_size=2 ** 25, ssl=ssl_context
         )
 
         async def listener():
