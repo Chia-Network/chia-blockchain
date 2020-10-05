@@ -2,10 +2,10 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-
+from clvm_tools import binutils
 from typing import List, Optional, Tuple, Dict, Callable
 
-from blspy import PrivateKey
+from blspy import PrivateKey, G1Element
 
 from src.util.byte_types import hexstr_to_bytes
 from src.util.chech32 import encode_puzzle_hash, decode_puzzle_hash
@@ -21,6 +21,7 @@ from src.server.outbound_message import NodeType, OutboundMessage, Message, Deli
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
 from src.types.sized_bytes import bytes32
+from src.types.coin import Coin
 from src.wallet.trade_record import TradeRecord
 from src.wallet.util.backup_utils import get_backup_info, download_backup, upload_backup
 from src.wallet.util.trade_utils import trade_record_to_dict
@@ -76,6 +77,7 @@ class WalletRpcApi:
             "/cc_get_colour": self.cc_get_colour,
             "/did_update_recovery_ids": self.did_update_recovery_ids,
             "/did_spend": self.did_spend,
+            "/did_get_pubkey": self.did_get_pubkey,
             "/did_get_id": self.did_get_id,
             "/did_recovery_spend": self.did_recovery_spend,
             "/did_create_attest": self.did_create_attest,
@@ -362,7 +364,7 @@ class WalletRpcApi:
                 )
                 asyncio.ensure_future(self._create_backup_and_upload(host))
                 return {"type": cc_wallet.type()}
-        if request["wallet_type"] == "rl_wallet":
+        elif request["wallet_type"] == "rl_wallet":
             if request["rl_type"] == "admin":
                 log.info("Create rl admin wallet")
                 rl_admin: RLWallet = await RLWallet.create_rl_admin(
@@ -393,6 +395,22 @@ class WalletRpcApi:
                     "type": rl_user.type(),
                     "pubkey": rl_user.rl_info.user_pubkey.hex(),
                 }
+        elif request["wallet_type"] == "did_wallet":
+            if request["did_type"] == "new":
+                backup_dids = []
+                for d in request["backup_dids"]:
+                    backup_dids.append(bytes.fromhex(d))
+                did_wallet: DIDWallet = await DIDWallet.create_new_did(
+                    wallet_state_manager, main_wallet, int(request["amount"]), backup_dids
+                )
+                my_did = did_wallet.get_my_ID()
+                return {
+                    "type": did_wallet.type(),
+                    "my_id": my_did,
+                    "wallet_id": did_wallet.id(),
+                }
+            elif request["did_type"] == "recovery":
+                print()
 
     ##########################################################################################
     # Wallet
@@ -565,6 +583,7 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = wallet.did_info.backup_ids
+        binutils.disassemble(recovery_list)
         return {"success": True, "recover_list": recovery_list}
 
     async def did_recovery_spend(self, request):
@@ -585,17 +604,32 @@ class WalletRpcApi:
             info_list.append(info_dict[entry.hex()])
         message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
 
+        pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
+
         success = await wallet.recovery_spend(
-            request["coin_name"], request["puzhash"], info_list, message_spend_bundle
+            request["coin_name"], bytes.fromhex(request["puzhash"]), info_list, pubkey, message_spend_bundle
         )
         return {"success": success}
+
+    async def did_get_pubkey(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        pubkey = bytes(
+            (
+                await wallet.wallet_state_manager.get_unused_derivation_record(
+                    wallet_id
+                )
+            ).pubkey).hex()
+        return {"success": True, "punkey": pubkey}
 
     async def did_create_attest(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         info = await wallet.get_info_for_recovery()
+        coin = Coin(request["coin_tuple"][0], request["coin_tuple"][1], request["coin_tuple"][2])
+        pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
         spend_bundle = await wallet.create_attestment(
-            request["coin_name"], request["puzhash"]
+            coin, bytes.fromhex(request["puzhash"]), pubkey
         )
         return {
             "success": True,

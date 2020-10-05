@@ -163,6 +163,32 @@ class DIDWallet:
         self.log.info(f"Confirmed balance for did wallet is {amount}")
         return uint64(amount)
 
+    async def get_pending_change_balance(self) -> uint64:
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.id()
+        )
+        addition_amount = 0
+
+        for record in unconfirmed_tx:
+            our_spend = False
+            for coin in record.removals:
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.id()
+                ):
+                    our_spend = True
+                    break
+
+            if our_spend is not True:
+                continue
+
+            for coin in record.additions:
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(
+                    coin, self.id()
+                ):
+                    addition_amount += coin.amount
+
+        return uint64(addition_amount)
+
     async def get_unconfirmed_balance(self) -> uint64:
         confirmed = await self.get_confirmed_balance()
         unconfirmed_tx: List[
@@ -460,7 +486,9 @@ class DIDWallet:
         await self.standard_wallet.push_transaction(did_record)
         return spend_bundle
 
-    async def create_attestment(self, identity, newpuz, pubkey):
+    # Pushes the a SpendBundle to create a message coin on the blockchain
+    # Returns a SpendBundle for the recoverer to spend the message coin
+    async def create_attestment(self, identity, newpuz, pubkey) -> SpendBundle:
         coins = await self.select_coins(1)
         coin = coins.pop()
         message = did_wallet_puzzles.create_recovery_message_puzzle(
