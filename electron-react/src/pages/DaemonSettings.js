@@ -4,11 +4,10 @@ import { useSelector, useDispatch } from "react-redux";
 import Link from "@material-ui/core/Link";
 import { useStyles } from "./selectKeyStyles";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
-import { withRouter } from "react-router-dom";
 import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
 import { changeDaemonHost, disconnectFromDaemon } from "../modules/daemon_api";
 
-import { Button, Box, TextField } from "@material-ui/core";
+import { Button, TextField } from "@material-ui/core";
 
 export const DaemonSettings = () => {
   const dispatch = useDispatch();
@@ -18,7 +17,7 @@ export const DaemonSettings = () => {
 
   function change_daemon_host() {
     dispatch(changeDaemonHost(host_input.value));
-    dispatch(disconnectFromDaemon())
+    dispatch(disconnectFromDaemon());
   }
 
   function goBack() {

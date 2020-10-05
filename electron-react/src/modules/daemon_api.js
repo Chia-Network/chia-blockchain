@@ -35,7 +35,7 @@ export const changeDaemonHost = host => ({
 
 export const disconnectFromDaemon = () => ({
   type: "WS_DISCONNECT"
-})
+});
 
 export const daemonReducer = (state = { ...initial_state }, action) => {
   switch (action.type) {
@@ -102,7 +102,7 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
         }
       } else if (command === "get_cert_paths") {
         if (data.success) {
-          debugger
+          debugger;
           return {
             ...state,
             key_path: data.key,
@@ -120,8 +120,12 @@ export const daemonReducer = (state = { ...initial_state }, action) => {
       }
       return state;
     case "WS_DISCONNECTED":
-      return {...initial_state,   cert_path: state.cert_path,
-        key_path: state.key_path, daemon_host: state.daemon_host};
+      return {
+        ...initial_state,
+        cert_path: state.cert_path,
+        key_path: state.key_path,
+        daemon_host: state.daemon_host
+      };
     default:
       return state;
   }

@@ -6,12 +6,6 @@ import App from "./App";
 import "./assets/css/App.css";
 import store from "./modules/store";
 import WebSocketConnection from "./hocs/WebsocketConnection";
-import { exit_and_close } from "./modules/message";
-import isElectron from "is-electron";
-
-const url = require("url");
-const config = require("./util/config");
-const parseArgs = require("minimist");
 
 const Root = ({ store }) => {
   return (

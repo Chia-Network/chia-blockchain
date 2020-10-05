@@ -21,7 +21,7 @@ import { openDialog } from "../modules/dialogReducer";
 if (isElectron()) {
   var remote = window.require("electron").remote;
   var fs = remote.require("fs");
-  var WS = window.require('ws');
+  var WS = window.require("ws");
 }
 
 const config = require("../config");
@@ -56,8 +56,8 @@ const socketMiddleware = () => {
       start_wallet = startService(service_wallet);
       start_node = startService(service_full_node);
     }
-    const state = store.getState()
-    if (state.daemon_state.daemon_host === default_daemon_host)  {
+    const state = store.getState();
+    if (state.daemon_state.daemon_host === default_daemon_host) {
       store.dispatch(getCertPaths());
     }
     store.dispatch(isServiceRunning(service_plotter));
@@ -88,7 +88,7 @@ const socketMiddleware = () => {
         if (socket !== null) {
           socket.close();
         }
-        if (action.host != default_daemon_host) {
+        if (action.host !== default_daemon_host) {
           if (!isElectron()) {
             // Show error message, can't connect to remote host from browser
             store.dispatch(
@@ -98,9 +98,9 @@ const socketMiddleware = () => {
               )
             );
           } else {
-            const state = store.getState()
-            const key_path = state.daemon_state.key_path
-            const cert_path = state.daemon_state.cert_path
+            const state = store.getState();
+            const key_path = state.daemon_state.key_path;
+            const cert_path = state.daemon_state.cert_path;
             var options = {
               cert: fs.readFileSync(cert_path),
               key: fs.readFileSync(key_path),
@@ -109,7 +109,7 @@ const socketMiddleware = () => {
             try {
               socket = new WS(action.host, options);
             } catch (e) {
-              connected = false
+              connected = false;
               store.dispatch(actions.wsDisconnected());
               console.log("Failed connection to", action.host);
               break;
@@ -120,7 +120,7 @@ const socketMiddleware = () => {
           try {
             socket = new WebSocket(action.host);
           } catch (e) {
-            connected = false
+            connected = false;
             console.log("Failed connection to", action.host);
             store.dispatch(actions.wsDisconnected());
             break;
