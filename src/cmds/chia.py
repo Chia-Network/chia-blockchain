@@ -1,5 +1,7 @@
 import importlib
 import pathlib
+import signal
+import sys
 from argparse import Namespace, ArgumentParser
 
 from src import __version__
@@ -52,8 +54,12 @@ def create_parser() -> ArgumentParser:
 def chia(args: Namespace, parser: ArgumentParser):
     return args.function(args, parser)
 
+def sigint_handler(sig, frame):
+    print('Caught SIGINT. Exiting.')
+    sys.exit(0)
 
 def main():
+    signal.signal(signal.SIGINT, sigint_handler)
     parser = create_parser()
     args = parser.parse_args()
     return chia(args, parser)
