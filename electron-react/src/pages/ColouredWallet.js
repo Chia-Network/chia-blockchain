@@ -31,7 +31,7 @@ import Accordion from '../components/Accordion';
 import { openDialog } from '../modules/dialog';
 import { get_transaction_result } from '../util/transaction_result';
 
-const config = require('../config');
+const config = require('../config/config');
 
 const drawerWidth = 240;
 

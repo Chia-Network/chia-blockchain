@@ -5,8 +5,8 @@ import createWallet from '../util/createWallet';
 
 type IncomingState = {
   mnemonic: string[];
-  public_key_fingerprints: Fingerprint[];
-  selected_fingerprint: null;
+  public_key_fingerprints: number[];
+  selected_fingerprint?: number | null;
   logged_in_received: boolean;
   logged_in: boolean;
   wallets: Wallet[];
