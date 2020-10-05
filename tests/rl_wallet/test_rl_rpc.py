@@ -65,14 +65,14 @@ class TestRLWallet:
 
         # test rename
         val = await api_user.get_wallets({})
-        for wallet in val['wallets']:
-            if wallet.id == user_wallet_id:
-                assert wallet.name == "RL User"
+        for w in val['wallets']:
+            if w.id == user_wallet_id:
+                assert w.name == "RL User"
         await api_user.rename_rl_wallet({"wallet_id": user_wallet_id, "name": "RL User Renamed"})
         val = await api_user.get_wallets({})
-        for wallet in val['wallets']:
-            if wallet.id == user_wallet_id:
-                assert wallet.name == "RL User Renamed"
+        for w in val['wallets']:
+            if w.id == user_wallet_id:
+                assert w.name == "RL User Renamed"
 
         api_admin = WalletRpcApi(wallet_node)
         val = await api_admin.create_new_wallet(
