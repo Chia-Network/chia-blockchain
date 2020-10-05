@@ -238,9 +238,7 @@ class RpcServer:
                     break
                 session = aiohttp.ClientSession()
                 if self.config["daemon_ssl"] is True:
-                    ssl_context = ssl_context_for_client(
-                        self.root_path, self.config
-                    )
+                    ssl_context = ssl_context_for_client(self.root_path, self.config)
                     daemon_host = f"ws://{self_hostname}:{daemon_port}"
                 else:
                     ssl_context = None

@@ -75,6 +75,8 @@ class TestWalletRpc:
             daemon_port,
             test_rpc_port,
             stop_node_cb,
+            bt.root_path,
+            config,
             connect_to_daemon=False,
         )
 
