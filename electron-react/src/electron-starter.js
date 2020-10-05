@@ -18,7 +18,7 @@ const {
 } = require("electron");
 const openAboutWindow = require("about-window").default;
 const path = require("path");
-const config = require("./config");
+const config = require('./config/config');
 const dev_config = require("./dev_config");
 const WebSocket = require("ws");
 const daemon_rpc_ws = require("./util/config").daemon_rpc_ws;

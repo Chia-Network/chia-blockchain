@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router';
+import styled from 'styled-components';
 import {
   Card,
   Typography,
@@ -38,6 +39,10 @@ import { resetMnemonic } from '../../modules/mnemonic';
 import type { RootState } from '../../modules/rootReducer';
 import type Fingerprint from '../../types/Fingerprint';
 
+const StyledFingerprintListItem = styled(ListItem)`
+  padding-right: ${({ theme }) => `${theme.spacing(11)}px`};
+`;
+
 export default function SelectKey() {
   const history = useHistory();
   const dispatch = useDispatch();
@@ -48,11 +53,10 @@ export default function SelectKey() {
   const hasFingerprints =
     publicKeyFingerprints && !!publicKeyFingerprints.length;
 
-  function handleClick(fingerprint: Fingerprint) {
+  async function handleClick(fingerprint: Fingerprint) {
     dispatch(resetMnemonic());
     dispatch(selectFingerprint(fingerprint));
-    dispatch(login_action(fingerprint));
-
+    await dispatch(login_action(fingerprint));
     history.push('/dashboard');
   }
 
@@ -86,7 +90,6 @@ export default function SelectKey() {
             <Typography
               variant="h5"
               component="h1"
-              color="primary"
               gutterBottom
             >
               <Trans id="SelectKey.title">Select Key</Trans>
@@ -119,20 +122,20 @@ export default function SelectKey() {
               <Card>
                 <List>
                   {publicKeyFingerprints.map((fingerprint: Fingerprint) => (
-                    <ListItem
-                      button
+                    <StyledFingerprintListItem
                       onClick={() => handleClick(fingerprint)}
-                      key={fingerprint.toString()}
+                      key={fingerprint}
+                      button
                     >
                       <ListItemText
-                        primary={`Private key with public fingerprint ${fingerprint[0]}`}
+                        primary={`Private key with public fingerprint ${fingerprint}`}
                         secondary="Can be backed up to mnemonic seed"
                       />
                       <ListItemSecondaryAction>
                         <Tooltip title="See private key">
                           <IconButton
                             edge="end"
-                            aria-label="delete"
+                            aria-label="show"
                             onClick={() => handleShowKey(fingerprint)}
                           >
                             <VisibilityIcon />
@@ -148,22 +151,11 @@ export default function SelectKey() {
                           </IconButton>
                         </Tooltip>
                       </ListItemSecondaryAction>
-                    </ListItem>
+                    </StyledFingerprintListItem>
                   ))}
                 </List>
               </Card>
             )}
-            <Link to="/wallet/import">
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                size="large"
-                fullWidth
-              >
-                Import from Mnemonics (24 words)
-              </Button>
-            </Link>
             <Link to="/wallet/add">
               <Button
                 type="submit"
@@ -173,6 +165,16 @@ export default function SelectKey() {
                 fullWidth
               >
                 Create a new private key
+              </Button>
+            </Link>
+            <Link to="/wallet/import">
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                fullWidth
+              >
+                Import from Mnemonics (24 words)
               </Button>
             </Link>
             <Button

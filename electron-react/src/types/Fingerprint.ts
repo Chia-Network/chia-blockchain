@@ -1,3 +1,3 @@
-type Fingerprint = [number, boolean];
+type Fingerprint = number;
 
 export default Fingerprint;

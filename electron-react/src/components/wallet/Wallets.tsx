@@ -165,22 +165,20 @@ const CreateWallet = () => {
   );
 };
 
-export const StatusCard = () => {
+export function StatusCard() {
   const syncing = useSelector(
     (state: RootState) => state.wallet_state.status.syncing,
   );
   const height = useSelector(
     (state: RootState) => state.wallet_state.status.height,
   );
-  const connection_count = useSelector(
+  const connectionCount = useSelector(
     (state: RootState) => state.wallet_state.status.connection_count,
   );
 
   return (
     <div style={{ margin: 16 }}>
-      <Typography variant="subtitle1" color="secondary">
-        Status
-      </Typography>
+      <Typography variant="subtitle1">Status</Typography>
       <div style={{ marginLeft: 8 }}>
         <Box display="flex">
           <Box flexGrow={1}>status:</Box>
@@ -192,12 +190,12 @@ export const StatusCard = () => {
         </Box>
         <Box display="flex">
           <Box flexGrow={1}>connections:</Box>
-          <Box>{connection_count}</Box>
+          <Box>{connectionCount}</Box>
         </Box>
       </div>
     </div>
   );
-};
+}
 
 export default function Wallets() {
   const classes = useStyles();

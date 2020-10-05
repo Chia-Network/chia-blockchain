@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter, Switch } from 'react-router-dom';
+import { BrowserRouter, Switch } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import SelectKey from '../selectKey/SelectKey';
 import WalletAdd from '../wallet/WalletAdd';
@@ -31,7 +31,7 @@ export default function Router() {
   }
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       <Switch>
         <GuestRoute path="/" exact>
           <SelectKey />
@@ -46,7 +46,7 @@ export default function Router() {
           <Dashboard />
         </PrivateRoute>
       </Switch>
-    </HashRouter>
+    </BrowserRouter>
   );
 
   /*

@@ -25,7 +25,7 @@ import {
 import { exitDaemon } from './daemon_messages';
 import { wsDisconnect } from './websocket';
 
-const config = require('../config');
+const config = require('../config/config');
 
 const { backup_host } = config;
 
