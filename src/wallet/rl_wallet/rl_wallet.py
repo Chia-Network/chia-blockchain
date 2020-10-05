@@ -1,5 +1,5 @@
 # RLWallet is subclass of Wallet
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import time
 from secrets import token_bytes
 from typing import Optional, List, Tuple, Any
@@ -777,3 +777,7 @@ class RLWallet:
     async def push_transaction(self, tx: TransactionRecord) -> None:
         """ Use this API to send transactions. """
         await self.wallet_state_manager.add_pending_transaction(tx)
+
+    async def rename(self, new_name: str):
+        self.wallet_info = replace(self.wallet_info, name=new_name)
+        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)

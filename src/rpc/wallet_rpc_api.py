@@ -82,6 +82,7 @@ class WalletRpcApi:
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
             "/add_rate_limited_funds:": self.add_rate_limited_funds,
+            "/rename_rl_wallet": self.rename_rl_wallet,
         }
 
     async def _state_changed(self, *args) -> List[str]:
@@ -714,3 +715,10 @@ class WalletRpcApi:
         request["puzzle_hash"] = puzzle_hash
         await wallet.rl_add_funds(request["amount"], puzzle_hash, request["fee"])
         return {"status": "SUCCESS"}
+
+    async def rename_rl_wallet(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet_id = uint32(request["wallet_id"])
+        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        await wallet.rename(str(request["name"]))
+        return {"wallet_id": wallet_id, "name": request["name"]}
