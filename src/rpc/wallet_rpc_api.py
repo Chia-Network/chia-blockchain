@@ -60,6 +60,7 @@ class WalletRpcApi:
             # Wallet management
             "/get_wallets": self.get_wallets,
             "/create_new_wallet": self.create_new_wallet,
+            "/delete_wallet": self.delete_wallet,
             # Wallet
             "/get_wallet_balance": self.get_wallet_balance,
             "/get_transaction": self.get_transaction,
@@ -388,6 +389,14 @@ class WalletRpcApi:
                     "type": rl_user.type(),
                     "pubkey": rl_user.rl_info.user_pubkey.hex(),
                 }
+
+    async def delete_wallet(self, request):
+        assert self.service.wallet_state_manager is not None
+        wallet_id = uint32(request["wallet_id"])
+        self.service.wallet_state_manager.wallets.pop(wallet_id)
+        await self.service.wallet_state_manager.user_store.delete_wallet(wallet_id)
+        return {}
+
 
     ##########################################################################################
     # Wallet

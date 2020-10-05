@@ -195,3 +195,10 @@ class TestRLWallet:
         await time_out_assert(15, check_balance, 0, api_admin, user_wallet_id)
         final_balance = await wallet.get_confirmed_balance()
         assert final_balance == fund_owners_initial_balance - 129
+
+        # test delete wallet
+        val = await api_user.get_wallets({})
+        assert len([wallet for wallet in val['wallets'] if wallet.id == user_wallet_id]) == 1
+        await api_user.delete_wallet({"wallet_id": user_wallet_id})
+        val2 = await api_user.get_wallets({})
+        assert len([wallet for wallet in val2['wallets'] if wallet.id == user_wallet_id]) == 0
