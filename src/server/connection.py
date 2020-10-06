@@ -206,7 +206,7 @@ class PeerConnections:
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get("http://checkip.amazonaws.com/") as resp:
+                async with session.get("https://checkip.amazonaws.com/") as resp:
                     if resp.status == 200:
                         ip = str(await resp.text())
                         ip = ip.rstrip()
