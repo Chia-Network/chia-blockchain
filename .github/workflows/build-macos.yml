@@ -114,7 +114,7 @@ jobs:
         ./venv/bin/py.test tests -s -v --durations 0
 
     - name: Upload MacOS artifacts
-      uses: actions/upload-artifact@v2.1.4
+      uses: actions/upload-artifact@v2.2.0
       with:
         name: Chia-Installer-on-MacOS-10.15-dmg
         path: ${{ github.workspace }}/build_scripts/final_installer/
