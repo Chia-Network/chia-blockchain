@@ -284,6 +284,8 @@ class AddressManager:
     def mark_good_(self, addr: PeerInfo, test_before_evict: bool, timestamp: int):
         self.last_good = timestamp
         (info, node_id) = self.find_(addr)
+        if not addr.is_valid():
+            return
         if info is None:
             return
         if node_id is None:
@@ -354,6 +356,8 @@ class AddressManager:
             addr.host,
             addr.port,
         )
+        if not peer_info.is_valid():
+            return False
         (info, node_id) = self.find_(peer_info)
         if (
             info is not None

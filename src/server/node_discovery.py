@@ -152,111 +152,121 @@ class FullNodeDiscovery:
         ] = await self.global_connections.get_local_peerinfo()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
         while not self.is_closed:
-            # We don't know any address, connect to the introducer to get some.
-            size = await self.address_manager.size()
-            if size == 0 or empty_tables:
-                await self._introducer_client()
-                await asyncio.sleep(min(10, self.peer_connect_interval))
-                empty_tables = False
-                continue
+            try:
+                # We don't know any address, connect to the introducer to get some.
+                size = await self.address_manager.size()
+                if size == 0 or empty_tables:
+                    await self._introducer_client()
+                    await asyncio.sleep(min(10, self.peer_connect_interval))
+                    empty_tables = False
+                    continue
 
-            # Only connect out to one peer per network group (/16 for IPv4).
-            groups = []
-            connected = self.global_connections.get_full_node_peerinfos()
-            for conn in self.global_connections.get_outbound_connections():
-                peer = conn.get_peer_info()
-                group = peer.get_group()
-                if group not in groups:
-                    groups.append(group)
+                # Only connect out to one peer per network group (/16 for IPv4).
+                groups = []
+                connected = self.global_connections.get_full_node_peerinfos()
+                for conn in self.global_connections.get_outbound_connections():
+                    peer = conn.get_peer_info()
+                    group = peer.get_group()
+                    if group not in groups:
+                        groups.append(group)
 
-            # Feeler Connections
-            #
-            # Design goals:
-            # * Increase the number of connectable addresses in the tried table.
-            #
-            # Method:
-            # * Choose a random address from new and attempt to connect to it if we can connect
-            # successfully it is added to tried.
-            # * Start attempting feeler connections only after node finishes making outbound
-            # connections.
-            # * Only make a feeler connection once every few minutes.
+                # Feeler Connections
+                #
+                # Design goals:
+                # * Increase the number of connectable addresses in the tried table.
+                #
+                # Method:
+                # * Choose a random address from new and attempt to connect to it if we can connect
+                # successfully it is added to tried.
+                # * Start attempting feeler connections only after node finishes making outbound
+                # connections.
+                # * Only make a feeler connection once every few minutes.
 
-            is_feeler = False
-            has_collision = False
-            if self._num_needed_peers() == 0:
-                if time.time() * 1000 * 1000 > next_feeler:
-                    next_feeler = self._poisson_next_send(
-                        time.time() * 1000 * 1000, 240, random
-                    )
-                    is_feeler = True
+                is_feeler = False
+                has_collision = False
+                if self._num_needed_peers() == 0:
+                    if time.time() * 1000 * 1000 > next_feeler:
+                        next_feeler = self._poisson_next_send(
+                            time.time() * 1000 * 1000, 240, random
+                        )
+                        is_feeler = True
 
-            await self.address_manager.resolve_tried_collisions()
-            tries = 0
-            now = time.time()
-            got_peer = False
-            addr: Optional[PeerInfo] = None
-            max_tries = 50
-            if len(groups) < 3:
-                max_tries = 10
-            elif len(groups) <= 5:
-                max_tries = 25
-            while not got_peer and not self.is_closed:
-                sleep_interval = min(15, self.peer_connect_interval)
-                sleep_interval = min(sleep_interval, 1 + len(groups) * 3)
-                await asyncio.sleep(sleep_interval)
-                tries += 1
-                if tries > max_tries:
-                    addr = None
-                    empty_tables = True
-                    break
-                info: Optional[
-                    ExtendedPeerInfo
-                ] = await self.address_manager.select_tried_collision()
-                if info is None:
-                    info = await self.address_manager.select_peer(is_feeler)
-                else:
-                    has_collision = True
-                if info is None:
-                    if not is_feeler:
+                await self.address_manager.resolve_tried_collisions()
+                tries = 0
+                now = time.time()
+                got_peer = False
+                addr: Optional[PeerInfo] = None
+                max_tries = 50
+                if len(groups) < 3:
+                    max_tries = 10
+                elif len(groups) <= 5:
+                    max_tries = 25
+                while not got_peer and not self.is_closed:
+                    sleep_interval = min(15, self.peer_connect_interval)
+                    sleep_interval = min(sleep_interval, 1 + len(groups) * 3)
+                    await asyncio.sleep(sleep_interval)
+                    tries += 1
+                    if tries > max_tries:
+                        addr = None
                         empty_tables = True
-                    break
-                # Require outbound connections, other than feelers, to be to distinct network groups.
-                addr = info.peer_info
-                if not is_feeler and addr.get_group() in groups:
-                    addr = None
-                    continue
-                if addr in connected:
-                    addr = None
-                    continue
-                # only consider very recently tried nodes after 30 failed attempts
-                if now - info.last_try < 3600 and tries < 30:
-                    continue
-                if (
-                    time.time() - last_timestamp_local_info > 1800
-                    or local_peerinfo is None
-                ):
-                    local_peerinfo = await self.global_connections.get_local_peerinfo()
-                    last_timestamp_local_info = uint64(int(time.time()))
-                if local_peerinfo is not None and addr == local_peerinfo:
-                    continue
-                got_peer = True
+                        break
+                    info: Optional[
+                        ExtendedPeerInfo
+                    ] = await self.address_manager.select_tried_collision()
+                    if info is None:
+                        info = await self.address_manager.select_peer(is_feeler)
+                    else:
+                        has_collision = True
+                    if info is None:
+                        if not is_feeler:
+                            empty_tables = True
+                        break
+                    # Require outbound connections, other than feelers,
+                    # to be to distinct network groups.
+                    addr = info.peer_info
+                    if has_collision:
+                        break
+                    if addr is not None and not addr.is_valid():
+                        addr = None
+                        continue
+                    if not is_feeler and addr.get_group() in groups:
+                        addr = None
+                        continue
+                    if addr in connected:
+                        addr = None
+                        continue
+                    # only consider very recently tried nodes after 30 failed attempts
+                    if now - info.last_try < 3600 and tries < 30:
+                        continue
+                    if (
+                        time.time() - last_timestamp_local_info > 1800
+                        or local_peerinfo is None
+                    ):
+                        local_peerinfo = await self.global_connections.get_local_peerinfo()
+                        last_timestamp_local_info = uint64(int(time.time()))
+                    if local_peerinfo is not None and addr == local_peerinfo:
+                        continue
+                    got_peer = True
 
-            disconnect_after_handshake = is_feeler
-            if self._num_needed_peers() == 0:
-                disconnect_after_handshake = True
-                empty_tables = False
-            initiate_connection = (
-                self._num_needed_peers() > 0 or has_collision or is_feeler
-            )
-            if addr is not None and initiate_connection:
-                asyncio.create_task(
-                    self.server.start_client(
-                        addr, None, None, disconnect_after_handshake
-                    )
+                disconnect_after_handshake = is_feeler
+                if self._num_needed_peers() == 0:
+                    disconnect_after_handshake = True
+                    empty_tables = False
+                initiate_connection = (
+                    self._num_needed_peers() > 0 or has_collision or is_feeler
                 )
-            sleep_interval = 5 + len(groups) * 5
-            sleep_interval = min(sleep_interval, self.peer_connect_interval)
-            await asyncio.sleep(sleep_interval)
+                if addr is not None and initiate_connection:
+                    asyncio.create_task(
+                        self.server.start_client(
+                            addr, None, None, disconnect_after_handshake
+                        )
+                    )
+                sleep_interval = 5 + len(groups) * 5
+                sleep_interval = min(sleep_interval, self.peer_connect_interval)
+                await asyncio.sleep(sleep_interval)
+            except Exception as e:
+                self.log.error(f"Exception in create outbound connections: {e}")
+                self.log.error(f"Traceback: {traceback.format_exc()}")
 
     async def _periodically_serialize(self, random: Random):
         while not self.is_closed:

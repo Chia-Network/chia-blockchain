@@ -12,6 +12,23 @@ class PeerInfo(Streamable):
     host: str
     port: uint16
 
+    def is_valid(self):
+        ip = None
+        try:
+            ip = ipaddress.IPv6Address(self.host)
+        except ValueError:
+            ip = None
+        if ip is not None:
+            return True
+
+        try:
+            ip = ipaddress.IPv4Address(self.host)
+        except ValueError:
+            ip = None
+        if ip is not None:
+            return True
+        return False
+
     # Functions related to peer bucketing in new/tried tables.
     def get_key(self):
         try:
