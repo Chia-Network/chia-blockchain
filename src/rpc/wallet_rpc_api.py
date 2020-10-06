@@ -397,7 +397,6 @@ class WalletRpcApi:
         await self.service.wallet_state_manager.user_store.delete_wallet(wallet_id)
         return {}
 
-
     ##########################################################################################
     # Wallet
     ##########################################################################################

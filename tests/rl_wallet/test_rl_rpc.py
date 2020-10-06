@@ -65,12 +65,17 @@ class TestRLWallet:
 
         # test rename
         val = await api_user.get_wallets({})
-        for w in val['wallets']:
+        for w in val["wallets"]:
             if w.id == user_wallet_id:
                 assert w.name == "RL User"
-        await api_user.rename_rl_wallet({"wallet_id": user_wallet_id, "name": "RL User Renamed"})
+        await api_user.rename_rl_wallet(
+            {
+                "wallet_id": user_wallet_id,
+                "name": "RL User Renamed",
+            }
+        )
         val = await api_user.get_wallets({})
-        for w in val['wallets']:
+        for w in val["wallets"]:
             if w.id == user_wallet_id:
                 assert w.name == "RL User Renamed"
 
@@ -198,7 +203,13 @@ class TestRLWallet:
 
         # test delete wallet
         val = await api_user.get_wallets({})
-        assert len([wallet for wallet in val['wallets'] if wallet.id == user_wallet_id]) == 1
+        assert (
+            len([wallet for wallet in val["wallets"] if wallet.id == user_wallet_id])
+            == 1
+        )
         await api_user.delete_wallet({"wallet_id": user_wallet_id})
         val2 = await api_user.get_wallets({})
-        assert len([wallet for wallet in val2['wallets'] if wallet.id == user_wallet_id]) == 0
+        assert (
+            len([wallet for wallet in val2["wallets"] if wallet.id == user_wallet_id])
+            == 0
+        )
