@@ -207,8 +207,11 @@ class PeerConnections:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get("http://checkip.amazonaws.com/") as resp:
-                    ip = str(await resp.text())
-                    ip = ip.rstrip()
+                    if resp.status == 200:
+                        ip = str(await resp.text())
+                        ip = ip.rstrip()
+                    else:
+                        ip = None
         except Exception:
             ip = None
         if ip is None:
