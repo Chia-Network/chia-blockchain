@@ -213,7 +213,10 @@ class PeerConnections:
             ip = None
         if ip is None:
             return None
-        return PeerInfo(ip, uint16(port))
+        peer = PeerInfo(ip, uint16(port))
+        if not peer.is_valid():
+            return None
+        return peer
 
     def get_connections(self):
         return self._all_connections

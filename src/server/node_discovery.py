@@ -242,7 +242,9 @@ class FullNodeDiscovery:
                         time.time() - last_timestamp_local_info > 1800
                         or local_peerinfo is None
                     ):
-                        local_peerinfo = await self.global_connections.get_local_peerinfo()
+                        local_peerinfo = (
+                            await self.global_connections.get_local_peerinfo()
+                        )
                         last_timestamp_local_info = uint64(int(time.time()))
                     if local_peerinfo is not None and addr == local_peerinfo:
                         continue
