@@ -108,7 +108,7 @@ class FullNodeDiscovery:
                     await self.address_manager.add_to_new_table(
                         [timestamped_peer_info], peer_info, 0
                     )
-                    await self.address_manager.mark_good(peer_info, True)
+                    # await self.address_manager.mark_good(peer_info, True)
                     if self.relay_queue is not None:
                         self.relay_queue.put_nowait((timestamped_peer_info, 1))
             except Exception as e:
@@ -447,6 +447,9 @@ class FullNodePeers(FullNodeDiscovery):
         while not self.is_closed:
             try:
                 relay_peer, num_peers = await self.relay_queue.get()
+                relay_peer_info = PeerInfo(relay_peer.host, relay_peer.port)
+                if not relay_peer_info.is_valid():
+                    continue
                 # https://en.bitcoin.it/wiki/Satoshi_Client_Node_Discovery#Address_Relay
                 connections = self.global_connections.get_full_node_connections()
                 hashes = []

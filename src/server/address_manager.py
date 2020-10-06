@@ -539,6 +539,8 @@ class AddressManager:
             rand_pos = randrange(len(self.random_pos) - n) + n
             self.swap_random_(n, rand_pos)
             info = self.map_info[self.random_pos[n]]
+            if not info.peer_info.is_valid():
+                continue
             if not info.is_terrible():
                 cur_peer_info = TimestampedPeerInfo(
                     info.peer_info.host,
