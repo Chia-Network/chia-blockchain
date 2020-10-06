@@ -288,8 +288,8 @@ class TestPeerManager:
         assert len(peers2) == 2
 
         # Test: Ensure GetPeers works with new and tried addresses.
-        await addrman.mark_good(peer1)
-        await addrman.mark_good(peer2)
+        await addrman.mark_good(PeerInfo(peer1.host, peer1.port))
+        await addrman.mark_good(PeerInfo(peer2.host, peer2.port))
         peers3 = await addrman.get_peers()
         assert len(peers3) == 2
 
@@ -302,7 +302,7 @@ class TestPeerManager:
             )
             await addrman.add_to_new_table([peer])
             if i % 8 == 0:
-                await addrman.mark_good(peer)
+                await addrman.mark_good(PeerInfo(peer.host, peer.port))
 
         peers4 = await addrman.get_peers()
         percent = await addrman.size()
