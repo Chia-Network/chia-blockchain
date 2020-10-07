@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 
 from secrets import token_bytes
@@ -9,7 +7,6 @@ from src.rpc.farmer_rpc_client import FarmerRpcClient
 from src.rpc.harvester_rpc_client import HarvesterRpcClient
 from src.rpc.rpc_server import start_rpc_server
 from src.util.ints import uint16
-from src.util.config import load_config
 from src.plotting.plot_tools import stream_plot_info
 from src.rpc.farmer_rpc_api import FarmerRpcApi
 from src.rpc.harvester_rpc_api import HarvesterRpcApi
@@ -17,12 +14,6 @@ from src.rpc.harvester_rpc_api import HarvesterRpcApi
 from tests.setup_nodes import setup_farmer_harvester, test_constants, bt
 from src.util.block_tools import get_plot_dir
 from tests.time_out_assert import time_out_assert
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 class TestRpc:
@@ -43,9 +34,8 @@ class TestRpc:
         def stop_node_cb_2():
             pass
 
-        config = load_config(bt.root_path, "config.yaml")
-        hostname = config["self_hostname"]
-        daemon_port = config["daemon_port"]
+        hostname = "127.0.0.1"
+        daemon_port = 55400
 
         farmer_rpc_api = FarmerRpcApi(farmer)
         harvester_rpc_api = HarvesterRpcApi(harvester)
@@ -132,7 +122,7 @@ class TestRpc:
             print(await client_2.get_plot_directories())
             assert len(await client_2.get_plot_directories()) == 1
 
-        except AssertionError:
+        finally:
             # Checks that the RPC manages to stop the node
             client.close()
             client_2.close()
@@ -140,11 +130,3 @@ class TestRpc:
             await client_2.await_closed()
             await rpc_cleanup()
             await rpc_cleanup_2()
-            raise
-
-        client.close()
-        client_2.close()
-        await client.await_closed()
-        await client_2.await_closed()
-        await rpc_cleanup()
-        await rpc_cleanup_2()
