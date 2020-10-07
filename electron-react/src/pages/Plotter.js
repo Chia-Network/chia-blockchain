@@ -331,7 +331,7 @@ const CreatePlot = () => {
   );
   const [plotSize, setPlotSize] = React.useState(25);
   const [plotCount, setPlotCount] = React.useState(1);
-  const [maxRam, setMaxRam] = React.useState(3072);
+  const [maxRam, setMaxRam] = React.useState(4508);
   const [numThreads, setNumThreads] = React.useState(2);
   const [numBuckets, setNumBuckets] = React.useState(0);
   const [stripeSize, setStripeSize] = React.useState(65536);
