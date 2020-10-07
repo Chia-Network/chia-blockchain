@@ -18,15 +18,17 @@ const MnemonicField = (props: any) => {
       <TextField
         variant="outlined"
         margin="normal"
-        disabled
-        fullWidth
         color="primary"
         id={props.id}
         label={props.index}
         name="email"
         autoComplete="email"
-        autoFocus
         value={props.word}
+        inputProps={{
+          readOnly: true,
+        }}
+        fullWidth
+        autoFocus
       />
     </Grid>
   );
@@ -46,12 +48,13 @@ export default function WalletAdd() {
   }
 
   return (
-    <LayoutHero>
-      <Container maxWidth="xl">
+    <LayoutHero
+      header={(
         <Link to="/">
           <ArrowBackIosIcon fontSize="large" color="secondary" />
         </Link>
-      </Container>
+      )}
+    >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Brand />

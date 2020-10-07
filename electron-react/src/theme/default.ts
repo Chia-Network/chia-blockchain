@@ -5,7 +5,7 @@ const defaultTheme = createMuiTheme();
 export default {
   palette: {
     primary: {
-      main: '#5DA962',
+      main: '#3AAC59',
       contrastText: '#ffffff',
     },
     secondary: {
@@ -73,6 +73,6 @@ export default {
     marginLeft: defaultTheme.spacing(4),
     fontSize: 35
   },
-  
+
   */
 };

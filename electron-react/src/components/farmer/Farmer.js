@@ -523,7 +523,9 @@ const Plots = props => {
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
       >
-        <DialogTitle id="alert-dialog-title">{"Delete all keys"}</DialogTitle>
+        <DialogTitle id="alert-dialog-title">
+          Delete all keys
+        </DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
             Are you sure you want to delete the plot? The plot cannot be

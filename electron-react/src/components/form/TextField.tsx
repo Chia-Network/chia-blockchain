@@ -1,9 +1,10 @@
 import styled from 'styled-components';
 import { TextField } from '@material-ui/core';
 
-export default styled(TextField)`
-  color: #ffffff;
+export default TextField;
 
+/*
+export default styled(TextField)`
   & .MuiFormLabel-root {
     color: #e3f2fd;
   }
@@ -48,6 +49,8 @@ export default styled(TextField)`
   }
 
   & .MuiOutlinedInput-input {
-    color: #ffffff;
+    // color: #ffffff;
   }
 `;
+
+*/

@@ -19,16 +19,14 @@ const MnemonicField = (props) => {
       <CssTextField
         variant="outlined"
         margin="normal"
-        disabled
-        fullWidth
         color="primary"
         id={props.id}
         label={props.index}
-        name="email"
-        autoComplete="email"
-        autoFocus
         value={props.word}
         height="60"
+        disabled
+        fullWidth
+        autoFocus
       />
     </Grid>
   );

@@ -10,6 +10,8 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
+  Card,
+  CardContent,
 } from "@material-ui/core";
 import {
   changeCreateWallet,
@@ -223,34 +225,34 @@ export const RLListItems = () => {
   );
 };
 
-const CreateViewSwitch = () => {
+export function CreateWalletView() {
   const view = useSelector(state => state.create_options.view);
 
-  if (view === ALL_OPTIONS) {
-    return <MainWalletList></MainWalletList>;
-  } else if (view === CREATE_CC_WALLET_OPTIONS) {
-    return <CCListItems></CCListItems>;
-  } else if (view === CREATE_NEW_CC) {
-    return <CreateNewCCWallet></CreateNewCCWallet>;
-  } else if (view === CREATE_EXISTING_CC) {
-    return <CreateExistingCCWallet></CreateExistingCCWallet>;
-  } else if (view === CREATE_RL_WALLET_OPTIONS) {
-    return <RLListItems></RLListItems>;
-  } else if (view === CREATE_RL_ADMIN) {
-    return <CreateRLAdminWallet></CreateRLAdminWallet>;
-  } else if (view === CREATE_RL_USER) {
-    return <CreateRLUserWallet></CreateRLUserWallet>;
-  }
-};
-
-export const CreateWalletView = () => {
-  const classes = useStyles();
-
   return (
-    <Grid className={classes.walletContainer} item xs={12}>
-      <Paper className={classes.paper}>
-        <CreateViewSwitch></CreateViewSwitch>
-      </Paper>
-    </Grid>
+    <Card>
+      <CardContent>
+        {view === ALL_OPTIONS && (
+          <MainWalletList />
+        )}
+        {view === CREATE_CC_WALLET_OPTIONS && (
+          <CCListItems />
+        )}
+        {view === CREATE_NEW_CC && (
+          <CreateNewCCWallet />
+        )}
+        {view === CREATE_EXISTING_CC && (
+          <CreateExistingCCWallet />
+        )}
+        {view === CREATE_RL_WALLET_OPTIONS && (
+          <RLListItems />
+        )}
+        {view === CREATE_RL_ADMIN && (
+          <CreateRLAdminWallet />
+        )}
+        {view === CREATE_RL_USER && (
+          <CreateRLUserWallet />
+        )}
+      </CardContent>
+    </Card>
   );
-};
+}
