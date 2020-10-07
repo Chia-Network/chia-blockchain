@@ -20,7 +20,7 @@ class Err(Enum):
 
     UNKNOWN = -9999
 
-    # permanent errors. Block is unsalvageable garbage.
+    # permanent errors. Block is un-salvageable garbage.
     BAD_COINBASE_SIGNATURE = 1
     INVALID_BLOCK_SOLUTION = 2
     INVALID_COIN_SOLUTION = 3
