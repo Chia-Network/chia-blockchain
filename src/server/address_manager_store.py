@@ -124,10 +124,7 @@ class AddressManagerStore:
         metadata = []
         nodes = []
         new_table_entries = []
-
         metadata.append(("key", str(address_manager.key)))
-        metadata.append(("new_count", str(address_manager.new_count)))
-        metadata.append(("tried_count", str(address_manager.tried_count)))
 
         unique_ids = {}
         count_ids = 0
@@ -138,6 +135,7 @@ class AddressManagerStore:
                 assert count_ids != address_manager.new_count
                 nodes.append((count_ids, info))
                 count_ids += 1
+        metadata.append(("new_count", str(count_ids)))
 
         tried_ids = 0
         for node_id, info in address_manager.map_info.items():
@@ -147,6 +145,7 @@ class AddressManagerStore:
                 nodes.append((count_ids, info))
                 count_ids += 1
                 tried_ids += 1
+        metadata.append(("tried_count", str(tried_ids)))
 
         for bucket in range(NEW_BUCKET_COUNT):
             for i in range(BUCKET_SIZE):
