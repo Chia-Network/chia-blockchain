@@ -410,7 +410,7 @@ class Timelord:
                             del self.pending_iters[challenge_hash]
                             del self.submitted_iters[challenge_hash]
                         except KeyError:
-                            log.error("Discriminant stopped anormally.")
+                            log.error("Discriminant stopped abnormally.")
 
     async def _manage_discriminant_queue(self):
         while not self._is_shutdown:
