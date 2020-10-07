@@ -77,7 +77,7 @@ export default function Dashboard() {
       <Flex flexGrow={1} flexDirection="column">
         <StyledBody flexGrow={1} flexDirection="column" overflow="auto">
           <ToolbarSpacing />
-          <Flex overflow="hidden">
+          <Flex flexGrow={1} overflow="hidden">
             <Switch>
               <Route path={`${path}`} exact>
                 <FullNode />

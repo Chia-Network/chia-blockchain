@@ -104,14 +104,15 @@ export default function WalletImport() {
   }
 
   return (
-    <LayoutHero>
-      <Container maxWidth="xl">
+    <LayoutHero
+      header={(
         <ArrowBackIosIcon
           onClick={handleBack}
           fontSize="large"
           color="secondary"
         />
-      </Container>
+      )}
+    >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Brand />

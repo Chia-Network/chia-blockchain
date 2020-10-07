@@ -222,14 +222,13 @@ const ColourCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
-              <Box flexGrow={1} style={{ marginBottom: 20 }}>
-                <Typography variant="subtitle1">Colour:</Typography>
+              <Box>
+                <Typography>{'Colour: '}</Typography>
               </Box>
               <Box
                 style={{
-                  paddingLeft: 20,
-                  width: "80%",
-                  overflowWrap: "break-word"
+                  wordBreak: "break-word",
+                  minWidth: '0',
                 }}
               >
                 <Typography variant="subtitle1">{colour}</Typography>
@@ -780,13 +779,13 @@ const ColouredWallet = props => {
   const wallets = useSelector(state => state.wallet_state.wallets);
 
   return wallets.length > props.wallet_id ? (
-    <Grid className={classes.walletContainer} item xs={12}>
+    <>
       <ColourCard wallet_id={id} name={name}></ColourCard>
       <BalanceCard wallet_id={id}></BalanceCard>
       <SendCard wallet_id={id}></SendCard>
       <AddressCard wallet_id={id}></AddressCard>
       <HistoryCard wallet_id={id}></HistoryCard>
-    </Grid>
+    </>
   ) : (
     ""
   );

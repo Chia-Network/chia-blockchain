@@ -100,17 +100,19 @@ const useStyles = makeStyles((theme) => ({
 
 const WalletItem = (props: any) => {
   const dispatch = useDispatch();
+  const history = useHistory();
   const id = props.wallet_id;
 
   const wallet = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id],
+    (state: RootState) => state.wallet_state.wallets[Number(id)],
   );
   let name = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].name,
+    (state: RootState) => state.wallet_state.wallets[Number(id)].name,
   );
   if (!name) {
     name = '';
   }
+
   let mainLabel = '';
   if (wallet.type === WalletType.STANDARD_WALLET) {
     mainLabel = 'Chia Wallet';
@@ -137,6 +139,8 @@ const WalletItem = (props: any) => {
     } else if (wallet.type === WalletType.RATE_LIMITED) {
       dispatch(changeWalletMenu(RLWallet, wallet.id));
     }
+
+    history.push('/dashboard/wallets');
   }
 
   return (
@@ -202,6 +206,7 @@ export default function Wallets() {
   const { path } = useRouteMatch();
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const id = useSelector((state: RootState) => state.wallet_menu.id);
+  const wallet = wallets.find(wallet => wallet && wallet.id === id);
   const [open] = useState(true);
 
   return (
@@ -233,16 +238,18 @@ export default function Wallets() {
             <Grid item xs={12}>
               <Switch>
                 <Route path={path} exact>
-                  <StandardWallet wallet_id={id} />
+                  {!!wallet && wallet.type === WalletType.STANDARD_WALLET && (
+                    <StandardWallet wallet_id={id} />
+                  )}
+                  {!!wallet && wallet.type === WalletType.COLOURED_COIN && (
+                    <ColouredWallet wallet_id={id} />
+                  )}
+                  {!!wallet && wallet.type === WalletType.RATE_LIMITED && (
+                    <RateLimitedWallet wallet_id={id} />
+                  )}
                 </Route>
                 <Route path={`${path}/create`} exact>
                   <CreateWalletView />
-                </Route>
-                <Route path={`${path}/coloured`} exact>
-                  <ColouredWallet wallet_id={id} />
-                </Route>
-                <Route path={`${path}/rate-limited`} exact>
-                  <RateLimitedWallet wallet_id={id} />
                 </Route>
               </Switch>
             </Grid>

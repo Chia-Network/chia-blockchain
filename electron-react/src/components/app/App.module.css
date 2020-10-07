@@ -4,6 +4,11 @@ body,
   height: 100%;
 }
 
+:global(#root) {
+  display: flex;
+  flex-direction: column;
+}
+
 @font-face {
   font-family: Roboto;
   src: url("./fonts/Roboto-Medium.ttf");
