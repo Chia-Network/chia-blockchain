@@ -452,24 +452,24 @@ class DIDWallet:
             raise e
         return
 
-    def load_backup(self, filename):
-        try:
-            f = open(filename, "r")
-            details = f.readline().split(":")
-            f.close()
-            genesis_id = bytes.fromhex(details[0])
-            backup_ids = []
-            for d in details[1].split(","):
-                backup_ids.append(bytes.fromhex(d))
-            innerpuz = Program.from_bytes(bytes.fromhex(details[2]))
-            did_info = DIDInfo(
-                genesis_id, backup_ids, self.did_info.parent_info, innerpuz
-            )
-            # await self.save_info(did_info)
-            full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, genesis_id)
-        except Exception as e:
-            raise e
-        return
+    # def load_backup(self, filename):
+    #     try:
+    #         f = open(filename, "r")
+    #         details = f.readline().split(":")
+    #         f.close()
+    #         genesis_id = bytes.fromhex(details[0])
+    #         backup_ids = []
+    #         for d in details[1].split(","):
+    #             backup_ids.append(bytes.fromhex(d))
+    #         innerpuz = Program.from_bytes(bytes.fromhex(details[2]))
+    #         did_info = DIDInfo(
+    #             genesis_id, backup_ids, self.did_info.parent_info, innerpuz
+    #         )
+    #         await self.save_info(did_info)
+    #         full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, genesis_id)
+    #     except Exception as e:
+    #         raise e
+    #     return
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)

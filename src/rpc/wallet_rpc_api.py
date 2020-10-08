@@ -2,7 +2,6 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from clvm_tools import binutils
 from typing import List, Optional, Tuple, Dict, Callable
 
 from blspy import PrivateKey, G1Element
@@ -400,7 +399,7 @@ class WalletRpcApi:
                 backup_dids = []
                 for d in request["backup_dids"]:
                     backup_dids.append(bytes.fromhex(d))
-                did_wallet: DIDWallet = await DIDWallet.create_new_did(
+                did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                     wallet_state_manager, main_wallet, int(request["amount"]), backup_dids
                 )
                 my_did = did_wallet.get_my_DID()
@@ -632,7 +631,11 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         info = await wallet.get_info_for_recovery()
-        coin = Coin(bytes.fromhex(request["coin_tuple"][0]), bytes.fromhex(request["coin_tuple"][1]), request["coin_tuple"][2])
+        coin = Coin(
+            bytes.fromhex(request["coin_tuple"][0]),
+            bytes.fromhex(request["coin_tuple"][1]),
+            request["coin_tuple"][2]
+        )
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
         spend_bundle = await wallet.create_attestment(
             coin, bytes.fromhex(request["puzhash"]), pubkey
