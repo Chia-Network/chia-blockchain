@@ -1,8 +1,8 @@
 import asyncio
 import logging
-from pathlib import Path
+import ssl
 from secrets import token_bytes
-from typing import Any, List, Tuple, Dict
+from typing import Any, Callable, List, Tuple
 
 from aiter import iter_to_aiter, map_aiter, push_aiter
 from aiter.server import start_server_aiter
@@ -15,7 +15,6 @@ from src.types.sized_bytes import bytes32
 from src.util.network import create_node_id
 
 from .pipeline import initialize_pipeline
-from .ssl_context import ssl_context_for_client, ssl_context_for_server
 
 
 async def start_server(
@@ -27,9 +26,7 @@ async def start_server(
     Whenever a new TCP connection is made, a new srwt tuple is sent through the pipeline.
     """
     require_cert = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
-    ssl_context = ssl_context_for_server(
-        self.root_path, self.config, require_cert=require_cert
-    )
+    ssl_context = self.ssl_context_for_server(require_cert)
 
     server, aiter = await start_server_aiter(
         self._port, host=None, reuse_address=True, ssl=ssl_context
@@ -62,8 +59,8 @@ class ChiaServer:
         local_type: NodeType,
         ping_interval: int,
         network_id: str,
-        root_path: Path,
-        config: Dict,
+        ssl_context_for_client: Callable[[bool], ssl.SSLContext],
+        ssl_context_for_server: Callable[[bool], ssl.SSLContext],
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
@@ -115,8 +112,9 @@ class ChiaServer:
             )
         )
 
-        self.root_path = root_path
-        self.config = config
+        self.ssl_context_for_client = ssl_context_for_client
+        self.ssl_context_for_server = ssl_context_for_server
+
         self._pending_connections: List = []
 
     async def start_client(
@@ -135,7 +133,7 @@ class ChiaServer:
             self.log.error("Starting client after server closed")
             return False
 
-        ssl_context = ssl_context_for_client(self.root_path, self.config, auth=auth)
+        ssl_context = self.ssl_context_for_client(auth)
         try:
             # Sometimes open_connection takes a long time, so we add it as a task, and cancel
             # the task in the event of closing the node.
