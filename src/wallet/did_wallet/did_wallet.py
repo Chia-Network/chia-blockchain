@@ -118,6 +118,37 @@ class DIDWallet:
         return self
 
     @staticmethod
+    async def create_new_did_wallet_from_recovery(
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        did: bytes,
+        inner_puzzle: Program,
+        backup_ids: List,
+        name: str = None,
+    ):
+        self = DIDWallet()
+        self.base_puzzle_program = None
+        self.base_inner_puzzle_hash = None
+        self.standard_wallet = wallet
+        if name:
+            self.log = logging.getLogger(name)
+        else:
+            self.log = logging.getLogger(__name__)
+
+        self.wallet_state_manager = wallet_state_manager
+        self.did_info = DIDInfo(did, backup_ids, [], inner_puzzle)
+        info_as_string = bytes(self.did_info).hex()
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+            "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
+        )
+        if self.wallet_info is None:
+            raise ValueError("Internal Error")
+        self.wallet_id = self.wallet_info.id
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
+        # TODO: scan blockchain for latest coin, innerpuz, and parent_info
+        return self
+
+    @staticmethod
     async def create(
         wallet_state_manager: Any,
         wallet: Wallet,
@@ -408,6 +439,38 @@ class DIDWallet:
             if parent_found:
                 await self.wallet_state_manager.set_action_done(action_id)
 
+    def make_backup(self, filename: str):
+        try:
+            f = open(filename, "w")
+            output_str = f"{self.get_my_DID()}:"
+            for did in self.did_info.backup_ids:
+                output_str = output_str + did.hex() + ","
+            output_str = output_str + f": {bytes(self.did_info.current_inner).hex()}"
+            f.write(output_str)
+            f.close()
+        except Exception as e:
+            raise e
+        return
+
+    def load_backup(self, filename):
+        try:
+            f = open(filename, "r")
+            details = f.readline().split(":")
+            f.close()
+            genesis_id = bytes.fromhex(details[0])
+            backup_ids = []
+            for d in details[1].split(","):
+                backup_ids.append(bytes.fromhex(d))
+            innerpuz = Program.from_bytes(bytes.fromhex(details[2]))
+            did_info = DIDInfo(
+                genesis_id, backup_ids, self.did_info.parent_info, innerpuz
+            )
+            # await self.save_info(did_info)
+            full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, genesis_id)
+        except Exception as e:
+            raise e
+        return
+
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
         did = self.did_info.my_did
@@ -587,13 +650,7 @@ class DIDWallet:
         )
         parent_info = await self.get_parent_for_coin(coin)
         assert parent_info is not None
-        fullsol = Program.to(
-            [
-                parent_info.as_list(),
-                coin.amount,
-                innersol,
-            ]
-        )
+        fullsol = Program.to([parent_info.as_list(), coin.amount, innersol])
         list_of_solutions = [
             CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
         ]

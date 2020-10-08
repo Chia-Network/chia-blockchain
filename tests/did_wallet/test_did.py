@@ -190,9 +190,13 @@ class TestDIDWallet:
         coin = coins.pop()
         info = await did_wallet.get_info_for_recovery()
         pubkey = (
-            await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
+            await did_wallet_2.wallet_state_manager.get_unused_derivation_record(
+                did_wallet_2.wallet_info.id
+            )
         ).pubkey
-        message_spend_bundle = await did_wallet.create_attestment(coin.name(), ph, pubkey)
+        message_spend_bundle = await did_wallet.create_attestment(
+            coin.name(), ph, pubkey
+        )
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
         info = Program.to([info])
@@ -274,7 +278,11 @@ class TestDIDWallet:
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
         info = await did_wallet_2.get_info_for_recovery()
-        pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
+        pubkey = (
+            await did_wallet.wallet_state_manager.get_unused_derivation_record(
+                did_wallet.wallet_info.id
+            )
+        ).pubkey
         spend_bundle = await did_wallet_2.create_attestment(coin.name(), ph, pubkey)
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
@@ -327,7 +335,11 @@ class TestDIDWallet:
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
         info = Program.to([])
-        pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
+        pubkey = (
+            await did_wallet.wallet_state_manager.get_unused_derivation_record(
+                did_wallet.wallet_info.id
+            )
+        ).pubkey
         spend_bundle = await did_wallet.recovery_spend(
             coin, ph, info, pubkey, SpendBundle([], AugSchemeMPL.aggregate([]))
         )
@@ -401,14 +413,20 @@ class TestDIDWallet:
         coin = coins.pop()
         info = await did_wallet.get_info_for_recovery()
         pubkey = (
-            await did_wallet_2.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
+            await did_wallet_2.wallet_state_manager.get_unused_derivation_record(
+                did_wallet_2.wallet_info.id
+            )
         ).pubkey
-        message_spend_bundle = await did_wallet.create_attestment(coin.name(), new_ph, pubkey)
+        message_spend_bundle = await did_wallet.create_attestment(
+            coin.name(), new_ph, pubkey
+        )
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
 
         info = Program.to([info])
-        await did_wallet_2.recovery_spend(coin, new_ph, info, pubkey, message_spend_bundle)
+        await did_wallet_2.recovery_spend(
+            coin, new_ph, info, pubkey, message_spend_bundle
+        )
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -420,8 +438,14 @@ class TestDIDWallet:
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
         info = await did_wallet_2.get_info_for_recovery()
-        pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
-        message_spend_bundle = await did_wallet_2.create_attestment(coin.name(), ph, pubkey)
+        pubkey = (
+            await did_wallet.wallet_state_manager.get_unused_derivation_record(
+                did_wallet.wallet_info.id
+            )
+        ).pubkey
+        message_spend_bundle = await did_wallet_2.create_attestment(
+            coin.name(), ph, pubkey
+        )
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
         info = [info]
@@ -588,8 +612,7 @@ class TestDIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = did_wallet.did_info.current_inner
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
-            innerpuz,
-            did_wallet.did_info.my_did,
+            innerpuz, did_wallet.did_info.my_did,
         )
         fullsol = Program.to(
             [
@@ -604,10 +627,7 @@ class TestDIDWallet:
         )
 
         list_of_solutions = [
-            CoinSolution(
-                coin,
-                clvm.to_sexp_f([full_puzzle, fullsol]),
-            )
+            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
         ]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())
