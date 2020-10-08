@@ -1,4 +1,9 @@
-from src.consensus.constants import constants
+import pathlib
+
+from typing import Dict
+
+from src.consensus.constants import ConsensusConstants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.farmer import Farmer
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
@@ -13,7 +18,9 @@ from src.server.start_service import run_service
 u"".encode("idna")
 
 
-def service_kwargs_for_farmer(root_path):
+def service_kwargs_for_farmer(
+    root_path: pathlib.Path, consensus_constants: ConsensusConstants
+) -> Dict:
     service_name = "farmer"
     config = load_config_cli(root_path, "config.yaml", service_name)
     keychain = Keychain()
@@ -24,7 +31,7 @@ def service_kwargs_for_farmer(root_path):
 
     # TOD: Remove once we have pool server
     config_pool = load_config_cli(root_path, "config.yaml", "pool")
-    api = Farmer(config, config_pool, keychain, constants)
+    api = Farmer(config, config_pool, keychain, consensus_constants)
 
     kwargs = dict(
         root_path=root_path,
@@ -43,7 +50,7 @@ def service_kwargs_for_farmer(root_path):
 
 
 def main():
-    kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH)
+    kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 
