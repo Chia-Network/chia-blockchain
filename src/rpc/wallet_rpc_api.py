@@ -77,7 +77,7 @@ class WalletRpcApi:
             "/did_update_recovery_ids": self.did_update_recovery_ids,
             "/did_spend": self.did_spend,
             "/did_get_pubkey": self.did_get_pubkey,
-            "/did_get_id": self.did_get_id,
+            "/did_get_did": self.did_get_did,
             "/did_recovery_spend": self.did_recovery_spend,
             "/did_create_attest": self.did_create_attest,
             "/create_offer_for_ids": self.create_offer_for_ids,
