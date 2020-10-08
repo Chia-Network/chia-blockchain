@@ -6,13 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
-## Unreleased
+## [1.0beta15] aka Beta 1.15 - 2020-10-07
 
 ### Changed
+- The development tool WalletTool was refactored out.
+- Update to clvm 0.5.3.
+- As k=30 and k=31 are now ruled out for mainnet, the GUI defaults to a plot size of k=32.
 
 ### Fixed
+- Over time the new peer gossip protocol could slowly disconnect all peers and take your node offline.
+- Sometimes on restart the peer connections database could cause fullnode to crash.
 
 ### Added
+- Choosing a larger k size in the GUI also increases the default memory buffer.
 
 ## [1.0beta14] aka Beta 1.14 - 2020-10-01
 
