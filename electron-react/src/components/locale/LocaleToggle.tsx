@@ -55,6 +55,7 @@ export default function LocaleToggle() {
           component="a"
           href="https://github.com/Chia-Network/chia-blockchain/tree/master/electron-react/src/locales/README.md"
           target="_blank"
+          onClick={() => handleClose()}
         >
           Help to translate
         </MenuItem>

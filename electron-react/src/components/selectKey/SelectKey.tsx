@@ -99,7 +99,6 @@ export default function SelectKey() {
               <Typography
                 variant="h5"
                 component="h1"
-                color="primary"
                 gutterBottom
               >
                 <Trans id="SelectKey.signInTitle">Sign In</Trans>

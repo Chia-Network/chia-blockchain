@@ -43,7 +43,6 @@ export default function LayoutHero(props: Props) {
           <DarkModeToggle />
         </Toolbar>
       </AppBar>
-      <ToolbarSpacing />
       <StyledBody>
         {children}
       </StyledBody>
