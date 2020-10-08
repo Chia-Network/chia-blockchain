@@ -176,7 +176,7 @@ class TestDIDWallet:
         await self.time_out_assert(15, did_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
 
-        recovery_list = [bytes.fromhex(did_wallet.get_my_ID())]
+        recovery_list = [bytes.fromhex(did_wallet.get_my_DID())]
 
         did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
             wallet_node_2.wallet_state_manager, wallet2, uint64(100), recovery_list
@@ -244,7 +244,7 @@ class TestDIDWallet:
         await self.time_out_assert(15, did_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
 
-        recovery_list = [bytes.fromhex(did_wallet.get_my_ID())]
+        recovery_list = [bytes.fromhex(did_wallet.get_my_DID())]
 
         did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
             wallet_node_2.wallet_state_manager, wallet2, uint64(100), recovery_list
@@ -255,7 +255,7 @@ class TestDIDWallet:
 
         assert did_wallet_2.did_info.backup_ids == recovery_list
 
-        recovery_list = [bytes.fromhex(did_wallet_2.get_my_ID())]
+        recovery_list = [bytes.fromhex(did_wallet_2.get_my_DID())]
         await did_wallet.update_recovery_list(recovery_list)
 
         assert did_wallet.did_info.backup_ids == recovery_list
@@ -369,7 +369,7 @@ class TestDIDWallet:
 
         await self.time_out_assert(15, did_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
-        recovery_list = [bytes.fromhex(did_wallet.get_my_ID())]
+        recovery_list = [bytes.fromhex(did_wallet.get_my_DID())]
 
         did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
             wallet_node_2.wallet_state_manager, wallet2, uint64(100), recovery_list
@@ -382,7 +382,7 @@ class TestDIDWallet:
         assert did_wallet_2.did_info.backup_ids == recovery_list
 
         # Update coin with new ID info
-        recovery_list = [bytes.fromhex(did_wallet_2.get_my_ID())]
+        recovery_list = [bytes.fromhex(did_wallet_2.get_my_DID())]
         await did_wallet.update_recovery_list(recovery_list)
         assert did_wallet.did_info.backup_ids == recovery_list
         updated_puz = await did_wallet.get_new_puzzle()

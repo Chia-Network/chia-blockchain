@@ -424,7 +424,7 @@ class DIDWallet:
             )
         )
 
-    def get_my_ID(self) -> str:
+    def get_my_DID(self) -> str:
         core = self.did_info.my_did
         return core.hex()
 
@@ -558,7 +558,7 @@ class DIDWallet:
         parent = coin.parent_coin_info
         innerpuzhash = self.did_info.current_inner.get_tree_hash()
         amount = coin.amount
-        return Program.to([parent, innerpuzhash, amount])
+        return [parent, innerpuzhash, amount]
 
     async def recovery_spend(
         self,
@@ -567,7 +567,7 @@ class DIDWallet:
         parent_innerpuzhash_amounts_for_recovery_ids: List[Tuple[bytes, bytes, int]],
         pubkey: G1Element,
         spend_bundle: SpendBundle,
-    ):
+    ) -> SpendBundle:
         # innerpuz solution is (mode amount new_puz identity my_puz parent_innerpuzhash_amounts_for_recovery_ids)
         innersol = Program.to(
             [

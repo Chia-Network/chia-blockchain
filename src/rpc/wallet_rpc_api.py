@@ -403,10 +403,10 @@ class WalletRpcApi:
                 did_wallet: DIDWallet = await DIDWallet.create_new_did(
                     wallet_state_manager, main_wallet, int(request["amount"]), backup_dids
                 )
-                my_did = did_wallet.get_my_ID()
+                my_did = did_wallet.get_my_DID()
                 return {
                     "type": did_wallet.type(),
-                    "my_id": my_did,
+                    "my_did": my_did,
                     "wallet_id": did_wallet.id(),
                 }
             elif request["did_type"] == "recovery":
@@ -568,14 +568,14 @@ class WalletRpcApi:
             return {"success": True}
         return {"success": False}
 
-    async def did_get_id(self, request):
+    async def did_get_did(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        id = wallet.get_my_ID()
+        my_did = wallet.get_my_DID()
         try:
             coins = wallet.select_coins(1)
             coin = coins.pop()
-            return {"success": True, "id": id, "coin_id": coin.name()}
+            return {"success": True, "my_did": my_did, "coin_id": coin.name()}
         except Exception:
             return {"success": False}
 
@@ -583,8 +583,10 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = wallet.did_info.backup_ids
-        binutils.disassemble(recovery_list)
-        return {"success": True, "recover_list": recovery_list}
+        recover_hex_list = []
+        for _ in recovery_list:
+            recover_hex_list.append(_.hex())
+        return {"success": True, "recover_list": recover_hex_list}
 
     async def did_recovery_spend(self, request):
         wallet_id = int(request["wallet_id"])
@@ -601,7 +603,11 @@ class WalletRpcApi:
         # convert info dict into recovery list - same order as wallet
         info_list = []
         for entry in my_recovery_list:
-            info_list.append(info_dict[entry.hex()])
+            info_list.append([
+                bytes.fromhex(info_dict[entry.hex()][0]),
+                bytes.fromhex(info_dict[entry.hex()][1]),
+                info_dict[entry.hex()][2]
+            ])
         message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
 
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
@@ -626,16 +632,21 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         info = await wallet.get_info_for_recovery()
-        coin = Coin(request["coin_tuple"][0], request["coin_tuple"][1], request["coin_tuple"][2])
+        coin = Coin(bytes.fromhex(request["coin_tuple"][0]), bytes.fromhex(request["coin_tuple"][1]), request["coin_tuple"][2])
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
         spend_bundle = await wallet.create_attestment(
             coin, bytes.fromhex(request["puzhash"]), pubkey
         )
-        return {
-            "success": True,
-            "message_spend_bundle": bytes(spend_bundle).hex(),
-            "info": info,
-        }
+        if spend_bundle is not None:
+            return {
+                "success": True,
+                "message_spend_bundle": bytes(spend_bundle).hex(),
+                "info": [info[0].hex(), info[1].hex(), info[2]]
+            }
+        else:
+            return {
+                "success": False
+            }
 
     async def cc_set_name(self, request):
         assert self.service.wallet_state_manager is not None
