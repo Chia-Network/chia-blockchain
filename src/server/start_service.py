@@ -21,6 +21,7 @@ from src.rpc.rpc_server import start_rpc_server
 from src.server.connection import OnConnectFunc
 
 from .reconnect_task import start_reconnect_task
+from .ssl_context import ssl_context_for_client, ssl_context_for_server
 
 
 stopped_by_signal = False
@@ -71,14 +72,29 @@ class Service:
 
         self._rpc_info = rpc_info
 
+        server_ssl_context_rc = ssl_context_for_server(
+            root_path, config, require_cert=True
+        )
+        server_ssl_context_nrc = ssl_context_for_server(
+            root_path, config, require_cert=False
+        )
+        client_ssl_context_auth = ssl_context_for_client(root_path, config, auth=True)
+        client_ssl_context_nauth = ssl_context_for_client(root_path, config, auth=False)
+
+        def ssl_client(auth: bool):
+            return client_ssl_context_auth if auth else client_ssl_context_nauth
+
+        def ssl_server(require_cert: bool):
+            return server_ssl_context_rc if require_cert else server_ssl_context_nrc
+
         self._server = ChiaServer(
             advertised_port,
             api,
             node_type,
             ping_interval,
             network_id,
-            root_path,
-            config,
+            ssl_client,
+            ssl_server,
             name=f"{service_name}_server",
         )
         for _ in ["set_server", "_set_server"]:
