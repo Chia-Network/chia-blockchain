@@ -50,8 +50,8 @@ jobs:
 
     - name: Build source distribution
       run: |
-        pip install pep517
-        python -m pep517.build --source --out-dir dist .
+        pip install build
+        python -m build --sdist --outdir dist .
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2.2.0
