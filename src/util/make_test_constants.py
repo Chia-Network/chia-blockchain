@@ -1,11 +1,11 @@
 from typing import Dict
 
-from src.consensus.constants import constants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.util.block_tools import BlockTools
 
 
 def make_test_constants_with_genesis(test_constants_overrides: Dict):
-    test_constants = constants.replace(**test_constants_overrides)
+    test_constants = make_test_constants_without_genesis(test_constants_overrides)
 
     bt = BlockTools()
 
@@ -20,6 +20,6 @@ def make_test_constants_with_genesis(test_constants_overrides: Dict):
 
 def make_test_constants_without_genesis(test_constants_overrides: Dict):
 
-    test_constants = constants.replace(**test_constants_overrides)
+    test_constants = DEFAULT_CONSTANTS.replace(**test_constants_overrides)
 
     return test_constants

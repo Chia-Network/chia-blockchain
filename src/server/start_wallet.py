@@ -1,6 +1,10 @@
-from multiprocessing import freeze_support
+import pathlib
 
-from src.consensus.constants import constants as consensus_constants
+from multiprocessing import freeze_support
+from typing import Dict
+
+from src.consensus.constants import ConsensusConstants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.wallet.wallet_node import WalletNode
 from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.server.outbound_message import NodeType
@@ -15,7 +19,9 @@ from src.types.peer_info import PeerInfo
 u"".encode("idna")
 
 
-def service_kwargs_for_wallet(root_path):
+def service_kwargs_for_wallet(
+    root_path: pathlib.Path, consensus_constants: ConsensusConstants
+) -> Dict:
     service_name = "wallet"
     config = load_config_cli(root_path, "config.yaml", service_name)
     keychain = Keychain(testing=False)
@@ -62,7 +68,7 @@ def service_kwargs_for_wallet(root_path):
 
 
 def main():
-    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH)
+    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 

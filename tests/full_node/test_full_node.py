@@ -5,7 +5,6 @@ import time
 from typing import Dict
 from secrets import token_bytes
 
-from src.consensus.constants import constants
 from src.protocols import (
     full_node_protocol as fnp,
     timelord_protocol,
@@ -55,8 +54,8 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def two_nodes():
-    constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
-    async for _ in setup_two_nodes(constants):
+    zero_free_constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+    async for _ in setup_two_nodes(zero_free_constants):
         yield _
 
 
@@ -847,7 +846,7 @@ class TestWalletProtocol:
             blocks_new[-1].get_coinbase(),
         )
         spend_bundle_bad = wallet_a.generate_signed_transaction(
-            constants.MAX_COIN_AMOUNT,
+            test_constants.MAX_COIN_AMOUNT,
             wallet_a.get_new_puzzlehash(),
             blocks_new[-1].get_coinbase(),
         )
