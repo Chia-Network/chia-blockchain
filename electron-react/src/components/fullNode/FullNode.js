@@ -137,7 +137,7 @@ const useStyles = makeStyles(theme => ({
     borderBottom: "1px solid #eeeeee",
     /* mouse over link */
     "&:hover": {
-      backgroundColor: "#eeeeee"
+     // backgroundColor: "#eeeeee"
     }
   },
   block_row_unfinished: {

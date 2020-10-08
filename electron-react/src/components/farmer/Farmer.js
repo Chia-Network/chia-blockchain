@@ -568,7 +568,7 @@ const FarmerContent = props => {
     dispatch(closeConnection(node_id));
   };
   return (
-    <Container maxWidth="lg" className={classes.container}>
+    <>
       <Grid container spacing={3}>
         {/* Chart */}
         <Grid item xs={12}>
@@ -592,7 +592,7 @@ const FarmerContent = props => {
           ></Connections>
         </Grid>
       </Grid>
-    </Container>
+    </>
   );
 };
 
