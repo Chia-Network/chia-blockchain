@@ -11,7 +11,6 @@ from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
-from src.server.upnp import upnp_remap_port
 
 
 # See: https://bugs.python.org/issue29288
@@ -27,8 +26,6 @@ def service_kwargs_for_full_node(
     api = FullNode(config, root_path=root_path, consensus_constants=consensus_constants)
 
     async def start_callback():
-        if config["enable_upnp"]:
-            upnp_remap_port(config["port"])
         await api._start()
 
     def stop_callback():
@@ -43,6 +40,7 @@ def service_kwargs_for_full_node(
         node_type=NodeType.FULL_NODE,
         advertised_port=config["port"],
         service_name=service_name,
+        upnp_ports=[config["port"]],
         server_listen_ports=[config["port"]],
         on_connect_callback=api._on_connect,
         start_callback=start_callback,
