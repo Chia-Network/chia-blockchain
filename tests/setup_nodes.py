@@ -94,19 +94,6 @@ async def setup_full_node(
             bt=bt,
         )
 
-    started = asyncio.Event()
-
-    async def start_callback():
-        await api._start()
-        nonlocal started
-        started.set()
-
-    def stop_callback():
-        api._close()
-
-    async def await_closed_callback():
-        await api._await_closed()
-
     service = Service(
         root_path=bt.root_path,
         api=api,
@@ -116,19 +103,15 @@ async def setup_full_node(
         server_listen_ports=[port],
         auth_connect_peers=False,
         on_connect_callback=api._on_connect,
-        start_callback=start_callback,
-        stop_callback=stop_callback,
-        await_closed_callback=await_closed_callback,
         parse_cli_args=False,
     )
 
-    run_task = asyncio.create_task(service.run())
-    await started.wait()
+    await service.start()
 
     yield api, api.server
 
     service.stop()
-    await run_task
+    await service.wait_closed()
     if db_path.exists():
         db_path.unlink()
 
@@ -175,19 +158,6 @@ async def setup_wallet_node(
     if full_node_port is not None:
         connect_peers = [PeerInfo(self_hostname, full_node_port)]
 
-    started = asyncio.Event()
-
-    async def start_callback():
-        await api._start(new_wallet=True)
-        nonlocal started
-        started.set()
-
-    def stop_callback():
-        api._close()
-
-    async def await_closed_callback():
-        await api._await_closed()
-
     service = Service(
         root_path=bt.root_path,
         api=api,
@@ -198,19 +168,15 @@ async def setup_wallet_node(
         connect_peers=connect_peers,
         auth_connect_peers=False,
         on_connect_callback=api._on_connect,
-        start_callback=start_callback,
-        stop_callback=stop_callback,
-        await_closed_callback=await_closed_callback,
         parse_cli_args=False,
     )
 
-    run_task = asyncio.create_task(service.run())
-    await started.wait()
+    await service.start(new_wallet=True)
 
     yield api, api.server
 
     service.stop()
-    await run_task
+    await service.wait_closed()
     if db_path.exists():
         db_path.unlink()
     keychain.delete_all_keys()
@@ -218,19 +184,6 @@ async def setup_wallet_node(
 
 async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants):
     api = Harvester(bt.root_path, consensus_constants)
-
-    started = asyncio.Event()
-
-    async def start_callback():
-        await api._start()
-        nonlocal started
-        started.set()
-
-    def stop_callback():
-        api._close()
-
-    async def await_closed_callback():
-        await api._await_closed()
 
     service = Service(
         root_path=bt.root_path,
@@ -241,19 +194,15 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
         server_listen_ports=[port],
         connect_peers=[PeerInfo(self_hostname, farmer_port)],
         auth_connect_peers=True,
-        start_callback=start_callback,
-        stop_callback=stop_callback,
-        await_closed_callback=await_closed_callback,
         parse_cli_args=False,
     )
 
-    run_task = asyncio.create_task(service.run())
-    await started.wait()
+    await service.start()
 
     yield api, api.server
 
     service.stop()
-    await run_task
+    await service.wait_closed()
 
 
 async def setup_farmer(
@@ -274,12 +223,6 @@ async def setup_farmer(
 
     api = Farmer(config, config_pool, bt.keychain, consensus_constants)
 
-    started = asyncio.Event()
-
-    async def start_callback():
-        nonlocal started
-        started.set()
-
     service = Service(
         root_path=bt.root_path,
         api=api,
@@ -290,35 +233,20 @@ async def setup_farmer(
         on_connect_callback=api._on_connect,
         connect_peers=connect_peers,
         auth_connect_peers=False,
-        start_callback=start_callback,
         parse_cli_args=False,
     )
 
-    run_task = asyncio.create_task(service.run())
-    await started.wait()
+    await service.start()
 
     yield api, api.server
 
     service.stop()
-    await run_task
+    await service.wait_closed()
 
 
 async def setup_introducer(port):
     config = load_config(bt.root_path, "config.yaml", "introducer")
     api = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
-
-    started = asyncio.Event()
-
-    async def start_callback():
-        await api._start()
-        nonlocal started
-        started.set()
-
-    def stop_callback():
-        api._close()
-
-    async def await_closed_callback():
-        await api._await_closed()
 
     service = Service(
         root_path=bt.root_path,
@@ -328,19 +256,15 @@ async def setup_introducer(port):
         service_name="introducer",
         server_listen_ports=[port],
         auth_connect_peers=False,
-        start_callback=start_callback,
-        stop_callback=stop_callback,
-        await_closed_callback=await_closed_callback,
         parse_cli_args=False,
     )
 
-    run_task = asyncio.create_task(service.run())
-    await started.wait()
+    await service.start()
 
     yield api, api.server
 
     service.stop()
-    await run_task
+    await service.wait_closed()
 
 
 async def setup_vdf_clients(port):
@@ -367,19 +291,6 @@ async def setup_timelord(
 
     api = Timelord(config, consensus_constants.DISCRIMINANT_SIZE_BITS)
 
-    started = asyncio.Event()
-
-    async def start_callback():
-        await api._start()
-        nonlocal started
-        started.set()
-
-    def stop_callback():
-        api._close()
-
-    async def await_closed_callback():
-        await api._await_closed()
-
     service = Service(
         root_path=bt.root_path,
         api=api,
@@ -389,19 +300,15 @@ async def setup_timelord(
         server_listen_ports=[port],
         connect_peers=[PeerInfo(self_hostname, full_node_port)],
         auth_connect_peers=False,
-        start_callback=start_callback,
-        stop_callback=stop_callback,
-        await_closed_callback=await_closed_callback,
         parse_cli_args=False,
     )
 
-    run_task = asyncio.create_task(service.run())
-    await started.wait()
+    await service.start()
 
     yield api, api.server
 
     service.stop()
-    await run_task
+    await service.wait_closed()
 
 
 async def setup_two_nodes(consensus_constants: ConsensusConstants):
