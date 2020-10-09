@@ -23,12 +23,6 @@ def node_height_at_least(node, h):
     return False
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestSimulation:
     @pytest.fixture(scope="function")
     async def simulation(self):

@@ -76,6 +76,15 @@ class Farmer:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
             raise RuntimeError(error_str)
 
+    async def _start(self):
+        pass
+
+    def _close(self):
+        pass
+
+    async def _await_closed(self):
+        pass
+
     async def _on_connect(self):
         # Sends a handshake to the harvester
         msg = harvester_protocol.HarvesterHandshake(
