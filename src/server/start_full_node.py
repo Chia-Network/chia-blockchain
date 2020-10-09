@@ -25,15 +25,6 @@ def service_kwargs_for_full_node(
 
     api = FullNode(config, root_path=root_path, consensus_constants=consensus_constants)
 
-    async def start_callback():
-        await api._start()
-
-    def stop_callback():
-        api._close()
-
-    async def await_closed_callback():
-        await api._await_closed()
-
     kwargs = dict(
         root_path=root_path,
         api=api,
@@ -43,9 +34,6 @@ def service_kwargs_for_full_node(
         upnp_ports=[config["port"]],
         server_listen_ports=[config["port"]],
         on_connect_callback=api._on_connect,
-        start_callback=start_callback,
-        stop_callback=stop_callback,
-        await_closed_callback=await_closed_callback,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])

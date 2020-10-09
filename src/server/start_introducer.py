@@ -24,15 +24,6 @@ def service_kwargs_for_introducer(
         config["max_peers_to_send"], config["recent_peer_threshold"]
     )
 
-    async def start_callback():
-        await introducer._start()
-
-    def stop_callback():
-        introducer._close()
-
-    async def await_closed_callback():
-        await introducer._await_closed()
-
     kwargs = dict(
         root_path=root_path,
         api=introducer,
@@ -40,9 +31,6 @@ def service_kwargs_for_introducer(
         advertised_port=config["port"],
         service_name=service_name,
         server_listen_ports=[config["port"]],
-        start_callback=start_callback,
-        stop_callback=stop_callback,
-        await_closed_callback=await_closed_callback,
     )
     return kwargs
 

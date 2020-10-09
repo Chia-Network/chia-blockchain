@@ -47,9 +47,6 @@ class Service:
         auth_connect_peers: bool = True,
         on_connect_callback: Optional[OnConnectFunc] = None,
         rpc_info: Optional[Tuple[type, int]] = None,
-        start_callback: Optional[Callable] = None,
-        stop_callback: Optional[Callable] = None,
-        await_closed_callback: Optional[Callable] = None,
         parse_cli_args=True,
     ):
         net_config = load_config(root_path, "config.yaml")
@@ -75,6 +72,15 @@ class Service:
         self._rpc_info = rpc_info
 
         ssl_cert_path, ssl_key_path = load_ssl_paths(root_path, config)
+
+        async def start_callback():
+            await api._start()
+
+        def stop_callback():
+            api._close()
+
+        async def await_closed_callback():
+            await api._await_closed()
 
         self._server = ChiaServer(
             advertised_port,

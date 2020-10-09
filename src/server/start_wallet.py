@@ -40,15 +40,6 @@ def service_kwargs_for_wallet(
     else:
         connect_peers = []
 
-    async def start_callback():
-        await api._start()
-
-    def stop_callback():
-        api._close()
-
-    async def await_closed_callback():
-        await api._await_closed()
-
     kwargs = dict(
         root_path=root_path,
         api=api,
@@ -57,9 +48,6 @@ def service_kwargs_for_wallet(
         service_name=service_name,
         server_listen_ports=[config["port"]],
         on_connect_callback=api._on_connect,
-        stop_callback=stop_callback,
-        start_callback=start_callback,
-        await_closed_callback=await_closed_callback,
         rpc_info=(WalletRpcApi, config["rpc_port"]),
         connect_peers=connect_peers,
         auth_connect_peers=False,
