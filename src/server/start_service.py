@@ -13,6 +13,7 @@ except ImportError:
 
 from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer, start_server
+from src.server.upnp import upnp_remap_port
 from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
 from src.util.config import load_config, load_config_cli
@@ -40,6 +41,7 @@ class Service:
         node_type: NodeType,
         advertised_port: int,
         service_name: str,
+        upnp_ports: List[int] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
         auth_connect_peers: bool = True,
@@ -91,6 +93,7 @@ class Service:
 
         self._connect_peers = connect_peers
         self._auth_connect_peers = auth_connect_peers
+        self._upnp_ports = upnp_ports
         self._server_listen_ports = server_listen_ports
 
         self._api = api
@@ -110,6 +113,9 @@ class Service:
             return
 
         async def _run():
+            for port in self._upnp_ports:
+                upnp_remap_port(port)
+
             if self._start_callback:
                 await self._start_callback()
 
