@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Trans } from '@lingui/macro';
 import {
   Box,
   Grid,
@@ -12,7 +13,6 @@ import {
 } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import {
-  Redirect,
   Route,
   Switch,
   useRouteMatch,
@@ -113,18 +113,18 @@ const WalletItem = (props: any) => {
     name = '';
   }
 
-  let mainLabel = '';
+  let mainLabel = <></>;
   if (wallet.type === WalletType.STANDARD_WALLET) {
-    mainLabel = 'Chia Wallet';
+    mainLabel = <Trans id="WalletItem.chiaWallet">Chia Wallet</Trans>;
     name = 'Chia';
   } else if (wallet.type === WalletType.COLOURED_COIN) {
-    mainLabel = 'CC Wallet';
+    mainLabel = <Trans id="WalletItem.ccWallet">CC Wallet</Trans>;
     if (name.length > 18) {
       name = name.substring(0, 18);
       name = name.concat('...');
     }
   } else if (wallet.type === WalletType.RATE_LIMITED) {
-    mainLabel = 'RL Wallet';
+    mainLabel = <Trans id="WalletItem.rlWallet">RL Wallet</Trans>;
     if (name.length > 18) {
       name = name.substring(0, 18);
       name = name.concat('...');
@@ -162,7 +162,7 @@ const CreateWallet = () => {
     <div className={classes.bottomOptions}>
       <Divider />
       <ListItem button onClick={presentCreateWallet}>
-        <ListItemText primary="Add Wallet" />
+        <ListItemText primary={<Trans id="CreateWallet.addWallet">Add Wallet</Trans>} />
       </ListItem>
       <Divider />
     </div>
@@ -182,18 +182,37 @@ export function StatusCard() {
 
   return (
     <div style={{ margin: 16 }}>
-      <Typography variant="subtitle1">Status</Typography>
+      <Typography variant="subtitle1">
+        <Trans id="StatusCard.title">
+          Status
+        </Trans>
+      </Typography>
       <div style={{ marginLeft: 8 }}>
         <Box display="flex">
-          <Box flexGrow={1}>status:</Box>
-          <Box>{syncing ? 'syncing' : 'synced'}</Box>
+          <Box flexGrow={1}>
+            <Trans id="StatusCard.status">
+              status:
+            </Trans>
+          </Box>
+          <Box>{syncing
+            ? <Trans id="StatusCard.syncing">syncing</Trans>
+            : <Trans id="StatusCard.synced">synced</Trans>}
+          </Box>
         </Box>
         <Box display="flex">
-          <Box flexGrow={1}>height:</Box>
+          <Box flexGrow={1}>
+            <Trans id="StatusCard.height">
+              height:
+            </Trans>
+          </Box>
           <Box>{height}</Box>
         </Box>
         <Box display="flex">
-          <Box flexGrow={1}>connections:</Box>
+          <Box flexGrow={1}>
+            <Trans id="StatusCard.connections">
+              connections:
+            </Trans>
+          </Box>
           <Box>{connectionCount}</Box>
         </Box>
       </div>
@@ -211,7 +230,11 @@ export default function Wallets() {
 
   return (
     <>
-      <DashboardTitle>Wallets</DashboardTitle>
+      <DashboardTitle>
+        <Trans id="Wallets.title">
+          Wallets
+        </Trans>
+      </DashboardTitle>
       <Drawer
         variant="permanent"
         classes={{

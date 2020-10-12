@@ -1,4 +1,5 @@
 import React from "react";
+import { Trans } from '@lingui/macro';
 import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import Typography from "@material-ui/core/Typography";
@@ -81,7 +82,9 @@ export default function Connections(props) {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Connections
+              <Trans id="Connections.title">
+                Connections
+              </Trans>
             </Typography>
           </div>
           <TableContainer component={Paper}>
@@ -92,18 +95,50 @@ export default function Connections(props) {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Node Id</TableCell>
-                  <TableCell align="right">Ip address</TableCell>
-                  <TableCell align="right">Port</TableCell>
-                  <TableCell align="right">Up/Down</TableCell>
-                  <TableCell align="right">Connection type</TableCell>
+                  <TableCell>
+                    <Trans id="Connections.nodeId">
+                      Node Id
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Connections.ipAddress">
+                      Ip address
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Connections.port">
+                      Port
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Connections.upDown">
+                      Up/Down
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Connections.connectionType">
+                      Connection type
+                    </Trans>
+                  </TableCell>
                   {connectionTime ? (
-                    <TableCell align="right">Connected</TableCell>
+                    <TableCell align="right">
+                      <Trans id="Connections.connected">
+                        Connected
+                      </Trans>
+                    </TableCell>
                   ) : null}
                   {connectionTime ? (
-                    <TableCell align="right">Last message</TableCell>
+                    <TableCell align="right">
+                      <Trans id="Connections.lastMessage">
+                        Last message
+                      </Trans>
+                    </TableCell>
                   ) : null}
-                  <TableCell align="right">Delete</TableCell>
+                  <TableCell align="right">
+                    <Trans id="Connections.delete">
+                      Delete
+                    </Trans>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -147,14 +182,22 @@ export default function Connections(props) {
               </TableBody>
             </Table>
           </TableContainer>
-          <h4 className={classes.connect}>Connect to other peers</h4>
+          <h4 className={classes.connect}>
+            <Trans id="Connections.connectToOtherPeersTitle">
+              Connect to other peers
+            </Trans>
+          </h4>
           <form className={classes.form} noValidate autoComplete="off">
             <TextField
-              label="Ip address / host"
+              label={<Trans id="Connections.ipAddressHost">Ip address / host</Trans>}
               value={host}
               onChange={handleChangeHost}
             />
-            <TextField label="Port" value={port} onChange={handleChangePort} />
+            <TextField
+              label={<Trans id="Connections.port">Port</Trans>}
+              value={port}
+              onChange={handleChangePort}
+            />
             <Button
               variant="contained"
               color="primary"
@@ -162,7 +205,9 @@ export default function Connections(props) {
               className={classes.button}
               startIcon={<SettingsInputAntennaIcon />}
             >
-              Connect
+              <Trans id="Connections.connect">
+                Connect
+              </Trans>
             </Button>
           </form>
           {connectionError === "" ? (

@@ -1,4 +1,5 @@
 import React from "react";
+import { Trans } from '@lingui/macro';
 import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
@@ -156,25 +157,32 @@ const getStatusItems = (state, connected) => {
     const progress = state.sync.sync_progress_height;
     const tip = state.sync.sync_tip_height;
     const item = {
-      label: "Status",
-      value: "Syncing " + progress + "/" + tip,
+      label: <Trans id="StatusItem.status">Status</Trans>,
+      value: <Trans id="StatusItem.statusValue">Syncing {progress}/{tip}</Trans>,
       colour: "orange",
-      tooltip:
-        "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
+      tooltip: (
+        <Trans id="StatusItem.statusTooltip">
+          The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain
+        </Trans>
+      ),
     };
     status_items.push(item);
   } else if (connected) {
     const item = {
-      label: "Status",
-      value: "Synced",
+      label: <Trans id="StatusItem.status">Status</Trans>,
+      value: <Trans id="StatusItem.statusSynced">Synced</Trans>,
       colour: "green",
-      tooltip: "This node is fully caught up and validating the network"
+      tooltip: (
+        <Trans id="StatusItem.statusSyncedTooltip">
+          This node is fully caught up and validating the network
+        </Trans>
+      )
     };
     status_items.push(item);
   } else {
     const item = {
-      label: "Status",
-      value: "Not connected",
+      label: <Trans id="StatusItem.status">Status</Trans>,
+      value: <Trans id="StatusItem.statusNotConnected">Not connected</Trans>,
       colour: "black"
     };
     status_items.push(item);
@@ -182,10 +190,16 @@ const getStatusItems = (state, connected) => {
 
   if (state.lca) {
     const lca_height = state.lca.data.height;
-    const item = { label: "LCA Block Height", value: "" + lca_height };
+    const item = {
+      label: <Trans id="StatusItem.lcaBlockHeight">LCA Block Height</Trans>,
+      value: "" + lca_height,
+    };
     status_items.push(item);
   } else {
-    const item = { label: "LCA Block Height", value: "0" };
+    const item = {
+      label: <Trans id="StatusItem.lcaBlockHeight">LCA Block Height</Trans>,
+      value: "0",
+    };
     status_items.push(item);
   }
 
@@ -196,10 +210,16 @@ const getStatusItems = (state, connected) => {
         max_height = parseInt(tip.data.height);
       }
     }
-    const item = { label: "Max Tip Block Height", value: "" + max_height };
+    const item = {
+      label: <Trans id="StatusItem.maxTipBlockHeight">Max Tip Block Height</Trans>,
+      value: "" + max_height
+    };
     status_items.push(item);
   } else {
-    const item = { label: "Max Tip Block Height", value: "0" };
+    const item = {
+      label: <Trans id="StatusItem.maxTipBlockHeight">Max Tip Block Height</Trans>,
+      value: "0"
+    };
     status_items.push(item);
   }
 
@@ -207,56 +227,76 @@ const getStatusItems = (state, connected) => {
     const lca_time = state.lca.data.timestamp;
     const date_string = unix_to_short_date(parseInt(lca_time));
     const item = {
-      label: "LCA Time",
+      label: <Trans id="StatusItem.lcaTime">LCA Time</Trans>,
       value: date_string,
-      tooltip:
-        "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height."
+      tooltip: (
+        <Trans id="StatusItem.lcaTimeTooltip">
+          This is the time of the latest common ancestor,
+          which is a block ancestor of all tip blocks.
+          Note that the full node keeps track of up to three tips at each height.
+        </Trans>
+      ),
     };
     status_items.push(item);
   } else {
-    const item = { label: "LCA Time", value: "" };
+    const item = {
+      label: <Trans id="StatusItem.lcaTime">LCA Time</Trans>,
+      value: ""
+    };
     status_items.push(item);
   }
 
   if (connected) {
     const item = {
-      label: "Connection Status ",
-      value: "Connected",
+      label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
+      value: <Trans id="StatusItem.connectionStatusConnected">Connected</Trans>,
       colour: "green"
     };
     status_items.push(item);
   } else {
     const item = {
-      label: "Connection Status ",
-      value: "Not connected",
+      label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
+      value: <Trans id="StatusItem.connectionStatusNotConnected">Not connected</Trans>,
       colour: "red"
     };
     status_items.push(item);
   }
   const difficulty = state.difficulty;
-  const diff_item = { label: "Difficulty", value: difficulty };
+  const diff_item = {
+    label: <Trans id="StatusItem.difficulty">Difficulty</Trans>,
+    value: difficulty,
+  };
   status_items.push(diff_item);
 
   const ips = state.ips;
   const ips_item = {
-    label: "Iterations per Second",
+    label: <Trans id="StatusItem.iterationsPerSecond">Iterations per Second</Trans>,
     value: ips,
-    tooltip:
-      "The estimated proof of time speed of the fastest timelord in the network."
+    tooltip: (
+      <Trans id="StatusItem.iterationsPerSecondTooltip">
+        The estimated proof of time speed of the fastest timelord in the network.
+      </Trans>
+    ),
   };
   status_items.push(ips_item);
 
   const iters = state.min_iters;
-  const min_item = { label: "Min Iterations", value: iters };
+  const min_item = {
+    label: <Trans id="StatusItem.minIterations">Min Iterations</Trans>,
+    value: iters,
+  };
   status_items.push(min_item);
 
   const space =
     (BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString() + "TiB";
   const space_item = {
-    label: "Estimated network space",
+    label: <Trans id="StatusItem.estimatedNetworkSpace">Estimated network space</Trans>,
     value: space,
-    tooltip:
-      "Estimated sum of all the plotted disk space of all farmers in the network"
+    tooltip: (
+      <Trans id="StatusItem.estimatedNetworkSpaceTooltip">
+        Estimated sum of all the plotted disk space of all farmers in the network
+      </Trans>
+    ),
   };
   status_items.push(space_item);
 
@@ -311,7 +351,9 @@ const FullNodeStatus = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Full Node Status
+              <Trans id="FullNodeStatus.title">
+                Full Node Status
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -341,7 +383,9 @@ const BlocksCard = () => {
       <Grid item xs={12}>
         <div className={classes.cardTitle}>
           <Typography component="h6" variant="h6">
-            Blocks
+            <Trans id="BlocksCard.title">
+              Blocks
+            </Trans>
           </Typography>
         </div>
       </Grid>
@@ -352,12 +396,26 @@ const BlocksCard = () => {
           key={"header"}
           style={{ minWidth: "100%" }}
         >
-          <Box className={classes.left_block_cell}>Header Hash</Box>
-          <Box className={classes.center_block_cell_small}>Height</Box>
-          <Box flexGrow={1} className={classes.center_block_cell}>
-            Time Created
+          <Box className={classes.left_block_cell}>
+            <Trans id="BlocksCard.headerHash">
+              Header Hash
+            </Trans>
           </Box>
-          <Box className={classes.right_block_cell}>Expected finish time</Box>
+          <Box className={classes.center_block_cell_small}>
+            <Trans id="BlocksCard.height">
+              Height
+            </Trans>
+          </Box>
+          <Box flexGrow={1} className={classes.center_block_cell}>
+            <Trans id="BlocksCard.timeCreated">
+              Time Created
+            </Trans>
+          </Box>
+          <Box className={classes.right_block_cell}>
+            <Trans id="BlocksCard.expectedFinishTime">
+              Expected finish time
+            </Trans>
+          </Box>
         </Box>
         {headers.map(header => (
           <Box
@@ -418,7 +476,9 @@ const SearchBlock = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Search block by header hash
+              <Trans id="SearchBlock.title">
+                Search block by header hash
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -428,7 +488,7 @@ const SearchBlock = props => {
               <Box flexGrow={1}>
                 <TextField
                   fullWidth
-                  label="Block hash"
+                  label={<Trans id="SearchBlock.blockHash">Block hash</Trans>}
                   value={searchHash}
                   onChange={handleChangeSearchHash}
                   variant="outlined"
@@ -441,7 +501,9 @@ const SearchBlock = props => {
                   color="secondary"
                   disableElevation
                 >
-                  Search
+                  <Trans id="SearchBlock.search">
+                    Search
+                  </Trans>
                 </Button>
               </Box>
             </Box>
@@ -473,7 +535,9 @@ export default function FullNode() {
   return (
     <>
       <DashboardTitle>
-        Full Node
+        <Trans id="FullNode.title">
+          Full Node
+        </Trans>
       </DashboardTitle>
       <Flex flexDirection="column" flexGrow={1} height="100%" overflow="auto" alignItems="center">
         <Container maxWidth="lg">

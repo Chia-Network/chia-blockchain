@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback, useState } from "react";
 import Grid from "@material-ui/core/Grid";
+import { Trans } from '@lingui/macro';
 import { withStyles } from "@material-ui/core/styles";
 import Typography from "@material-ui/core/Typography";
 import { Paper, TableRow, Tooltip } from "@material-ui/core";
@@ -134,81 +135,110 @@ const Block = props => {
     .to("chia")
     .toString();
 
-  const rows = [
-    { name: "Header hash", value: newHeaderHash },
-    {
-      name: "Timestamp",
-      value: unix_to_short_date(block.header.data.timestamp),
-      tooltip:
-        "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
-    },
-    { name: "Height", value: block.header.data.height },
-    {
-      name: "Weight",
-      value: BigInt(block.header.data.weight).toLocaleString(),
-      tooltip:
-        "Weight is the total added difficulty of all blocks up to and including this one"
-    },
-    { name: "Previous block", value: block.header.data.prev_header_hash },
-    { name: "Difficulty", value: BigInt(diff).toLocaleString() },
-    {
-      name: "Total VDF Iterations",
-      value: BigInt(block.header.data.total_iters).toLocaleString(),
-      tooltip:
-        "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
-    },
-    {
-      name: "Block VDF Iterations",
-      value: BigInt(block.proof_of_time.number_of_iterations).toLocaleString(),
-      tooltip:
-        "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
-    },
-    { name: "Proof of Space Size", value: block.proof_of_space.size },
-    { name: "Plot Public Key", value: block.proof_of_space.plot_public_key },
-    { name: "Pool Public Key", value: block.proof_of_space.pool_public_key },
-    {
-      name: "Plot Id",
-      value: newPlotId,
-      tooltip:
-        "The seed used to create the plot, this depends on the pool pk and plot pk"
-    },
-    {
-      name: "Transactions Filter Hash",
-      value: block.header.data.filter_hash
-    },
-    {
-      name: "Transactions Generator Hash",
-      value: block.header.data.generator_hash
-    },
-    {
-      name: "Coinbase Amount",
-      value: chia_cb + " TXCH",
-      tooltip:
-        "The Chia block reward, goes to the pool (or farmer if not pooling)"
-    },
-    {
-      name: "Coinbase Puzzle Hash",
-      value: block.header.data.pool_target.puzzle_hash
-    },
-    {
-      name: "Fees Amount",
-      value: chia_fees + " TXCH",
-      tooltip: "The total fees in this block, goes to the farmer"
-    },
-    {
-      name: "Fees Puzzle Hash",
-      value: block.header.data.farmer_rewards_puzzle_hash
-    }
-  ];
+  const rows = [{
+    name: <Trans id="Block.headerHash">Header hash</Trans>,
+    value: newHeaderHash
+  }, {
+    name: <Trans id="Block.timestamp">Timestamp</Trans>,
+    value: unix_to_short_date(block.header.data.timestamp),
+    tooltip: (
+      <Trans id="Block.timestampTooltip">
+        This is the time the block was created by the farmer,
+        which is before it is finalized with a proof of time
+      </Trans>
+    ),
+  }, {
+    name: <Trans id="Block.height">Height</Trans>,
+    value: block.header.data.height
+  }, {
+    name: <Trans id="Block.weight">Weight</Trans>,
+    value: BigInt(block.header.data.weight).toLocaleString(),
+    tooltip: (
+      <Trans id="Block.weightTooltip">
+        Weight is the total added difficulty of all blocks up to and including this one
+      </Trans>
+    ),
+  }, {
+    name: <Trans id="Block.previousBlock">Previous block</Trans>,
+    value: block.header.data.prev_header_hash
+  }, {
+    name: <Trans id="Block.difficulty">Difficulty</Trans>,
+    value: BigInt(diff).toLocaleString()
+  }, {
+    name: <Trans id="Block.totalVDFIterations">Total VDF Iterations</Trans>,
+    value: BigInt(block.header.data.total_iters).toLocaleString(),
+    tooltip: (
+      <Trans id="Block.totalVDFIterationsTooltip">
+        The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block.
+      </Trans>
+    ),
+  }, {
+    name: <Trans id="Block.blockVDFIterations">Block VDF Iterations</Trans>,
+    value: BigInt(block.proof_of_time.number_of_iterations).toLocaleString(),
+    tooltip: (
+      <Trans id="Block.blockVDFIterationsTooltip">
+        The total number of VDF (verifiable delay function) or proof of time iterations on this block.
+      </Trans>
+    ),
+  }, {
+    name: <Trans id="Block.proofOfSpaceSize">Proof of Space Size</Trans>,
+    value: block.proof_of_space.size
+  }, {
+    name: <Trans id="Block.plotPublicKey">Plot Public Key</Trans>,
+    value: block.proof_of_space.plot_public_key
+  }, {
+    name: <Trans id="Block.poolPublicKey">Pool Public Key</Trans>,
+    value: block.proof_of_space.pool_public_key
+  }, {
+    name: <Trans id="Block.plotId">Plot Id</Trans>,
+    value: newPlotId,
+    tooltip: (
+      <Trans id="Block.plotIdTooltip">
+        The seed used to create the plot, this depends on the pool pk and plot pk
+      </Trans>
+    ),
+  }, {
+    name: <Trans id="Block.transactionsFilterHash">Transactions Filter Hash</Trans>,
+    value: block.header.data.filter_hash
+  }, {
+    name: <Trans id="Block.transactionsGeneratorHash">Transactions Generator Hash</Trans>,
+    value: block.header.data.generator_hash
+  }, {
+    name: <Trans id="Block.coinbaseAmount">Coinbase Amount</Trans>,
+    value: chia_cb + " TXCH",
+    tooltip: (
+      <Trans id="Block.coinbaseAmountTooltip">
+        The Chia block reward, goes to the pool (or farmer if not pooling)
+      </Trans>
+    ),
+  }, {
+    name: <Trans id="Block.coinbasePuzzleHash">Coinbase Puzzle Hash</Trans>,
+    value: block.header.data.pool_target.puzzle_hash
+  }, {
+    name: <Trans id="Block.feesAmount">Fees Amount</Trans>,
+    value: chia_fees + " TXCH",
+    tooltip: (
+      <Trans id="Block.feesAmountTooltip">
+        The total fees in this block, goes to the farmer
+      </Trans>
+    ),
+  }, {
+    name: <Trans id="Block.feesPuzzleHash">Fees Puzzle Hash</Trans>,
+    value: block.header.data.farmer_rewards_puzzle_hash
+  }];
 
   return (
     <Paper className={classes.balancePaper}>
       <Grid container spacing={0}>
         <Grid item xs={12}>
-          <Button onClick={handleClearBlock}>Back</Button>
+          <Button onClick={handleClearBlock}>
+            <Trans id="Block.title">Block</Trans>
+          </Button>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Block at height {block.header.data.height} in the Chia blockchain
+              <Trans id="Block.description">
+                Block at height {block.header.data.height} in the Chia blockchain
+              </Trans>
             </Typography>
           </div>
           <TableContainer component={Paper}>

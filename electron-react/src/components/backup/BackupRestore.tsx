@@ -27,6 +27,8 @@ import myStyle from '../../pages/style';
 import LayoutHero from "../layout/LayoutHero";
 
 const StyledDropPaper = styled(Paper)`
+  background-color: ${({ theme }) =>
+    theme.palette.type === 'dark' ? '#424242' : '#F0F0F0'};
   height: 300px;
   width: 100%;
   display: flex;
