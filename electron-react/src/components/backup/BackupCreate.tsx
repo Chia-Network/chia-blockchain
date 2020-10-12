@@ -2,9 +2,10 @@ import React from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import Modal from "@material-ui/core/Modal";
 import { Button } from "@material-ui/core";
-import { useSelector, useDispatch } from "react-redux";
-import { showCreateBackup, create_backup_action } from "../../modules/message";
 import isElectron from "is-electron";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState } from '../../modules/rootReducer';
+import { showCreateBackup, create_backup_action } from "../../modules/message";
 import { openDialog } from "../../modules/dialog";
 
 function getModalStyle() {
@@ -30,20 +31,23 @@ const useStyles = makeStyles(theme => ({
   }
 }));
 
-export const CreateBackup = () => {
-  const show_create_backup = useSelector(
-    state => state.wallet_state.show_create_backup
+export default function BackupCreate() {
+  const showBackupModal = useSelector(
+    (state: RootState) => state.wallet_state.show_create_backup
   );
   const dispatch = useDispatch();
+  const classes = useStyles();
+  const modalStyle = getModalStyle();
+
   function handleClose() {
     console.log("Modal dialog closed");
     dispatch(showCreateBackup(false));
   }
 
-  async function create_backup() {
+  async function handleCreateBackup() {
     if (isElectron()) {
-      const dialogOptions = {};
-      const result = await window.remote.dialog.showSaveDialog(dialogOptions);
+      // @ts-ignore
+      const result = await window.remote.dialog.showSaveDialog({});
       const { filePath } = result;
       dispatch(create_backup_action(filePath));
     } else {
@@ -53,37 +57,31 @@ export const CreateBackup = () => {
     }
   }
 
-  const classes = useStyles();
-
-  const modalStyle = getModalStyle();
-  const body = (
-    <div style={modalStyle} className={classes.paper}>
-      <h2 id="simple-modal-title">Create a Backup</h2>
-      <p id="simple-modal-description">
-        Backup file is used to restore smart wallets.
-      </p>
-      <Button
-        style={{
-          float: "right",
-          width: "100px",
-          height: "45px",
-          backgroundColor: "#0000dd",
-          color: "white"
-        }}
-        onClick={create_backup}
-      >
-        Create
-      </Button>
-    </div>
-  );
   return (
     <Modal
-      open={show_create_backup}
+      open={showBackupModal}
       onClose={handleClose}
       aria-labelledby="simple-modal-title"
       aria-describedby="simple-modal-description"
     >
-      {body}
+      <div style={modalStyle} className={classes.paper}>
+        <h2 id="simple-modal-title">Create a Backup</h2>
+        <p id="simple-modal-description">
+          Backup file is used to restore smart wallets.
+        </p>
+        <Button
+          style={{
+            float: "right",
+            width: "100px",
+            height: "45px",
+            backgroundColor: "#0000dd",
+            color: "white"
+          }}
+          onClick={handleCreateBackup}
+        >
+          Create
+        </Button>
+      </div>
     </Modal>
   );
-};
+}

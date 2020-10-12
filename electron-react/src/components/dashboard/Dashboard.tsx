@@ -14,8 +14,7 @@ import ToolbarSpacing from '../toolbar/ToolbarSpacing';
 import TradeManager from '../trading/TradeManager';
 import DarkModeToggle from '../darkMode/DarkModeToggle';
 import LocaleToggle from '../locale/LocaleToggle';
-
-// import { CreateBackup } from "./backup/createBackup";
+import BackupCreate from '../backup/BackupCreate';
 
 const StyledRoot = styled(Flex)`
   height: 100%;
@@ -59,6 +58,7 @@ export default function Dashboard() {
 
   return (
     <StyledRoot>
+      <BackupCreate />
       <StyledAppBar position="fixed" color="transparent" elevation={0}>
         <Toolbar>
           <DashboardTitleTarget />
@@ -101,7 +101,3 @@ export default function Dashboard() {
     </StyledRoot>
   );
 }
-
-      {/*
-        <CreateBackup />
-        */}
