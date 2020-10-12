@@ -2,8 +2,6 @@ import pathlib
 
 from typing import Dict
 
-from src.consensus.constants import ConsensusConstants
-from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.introducer import Introducer
 from src.server.outbound_message import NodeType
 from src.util.config import load_config_cli
@@ -18,7 +16,8 @@ SERVICE_NAME = "introducer"
 
 
 def service_kwargs_for_introducer(
-    root_path: pathlib.Path, config: Dict, constants: ConsensusConstants
+    root_path: pathlib.Path,
+    config: Dict,
 ) -> Dict:
     api = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
 
@@ -35,7 +34,7 @@ def service_kwargs_for_introducer(
 
 def main():
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    kwargs = service_kwargs_for_introducer(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
+    kwargs = service_kwargs_for_introducer(DEFAULT_ROOT_PATH, config)
     return run_service(**kwargs)
 
 

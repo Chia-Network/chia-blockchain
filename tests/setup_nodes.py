@@ -13,11 +13,11 @@ from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.wallet.wallet_node import WalletNode
 from src.util.config import load_config
 from src.farmer import Farmer
-from src.introducer import Introducer
-from src.timelord import Timelord
 from src.server.connection import PeerInfo
 from src.util.ints import uint16, uint32
 from src.server.start_harvester import service_kwargs_for_harvester
+from src.server.start_introducer import service_kwargs_for_introducer
+from src.server.start_timelord import service_kwargs_for_timelord
 from src.server.start_service import Service
 from src.util.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert
@@ -107,7 +107,7 @@ async def setup_full_node(
 
     await service.start()
 
-    yield api, api.server
+    yield service._api, service._api.server
 
     service.stop()
     await service.wait_closed()
@@ -172,7 +172,7 @@ async def setup_wallet_node(
 
     await service.start(new_wallet=True)
 
-    yield api, api.server
+    yield service._api, service._api.server
 
     service.stop()
     await service.wait_closed()
@@ -195,7 +195,9 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
     )
 
     service = Service(**kwargs)
+
     await service.start()
+
     yield service._api, service._api.server
 
     service.stop()
@@ -235,30 +237,29 @@ async def setup_farmer(
 
     await service.start()
 
-    yield api, api.server
+    yield service._api, service._api.server
 
     service.stop()
     await service.wait_closed()
 
 
 async def setup_introducer(port):
-    config = load_config(bt.root_path, "config.yaml", "introducer")
-    api = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
-
-    service = Service(
-        root_path=bt.root_path,
-        api=api,
-        node_type=NodeType.INTRODUCER,
-        advertised_port=port,
-        service_name="introducer",
-        server_listen_ports=[port],
-        auth_connect_peers=False,
-        parse_cli_args=False,
+    kwargs = service_kwargs_for_introducer(
+        bt.root_path,
+        bt.config["introducer"],
     )
+    kwargs.update(
+        dict(
+            advertised_port=port,
+            parse_cli_args=False,
+        )
+    )
+
+    service = Service(**kwargs)
 
     await service.start()
 
-    yield api, api.server
+    yield service._api, service._api.server
 
     service.stop()
     await service.wait_closed()
@@ -281,28 +282,27 @@ async def setup_vdf_clients(port):
 async def setup_timelord(
     port, full_node_port, sanitizer, consensus_constants: ConsensusConstants
 ):
-    config = load_config(bt.root_path, "config.yaml", "timelord")
+    config = bt.config["timelord"]
+    config["port"] = port
+    config["full_node_peer"]["port"] = full_node_port
     config["sanitizer_mode"] = sanitizer
     if sanitizer:
         config["vdf_server"]["port"] = 7999
 
-    api = Timelord(config, consensus_constants.DISCRIMINANT_SIZE_BITS)
-
-    service = Service(
-        root_path=bt.root_path,
-        api=api,
-        node_type=NodeType.TIMELORD,
-        advertised_port=port,
-        service_name="timelord",
-        server_listen_ports=[port],
-        connect_peers=[PeerInfo(self_hostname, full_node_port)],
-        auth_connect_peers=False,
-        parse_cli_args=False,
+    kwargs = service_kwargs_for_timelord(
+        bt.root_path, config, consensus_constants.DISCRIMINANT_SIZE_BITS
     )
+    kwargs.update(
+        dict(
+            parse_cli_args=False,
+        )
+    )
+
+    service = Service(**kwargs)
 
     await service.start()
 
-    yield api, api.server
+    yield service._api, service._api.server
 
     service.stop()
     await service.wait_closed()
