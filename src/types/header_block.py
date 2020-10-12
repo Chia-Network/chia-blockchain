@@ -1,48 +1,41 @@
+from typing import Optional, List
 from dataclasses import dataclass
-
-from src.types.challenge import Challenge
-from src.types.header import Header
-from src.types.proof_of_space import ProofOfSpace
-from src.types.proof_of_time import ProofOfTime
+from blspy import G2Element
 from src.util.streamable import Streamable, streamable
-from src.consensus.coinbase import create_coinbase_coin, create_fees_coin
-from src.consensus.block_rewards import calculate_block_reward
-from src.types.coin import Coin
+from src.types.proof_of_time import ProofOfTime
+from src.types.challenge_slot import ChallengeSlot
+from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot
+from src.types.reward_chain_sub_block import RewardChainInfusionPoint, RewardChainSubBlock
+from src.types.foliage import FoliageSubBlock, FoliageBlock
 
 
 @dataclass(frozen=True)
 @streamable
 class HeaderBlock(Streamable):
-    proof_of_space: ProofOfSpace
-    proof_of_time: ProofOfTime
-    challenge: Challenge
-    header: Header
+    # Same as a FullBlock but without TransactionInfo and Generator, used by light clients
+    finished_challenge_slots: List[ChallengeSlot]           # If first sub-block in slot
+    finished_reward_slots: List[RewardChainEndOfSlot]       # If first sub-block in slot
+    icp_proof_of_time: Optional[ProofOfTime]                # If included in challenge chain
+    icp_signature: Optional[G2Element]                      # If included in challenge chain
+    ip_proof_of_time: Optional[ProofOfTime]                 # If included in challenge chain
+    reward_chain_sub_block: RewardChainSubBlock             # Reward chain trunk data
+    reward_chain_infusion_point: RewardChainInfusionPoint   # Data to complete the sub-block
+    foliage_sub_block: FoliageSubBlock                      # Reward chain foliage data
+    foliage_block: Optional[FoliageBlock]                   # Reward chain foliage data (tx block)
+    transactions_filter: bytes                              # Filter for block transactions
 
     @property
     def prev_header_hash(self):
-        return self.header.data.prev_header_hash
+        return self.foliage_sub_block.prev_sub_block_hash
 
     @property
     def height(self):
-        return self.header.height
+        return self.reward_chain_sub_block.sub_block_height
 
     @property
     def weight(self):
-        return self.header.weight
+        return self.reward_chain_sub_block.weight
 
     @property
     def header_hash(self):
-        return self.header.header_hash
-
-    def get_coinbase(self) -> Coin:
-        br = calculate_block_reward(self.height)
-        return create_coinbase_coin(
-            self.height, self.header.data.pool_target.puzzle_hash, br
-        )
-
-    def get_fees_coin(self) -> Coin:
-        return create_fees_coin(
-            self.height,
-            self.header.data.farmer_rewards_puzzle_hash,
-            self.header.data.total_transaction_fees,
-        )
+        return self.foliage_sub_block.get_hash()
