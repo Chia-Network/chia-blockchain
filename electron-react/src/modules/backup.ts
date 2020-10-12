@@ -1,3 +1,5 @@
+import Wallet from "../types/Wallet";
+
 export const presentBackupInfo = 'BACKUP_INFO';
 export const presentMain = 'MAIN';
 
@@ -17,13 +19,17 @@ export const selectFilePath = (file_path: string) => ({
 
 type BackupState = {
   view: 'MAIN' | 'BACKUP_INFO';
-  backup_info:
-    | {}
-    | {
-        type: 'BACKUP_INFO' | 'SELECT_FILEPATH';
-        backup_info?: string;
-        file_path?: string;
-      };
+  backup_info: {
+    type?: 'BACKUP_INFO' | 'SELECT_FILEPATH';
+    backup_info?: string;
+    file_path?: string;
+    timestamp?: number,
+    version?: string,
+    wallets?: Wallet[],
+    downloaded?: boolean,
+    backup_host?: string,
+    fingerprint?: string,
+  };
   selected_file_path?: string | null;
 };
 

@@ -1,15 +1,9 @@
-import React from "react";
-import Button from "@material-ui/core/Button";
-import CssBaseline from "@material-ui/core/CssBaseline";
-import Typography from "@material-ui/core/Typography";
-import Container from "@material-ui/core/Container";
-import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
+import React, { DragEvent } from "react";
+import styled from 'styled-components';
+import { Box, Button, Paper, Grid, Typography, Container } from "@material-ui/core";
+import { ArrowBackIos as ArrowBackIosIcon } from "@material-ui/icons";
 import { useSelector, useDispatch } from "react-redux";
-import myStyle from "../style";
-import {
-  changeEntranceMenu,
-  presentSelectKeys
-} from "../../modules/entranceMenu";
+import { useHistory } from "react-router";
 import {
   add_new_key_action,
   add_and_restore_from_backup,
@@ -17,36 +11,46 @@ import {
   get_backup_info_action,
   log_in_and_import_backup_action
 } from "../../modules/message";
-import { Paper, Grid } from "@material-ui/core";
 import {
   changeBackupView,
   presentMain,
   presentBackupInfo,
   setBackupInfo,
   selectFilePath
-} from "../../modules/backup_state";
+} from "../../modules/backup";
+import Link from '../router/Link';
+import Flex from '../flex/Flex';
 import { unix_to_short_date } from "../../util/utils";
-import { Box } from "@material-ui/core";
+import type { RootState } from '../../modules/rootReducer';
+import Wallet from "../../types/Wallet";
+import myStyle from '../../pages/style';
+import LayoutHero from "../layout/LayoutHero";
 
-const UIPart = props => {
+const StyledDropPaper = styled(Paper)`
+  height: 300px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+function UIPart() {
+  const history = useHistory();
   const dispatch = useDispatch();
   const classes = myStyle();
-  var words = useSelector(state => state.mnemonic_state.mnemonic_input);
+  var words = useSelector((state: RootState) => state.mnemonic_state.mnemonic_input);
   var fingerprint = useSelector(
-    state => state.wallet_state.selected_fingerprint
+    (state: RootState) => state.wallet_state.selected_fingerprint
   );
 
   for (let word of words) {
     if (word === "") {
+      // @ts-ignore
       words = null;
     }
   }
 
-  function goBack() {
-    dispatch(changeEntranceMenu(presentSelectKeys));
-  }
-
-  function skip() {
+  function handleSkip() {
     if (fingerprint !== null) {
       dispatch(login_and_skip_action(fingerprint));
     } else if (words !== null) {
@@ -54,19 +58,19 @@ const UIPart = props => {
     }
   }
 
-  const handleDragEnter = e => {
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
   };
-  const handleDragLeave = e => {
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
   };
-  const handleDragOver = e => {
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
   };
-  const handleDrop = e => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>)  => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -79,84 +83,89 @@ const UIPart = props => {
   };
 
   return (
-    <div className={classes.root}>
-      <ArrowBackIosIcon onClick={goBack} className={classes.navigator}>
-        {" "}
-      </ArrowBackIosIcon>
-      <div className={classes.grid_wrap}>
-        <Container className={classes.grid} maxWidth="lg">
-          <Typography className={classes.title} component="h4" variant="h4">
+    <LayoutHero
+      header={(
+        <Link to="/">
+          <ArrowBackIosIcon fontSize="large" color="secondary" />
+        </Link>
+      )}
+    >
+      <Container maxWidth="lg">
+        <Flex flexDirection="column" gap={3} alignItems="center">
+          <Typography variant="h4" component="h1" gutterBottom>
             Restore Smart Wallets From Backup
           </Typography>
-        </Container>
-      </div>
-      <div
-        onDrop={e => handleDrop(e)}
-        onDragOver={e => handleDragOver(e)}
-        onDragEnter={e => handleDragEnter(e)}
-        onDragLeave={e => handleDragLeave(e)}
-        className={classes.dragContainer}
-      >
-        <Paper
-          className={classes.drag}
-          style={{ position: "relative", width: "80%", margin: "auto" }}
-        >
-          <div className={classes.dragText}>Drag and drop your backup file</div>
-        </Paper>
-      </div>
-      <Container component="main" maxWidth="xs">
-        <CssBaseline />
-        <div className={classes.paper}>
-          <Button
-            onClick={skip}
-            type="submit"
-            fullWidth
-            variant="contained"
-            color="primary"
-            className={classes.submit}
-          >
-            Skip
-          </Button>
-        </div>
-      </Container>
-    </div>
-  );
-};
 
-const BackupDetails = () => {
+          <StyledDropPaper
+            onDrop={e => handleDrop(e)}
+            onDragOver={e => handleDragOver(e)}
+            onDragEnter={e => handleDragEnter(e)}
+            onDragLeave={e => handleDragLeave(e)}
+          >
+            <Typography variant="subtitle1">Drag and drop your backup file</Typography>
+          </StyledDropPaper>
+
+          <Container maxWidth="xs">
+            <Button
+              onClick={handleSkip}
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              className={classes.submit}
+            >
+              Skip
+            </Button>
+          </Container>
+        </Flex>
+      </Container>
+    </LayoutHero>
+  );
+}
+
+function BackupDetails() {
+  const history = useHistory();
   const classes = myStyle();
   const dispatch = useDispatch();
-  const file_path = useSelector(state => state.backup_state.selected_file_path);
-  const backup_info = useSelector(state => state.backup_state.backup_info);
+  const file_path = useSelector((state: RootState) => state.backup_state.selected_file_path);
+  const backupInfo = useSelector((state: RootState) => state.backup_state.backup_info);
   const selected_file_path = useSelector(
-    state => state.backup_state.selected_file_path
+    (state: RootState) => state.backup_state.selected_file_path
   );
-  const date = unix_to_short_date(backup_info["timestamp"]);
-  const backup_fingerprint = backup_info["fingerprint"];
-  const version = backup_info["version"];
-  const wallets = backup_info["wallets"];
-  const downloaded = backup_info["downloaded"];
-  const host = backup_info["backup_host"];
 
-  var words = useSelector(state => state.mnemonic_state.mnemonic_input);
+  const {
+    timestamp,
+    version,
+    wallets,
+    downloaded,
+    backup_host: host,
+    fingerprint: backup_fingerprint,
+  } = backupInfo;
+
+  const date = unix_to_short_date(timestamp);
+
+
+  var words = useSelector((state: RootState) => state.mnemonic_state.mnemonic_input);
   var fingerprint = useSelector(
-    state => state.wallet_state.selected_fingerprint
+    (state: RootState) => state.wallet_state.selected_fingerprint
   );
 
   for (let word of words) {
     if (word === "") {
+      // @ts-ignore
       words = null;
     }
   }
 
-  function goBack() {
+  function handleGoBack() {
     dispatch(changeBackupView(presentMain));
-    dispatch(changeEntranceMenu(presentSelectKeys));
+    history.push('/');
   }
 
   function goBackBackup() {
     dispatch(changeBackupView(presentMain));
     dispatch(setBackupInfo({}));
+    // @ts-ignore
     dispatch(selectFilePath(null));
   }
 
@@ -170,7 +179,7 @@ const BackupDetails = () => {
 
   return (
     <div className={classes.root}>
-      <ArrowBackIosIcon onClick={goBack} className={classes.navigator}>
+      <ArrowBackIosIcon onClick={handleGoBack} className={classes.navigator}>
         {" "}
       </ArrowBackIosIcon>
       <div className={classes.grid_wrap}>
@@ -247,13 +256,12 @@ const BackupDetails = () => {
           </Grid>
           <Typography variant="subtitle1">Smart wallets</Typography>
           <WalletHeader></WalletHeader>
-          {wallets.map(wallet => (
+          {!!wallets && wallets.map((wallet: Wallet) => (
             <WalletRow wallet={wallet}></WalletRow>
           ))}
         </Paper>
       </div>
       <Container component="main" maxWidth="xs">
-        <CssBaseline />
         <div className={classes.paper}>
           <Button
             onClick={next}
@@ -271,11 +279,19 @@ const BackupDetails = () => {
   );
 };
 
-const WalletRow = props => {
-  const wallet = props.wallet;
-  const id = wallet.id;
-  const name = wallet.name;
-  const type = wallet.type_name;
+type WalletRowProps = {
+  wallet: Wallet;
+};
+
+function WalletRow(props: WalletRowProps) {
+  const {
+    wallet: {
+      id,
+      name,
+      // @ts-ignore
+      type_name: type,
+    }
+  } = props;
   const classes = myStyle();
 
   return (
@@ -291,9 +307,9 @@ const WalletRow = props => {
       </Box>
     </Box>
   );
-};
+}
 
-const WalletHeader = () => {
+function WalletHeader() {
   const classes = myStyle();
 
   return (
@@ -317,11 +333,11 @@ const WalletHeader = () => {
   );
 };
 
-export const RestoreBackup = () => {
-  const view = useSelector(state => state.backup_state.view);
+export default function RestoreBackup() {
+  const view = useSelector((state: RootState) => state.backup_state.view);
   if (view === presentBackupInfo) {
     return <BackupDetails></BackupDetails>;
   } else {
     return <UIPart></UIPart>;
   }
-};
+}

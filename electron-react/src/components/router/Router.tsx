@@ -7,7 +7,7 @@ import WalletImport from '../wallet/WalletImport';
 import PrivateRoute from './PrivateRoute';
 import GuestRoute from './GuestRoute';
 import Dashboard from '../dashboard/Dashboard';
-import { RestoreBackup } from '../../pages/backup/restoreBackup';
+import BackupRestore from '../backup/BackupRestore';
 import type { RootState } from '../../modules/rootReducer';
 import LoadingScreen from '../loading/LoadingScreen';
 
@@ -42,17 +42,13 @@ export default function Router() {
         <GuestRoute path="/wallet/import" exact>
           <WalletImport />
         </GuestRoute>
+        <GuestRoute path="/wallet/restore" exact>
+          <BackupRestore />
+        </GuestRoute>
         <PrivateRoute path="/dashboard">
           <Dashboard />
         </PrivateRoute>
       </Switch>
     </BrowserRouter>
   );
-
-  /*
-    if (presentView === presentRestoreBackup) {
-      return <RestoreBackup></RestoreBackup>;
-    }
-  }
-  */
 }
