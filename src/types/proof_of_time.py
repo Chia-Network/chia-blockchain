@@ -10,6 +10,14 @@ from src.util.streamable import Streamable, streamable
 
 @dataclass(frozen=True)
 @streamable
+class ProofOfTimeOutput(Streamable):
+    challenge_hash: bytes32
+    number_of_iterations: uint64
+    output: ClassgroupElement
+
+
+@dataclass(frozen=True)
+@streamable
 class ProofOfTime(Streamable):
     challenge_hash: bytes32
     number_of_iterations: uint64
