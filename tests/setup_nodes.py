@@ -12,9 +12,9 @@ from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.wallet.wallet_node import WalletNode
 from src.util.config import load_config
-from src.farmer import Farmer
 from src.server.connection import PeerInfo
 from src.util.ints import uint16, uint32
+from src.server.start_farmer import service_kwargs_for_farmer
 from src.server.start_harvester import service_kwargs_for_harvester
 from src.server.start_introducer import service_kwargs_for_introducer
 from src.server.start_timelord import service_kwargs_for_timelord
@@ -209,31 +209,30 @@ async def setup_farmer(
     consensus_constants: ConsensusConstants,
     full_node_port: Optional[uint16] = None,
 ):
-    config = load_config(bt.root_path, "config.yaml", "farmer")
-    config_pool = load_config(bt.root_path, "config.yaml", "pool")
+    config = bt.config["farmer"]
+    config_pool = bt.config["pool"]
 
     config["xch_target_address"] = encode_puzzle_hash(bt.farmer_ph)
     config["pool_public_keys"] = [bytes(pk).hex() for pk in bt.pool_pubkeys]
+    config["port"] = port
     config_pool["xch_target_address"] = encode_puzzle_hash(bt.pool_ph)
+
     if full_node_port:
-        connect_peers = [PeerInfo(self_hostname, full_node_port)]
+        config["full_node_peer"]["host"] = self_hostname
+        config["full_node_peer"]["port"] = full_node_port
     else:
-        connect_peers = []
+        del config["full_node_peer"]
 
-    api = Farmer(config, config_pool, bt.keychain, consensus_constants)
-
-    service = Service(
-        root_path=bt.root_path,
-        api=api,
-        node_type=NodeType.FARMER,
-        advertised_port=port,
-        service_name="farmer",
-        server_listen_ports=[port],
-        on_connect_callback=api._on_connect,
-        connect_peers=connect_peers,
-        auth_connect_peers=False,
-        parse_cli_args=False,
+    kwargs = service_kwargs_for_farmer(
+        bt.root_path, config, config_pool, bt.keychain, consensus_constants
     )
+    kwargs.update(
+        dict(
+            parse_cli_args=False,
+        )
+    )
+
+    service = Service(**kwargs)
 
     await service.start()
 

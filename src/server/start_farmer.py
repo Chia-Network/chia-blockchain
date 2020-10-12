@@ -21,16 +21,19 @@ SERVICE_NAME = "farmer"
 
 
 def service_kwargs_for_farmer(
-    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
+    root_path: pathlib.Path,
+    config: Dict,
+    config_pool: Dict,
+    keychain: Keychain,
+    consensus_constants: ConsensusConstants,
 ) -> Dict:
-    keychain = Keychain()
 
-    connect_peers = [
-        PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
-    ]
+    connect_peers = []
+    fnp = config.get("full_node_peer")
+    if fnp is not None:
+        connect_peers.append(PeerInfo(fnp["host"], fnp["port"]))
 
     # TOD: Remove once we have pool server
-    config_pool = load_config_cli(root_path, "config.yaml", "pool")
     api = Farmer(config, config_pool, keychain, consensus_constants)
 
     kwargs = dict(
@@ -51,7 +54,11 @@ def service_kwargs_for_farmer(
 
 def main():
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
+    config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
+    keychain = Keychain()
+    kwargs = service_kwargs_for_farmer(
+        DEFAULT_ROOT_PATH, config, config_pool, keychain, DEFAULT_CONSTANTS
+    )
     return run_service(**kwargs)
 
 
