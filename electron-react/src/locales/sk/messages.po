@@ -13,7 +13,212 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/dashboard/DashboardSideBar.tsx:38
+#: src/components/wallet/standard/WalletStandard.js:246
+msgid "BalanceCard.balance"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:265
+msgid "BalanceCard.spendableBalance"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:268
+msgid "BalanceCard.spendableBalanceTooltip"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:253
+msgid "BalanceCard.totalBalance"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:256
+msgid "BalanceCard.totalBalanceTooltip"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:286
+msgid "BalanceCard.viewPendingBalances"
+msgstr ""
+
+#: src/components/block/Block.js:176
+msgid "Block.blockVDFIterations"
+msgstr ""
+
+#: src/components/block/Block.js:179
+msgid "Block.blockVDFIterationsTooltip"
+msgstr ""
+
+#: src/components/block/Block.js:207
+msgid "Block.coinbaseAmount"
+msgstr ""
+
+#: src/components/block/Block.js:210
+msgid "Block.coinbaseAmountTooltip"
+msgstr ""
+
+#: src/components/block/Block.js:215
+msgid "Block.coinbasePuzzleHash"
+msgstr ""
+
+#: src/components/block/Block.js:239
+msgid "Block.description"
+msgstr ""
+
+#: src/components/block/Block.js:165
+msgid "Block.difficulty"
+msgstr ""
+
+#: src/components/block/Block.js:218
+msgid "Block.feesAmount"
+msgstr ""
+
+#: src/components/block/Block.js:221
+msgid "Block.feesAmountTooltip"
+msgstr ""
+
+#: src/components/block/Block.js:226
+msgid "Block.feesPuzzleHash"
+msgstr ""
+
+#: src/components/block/Block.js:139
+msgid "Block.headerHash"
+msgstr ""
+
+#: src/components/block/Block.js:151
+msgid "Block.height"
+msgstr ""
+
+#: src/components/block/Block.js:193
+msgid "Block.plotId"
+msgstr ""
+
+#: src/components/block/Block.js:196
+msgid "Block.plotIdTooltip"
+msgstr ""
+
+#: src/components/block/Block.js:187
+msgid "Block.plotPublicKey"
+msgstr ""
+
+#: src/components/block/Block.js:190
+msgid "Block.poolPublicKey"
+msgstr ""
+
+#: src/components/block/Block.js:162
+msgid "Block.previousBlock"
+msgstr ""
+
+#: src/components/block/Block.js:184
+msgid "Block.proofOfSpaceSize"
+msgstr ""
+
+#: src/components/block/Block.js:142
+msgid "Block.timestamp"
+msgstr ""
+
+#: src/components/block/Block.js:145
+msgid "Block.timestampTooltip"
+msgstr ""
+
+#: src/components/block/Block.js:235
+msgid "Block.title"
+msgstr ""
+
+#: src/components/block/Block.js:168
+msgid "Block.totalVDFIterations"
+msgstr ""
+
+#: src/components/block/Block.js:171
+msgid "Block.totalVDFIterationsTooltip"
+msgstr ""
+
+#: src/components/block/Block.js:201
+msgid "Block.transactionsFilterHash"
+msgstr ""
+
+#: src/components/block/Block.js:204
+msgid "Block.transactionsGeneratorHash"
+msgstr ""
+
+#: src/components/block/Block.js:154
+msgid "Block.weight"
+msgstr ""
+
+#: src/components/block/Block.js:157
+msgid "Block.weightTooltip"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:415
+msgid "BlocksCard.expectedFinishTime"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:400
+msgid "BlocksCard.headerHash"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:405
+msgid "BlocksCard.height"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:410
+msgid "BlocksCard.timeCreated"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:386
+msgid "BlocksCard.title"
+msgstr ""
+
+#: src/components/connections/Connections.js:208
+msgid "Connections.connect"
+msgstr ""
+
+#: src/components/connections/Connections.js:186
+msgid "Connections.connectToOtherPeersTitle"
+msgstr ""
+
+#: src/components/connections/Connections.js:125
+msgid "Connections.connected"
+msgstr ""
+
+#: src/components/connections/Connections.js:119
+msgid "Connections.connectionType"
+msgstr ""
+
+#: src/components/connections/Connections.js:138
+msgid "Connections.delete"
+msgstr ""
+
+#: src/components/connections/Connections.js:104
+msgid "Connections.ipAddress"
+msgstr ""
+
+#: src/components/connections/Connections.js:192
+msgid "Connections.ipAddressHost"
+msgstr ""
+
+#: src/components/connections/Connections.js:132
+msgid "Connections.lastMessage"
+msgstr ""
+
+#: src/components/connections/Connections.js:99
+msgid "Connections.nodeId"
+msgstr ""
+
+#: src/components/connections/Connections.js:109
+#: src/components/connections/Connections.js:197
+msgid "Connections.port"
+msgstr ""
+
+#: src/components/connections/Connections.js:85
+msgid "Connections.title"
+msgstr ""
+
+#: src/components/connections/Connections.js:114
+msgid "Connections.upDown"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:129
+msgid "CreateWallet.addWallet"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:32
 msgid "DashboardSideBar.farm"
 msgstr "Farma"
 
@@ -21,30 +226,260 @@ msgstr "Farma"
 msgid "DashboardSideBar.home"
 msgstr "Domov"
 
-#: src/components/dashboard/DashboardSideBar.tsx:44
+#: src/components/dashboard/DashboardSideBar.tsx:34
 msgid "DashboardSideBar.keys"
 msgstr "Kľúče"
 
-#: src/components/dashboard/DashboardSideBar.tsx:35
+#: src/components/dashboard/DashboardSideBar.tsx:31
 msgid "DashboardSideBar.plot"
 msgstr "Disky"
 
-#: src/components/dashboard/DashboardSideBar.tsx:41
+#: src/components/dashboard/DashboardSideBar.tsx:33
 msgid "DashboardSideBar.trade"
 msgstr "Obchody"
 
-#: src/components/dashboard/DashboardSideBar.tsx:32
+#: src/components/dashboard/DashboardSideBar.tsx:30
 msgid "DashboardSideBar.wallets"
 msgstr "Peňaženky"
 
-#: src/components/selectKey/SelectKey.tsx:61
+#: src/components/selectKey/SelectKey.tsx:138
+msgid "DeleteAllKeys.back"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:143
+msgid "DeleteAllKeys.delete"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:129
+msgid "DeleteAllKeys.description"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:123
+msgid "DeleteAllKeys.title"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:538
+msgid "FullNode.title"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:354
+msgid "FullNodeStatus.title"
+msgstr ""
+
+#: src/components/locale/LocaleToggle.tsx:35
+msgid "LocaleToggle.helpToTranslate"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:491
+msgid "SearchBlock.blockHash"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:504
+msgid "SearchBlock.search"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:479
+msgid "SearchBlock.title"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:101
+msgid "SelectKey.createNewPrivateKey"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:114
+msgid "SelectKey.deleteAllKeys"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:108
+msgid "SelectKey.importFromMnemonics"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:79
+msgid "SelectKey.selectFingerprint"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:81
+msgid "SelectKey.selectKeyCanBeBacked"
+msgstr ""
+
+#: src/components/selectKey/SelectKey.tsx:69
 msgid "SelectKey.signInDescription"
 msgstr "Vitaj v Chia. Prosím prihlás sa s existujúcim kľúčom, alebo si vytvor nový."
 
-#: src/components/selectKey/SelectKey.tsx:56
+#: src/components/selectKey/SelectKey.tsx:66
 msgid "SelectKey.signInTitle"
 msgstr "Prihlás sa"
 
-#: src/components/selectKey/SelectKey.tsx:51
+#: src/components/selectKey/SelectKey.tsx:63
 msgid "SelectKey.title"
 msgstr "Vyber kľúč"
+
+#: src/components/wallet/Wallets.tsx:166
+msgid "StatusCard.connections"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:158
+msgid "StatusCard.height"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:147
+msgid "StatusCard.status"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:153
+msgid "StatusCard.synced"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:152
+msgid "StatusCard.syncing"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:140
+msgid "StatusCard.title"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:251
+#: src/components/fullNode/FullNode.js:258
+msgid "StatusItem.connectionStatus"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:252
+msgid "StatusItem.connectionStatusConnected"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:259
+msgid "StatusItem.connectionStatusNotConnected"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:266
+msgid "StatusItem.difficulty"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:293
+msgid "StatusItem.estimatedNetworkSpace"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:296
+msgid "StatusItem.estimatedNetworkSpaceTooltip"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:273
+msgid "StatusItem.iterationsPerSecond"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:276
+msgid "StatusItem.iterationsPerSecondTooltip"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:194
+#: src/components/fullNode/FullNode.js:200
+msgid "StatusItem.lcaBlockHeight"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:230
+#: src/components/fullNode/FullNode.js:243
+msgid "StatusItem.lcaTime"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:233
+msgid "StatusItem.lcaTimeTooltip"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:214
+#: src/components/fullNode/FullNode.js:220
+msgid "StatusItem.maxTipBlockHeight"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:285
+msgid "StatusItem.minIterations"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:160
+#: src/components/fullNode/FullNode.js:172
+#: src/components/fullNode/FullNode.js:184
+msgid "StatusItem.status"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:185
+msgid "StatusItem.statusNotConnected"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:173
+msgid "StatusItem.statusSynced"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:176
+msgid "StatusItem.statusSyncedTooltip"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:164
+msgid "StatusItem.statusTooltip"
+msgstr ""
+
+#: src/components/fullNode/FullNode.js:161
+msgid "StatusItem.statusValue"
+msgstr ""
+
+#: src/components/wallet/WalletAdd.tsx:43
+msgid "WalletAdd.description"
+msgstr ""
+
+#: src/components/wallet/WalletAdd.tsx:55
+msgid "WalletAdd.next"
+msgstr ""
+
+#: src/components/wallet/WalletAdd.tsx:38
+msgid "WalletAdd.title"
+msgstr ""
+
+#: src/components/wallet/WalletImport.tsx:72
+msgid "WalletImport.description"
+msgstr ""
+
+#: src/components/wallet/WalletImport.tsx:82
+msgid "WalletImport.next"
+msgstr ""
+
+#: src/components/wallet/WalletImport.tsx:67
+msgid "WalletImport.title"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:91
+msgid "WalletItem.ccWallet"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:87
+msgid "WalletItem.chiaWallet"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:98
+msgid "WalletItem.rlWallet"
+msgstr ""
+
+#: src/components/wallet/WalletStatusCard.tsx:30
+msgid "WalletStatusCard.connections"
+msgstr ""
+
+#: src/components/wallet/WalletStatusCard.tsx:24
+msgid "WalletStatusCard.height"
+msgstr ""
+
+#: src/components/wallet/WalletStatusCard.tsx:16
+msgid "WalletStatusCard.status"
+msgstr ""
+
+#: src/components/wallet/WalletStatusCard.tsx:19
+msgid "WalletStatusCard.synced"
+msgstr ""
+
+#: src/components/wallet/WalletStatusCard.tsx:19
+msgid "WalletStatusCard.syncing"
+msgstr ""
+
+#: src/components/wallet/WalletStatusCard.tsx:11
+msgid "WalletStatusCard.title"
+msgstr ""
+
+#: src/components/wallet/Wallets.tsx:184
+msgid "Wallets.title"
+msgstr ""

@@ -1,8 +1,8 @@
 import React from 'react';
+import { Trans } from '@lingui/macro';
 import { useToggle } from 'react-use';
 import { Button, Menu, MenuItem } from '@material-ui/core';
 import { Translate, ExpandMore } from '@material-ui/icons';
-import Link from '../router/Link';
 import useLocale from '../../hooks/useLocale';
 
 const locales: { [char: string]: string } = {
@@ -50,14 +50,16 @@ export default function LocaleToggle() {
         onClose={handleClose}
       >
         <MenuItem onClick={() => handleSelect('en')}>English</MenuItem>
-        <MenuItem onClick={() => handleSelect('sk')}>Slovak</MenuItem>
+        <MenuItem onClick={() => handleSelect('sk')}>Slovenčina</MenuItem>
         <MenuItem
           component="a"
           href="https://github.com/Chia-Network/chia-blockchain/tree/master/electron-react/src/locales/README.md"
           target="_blank"
           onClick={() => handleClose()}
         >
-          Help to translate
+          <Trans id="LocaleToggle.helpToTranslate">
+            Help to translate
+          </Trans>
         </MenuItem>
       </Menu>
     </>

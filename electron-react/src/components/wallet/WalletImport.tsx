@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Trans } from '@lingui/macro';
 import { Typography, Container, Button, Grid } from '@material-ui/core';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
@@ -117,11 +118,15 @@ export default function WalletImport() {
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Brand />
           <Typography variant="h4" component="h1" gutterBottom>
-            Import Wallet from Mnemonics
+            <Trans id="WalletImport.title">
+              Import Wallet from Mnemonics
+            </Trans>
           </Typography>
           <Typography variant="subtitle1" align="center">
-            Enter the 24 word mmemonic that you have saved in order to restore
-            your Chia wallet.
+            <Trans id="WalletImport.description">
+              Enter the 24 word mmemonic that you have saved in order to restore
+              your Chia wallet.
+            </Trans>
           </Typography>
           <Grid container spacing={2}>
             <Iterator submitted={submitted} />
@@ -134,7 +139,9 @@ export default function WalletImport() {
               color="primary"
               fullWidth
             >
-              Next
+              <Trans id="WalletImport.next">
+                Next
+              </Trans>
             </Button>
           </Container>
         </Flex>

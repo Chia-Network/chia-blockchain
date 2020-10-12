@@ -127,8 +127,16 @@ export default function SelectKey() {
                       button
                     >
                       <ListItemText
-                        primary={`Private key with public fingerprint ${fingerprint}`}
-                        secondary="Can be backed up to mnemonic seed"
+                        primary={(
+                          <Trans id="SelectKey.selectFingerprint">
+                            Private key with public fingerprint {fingerprint}
+                          </Trans>
+                        )}
+                        secondary={(
+                          <Trans id="SelectKey.selectKeyCanBeBacked">
+                            Can be backed up to mnemonic seed
+                          </Trans>
+                        )}
                       />
                       <ListItemSecondaryAction>
                         <Tooltip title="See private key">
@@ -163,7 +171,9 @@ export default function SelectKey() {
                 size="large"
                 fullWidth
               >
-                Create a new private key
+                <Trans id="SelectKey.createNewPrivateKey">
+                  Create a new private key
+                </Trans>
               </Button>
             </Link>
             <Link to="/wallet/import">
@@ -173,7 +183,9 @@ export default function SelectKey() {
                 size="large"
                 fullWidth
               >
-                Import from Mnemonics (24 words)
+                <Trans id="SelectKey.importFromMnemonics">
+                  Import from Mnemonics (24 words)
+                </Trans>
               </Button>
             </Link>
             <Button
@@ -184,7 +196,9 @@ export default function SelectKey() {
               size="large"
               fullWidth
             >
-              Delete all keys
+              <Trans id="SelectKey.deleteAllKeys">
+                Delete all keys
+              </Trans>
             </Button>
           </Flex>
         </Flex>
@@ -195,20 +209,30 @@ export default function SelectKey() {
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
       >
-        <DialogTitle id="alert-dialog-title">Delete all keys</DialogTitle>
+        <DialogTitle id="alert-dialog-title">
+          <Trans id="DeleteAllKeys.title">
+            Delete all keys
+          </Trans>
+        </DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
-            Deleting all keys will permanatly remove the keys from your
-            computer, make sure you have backups. Are you sure you want to
-            continue?
+            <Trans id="DeleteAllKeys.description">
+              Deleting all keys will permanatly remove the keys from your
+              computer, make sure you have backups. Are you sure you want to
+              continue?
+            </Trans>
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose} color="secondary">
-            Back
+          <Button onClick={handleClose} color="secondary" autoFocus>
+            <Trans id="DeleteAllKeys.back">
+              Back
+            </Trans>
           </Button>
-          <Button onClick={handleCloseDelete} color="secondary" autoFocus>
-            Delete
+          <Button onClick={handleCloseDelete} color="secondary">
+            <Trans id="DeleteAllKeys.delete">
+              Delete
+            </Trans>
           </Button>
         </DialogActions>
       </Dialog>

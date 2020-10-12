@@ -1,4 +1,5 @@
 import React from "react";
+import { Trans } from '@lingui/macro';
 import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import { withRouter } from "react-router-dom";
@@ -242,21 +243,34 @@ const BalanceCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Balance
+              <Trans id="BalanceCard.balance">
+                Balance
+              </Trans>
             </Typography>
           </div>
         </Grid>
         <BalanceCardSubSection
-          title="Total Balance"
+          title={<Trans id="BalanceCard.totalBalance">Total Balance</Trans>}
           balance={balance}
-          tooltip="This is the total amount of Chia in the blockchain at the LCA block (latest common ancestor) that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+          tooltip={(
+            <Trans id="BalanceCard.totalBalanceTooltip">
+              This is the total amount of Chia in the blockchain at the LCA block
+              (latest common ancestor) that is controlled by your private keys.
+              It includes frozen farming rewards,
+              but not pending incoming and outgoing transactions.
+            </Trans>
+          )}
         />
         <BalanceCardSubSection
-          title="Spendable Balance"
+          title={<Trans id="BalanceCard.spendableBalance">Spendable Balance</Trans>}
           balance={balance_spendable}
-          tooltip={
-            "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transctions, and Chia that you have just spent but is not yet in the blockchain."
-          }
+          tooltip={(
+            <Trans id="BalanceCard.spendableBalanceTooltip">
+              This is the amount of Chia that you can currently use to make transactions.
+              It does not include pending farming rewards, pending incoming transctions,
+              and Chia that you have just spent but is not yet in the blockchain.
+            </Trans>
+          )}
         />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
@@ -269,7 +283,9 @@ const BalanceCard = props => {
                     id="panel1a-header"
                   >
                     <Typography className={classes.heading}>
-                      View pending balances
+                      <Trans id="BalanceCard.viewPendingBalances">
+                        View pending balances
+                      </Trans>
                     </Typography>
                   </AccordionSummary>
                   <AccordionDetails>

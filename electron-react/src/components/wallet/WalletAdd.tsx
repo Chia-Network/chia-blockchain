@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trans } from '@lingui/macro';
 import { Typography, Button, Grid, Container } from '@material-ui/core';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
@@ -59,13 +60,17 @@ export default function WalletAdd() {
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Brand />
           <Typography variant="h4" component="h1" gutterBottom>
-            New Wallet
+            <Trans id="WalletAdd.title">
+              New Wallet
+            </Trans>
           </Typography>
           <Typography variant="subtitle1" align="center">
-            Welcome! The following words are used for your wallet backup.
-            Without them, you will lose access to your wallet, keep them safe!
-            Write down each word along with the order number next to them.
-            (Order is important)
+            <Trans id="WalletAdd.description">
+              Welcome! The following words are used for your wallet backup.
+              Without them, you will lose access to your wallet, keep them safe!
+              Write down each word along with the order number next to them.
+              (Order is important)
+            </Trans>
           </Typography>
           {words.length ? (
             <Grid container spacing={2}>
@@ -89,7 +94,9 @@ export default function WalletAdd() {
               color="primary"
               fullWidth
             >
-              Next
+              <Trans id="WalletAdd.next">
+                Next
+              </Trans>
             </Button>
           </Container>
         </Flex>

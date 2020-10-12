@@ -13,7 +13,212 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/dashboard/DashboardSideBar.tsx:38
+#: src/components/wallet/standard/WalletStandard.js:246
+msgid "BalanceCard.balance"
+msgstr "Balance"
+
+#: src/components/wallet/standard/WalletStandard.js:265
+msgid "BalanceCard.spendableBalance"
+msgstr "Spendable Balance"
+
+#: src/components/wallet/standard/WalletStandard.js:268
+msgid "BalanceCard.spendableBalanceTooltip"
+msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transctions, and Chia that you have just spent but is not yet in the blockchain."
+
+#: src/components/wallet/standard/WalletStandard.js:253
+msgid "BalanceCard.totalBalance"
+msgstr "Total Balance"
+
+#: src/components/wallet/standard/WalletStandard.js:256
+msgid "BalanceCard.totalBalanceTooltip"
+msgstr "This is the total amount of Chia in the blockchain at the LCA block (latest common ancestor) that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+
+#: src/components/wallet/standard/WalletStandard.js:286
+msgid "BalanceCard.viewPendingBalances"
+msgstr "View pending balances"
+
+#: src/components/block/Block.js:176
+msgid "Block.blockVDFIterations"
+msgstr "Block VDF Iterations"
+
+#: src/components/block/Block.js:179
+msgid "Block.blockVDFIterationsTooltip"
+msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
+
+#: src/components/block/Block.js:207
+msgid "Block.coinbaseAmount"
+msgstr "Coinbase Amount"
+
+#: src/components/block/Block.js:210
+msgid "Block.coinbaseAmountTooltip"
+msgstr "The Chia block reward, goes to the pool (or farmer if not pooling)"
+
+#: src/components/block/Block.js:215
+msgid "Block.coinbasePuzzleHash"
+msgstr "Coinbase Puzzle Hash"
+
+#: src/components/block/Block.js:239
+msgid "Block.description"
+msgstr "Block at height {0} in the Chia blockchain"
+
+#: src/components/block/Block.js:165
+msgid "Block.difficulty"
+msgstr "Difficulty"
+
+#: src/components/block/Block.js:218
+msgid "Block.feesAmount"
+msgstr "Fees Amount"
+
+#: src/components/block/Block.js:221
+msgid "Block.feesAmountTooltip"
+msgstr "The total fees in this block, goes to the farmer"
+
+#: src/components/block/Block.js:226
+msgid "Block.feesPuzzleHash"
+msgstr "Fees Puzzle Hash"
+
+#: src/components/block/Block.js:139
+msgid "Block.headerHash"
+msgstr "Header hash"
+
+#: src/components/block/Block.js:151
+msgid "Block.height"
+msgstr "Height"
+
+#: src/components/block/Block.js:193
+msgid "Block.plotId"
+msgstr "Plot Id"
+
+#: src/components/block/Block.js:196
+msgid "Block.plotIdTooltip"
+msgstr "The seed used to create the plot, this depends on the pool pk and plot pk"
+
+#: src/components/block/Block.js:187
+msgid "Block.plotPublicKey"
+msgstr "Plot Public Key"
+
+#: src/components/block/Block.js:190
+msgid "Block.poolPublicKey"
+msgstr "Pool Public Key"
+
+#: src/components/block/Block.js:162
+msgid "Block.previousBlock"
+msgstr "Previous block"
+
+#: src/components/block/Block.js:184
+msgid "Block.proofOfSpaceSize"
+msgstr "Proof of Space Size"
+
+#: src/components/block/Block.js:142
+msgid "Block.timestamp"
+msgstr "Timestamp"
+
+#: src/components/block/Block.js:145
+msgid "Block.timestampTooltip"
+msgstr "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
+
+#: src/components/block/Block.js:235
+msgid "Block.title"
+msgstr "Block"
+
+#: src/components/block/Block.js:168
+msgid "Block.totalVDFIterations"
+msgstr "Total VDF Iterations"
+
+#: src/components/block/Block.js:171
+msgid "Block.totalVDFIterationsTooltip"
+msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
+
+#: src/components/block/Block.js:201
+msgid "Block.transactionsFilterHash"
+msgstr "Transactions Filter Hash"
+
+#: src/components/block/Block.js:204
+msgid "Block.transactionsGeneratorHash"
+msgstr "Transactions Generator Hash"
+
+#: src/components/block/Block.js:154
+msgid "Block.weight"
+msgstr "Weight"
+
+#: src/components/block/Block.js:157
+msgid "Block.weightTooltip"
+msgstr "Weight is the total added difficulty of all blocks up to and including this one"
+
+#: src/components/fullNode/FullNode.js:415
+msgid "BlocksCard.expectedFinishTime"
+msgstr "Expected finish time"
+
+#: src/components/fullNode/FullNode.js:400
+msgid "BlocksCard.headerHash"
+msgstr "Header Hash"
+
+#: src/components/fullNode/FullNode.js:405
+msgid "BlocksCard.height"
+msgstr "Height"
+
+#: src/components/fullNode/FullNode.js:410
+msgid "BlocksCard.timeCreated"
+msgstr "Time Created"
+
+#: src/components/fullNode/FullNode.js:386
+msgid "BlocksCard.title"
+msgstr "Blocks"
+
+#: src/components/connections/Connections.js:208
+msgid "Connections.connect"
+msgstr "Connect"
+
+#: src/components/connections/Connections.js:186
+msgid "Connections.connectToOtherPeersTitle"
+msgstr "Connect to other peers"
+
+#: src/components/connections/Connections.js:125
+msgid "Connections.connected"
+msgstr "Connected"
+
+#: src/components/connections/Connections.js:119
+msgid "Connections.connectionType"
+msgstr "Connection type"
+
+#: src/components/connections/Connections.js:138
+msgid "Connections.delete"
+msgstr "Delete"
+
+#: src/components/connections/Connections.js:104
+msgid "Connections.ipAddress"
+msgstr "Ip address"
+
+#: src/components/connections/Connections.js:192
+msgid "Connections.ipAddressHost"
+msgstr "Ip address / host"
+
+#: src/components/connections/Connections.js:132
+msgid "Connections.lastMessage"
+msgstr "Last message"
+
+#: src/components/connections/Connections.js:99
+msgid "Connections.nodeId"
+msgstr "Node Id"
+
+#: src/components/connections/Connections.js:109
+#: src/components/connections/Connections.js:197
+msgid "Connections.port"
+msgstr "Port"
+
+#: src/components/connections/Connections.js:85
+msgid "Connections.title"
+msgstr "Connections"
+
+#: src/components/connections/Connections.js:114
+msgid "Connections.upDown"
+msgstr "Up/Down"
+
+#: src/components/wallet/Wallets.tsx:129
+msgid "CreateWallet.addWallet"
+msgstr "Add Wallet"
+
+#: src/components/dashboard/DashboardSideBar.tsx:32
 msgid "DashboardSideBar.farm"
 msgstr "Farm"
 
@@ -21,30 +226,260 @@ msgstr "Farm"
 msgid "DashboardSideBar.home"
 msgstr "Full Node"
 
-#: src/components/dashboard/DashboardSideBar.tsx:44
+#: src/components/dashboard/DashboardSideBar.tsx:34
 msgid "DashboardSideBar.keys"
 msgstr "Keys"
 
-#: src/components/dashboard/DashboardSideBar.tsx:35
+#: src/components/dashboard/DashboardSideBar.tsx:31
 msgid "DashboardSideBar.plot"
 msgstr "Plot"
 
-#: src/components/dashboard/DashboardSideBar.tsx:41
+#: src/components/dashboard/DashboardSideBar.tsx:33
 msgid "DashboardSideBar.trade"
 msgstr "Trade"
 
-#: src/components/dashboard/DashboardSideBar.tsx:32
+#: src/components/dashboard/DashboardSideBar.tsx:30
 msgid "DashboardSideBar.wallets"
 msgstr "Wallets"
 
-#: src/components/selectKey/SelectKey.tsx:61
+#: src/components/selectKey/SelectKey.tsx:138
+msgid "DeleteAllKeys.back"
+msgstr "Back"
+
+#: src/components/selectKey/SelectKey.tsx:143
+msgid "DeleteAllKeys.delete"
+msgstr "Delete"
+
+#: src/components/selectKey/SelectKey.tsx:129
+msgid "DeleteAllKeys.description"
+msgstr "Deleting all keys will permanatly remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
+
+#: src/components/selectKey/SelectKey.tsx:123
+msgid "DeleteAllKeys.title"
+msgstr "Delete all keys"
+
+#: src/components/fullNode/FullNode.js:538
+msgid "FullNode.title"
+msgstr "Full Node"
+
+#: src/components/fullNode/FullNode.js:354
+msgid "FullNodeStatus.title"
+msgstr "Full Node Status"
+
+#: src/components/locale/LocaleToggle.tsx:35
+msgid "LocaleToggle.helpToTranslate"
+msgstr "Help to translate"
+
+#: src/components/fullNode/FullNode.js:491
+msgid "SearchBlock.blockHash"
+msgstr "Block hash"
+
+#: src/components/fullNode/FullNode.js:504
+msgid "SearchBlock.search"
+msgstr "Search"
+
+#: src/components/fullNode/FullNode.js:479
+msgid "SearchBlock.title"
+msgstr "Search block by header hash"
+
+#: src/components/selectKey/SelectKey.tsx:101
+msgid "SelectKey.createNewPrivateKey"
+msgstr "Create a new private key"
+
+#: src/components/selectKey/SelectKey.tsx:114
+msgid "SelectKey.deleteAllKeys"
+msgstr "Delete all keys"
+
+#: src/components/selectKey/SelectKey.tsx:108
+msgid "SelectKey.importFromMnemonics"
+msgstr "Import from Mnemonics (24 words)"
+
+#: src/components/selectKey/SelectKey.tsx:79
+msgid "SelectKey.selectFingerprint"
+msgstr "Private key with public fingerprint {fingerprint}"
+
+#: src/components/selectKey/SelectKey.tsx:81
+msgid "SelectKey.selectKeyCanBeBacked"
+msgstr "Can be backed up to mnemonic seed"
+
+#: src/components/selectKey/SelectKey.tsx:69
 msgid "SelectKey.signInDescription"
 msgstr "Welcome to Chia. Please log in with an existing key, or create a a new key."
 
-#: src/components/selectKey/SelectKey.tsx:56
+#: src/components/selectKey/SelectKey.tsx:66
 msgid "SelectKey.signInTitle"
 msgstr "Sign In"
 
-#: src/components/selectKey/SelectKey.tsx:51
+#: src/components/selectKey/SelectKey.tsx:63
 msgid "SelectKey.title"
 msgstr "Select Key"
+
+#: src/components/wallet/Wallets.tsx:166
+msgid "StatusCard.connections"
+msgstr "connections:"
+
+#: src/components/wallet/Wallets.tsx:158
+msgid "StatusCard.height"
+msgstr "height:"
+
+#: src/components/wallet/Wallets.tsx:147
+msgid "StatusCard.status"
+msgstr "status:"
+
+#: src/components/wallet/Wallets.tsx:153
+msgid "StatusCard.synced"
+msgstr "synced"
+
+#: src/components/wallet/Wallets.tsx:152
+msgid "StatusCard.syncing"
+msgstr "syncing"
+
+#: src/components/wallet/Wallets.tsx:140
+msgid "StatusCard.title"
+msgstr "Status"
+
+#: src/components/fullNode/FullNode.js:251
+#: src/components/fullNode/FullNode.js:258
+msgid "StatusItem.connectionStatus"
+msgstr "Connection Status"
+
+#: src/components/fullNode/FullNode.js:252
+msgid "StatusItem.connectionStatusConnected"
+msgstr "Connected"
+
+#: src/components/fullNode/FullNode.js:259
+msgid "StatusItem.connectionStatusNotConnected"
+msgstr "Not connected"
+
+#: src/components/fullNode/FullNode.js:266
+msgid "StatusItem.difficulty"
+msgstr "Difficulty"
+
+#: src/components/fullNode/FullNode.js:293
+msgid "StatusItem.estimatedNetworkSpace"
+msgstr "Estimated network space"
+
+#: src/components/fullNode/FullNode.js:296
+msgid "StatusItem.estimatedNetworkSpaceTooltip"
+msgstr "Estimated sum of all the plotted disk space of all farmers in the network"
+
+#: src/components/fullNode/FullNode.js:273
+msgid "StatusItem.iterationsPerSecond"
+msgstr "Iterations per Second"
+
+#: src/components/fullNode/FullNode.js:276
+msgid "StatusItem.iterationsPerSecondTooltip"
+msgstr "The estimated proof of time speed of the fastest timelord in the network."
+
+#: src/components/fullNode/FullNode.js:194
+#: src/components/fullNode/FullNode.js:200
+msgid "StatusItem.lcaBlockHeight"
+msgstr "LCA Block Height"
+
+#: src/components/fullNode/FullNode.js:230
+#: src/components/fullNode/FullNode.js:243
+msgid "StatusItem.lcaTime"
+msgstr "LCA Time"
+
+#: src/components/fullNode/FullNode.js:233
+msgid "StatusItem.lcaTimeTooltip"
+msgstr "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height."
+
+#: src/components/fullNode/FullNode.js:214
+#: src/components/fullNode/FullNode.js:220
+msgid "StatusItem.maxTipBlockHeight"
+msgstr "Max Tip Block Height"
+
+#: src/components/fullNode/FullNode.js:285
+msgid "StatusItem.minIterations"
+msgstr "Min Iterations"
+
+#: src/components/fullNode/FullNode.js:160
+#: src/components/fullNode/FullNode.js:172
+#: src/components/fullNode/FullNode.js:184
+msgid "StatusItem.status"
+msgstr "Status"
+
+#: src/components/fullNode/FullNode.js:185
+msgid "StatusItem.statusNotConnected"
+msgstr "Not connected"
+
+#: src/components/fullNode/FullNode.js:173
+msgid "StatusItem.statusSynced"
+msgstr "Synced"
+
+#: src/components/fullNode/FullNode.js:176
+msgid "StatusItem.statusSyncedTooltip"
+msgstr "This node is fully caught up and validating the network"
+
+#: src/components/fullNode/FullNode.js:164
+msgid "StatusItem.statusTooltip"
+msgstr "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
+
+#: src/components/fullNode/FullNode.js:161
+msgid "StatusItem.statusValue"
+msgstr "Syncing {progress}/{tip}"
+
+#: src/components/wallet/WalletAdd.tsx:43
+msgid "WalletAdd.description"
+msgstr "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
+
+#: src/components/wallet/WalletAdd.tsx:55
+msgid "WalletAdd.next"
+msgstr "Next"
+
+#: src/components/wallet/WalletAdd.tsx:38
+msgid "WalletAdd.title"
+msgstr "New Wallet"
+
+#: src/components/wallet/WalletImport.tsx:72
+msgid "WalletImport.description"
+msgstr "Enter the 24 word mmemonic that you have saved in order to restore your Chia wallet."
+
+#: src/components/wallet/WalletImport.tsx:82
+msgid "WalletImport.next"
+msgstr "Next"
+
+#: src/components/wallet/WalletImport.tsx:67
+msgid "WalletImport.title"
+msgstr "Import Wallet from Mnemonics"
+
+#: src/components/wallet/Wallets.tsx:91
+msgid "WalletItem.ccWallet"
+msgstr "CC Wallet"
+
+#: src/components/wallet/Wallets.tsx:87
+msgid "WalletItem.chiaWallet"
+msgstr "Chia Wallet"
+
+#: src/components/wallet/Wallets.tsx:98
+msgid "WalletItem.rlWallet"
+msgstr "RL Wallet"
+
+#: src/components/wallet/WalletStatusCard.tsx:30
+msgid "WalletStatusCard.connections"
+msgstr "connections:"
+
+#: src/components/wallet/WalletStatusCard.tsx:24
+msgid "WalletStatusCard.height"
+msgstr "height:"
+
+#: src/components/wallet/WalletStatusCard.tsx:16
+msgid "WalletStatusCard.status"
+msgstr "status:"
+
+#: src/components/wallet/WalletStatusCard.tsx:19
+msgid "WalletStatusCard.synced"
+msgstr "synced"
+
+#: src/components/wallet/WalletStatusCard.tsx:19
+msgid "WalletStatusCard.syncing"
+msgstr "syncing"
+
+#: src/components/wallet/WalletStatusCard.tsx:11
+msgid "WalletStatusCard.title"
+msgstr "Status"
+
+#: src/components/wallet/Wallets.tsx:184
+msgid "Wallets.title"
+msgstr "Wallets"
