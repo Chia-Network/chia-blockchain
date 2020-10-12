@@ -33,6 +33,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 from src.types.pool_target import PoolTarget
 from src.types.sized_bytes import bytes32
+from src.util.config import load_config
 from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.util.merkle_set import MerkleSet
 from src.util.ints import uint8, uint32, uint64, uint128, int512
@@ -153,6 +154,7 @@ class BlockTools:
         _, self.plots, _, _ = load_plots(
             {}, {}, farmer_pubkeys, self.pool_pubkeys, root_path
         )
+        self.config = load_config(self.root_path, "config.yaml")
 
     def get_plot_signature(
         self, header_data: HeaderData, plot_pk: G1Element
