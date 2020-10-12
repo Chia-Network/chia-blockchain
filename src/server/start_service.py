@@ -41,11 +41,11 @@ class Service:
         rpc_info: Optional[Tuple[type, int]] = None,
         parse_cli_args=True,
     ):
-        net_config = load_config(root_path, "config.yaml")
-        ping_interval = net_config.get("ping_interval")
-        network_id = net_config.get("network_id")
-        self.self_hostname = net_config.get("self_hostname")
-        self.daemon_port = net_config.get("daemon_port")
+        config = load_config(root_path, "config.yaml")
+        ping_interval = config.get("ping_interval")
+        network_id = config.get("network_id")
+        self.self_hostname = config.get("self_hostname")
+        self.daemon_port = config.get("daemon_port")
         assert ping_interval is not None
         assert network_id is not None
 
@@ -56,14 +56,14 @@ class Service:
         setproctitle(proctitle_name)
         self._log = logging.getLogger(service_name)
         if parse_cli_args:
-            config = load_config_cli(root_path, "config.yaml", service_name)
+            service_config = load_config_cli(root_path, "config.yaml", service_name)
         else:
-            config = load_config(root_path, "config.yaml", service_name)
+            service_config = load_config(root_path, "config.yaml", service_name)
         initialize_logging(service_name, config["logging"], root_path)
 
         self._rpc_info = rpc_info
 
-        ssl_cert_path, ssl_key_path = load_ssl_paths(root_path, config)
+        ssl_cert_path, ssl_key_path = load_ssl_paths(root_path, service_config)
 
         self._server = ChiaServer(
             advertised_port,
