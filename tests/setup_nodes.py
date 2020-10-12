@@ -12,17 +12,16 @@ from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.wallet.wallet_node import WalletNode
 from src.util.config import load_config
-from src.harvester import Harvester
 from src.farmer import Farmer
 from src.introducer import Introducer
 from src.timelord import Timelord
 from src.server.connection import PeerInfo
 from src.util.ints import uint16, uint32
+from src.server.start_harvester import service_kwargs_for_harvester
 from src.server.start_service import Service
 from src.util.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert
 from src.util.chech32 import encode_puzzle_hash
-
 
 test_constants, bt = make_test_constants_with_genesis(
     {
@@ -183,23 +182,21 @@ async def setup_wallet_node(
 
 
 async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants):
-    api = Harvester(bt.root_path, consensus_constants)
-
-    service = Service(
-        root_path=bt.root_path,
-        api=api,
-        node_type=NodeType.HARVESTER,
-        advertised_port=port,
-        service_name="harvester",
-        server_listen_ports=[port],
-        connect_peers=[PeerInfo(self_hostname, farmer_port)],
-        auth_connect_peers=True,
-        parse_cli_args=False,
+    kwargs = service_kwargs_for_harvester(
+        bt.root_path, bt.config["harvester"], consensus_constants
+    )
+    kwargs.update(
+        dict(
+            server_listen_ports=[port],
+            advertised_port=port,
+            connect_peers=[PeerInfo(self_hostname, farmer_port)],
+            parse_cli_args=False,
+        )
     )
 
+    service = Service(**kwargs)
     await service.start()
-
-    yield api, api.server
+    yield service._api, service._api.server
 
     service.stop()
     await service.wait_closed()
