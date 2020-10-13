@@ -11,7 +11,7 @@ const locales: { [char: string]: string } = {
 };
 
 export default function LocaleToggle() {
-  const [locale, setLocale] = useLocale('en');
+  const [currentLocale, setLocale] = useLocale('en');
   const [open, toggleOpen] = useToggle(false);
 
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -40,7 +40,7 @@ export default function LocaleToggle() {
         startIcon={<Translate />}
         endIcon={<ExpandMore />}
       >
-        {locale in locales ? locales[locale] : 'Unknown'}
+        {currentLocale in locales ? locales[currentLocale] : 'Unknown'}
       </Button>
       <Menu
         id="simple-menu"
@@ -49,8 +49,14 @@ export default function LocaleToggle() {
         open={open}
         onClose={handleClose}
       >
-        {Object.keys(locales).forEach((locale) => (
-          <MenuItem onClick={() => handleSelect(locale)}>{locales[locale]}</MenuItem>
+        {Object.keys(locales).map((locale) => (
+          <MenuItem
+            key={locale}
+            onClick={() => handleSelect(locale)}
+            selected={locale === currentLocale}
+          >
+            {locales[locale]}
+          </MenuItem>
         ))}
         <MenuItem
           component="a"
