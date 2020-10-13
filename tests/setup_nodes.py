@@ -7,21 +7,22 @@ from src.consensus.constants import ConsensusConstants
 from src.full_node.full_node import FullNode
 from src.server.connection import NodeType
 from src.server.server import ChiaServer
-from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.wallet.wallet_node import WalletNode
-from src.util.config import load_config
 from src.server.connection import PeerInfo
-from src.util.ints import uint16, uint32
+from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
 from src.server.start_farmer import service_kwargs_for_farmer
+from src.server.start_full_node import service_kwargs_for_full_node
 from src.server.start_harvester import service_kwargs_for_harvester
 from src.server.start_introducer import service_kwargs_for_introducer
 from src.server.start_timelord import service_kwargs_for_timelord
 from src.server.start_service import Service
+from src.util.ints import uint16, uint32
 from src.util.make_test_constants import make_test_constants_with_genesis
-from tests.time_out_assert import time_out_assert
 from src.util.chech32 import encode_puzzle_hash
+
+from tests.time_out_assert import time_out_assert
 
 test_constants, bt = make_test_constants_with_genesis(
     {
@@ -40,8 +41,7 @@ test_constants, bt = make_test_constants_with_genesis(
     }
 )
 
-global_config = load_config(bt.root_path, "config.yaml")
-self_hostname = global_config["self_hostname"]
+self_hostname = bt.config["self_hostname"]
 
 
 def constants_for_dic(dic):
@@ -69,41 +69,32 @@ async def setup_full_node(
     if db_path.exists():
         db_path.unlink()
 
-    config = load_config(bt.root_path, "config.yaml", "full_node")
+    config = bt.config["full_node"]
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
     config["peer_connect_interval"] = 3
     config["introducer_peer"]["host"] = "::1"
     if introducer_port is not None:
         config["introducer_peer"]["port"] = introducer_port
+    config["port"] = port
+    config["rpc_port"] = port + 1000
 
-    if not simulator:
-        api: FullNode = FullNode(
-            config=config,
-            root_path=bt.root_path,
-            consensus_constants=consensus_constants,
-            name=f"full_node_{port}",
+    if simulator:
+        kwargs = service_kwargs_for_full_node_simulator(
+            bt.root_path, bt.config["full_node"], consensus_constants, bt
         )
     else:
-        api = FullNodeSimulator(
-            config=config,
-            root_path=bt.root_path,
-            consensus_constants=consensus_constants,
-            name=f"full_node_sim_{port}",
-            bt=bt,
+        kwargs = service_kwargs_for_full_node(
+            bt.root_path, bt.config["full_node"], consensus_constants
         )
 
-    service = Service(
-        root_path=bt.root_path,
-        api=api,
-        node_type=NodeType.FULL_NODE,
-        advertised_port=port,
-        service_name="full_node",
-        server_listen_ports=[port],
-        auth_connect_peers=False,
-        on_connect_callback=api._on_connect,
-        parse_cli_args=False,
+    kwargs.update(
+        dict(
+            parse_cli_args=False,
+        )
     )
+
+    service = Service(**kwargs)
 
     await service.start()
 
@@ -123,7 +114,7 @@ async def setup_wallet_node(
     key_seed=None,
     starting_height=None,
 ):
-    config = load_config(bt.root_path, "config.yaml", "wallet")
+    config = bt.config["wallet"]
     if starting_height is not None:
         config["starting_height"] = starting_height
     config["initial_num_public_keys"] = 5

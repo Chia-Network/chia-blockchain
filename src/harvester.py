@@ -27,7 +27,6 @@ log = logging.getLogger(__name__)
 
 
 class Harvester:
-    config: Dict
     provers: Dict[Path, PlotInfo]
     failed_to_open_filenames: Dict[Path, int]
     no_key_filenames: Set[Path]
