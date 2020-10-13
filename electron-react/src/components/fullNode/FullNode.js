@@ -358,7 +358,7 @@ const FullNodeStatus = props => {
           </div>
         </Grid>
         {statusItems.map(item => (
-          <StatusCell item={item} key={item.label}></StatusCell>
+          <StatusCell item={item} key={item.label.props.id}></StatusCell>
         ))}
       </Grid>
     </Paper>

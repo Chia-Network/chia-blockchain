@@ -278,7 +278,7 @@ const BalanceCardSubSection = (props) => {
   const classes = useStyles();
   let cc_unit = props.name;
   if (cc_unit.length > 10) {
-    cc_unit = `${cc_unit.substring(0, 10)}...`;
+    cc_unit = `${cc_unit.slice(0, 10)}...`;
   }
   return (
     <Grid item xs={12}>
@@ -301,7 +301,7 @@ const BalanceCardSubSection = (props) => {
 function get_cc_unit(name) {
   let cc_unit = name;
   if (cc_unit.length > 10) {
-    cc_unit = `${cc_unit.substring(0, 10)}...`;
+    cc_unit = `${cc_unit.slice(0, 10)}...`;
   }
   return cc_unit;
 }
@@ -475,9 +475,9 @@ const SendCard = (props) => {
       );
       return;
     }
-    if (address.substring(0, 14) === 'colour_addr://') {
-      const colour_id = address.substring(14, 78);
-      address = address.substring(79);
+    if (address.slice(0, 14) === 'colour_addr://') {
+      const colour_id = address.slice(14, 78);
+      address = address.slice(79);
       if (colour_id !== colour) {
         dispatch(
           openDialog(
@@ -489,11 +489,11 @@ const SendCard = (props) => {
     }
 
     if (address.startsWith('0x') || address.startsWith('0X')) {
-      address = address.substring(2);
+      address = address.slice(2);
     }
 
-    const amount_value = parseFloat(Number(amount));
-    const fee_value = parseFloat(Number(fee));
+    const amount_value = Number.parseFloat(Number(amount));
+    const fee_value = Number.parseFloat(Number(fee));
 
     if (fee_value !== 0) {
       dispatch(

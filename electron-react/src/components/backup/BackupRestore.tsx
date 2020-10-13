@@ -1,30 +1,37 @@
-import React, { DragEvent } from "react";
+import React, { DragEvent } from 'react';
 import styled from 'styled-components';
-import { Box, Button, Paper, Grid, Typography, Container } from "@material-ui/core";
-import { ArrowBackIos as ArrowBackIosIcon } from "@material-ui/icons";
-import { useSelector, useDispatch } from "react-redux";
-import { useHistory } from "react-router";
+import {
+  Box,
+  Button,
+  Paper,
+  Grid,
+  Typography,
+  Container,
+} from '@material-ui/core';
+import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
+import { useSelector, useDispatch } from 'react-redux';
+import { useHistory } from 'react-router';
 import {
   add_new_key_action,
   add_and_restore_from_backup,
   login_and_skip_action,
   get_backup_info_action,
-  log_in_and_import_backup_action
-} from "../../modules/message";
+  log_in_and_import_backup_action,
+} from '../../modules/message';
 import {
   changeBackupView,
   presentMain,
   presentBackupInfo,
   setBackupInfo,
-  selectFilePath
-} from "../../modules/backup";
+  selectFilePath,
+} from '../../modules/backup';
 import Link from '../router/Link';
 import Flex from '../flex/Flex';
-import { unix_to_short_date } from "../../util/utils";
+import { unix_to_short_date } from '../../util/utils';
 import type { RootState } from '../../modules/rootReducer';
-import Wallet from "../../types/Wallet";
+import Wallet from '../../types/Wallet';
 import myStyle from '../../pages/style';
-import LayoutHero from "../layout/LayoutHero";
+import LayoutHero from '../layout/LayoutHero';
 
 const StyledDropPaper = styled(Paper)`
   background-color: ${({ theme }) =>
@@ -40,13 +47,15 @@ function UIPart() {
   const history = useHistory();
   const dispatch = useDispatch();
   const classes = myStyle();
-  var words = useSelector((state: RootState) => state.mnemonic_state.mnemonic_input);
-  var fingerprint = useSelector(
-    (state: RootState) => state.wallet_state.selected_fingerprint
+  let words = useSelector(
+    (state: RootState) => state.mnemonic_state.mnemonic_input,
+  );
+  const fingerprint = useSelector(
+    (state: RootState) => state.wallet_state.selected_fingerprint,
   );
 
-  for (let word of words) {
-    if (word === "") {
+  for (const word of words) {
+    if (word === '') {
       // @ts-ignore
       words = null;
     }
@@ -72,7 +81,7 @@ function UIPart() {
     e.preventDefault();
     e.stopPropagation();
   };
-  const handleDrop = (e: DragEvent<HTMLDivElement>)  => {
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -86,11 +95,11 @@ function UIPart() {
 
   return (
     <LayoutHero
-      header={(
+      header={
         <Link to="/">
           <ArrowBackIosIcon fontSize="large" color="secondary" />
         </Link>
-      )}
+      }
     >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
@@ -99,12 +108,14 @@ function UIPart() {
           </Typography>
 
           <StyledDropPaper
-            onDrop={e => handleDrop(e)}
-            onDragOver={e => handleDragOver(e)}
-            onDragEnter={e => handleDragEnter(e)}
-            onDragLeave={e => handleDragLeave(e)}
+            onDrop={(e) => handleDrop(e)}
+            onDragOver={(e) => handleDragOver(e)}
+            onDragEnter={(e) => handleDragEnter(e)}
+            onDragLeave={(e) => handleDragLeave(e)}
           >
-            <Typography variant="subtitle1">Drag and drop your backup file</Typography>
+            <Typography variant="subtitle1">
+              Drag and drop your backup file
+            </Typography>
           </StyledDropPaper>
 
           <Container maxWidth="xs">
@@ -129,10 +140,14 @@ function BackupDetails() {
   const history = useHistory();
   const classes = myStyle();
   const dispatch = useDispatch();
-  const file_path = useSelector((state: RootState) => state.backup_state.selected_file_path);
-  const backupInfo = useSelector((state: RootState) => state.backup_state.backup_info);
+  const file_path = useSelector(
+    (state: RootState) => state.backup_state.selected_file_path,
+  );
+  const backupInfo = useSelector(
+    (state: RootState) => state.backup_state.backup_info,
+  );
   const selected_file_path = useSelector(
-    (state: RootState) => state.backup_state.selected_file_path
+    (state: RootState) => state.backup_state.selected_file_path,
   );
 
   const {
@@ -146,14 +161,15 @@ function BackupDetails() {
 
   const date = unix_to_short_date(timestamp);
 
-
-  var words = useSelector((state: RootState) => state.mnemonic_state.mnemonic_input);
-  var fingerprint = useSelector(
-    (state: RootState) => state.wallet_state.selected_fingerprint
+  let words = useSelector(
+    (state: RootState) => state.mnemonic_state.mnemonic_input,
+  );
+  const fingerprint = useSelector(
+    (state: RootState) => state.wallet_state.selected_fingerprint,
   );
 
-  for (let word of words) {
-    if (word === "") {
+  for (const word of words) {
+    if (word === '') {
       // @ts-ignore
       words = null;
     }
@@ -182,7 +198,7 @@ function BackupDetails() {
   return (
     <div className={classes.root}>
       <ArrowBackIosIcon onClick={handleGoBack} className={classes.navigator}>
-        {" "}
+        {' '}
       </ArrowBackIosIcon>
       <div className={classes.grid_wrap}>
         <Container className={classes.grid} maxWidth="lg">
@@ -195,23 +211,23 @@ function BackupDetails() {
         <Paper
           className={classes.drag}
           style={{
-            position: "relative",
-            width: "80%",
-            margin: "auto",
-            padding: "20px"
+            position: 'relative',
+            width: '80%',
+            margin: 'auto',
+            padding: '20px',
           }}
         >
           <Box
             display="flex"
             onClick={goBackBackup}
-            style={{ cursor: "pointer", minWidth: "100%" }}
+            style={{ cursor: 'pointer', minWidth: '100%' }}
           >
             <Box>
-              {" "}
+              {' '}
               <ArrowBackIosIcon
-                style={{ cursor: "pointer" }}
+                style={{ cursor: 'pointer' }}
                 onClick={goBackBackup}
-              ></ArrowBackIosIcon>
+              />
             </Box>
             <Box className={classes.align_left} flexGrow={1}>
               <Typography variant="subtitle2">Import Backup File</Typography>
@@ -220,19 +236,19 @@ function BackupDetails() {
           <Grid container spacing={3} style={{ marginBottom: 10 }}>
             <Grid item xs={6}>
               <Typography variant="subtitle1">Backup info:</Typography>
-              <Box display="flex" style={{ minWidth: "100%" }}>
+              <Box display="flex" style={{ minWidth: '100%' }}>
                 <Box flexGrow={1}>Date: </Box>
                 <Box className={classes.align_right} flexGrow={1}>
                   {date}
                 </Box>
               </Box>
-              <Box display="flex" style={{ minWidth: "100%" }}>
+              <Box display="flex" style={{ minWidth: '100%' }}>
                 <Box flexGrow={1}>Version: </Box>
                 <Box className={classes.align_right} flexGrow={1}>
                   {version}
                 </Box>
               </Box>
-              <Box display="flex" style={{ minWidth: "100%" }}>
+              <Box display="flex" style={{ minWidth: '100%' }}>
                 <Box flexGrow={1}>Fingerprint: </Box>
                 <Box className={classes.align_right} flexGrow={1}>
                   {backup_fingerprint}
@@ -240,15 +256,15 @@ function BackupDetails() {
               </Box>
             </Grid>
             <Grid item xs={6}>
-              <Box display="flex" style={{ minWidth: "100%" }}>
+              <Box display="flex" style={{ minWidth: '100%' }}>
                 <Box flexGrow={1}>Downloaded: </Box>
                 <Box className={classes.align_right} flexGrow={1}>
-                  {downloaded + ""}
+                  {`${downloaded}`}
                 </Box>
               </Box>
-              <Box display="flex" style={{ minWidth: "100%" }}>
+              <Box display="flex" style={{ minWidth: '100%' }}>
                 <Box flexGrow={1}>
-                  {downloaded ? "Backup Host:" : "File Path"}
+                  {downloaded ? 'Backup Host:' : 'File Path'}
                 </Box>
                 <Box className={classes.align_right} flexGrow={1}>
                   {downloaded ? host : selected_file_path}
@@ -257,10 +273,9 @@ function BackupDetails() {
             </Grid>
           </Grid>
           <Typography variant="subtitle1">Smart wallets</Typography>
-          <WalletHeader></WalletHeader>
-          {!!wallets && wallets.map((wallet: Wallet) => (
-            <WalletRow wallet={wallet}></WalletRow>
-          ))}
+          <WalletHeader />
+          {!!wallets &&
+            wallets.map((wallet: Wallet) => <WalletRow wallet={wallet} />)}
         </Paper>
       </div>
       <Container component="main" maxWidth="xs">
@@ -279,7 +294,7 @@ function BackupDetails() {
       </Container>
     </div>
   );
-};
+}
 
 type WalletRowProps = {
   wallet: Wallet;
@@ -292,12 +307,12 @@ function WalletRow(props: WalletRowProps) {
       name,
       // @ts-ignore
       type_name: type,
-    }
+    },
   } = props;
   const classes = myStyle();
 
   return (
-    <Box display="flex" style={{ minWidth: "100%" }}>
+    <Box display="flex" style={{ minWidth: '100%' }}>
       <Box className={classes.column_three} flexGrow={1}>
         {id}
       </Box>
@@ -315,31 +330,30 @@ function WalletHeader() {
   const classes = myStyle();
 
   return (
-    <Box display="flex" style={{ minWidth: "100%" }}>
+    <Box display="flex" style={{ minWidth: '100%' }}>
       <Box className={classes.column_three} flexGrow={1}>
         <Typography variant="subtitle2"> id</Typography>
       </Box>
       <Box className={classes.column_three} flexGrow={1}>
         <div className={classes.align_center}>
-          {" "}
+          {' '}
           <Typography variant="subtitle2"> name</Typography>
         </div>
       </Box>
       <Box className={classes.column_three} flexGrow={1}>
         <div className={classes.align_right}>
-          {" "}
+          {' '}
           <Typography variant="subtitle2"> type</Typography>
         </div>
       </Box>
     </Box>
   );
-};
+}
 
 export default function RestoreBackup() {
   const view = useSelector((state: RootState) => state.backup_state.view);
   if (view === presentBackupInfo) {
-    return <BackupDetails></BackupDetails>;
-  } else {
-    return <UIPart></UIPart>;
+    return <BackupDetails />;
   }
+  return <UIPart />;
 }

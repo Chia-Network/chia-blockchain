@@ -50,19 +50,17 @@ export default function WalletAdd() {
 
   return (
     <LayoutHero
-      header={(
+      header={
         <Link to="/">
           <ArrowBackIosIcon fontSize="large" color="secondary" />
         </Link>
-      )}
+      }
     >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Brand />
           <Typography variant="h4" component="h1" gutterBottom>
-            <Trans id="WalletAdd.title">
-              New Wallet
-            </Trans>
+            <Trans id="WalletAdd.title">New Wallet</Trans>
           </Typography>
           <Typography variant="subtitle1" align="center">
             <Trans id="WalletAdd.description">
@@ -94,9 +92,7 @@ export default function WalletAdd() {
               color="primary"
               fullWidth
             >
-              <Trans id="WalletAdd.next">
-                Next
-              </Trans>
+              <Trans id="WalletAdd.next">Next</Trans>
             </Button>
           </Container>
         </Flex>

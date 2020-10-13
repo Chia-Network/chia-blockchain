@@ -10,10 +10,10 @@ export function unix_to_short_date(unix_timestamp) {
 }
 
 export function get_query_variable(variable) {
-  const query = global.location.search.substring(1);
+  const query = global.location.search.slice(1);
   const vars = query.split('&');
-  for (let i = 0; i < vars.length; i++) {
-    const pair = vars[i].split('=');
+  for (const var_ of vars) {
+    const pair = var_.split('=');
     if (decodeURIComponent(pair[0]) === variable) {
       return decodeURIComponent(pair[1]);
     }
@@ -31,12 +31,12 @@ export function big_int_to_array(x, num_bytes) {
 }
 
 export function hex_to_array(hexString) {
-  if (hexString.substr(0, 2) === '0x' || hexString.substr(0, 2) === '0X') {
+  if (hexString.slice(0, 2) === '0x' || hexString.slice(0, 2) === '0X') {
     hexString = hexString.slice(2);
   }
   const arr = [];
   for (let i = 0; i < hexString.length; i += 2) {
-    arr.push(parseInt(hexString.substr(i, 2), 16));
+    arr.push(Number.parseInt(hexString.substr(i, 2), 16));
   }
   return arr;
 }

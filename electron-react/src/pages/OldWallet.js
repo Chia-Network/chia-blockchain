@@ -50,7 +50,7 @@ const Iterator = (props) => {
   function handleTextFieldChange(e) {
     const id = `${e.target.id}`;
     const clean_id = id.replace('id_', '');
-    const int_val = parseInt(clean_id) - 1;
+    const int_val = Number.parseInt(clean_id) - 1;
     const data = { word: e.target.value, id: int_val };
     dispatch(mnemonic_word_added(data));
   }
@@ -87,8 +87,8 @@ const UIPart = () => {
 
   function enterMnemonic() {
     setSubmitted(true);
-    for (let i = 0; i < mnemonic.length; i++) {
-      if (mnemonic[i] === '') {
+    for (const element of mnemonic) {
+      if (element === '') {
         return;
       }
     }

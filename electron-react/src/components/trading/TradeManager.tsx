@@ -64,9 +64,7 @@ export default function TradeManager() {
   return (
     <>
       <DashboardTitle>
-        <Trans id="TradeManager.title">
-          Trading
-        </Trans>
+        <Trans id="TradeManager.title">Trading</Trans>
       </DashboardTitle>
       <Drawer
         variant="permanent"
@@ -79,7 +77,9 @@ export default function TradeManager() {
           <span key="trade_overview">
             <ListItem button onClick={() => history.push(url)}>
               <ListItemText
-                primary={<Trans id="TradeManager.tradeOverview">Trade Overview</Trans>}
+                primary={
+                  <Trans id="TradeManager.tradeOverview">Trade Overview</Trans>
+                }
                 secondary=""
               />
             </ListItem>
@@ -87,7 +87,9 @@ export default function TradeManager() {
           <Divider />
           <ListItem button onClick={() => history.push(`${url}/create`)}>
             <ListItemText
-              primary={<Trans id="TradeManager.createTrade">Create Trade</Trans>}
+              primary={
+                <Trans id="TradeManager.createTrade">Create Trade</Trans>
+              }
               secondary=""
             />
           </ListItem>

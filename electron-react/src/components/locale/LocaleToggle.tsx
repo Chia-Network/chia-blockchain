@@ -64,9 +64,7 @@ export default function LocaleToggle() {
           target="_blank"
           onClick={() => handleClose()}
         >
-          <Trans id="LocaleToggle.helpToTranslate">
-            Help to translate
-          </Trans>
+          <Trans id="LocaleToggle.helpToTranslate">Help to translate</Trans>
         </MenuItem>
       </Menu>
     </>

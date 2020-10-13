@@ -20,12 +20,12 @@ const store =
         ),
       );
 
-window.onload = () => {
+window.addEventListener('load', () => {
   if (isElectron()) {
     window.ipcRenderer.on('exit-daemon', (event) => {
       store.dispatch(exit_and_close(event));
     });
   }
-};
+});
 
 export default store;

@@ -128,8 +128,8 @@ async function track_progress(store, location) {
     global_tail.on('error', (err) => {
       dispatch(addProgress(err));
     });
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.log(error);
   }
 }
 

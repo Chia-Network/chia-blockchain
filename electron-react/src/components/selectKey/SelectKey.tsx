@@ -87,20 +87,12 @@ export default function SelectKey() {
         <Flex flexDirection="column" alignItems="center" gap={3}>
           <Brand />
           {hasFingerprints ? (
-            <Typography
-              variant="h5"
-              component="h1"
-              gutterBottom
-            >
+            <Typography variant="h5" component="h1" gutterBottom>
               <Trans id="SelectKey.title">Select Key</Trans>
             </Typography>
           ) : (
             <>
-              <Typography
-                variant="h5"
-                component="h1"
-                gutterBottom
-              >
+              <Typography variant="h5" component="h1" gutterBottom>
                 <Trans id="SelectKey.signInTitle">Sign In</Trans>
               </Typography>
               <Typography variant="subtitle1">
@@ -127,16 +119,16 @@ export default function SelectKey() {
                       button
                     >
                       <ListItemText
-                        primary={(
+                        primary={
                           <Trans id="SelectKey.selectFingerprint">
                             Private key with public fingerprint {fingerprint}
                           </Trans>
-                        )}
-                        secondary={(
+                        }
+                        secondary={
                           <Trans id="SelectKey.selectKeyCanBeBacked">
                             Can be backed up to mnemonic seed
                           </Trans>
-                        )}
+                        }
                       />
                       <ListItemSecondaryAction>
                         <Tooltip title="See private key">
@@ -177,12 +169,7 @@ export default function SelectKey() {
               </Button>
             </Link>
             <Link to="/wallet/import">
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                fullWidth
-              >
+              <Button type="submit" variant="contained" size="large" fullWidth>
                 <Trans id="SelectKey.importFromMnemonics">
                   Import from Mnemonics (24 words)
                 </Trans>
@@ -196,9 +183,7 @@ export default function SelectKey() {
               size="large"
               fullWidth
             >
-              <Trans id="SelectKey.deleteAllKeys">
-                Delete all keys
-              </Trans>
+              <Trans id="SelectKey.deleteAllKeys">Delete all keys</Trans>
             </Button>
           </Flex>
         </Flex>
@@ -210,9 +195,7 @@ export default function SelectKey() {
         aria-describedby="alert-dialog-description"
       >
         <DialogTitle id="alert-dialog-title">
-          <Trans id="DeleteAllKeys.title">
-            Delete all keys
-          </Trans>
+          <Trans id="DeleteAllKeys.title">Delete all keys</Trans>
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
@@ -225,14 +208,10 @@ export default function SelectKey() {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} color="secondary" autoFocus>
-            <Trans id="DeleteAllKeys.back">
-              Back
-            </Trans>
+            <Trans id="DeleteAllKeys.back">Back</Trans>
           </Button>
           <Button onClick={handleCloseDelete} color="secondary">
-            <Trans id="DeleteAllKeys.delete">
-              Delete
-            </Trans>
+            <Trans id="DeleteAllKeys.delete">Delete</Trans>
           </Button>
         </DialogActions>
       </Dialog>

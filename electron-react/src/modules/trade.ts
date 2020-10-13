@@ -83,8 +83,7 @@ export default function tradeReducer(
         const all_trades = data.trades;
         const pending_trades = [];
         const trade_history = [];
-        for (let i = 0; i < all_trades.length; i++) {
-          const trade = all_trades[i];
+        for (const trade of all_trades) {
           const my_trade = trade.my_offer;
           const { confirmed_at_index } = trade;
           if (my_trade === true && confirmed_at_index === 0) {

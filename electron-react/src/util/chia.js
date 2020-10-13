@@ -3,13 +3,13 @@ const units = require('./units');
 
 // TODO: use bigint instead of float
 const convert = (amount, from, to) => {
-  if (Number.isNaN(parseFloat(amount)) || !Number.isFinite(amount)) {
+  if (Number.isNaN(Number.parseFloat(amount)) || !Number.isFinite(amount)) {
     return 0;
   }
 
   const amountInFromUnit = Big(amount).times(units.getUnit(from));
 
-  return parseFloat(amountInFromUnit.div(units.getUnit(to)));
+  return Number.parseFloat(amountInFromUnit.div(units.getUnit(to)));
 };
 
 class Chia {
@@ -44,7 +44,7 @@ class Chia {
 
     if (fractionDigits !== undefined) {
       const fractionPower = Big(10).pow(fractionDigits);
-      value = parseFloat(
+      value = Number.parseFloat(
         Big(Math.floor(Big(this._value).times(fractionPower))).div(
           fractionPower,
         ),
@@ -55,7 +55,7 @@ class Chia {
 
     let formatted = format.replace(
       '{amount}',
-      parseFloat(value).toLocaleString(undefined, options),
+      Number.parseFloat(value).toLocaleString(undefined, options),
     );
 
     if (displayUnit.pluralize && this._value !== 1) {
@@ -69,7 +69,7 @@ class Chia {
     const displayUnit = units.getDisplay(this._unit);
     const { fractionDigits } = displayUnit;
     const options = { maximumFractionDigits: fractionDigits };
-    return parseFloat(this._value).toLocaleString(undefined, options);
+    return Number.parseFloat(this._value).toLocaleString(undefined, options);
   }
 }
 
@@ -84,11 +84,11 @@ chia_formatter.setFiat = (currency, rate, display = null) => {
 };
 
 export const mojo_to_chia = (mojo) => {
-  return chia_formatter(parseInt(mojo), 'mojo').to('chia').value();
+  return chia_formatter(Number.parseInt(mojo), 'mojo').to('chia').value();
 };
 
 export const chia_to_mojo = (chia) => {
-  return chia_formatter(parseFloat(Number(chia)), 'chia')
+  return chia_formatter(Number.parseFloat(Number(chia)), 'chia')
     .to('mojo')
     .value();
 };
@@ -98,11 +98,13 @@ export const mojo_to_chia_string = (mojo) => {
 };
 
 export const mojo_to_colouredcoin = (mojo) => {
-  return chia_formatter(parseInt(mojo), 'mojo').to('colouredcoin').value();
+  return chia_formatter(Number.parseInt(mojo), 'mojo')
+    .to('colouredcoin')
+    .value();
 };
 
 export const colouredcoin_to_mojo = (colouredcoin) => {
-  return chia_formatter(parseFloat(Number(colouredcoin)), 'colouredcoin')
+  return chia_formatter(Number.parseFloat(Number(colouredcoin)), 'colouredcoin')
     .to('mojo')
     .value();
 };
