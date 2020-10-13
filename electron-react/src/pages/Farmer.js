@@ -135,8 +135,9 @@ const getStatusItems = (
     };
     status_items.push(item);
   }
-  const proportion = parseFloat(farmerSpace) / parseFloat(totalNetworkSpace);
-  const totalHours = 5.0 / proportion / 60;
+  const proportion =
+    Number.parseFloat(farmerSpace) / Number.parseFloat(totalNetworkSpace);
+  const totalHours = 5 / proportion / 60;
 
   status_items.push({
     label: 'Total size of local plots',
@@ -274,7 +275,7 @@ const Challenges = (props) => {
                 {latest_challenges.map((item) => (
                   <TableRow key={item.challenge}>
                     <TableCell component="th" scope="row">
-                      {item.challenge.substring(0, 10)}...
+                      {item.challenge.slice(0, 10)}...
                     </TableCell>
                     <TableCell align="right">{item.height}</TableCell>
                     <TableCell align="right">{item.estimates.length}</TableCell>
@@ -400,7 +401,7 @@ const Plots = (props) => {
                     <TableRow key={item.filename}>
                       <TableCell component="th" scope="row">
                         <Tooltip title={item.filename} interactive>
-                          <span>{item.filename.substring(0, 40)}...</span>
+                          <span>{item.filename.slice(0, 40)}...</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">
@@ -412,21 +413,17 @@ const Plots = (props) => {
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title={item['plot-seed']} interactive>
-                          <span>{item['plot-seed'].substring(0, 10)}</span>
+                          <span>{item['plot-seed'].slice(0, 10)}</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title={item.plot_public_key} interactive>
-                          <span>
-                            {item.plot_public_key.substring(0, 10)}...
-                          </span>
+                          <span>{item.plot_public_key.slice(0, 10)}...</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title={item.pool_public_key} interactive>
-                          <span>
-                            {item.pool_public_key.substring(0, 10)}...
-                          </span>
+                          <span>{item.pool_public_key.slice(0, 10)}...</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell
@@ -620,7 +617,7 @@ const Farmer = (props) => {
       }
       for (const tx of wallet.transactions) {
         if (!didMount) return;
-        if (tx.additions.length < 1) {
+        if (tx.additions.length === 0) {
           continue;
         }
         console.log('Checking tx', tx);

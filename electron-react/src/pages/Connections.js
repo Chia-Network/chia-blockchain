@@ -110,7 +110,7 @@ const Connections = (props) => {
                 {connections.map((item) => (
                   <TableRow key={item.node_id}>
                     <TableCell component="th" scope="row">
-                      {item.node_id.substring(0, 10)}...
+                      {item.node_id.slice(0, 10)}...
                     </TableCell>
                     <TableCell align="right">{item.peer_host}</TableCell>
                     <TableCell align="right">
@@ -127,12 +127,16 @@ const Connections = (props) => {
 
                     {connectionTime ? (
                       <TableCell align="right">
-                        {unix_to_short_date(parseInt(item.creation_time))}
+                        {unix_to_short_date(
+                          Number.parseInt(item.creation_time),
+                        )}
                       </TableCell>
                     ) : null}
                     {connectionTime ? (
                       <TableCell align="right">
-                        {unix_to_short_date(parseInt(item.last_message_time))}
+                        {unix_to_short_date(
+                          Number.parseInt(item.last_message_time),
+                        )}
                       </TableCell>
                     ) : null}
                     <TableCell

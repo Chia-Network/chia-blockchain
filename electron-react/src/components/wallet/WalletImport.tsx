@@ -51,7 +51,7 @@ function Iterator(props: any) {
 
     const id = `${e.target.id}`;
     const clean_id = id.replace('id_', '');
-    const int_val = parseInt(clean_id) - 1;
+    const int_val = Number.parseInt(clean_id) - 1;
     const data = {
       word: e.target.value,
       id: int_val,
@@ -95,8 +95,8 @@ export default function WalletImport() {
 
   function handleSubmit() {
     setSubmitted(true);
-    for (let i = 0; i < mnemonic.length; i++) {
-      if (mnemonic[i] === '') {
+    for (const element of mnemonic) {
+      if (element === '') {
         return;
       }
     }
@@ -106,21 +106,19 @@ export default function WalletImport() {
 
   return (
     <LayoutHero
-      header={(
+      header={
         <ArrowBackIosIcon
           onClick={handleBack}
           fontSize="large"
           color="secondary"
         />
-      )}
+      }
     >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Brand />
           <Typography variant="h4" component="h1" gutterBottom>
-            <Trans id="WalletImport.title">
-              Import Wallet from Mnemonics
-            </Trans>
+            <Trans id="WalletImport.title">Import Wallet from Mnemonics</Trans>
           </Typography>
           <Typography variant="subtitle1" align="center">
             <Trans id="WalletImport.description">
@@ -139,9 +137,7 @@ export default function WalletImport() {
               color="primary"
               fullWidth
             >
-              <Trans id="WalletImport.next">
-                Next
-              </Trans>
+              <Trans id="WalletImport.next">Next</Trans>
             </Button>
           </Container>
         </Flex>

@@ -193,18 +193,18 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const plot_size_options = [
-  { label: "600MiB", value: 25, workspace: "1.8GiB" },
-  { label: "1.3GiB", value: 26, workspace: "3.6GiB" },
-  { label: "2.7GiB", value: 27, workspace: "9.2GiB" },
-  { label: "5.6GiB", value: 28, workspace: "19GiB" },
-  { label: "11.5GiB", value: 29, workspace: "38GiB" },
-  { label: "23.8GiB", value: 30, workspace: "83GiB" },
-  { label: "49.1GiB", value: 31, workspace: "165GiB" },
-  { label: "101.4GiB", value: 32, workspace: "331GiB" },
-  { label: "208.8GiB", value: 33, workspace: "660GiB" },
+  { label: '600MiB', value: 25, workspace: '1.8GiB' },
+  { label: '1.3GiB', value: 26, workspace: '3.6GiB' },
+  { label: '2.7GiB', value: 27, workspace: '9.2GiB' },
+  { label: '5.6GiB', value: 28, workspace: '19GiB' },
+  { label: '11.5GiB', value: 29, workspace: '38GiB' },
+  { label: '23.8GiB', value: 30, workspace: '83GiB' },
+  { label: '49.1GiB', value: 31, workspace: '165GiB' },
+  { label: '101.4GiB', value: 32, workspace: '331GiB' },
+  { label: '208.8GiB', value: 33, workspace: '660GiB' },
   // workspace are guesses using 55.35% - rounded up - past here
-  { label: "429.8GiB", value: 34, workspace: "1300GiB" },
-  { label: "884.1GiB", value: 35, workspace: "2600GiB" }
+  { label: '429.8GiB', value: 34, workspace: '1300GiB' },
+  { label: '884.1GiB', value: 35, workspace: '2600GiB' },
 ];
 
 const WorkLocation = () => {

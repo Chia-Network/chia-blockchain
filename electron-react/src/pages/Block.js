@@ -84,7 +84,7 @@ const Block = (props) => {
       const phh = await hash_header(props.prevHeader);
       let phh_expected = props.block.header.data.prev_header_hash;
       if (phh_expected.startsWith('0x') || phh_expected.startsWith('0X')) {
-        phh_expected = phh_expected.substring(2);
+        phh_expected = phh_expected.slice(2);
       }
       if (phh !== phh_expected) {
         handleGetHeader(props.block.header.data.prev_header_hash);
@@ -127,13 +127,13 @@ const Block = (props) => {
   const newPlotId = `0x${plotId}`;
 
   const chia_cb = chia_formatter(
-    parseFloat(calculate_block_reward(block.header.data.height)),
+    Number.parseFloat(calculate_block_reward(block.header.data.height)),
     'mojo',
   )
     .to('chia')
     .toString();
   const chia_fees = chia_formatter(
-    parseFloat(BigInt(block.header.data.total_transaction_fees)),
+    Number.parseFloat(BigInt(block.header.data.total_transaction_fees)),
     'mojo',
   )
     .to('chia')

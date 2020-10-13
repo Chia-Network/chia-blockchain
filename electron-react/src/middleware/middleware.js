@@ -86,7 +86,7 @@ const socketMiddleware = () => {
         // websocket handlers
         socket.onmessage = onMessage(store);
         socket.onclose = onClose(store);
-        socket.onopen = onOpen(store);
+        socket.addEventListener('open', onOpen(store));
         break;
       case 'WS_DISCONNECT':
         if (socket !== null) {

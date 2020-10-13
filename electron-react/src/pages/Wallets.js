@@ -122,13 +122,13 @@ const WalletItem = (props) => {
   } else if (wallet.type === COLOURED_COIN) {
     mainLabel = 'CC Wallet';
     if (name.length > 18) {
-      name = name.substring(0, 18);
+      name = name.slice(0, 18);
       name = name.concat('...');
     }
   } else if (wallet.type === RATE_LIMITED) {
     mainLabel = 'RL Wallet';
     if (name.length > 18) {
-      name = name.substring(0, 18);
+      name = name.slice(0, 18);
       name = name.concat('...');
     }
   }

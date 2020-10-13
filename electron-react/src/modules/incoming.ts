@@ -65,7 +65,7 @@ export default function incomingReducer(
 
     case 'CLEAR_SEND':
       var id = action.message.data.wallet_id;
-      var wallet = state.wallets[parseInt(id)];
+      var wallet = state.wallets[Number.parseInt(id)];
       wallet.sending_transaction = false;
       wallet.send_transaction_result = null;
       return {
@@ -77,7 +77,7 @@ export default function incomingReducer(
         action.message.command === 'cc_spend'
       ) {
         id = action.message.data.wallet_id;
-        wallet = state.wallets[parseInt(id)];
+        wallet = state.wallets[Number.parseInt(id)];
         wallet.sending_transaction = false;
         wallet.send_transaction_result = null;
         return {
@@ -155,7 +155,7 @@ export default function incomingReducer(
           const { wallet_balance } = data;
           id = wallet_balance.wallet_id;
           wallets = state.wallets;
-          wallet = wallets[parseInt(id)];
+          wallet = wallets[Number.parseInt(id)];
           if (!wallet) {
             return state;
           }

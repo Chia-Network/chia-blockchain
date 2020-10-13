@@ -50,14 +50,14 @@ export default function daemonReducer(
       ) {
         return state;
       }
-      const message = action.message;
-      const data = message.data;
-      const command = message.command;
+      const { message } = action;
+      const { data } = message;
+      const { command } = message;
       if (command === 'register_service') {
         return { ...state, daemon_running: true, daemon_connected: true };
       }
       if (command === 'start_service') {
-        const service = data.service;
+        const { service } = data;
         if (service === service_full_node) {
           return { ...state, full_node_running: true };
         }
@@ -74,7 +74,7 @@ export default function daemonReducer(
           return { ...state, harvester_running: true };
         }
       } else if (command === 'ping') {
-        const origin = message.origin;
+        const { origin } = message;
         if (origin === service_full_node) {
           return { ...state, full_node_connected: true };
         }
@@ -92,17 +92,20 @@ export default function daemonReducer(
         }
       } else if (command === 'is_running') {
         if (data.success) {
-          const service = data.service;
+          const { service } = data;
           if (service === service_plotter) {
             return { ...state, plotter_running: data.is_running };
           }
           if (service === service_full_node) {
             return { ...state, full_node_running: data.is_running };
-          } else if (service === service_wallet) {
+          }
+          if (service === service_wallet) {
             return { ...state, wallet_running: data.is_running };
-          } else if (service === service_farmer) {
+          }
+          if (service === service_farmer) {
             return { ...state, farmer_running: data.is_running };
-          } else if (service === service_harvester) {
+          }
+          if (service === service_harvester) {
             return { ...state, harvester_running: data.is_running };
           }
         }

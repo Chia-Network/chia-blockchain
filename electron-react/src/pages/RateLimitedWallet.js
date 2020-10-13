@@ -245,7 +245,7 @@ const IncompleteCard = (props) => {
 
   function submit() {
     const ip_val = ip_input.value;
-    const hexcheck = /[0-9a-f]+$/gi;
+    const hexcheck = /[\da-f]+$/gi;
 
     if (!hexcheck.test(ip_val) || ip_val.value === '') {
       dispatch(openDialog('Please enter a valid info packet'));
@@ -259,8 +259,8 @@ const IncompleteCard = (props) => {
     const chiaper_input = ip_parsed.limit;
     const origin_input = ip_parsed.origin_string;
     const admin_pubkey_input = ip_parsed.admin_pubkey;
-    const interval_value = parseInt(Number(interval_input));
-    const chiaper_value = parseInt(Number(chiaper_input));
+    const interval_value = Number.parseInt(Number(interval_input));
+    const chiaper_value = Number.parseInt(Number(chiaper_input));
     const origin_parsed = JSON.parse(origin_input);
     dispatch(
       rl_set_user_info_action(
@@ -682,11 +682,11 @@ const SendCard = (props) => {
     const fee = chia_to_mojo(fee_input.value);
 
     if (address.startsWith('0x') || address.startsWith('0X')) {
-      address = address.substring(2);
+      address = address.slice(2);
     }
 
-    const amount_value = parseFloat(Number(amount));
-    const fee_value = parseFloat(Number(fee));
+    const amount_value = Number.parseFloat(Number(amount));
+    const fee_value = Number.parseFloat(Number(fee));
     if (fee_value !== 0) {
       dispatch(
         openDialog(

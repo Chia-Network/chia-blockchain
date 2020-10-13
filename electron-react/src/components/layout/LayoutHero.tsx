@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { AppBar, Toolbar, Box, Container } from '@material-ui/core';
-import Flex from '../flex/Flex';
 import styled from 'styled-components';
+import Flex from '../flex/Flex';
 import DarkModeToggle from '../darkMode/DarkModeToggle';
 import LocaleToggle from '../locale/LocaleToggle';
 import ToolbarSpacing from '../toolbar/ToolbarSpacing';
@@ -43,9 +43,7 @@ export default function LayoutHero(props: Props) {
           <DarkModeToggle />
         </Toolbar>
       </AppBar>
-      <StyledBody>
-        {children}
-      </StyledBody>
+      <StyledBody>{children}</StyledBody>
     </StyledWrapper>
   );
 }

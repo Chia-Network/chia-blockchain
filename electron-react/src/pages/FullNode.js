@@ -197,8 +197,8 @@ const getStatusItems = (state, connected) => {
   if (state.tips) {
     let max_height = 0;
     for (const tip of state.tips) {
-      if (parseInt(tip.data.height) > max_height) {
-        max_height = parseInt(tip.data.height);
+      if (Number.parseInt(tip.data.height) > max_height) {
+        max_height = Number.parseInt(tip.data.height);
       }
     }
     const item = { label: 'Max Tip Block Height', value: `${max_height}` };
@@ -210,7 +210,7 @@ const getStatusItems = (state, connected) => {
 
   if (state.lca) {
     const lca_time = state.lca.data.timestamp;
-    const date_string = unix_to_short_date(parseInt(lca_time));
+    const date_string = unix_to_short_date(Number.parseInt(lca_time));
     const item = {
       label: 'LCA Time',
       value: date_string,
@@ -386,19 +386,19 @@ const BlocksCard = () => {
             style={{ minWidth: '100%' }}
           >
             <Box className={classes.left_block_cell}>
-              {`${header.data.header_hash.substring(0, 12)}...`}
+              {`${header.data.header_hash.slice(0, 12)}...`}
               {header.data.finished ? '' : ' (unfinished)'}
             </Box>
             <Box className={classes.center_block_cell_small}>
               {header.data.height}
             </Box>
             <Box flexGrow={1} className={classes.center_block_cell}>
-              {unix_to_short_date(parseInt(header.data.timestamp))}
+              {unix_to_short_date(Number.parseInt(header.data.timestamp))}
             </Box>
             <Box className={classes.right_block_cell}>
               {header.data.finished
                 ? 'finished'
-                : unix_to_short_date(parseInt(header.data.finish_time))}
+                : unix_to_short_date(Number.parseInt(header.data.finish_time))}
             </Box>
           </Box>
         ))}
