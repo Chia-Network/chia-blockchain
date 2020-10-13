@@ -1,6 +1,7 @@
+import { ReactNode } from 'react';
 import createDialog from '../util/createDialog';
 
-export const openDialog = (title: string, text: string) => {
+export const openDialog = (title: ReactNode, text?: ReactNode) => {
   return {
     type: 'DIALOG_CONTROL',
     open: true,
