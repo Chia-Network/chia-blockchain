@@ -77,7 +77,7 @@ class TestBlockValidation:
         b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
         for i in range(1, 9):
             result, removed, error_code = await b.receive_block(blocks[i])
-            assert result == ReceiveBlockResult.ADDED_TO_HEAD
+            assert result == ReceiveBlockResult.NEW_TIP
         yield (blocks, b)
 
         await connection.close()
@@ -540,7 +540,7 @@ class TestBlockValidation:
         b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
         for i in range(1, num_blocks):
             result, removed, error_code = await b.receive_block(blocks[i])
-            assert result == ReceiveBlockResult.ADDED_TO_HEAD
+            assert result == ReceiveBlockResult.NEW_TIP
             assert error_code is None
 
         diff_6 = b.get_next_difficulty(blocks[5].header)
@@ -587,7 +587,7 @@ class TestReorgs:
             elif reorg_block.height < 14:
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
             elif reorg_block.height >= 15:
-                assert result == ReceiveBlockResult.ADDED_TO_HEAD
+                assert result == ReceiveBlockResult.NEW_TIP
             assert error_code is None
         assert b.get_current_tips()[0].height == 16
 
@@ -620,7 +620,7 @@ class TestReorgs:
             elif reorg_block.height < 19:
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
             else:
-                assert result == ReceiveBlockResult.ADDED_TO_HEAD
+                assert result == ReceiveBlockResult.NEW_TIP
         assert b.get_current_tips()[0].height == 21
 
         # Reorg back to original branch
@@ -631,10 +631,10 @@ class TestReorgs:
         assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
 
         result, _, error_code = await b.receive_block(blocks_reorg_chain_2[21])
-        assert result == ReceiveBlockResult.ADDED_TO_HEAD
+        assert result == ReceiveBlockResult.NEW_TIP
 
         result, _, error_code = await b.receive_block(blocks_reorg_chain_2[22])
-        assert result == ReceiveBlockResult.ADDED_TO_HEAD
+        assert result == ReceiveBlockResult.NEW_TIP
 
         await connection.close()
         b.shut_down()
