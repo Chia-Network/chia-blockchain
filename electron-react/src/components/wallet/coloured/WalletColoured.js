@@ -40,7 +40,7 @@ const useStyles = makeStyles(theme => ({
     paddingLeft: "0px"
   },
   resultSuccess: {
-    color: "green"
+    color: "#3AAC59"
   },
   resultFailure: {
     color: "red"

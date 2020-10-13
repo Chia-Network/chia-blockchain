@@ -117,7 +117,7 @@ const getStatusItems = (
     const item = {
       label: "Connection Status ",
       value: "Connected",
-      colour: "green"
+      colour: "#3AAC59"
     };
     status_items.push(item);
   } else {

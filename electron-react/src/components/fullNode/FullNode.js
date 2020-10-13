@@ -171,7 +171,7 @@ const getStatusItems = (state, connected) => {
     const item = {
       label: <Trans id="StatusItem.status">Status</Trans>,
       value: <Trans id="StatusItem.statusSynced">Synced</Trans>,
-      colour: "green",
+      colour: "#3AAC59",
       tooltip: (
         <Trans id="StatusItem.statusSyncedTooltip">
           This node is fully caught up and validating the network
@@ -250,7 +250,7 @@ const getStatusItems = (state, connected) => {
     const item = {
       label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
       value: <Trans id="StatusItem.connectionStatusConnected">Connected</Trans>,
-      colour: "green"
+      colour: "#3AAC59"
     };
     status_items.push(item);
   } else {
