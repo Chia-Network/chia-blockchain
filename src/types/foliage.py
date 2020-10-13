@@ -12,9 +12,10 @@ from src.types.pool_target import PoolTarget
 @streamable
 class RewardClaim(Streamable):
     # The pool and farmer coinbase rewards, as they are included into transaction block
-    transaction_height: uint32
+    sub_block_height: uint32
     puzzle_hash: bytes32
     amount: uint64
+    is_farmer_reward: bool   # Whether the reward is for the farmer or pool
 
 
 @dataclass(frozen=True)
@@ -24,7 +25,7 @@ class TransactionsInfo(Streamable):
     previous_generators_root: bytes32  # This needs to be a tree hash
     generator_root: bytes32            # This needs to be a tree hash
     aggregated_signature: G2Element
-    total_transaction_fees: uint64
+    fees: uint64                       # This only includes user fees, not block rewards
     cost: uint64
     reward_claims_incorporated: List[RewardClaim]
 
@@ -49,7 +50,6 @@ class FoliageSubBlockData(Streamable):
     pool_target: PoolTarget
     pool_signature: G2Element
     farmer_reward_puzzle_hash: bytes32
-    farmer_reward_amount: uint64
     extension_data: bytes32
     transaction_block_hash: bytes32
 

@@ -35,7 +35,7 @@ from src.full_node.cost_calculator import calculate_cost_of_program
 from src.util.errors import ConsensusError, Err
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
-from src.util.merkle_set import MerkleSet
+from src.full_node.block_root_validation import validate_block_merkle_roots
 from src.consensus.find_fork_point import find_fork_point_in_chain
 
 log = logging.getLogger(__name__)
@@ -412,7 +412,7 @@ class Blockchain:
             # 16. If genesis, the fee must be the base fee, agg_sig must be None, and merkle roots must be valid
             if fee_base != block.header.data.total_transaction_fees:
                 return Err.INVALID_BLOCK_FEE_AMOUNT
-            root_error = self._validate_merkle_root(block)
+            root_error = validate_block_merkle_roots(block)
             if root_error:
                 return root_error
 
@@ -425,50 +425,6 @@ class Blockchain:
             )
             if not validates:
                 return Err.BAD_AGGREGATE_SIGNATURE
-
-        return None
-
-    def _validate_merkle_root(
-        self,
-        block: FullBlock,
-        tx_additions: List[Coin] = None,
-        tx_removals: List[bytes32] = None,
-    ) -> Optional[Err]:
-        additions = []
-        removals = []
-        if tx_additions:
-            additions.extend(tx_additions)
-        if tx_removals:
-            removals.extend(tx_removals)
-
-        removal_merkle_set = MerkleSet()
-        addition_merkle_set = MerkleSet()
-
-        # Create removal Merkle set
-        for coin_name in removals:
-            removal_merkle_set.add_already_hashed(coin_name)
-
-        # Create addition Merkle set
-        puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
-
-        for coin in additions + [block.get_coinbase(), block.get_fees_coin()]:
-            if coin.puzzle_hash in puzzlehash_coins_map:
-                puzzlehash_coins_map[coin.puzzle_hash].append(coin)
-            else:
-                puzzlehash_coins_map[coin.puzzle_hash] = [coin]
-
-        # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-        for puzzle, coins in puzzlehash_coins_map.items():
-            addition_merkle_set.add_already_hashed(puzzle)
-            addition_merkle_set.add_already_hashed(hash_coin_list(coins))
-
-        additions_root = addition_merkle_set.get_root()
-        removals_root = removal_merkle_set.get_root()
-
-        if block.header.data.additions_root != additions_root:
-            return Err.BAD_ADDITION_ROOT
-        if block.header.data.removals_root != removals_root:
-            return Err.BAD_REMOVAL_ROOT
 
         return None
 
@@ -512,7 +468,7 @@ class Blockchain:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         # Validate addition and removal roots
-        root_error = self._validate_merkle_root(block, additions, removals)
+        root_error = validate_block_merkle_roots(block, additions, removals)
         if root_error:
             return root_error
 
