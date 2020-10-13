@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import React from "react";
+import { Trans } from '@lingui/macro';
 import { makeStyles } from "@material-ui/core/styles";
 import { Paper, Button, Tooltip, Divider, ListItem } from "@material-ui/core";
 import { unix_to_short_date } from "../../util/utils";
@@ -122,8 +123,16 @@ const TradeRow = props => {
 export const TableHeader = () => {
   return (
     <Box display="flex" style={{ minWidth: "100%" }}>
-      <Box flexGrow={1}>Trade ID</Box>
-      <Box flexGrow={1}>Status</Box>
+      <Box flexGrow={1}>
+        <Trans id="TradeOverviewTableHeader.tradeId">
+          Trade ID
+        </Trans>
+      </Box>
+      <Box flexGrow={1}>
+        <Trans id="TradeOverviewTableHeader.status">
+          Status
+        </Trans>
+      </Box>
       <Box
         style={{
           marginRight: 10,
@@ -131,7 +140,9 @@ export const TableHeader = () => {
           overflowWrap: "break-word"
         }}
       >
-        Date
+        <Trans id="TradeOverviewTableHeader.date">
+          Date
+        </Trans>
       </Box>
     </Box>
   );
@@ -146,7 +157,11 @@ export const TradeTable = props => {
       <div className={classes.trade_table}>
         <TableHeader></TableHeader>
         <Paper className={classes.empty} style={{ position: "relative" }}>
-          <div className={classes.centerText}>Trades will show up here</div>
+          <div className={classes.centerText}>
+            <Trans id="TradeOverviewTable.tradesShowUpHere">
+              Trades will show up here
+            </Trans>
+          </div>
         </Paper>
       </div>
     );
@@ -164,66 +179,86 @@ export const TradeTable = props => {
 const getDetailItems = trade => {
   var detail_items = [];
   const trade_id_item = {
-    label: "Trade ID: ",
+    label: <Trans id="TradeDetail.tradeId">Trade ID:</Trans>,
     value: trade.trade_id.substring(0, 16),
     colour: "black",
-    tooltip: "Unique identifier"
+    tooltip: (
+      <Trans id="TradeDetail.tradeIdTooltip">
+        Unique identifier
+      </Trans>
+    ),
   };
 
   const status_item = {
-    label: "Status: ",
+    label: <Trans id="TradeDetail.status">Status:</Trans>,
     value: trade.status,
     colour: "black",
-    tooltip: "Unique identifier"
+    tooltip: <Trans id="TradeDetail.statusTooltip">Current trade status</Trans>,
   };
 
   const date_item = {
-    label: "Created At: ",
+    label: <Trans id="TradeDetail.createdAt">Created At:</Trans>,
     value: unix_to_short_date(trade.created_at_time),
     colour: "black",
-    tooltip: "Time this trade was created at this time"
+    tooltip: (
+      <Trans id="TradeDetail.createdAtTooltip">
+        Time this trade was created at this time
+      </Trans>
+    ),
   };
   var confirmed_string = "";
   var confirmed = trade.confirmed_at_index;
   if (confirmed === 0) {
-    confirmed_string = "Not confirmed yet";
+    confirmed_string = <Trans id="TradeDetail.notConfirmedYet">Not confirmed yet</Trans>;
   } else {
     confirmed_string = trade.confirmed_at_index;
   }
 
   const executed_at_item = {
-    label: "Confirmed at block: ",
+    label: <Trans id="TradeDetail.confirmedAtBlock">Confirmed at block:</Trans>,
     value: confirmed_string,
     colour: "black",
-    tooltip: "This trade was included on blockchain at this block height"
+    tooltip: (
+      <Trans id="TradeDetail.confirmedAtBlockTooltip">
+        This trade was included on blockchain at this block height
+      </Trans>
+    ),
   };
   var our = "";
   if (trade.my_offer === true) {
-    our = "Yes";
+    our = <Trans id="TradeDetail.yes">Yes</Trans>;
   } else {
-    our = "No";
+    our = <Trans id="TradeDetail.no">No</Trans>;
   }
   const offer_creator_item = {
-    label: "Created by us: ",
+    label: <Trans id="TradeDetail.createdByUs">Created by us:</Trans>,
     value: our,
     colour: "black",
-    tooltip: "Indicated if this offer was created by us"
+    tooltip: (
+      <Trans id="TradeDetail.createdByUsTooltip">
+        Indicated if this offer was created by us
+      </Trans>
+    ),
   };
 
   var accepted = "";
   var accepted_time = trade.accepted_at_time;
 
   if (accepted_time === null) {
-    accepted = "Not accepted yet";
+    accepted = <Trans id="TradeDetail.notAcceptedYet">Not accepted yet</Trans>;
   } else {
     accepted = unix_to_short_date(trade.accepted_at_time);
   }
 
   const accepted_at_time = {
-    label: "Accepted at time: ",
+    label: <Trans id="TradeDetail.acceptedAtTime">Accepted at time:</Trans>,
     value: accepted,
     colour: "black",
-    tooltip: "Indicated what time this offer was accepted"
+    tooltip: (
+      <Trans id="TradeDetail.acceptedAtTimeTooltip">
+        Indicated what time this offer was accepted
+      </Trans>
+    ),
   };
 
   detail_items.push(trade_id_item);
@@ -281,7 +316,9 @@ const OfferRow = props => {
     }
   }
 
-  const side = amount * multiplier < 0 ? "Sell" : "Buy";
+  const side = amount * multiplier < 0
+    ? <Trans id="TradeOfferRow.sell">Sell</Trans>
+    : <Trans id="TradeOfferRow.buy">Buy</Trans>;
 
   return (
     <Box display="flex" style={{ minWidth: "100%" }}>
@@ -343,7 +380,9 @@ export const TradeDetail = () => {
             </Box>
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                Trade Details
+                <Trans id="TradeDetail.title">
+                  Trade Details
+                </Trans>
               </Typography>
             </Box>
           </Box>
@@ -355,10 +394,14 @@ export const TradeDetail = () => {
             ))}
           </Grid>
         </div>
-        <Divider></Divider>
+        <Divider />
         <div>
           <div className={classes.tradeSubSection}>
-            <Typography component="subtitle">Coins:</Typography>
+            <Typography component="subtitle">
+              <Trans id="TradeDetail.coins">
+                Coins:
+              </Trans>
+            </Typography>
             {Object.keys(presented.offer_dict).map(name => (
               <OfferRow
                 key={name}
@@ -380,7 +423,9 @@ export const TradeDetail = () => {
                 color="primary"
                 style={visible}
               >
-                Cancel and Spend
+                <Trans id="TradeDetail.cancelAndSpend">
+                  Cancel and Spend
+                </Trans>
               </Button>
             </Box>
             <Box>
@@ -391,7 +436,9 @@ export const TradeDetail = () => {
                 color="primary"
                 style={visible}
               >
-                Cancel
+                <Trans id="TradeDetail.cancel">
+                  Cancel
+                </Trans>
               </Button>
             </Box>
           </Box>
@@ -408,7 +455,9 @@ export const PendingTrades = () => {
     <Paper className={classes.paper}>
       <div className={classes.pending_trades}>
         <Typography component="h6" variant="h6">
-          Offers Created
+          <Trans id="PendingTrades.title">
+            Offers Created
+          </Trans>
         </Typography>
         <TradeTable trades={trades}></TradeTable>
       </div>
@@ -423,7 +472,9 @@ export const TradingHistory = () => {
     <Paper className={classes.paper}>
       <div className={classes.pending_trades}>
         <Typography component="h6" variant="h6">
-          Trading History
+          <Trans id="TradingHistory.title">
+            Trading History
+          </Trans>
         </Typography>
         <TradeTable trades={trades}></TradeTable>
       </div>

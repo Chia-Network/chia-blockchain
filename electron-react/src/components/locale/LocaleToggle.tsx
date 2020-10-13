@@ -7,7 +7,7 @@ import useLocale from '../../hooks/useLocale';
 
 const locales: { [char: string]: string } = {
   en: 'English',
-  sk: 'Slovak',
+  sk: 'Slovenčina',
 };
 
 export default function LocaleToggle() {
@@ -49,8 +49,9 @@ export default function LocaleToggle() {
         open={open}
         onClose={handleClose}
       >
-        <MenuItem onClick={() => handleSelect('en')}>English</MenuItem>
-        <MenuItem onClick={() => handleSelect('sk')}>Slovenčina</MenuItem>
+        {Object.keys(locales).forEach((locale) => (
+          <MenuItem onClick={() => handleSelect(locale)}>{locales[locale]}</MenuItem>
+        ))}
         <MenuItem
           component="a"
           href="https://github.com/Chia-Network/chia-blockchain/tree/master/electron-react/src/locales/README.md"

@@ -291,32 +291,46 @@ const BalanceCard = props => {
                   <AccordionDetails>
                     <Grid container spacing={0}>
                       <BalanceCardSubSection
-                        title="Pending Total Balance"
+                        title={<Trans id="BalanceCard.pendingTotalBalance">Pending Total Balance</Trans>}
                         balance={balance_ptotal}
-                        tooltip={
-                          "This is the total balance + pending balance: it it what your balance will be after all pending transactions are confirmed."
-                        }
+                        tooltip={(
+                          <Trans id="BalanceCard.pendingTotalBalanceTooltip">
+                            This is the total balance + pending balance: it it what your balance will be after all pending transactions are confirmed.
+                          </Trans>
+                        )}
                       />
                       <BalanceCardSubSection
-                        title="Pending Balance"
+                        title={<Trans id="BalanceCard.pendingBalance">Pending Balance</Trans>}
                         balance={balance_pending}
-                        tooltip={
-                          "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-                        }
+                        tooltip={(
+                          <Trans id="BalanceCard.pendingBalanceTooltip">
+                            This is the sum of the incoming and outgoing pending transactions
+                            (not yet included into the blockchain).
+                            This does not include farming rewards.
+                          </Trans>
+                        )}
                       />
                       <BalanceCardSubSection
-                        title="Pending Farming Rewards"
+                        title={<Trans id="BalanceCard.pendingFarmingRewards">Pending Farming Rewards</Trans>}
                         balance={balance_frozen}
-                        tooltip={
-                          "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable. Farming rewards are frozen for 200 blocks."
-                        }
+                        tooltip={(
+                          <Trans id="BalanceCard.pendingFarmingRewardsTooltip">
+                            This is the total amount of farming rewards farmed recently,
+                            that have been confirmed but are not yet spendable.
+                            Farming rewards are frozen for 200 blocks.
+                          </Trans>
+                        )}
                       />
                       <BalanceCardSubSection
-                        title="Pending Change"
+                        title={<Trans id="BalanceCard.pendingChange">Pending Change</Trans>}
                         balance={balance_change}
-                        tooltip={
-                          "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-                        }
+                        tooltip={(
+                          <Trans id="BalanceCard.pendingChangeTooltip">
+                            This is the pending change,
+                            which are change coins which you have sent to yourself,
+                            but have not been confirmed yet.
+                          </Trans>
+                        )}
                       />
                     </Grid>
                   </AccordionDetails>
@@ -365,7 +379,11 @@ const SendCard = props => {
       return;
     }
     if (syncing) {
-      dispatch(openDialog("Please finish syncing before making a transaction"));
+      dispatch(openDialog(
+        <Trans id="SendCard.finishSyncingBeforeTransaction">
+          Please finish syncing before making a transaction
+        </Trans>
+      ));
       return;
     }
 
@@ -376,11 +394,19 @@ const SendCard = props => {
       !Number(amount_input.value) ||
       isNaN(Number(amount_input.value))
     ) {
-      dispatch(openDialog("Please enter a valid numeric amount"));
+      dispatch(openDialog(
+        <Trans id="SendCard.enterValidAmount">
+          Please enter a valid numeric amount
+        </Trans>
+      ));
       return;
     }
     if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
-      dispatch(openDialog("Please enter a valid numeric fee"));
+      dispatch(openDialog(
+        <Trans id="SendCard.enterValidFee">
+          Please enter a valid numeric fee
+        </Trans>
+      ));
       return;
     }
     const amount = chia_to_mojo(amount_input.value);
@@ -389,7 +415,9 @@ const SendCard = props => {
     if (address.includes("colour")) {
       dispatch(
         openDialog(
-          "Error: Cannot send chia to coloured address. Please enter a chia address."
+          <Trans id="SendCard.enterValidAddress">
+            Error: Cannot send chia to coloured address. Please enter a chia address.
+          </Trans>
         )
       );
       return;
@@ -415,7 +443,9 @@ const SendCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Create Transaction
+              <Trans id="SendCard.title">
+                Create Transaction
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -437,7 +467,7 @@ const SendCard = props => {
                   inputRef={input => {
                     address_input = input;
                   }}
-                  label="Address / Puzzle hash"
+                  label={<Trans id="SendCard.address">Address / Puzzle hash</Trans>}
                 />
               </Box>
               <Box></Box>
@@ -459,7 +489,7 @@ const SendCard = props => {
                   inputRef={input => {
                     amount_input = input;
                   }}
-                  label="Amount"
+                  label={<Trans id="SendCard.amount">Amount</Trans>}
                 />
               </Box>
               <Box flexGrow={6}>
@@ -473,7 +503,7 @@ const SendCard = props => {
                   inputRef={input => {
                     fee_input = input;
                   }}
-                  label="Fee"
+                  label={<Trans id="SendCard.fee">Fee</Trans>}
                 />
               </Box>
             </Box>
@@ -490,7 +520,9 @@ const SendCard = props => {
                   variant="contained"
                   color="primary"
                 >
-                  Farm
+                  <Trans id="SendCard.farm">
+                    Farm
+                  </Trans>
                 </Button>
               </Box>
               <Box>
@@ -501,7 +533,9 @@ const SendCard = props => {
                   color="primary"
                   disabled={sending_transaction}
                 >
-                  Send
+                  <Trans id="SendCard.send">
+                    Send
+                  </Trans>
                 </Button>
               </Box>
             </Box>
@@ -521,7 +555,9 @@ const HistoryCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              History
+              <Trans id="HistoryCard.title">
+                History
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -546,15 +582,31 @@ const TransactionTable = props => {
 
   const incoming_string = incoming => {
     if (incoming) {
-      return "Incoming";
+      return (
+        <Trans id="TransactionTable.incoming">
+          Incoming
+        </Trans>
+      );
     } else {
-      return "Outgoing";
+      return (
+        <Trans id="TransactionTable.outgoing">
+          Outgoing
+        </Trans>
+      );
     }
   };
   const confirmed_to_string = tx => {
     return tx.confirmed
-      ? "Confirmed at height " + tx.confirmed_at_index
-      : "Pending";
+      ? (
+        <Trans id="TransactionTable.confirmedAtHeight">
+          Confirmed at height {tx.confirmed_at_index}
+        </Trans>
+      )
+      : (
+        <Trans id="TransactionTable.pending">
+          Pending
+        </Trans>
+      );
   };
 
   return (
@@ -562,12 +614,36 @@ const TransactionTable = props => {
       <Table stickyHeader className={classes.table}>
         <TableHead className={classes.head}>
           <TableRow className={classes.row}>
-            <TableCell className={classes.cell_short}>Type</TableCell>
-            <TableCell className={classes.cell_short}>To</TableCell>
-            <TableCell className={classes.cell_short}>Date</TableCell>
-            <TableCell className={classes.cell_short}>Status</TableCell>
-            <TableCell className={classes.cell_short}>Amount</TableCell>
-            <TableCell className={classes.cell_short}>Fee</TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="TransactionTable.type">
+                Type
+              </Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="TransactionTable.to">
+                To
+              </Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="TransactionTable.date">
+                Date
+              </Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="TransactionTable.status">
+                Status
+              </Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="TransactionTable.amount">
+                Amount
+              </Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="TransactionTable.fee">
+                Fee
+              </Trans>
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody className={classes.tableBody}>
@@ -630,7 +706,9 @@ const AddressCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Receive Address
+              <Trans id="AddressCard.title">
+                Receive Address
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -641,7 +719,7 @@ const AddressCard = props => {
                 <TextField
                   disabled
                   fullWidth
-                  label="Address"
+                  label={<Trans id="AddressCard.address">Address</Trans>}
                   value={address}
                   variant="outlined"
                 />
@@ -654,7 +732,7 @@ const AddressCard = props => {
                   color="secondary"
                   disableElevation
                 >
-                  Copy
+                  <Trans id="AddressCard.copy">Copy</Trans>
                 </Button>
               </Box>
             </Box>
@@ -671,7 +749,7 @@ const AddressCard = props => {
                   variant="contained"
                   color="primary"
                 >
-                  New Address
+                  <Trans id="AddressCard.newAddress">New Address</Trans>
                 </Button>
               </Box>
             </Box>

@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import React from "react";
+import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router';
 import {
   Box,
@@ -147,8 +148,12 @@ const TradeList = () => {
     <Grid item xs={12}>
       <div className={classes.tradeSubSection}>
         <Box display="flex" style={{ minWidth: "100%" }}>
-          <Box flexGrow={1}>Side</Box>
-          <Box flexGrow={1}>Amount</Box>
+          <Box flexGrow={1}>
+            <Trans id="TradeList.side">Side</Trans>
+          </Box>
+          <Box flexGrow={1}>
+            <Trans id="TradeList.amount">Amount</Trans>
+          </Box>
           <Box
             style={{
               marginRight: 10,
@@ -157,7 +162,7 @@ const TradeList = () => {
               overflowWrap: "break-word"
             }}
           >
-            Colour
+            <Trans id="TradeList.colour">Colour</Trans>
           </Box>
         </Box>
         {trades.map(trade => (
@@ -193,15 +198,15 @@ export default function CreateOffer() {
 
   function add() {
     if (!wallet_id.value) {
-      dispatch(openDialog("", "Please select coin type "));
+      dispatch(openDialog("", <Trans id="CreateOffer.selectCoinType">Please select coin type</Trans>));
       return;
     }
     if (amount_input.value === "") {
-      dispatch(openDialog("", "Please select amount "));
+      dispatch(openDialog("", <Trans id="CreateOffer.selectAmount">Please select amount</Trans>));
       return;
     }
     if (!buy_or_sell.value) {
-      dispatch(openDialog("", "Please select buy or sell "));
+      dispatch(openDialog("", <Trans id="CreateOffer.selectBuyOrSell">Please select buy or sell</Trans>));
       return;
     }
     let mojo = chia_to_mojo(amount_input.value);
@@ -219,7 +224,7 @@ export default function CreateOffer() {
   async function save() {
     console.log(trades.length);
     if (trades.length === 0) {
-      dispatch(openDialog("", "Please add trade pair"));
+      dispatch(openDialog("", <Trans id="CreateOffer.addTradePair">Please add trade pair</Trans>));
       return;
     }
     if (isElectron()) {
@@ -238,7 +243,7 @@ export default function CreateOffer() {
       dispatch(create_trade_action(offer, filePath, history));
     } else {
       dispatch(
-        openDialog("", "This feature is available only from electron app")
+        openDialog("", <Trans id="CreateOffer.availableOnlyFromElectron">This feature is available only from electron app</Trans>)
       );
     }
   }
@@ -252,7 +257,7 @@ export default function CreateOffer() {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Create Trade Offer
+              <Trans id="CreateOffer.title">Create Trade Offer</Trans>
             </Typography>
           </div>
         </Grid>
@@ -271,7 +276,7 @@ export default function CreateOffer() {
                     inputRef={input => {
                       buy_or_sell = input;
                     }}
-                    label="Buy Or Sell"
+                    label={<Trans id="CreateOffer.buyOrSell">Buy Or Sell</Trans>}
                   >
                     <MenuItem value={1}>Buy</MenuItem>
                     <MenuItem value={2}>Sell</MenuItem>
@@ -289,7 +294,7 @@ export default function CreateOffer() {
                     inputRef={input => {
                       wallet_id = input;
                     }}
-                    label="Colour"
+                    label={<Trans id="CreateOffer.colour">Colour</Trans>}
                   >
                     {wallets.map(wallet => (
                       <MenuItem value={wallet.id}>{wallet.name}</MenuItem>
@@ -310,7 +315,7 @@ export default function CreateOffer() {
                   inputRef={input => {
                     amount_input = input;
                   }}
-                  label="Amount"
+                  label={<Trans id="CreateOffer.amount">Amount</Trans>}
                   variant="outlined"
                 />
               </Box>
@@ -321,7 +326,9 @@ export default function CreateOffer() {
                   variant="contained"
                   color="primary"
                 >
-                  Add
+                  <Trans id="CreateOffer.add">
+                    Add
+                  </Trans>
                 </Button>
               </Box>
             </Box>
@@ -337,7 +344,9 @@ export default function CreateOffer() {
                   variant="contained"
                   color="primary"
                 >
-                  Save
+                  <Trans id="CreateOffer.save">
+                    Save
+                  </Trans>
                 </Button>
               </Grid>
               <Grid item xs={6}>
@@ -347,7 +356,9 @@ export default function CreateOffer() {
                   variant="contained"
                   color="primary"
                 >
-                  Cancel
+                  <Trans id="CreateOffer.cancel">
+                    Cancel
+                  </Trans>
                 </Button>
               </Grid>
             </Grid>

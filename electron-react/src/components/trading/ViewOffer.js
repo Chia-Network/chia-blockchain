@@ -1,5 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import React from "react";
+import { Trans } from '@lingui/macro';
 import {
   Box,
   Typography,
@@ -177,7 +178,9 @@ export const DropView = () => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              View Offer
+              <Trans id="OfferDropView.title">
+                View Offer
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -191,7 +194,9 @@ export const DropView = () => {
           >
             <Paper className={classes.drag} style={{ position: "relative" }}>
               <div className={classes.dragText} style={textStyle}>
-                Drag and drop offer file
+                <Trans id="OfferDropView.dragAndDropOfferFile">
+                  Drag and drop offer file
+                </Trans>
               </div>
               <div className={classes.circle} style={progressStyle}>
                 <CircularProgress color="secondary" />
@@ -224,7 +229,9 @@ export const OfferView = () => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              View Offer
+              <Trans id="OfferView.title">
+                View Offer
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -245,7 +252,9 @@ export const OfferView = () => {
                   variant="contained"
                   color="primary"
                 >
-                  Accept
+                  <Trans id="OfferView.accept">
+                    Accept
+                  </Trans>
                 </Button>
               </Grid>
               <Grid item xs={6}>
@@ -255,7 +264,9 @@ export const OfferView = () => {
                   variant="contained"
                   color="primary"
                 >
-                  Cancel
+                  <Trans id="OfferView.cancel">
+                    Cancel
+                  </Trans>
                 </Button>
               </Grid>
             </Grid>
@@ -269,7 +280,9 @@ export const OfferView = () => {
 const OfferRow = props => {
   const name = props.name;
   const amount = props.amount;
-  const side = amount < 0 ? "Sell" : "Buy";
+  const side = amount < 0
+    ? <Trans id="OfferRow.sell">Sell</Trans>
+    : <Trans id="OfferRow.buy">Buy</Trans>;
 
   return (
     <Box display="flex" style={{ minWidth: "100%" }}>
