@@ -44,17 +44,15 @@ log = logging.getLogger(__name__)
 class ReceiveBlockResult(Enum):
     """
     When Blockchain.receive_block(b) is called, one of these results is returned,
-    showing whether the block was added to the chain (extending a head or not),
+    showing whether the block was added to the chain (extending the tip),
     and if not, why it was not added.
     """
 
-    NEW_TIP = 1  # Added to one of the heads, this block is now a new head
-    ADDED_AS_ORPHAN = 2  # Added as an orphan/stale block (block that is not a head or ancestor of a head)
+    NEW_TIP = 1  # Added to the tip of the blockchain
+    ADDED_AS_ORPHAN = 2  # Added as an orphan/stale block (not a new tip of the chain)
     INVALID_BLOCK = 3  # Block was not added because it was invalid
     ALREADY_HAVE_BLOCK = 4  # Block is already present in this blockchain
-    DISCONNECTED_BLOCK = (
-        5  # Block's parent (previous pointer) is not in this blockchain
-    )
+    DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
 
 
 class Blockchain:
@@ -114,9 +112,7 @@ class Blockchain:
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(
-        self, genesis: FullBlock
-    ) -> None:
+    async def _load_chain_from_store(self, genesis: FullBlock) -> None:
         """
         Initializes the state of the Blockchain class from the database. Sets the LCA, tips,
         headers, height_to_hash, and block_store DiffStores.
@@ -124,9 +120,7 @@ class Blockchain:
         self.sub_blocks_db: Dict[bytes32, SubBlockRecord] = await self.block_store.get_sub_blocks()
 
         if len(self.sub_blocks_db) == 0:
-            result, error_code = await self.receive_block(
-                genesis, sync_mode=False
-            )
+            result, error_code = await self.receive_block(genesis, sync_mode=False)
             if result != ReceiveBlockResult.NEW_TIP:
                 if error_code is not None:
                     raise ConsensusError(error_code)
@@ -283,9 +277,7 @@ class Blockchain:
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None
 
-    async def _reconsider_tip(
-        self, sub_block: SubBlockRecord, genesis: bool, sync_mode: bool
-    ) -> bool:
+    async def _reconsider_tip(self, sub_block: SubBlockRecord, genesis: bool, sync_mode: bool) -> bool:
         """
         When a new block is added, this is called, to check if the new block is the new tip of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
@@ -316,11 +308,7 @@ class Blockchain:
             for block in reversed(blocks_to_add):
                 self.height_to_hash[block.height] = block.header_hash
                 self.sub_blocks[block.header_hash] = SubBlockRecord(
-                    block.header_hash,
-                    block.prev_header_hash,
-                    block.height,
-                    block.weight,
-                    block.total_iters
+                    block.header_hash, block.prev_header_hash, block.height, block.weight, block.total_iters
                 )
                 await self.coin_store.new_block(block)
             return True
@@ -330,15 +318,11 @@ class Blockchain:
 
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
         # TODO(mariano)
-        return get_next_difficulty(
-            self.constants, self.sub_blocks, self.height_to_hash, header_hash
-        )
+        return get_next_difficulty(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
 
     def get_next_min_iters(self, header_hash: bytes32) -> uint64:
         # TODO(mariano)
-        return get_next_min_iters(
-            self.constants, self.sub_blocks, self.height_to_hash, header_hash
-        )
+        return get_next_min_iters(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
 
     async def pre_validate_blocks_multiprocessing(
         self, blocks: List[FullBlock]
@@ -393,10 +377,7 @@ class Blockchain:
         # target reward_fee = 1/8 coinbase reward + tx fees
         if block.transactions_generator is not None:
             # 14. Make sure transactions generator hash is valid (or all 0 if not present)
-            if (
-                block.transactions_generator.get_tree_hash()
-                != block.header.data.generator_hash
-            ):
+            if block.transactions_generator.get_tree_hash() != block.header.data.generator_hash:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
 
             # 15. If not genesis, the transactions must be valid and fee must be valid
@@ -428,9 +409,7 @@ class Blockchain:
 
         return None
 
-    async def _validate_transactions(
-        self, block: FullBlock, fee_base: uint64
-    ) -> Optional[Err]:
+    async def _validate_transactions(self, block: FullBlock, fee_base: uint64) -> Optional[Err]:
         # TODO(straya): review, further test the code, and number all the validation steps
 
         # 1. Check that transactions generator is present
@@ -509,9 +488,7 @@ class Blockchain:
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
         removals_since_fork: Set[bytes32] = set()
         coinbases_since_fork: Dict[bytes32, uint32] = {}
-        curr: Optional[FullBlock] = await self.block_store.get_block(
-            block.prev_header_hash
-        )
+        curr: Optional[FullBlock] = await self.block_store.get_block(block.prev_header_hash)
         assert curr is not None
 
         while curr.height > fork_h:
@@ -541,9 +518,7 @@ class Blockchain:
             if rem in additions_dic:
                 # Ephemeral coin
                 rem_coin: Coin = additions_dic[rem]
-                new_unspent: CoinRecord = CoinRecord(
-                    rem_coin, block.height, uint32(0), False, False
-                )
+                new_unspent: CoinRecord = CoinRecord(rem_coin, block.height, uint32(0), False, False)
                 removal_coin_records[new_unspent.name] = new_unspent
             else:
                 assert prev_header is not None
@@ -556,10 +531,7 @@ class Blockchain:
                         return Err.DOUBLE_SPEND
                     # If it's a coinbase, check that it's not frozen
                     if unspent.coinbase == 1:
-                        if (
-                            block.height
-                            < unspent.confirmed_block_index + self.coinbase_freeze
-                        ):
+                        if block.height < unspent.confirmed_block_index + self.coinbase_freeze:
                             return Err.COINBASE_NOT_YET_SPENDABLE
                     removal_coin_records[unspent.name] = unspent
                 else:
@@ -570,10 +542,7 @@ class Blockchain:
                         return Err.UNKNOWN_UNSPENT
                     if rem in coinbases_since_fork:
                         # This coin is a coinbase coin
-                        if (
-                            block.height
-                            < coinbases_since_fork[rem] + self.coinbase_freeze
-                        ):
+                        if block.height < coinbases_since_fork[rem] + self.coinbase_freeze:
                             return Err.COINBASE_NOT_YET_SPENDABLE
                     new_coin, confirmed_height = additions_since_fork[rem]
                     new_coin_record: CoinRecord = CoinRecord(
@@ -608,9 +577,7 @@ class Blockchain:
 
         for npc in npc_list:
             if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
-                fee_list: List[ConditionVarPair] = npc.condition_dict[
-                    ConditionOpcode.ASSERT_FEE
-                ]
+                fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
                 for cvp in fee_list:
                     fee = int_from_bytes(cvp.vars[0])
                     assert_fee_sum = assert_fee_sum + fee
@@ -644,9 +611,7 @@ class Blockchain:
             )
             if error:
                 return error
-            for pk, m in pkm_pairs_for_conditions_dict(
-                npc.condition_dict, npc.coin_name
-            ):
+            for pk, m in pkm_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name):
                 pairs_pks.append(pk)
                 pairs_msgs.append(m)
 
@@ -655,9 +620,7 @@ class Blockchain:
         if not block.header.data.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
 
-        validates = AugSchemeMPL.aggregate_verify(
-            pairs_pks, pairs_msgs, block.header.data.aggregated_signature
-        )
+        validates = AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.header.data.aggregated_signature)
         if not validates:
             return Err.BAD_AGGREGATE_SIGNATURE
 

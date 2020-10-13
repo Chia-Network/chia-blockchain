@@ -13,6 +13,8 @@ class SubBlockRecord(Streamable):
     sub_block_height: uint32
     weight: uint128
     total_iters: uint128
+    slot_number: uint32
+    overflows_slot: bool
 
     @property
     def height(self):
