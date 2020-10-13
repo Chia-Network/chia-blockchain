@@ -21,11 +21,11 @@ def sign_coinbase_coin(coin: Coin, private_key: PrivateKey):
     return signature_for_coinbase(coin, private_key)
 
 
-def create_coinbase_coin(block_index: uint32, puzzle_hash: bytes32, reward: uint64):
+def create_pool_coin(block_index: uint32, puzzle_hash: bytes32, reward: uint64):
     block_index_as_hash = bytes32(block_index.to_bytes(32, "big"))
     return Coin(block_index_as_hash, puzzle_hash, reward)
 
 
-def create_fees_coin(block_index: uint32, puzzle_hash: bytes32, reward: uint64):
+def create_farmer_coin(block_index: uint32, puzzle_hash: bytes32, reward: uint64):
     block_index_as_hash = std_hash(std_hash(block_index.to_bytes(4, "big")))
     return Coin(block_index_as_hash, puzzle_hash, reward)
