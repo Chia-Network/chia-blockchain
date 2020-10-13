@@ -93,6 +93,7 @@ class Service:
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
         self._server_sockets: List = []
+        self._reconnect_tasks: List[asyncio.Task] = []
 
     async def start(self, **kwargs):
         # we include `kwargs` as a hack for the wallet, which for some

@@ -11,7 +11,6 @@ from tests.time_out_assert import time_out_assert
 from src.util.chech32 import encode_puzzle_hash
 from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.rpc.wallet_rpc_api import WalletRpcApi
-from src.util.config import load_config
 from src.rpc.rpc_server import start_rpc_server
 
 
@@ -56,7 +55,7 @@ class TestWalletRpc:
 
         wallet_rpc_api = WalletRpcApi(wallet_node)
 
-        config = load_config(bt.root_path, "config.yaml")
+        config = bt.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 

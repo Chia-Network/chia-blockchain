@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 import time
@@ -154,7 +155,11 @@ class BlockTools:
         _, self.plots, _, _ = load_plots(
             {}, {}, farmer_pubkeys, self.pool_pubkeys, root_path
         )
-        self.config = load_config(self.root_path, "config.yaml")
+        self._config = load_config(self.root_path, "config.yaml")
+
+    @property
+    def config(self) -> Dict:
+        return copy.deepcopy(self._config)
 
     def get_plot_signature(
         self, header_data: HeaderData, plot_pk: G1Element

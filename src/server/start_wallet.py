@@ -12,31 +12,28 @@ from src.server.start_service import run_service
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.keychain import Keychain
-from src.simulator.simulator_constants import test_constants
 from src.types.peer_info import PeerInfo
 
 # See: https://bugs.python.org/issue29288
 u"".encode("idna")
 
+SERVICE_NAME = "wallet"
+
 
 def service_kwargs_for_wallet(
-    root_path: pathlib.Path, consensus_constants: ConsensusConstants
+    root_path: pathlib.Path,
+    config: Dict,
+    consensus_constants: ConsensusConstants,
+    keychain: Keychain,
 ) -> Dict:
-    service_name = "wallet"
-    config = load_config_cli(root_path, "config.yaml", service_name)
-    keychain = Keychain(testing=False)
 
-    wallet_constants = consensus_constants
-    if config["testing"] is True:
-        config["database_path"] = "test_db_wallet.db"
-        wallet_constants = test_constants
+    api = WalletNode(
+        config, keychain, root_path, consensus_constants=consensus_constants
+    )
 
-    api = WalletNode(config, keychain, root_path, consensus_constants=wallet_constants)
-
-    if "full_node_peer" in config:
-        connect_peers = [
-            PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
-        ]
+    fnp = config.get("full_node_peer")
+    if fnp:
+        connect_peers = [PeerInfo(fnp["host"], fnp["port"])]
     else:
         connect_peers = []
 
@@ -44,19 +41,30 @@ def service_kwargs_for_wallet(
         root_path=root_path,
         api=api,
         node_type=NodeType.WALLET,
-        advertised_port=config["port"],
-        service_name=service_name,
-        server_listen_ports=[config["port"]],
+        service_name=SERVICE_NAME,
         on_connect_callback=api._on_connect,
-        rpc_info=(WalletRpcApi, config["rpc_port"]),
         connect_peers=connect_peers,
         auth_connect_peers=False,
     )
+    port = config.get("port")
+    if port is not None:
+        kwargs.update(
+            advertised_port=config["port"],
+            server_listen_ports=[config["port"]],
+        )
+    rpc_port = config.get("rpc_port")
+    if rpc_port is not None:
+        kwargs["rpc_info"] = (WalletRpcApi, config["rpc_port"])
+
     return kwargs
 
 
 def main():
-    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, DEFAULT_CONSTANTS)
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    keychain = Keychain(testing=False)
+    kwargs = service_kwargs_for_wallet(
+        DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS, keychain
+    )
     return run_service(**kwargs)
 
 
