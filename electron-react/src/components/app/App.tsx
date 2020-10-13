@@ -30,6 +30,7 @@ export default function App() {
   useEffect(() => {
     window.addEventListener('load', () => {
       if (isElectron()) {
+        // @ts-ignore
         window.ipcRenderer.on('exit-daemon', (event) => {
           store.dispatch(exit_and_close(event));
         });

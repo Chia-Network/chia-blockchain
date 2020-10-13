@@ -1,6 +1,6 @@
 import reduxThunk from "redux-thunk";
 import { createStore, applyMiddleware, compose } from "redux";
-import rootReducer from "./reducers";
+import rootReducer from "./rootReducer";
 import wsMiddleware from "../middleware/middleware";
 import isElectron from "is-electron";
 import dev_config from "../dev_config";
