@@ -5,11 +5,9 @@ from secrets import token_bytes
 from typing import Dict, Tuple, List, Optional
 from src.consensus.constants import ConsensusConstants
 from src.full_node.full_node import FullNode
-from src.server.connection import NodeType
 from src.server.server import ChiaServer
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.keychain import Keychain, bytes_to_mnemonic
-from src.wallet.wallet_node import WalletNode
 from src.server.connection import PeerInfo
 from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
 from src.server.start_farmer import service_kwargs_for_farmer
@@ -17,6 +15,7 @@ from src.server.start_full_node import service_kwargs_for_full_node
 from src.server.start_harvester import service_kwargs_for_harvester
 from src.server.start_introducer import service_kwargs_for_introducer
 from src.server.start_timelord import service_kwargs_for_timelord
+from src.server.start_wallet import service_kwargs_for_wallet
 from src.server.start_service import Service
 from src.util.ints import uint16, uint32
 from src.util.make_test_constants import make_test_constants_with_genesis
@@ -84,9 +83,7 @@ async def setup_full_node(
             bt.root_path, config, consensus_constants, bt
         )
     else:
-        kwargs = service_kwargs_for_full_node(
-            bt.root_path, config, consensus_constants
-        )
+        kwargs = service_kwargs_for_full_node(bt.root_path, config, consensus_constants)
 
     kwargs.update(
         parse_cli_args=False,
@@ -113,6 +110,8 @@ async def setup_wallet_node(
     starting_height=None,
 ):
     config = bt.config["wallet"]
+    config["port"] = port
+    config["rpc_port"] = port + 1000
     if starting_height is not None:
         config["starting_height"] = starting_height
     config["initial_num_public_keys"] = 5
@@ -130,34 +129,25 @@ async def setup_wallet_node(
     config["database_path"] = str(db_name)
     config["testing"] = True
 
-    api = WalletNode(
-        config,
-        keychain,
-        bt.root_path,
-        consensus_constants=consensus_constants,
-        name="wallet1",
-    )
     config["introducer_peer"]["host"] = "::1"
     if introducer_port is not None:
         config["introducer_peer"]["port"] = introducer_port
         config["peer_connect_interval"] = 10
 
-    connect_peers: List[PeerInfo] = []
     if full_node_port is not None:
-        connect_peers = [PeerInfo(self_hostname, full_node_port)]
+        config["full_node_peer"]["host"] = self_hostname
+        config["full_node_peer"]["port"] = full_node_port
+    else:
+        del config["full_node_peer"]
 
-    service = Service(
-        root_path=bt.root_path,
-        api=api,
-        node_type=NodeType.WALLET,
-        advertised_port=port,
-        service_name="wallet",
-        server_listen_ports=[port],
-        connect_peers=connect_peers,
-        auth_connect_peers=False,
-        on_connect_callback=api._on_connect,
+    kwargs = service_kwargs_for_wallet(
+        bt.root_path, config, consensus_constants, keychain
+    )
+    kwargs.update(
         parse_cli_args=False,
     )
+
+    service = Service(**kwargs)
 
     await service.start(new_wallet=True)
 
