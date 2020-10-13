@@ -81,17 +81,15 @@ async def setup_full_node(
 
     if simulator:
         kwargs = service_kwargs_for_full_node_simulator(
-            bt.root_path, bt.config["full_node"], consensus_constants, bt
+            bt.root_path, config, consensus_constants, bt
         )
     else:
         kwargs = service_kwargs_for_full_node(
-            bt.root_path, bt.config["full_node"], consensus_constants
+            bt.root_path, config, consensus_constants
         )
 
     kwargs.update(
-        dict(
-            parse_cli_args=False,
-        )
+        parse_cli_args=False,
     )
 
     service = Service(**kwargs)
@@ -177,12 +175,10 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
         bt.root_path, bt.config["harvester"], consensus_constants
     )
     kwargs.update(
-        dict(
-            server_listen_ports=[port],
-            advertised_port=port,
-            connect_peers=[PeerInfo(self_hostname, farmer_port)],
-            parse_cli_args=False,
-        )
+        server_listen_ports=[port],
+        advertised_port=port,
+        connect_peers=[PeerInfo(self_hostname, farmer_port)],
+        parse_cli_args=False,
     )
 
     service = Service(**kwargs)
@@ -218,9 +214,7 @@ async def setup_farmer(
         bt.root_path, config, config_pool, bt.keychain, consensus_constants
     )
     kwargs.update(
-        dict(
-            parse_cli_args=False,
-        )
+        parse_cli_args=False,
     )
 
     service = Service(**kwargs)
@@ -239,10 +233,8 @@ async def setup_introducer(port):
         bt.config["introducer"],
     )
     kwargs.update(
-        dict(
-            advertised_port=port,
-            parse_cli_args=False,
-        )
+        advertised_port=port,
+        parse_cli_args=False,
     )
 
     service = Service(**kwargs)
@@ -283,9 +275,7 @@ async def setup_timelord(
         bt.root_path, config, consensus_constants.DISCRIMINANT_SIZE_BITS
     )
     kwargs.update(
-        dict(
-            parse_cli_args=False,
-        )
+        parse_cli_args=False,
     )
 
     service = Service(**kwargs)

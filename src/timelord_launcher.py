@@ -82,8 +82,8 @@ async def spawn_all_processes(config, net_config):
 def main():
     root_path = DEFAULT_ROOT_PATH
     setproctitle("chia_timelord_launcher")
-    config = load_config(root_path, "config.yaml", "timelord_launcher")
     net_config = load_config(root_path, "config.yaml")
+    config = net_config["timelord_launcher"]
     initialize_logging("TLauncher", config["logging"], root_path)
 
     def signal_received():

@@ -341,7 +341,7 @@ class FullNode:
     def _close(self):
         self._shut_down = True
         self.blockchain.shut_down()
-        asyncio.create_task(self.full_node_peers.close())
+        self._stop_task = asyncio.create_task(self.full_node_peers.close())
 
     async def _await_closed(self):
         await self.connection.close()
