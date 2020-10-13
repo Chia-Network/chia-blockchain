@@ -9,8 +9,6 @@ class ConsensusConstants:
     DIFFICULTY_STARTING: int
     DIFFICULTY_FACTOR: int
     DIFFICULTY_EPOCH: int
-    DIFFICULTY_WARP_FACTOR: int
-    DIFFICULTY_DELAY: int  # EPOCH / WARP_FACTOR
     SIGNIFICANT_BITS: int  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     DISCRIMINANT_SIZE_BITS: int  # Max is 1024 (based on ClassGroupElement int size)
     NUMBER_ZERO_BITS_CHALLENGE_SIG: int  # H(plot signature of the challenge) must start with these many zeroes
@@ -53,9 +51,7 @@ class ConsensusConstants:
     MAX_BLOCK_COST_CLVM: int
 
     def __post_init__(self):
-        assert (
-            self.DIFFICULTY_EPOCH == self.DIFFICULTY_DELAY * self.DIFFICULTY_WARP_FACTOR
-        )
+        assert self.DIFFICULTY_EPOCH == self.DIFFICULTY_DELAY * self.DIFFICULTY_WARP_FACTOR
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
@@ -68,9 +64,7 @@ testnet_kwargs = {
     "DIFFICULTY_STARTING": 2 ** 20,
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
-    "DIFFICULTY_EPOCH": 256,  # The number of blocks per epoch
-    "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
-    "DIFFICULTY_DELAY": 64,  # EPOCH / WARP_FACTOR
+    "DIFFICULTY_EPOCH": 512,  # The number of blocks per epoch
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_CHALLENGE_SIG": 8,  # H(plot signature of the challenge) must start with these many zeroes

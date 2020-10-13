@@ -1,11 +1,9 @@
-from typing import Dict, Optional, Union
+from typing import Dict, Optional
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_min_iters_from_iterations
-from src.types.full_block import FullBlock
-from src.types.header import Header
-from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
+from src.full_node.sub_block_record import SubBlockRecord
 from src.util.ints import uint32, uint64
 from src.util.significant_bits import (
     count_significant_bits,
@@ -13,24 +11,48 @@ from src.util.significant_bits import (
 )
 
 
+def get_difficulty(
+    constants: ConsensusConstants, sub_blocks: Dict[bytes32, SubBlockRecord], header_hash: bytes32
+) -> uint64:
+    sub_block = sub_blocks[header_hash]
+    if sub_block.height == 0:
+        return uint64(constants.DIFFICULTY_STARTING)
+    return uint64(sub_block.weight - sub_blocks[sub_block.prev_hash].weight)
+
+
 def get_next_difficulty(
     constants: ConsensusConstants,
-    headers: Dict[bytes32, Header],
+    sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
-    block: Header,
+    header_hash: bytes32,
+    new_slot: bool,
 ) -> uint64:
     """
-    Returns the difficulty of the next block that extends onto block.
+    Returns the difficulty of the next sub-block that extends onto sub-block.
     Used to calculate the number of iterations. When changing this, also change the implementation
     in wallet_state_manager.py.
     """
+    sub_block: SubBlockRecord = sub_blocks[header_hash]
+    next_height: uint32 = uint32(sub_block.height + 1)
 
-    next_height: uint32 = uint32(block.height + 1)
     if next_height < constants.DIFFICULTY_EPOCH:
         # We are in the first epoch
         return uint64(constants.DIFFICULTY_STARTING)
 
-    # Epochs are diffined as intervals of DIFFICULTY_EPOCH blocks, inclusive and indexed at 0.
+    # If we are in the same slot as previous sub-block, return same difficulty
+    if not new_slot:
+        return get_difficulty(constants, sub_blocks, sub_block)
+
+    prev_slot: uint32 = sub_block.slot_number
+    cur: SubBlockRecord = sub_block
+    while cur.slot_number == prev_slot and cur.height > 0:
+        cur = sub_blocks[cur.prev_hash]
+
+    # If we have not crossed the epoch barrier in this slot, return same difficulty
+    if (cur.height + 1) % constants.DIFFICULTY_EPOCH == next_height % constants.DIFFICULTY_EPOCH:
+        return get_next_difficulty(constants, sub_blocks, sub_block)
+
+    # Epochs are defined as intervals of DIFFICULTY_EPOCH blocks, inclusive and indexed at 0.
     # For example, [0-2047], [2048-4095], etc. The difficulty changes DIFFICULTY_DELAY into the
     # epoch, as opposed to the first block (as in Bitcoin).
     elif next_height % constants.DIFFICULTY_EPOCH != constants.DIFFICULTY_DELAY:
@@ -42,9 +64,7 @@ def get_next_difficulty(
     # ----------|-----|----------------------|-----|-----...
     #           h1    h2                     h3   i-1
     # Height1 is the last block 2 epochs ago, so we can include the time to mine 1st block in previous epoch
-    height1 = uint32(
-        next_height - constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY - 1
-    )
+    height1 = uint32(next_height - constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY - 1)
     # Height2 is the DIFFICULTY DELAYth block in the previous epoch
     height2 = uint32(next_height - constants.DIFFICULTY_EPOCH - 1)
     # Height3 is the last block in the previous epoch
@@ -59,10 +79,7 @@ def get_next_difficulty(
     # This is important if we are on a fork, or beyond the LCA.
     curr: Optional[Header] = block
     assert curr is not None
-    while (
-        curr.height not in height_to_hash
-        or height_to_hash[curr.height] != curr.header_hash
-    ):
+    while curr.height not in height_to_hash or height_to_hash[curr.height] != curr.header_hash:
         if curr.height == height1:
             block1 = curr
         elif curr.height == height2:
@@ -83,14 +100,10 @@ def get_next_difficulty(
     assert block2 is not None and block3 is not None
 
     # Current difficulty parameter (diff of block h = i - 1)
-    Tc = get_next_difficulty(
-        constants, headers, height_to_hash, headers[block.prev_header_hash]
-    )
+    Tc = get_next_difficulty(constants, headers, height_to_hash, headers[block.prev_header_hash])
 
     # Previous difficulty parameter (diff of block h = i - 2048 - 1)
-    Tp = get_next_difficulty(
-        constants, headers, height_to_hash, headers[block2.prev_header_hash]
-    )
+    Tp = get_next_difficulty(constants, headers, height_to_hash, headers[block2.prev_header_hash])
     if block1:
         timestamp1 = int(block1.data.timestamp)  # i - 512 - 1
     else:
@@ -103,12 +116,7 @@ def get_next_difficulty(
 
     # Numerator fits in 128 bits, so big int is not necessary
     # We multiply by the denominators here, so we only have one fraction in the end (avoiding floating point)
-    term1 = (
-        constants.DIFFICULTY_DELAY
-        * Tp
-        * (timestamp3 - timestamp2)
-        * constants.BLOCK_TIME_TARGET
-    )
+    term1 = constants.DIFFICULTY_DELAY * Tp * (timestamp3 - timestamp2) * constants.BLOCK_TIME_TARGET
     term2 = (
         (constants.DIFFICULTY_WARP_FACTOR - 1)
         * (constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY)
@@ -119,17 +127,10 @@ def get_next_difficulty(
 
     # Round down after the division
     new_difficulty_precise: uint64 = uint64(
-        (term1 + term2)
-        // (
-            constants.DIFFICULTY_WARP_FACTOR
-            * (timestamp3 - timestamp2)
-            * (timestamp2 - timestamp1)
-        )
+        (term1 + term2) // (constants.DIFFICULTY_WARP_FACTOR * (timestamp3 - timestamp2) * (timestamp2 - timestamp1))
     )
     # Take only DIFFICULTY_SIGNIFICANT_BITS significant bits
-    new_difficulty = uint64(
-        truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS)
-    )
+    new_difficulty = uint64(truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS))
     assert count_significant_bits(new_difficulty) <= constants.SIGNIFICANT_BITS
 
     # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
@@ -169,12 +170,8 @@ def get_next_min_iters(
     prev_block_header: Header = headers[block.prev_header_hash]
 
     proof_of_space = block.proof_of_space
-    difficulty = get_next_difficulty(
-        constants, headers, height_to_hash, prev_block_header
-    )
-    iterations = uint64(
-        block.header.data.total_iters - prev_block_header.data.total_iters
-    )
+    difficulty = get_next_difficulty(constants, headers, height_to_hash, prev_block_header)
+    iterations = uint64(block.header.data.total_iters - prev_block_header.data.total_iters)
     prev_min_iters = calculate_min_iters_from_iterations(
         proof_of_space,
         difficulty,
@@ -193,9 +190,7 @@ def get_next_min_iters(
     # block of the last epochs. Basically, it's total iterations per block on average.
 
     # Height1 is the last block 2 epochs ago, so we can include the iterations taken for mining first block in epoch
-    height1 = uint32(
-        next_height - constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY - 1
-    )
+    height1 = uint32(next_height - constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY - 1)
     # Height2 is the last block in the previous epoch
     height2 = uint32(next_height - constants.DIFFICULTY_DELAY - 1)
 
@@ -206,10 +201,7 @@ def get_next_min_iters(
     # This is important if we are on a fork, or beyond the LCA.
     curr: Optional[Header] = block.header
     assert curr is not None
-    while (
-        curr.height not in height_to_hash
-        or height_to_hash[curr.height] != curr.header_hash
-    ):
+    while curr.height not in height_to_hash or height_to_hash[curr.height] != curr.header_hash:
         if curr.height == height1:
             block1 = curr
         elif curr.height == height2:
@@ -233,12 +225,7 @@ def get_next_min_iters(
 
     iters2 = block2.data.total_iters
 
-    min_iters_precise = uint64(
-        (iters2 - iters1)
-        // (constants.DIFFICULTY_EPOCH * constants.MIN_ITERS_PROPORTION)
-    )
-    min_iters = uint64(
-        truncate_to_significant_bits(min_iters_precise, constants.SIGNIFICANT_BITS)
-    )
+    min_iters_precise = uint64((iters2 - iters1) // (constants.DIFFICULTY_EPOCH * constants.MIN_ITERS_PROPORTION))
+    min_iters = uint64(truncate_to_significant_bits(min_iters_precise, constants.SIGNIFICANT_BITS))
     assert count_significant_bits(min_iters) <= constants.SIGNIFICANT_BITS
     return min_iters
