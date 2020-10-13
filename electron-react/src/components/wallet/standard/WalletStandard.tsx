@@ -637,9 +637,9 @@ function TransactionTable(props: TransactionTableProps) {
   const incoming_string = (incoming: boolean) => {
     if (incoming) {
       return <Trans id="TransactionTable.incoming">Incoming</Trans>;
-    } 
+    }
       return <Trans id="TransactionTable.outgoing">Outgoing</Trans>;
-    
+
   };
   const confirmed_to_string = (tx: Transaction) => {
     return tx.confirmed ? (
@@ -804,14 +804,16 @@ export default function StandardWallet(props: StandardWalletProps) {
   const id = props.wallet_id;
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
 
-  return wallets.length > props.wallet_id ? (
-    <Grid className={classes.walletContainer} item xs={12}>
-      <BalanceCard wallet_id={id} />
-      <SendCard wallet_id={id} />
-      <AddressCard wallet_id={id} />
-      <HistoryCard wallet_id={id} />
-    </Grid>
-  ) : (
-    ''
-  );
+  if (wallets.length > props.wallet_id) {
+    return (
+      <Grid className={classes.walletContainer} item xs={12}>
+        <BalanceCard wallet_id={id} />
+        <SendCard wallet_id={id} />
+        <AddressCard wallet_id={id} />
+        <HistoryCard wallet_id={id} />
+      </Grid>
+    );
+  }
+
+  return null;
 }

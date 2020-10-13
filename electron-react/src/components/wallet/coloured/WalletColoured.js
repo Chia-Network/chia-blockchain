@@ -3,16 +3,16 @@ import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import { withRouter } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-
+import { Trans } from '@lingui/macro';
 import Typography from "@material-ui/core/Typography";
-import Paper from "@material-ui/core/Paper";
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import { Accordion, AccordionSummary, AccordionDetails, Paper } from "@material-ui/core";
 import Box from "@material-ui/core/Box";
 import TextField from "@material-ui/core/TextField";
 import Button from "@material-ui/core/Button";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
-
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import {
@@ -27,7 +27,6 @@ import {
   colouredcoin_to_mojo
 } from "../../../util/chia";
 import { unix_to_short_date } from "../../../util/utils";
-import Accordion from "../../accordion/Accordion";
 import { openDialog } from "../../../modules/dialog";
 import { get_transaction_result } from "../../../util/transaction_result";
 import config from '../../../config/config';
@@ -215,7 +214,9 @@ const ColourCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Colour Info
+              <Trans id="ColourCard.title">
+                Colour Info
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -223,7 +224,11 @@ const ColourCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box>
-                <Typography>{'Colour: '}</Typography>
+                <Typography>
+                  <Trans id="ColourCard.colour">
+                    Colour:
+                  </Trans>
+                </Typography>
               </Box>
               <Box
                 style={{
@@ -245,7 +250,7 @@ const ColourCard = props => {
                   variant="filled"
                   color="secondary"
                   fullWidth
-                  label="Nickname"
+                  label={<Trans id="ColourCard.nickname">Nickname</Trans>}
                   inputRef={input => {
                     name_input = input;
                   }}
@@ -261,7 +266,9 @@ const ColourCard = props => {
                   color="secondary"
                   disableElevation
                 >
-                  Rename
+                  <Trans id="ColourCard.rename">
+                    Rename
+                  </Trans>
                 </Button>
               </Box>
             </Box>
@@ -372,17 +379,19 @@ const BalanceCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Balance
+              <Trans id="ColouredBalanceCard.title">
+                Balance
+              </Trans>
             </Typography>
           </div>
         </Grid>
         <BalanceCardSubSection
-          title="Total Balance"
+          title={<Trans id="ColouredBalanceCard.totalBalance">Total Balance</Trans>}
           balance={balance}
           name={name}
         />
         <BalanceCardSubSection
-          title="Spendable Balance"
+          title={<Trans id="ColouredBalanceCard.spendableBalance">Spendable Balance</Trans>}
           balance={balance_spendable}
           name={name}
         />
@@ -390,10 +399,14 @@ const BalanceCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1}>
-                <Accordion
-                  title="View pending balances..."
-                  content={acc_content}
-                />
+                <Accordion>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Trans id="ColouredBalanceCard.viewPendingBalances">View pending balances...</Trans>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <div dangerouslySetInnerHTML={{ __html: acc_content }} />
+                  </AccordionDetails>
+                </Accordion>
               </Box>
             </Box>
           </div>
@@ -513,7 +526,9 @@ const SendCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Create Transaction
+              <Trans id="ColouredSendCard.title">
+                Create Transaction
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -535,7 +550,7 @@ const SendCard = props => {
                   inputRef={input => {
                     address_input = input;
                   }}
-                  label="Address"
+                  label={<Trans id="ColouredSendCard.address">Address</Trans>}
                 />
               </Box>
               <Box></Box>
@@ -557,7 +572,7 @@ const SendCard = props => {
                   inputRef={input => {
                     amount_input = input;
                   }}
-                  label={"Amount (" + cc_unit + ")"}
+                  label={<Trans id="ColouredSendCard.amount">Amount ({cc_unit})</Trans>}
                 />
               </Box>
               <Box flexGrow={6}>
@@ -571,7 +586,7 @@ const SendCard = props => {
                   inputRef={input => {
                     fee_input = input;
                   }}
-                  label="Fee (TXCH)"
+                  label={<Trans id="ColouredSendCard.fee">Fee (TXCH)</Trans>}
                 />
               </Box>
             </Box>
@@ -588,7 +603,9 @@ const SendCard = props => {
                   color="primary"
                   style={config.local_test ? {} : { visibility: "hidden" }}
                 >
-                  Farm
+                  <Trans id="ColouredSendCard.farm">
+                    Farm
+                  </Trans>
                 </Button>
               </Box>
               <Box>
@@ -598,7 +615,9 @@ const SendCard = props => {
                   variant="contained"
                   color="primary"
                 >
-                  Send
+                  <Trans id="ColouredSendCard.send">
+                    Send
+                  </Trans>
                 </Button>
               </Box>
             </Box>
@@ -618,12 +637,14 @@ const HistoryCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              History
+              <Trans id="ColouredHistoryCard.title">
+                History
+              </Trans>
             </Typography>
           </div>
         </Grid>
         <Grid item xs={12}>
-          <TransactionTable wallet_id={id}> </TransactionTable>
+          <TransactionTable wallet_id={id} />
         </Grid>
       </Grid>
     </Paper>
@@ -638,18 +659,26 @@ const TransactionTable = props => {
   );
 
   if (transactions.length === 0) {
-    return <div style={{ margin: "30px" }}>No previous transactions</div>;
+    return (
+      <div style={{ margin: "30px" }}>
+        <Trans id="ColouredTransactionTable.noPreviousTransactions">
+          No previous transactions
+        </Trans>
+      </div>
+    );
   }
 
   const incoming_string = incoming => {
     if (incoming) {
-      return "Incoming";
+      return <Trans id="ColouredTransactionTable.incoming">Incoming</Trans>;
     } else {
-      return "Outgoing";
+      return <Trans id="ColouredTransactionTable.outgoing">Outgoing</Trans>;
     }
   };
   const confirmed_to_string = confirmed => {
-    return confirmed ? "Confirmed" : "Pending";
+    return confirmed
+      ? <Trans id="ColouredTransactionTable.confirmed">Confirmed</Trans>
+      : <Trans id="ColouredTransactionTable.pending">Pending</Trans>;
   };
 
   return (
@@ -657,12 +686,36 @@ const TransactionTable = props => {
       <Table stickyHeader className={classes.table}>
         <TableHead className={classes.head}>
           <TableRow className={classes.row}>
-            <TableCell className={classes.cell_short}>Type</TableCell>
-            <TableCell className={classes.cell_short}>To</TableCell>
-            <TableCell className={classes.cell_short}>Date</TableCell>
-            <TableCell className={classes.cell_short}>Status</TableCell>
-            <TableCell className={classes.cell_short}>Amount</TableCell>
-            <TableCell className={classes.cell_short}>Fee</TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="ColouredTransactionTable.type">
+                Type
+              </Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="ColouredTransactionTable.to">
+                To
+              </Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="ColouredTransactionTable.date">
+                Date
+              </Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="ColouredTransactionTable.status">
+                Status
+              </Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="ColouredTransactionTable.amount">
+                Amount
+              </Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="ColouredTransactionTable.fee">
+                Fee
+              </Trans>
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody className={classes.tableBody}>
@@ -720,7 +773,9 @@ const AddressCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Receive Addresss
+              <Trans id="ColouredAddressCard.title">
+                Receive Addresss
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -731,7 +786,7 @@ const AddressCard = props => {
                 <TextField
                   disabled
                   fullWidth
-                  label="Address"
+                  label={<Trans id="ColouredAddressCard.address">Address</Trans>}
                   value={address}
                   variant="outlined"
                 />
@@ -744,7 +799,9 @@ const AddressCard = props => {
                   color="secondary"
                   disableElevation
                 >
-                  Copy
+                  <Trans id="ColouredAddressCard.copy">
+                    Copy
+                  </Trans>
                 </Button>
               </Box>
             </Box>
@@ -761,7 +818,9 @@ const AddressCard = props => {
                   variant="contained"
                   color="primary"
                 >
-                  New Address
+                  <Trans id="ColouredAddressCard.newAddress">
+                    New Address
+                  </Trans>
                 </Button>
               </Box>
             </Box>
@@ -772,23 +831,23 @@ const AddressCard = props => {
   );
 };
 
-const ColouredWallet = props => {
+export default function ColouredWallet(props) {
   const classes = useStyles();
   const id = useSelector(state => state.wallet_menu.id);
   const name = useSelector(state => state.wallet_state.wallets[id].name);
   const wallets = useSelector(state => state.wallet_state.wallets);
 
-  return wallets.length > props.wallet_id ? (
-    <>
-      <ColourCard wallet_id={id} name={name}></ColourCard>
-      <BalanceCard wallet_id={id}></BalanceCard>
-      <SendCard wallet_id={id}></SendCard>
-      <AddressCard wallet_id={id}></AddressCard>
-      <HistoryCard wallet_id={id}></HistoryCard>
-    </>
-  ) : (
-    ""
-  );
-};
+  if (wallets.length > props.wallet_id) {
+    return (
+      <>
+        <ColourCard wallet_id={id} name={name} />
+        <BalanceCard wallet_id={id} />
+        <SendCard wallet_id={id} />
+        <AddressCard wallet_id={id} />
+        <HistoryCard wallet_id={id} />
+      </>
+    );
+  }
 
-export default withRouter(ColouredWallet);
+  return null;
+}
