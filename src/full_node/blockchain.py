@@ -19,16 +19,16 @@ from src.full_node.block_header_validation import (
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_min_iters
-from src.types.challenge import Challenge
+from src.types.challenge_slot import ChallengeSlot
 from src.types.coin import Coin, hash_coin_list
 from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.full_block import FullBlock, additions_for_npc
-from src.types.header import Header
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.full_node.blockchain_check_conditions import blockchain_check_conditions_dict
+from src.full_node.sub_block_record import SubBlockRecord
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.full_node.cost_calculator import calculate_cost_of_program
@@ -48,7 +48,7 @@ class ReceiveBlockResult(Enum):
     and if not, why it was not added.
     """
 
-    ADDED_TO_HEAD = 1  # Added to one of the heads, this block is now a new head
+    NEW_TIP = 1  # Added to one of the heads, this block is now a new head
     ADDED_AS_ORPHAN = 2  # Added as an orphan/stale block (block that is not a head or ancestor of a head)
     INVALID_BLOCK = 3  # Block was not added because it was invalid
     ALREADY_HAVE_BLOCK = 4  # Block is already present in this blockchain
@@ -59,16 +59,12 @@ class ReceiveBlockResult(Enum):
 
 class Blockchain:
     constants: ConsensusConstants
-    # Tips of the blockchain
-    tips: List[Header]
-    # Least common ancestor of tips
-    lca_block: Header
-    # Defines the path from genesis to the lca
+    # Tip of the blockchain
+    tip_height: uint32
+    # Defines the path from genesis to the tip, no orphan sub-blocks
     height_to_hash: Dict[uint32, bytes32]
-    # All headers (but not orphans) from genesis to the tip are guaranteed to be in headers
-    headers: Dict[bytes32, Header]
-    # Genesis block
-    genesis: FullBlock
+    # All sub blocks in tip path are guaranteed to be included, can include orphan sub-blocks
+    sub_blocks: Dict[bytes32, SubBlockRecord]
     # Unspent Store
     coin_store: CoinStore
     # Store
@@ -104,15 +100,14 @@ class Blockchain:
             max_workers=max(cpu_count - 2, 1)
         )
         self.constants = consensus_constants
-        self.tips = []
+        self.tip_height = 0
         self.height_to_hash = {}
-        self.headers = {}
+        self.sub_blocks = {}
         self.coin_store = coin_store
         self.block_store = block_store
         self._shut_down = False
-        self.genesis = FullBlock.from_bytes(self.constants.GENESIS_BLOCK)
         self.coinbase_freeze = self.constants.COINBASE_FREEZE_PERIOD
-        await self._load_chain_from_store()
+        await self._load_chain_from_store(FullBlock.from_bytes(self.constants.GENESIS_BLOCK))
         return self
 
     def shut_down(self):
@@ -120,143 +115,69 @@ class Blockchain:
         self.pool.shutdown(wait=True)
 
     async def _load_chain_from_store(
-        self,
+        self, genesis: FullBlock
     ) -> None:
         """
         Initializes the state of the Blockchain class from the database. Sets the LCA, tips,
         headers, height_to_hash, and block_store DiffStores.
         """
-        lca_db: Optional[Header] = await self.block_store.get_lca()
-        tips_db: List[Header] = await self.block_store.get_tips()
-        headers_db: Dict[bytes32, Header] = await self.block_store.get_headers()
+        self.sub_blocks_db: Dict[bytes32, SubBlockRecord] = await self.block_store.get_sub_blocks()
 
-        assert (lca_db is None) == (len(tips_db) == 0) == (len(headers_db) == 0)
-        if lca_db is None:
-            result, removed, error_code = await self.receive_block(
-                self.genesis, sync_mode=False
+        if len(self.sub_blocks_db) == 0:
+            result, error_code = await self.receive_block(
+                genesis, sync_mode=False
             )
-            if result != ReceiveBlockResult.ADDED_TO_HEAD:
+            if result != ReceiveBlockResult.NEW_TIP:
                 if error_code is not None:
                     raise ConsensusError(error_code)
                 else:
-                    raise RuntimeError(f"Invalid genesis block {self.genesis}")
+                    raise RuntimeError(f"Invalid genesis block {genesis}")
             return
 
-        await self.block_store.init_challenge_hashes()
+        # Sets the other state variables (tip_height and height_to_hash)
+        for hh, sb in self.sub_blocks:
+            self.height_to_hash[sb.height] = hh
+            if sb.height > self.tip_height:
+                self.tip_height = sb.height
 
-        # Set the state (lca block and tips)
-        self.lca_block = lca_db
-        self.tips = tips_db
+        assert len(self.sub_blocks_db) == len(self.height_to_hash) == self.tip_height + 1
 
-        # Find the common ancestor of the tips, and add intermediate blocks to headers
-        cur: List[Header] = self.tips[:]
-        while any(b.header_hash != cur[0].header_hash for b in cur):
-            heights = [b.height for b in cur]
-            i = heights.index(max(heights))
-            self.headers[cur[i].header_hash] = cur[i]
-            prev: Header = headers_db[cur[i].prev_header_hash]
-            challenge_hash = self.block_store.get_challenge_hash(cur[i].header_hash)
-            self.block_store.add_proof_of_time(
-                challenge_hash,
-                uint64(cur[i].data.total_iters - prev.data.total_iters),
-                cur[i].data.height,
-            )
-            cur[i] = prev
-
-        # Consistency check, tips should have an LCA equal to the DB LCA
-        assert cur[0] == self.lca_block
-
-        # Sets the header for remaining blocks, and height_to_hash dict
-        cur_b: Header = self.lca_block
-        while True:
-            self.headers[cur_b.header_hash] = cur_b
-            self.height_to_hash[cur_b.height] = cur_b.header_hash
-            if cur_b.height == 0:
-                break
-            prev_b: Header = headers_db[cur_b.prev_header_hash]
-            challenge_hash = self.block_store.get_challenge_hash(cur_b.header_hash)
-            self.block_store.add_proof_of_time(
-                challenge_hash,
-                uint64(cur_b.data.total_iters - prev_b.data.total_iters),
-                cur_b.data.height,
-            )
-            cur_b = prev_b
-
-        # Asserts that the DB genesis block is correct
-        assert cur_b == self.genesis.header
-
-        # Adds the blocks to the db between LCA and tip
-        await self.recreate_diff_stores()
-
-    def get_current_tips(self) -> List[Header]:
+    def get_tip(self) -> SubBlockRecord:
         """
-        Return the heads.
+        Return the tip of the blockchain
         """
-        return self.tips[:]
+        return self.sub_blocks[self.height_to_hash[self.tip_height]]
 
-    async def get_full_tips(self) -> List[FullBlock]:
+    async def get_full_tip(self) -> FullBlock:
         """ Return list of FullBlocks that are tips"""
-        result: List[FullBlock] = []
-        for tip in self.tips:
-            block = await self.block_store.get_block(tip.header_hash)
-            if not block:
-                continue
-            result.append(block)
-        return result
+        block = await self.block_store.get_block(self.height_to_hash[self.tip_height])
+        assert block is not None
+        return block
 
-    def is_child_of_head(self, block: FullBlock) -> bool:
+    def is_child_of_tip(self, block: FullBlock) -> bool:
         """
-        True iff the block is the direct ancestor of a head.
+        True iff the block is the direct ancestor of the tip
         """
-        for head in self.tips:
-            if block.prev_header_hash == head.header_hash:
-                return True
-        return False
+        return block.prev_header_hash == self.get_tip().header_hash
 
     def contains_block(self, header_hash: bytes32) -> bool:
-        return header_hash in self.headers
-
-    def get_challenge(self, block: FullBlock) -> Optional[Challenge]:
-        if block.proof_of_time is None:
-            return None
-        if block.prev_header_hash not in self.headers and block.height > 0:
-            return None
-
-        prev_challenge_hash = block.proof_of_space.challenge_hash
-
-        new_difficulty: Optional[uint64]
-        if (
-            block.height + 1
-        ) % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
-            new_difficulty = get_next_difficulty(
-                self.constants, self.headers, self.height_to_hash, block.header
-            )
-        else:
-            new_difficulty = None
-        return Challenge(
-            prev_challenge_hash,
-            std_hash(
-                block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()
-            ),
-            new_difficulty,
-        )
-
-    def get_header_block(self, block: FullBlock) -> Optional[HeaderBlock]:
-        challenge: Optional[Challenge] = self.get_challenge(block)
-        if challenge is None or block.proof_of_time is None:
-            return None
-        return HeaderBlock(
-            block.proof_of_space, block.proof_of_time, challenge, block.header
-        )
+        """
+        True if we have already added this block to the chain. This may return false for orphan sub-blocks
+        that we have added but no longer keep in memory.
+        """
+        return header_hash in self.sub_blocks
 
     def get_header_hashes(self, tip_header_hash: bytes32) -> List[bytes32]:
-        if tip_header_hash not in self.headers:
+        """
+        Returns a list of all header hashes from genesis to the tip, inclusive.
+        """
+        if tip_header_hash not in self.sub_blocks:
             raise ValueError("Invalid tip requested")
 
-        curr = self.headers[tip_header_hash]
+        curr = self.sub_blocks[tip_header_hash]
         ret_hashes = [tip_header_hash]
         while curr.height != 0:
-            curr = self.headers[curr.prev_header_hash]
+            curr = self.sub_blocks[curr.prev_header_hash]
             ret_hashes.append(curr.header_hash)
         return list(reversed(ret_hashes))
 
@@ -265,12 +186,12 @@ class Blockchain:
         Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
         where both blockchains are equal.
         """
-        lca: Header = self.lca_block
+        tip: SubBlockRecord = self.get_tip()
 
-        if lca.height >= len(alternate_chain) - 1:
+        if tip.height >= len(alternate_chain) - 1:
             raise ValueError("Alternate chain is shorter")
         low: uint32 = uint32(0)
-        high = lca.height
+        high = tip.height
         while low + 1 < high:
             mid = (low + high) // 2
             if self.height_to_hash[uint32(mid)] != alternate_chain[mid]:
@@ -298,34 +219,35 @@ class Blockchain:
         pre_validated: bool = False,
         pos_quality_string: bytes32 = None,
         sync_mode: bool = False,
-    ) -> Tuple[ReceiveBlockResult, Optional[Header], Optional[Err]]:
+    ) -> Tuple[ReceiveBlockResult, Optional[Err]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
         blockchain, regardless of whether it is the child of a head, or another block.
         Returns a header if block is added to head. Returns an error if the block is
         invalid.
         """
-        genesis: bool = block.height == 0 and not self.tips
+        genesis: bool = block.height == 0 and len(self.height_to_hash) == 0
 
-        if block.header_hash in self.headers:
-            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
+        if block.header_hash in self.sub_blocks:
+            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None
 
-        if block.prev_header_hash not in self.headers and not genesis:
-            return ReceiveBlockResult.DISCONNECTED_BLOCK, None, None
+        if block.prev_header_hash not in self.sub_blocks and not genesis:
+            return ReceiveBlockResult.DISCONNECTED_BLOCK, None
 
         prev_header_block: Optional[HeaderBlock] = None
         if not genesis:
             prev_full_block = await self.block_store.get_block(block.prev_header_hash)
             assert prev_full_block is not None
-            prev_header_block = self.get_header_block(prev_full_block)
+            prev_header_block = prev_full_block.get_header_block()
             assert prev_header_block is not None
 
-        curr_header_block = self.get_header_block(block)
+        curr_header_block = block.get_header_block()
         assert curr_header_block is not None
         # Validate block header
+        # TODO(mariano): check
         error_code: Optional[Err] = await validate_finished_block_header(
             self.constants,
-            self.headers,
+            self.sub_blocks,
             self.height_to_hash,
             curr_header_block,
             prev_header_block,
@@ -335,174 +257,87 @@ class Blockchain:
         )
 
         if error_code is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, None, error_code
+            return ReceiveBlockResult.INVALID_BLOCK, error_code
 
         # Validate block body
+        # TODO(mariano): check
         error_code = await self.validate_block_body(block)
 
         if error_code is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, None, error_code
+            return ReceiveBlockResult.INVALID_BLOCK, error_code
 
-        # Cache header in memory
-        self.headers[block.header_hash] = block.header
-
-        # Always immediately add the block to the database, after updating blockchain state
-        await self.block_store.add_block(block)
-        assert block.proof_of_time is not None
-        self.block_store.add_proof_of_time(
-            block.proof_of_time.challenge_hash,
-            block.proof_of_time.number_of_iterations,
+        sub_block = SubBlockRecord(
+            block.header_hash,
+            block.prev_header_hash,
             block.height,
+            block.weight,
+            block.total_iters,
         )
-        res, header = await self._reconsider_heads(block.header, genesis, sync_mode)
-        if res:
-            return ReceiveBlockResult.ADDED_TO_HEAD, header, None
+
+        # Always add the block to the database
+        await self.block_store.add_block(block)
+
+        new_tip = await self._reconsider_tip(sub_block, genesis, sync_mode)
+        if new_tip:
+            return ReceiveBlockResult.NEW_TIP, None
         else:
-            return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
+            return ReceiveBlockResult.ADDED_AS_ORPHAN, None
 
-    async def _reconsider_heads(
-        self, block: Header, genesis: bool, sync_mode: bool
-    ) -> Tuple[bool, Optional[Header]]:
+    async def _reconsider_tip(
+        self, sub_block: SubBlockRecord, genesis: bool, sync_mode: bool
+    ) -> bool:
         """
-        When a new block is added, this is called, to check if the new block is heavier
-        than one of the heads.
+        When a new block is added, this is called, to check if the new block is the new tip of the chain.
+        This also handles reorgs by reverting blocks which are not in the heaviest chain.
         """
-        removed: Optional[Header] = None
-        if len(self.tips) == 0 or block.weight > min([b.weight for b in self.tips]):
-            self.tips.append(block)
-            while len(self.tips) > self.constants.NUMBER_OF_HEADS:
-                self.tips.sort(key=lambda b: b.weight, reverse=True)
-                # This will loop only once
-                removed = self.tips.pop()
-            await self.block_store.set_tips([t.header_hash for t in self.tips])
-            await self._reconsider_lca(genesis, sync_mode)
-            return True, removed
-        return False, None
-
-    async def _reconsider_lca(self, genesis: bool, sync_mode: bool):
-        """
-        Update the least common ancestor of the heads. This is useful, since we can just assume
-        there is one block per height before the LCA (and use the height_to_hash dict).
-        """
-        cur: List[Header] = self.tips[:]
-        old_lca: Optional[Header]
-        try:
-            old_lca = self.lca_block
-        except AttributeError:
-            old_lca = None
-        while any(b.header_hash != cur[0].header_hash for b in cur):
-            heights = [b.height for b in cur]
-            i = heights.index(max(heights))
-            cur[i] = self.headers[cur[i].prev_header_hash]
         if genesis:
-            self._reconsider_heights(None, cur[0])
-        else:
-            self._reconsider_heights(self.lca_block, cur[0])
-        self.lca_block = cur[0]
-        await self.block_store.set_lca(self.lca_block.header_hash)
+            assert self.tip_height == 0
+            block: Optional[FullBlock] = await self.block_store.get_block(sub_block.header_hash)
+            assert block is not None
+            await self.coin_store.new_block(block)
+            self.height_to_hash[uint32(0)] = block.header_hash
+            return True
 
-        if old_lca is None:
-            full: Optional[FullBlock] = await self.block_store.get_block(
-                self.lca_block.header_hash
-            )
-            assert full is not None
-            await self.coin_store.new_lca(full)
-            await self._create_diffs_for_tips(self.lca_block)
-        # If LCA changed update the unspent store
-        elif old_lca.header_hash != self.lca_block.header_hash:
-            # New LCA is lower height but not the a parent of old LCA (Reorg)
-            fork_h = find_fork_point_in_chain(self.headers, old_lca, self.lca_block)
+        if sub_block.weight > self.get_tip().weight:
+            # Find the fork. if the block is just being appended, it will return the tip
+            fork_h: bytes32 = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_tip())
             # Rollback to fork
-            await self.coin_store.rollback_lca_to_block(fork_h)
+            await self.coin_store.rollback_to_block(fork_h)
 
-            # Add blocks between fork point and new lca
-            fork_hash = self.height_to_hash[fork_h]
-            fork_head = self.headers[fork_hash]
-            await self._from_fork_to_lca(fork_head, self.lca_block)
-            if not sync_mode:
-                await self.recreate_diff_stores()
-        else:
-            # If LCA has not changed just update the difference
-            self.coin_store.nuke_diffs()
-            # Create DiffStore
-            await self._create_diffs_for_tips(self.lca_block)
+            # Collect all blocks from fork point to new tip
+            blocks_to_add: List[FullBlock] = []
+            curr = sub_block.header_hash
+            while curr != self.height_to_hash[fork_h]:
+                block: Optional[FullBlock] = await self.block_store.get_block(curr)
+                assert block is not None
+                blocks_to_add.append(block)
+                curr = block.prev_header_hash
 
-    async def recreate_diff_stores(self):
-        # Nuke DiffStore
-        self.coin_store.nuke_diffs()
-        # Create DiffStore
-        await self._create_diffs_for_tips(self.lca_block)
+            for block in reversed(blocks_to_add):
+                self.height_to_hash[block.height] = block.header_hash
+                self.sub_blocks[block.header_hash] = SubBlockRecord(
+                    block.header_hash,
+                    block.prev_header_hash,
+                    block.height,
+                    block.weight,
+                    block.total_iters
+                )
+                await self.coin_store.new_block(block)
+            return True
 
-    def _reconsider_heights(self, old_lca: Optional[Header], new_lca: Header):
-        """
-        Update the mapping from height to block hash, when the lca changes.
-        """
-        curr_old: Optional[Header] = old_lca if old_lca else None
-        curr_new: Header = new_lca
-        while True:
-            fetched: Optional[Header]
-            if not curr_old or curr_old.height < curr_new.height:
-                self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
-                self.headers[curr_new.header_hash] = curr_new
-                if curr_new.height == 0:
-                    return
-                curr_new = self.headers[curr_new.prev_header_hash]
-            elif curr_old.height > curr_new.height:
-                del self.height_to_hash[uint32(curr_old.height)]
-                curr_old = self.headers[curr_old.prev_header_hash]
-            else:
-                if curr_new.header_hash == curr_old.header_hash:
-                    return
-                self.height_to_hash[uint32(curr_new.height)] = curr_new.header_hash
-                curr_new = self.headers[curr_new.prev_header_hash]
-                curr_old = self.headers[curr_old.prev_header_hash]
-
-    async def _create_diffs_for_tips(self, target: Header):
-        """ Adds to unspent store from tips down to target"""
-        for tip in self.tips:
-            await self._from_tip_to_lca_unspent(tip, target)
-
-    async def _from_tip_to_lca_unspent(self, head: Header, target: Header):
-        """ Adds diffs to unspent store, from tip to lca target"""
-        blocks: List[FullBlock] = []
-        tip_hash: bytes32 = head.header_hash
-        while True:
-            if tip_hash == target.header_hash:
-                break
-            full = await self.block_store.get_block(tip_hash)
-            if full is None:
-                return
-            blocks.append(full)
-            tip_hash = full.prev_header_hash
-        if len(blocks) == 0:
-            return
-        blocks.reverse()
-        await self.coin_store.new_heads(blocks)
-
-    async def _from_fork_to_lca(self, fork_point: Header, lca: Header):
-        """ Selects blocks between fork_point and LCA, and then adds them to coin_store. """
-        blocks: List[FullBlock] = []
-        tip_hash: bytes32 = lca.header_hash
-        while True:
-            if tip_hash == fork_point.header_hash:
-                break
-            full = await self.block_store.get_block(tip_hash)
-            if not full:
-                return
-            blocks.append(full)
-            tip_hash = full.prev_header_hash
-        blocks.reverse()
-
-        await self.coin_store.add_lcas(blocks)
+        # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
+        return False
 
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
+        # TODO(mariano)
         return get_next_difficulty(
-            self.constants, self.headers, self.height_to_hash, header_hash
+            self.constants, self.sub_blocks, self.height_to_hash, header_hash
         )
 
     def get_next_min_iters(self, header_hash: bytes32) -> uint64:
+        # TODO(mariano)
         return get_next_min_iters(
-            self.constants, self.headers, self.height_to_hash, header_hash
+            self.constants, self.sub_blocks, self.height_to_hash, header_hash
         )
 
     async def pre_validate_blocks_multiprocessing(
@@ -532,11 +367,11 @@ class Blockchain:
     async def validate_unfinished_block(
         self, block: FullBlock, prev_full_block: FullBlock
     ) -> Tuple[Optional[Err], Optional[uint64]]:
-        prev_hb = self.get_header_block(prev_full_block)
+        prev_hb = prev_full_block.get_header_block()
         assert prev_hb is not None
         return await validate_unfinished_block_header(
             self.constants,
-            self.headers,
+            self.sub_blocks,
             self.height_to_hash,
             block.header,
             block.proof_of_space,

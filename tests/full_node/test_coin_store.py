@@ -56,8 +56,8 @@ class TestCoinStore:
             assert block.get_coinbase() == unspent.coin
             assert block.get_fees_coin() == unspent_fee.coin
 
-            await db.set_spent(unspent.coin.name(), block.height)
-            await db.set_spent(unspent_fee.coin.name(), block.height)
+            await db._set_spent(unspent.coin.name(), block.height)
+            await db._set_spent(unspent_fee.coin.name(), block.height)
             unspent = await db.get_coin_record(block.get_coinbase().name())
             unspent_fee = await db.get_coin_record(block.get_fees_coin().name())
             assert unspent.spent == 1
@@ -92,7 +92,7 @@ class TestCoinStore:
             assert unspent_fee.spent == 1
 
         reorg_index = 4
-        await db.rollback_lca_to_block(reorg_index)
+        await db.rollback_to_block(reorg_index)
 
         for c, block in enumerate(blocks):
             unspent = await db.get_coin_record(block.get_coinbase().name())
@@ -155,7 +155,7 @@ class TestCoinStore:
                 elif reorg_block.height < initial_block_count - 1:
                     assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
                 elif reorg_block.height >= initial_block_count:
-                    assert result == ReceiveBlockResult.ADDED_TO_HEAD
+                    assert result == ReceiveBlockResult.NEW_TIP
                     unspent = await coin_store.get_coin_record(
                         reorg_block.get_coinbase().name(), reorg_block.header
                     )

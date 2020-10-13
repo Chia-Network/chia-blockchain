@@ -15,11 +15,13 @@ class HeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator, used by light clients
     finished_challenge_slots: List[ChallengeSlot]           # If first sub-block in slot
     finished_reward_slots: List[RewardChainEndOfSlot]       # If first sub-block in slot
-    icp_proof_of_time: Optional[ProofOfTime]                # If included in challenge chain
-    icp_signature: Optional[G2Element]                      # If included in challenge chain
-    ip_proof_of_time: Optional[ProofOfTime]                 # If included in challenge chain
+    challenge_chain_icp_pot: Optional[ProofOfTime]          # If included in challenge chain
+    challenge_chain_icp_signature: Optional[G2Element]      # If included in challenge chain
+    challenge_chain_ip_pot: Optional[ProofOfTime]           # If included in challenge chain
     reward_chain_sub_block: RewardChainSubBlock             # Reward chain trunk data
     reward_chain_infusion_point: RewardChainInfusionPoint   # Data to complete the sub-block
+    reward_chain_icp_pot: ProofOfTime
+    reward_chain_ip_pot: ProofOfTime
     foliage_sub_block: FoliageSubBlock                      # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]                   # Reward chain foliage data (tx block)
     transactions_filter: bytes                              # Filter for block transactions

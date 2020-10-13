@@ -4,7 +4,7 @@ from blspy import G2Element
 
 from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
-from src.types.proof_of_time import ProofOfTime, ProofOfTimeOutput
+from src.types.proof_of_time import ProofOfTimeOutput
 from src.types.proof_of_space import ProofOfSpace
 
 
