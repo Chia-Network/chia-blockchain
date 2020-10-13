@@ -16,16 +16,16 @@ import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
 import InputAdornment from "@material-ui/core/InputAdornment";
 import FormHelperText from "@material-ui/core/FormHelperText";
-import { openDialog } from "../modules/dialogReducer";
+import { openDialog } from "../../modules/dialog";
 import isElectron from "is-electron";
 import {
   workspaceSelected,
   finalSelected,
   startPlotting,
   resetProgress
-} from "../modules/plotter_messages";
-import { stopService } from "../modules/daemon_messages";
-import { service_plotter } from "../util/service_names";
+} from "../../modules/plotter_messages";
+import { stopService } from "../../modules/daemon_messages";
+import { service_plotter } from "../../util/service_names";
 import Input from "@material-ui/core/Input";
 
 const drawerWidth = 180;

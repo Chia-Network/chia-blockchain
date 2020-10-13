@@ -12,8 +12,8 @@ import {
   pingWallet
 } from "../modules/message";
 
-import { offerParsed, resetTrades } from "../modules/TradeReducer";
-import { openDialog } from "../modules/dialogReducer";
+import { offerParsed, resetTrades } from "../modules/trade";
+import { openDialog } from "../modules/dialog";
 import {
   service_wallet,
   service_full_node,
