@@ -54,8 +54,8 @@ class TestBlockStore:
             await db.add_block(blocks_alt[2])
             assert len(await db.get_blocks_at([1, 2])) == 3
 
-            # Get headers (added alt block also, so +1)
-            assert len(await db.get_headers()) == len(blocks) + 1
+            # Get sub blocks (added alt block also, so +1)
+            assert len(await db.get_sub_blocks()) == len(blocks) + 1
 
             # Test LCA
             assert (await db.get_lca()) is None

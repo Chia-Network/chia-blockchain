@@ -1230,9 +1230,7 @@ class FullNode:
             request.header_hash
         )
         if full_block is not None:
-            header_block: Optional[HeaderBlock] = self.blockchain.get_header_block(
-                full_block
-            )
+            header_block: Optional[HeaderBlock] = full_block.get_header_block()
             if header_block is not None and header_block.height == request.height:
                 response = full_node_protocol.RespondHeaderBlock(header_block)
                 yield OutboundMessage(
@@ -1586,10 +1584,10 @@ class FullNode:
 
         async with self.blockchain.lock:
             # Tries to add the block to the blockchain
-            added, replaced, error_code = await self.blockchain.receive_block(
+            added, error_code = await self.blockchain.receive_block(
                 respond_block.block, False, None, sync_mode=False
             )
-            if added == ReceiveBlockResult.ADDED_TO_HEAD:
+            if added == ReceiveBlockResult.NEW_TIP:
                 await self.mempool_manager.new_tips(
                     await self.blockchain.get_full_tips()
                 )
@@ -1653,7 +1651,7 @@ class FullNode:
                 self.full_node_store.add_disconnected_block(respond_block.block)
                 yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RESPOND)
             return
-        elif added == ReceiveBlockResult.ADDED_TO_HEAD:
+        elif added == ReceiveBlockResult.NEW_TIP:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
             self.log.info(
                 f"Updated heads, new heights: {[b.height for b in self.blockchain.get_current_tips()]}"
@@ -1715,16 +1713,6 @@ class FullNode:
                 ),
                 Delivery.BROADCAST_TO_OTHERS,
             )
-            # Tell peers about the tip that was removed (if one was removed)
-            if replaced is not None:
-                yield OutboundMessage(
-                    NodeType.FULL_NODE,
-                    Message(
-                        "removing_tip",
-                        full_node_protocol.RemovingTip(replaced.header_hash),
-                    ),
-                    Delivery.BROADCAST,
-                )
 
             # Tell peer wallets about the new LCA, if it changed
             new_lca = self.blockchain.lca_block
@@ -1753,7 +1741,7 @@ class FullNode:
             # Should never reach here, all the cases are covered
             raise RuntimeError(f"Invalid result from receive_block {added}")
 
-        # This code path is reached if added == ADDED_AS_ORPHAN or ADDED_TO_HEAD
+        # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
         next_block: Optional[
             FullBlock
         ] = self.full_node_store.get_disconnected_block_by_prev(
@@ -1958,9 +1946,7 @@ class FullNode:
             request.header_hash
         )
         if full_block is not None:
-            header_block: Optional[HeaderBlock] = self.blockchain.get_header_block(
-                full_block
-            )
+            header_block: Optional[HeaderBlock] = full_block.get_header_block()
             if header_block is not None and header_block.height == request.height:
                 response = wallet_protocol.RespondHeader(
                     header_block, full_block.transactions_filter
