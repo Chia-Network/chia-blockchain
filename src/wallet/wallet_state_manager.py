@@ -853,7 +853,7 @@ class WalletStateManager:
                     block.removals, block.additions, block.height
                 )
                 self.height_to_hash[uint32(0)] = block.header_hash
-                return ReceiveBlockResult.ADDED_TO_HEAD
+                return ReceiveBlockResult.NEW_TIP
 
             # Not genesis, updated LCA
             if block.weight > self.block_records[self.lca].weight:
@@ -887,7 +887,7 @@ class WalletStateManager:
                     )
                 self.lca = block.header_hash
                 self.state_changed("new_block")
-                return ReceiveBlockResult.ADDED_TO_HEAD
+                return ReceiveBlockResult.NEW_TIP
 
             return ReceiveBlockResult.ADDED_AS_ORPHAN
 

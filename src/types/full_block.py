@@ -12,19 +12,8 @@ from src.types.challenge_slot import ChallengeSlot
 from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot
 from src.types.reward_chain_sub_block import RewardChainInfusionPoint, RewardChainSubBlock
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
+from src.types.header_block import HeaderBlock
 from src.types.program import Program
-
-
-def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
-    additions: List[Coin] = []
-
-    for npc in npc_list:
-        for coin in created_outputs_for_conditions_dict(
-            npc.condition_dict, npc.coin_name
-        ):
-            additions.append(coin)
-
-    return additions
 
 
 @dataclass(frozen=True)
@@ -33,11 +22,13 @@ class FullBlock(Streamable):
     # All the information required to validate a block
     finished_challenge_slots: List[ChallengeSlot]           # If first sub-block in slot
     finished_reward_slots: List[RewardChainEndOfSlot]       # If first sub-block in slot
-    icp_proof_of_time: Optional[ProofOfTime]                # If included in challenge chain
-    icp_signature: Optional[G2Element]                      # If included in challenge chain
-    ip_proof_of_time: Optional[ProofOfTime]                 # If included in challenge chain
+    challenge_chain_icp_pot: Optional[ProofOfTime]          # If included in challenge chain
+    challenge_chain_icp_signature: Optional[G2Element]      # If included in challenge chain
+    challenge_chain_ip_pot: Optional[ProofOfTime]           # If included in challenge chain
     reward_chain_sub_block: RewardChainSubBlock             # Reward chain trunk data
     reward_chain_infusion_point: RewardChainInfusionPoint   # Data to complete the sub-block
+    reward_chain_icp_pot: ProofOfTime
+    reward_chain_ip_pot: ProofOfTime
     foliage_sub_block: FoliageSubBlock                      # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]                   # Reward chain foliage data (tx block)
     transactions_filter: bytes                              # Filter for block transactions
@@ -55,6 +46,10 @@ class FullBlock(Streamable):
     @property
     def weight(self):
         return self.reward_chain_sub_block.weight
+
+    @property
+    def total_iters(self):
+        return self.reward_chain_sub_block.total_iters
 
     @property
     def header_hash(self):
@@ -100,3 +95,35 @@ class FullBlock(Streamable):
             additions.extend(additions_for_npc(npc_list))
 
         return removals, additions
+
+    def get_header_block(self):
+        """
+        Returns the block but without TransactionInfo and Transactions generator
+        """
+        return HeaderBlock(
+            self.finished_challenge_slots,
+            self.finished_reward_slots,
+            self.challenge_chain_icp_pot,
+            self.challenge_chain_icp_signature,
+            self.challenge_chain_ip_pot,
+            self.reward_chain_sub_block,
+            self.reward_chain_infusion_point,
+            self.reward_chain_icp_pot,
+            self.reward_chain_ip_pot,
+            self.foliage_sub_block,
+            self.foliage_block,
+            self.transactions_filter
+        )
+
+
+def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
+    additions: List[Coin] = []
+
+    for npc in npc_list:
+        for coin in created_outputs_for_conditions_dict(
+                npc.condition_dict, npc.coin_name
+        ):
+            additions.append(coin)
+
+    return additions
+

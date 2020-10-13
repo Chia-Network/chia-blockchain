@@ -45,7 +45,6 @@ class FoliageBlock(Streamable):
 @streamable
 class FoliageSubBlockData(Streamable):
     # Part of the sub-block that is signed by the plot key
-    committing_prev_block_hash: bytes32
     reward_block_hash: bytes32
     pool_target: PoolTarget
     pool_signature: G2Element
@@ -61,5 +60,6 @@ class FoliageSubBlock(Streamable):
     # The entire sub-block, containing signature and the unsigned back pointer
     # The hash of this is the "block hash"
     prev_sub_block_hash: bytes32
+    is_block: bool
     signed_data: FoliageSubBlockData
     plot_key_signature: G2Element

@@ -15,12 +15,11 @@ class RewardChainSubBlock(Streamable):
     sub_block_height: uint32
     total_iters: uint128
     challenge_slot_hash: bytes32
-    is_challenge_block: bool
     proof_of_space: ProofOfSpace
     icp_prev_icp: bytes32
     infusion_challenge_point: ProofOfTimeOutput
-    infusion_challenge_point_proof: ProofOfTime
     infusion_challenge_point_sig: G2Element
+    is_challenge_block: bool
 
 
 @dataclass(frozen=True)
@@ -28,5 +27,4 @@ class RewardChainSubBlock(Streamable):
 class RewardChainInfusionPoint(Streamable):
     ip_prev_icp: bytes32
     infusion_point: ProofOfTimeOutput
-    infusion_point_proof: ProofOfTime
 
