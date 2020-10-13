@@ -13,8 +13,56 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
+#: src/components/wallet/standard/WalletStandard.js:722
+msgid "AddressCard.address"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:735
+msgid "AddressCard.copy"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:752
+msgid "AddressCard.newAddress"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:709
+msgid "AddressCard.title"
+msgstr ""
+
 #: src/components/wallet/standard/WalletStandard.js:246
 msgid "BalanceCard.balance"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:303
+msgid "BalanceCard.pendingBalance"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:306
+msgid "BalanceCard.pendingBalanceTooltip"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:325
+msgid "BalanceCard.pendingChange"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:328
+msgid "BalanceCard.pendingChangeTooltip"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:314
+msgid "BalanceCard.pendingFarmingRewards"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:317
+msgid "BalanceCard.pendingFarmingRewardsTooltip"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:294
+msgid "BalanceCard.pendingTotalBalance"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:297
+msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr ""
 
 #: src/components/wallet/standard/WalletStandard.js:265
@@ -214,6 +262,54 @@ msgstr ""
 msgid "Connections.upDown"
 msgstr ""
 
+#: src/components/trading/CreateOffer.js:329
+msgid "CreateOffer.add"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:227
+msgid "CreateOffer.addTradePair"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:318
+msgid "CreateOffer.amount"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:246
+msgid "CreateOffer.availableOnlyFromElectron"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:279
+msgid "CreateOffer.buyOrSell"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:359
+msgid "CreateOffer.cancel"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:297
+msgid "CreateOffer.colour"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:347
+msgid "CreateOffer.save"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:205
+msgid "CreateOffer.selectAmount"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:209
+msgid "CreateOffer.selectBuyOrSell"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:201
+msgid "CreateOffer.selectCoinType"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:260
+msgid "CreateOffer.title"
+msgstr ""
+
 #: src/components/wallet/Wallets.tsx:129
 msgid "CreateWallet.addWallet"
 msgstr ""
@@ -266,8 +362,44 @@ msgstr ""
 msgid "FullNodeStatus.title"
 msgstr ""
 
-#: src/components/locale/LocaleToggle.tsx:35
+#: src/components/wallet/standard/WalletStandard.js:558
+msgid "HistoryCard.title"
+msgstr ""
+
+#: src/components/locale/LocaleToggle.tsx:34
 msgid "LocaleToggle.helpToTranslate"
+msgstr ""
+
+#: src/components/trading/ViewOffer.js:197
+msgid "OfferDropView.dragAndDropOfferFile"
+msgstr ""
+
+#: src/components/trading/ViewOffer.js:181
+msgid "OfferDropView.title"
+msgstr ""
+
+#: src/components/trading/ViewOffer.js:285
+msgid "OfferRow.buy"
+msgstr ""
+
+#: src/components/trading/ViewOffer.js:284
+msgid "OfferRow.sell"
+msgstr ""
+
+#: src/components/trading/ViewOffer.js:255
+msgid "OfferView.accept"
+msgstr ""
+
+#: src/components/trading/ViewOffer.js:267
+msgid "OfferView.cancel"
+msgstr ""
+
+#: src/components/trading/ViewOffer.js:232
+msgid "OfferView.title"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:458
+msgid "PendingTrades.title"
 msgstr ""
 
 #: src/components/fullNode/FullNode.js:491
@@ -313,6 +445,46 @@ msgstr "Prihlás sa"
 #: src/components/selectKey/SelectKey.tsx:63
 msgid "SelectKey.title"
 msgstr "Vyber kľúč"
+
+#: src/components/wallet/standard/WalletStandard.js:470
+msgid "SendCard.address"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:492
+msgid "SendCard.amount"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:418
+msgid "SendCard.enterValidAddress"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:398
+msgid "SendCard.enterValidAmount"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:406
+msgid "SendCard.enterValidFee"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:523
+msgid "SendCard.farm"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:506
+msgid "SendCard.fee"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:383
+msgid "SendCard.finishSyncingBeforeTransaction"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:536
+msgid "SendCard.send"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:446
+msgid "SendCard.title"
+msgstr ""
 
 #: src/components/wallet/Wallets.tsx:166
 msgid "StatusCard.connections"
@@ -418,6 +590,182 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.js:161
 msgid "StatusItem.statusValue"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:254
+msgid "TradeDetail.acceptedAtTime"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:258
+msgid "TradeDetail.acceptedAtTimeTooltip"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:439
+msgid "TradeDetail.cancel"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:426
+msgid "TradeDetail.cancelAndSpend"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:401
+msgid "TradeDetail.coins"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:218
+msgid "TradeDetail.confirmedAtBlock"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:222
+msgid "TradeDetail.confirmedAtBlockTooltip"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:200
+msgid "TradeDetail.createdAt"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:204
+msgid "TradeDetail.createdAtTooltip"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:234
+msgid "TradeDetail.createdByUs"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:238
+msgid "TradeDetail.createdByUsTooltip"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:231
+msgid "TradeDetail.no"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:248
+msgid "TradeDetail.notAcceptedYet"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:212
+msgid "TradeDetail.notConfirmedYet"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:193
+msgid "TradeDetail.status"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:196
+msgid "TradeDetail.statusTooltip"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:383
+msgid "TradeDetail.title"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:182
+msgid "TradeDetail.tradeId"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:186
+msgid "TradeDetail.tradeIdTooltip"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:229
+msgid "TradeDetail.yes"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:155
+msgid "TradeList.amount"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:165
+msgid "TradeList.colour"
+msgstr ""
+
+#: src/components/trading/CreateOffer.js:152
+msgid "TradeList.side"
+msgstr ""
+
+#: src/components/trading/TradeManager.tsx:70
+msgid "TradeManager.createTrade"
+msgstr ""
+
+#: src/components/trading/TradeManager.tsx:54
+msgid "TradeManager.title"
+msgstr ""
+
+#: src/components/trading/TradeManager.tsx:65
+msgid "TradeManager.tradeOverview"
+msgstr ""
+
+#: src/components/trading/TradeManager.tsx:75
+msgid "TradeManager.viewTrade"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:321
+msgid "TradeOfferRow.buy"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:320
+msgid "TradeOfferRow.sell"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:161
+msgid "TradeOverviewTable.tradesShowUpHere"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:143
+msgid "TradeOverviewTableHeader.date"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:132
+msgid "TradeOverviewTableHeader.status"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:127
+msgid "TradeOverviewTableHeader.tradeId"
+msgstr ""
+
+#: src/components/trading/TradingOverview.js:475
+msgid "TradingHistory.title"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:638
+msgid "TransactionTable.amount"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:601
+msgid "TransactionTable.confirmedAtHeight"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:628
+msgid "TransactionTable.date"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:643
+msgid "TransactionTable.fee"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:586
+msgid "TransactionTable.incoming"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:592
+msgid "TransactionTable.outgoing"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:606
+msgid "TransactionTable.pending"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:633
+msgid "TransactionTable.status"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:623
+msgid "TransactionTable.to"
+msgstr ""
+
+#: src/components/wallet/standard/WalletStandard.js:618
+msgid "TransactionTable.type"
 msgstr ""
 
 #: src/components/wallet/WalletAdd.tsx:43

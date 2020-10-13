@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trans } from '@lingui/macro';
 import { makeStyles } from '@material-ui/core/styles';
 import { Route, Switch, useRouteMatch, useHistory } from 'react-router';
 import clsx from 'clsx';
@@ -62,7 +63,11 @@ export default function TradeManager() {
 
   return (
     <>
-      <DashboardTitle>Trading</DashboardTitle>
+      <DashboardTitle>
+        <Trans id="TradeManager.title">
+          Trading
+        </Trans>
+      </DashboardTitle>
       <Drawer
         variant="permanent"
         classes={{
@@ -73,17 +78,26 @@ export default function TradeManager() {
           <Divider />
           <span key="trade_overview">
             <ListItem button onClick={() => history.push(url)}>
-              <ListItemText primary="Trade Overview" secondary="" />
+              <ListItemText
+                primary={<Trans id="TradeManager.tradeOverview">Trade Overview</Trans>}
+                secondary=""
+              />
             </ListItem>
           </span>
           <Divider />
           <ListItem button onClick={() => history.push(`${url}/create`)}>
-            <ListItemText primary="Create Trade" secondary="" />
+            <ListItemText
+              primary={<Trans id="TradeManager.createTrade">Create Trade</Trans>}
+              secondary=""
+            />
           </ListItem>
           <Divider />
 
           <ListItem button onClick={() => history.push(`${url}/offer`)}>
-            <ListItemText primary="View Trade" secondary="" />
+            <ListItemText
+              primary={<Trans id="TradeManager.viewTrade">View Trade</Trans>}
+              secondary=""
+            />
           </ListItem>
           <Divider />
         </List>
