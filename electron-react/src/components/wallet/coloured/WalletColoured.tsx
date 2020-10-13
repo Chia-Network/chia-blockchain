@@ -1,207 +1,220 @@
-import React from "react";
-import Grid from "@material-ui/core/Grid";
-import { makeStyles } from "@material-ui/core/styles";
-import { withRouter } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import React, { ReactNode } from 'react';
+import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core/styles';
+import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import Typography from "@material-ui/core/Typography";
+import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import { Accordion, AccordionSummary, AccordionDetails, Paper } from "@material-ui/core";
-import Box from "@material-ui/core/Box";
-import TextField from "@material-ui/core/TextField";
-import Button from "@material-ui/core/Button";
-import Table from "@material-ui/core/Table";
-import TableBody from "@material-ui/core/TableBody";
-import TableCell from "@material-ui/core/TableCell";
-import TableHead from "@material-ui/core/TableHead";
-import TableRow from "@material-ui/core/TableRow";
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Box,
+  Button,
+  TextField,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+} from '@material-ui/core';
 import {
   get_address,
   cc_spend,
   farm_block,
-  rename_cc_wallet
-} from "../../../modules/message";
+  rename_cc_wallet,
+} from '../../../modules/message';
 import {
   mojo_to_chia_string,
   mojo_to_colouredcoin_string,
-  colouredcoin_to_mojo
-} from "../../../util/chia";
-import { unix_to_short_date } from "../../../util/utils";
-import { openDialog } from "../../../modules/dialog";
-import { get_transaction_result } from "../../../util/transaction_result";
+  colouredcoin_to_mojo,
+} from '../../../util/chia';
+import { unix_to_short_date } from '../../../util/utils';
+import { openDialog } from '../../../modules/dialog';
+import { get_transaction_result } from '../../../util/transaction_result';
 import config from '../../../config/config';
+import type { RootState } from '../../../modules/rootReducer';
 
 const drawerWidth = 240;
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   root: {
-    display: "flex",
-    paddingLeft: "0px"
+    display: 'flex',
+    paddingLeft: '0px',
   },
   resultSuccess: {
-    color: "#3AAC59"
+    color: '#3AAC59',
   },
   resultFailure: {
-    color: "red"
+    color: 'red',
   },
   toolbar: {
-    paddingRight: 24 // keep right padding when drawer closed
+    paddingRight: 24, // keep right padding when drawer closed
   },
   toolbarIcon: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    padding: "0 8px",
-    ...theme.mixins.toolbar
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    padding: '0 8px',
+    ...theme.mixins.toolbar,
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
-    transition: theme.transitions.create(["width", "margin"], {
+    transition: theme.transitions.create(['width', 'margin'], {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
-    })
+      duration: theme.transitions.duration.leavingScreen,
+    }),
   },
   appBarShift: {
     marginLeft: drawerWidth,
     width: `calc(100% - ${drawerWidth}px)`,
-    transition: theme.transitions.create(["width", "margin"], {
+    transition: theme.transitions.create(['width', 'margin'], {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   menuButton: {
-    marginRight: 36
+    marginRight: 36,
   },
   menuButtonHidden: {
-    display: "none"
+    display: 'none',
   },
   title: {
-    flexGrow: 1
+    flexGrow: 1,
   },
   drawerPaper: {
-    position: "relative",
-    whiteSpace: "nowrap",
+    position: 'relative',
+    whiteSpace: 'nowrap',
     width: drawerWidth,
-    transition: theme.transitions.create("width", {
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   drawerPaperClose: {
-    overflowX: "hidden",
-    transition: theme.transitions.create("width", {
+    overflowX: 'hidden',
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
+      duration: theme.transitions.duration.leavingScreen,
     }),
     width: theme.spacing(7),
-    [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9)
-    }
+    [theme.breakpoints.up('sm')]: {
+      width: theme.spacing(9),
+    },
   },
   appBarSpacer: theme.mixins.toolbar,
   content: {
     flexGrow: 1,
-    height: "100vh",
-    overflow: "auto"
+    height: '100vh',
+    overflow: 'auto',
   },
   container: {
     paddingTop: theme.spacing(0),
     paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0)
+    paddingRight: theme.spacing(0),
   },
   paper: {
     padding: theme.spacing(1),
     margin: theme.spacing(1),
     marginBottom: theme.spacing(2),
     marginTop: theme.spacing(2),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column"
+    display: 'flex',
+    overflow: 'auto',
+    flexDirection: 'column',
   },
   drawerWallet: {
-    position: "relative",
-    whiteSpace: "nowrap",
+    position: 'relative',
+    whiteSpace: 'nowrap',
     width: drawerWidth,
-    height: "100%",
-    transition: theme.transitions.create("width", {
+    height: '100%',
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   balancePaper: {
-    marginTop: theme.spacing(2)
+    marginTop: theme.spacing(2),
   },
   sendButton: {
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
     width: 150,
-    height: 50
+    height: 50,
   },
   copyButton: {
     marginTop: theme.spacing(0),
     marginBottom: theme.spacing(0),
     width: 70,
-    height: 56
+    height: 56,
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   cardSubSection: {
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1)
+    paddingTop: theme.spacing(1),
   },
   walletContainer: {
-    marginBottom: theme.spacing(5)
+    marginBottom: theme.spacing(5),
   },
   table_root: {
-    width: "100%",
+    width: '100%',
     maxHeight: 600,
-    overflowY: "scroll",
+    overflowY: 'scroll',
     padding: theme.spacing(1),
     margin: theme.spacing(1),
     marginBottom: theme.spacing(2),
     marginTop: theme.spacing(2),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column"
+    display: 'flex',
+    overflow: 'auto',
+    flexDirection: 'column',
   },
   table: {
-    height: "100%",
-    overflowY: "scroll"
+    height: '100%',
+    overflowY: 'scroll',
   },
   tableBody: {
-    height: "100%",
-    overflowY: "scroll"
+    height: '100%',
+    overflowY: 'scroll',
   },
   row: {
-    width: 700
+    width: 700,
   },
   cell_short: {
-    fontSize: "14px",
+    fontSize: '14px',
     width: 50,
-    overflowWrap: "break-word" /* Renamed property in CSS3 draft spec */
+    overflowWrap: 'break-word' /* Renamed property in CSS3 draft spec */,
   },
   colourCard: {
-    overflowWrap: "break-word",
+    overflowWrap: 'break-word',
     marginTop: theme.spacing(2),
-    paddingBottom: 20
+    paddingBottom: 20,
   },
   amountField: {
-    paddingRight: 20
-  }
+    paddingRight: 20,
+  },
 }));
 
-const ColourCard = props => {
-  var id = props.wallet_id;
+type ColourCardProps = {
+  wallet_id: number;
+};
+
+function ColourCard(props: ColourCardProps) {
+  const id = props.wallet_id;
 
   const dispatch = useDispatch();
-  const colour = useSelector(state => state.wallet_state.wallets[id].colour);
-  const name = useSelector(state => state.wallet_state.wallets[id].name);
+  const colour = useSelector(
+    (state: RootState) => state.wallet_state.wallets[id].colour,
+  );
+  const name = useSelector(
+    (state: RootState) => state.wallet_state.wallets[id].name,
+  );
 
-  var name_input = null;
+  let name_input: HTMLInputElement;
 
   function rename() {
     dispatch(rename_cc_wallet(id, name_input.value));
@@ -214,9 +227,7 @@ const ColourCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              <Trans id="ColourCard.title">
-                Colour Info
-              </Trans>
+              <Trans id="ColourCard.title">Colour Info</Trans>
             </Typography>
           </div>
         </Grid>
@@ -225,14 +236,12 @@ const ColourCard = props => {
             <Box display="flex">
               <Box>
                 <Typography>
-                  <Trans id="ColourCard.colour">
-                    Colour:
-                  </Trans>
+                  <Trans id="ColourCard.colour">Colour:</Trans>
                 </Typography>
               </Box>
               <Box
                 style={{
-                  wordBreak: "break-word",
+                  wordBreak: 'break-word',
                   minWidth: '0',
                 }}
               >
@@ -251,7 +260,7 @@ const ColourCard = props => {
                   color="secondary"
                   fullWidth
                   label={<Trans id="ColourCard.nickname">Nickname</Trans>}
-                  inputRef={input => {
+                  inputRef={(input) => {
                     name_input = input;
                   }}
                   defaultValue={name}
@@ -266,9 +275,7 @@ const ColourCard = props => {
                   color="secondary"
                   disableElevation
                 >
-                  <Trans id="ColourCard.rename">
-                    Rename
-                  </Trans>
+                  <Trans id="ColourCard.rename">Rename</Trans>
                 </Button>
               </Box>
             </Box>
@@ -277,13 +284,19 @@ const ColourCard = props => {
       </Grid>
     </Paper>
   );
+}
+
+type BalanceCardSubSectionProps = {
+  title: ReactNode;
+  balance: number;
+  name: string;
 };
 
-const BalanceCardSubSection = props => {
+function BalanceCardSubSection(props: BalanceCardSubSectionProps) {
   const classes = useStyles();
-  var cc_unit = props.name;
+  let cc_unit = props.name;
   if (cc_unit.length > 10) {
-    cc_unit = cc_unit.substring(0, 10) + "...";
+    cc_unit = `${cc_unit.slice(0, 10)  }...`;
   }
   return (
     <Grid item xs={12}>
@@ -301,48 +314,54 @@ const BalanceCardSubSection = props => {
       </div>
     </Grid>
   );
-};
+}
 
-function get_cc_unit(name) {
-  var cc_unit = name;
+function get_cc_unit(name: string): string {
+  let cc_unit = name;
   if (cc_unit.length > 10) {
-    cc_unit = cc_unit.substring(0, 10) + "...";
+    cc_unit = `${cc_unit.slice(0, 10)  }...`;
   }
   return cc_unit;
 }
 
-const BalanceCard = props => {
-  var id = props.wallet_id;
-  let name = useSelector(state => state.wallet_state.wallets[id].name);
+type BalanceCardProps = {
+  wallet_id: number;
+};
+
+function BalanceCard(props: BalanceCardProps) {
+  const id = props.wallet_id;
+  let name = useSelector(
+    (state: RootState) => state.wallet_state.wallets[id].name,
+  );
   if (!name) {
-    name = "";
+    name = '';
   }
   const cc_unit = get_cc_unit(name);
 
   const balance = useSelector(
-    state => state.wallet_state.wallets[id].balance_total
+    (state: RootState) => state.wallet_state.wallets[id].balance_total,
   );
-  var balance_spendable = useSelector(
-    state => state.wallet_state.wallets[id].balance_spendable
+  const balance_spendable = useSelector(
+    (state: RootState) => state.wallet_state.wallets[id].balance_spendable,
   );
   const balance_pending = useSelector(
-    state => state.wallet_state.wallets[id].balance_pending
+    (state: RootState) => state.wallet_state.wallets[id].balance_pending,
   );
   const balance_change = useSelector(
-    state => state.wallet_state.wallets[id].balance_change
+    (state: RootState) => state.wallet_state.wallets[id].balance_change,
   );
   const balance_ptotal = balance + balance_pending;
 
   const balancebox_1 = "<table width='100%'>";
   const balancebox_2 = "<tr><td align='left'>";
   const balancebox_3 = "</td><td align='right'>";
-  const balancebox_4 = "</td></tr>";
+  const balancebox_4 = '</td></tr>';
   const balancebox_row = "<tr height='8px'></tr>";
-  const balancebox_5 = "</td></tr></table>";
-  const balancebox_ptotal = "Pending Total Balance";
-  const balancebox_pending = "Pending Transactions";
-  const balancebox_change = "Pending Change";
-  const balancebox_unit = " " + cc_unit;
+  const balancebox_5 = '</td></tr></table>';
+  const balancebox_ptotal = 'Pending Total Balance';
+  const balancebox_pending = 'Pending Transactions';
+  const balancebox_change = 'Pending Change';
+  const balancebox_unit = ` ${  cc_unit}`;
   const balancebox_hline =
     "<tr><td colspan='2' style='text-align:center'><hr width='50%'></td></tr>";
   const balance_ptotal_chia = mojo_to_colouredcoin_string(balance_ptotal);
@@ -379,19 +398,23 @@ const BalanceCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              <Trans id="ColouredBalanceCard.title">
-                Balance
-              </Trans>
+              <Trans id="ColouredBalanceCard.title">Balance</Trans>
             </Typography>
           </div>
         </Grid>
         <BalanceCardSubSection
-          title={<Trans id="ColouredBalanceCard.totalBalance">Total Balance</Trans>}
+          title={
+            <Trans id="ColouredBalanceCard.totalBalance">Total Balance</Trans>
+          }
           balance={balance}
           name={name}
         />
         <BalanceCardSubSection
-          title={<Trans id="ColouredBalanceCard.spendableBalance">Spendable Balance</Trans>}
+          title={
+            <Trans id="ColouredBalanceCard.spendableBalance">
+              Spendable Balance
+            </Trans>
+          }
           balance={balance_spendable}
           name={name}
         />
@@ -401,7 +424,9 @@ const BalanceCard = props => {
               <Box flexGrow={1}>
                 <Accordion>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Trans id="ColouredBalanceCard.viewPendingBalances">View pending balances...</Trans>
+                    <Trans id="ColouredBalanceCard.viewPendingBalances">
+                      View pending balances...
+                    </Trans>
                   </AccordionSummary>
                   <AccordionDetails>
                     <div dangerouslySetInnerHTML={{ __html: acc_content }} />
@@ -414,40 +439,51 @@ const BalanceCard = props => {
       </Grid>
     </Paper>
   );
+}
+
+type SendCardProps = {
+  wallet_id: number;
 };
 
-const SendCard = props => {
-  var id = props.wallet_id;
+function SendCard(props: SendCardProps) {
+  const id = props.wallet_id;
   const classes = useStyles();
-  var address_input = null;
-  var amount_input = null;
-  var fee_input = null;
+  let address_input: HTMLInputElement;
+  let amount_input: HTMLInputElement;
+  let fee_input: HTMLInputElement;
   const dispatch = useDispatch();
-  let name = useSelector(state => state.wallet_state.wallets[id].name);
+  let name = useSelector(
+    (state: RootState) => state.wallet_state.wallets[id].name,
+  );
   if (!name) {
-    name = "";
+    name = '';
   }
   const cc_unit = get_cc_unit(name);
 
   const sending_transaction = useSelector(
-    state => state.wallet_state.wallets[id].sending_transaction
+    (state: RootState) => state.wallet_state.wallets[id].sending_transaction,
   );
 
   const send_transaction_result = useSelector(
-    state => state.wallet_state.wallets[id].send_transaction_result
+    (state: RootState) =>
+      state.wallet_state.wallets[id].send_transaction_result,
   );
 
-  const colour = useSelector(state => state.wallet_state.wallets[id].colour);
-  const syncing = useSelector(state => state.wallet_state.status.syncing);
+  const colour = useSelector(
+    (state: RootState) => state.wallet_state.wallets[id].colour,
+  );
+  const syncing = useSelector(
+    (state: RootState) => state.wallet_state.status.syncing,
+  );
   const result = get_transaction_result(send_transaction_result);
-  let result_message = result.message;
-  let result_class = result.success
+  const result_message = result.message;
+  const result_class = result.success
     ? classes.resultSuccess
     : classes.resultFailure;
 
   function farm() {
-    var address = address_input.value;
-    if (address !== "") {
+    const address = address_input.value;
+    if (address !== '') {
       dispatch(farm_block(address));
     }
   }
@@ -457,67 +493,67 @@ const SendCard = props => {
       return;
     }
     if (syncing) {
-      dispatch(openDialog("Please finish syncing before making a transaction"));
+      dispatch(openDialog('Please finish syncing before making a transaction'));
       return;
     }
     let address = address_input.value.trim();
     if (
-      amount_input.value === "" ||
+      amount_input.value === '' ||
       Number(amount_input.value) === 0 ||
       !Number(amount_input.value) ||
       isNaN(Number(amount_input.value))
     ) {
-      dispatch(openDialog("Please enter a valid numeric amount"));
+      dispatch(openDialog('Please enter a valid numeric amount'));
       return;
     }
-    if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
-      dispatch(openDialog("Please enter a valid numeric fee"));
+    if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
+      dispatch(openDialog('Please enter a valid numeric fee'));
       return;
     }
 
     const amount = colouredcoin_to_mojo(amount_input.value);
     const fee = colouredcoin_to_mojo(fee_input.value);
 
-    if (address.includes("chia_addr") || address.includes("colour_desc")) {
+    if (address.includes('chia_addr') || address.includes('colour_desc')) {
       dispatch(
         openDialog(
-          "Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address"
-        )
+          'Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address',
+        ),
       );
       return;
     }
-    if (address.substring(0, 14) === "colour_addr://") {
-      const colour_id = address.substring(14, 78);
-      address = address.substring(79);
+    if (address.slice(0, 14) === 'colour_addr://') {
+      const colour_id = address.slice(14, 78);
+      address = address.slice(79);
       if (colour_id !== colour) {
         dispatch(
           openDialog(
-            "Error the entered address appears to be for a different colour."
-          )
+            'Error the entered address appears to be for a different colour.',
+          ),
         );
         return;
       }
     }
 
-    if (address.startsWith("0x") || address.startsWith("0X")) {
-      address = address.substring(2);
+    if (address.startsWith('0x') || address.startsWith('0X')) {
+      address = address.slice(2);
     }
 
-    const amount_value = parseFloat(Number(amount));
-    const fee_value = parseFloat(Number(fee));
+    const amount_value = Number.parseFloat(amount);
+    const fee_value = Number.parseFloat(fee);
 
     if (fee_value !== 0) {
       dispatch(
         openDialog(
-          "Please enter 0 fee. Positive fees not supported yet for coloured coins."
-        )
+          'Please enter 0 fee. Positive fees not supported yet for coloured coins.',
+        ),
       );
       return;
     }
 
     dispatch(cc_spend(id, address, amount_value, fee_value));
-    address_input.value = "";
-    amount_input.value = "";
+    address_input.value = '';
+    amount_input.value = '';
   }
 
   return (
@@ -526,9 +562,7 @@ const SendCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              <Trans id="ColouredSendCard.title">
-                Create Transaction
-              </Trans>
+              <Trans id="ColouredSendCard.title">Create Transaction</Trans>
             </Typography>
           </div>
         </Grid>
@@ -547,13 +581,13 @@ const SendCard = props => {
                   color="secondary"
                   fullWidth
                   disabled={sending_transaction}
-                  inputRef={input => {
+                  inputRef={(input) => {
                     address_input = input;
                   }}
                   label={<Trans id="ColouredSendCard.address">Address</Trans>}
                 />
               </Box>
-              <Box></Box>
+              <Box />
             </Box>
           </div>
         </Grid>
@@ -569,10 +603,14 @@ const SendCard = props => {
                   disabled={sending_transaction}
                   margin="normal"
                   className={classes.amountField}
-                  inputRef={input => {
+                  inputRef={(input) => {
                     amount_input = input;
                   }}
-                  label={<Trans id="ColouredSendCard.amount">Amount ({cc_unit})</Trans>}
+                  label={
+                    <Trans id="ColouredSendCard.amount">
+                      Amount ({cc_unit})
+                    </Trans>
+                  }
                 />
               </Box>
               <Box flexGrow={6}>
@@ -583,7 +621,7 @@ const SendCard = props => {
                   color="secondary"
                   margin="normal"
                   disabled={sending_transaction}
-                  inputRef={input => {
+                  inputRef={(input) => {
                     fee_input = input;
                   }}
                   label={<Trans id="ColouredSendCard.fee">Fee (TXCH)</Trans>}
@@ -601,11 +639,9 @@ const SendCard = props => {
                   className={classes.sendButton}
                   variant="contained"
                   color="primary"
-                  style={config.local_test ? {} : { visibility: "hidden" }}
+                  style={config.local_test ? {} : { visibility: 'hidden' }}
                 >
-                  <Trans id="ColouredSendCard.farm">
-                    Farm
-                  </Trans>
+                  <Trans id="ColouredSendCard.farm">Farm</Trans>
                 </Button>
               </Box>
               <Box>
@@ -615,9 +651,7 @@ const SendCard = props => {
                   variant="contained"
                   color="primary"
                 >
-                  <Trans id="ColouredSendCard.send">
-                    Send
-                  </Trans>
+                  <Trans id="ColouredSendCard.send">Send</Trans>
                 </Button>
               </Box>
             </Box>
@@ -626,10 +660,14 @@ const SendCard = props => {
       </Grid>
     </Paper>
   );
+}
+
+type HistoryCardProps = {
+  wallet_id: number;
 };
 
-const HistoryCard = props => {
-  var id = props.wallet_id;
+function HistoryCard(props: HistoryCardProps) {
+  const id = props.wallet_id;
   const classes = useStyles();
   return (
     <Paper className={classes.paper}>
@@ -637,9 +675,7 @@ const HistoryCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              <Trans id="ColouredHistoryCard.title">
-                History
-              </Trans>
+              <Trans id="ColouredHistoryCard.title">History</Trans>
             </Typography>
           </div>
         </Grid>
@@ -649,18 +685,22 @@ const HistoryCard = props => {
       </Grid>
     </Paper>
   );
+}
+
+type TransactionTableProps = {
+  wallet_id: number;
 };
 
-const TransactionTable = props => {
+function TransactionTable(props: TransactionTableProps) {
   const classes = useStyles();
-  var id = props.wallet_id;
+  const id = props.wallet_id;
   const transactions = useSelector(
-    state => state.wallet_state.wallets[id].transactions
+    (state: RootState) => state.wallet_state.wallets[id].transactions,
   );
 
   if (transactions.length === 0) {
     return (
-      <div style={{ margin: "30px" }}>
+      <div style={{ margin: '30px' }}>
         <Trans id="ColouredTransactionTable.noPreviousTransactions">
           No previous transactions
         </Trans>
@@ -668,58 +708,48 @@ const TransactionTable = props => {
     );
   }
 
-  const incoming_string = incoming => {
+  const incoming_string = (incoming: boolean) => {
     if (incoming) {
       return <Trans id="ColouredTransactionTable.incoming">Incoming</Trans>;
-    } else {
+    } 
       return <Trans id="ColouredTransactionTable.outgoing">Outgoing</Trans>;
-    }
+    
   };
-  const confirmed_to_string = confirmed => {
-    return confirmed
-      ? <Trans id="ColouredTransactionTable.confirmed">Confirmed</Trans>
-      : <Trans id="ColouredTransactionTable.pending">Pending</Trans>;
+  const confirmed_to_string = (confirmed: boolean) => {
+    return confirmed ? (
+      <Trans id="ColouredTransactionTable.confirmed">Confirmed</Trans>
+    ) : (
+      <Trans id="ColouredTransactionTable.pending">Pending</Trans>
+    );
   };
 
   return (
     <Paper className={classes.table_root}>
       <Table stickyHeader className={classes.table}>
-        <TableHead className={classes.head}>
+        <TableHead>
           <TableRow className={classes.row}>
             <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.type">
-                Type
-              </Trans>
+              <Trans id="ColouredTransactionTable.type">Type</Trans>
             </TableCell>
             <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.to">
-                To
-              </Trans>
+              <Trans id="ColouredTransactionTable.to">To</Trans>
             </TableCell>
             <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.date">
-                Date
-              </Trans>
+              <Trans id="ColouredTransactionTable.date">Date</Trans>
             </TableCell>
             <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.status">
-                Status
-              </Trans>
+              <Trans id="ColouredTransactionTable.status">Status</Trans>
             </TableCell>
             <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.amount">
-                Amount
-              </Trans>
+              <Trans id="ColouredTransactionTable.amount">Amount</Trans>
             </TableCell>
             <TableCell className={classes.cell_short}>
-              <Trans id="ColouredTransactionTable.fee">
-                Fee
-              </Trans>
+              <Trans id="ColouredTransactionTable.fee">Fee</Trans>
             </TableCell>
           </TableRow>
         </TableHead>
         <TableBody className={classes.tableBody}>
-          {transactions.map(tx => (
+          {transactions.map((tx) => (
             <TableRow
               className={classes.row}
               key={tx.to_address + tx.created_at_time + tx.amount}
@@ -728,7 +758,7 @@ const TransactionTable = props => {
                 {incoming_string(tx.incoming)}
               </TableCell>
               <TableCell
-                style={{ maxWidth: "150px" }}
+                style={{ maxWidth: '150px' }}
                 className={classes.cell_short}
               >
                 {tx.to_address}
@@ -751,11 +781,17 @@ const TransactionTable = props => {
       </Table>
     </Paper>
   );
+}
+
+type AddressCardProps = {
+  wallet_id: number;
 };
 
-const AddressCard = props => {
-  var id = props.wallet_id;
-  const address = useSelector(state => state.wallet_state.wallets[id].address);
+function AddressCard(props: AddressCardProps) {
+  const id = props.wallet_id;
+  const address = useSelector(
+    (state: RootState) => state.wallet_state.wallets[id].address,
+  );
   const classes = useStyles();
   const dispatch = useDispatch();
 
@@ -773,9 +809,7 @@ const AddressCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              <Trans id="ColouredAddressCard.title">
-                Receive Addresss
-              </Trans>
+              <Trans id="ColouredAddressCard.title">Receive Addresss</Trans>
             </Typography>
           </div>
         </Grid>
@@ -786,7 +820,9 @@ const AddressCard = props => {
                 <TextField
                   disabled
                   fullWidth
-                  label={<Trans id="ColouredAddressCard.address">Address</Trans>}
+                  label={
+                    <Trans id="ColouredAddressCard.address">Address</Trans>
+                  }
                   value={address}
                   variant="outlined"
                 />
@@ -799,9 +835,7 @@ const AddressCard = props => {
                   color="secondary"
                   disableElevation
                 >
-                  <Trans id="ColouredAddressCard.copy">
-                    Copy
-                  </Trans>
+                  <Trans id="ColouredAddressCard.copy">Copy</Trans>
                 </Button>
               </Box>
             </Box>
@@ -810,7 +844,7 @@ const AddressCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <Box display="flex">
-              <Box flexGrow={1}></Box>
+              <Box flexGrow={1} />
               <Box>
                 <Button
                   onClick={newAddress}
@@ -818,9 +852,7 @@ const AddressCard = props => {
                   variant="contained"
                   color="primary"
                 >
-                  <Trans id="ColouredAddressCard.newAddress">
-                    New Address
-                  </Trans>
+                  <Trans id="ColouredAddressCard.newAddress">New Address</Trans>
                 </Button>
               </Box>
             </Box>
@@ -829,18 +861,24 @@ const AddressCard = props => {
       </Grid>
     </Paper>
   );
+}
+
+type ColouredWalletProps = {
+  wallet_id: number;
 };
 
-export default function ColouredWallet(props) {
+export default function ColouredWallet(props: ColouredWalletProps) {
   const classes = useStyles();
-  const id = useSelector(state => state.wallet_menu.id);
-  const name = useSelector(state => state.wallet_state.wallets[id].name);
-  const wallets = useSelector(state => state.wallet_state.wallets);
+  const id = useSelector((state: RootState) => state.wallet_menu.id);
+  const name = useSelector(
+    (state: RootState) => state.wallet_state.wallets[id].name,
+  );
+  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
 
   if (wallets.length > props.wallet_id) {
     return (
       <>
-        <ColourCard wallet_id={id} name={name} />
+        <ColourCard wallet_id={id} />
         <BalanceCard wallet_id={id} />
         <SendCard wallet_id={id} />
         <AddressCard wallet_id={id} />

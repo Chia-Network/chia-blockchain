@@ -16,7 +16,7 @@ import Flex from '../flex/Flex';
 const StyledHomeIcon = styled(HomeIcon)`
   path {
     stroke: ${({ theme }) =>
-      theme.palette.type === 'dark' ? 'white' : '#757575'};;
+      theme.palette.type === 'dark' ? 'white' : '#757575'};
     stroke-width: 1;
   }
 `;
@@ -42,45 +42,69 @@ export default function DashboardSideBar() {
       <StyledList disablePadding>
         <SideBarItem
           to="/dashboard"
-          icon={(
-            <SvgIcon fontSize="large" component={StyledHomeIcon} viewBox="0 0 32 31" />
-          )}
+          icon={
+            <SvgIcon
+              fontSize="large"
+              component={StyledHomeIcon}
+              viewBox="0 0 32 31"
+            />
+          }
           title={<Trans id="DashboardSideBar.home">Full Node</Trans>}
           exact
         />
         <SideBarItem
           to="/dashboard/wallets"
-          icon={(
-            <SvgIcon fontSize="large" component={WalletsIcon} viewBox="0 0 32 39" />
-          )}
+          icon={
+            <SvgIcon
+              fontSize="large"
+              component={WalletsIcon}
+              viewBox="0 0 32 39"
+            />
+          }
           title={<Trans id="DashboardSideBar.wallets">Wallets</Trans>}
         />
         <SideBarItem
           to="/dashboard/plot"
-          icon={(
-            <SvgIcon fontSize="large" component={PlotIcon} viewBox="0 0 40 32" />
-          )}
+          icon={
+            <SvgIcon
+              fontSize="large"
+              component={PlotIcon}
+              viewBox="0 0 40 32"
+            />
+          }
           title={<Trans id="DashboardSideBar.plot">Plot</Trans>}
         />
         <SideBarItem
           to="/dashboard/farm"
-          icon={(
-            <SvgIcon fontSize="large" component={FarmIcon} viewBox="0 0 32 37" />
-          )}
+          icon={
+            <SvgIcon
+              fontSize="large"
+              component={FarmIcon}
+              viewBox="0 0 32 37"
+            />
+          }
           title={<Trans id="DashboardSideBar.farm">Farm</Trans>}
         />
         <SideBarItem
           to="/dashboard/trade"
-          icon={(
-            <SvgIcon fontSize="large" component={TradeIcon} viewBox="0 0 34 34" />
-          )}
+          icon={
+            <SvgIcon
+              fontSize="large"
+              component={TradeIcon}
+              viewBox="0 0 34 34"
+            />
+          }
           title={<Trans id="DashboardSideBar.trade">Trade</Trans>}
         />
         <SideBarItem
           to="/"
-          icon={(
-            <SvgIcon fontSize="large" component={KeysIcon} viewBox="0 0 32 33" />
-          )}
+          icon={
+            <SvgIcon
+              fontSize="large"
+              component={KeysIcon}
+              viewBox="0 0 32 33"
+            />
+          }
           onSelect={handleLogOut}
           title={<Trans id="DashboardSideBar.keys">Keys</Trans>}
           exact

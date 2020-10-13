@@ -213,9 +213,7 @@ function BalanceCardSubSection(props: BalanceCardSubSectionProps) {
               {props.title}
               {props.tooltip && (
                 <Tooltip title={props.tooltip}>
-                  <HelpIcon
-                    style={{ color: '#c8c8c8', fontSize: 12 }}
-                   />
+                  <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
                 </Tooltip>
               )}
             </Typography>
@@ -473,7 +471,8 @@ function SendCard(props: SendCardProps) {
         ),
       );
       return;
-    } if (address.slice(0, 12) === 'chia_addr://') {
+    }
+    if (address.slice(0, 12) === 'chia_addr://') {
       address = address.slice(12);
     }
     if (address.startsWith('0x') || address.startsWith('0X')) {
@@ -638,8 +637,7 @@ function TransactionTable(props: TransactionTableProps) {
     if (incoming) {
       return <Trans id="TransactionTable.incoming">Incoming</Trans>;
     }
-      return <Trans id="TransactionTable.outgoing">Outgoing</Trans>;
-
+    return <Trans id="TransactionTable.outgoing">Outgoing</Trans>;
   };
   const confirmed_to_string = (tx: Transaction) => {
     return tx.confirmed ? (
