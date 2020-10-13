@@ -638,7 +638,7 @@ class WalletNode:
                 )
                 res = await self.wallet_state_manager.receive_block(block_record, None)
                 assert (
-                    res == ReceiveBlockResult.ADDED_TO_HEAD
+                    res == ReceiveBlockResult.NEW_TIP
                     or res == ReceiveBlockResult.ADDED_AS_ORPHAN
                 )
             self.log.info(
@@ -767,7 +767,7 @@ class WalletNode:
             self.log.info(
                 f"Added orphan {block_record.header_hash} at height {block_record.height}"
             )
-        elif res == ReceiveBlockResult.ADDED_TO_HEAD:
+        elif res == ReceiveBlockResult.NEW_TIP:
             self.log.info(
                 f"Updated LCA to {block_record.header_hash} at height {block_record.height}"
             )

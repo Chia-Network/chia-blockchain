@@ -1148,7 +1148,7 @@ class TestBlockchainTransactions:
         result, removed, error_code = await full_node_1.blockchain.receive_block(
             next_block
         )
-        assert result == ReceiveBlockResult.ADDED_TO_HEAD
+        assert result == ReceiveBlockResult.NEW_TIP
 
     @pytest.mark.asyncio
     async def test_assert_fee_condition(self, two_nodes):
