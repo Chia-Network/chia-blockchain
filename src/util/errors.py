@@ -73,6 +73,9 @@ class Err(Enum):
     INVALID_FEES_COIN_PARENT = 47
     ASSERT_FEE_CONDITION_FAILED = 48
 
+    NOT_BLOCK_BUT_HAS_DATA = 49
+    IS_BLOCK_BUT_NO_DATA = 50
+
 
 class ConsensusError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):

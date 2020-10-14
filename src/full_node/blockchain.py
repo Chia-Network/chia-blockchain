@@ -9,7 +9,6 @@ from blspy import AugSchemeMPL
 
 from chiabip158 import PyBIP158
 
-from src.consensus.block_rewards import calculate_base_fee
 from src.consensus.constants import ConsensusConstants
 from src.full_node.block_header_validation import (
     validate_unfinished_block_header,
@@ -18,8 +17,7 @@ from src.full_node.block_header_validation import (
 )
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_min_iters
-from src.types.challenge_slot import ChallengeSlot
+from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iterations
 from src.types.coin import Coin, hash_coin_list
 from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
@@ -317,16 +315,15 @@ class Blockchain:
         return False
 
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
-        # TODO(mariano)
         return get_next_difficulty(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
 
-    def get_next_min_iters(self, header_hash: bytes32) -> uint64:
-        # TODO(mariano)
-        return get_next_min_iters(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
+    def get_next_slot_iters(self, header_hash: bytes32) -> uint64:
+        return get_next_slot_iterations(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
 
     async def pre_validate_blocks_multiprocessing(
         self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
+        # TODO(mariano): review
         futures = []
         # Pool of workers to validate blocks concurrently
         for block in blocks:
@@ -351,6 +348,7 @@ class Blockchain:
     async def validate_unfinished_block(
         self, block: FullBlock, prev_full_block: FullBlock
     ) -> Tuple[Optional[Err], Optional[uint64]]:
+        # TODO(mariano): review
         prev_hb = prev_full_block.get_header_block()
         assert prev_hb is not None
         return await validate_unfinished_block_header(
@@ -368,12 +366,25 @@ class Blockchain:
         Validates the transactions and body of the block. Returns None if everything
         validates correctly, or an Err if something does not validate.
         """
+        # If it is a sub block but not a block, there is no body to validate. Check that all fields are None
+        if not block.foliage_sub_block.is_block:
+            if (
+                block.foliage_block is not None
+                or block.transactions_filter is not None
+                or block.transactions_info is not None
+                or block.transactions_generator is not None
+            ):
+                return Err.NOT_BLOCK_BUT_HAS_DATA
+
+        if block.foliage_block is None or block.transactions_filter is None or block.transactions_info is None:
+            return Err.IS_BLOCK_BUT_NO_DATA
 
         # 6. The compact block filter must be correct, according to the body (BIP158)
-        if std_hash(block.transactions_filter) != block.header.data.filter_hash:
+        if std_hash(block.transactions_filter) != block.foliage_block.filter_hash:
             return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
         fee_base = calculate_base_fee(block.height)
+
         # target reward_fee = 1/8 coinbase reward + tx fees
         if block.transactions_generator is not None:
             # 14. Make sure transactions generator hash is valid (or all 0 if not present)
