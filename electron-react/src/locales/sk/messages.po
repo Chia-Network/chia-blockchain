@@ -97,151 +97,155 @@ msgstr ""
 msgid "BalanceCard.viewPendingBalances"
 msgstr ""
 
-#: src/components/block/Block.js:176
+#: src/components/block/Block.jsx:190
 msgid "Block.blockVDFIterations"
 msgstr ""
 
-#: src/components/block/Block.js:179
+#: src/components/block/Block.jsx:193
 msgid "Block.blockVDFIterationsTooltip"
 msgstr ""
 
-#: src/components/block/Block.js:207
+#: src/components/block/Block.jsx:238
 msgid "Block.coinbaseAmount"
 msgstr ""
 
-#: src/components/block/Block.js:210
+#: src/components/block/Block.jsx:241
 msgid "Block.coinbaseAmountTooltip"
 msgstr ""
 
-#: src/components/block/Block.js:215
+#: src/components/block/Block.jsx:247
 msgid "Block.coinbasePuzzleHash"
 msgstr ""
 
-#: src/components/block/Block.js:239
+#: src/components/block/Block.jsx:274
 msgid "Block.description"
 msgstr ""
 
-#: src/components/block/Block.js:165
+#: src/components/block/Block.jsx:176
 msgid "Block.difficulty"
 msgstr ""
 
-#: src/components/block/Block.js:218
+#: src/components/block/Block.jsx:251
 msgid "Block.feesAmount"
 msgstr ""
 
-#: src/components/block/Block.js:221
+#: src/components/block/Block.jsx:254
 msgid "Block.feesAmountTooltip"
 msgstr ""
 
-#: src/components/block/Block.js:226
+#: src/components/block/Block.jsx:260
 msgid "Block.feesPuzzleHash"
 msgstr ""
 
-#: src/components/block/Block.js:139
+#: src/components/block/Block.jsx:144
 msgid "Block.headerHash"
 msgstr ""
 
-#: src/components/block/Block.js:151
+#: src/components/block/Block.jsx:158
 msgid "Block.height"
 msgstr ""
 
-#: src/components/block/Block.js:193
+#: src/components/block/Block.jsx:212
 msgid "Block.plotId"
 msgstr ""
 
-#: src/components/block/Block.js:196
+#: src/components/block/Block.jsx:215
 msgid "Block.plotIdTooltip"
 msgstr ""
 
-#: src/components/block/Block.js:187
+#: src/components/block/Block.jsx:204
 msgid "Block.plotPublicKey"
 msgstr ""
 
-#: src/components/block/Block.js:190
+#: src/components/block/Block.jsx:208
 msgid "Block.poolPublicKey"
 msgstr ""
 
-#: src/components/block/Block.js:162
+#: src/components/block/Block.jsx:172
 msgid "Block.previousBlock"
 msgstr ""
 
-#: src/components/block/Block.js:184
+#: src/components/block/Block.jsx:200
 msgid "Block.proofOfSpaceSize"
 msgstr ""
 
-#: src/components/block/Block.js:142
+#: src/components/block/Block.jsx:148
 msgid "Block.timestamp"
 msgstr ""
 
-#: src/components/block/Block.js:145
+#: src/components/block/Block.jsx:151
 msgid "Block.timestampTooltip"
 msgstr ""
 
-#: src/components/block/Block.js:235
+#: src/components/block/Block.jsx:270
 msgid "Block.title"
 msgstr ""
 
-#: src/components/block/Block.js:168
+#: src/components/block/Block.jsx:180
 msgid "Block.totalVDFIterations"
 msgstr ""
 
-#: src/components/block/Block.js:171
+#: src/components/block/Block.jsx:183
 msgid "Block.totalVDFIterationsTooltip"
 msgstr ""
 
-#: src/components/block/Block.js:201
+#: src/components/block/Block.jsx:223
 msgid "Block.transactionsFilterHash"
 msgstr ""
 
-#: src/components/block/Block.js:204
+#: src/components/block/Block.jsx:231
 msgid "Block.transactionsGeneratorHash"
 msgstr ""
 
-#: src/components/block/Block.js:154
+#: src/components/block/Block.jsx:162
 msgid "Block.weight"
 msgstr ""
 
-#: src/components/block/Block.js:157
+#: src/components/block/Block.jsx:165
 msgid "Block.weightTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:415
+#: src/components/fullNode/FullNode.jsx:426
 msgid "BlocksCard.expectedFinishTime"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:400
+#: src/components/fullNode/FullNode.jsx:417
 msgid "BlocksCard.headerHash"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:405
+#: src/components/fullNode/FullNode.jsx:420
 msgid "BlocksCard.height"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:410
+#: src/components/fullNode/FullNode.jsx:423
 msgid "BlocksCard.timeCreated"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:386
+#: src/components/fullNode/FullNode.jsx:405
 msgid "BlocksCard.title"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:282
+#: src/components/wallet/create/WalletCreate.jsx:164
+msgid "CCListItems.title"
+msgstr ""
+
+#: src/components/farmer/Farmer.jsx:288
 msgid "Challenges.bestEstimate"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:267
+#: src/components/farmer/Farmer.jsx:277
 msgid "Challenges.challengeHash"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:272
+#: src/components/farmer/Farmer.jsx:280
 msgid "Challenges.height"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:277
+#: src/components/farmer/Farmer.jsx:283
 msgid "Challenges.numberOfProofs"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:253
+#: src/components/farmer/Farmer.jsx:265
 msgid "Challenges.title"
 msgstr ""
 
@@ -365,150 +369,271 @@ msgstr ""
 msgid "ColouredTransactionTable.type"
 msgstr ""
 
-#: src/components/connections/Connections.js:208
+#: src/components/connections/Connections.jsx:194
 msgid "Connections.connect"
 msgstr ""
 
-#: src/components/connections/Connections.js:186
+#: src/components/connections/Connections.jsx:170
 msgid "Connections.connectToOtherPeersTitle"
 msgstr ""
 
-#: src/components/connections/Connections.js:125
+#: src/components/connections/Connections.jsx:115
 msgid "Connections.connected"
 msgstr ""
 
-#: src/components/connections/Connections.js:119
+#: src/components/connections/Connections.jsx:109
 msgid "Connections.connectionType"
 msgstr ""
 
-#: src/components/connections/Connections.js:138
+#: src/components/connections/Connections.jsx:124
 msgid "Connections.delete"
 msgstr ""
 
-#: src/components/connections/Connections.js:104
+#: src/components/connections/Connections.jsx:100
 msgid "Connections.ipAddress"
 msgstr ""
 
-#: src/components/connections/Connections.js:192
+#: src/components/connections/Connections.jsx:177
 msgid "Connections.ipAddressHost"
 msgstr ""
 
-#: src/components/connections/Connections.js:132
+#: src/components/connections/Connections.jsx:120
 msgid "Connections.lastMessage"
 msgstr ""
 
-#: src/components/connections/Connections.js:99
+#: src/components/connections/Connections.jsx:97
 msgid "Connections.nodeId"
 msgstr ""
 
-#: src/components/connections/Connections.js:109
-#: src/components/connections/Connections.js:197
+#: src/components/connections/Connections.jsx:103
+#: src/components/connections/Connections.jsx:183
 msgid "Connections.port"
 msgstr ""
 
-#: src/components/connections/Connections.js:85
+#: src/components/connections/Connections.jsx:85
 msgid "Connections.title"
 msgstr ""
 
-#: src/components/connections/Connections.js:114
+#: src/components/connections/Connections.jsx:106
 msgid "Connections.upDown"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:329
+#: src/components/wallet/create/createExistingColouredCoin.jsx:112
+msgid "CreateExistingCCWallet.colourString"
+msgstr ""
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:138
+msgid "CreateExistingCCWallet.create"
+msgstr ""
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:68
+msgid "CreateExistingCCWallet.enterValidFee"
+msgstr ""
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:128
+msgid "CreateExistingCCWallet.fee"
+msgstr ""
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:92
+msgid "CreateExistingCCWallet.title"
+msgstr ""
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:120
+msgid "CreateNewCCWallet.amount"
+msgstr ""
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:143
+msgid "CreateNewCCWallet.create"
+msgstr ""
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:67
+msgid "CreateNewCCWallet.enterValidAmount"
+msgstr ""
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:77
+msgid "CreateNewCCWallet.enterValidFee"
+msgstr ""
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:133
+msgid "CreateNewCCWallet.fee"
+msgstr ""
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:101
+msgid "CreateNewCCWallet.generateNewColour"
+msgstr ""
+
+#: src/components/trading/CreateOffer.jsx:354
 msgid "CreateOffer.add"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:227
+#: src/components/trading/CreateOffer.jsx:244
 msgid "CreateOffer.addTradePair"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:318
+#: src/components/trading/CreateOffer.jsx:343
 msgid "CreateOffer.amount"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:246
+#: src/components/trading/CreateOffer.jsx:266
 msgid "CreateOffer.availableOnlyFromElectron"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:279
+#: src/components/trading/CreateOffer.jsx:303
 msgid "CreateOffer.buyOrSell"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:359
+#: src/components/trading/CreateOffer.jsx:380
 msgid "CreateOffer.cancel"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:297
+#: src/components/trading/CreateOffer.jsx:322
 msgid "CreateOffer.colour"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:347
+#: src/components/trading/CreateOffer.jsx:370
 msgid "CreateOffer.save"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:205
+#: src/components/trading/CreateOffer.jsx:210
 msgid "CreateOffer.selectAmount"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:209
+#: src/components/trading/CreateOffer.jsx:219
 msgid "CreateOffer.selectBuyOrSell"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:201
+#: src/components/trading/CreateOffer.jsx:199
 msgid "CreateOffer.selectCoinType"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:260
+#: src/components/trading/CreateOffer.jsx:283
 msgid "CreateOffer.title"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:453
+#: src/components/plotter/Plotter.jsx:481
 msgid "CreatePlot.colour"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:563
+#: src/components/plotter/Plotter.jsx:589
 msgid "CreatePlot.create"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:404
+#: src/components/plotter/Plotter.jsx:432
 msgid "CreatePlot.description"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:514
+#: src/components/plotter/Plotter.jsx:542
 msgid "CreatePlot.numberOfBuckets"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:524
+#: src/components/plotter/Plotter.jsx:552
 msgid "CreatePlot.numberOfBucketsDescription"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:496
+#: src/components/plotter/Plotter.jsx:524
 msgid "CreatePlot.numberOfThreads"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:424
-#: src/components/plotter/Plotter.js:429
+#: src/components/plotter/Plotter.jsx:452
+#: src/components/plotter/Plotter.jsx:457
 msgid "CreatePlot.plotSize"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:470
+#: src/components/plotter/Plotter.jsx:498
 msgid "CreatePlot.ramMaxUsage"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:481
+#: src/components/plotter/Plotter.jsx:509
 msgid "CreatePlot.ramMaxUsageDescription"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:371
+#: src/components/plotter/Plotter.jsx:388
 msgid "CreatePlot.specifyFinalDirectory"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:537
+#: src/components/plotter/Plotter.jsx:565
 msgid "CreatePlot.stripeSize"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:396
+#: src/components/plotter/Plotter.jsx:426
 msgid "CreatePlot.title"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:248
+msgid "CreateRLAdminWallet.amountForInitialCoin"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:322
+msgid "CreateRLAdminWallet.create"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:187
+msgid "CreateRLAdminWallet.createRateLimitedAdminWallet"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:138
+msgid "CreateRLAdminWallet.enterValidInitialCoin"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:148
+msgid "CreateRLAdminWallet.enterValidNumericFee"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:98
+msgid "CreateRLAdminWallet.enterValidNumericInterval"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:123
+msgid "CreateRLAdminWallet.enterValidPubkey"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:113
+msgid "CreateRLAdminWallet.enterValidSpendableAmount"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:255
+#: src/components/wallet/create/createRLAdmin.jsx:287
+msgid "CreateRLAdminWallet.fee"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:272
+msgid "CreateRLAdminWallet.initialAmount"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:223
+msgid "CreateRLAdminWallet.interval"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:312
+msgid "CreateRLAdminWallet.pubkey"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:236
+msgid "CreateRLAdminWallet.spendableAmount"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:205
+msgid "CreateRLAdminWallet.spendableAmountPerInterval"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:198
+msgid "CreateRLAdminWallet.spendingIntervalLength"
+msgstr ""
+
+#: src/components/wallet/create/createRLAdmin.jsx:296
+msgid "CreateRLAdminWallet.userPubkey"
+msgstr ""
+
+#: src/components/wallet/create/createRLUser.jsx:103
+msgid "CreateRLUserWallet.create"
+msgstr ""
+
+#: src/components/wallet/create/createRLUser.jsx:89
+msgid "CreateRLUserWallet.description"
+msgstr ""
+
+#: src/components/wallet/create/createRLUser.jsx:78
+msgid "CreateRLUserWallet.title"
 msgstr ""
 
 #: src/components/wallet/Wallets.tsx:129
@@ -555,49 +680,49 @@ msgstr ""
 msgid "DeleteAllKeys.title"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:734
+#: src/components/farmer/Farmer.jsx:715
 msgid "Farmer.title"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:120
+#: src/components/farmer/Farmer.jsx:122
 msgid "FarmerStatus.connected"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:119
-#: src/components/farmer/Farmer.js:126
+#: src/components/farmer/Farmer.jsx:120
+#: src/components/farmer/Farmer.jsx:129
 msgid "FarmerStatus.connectionStatus"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:152
-#: src/components/farmer/Farmer.js:157
+#: src/components/farmer/Farmer.jsx:161
+#: src/components/farmer/Farmer.jsx:170
 msgid "FarmerStatus.lastHeightFarmed"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:153
+#: src/components/farmer/Farmer.jsx:164
 msgid "FarmerStatus.noBlocksFarmedYet"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:127
+#: src/components/farmer/Farmer.jsx:131
 msgid "FarmerStatus.notConnected"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:224
+#: src/components/farmer/Farmer.jsx:238
 msgid "FarmerStatus.title"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:147
+#: src/components/farmer/Farmer.jsx:155
 msgid "FarmerStatus.totalChiaFarmed"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:136
+#: src/components/farmer/Farmer.jsx:141
 msgid "FarmerStatus.totalSizeOfLocalPlots"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:538
+#: src/components/fullNode/FullNode.jsx:545
 msgid "FullNode.title"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:354
+#: src/components/fullNode/FullNode.jsx:375
 msgid "FullNodeStatus.title"
 msgstr ""
 
@@ -609,324 +734,356 @@ msgstr ""
 msgid "LocaleToggle.helpToTranslate"
 msgstr ""
 
-#: src/components/trading/ViewOffer.js:197
+#: src/components/wallet/create/WalletCreate.jsx:116
+msgid "MainWalletList.colouredCoin"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:240
+msgid "MainWalletList.createAdminWallet"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:176
+msgid "MainWalletList.createNewColouredCoin"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:252
+msgid "MainWalletList.createUserWallet"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:188
+msgid "MainWalletList.createWalletForExistingColour"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:126
+msgid "MainWalletList.rateLimited"
+msgstr ""
+
+#: src/components/wallet/create/WalletCreate.jsx:104
+msgid "MainWalletList.title"
+msgstr ""
+
+#: src/components/trading/ViewOffer.jsx:195
 msgid "OfferDropView.dragAndDropOfferFile"
 msgstr ""
 
-#: src/components/trading/ViewOffer.js:181
+#: src/components/trading/ViewOffer.jsx:181
 msgid "OfferDropView.title"
 msgstr ""
 
-#: src/components/trading/ViewOffer.js:285
+#: src/components/trading/ViewOffer.jsx:279
 msgid "OfferRow.buy"
 msgstr ""
 
-#: src/components/trading/ViewOffer.js:284
+#: src/components/trading/ViewOffer.jsx:277
 msgid "OfferRow.sell"
 msgstr ""
 
-#: src/components/trading/ViewOffer.js:255
+#: src/components/trading/ViewOffer.jsx:251
 msgid "OfferView.accept"
 msgstr ""
 
-#: src/components/trading/ViewOffer.js:267
+#: src/components/trading/ViewOffer.jsx:261
 msgid "OfferView.cancel"
 msgstr ""
 
-#: src/components/trading/ViewOffer.js:232
+#: src/components/trading/ViewOffer.jsx:230
 msgid "OfferView.title"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:458
+#: src/components/trading/TradingOverview.jsx:443
 msgid "PendingTrades.title"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:600
+#: src/components/farmer/Farmer.jsx:585
 msgid "Plots.back"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:435
-#: src/components/farmer/Farmer.js:609
+#: src/components/farmer/Farmer.jsx:425
+#: src/components/farmer/Farmer.jsx:592
 msgid "Plots.delete"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:586
+#: src/components/farmer/Farmer.jsx:573
 msgid "Plots.deleteAllKeys"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:592
+#: src/components/farmer/Farmer.jsx:577
 msgid "Plots.deleteAllKeysDescription"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:512
+#: src/components/farmer/Farmer.jsx:498
 msgid "Plots.deletePlotsDescription"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:544
+#: src/components/farmer/Farmer.jsx:530
 msgid "Plots.failedToOpenPlots"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:550
+#: src/components/farmer/Farmer.jsx:536
 msgid "Plots.failedToOpenPlotsDescription"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:410
+#: src/components/farmer/Farmer.jsx:410
 msgid "Plots.filename"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:385
+#: src/components/farmer/Farmer.jsx:385
 msgid "Plots.managePlotDirectories"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:506
+#: src/components/farmer/Farmer.jsx:494
 msgid "Plots.notFoundPlots"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:420
+#: src/components/farmer/Farmer.jsx:416
 msgid "Plots.plotId"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:425
+#: src/components/farmer/Farmer.jsx:419
 msgid "Plots.plotPk"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:430
+#: src/components/farmer/Farmer.jsx:422
 msgid "Plots.pootPk"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:372
+#: src/components/farmer/Farmer.jsx:374
 msgid "Plots.refreshPlots"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:415
+#: src/components/farmer/Farmer.jsx:413
 msgid "Plots.size"
 msgstr ""
 
-#: src/components/farmer/Farmer.js:362
+#: src/components/farmer/Farmer.jsx:366
 msgid "Plots.title"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:286
+#: src/components/plotter/Plotter.jsx:297
 msgid "PlotterFinalLocation.availableOnlyFromElectron"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:303
+#: src/components/plotter/Plotter.jsx:317
 msgid "PlotterFinalLocation.finalFolderLocation"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:316
+#: src/components/plotter/Plotter.jsx:334
 msgid "PlotterFinalLocation.select"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:624
+#: src/components/plotter/Plotter.jsx:645
 msgid "PlotterProgress.cancel"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:637
+#: src/components/plotter/Plotter.jsx:656
 msgid "PlotterProgress.clearLog"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:608
+#: src/components/plotter/Plotter.jsx:629
 msgid "PlotterProgress.plottingStoppedSuccesfully"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:594
+#: src/components/plotter/Plotter.jsx:618
 msgid "PlotterProgress.title"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:229
+#: src/components/plotter/Plotter.jsx:231
 msgid "PlotterWorkLocation.availableOnlyFromElectron"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:259
+#: src/components/plotter/Plotter.jsx:268
 msgid "PlotterWorkLocation.select"
 msgstr ""
 
-#: src/components/plotter/Plotter.js:247
+#: src/components/plotter/Plotter.jsx:252
 msgid "PlotterWorkLocation.temporaryFolderLocation"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:646
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:650
 msgid "RLBalanceCard.pendingBalance"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:651
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:659
 msgid "RLBalanceCard.pendingChange"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:641
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:641
 msgid "RLBalanceCard.pendingTotalBalance"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:618
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:616
 msgid "RLBalanceCard.spendableBalance"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:606
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:605
 msgid "RLBalanceCard.title"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:613
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:610
 msgid "RLBalanceCard.totalBalance"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:633
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:632
 msgid "RLBalanceCard.viewPendingBalances"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:464
-#: src/components/wallet/rateLimited/WalletRateLimited.js:538
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:539
 msgid "RLDetailsCard.copy"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:513
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:512
 msgid "RLDetailsCard.description"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:525
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:525
 msgid "RLDetailsCard.infoPacket"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:451
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
 msgid "RLDetailsCard.myPubkey"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:429
-#: src/components/wallet/rateLimited/WalletRateLimited.js:493
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:430
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
 msgid "RLDetailsCard.spendingInterval"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:436
-#: src/components/wallet/rateLimited/WalletRateLimited.js:500
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:437
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:498
 msgid "RLDetailsCard.spendingLimit"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:418
-#: src/components/wallet/rateLimited/WalletRateLimited.js:482
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:421
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:482
 msgid "RLDetailsCard.title"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:850
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:869
 msgid "RLHistoryCard.title"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:777
+#: src/components/wallet/create/WalletCreate.jsx:228
+msgid "RLListItems.title"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:795
 msgid "RLSendCard.addressPuzzleHash"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:798
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:819
 msgid "RLSendCard.amount"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:735
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:753
 msgid "RLSendCard.enter0fee"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:710
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:724
 msgid "RLSendCard.enterValidAmount"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:718
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:734
 msgid "RLSendCard.enterValidFee"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:811
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:832
 msgid "RLSendCard.fee"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:828
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:849
 msgid "RLSendCard.send"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:754
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:773
 msgid "RLSendCard.title"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:696
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:708
 msgid "RLSendCard.waitForSyncing"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:912
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:931
 msgid "RLTransactionTable.amount"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:890
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:907
 msgid "RLTransactionTable.confirmed"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:906
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:925
 msgid "RLTransactionTable.date"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:915
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:934
 msgid "RLTransactionTable.fee"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:883
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:900
 msgid "RLTransactionTable.incoming"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:874
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:891
 msgid "RLTransactionTable.noPreviousTransactions"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:885
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:902
 msgid "RLTransactionTable.outgoing"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:891
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:909
 msgid "RLTransactionTable.pending"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:909
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:928
 msgid "RLTransactionTable.status"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:903
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:922
 msgid "RLTransactionTable.to"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:900
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:919
 msgid "RLTransactionTable.type"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:322
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:327
 msgid "RTIncompleteCard.copy"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:294
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:297
 msgid "RTIncompleteCard.description"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:335
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:338
 msgid "RTIncompleteCard.description2"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:352
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:356
 msgid "RTIncompleteCard.infoPacket"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:366
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:371
 msgid "RTIncompleteCard.submit"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:283
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:286
 msgid "RTIncompleteCard.title"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.js:309
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
 msgid "RTIncompleteCard.userPubkey"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:491
+#: src/components/fullNode/FullNode.jsx:500
 msgid "SearchBlock.blockHash"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:504
+#: src/components/fullNode/FullNode.jsx:513
 msgid "SearchBlock.search"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:479
+#: src/components/fullNode/FullNode.jsx:490
 msgid "SearchBlock.title"
 msgstr ""
 
@@ -1026,177 +1183,177 @@ msgstr ""
 msgid "StatusCard.title"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:251
-#: src/components/fullNode/FullNode.js:258
+#: src/components/fullNode/FullNode.jsx:260
+#: src/components/fullNode/FullNode.jsx:267
 msgid "StatusItem.connectionStatus"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:252
+#: src/components/fullNode/FullNode.jsx:261
 msgid "StatusItem.connectionStatusConnected"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:259
+#: src/components/fullNode/FullNode.jsx:269
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:266
+#: src/components/fullNode/FullNode.jsx:279
 msgid "StatusItem.difficulty"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:293
+#: src/components/fullNode/FullNode.jsx:310
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:296
+#: src/components/fullNode/FullNode.jsx:316
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:273
+#: src/components/fullNode/FullNode.jsx:287
 msgid "StatusItem.iterationsPerSecond"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:276
+#: src/components/fullNode/FullNode.jsx:291
 msgid "StatusItem.iterationsPerSecondTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:194
-#: src/components/fullNode/FullNode.js:200
+#: src/components/fullNode/FullNode.jsx:199
+#: src/components/fullNode/FullNode.jsx:205
 msgid "StatusItem.lcaBlockHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:230
-#: src/components/fullNode/FullNode.js:243
+#: src/components/fullNode/FullNode.jsx:239
+#: src/components/fullNode/FullNode.jsx:252
 msgid "StatusItem.lcaTime"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:233
+#: src/components/fullNode/FullNode.jsx:242
 msgid "StatusItem.lcaTimeTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:214
-#: src/components/fullNode/FullNode.js:220
+#: src/components/fullNode/FullNode.jsx:220
+#: src/components/fullNode/FullNode.jsx:228
 msgid "StatusItem.maxTipBlockHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:285
+#: src/components/fullNode/FullNode.jsx:301
 msgid "StatusItem.minIterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:160
-#: src/components/fullNode/FullNode.js:172
-#: src/components/fullNode/FullNode.js:184
+#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:177
+#: src/components/fullNode/FullNode.jsx:189
 msgid "StatusItem.status"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:185
+#: src/components/fullNode/FullNode.jsx:190
 msgid "StatusItem.statusNotConnected"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:173
+#: src/components/fullNode/FullNode.jsx:178
 msgid "StatusItem.statusSynced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:176
+#: src/components/fullNode/FullNode.jsx:181
 msgid "StatusItem.statusSyncedTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:164
+#: src/components/fullNode/FullNode.jsx:168
 msgid "StatusItem.statusTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.js:161
+#: src/components/fullNode/FullNode.jsx:162
 msgid "StatusItem.statusValue"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:254
+#: src/components/trading/TradingOverview.jsx:246
 msgid "TradeDetail.acceptedAtTime"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:258
+#: src/components/trading/TradingOverview.jsx:250
 msgid "TradeDetail.acceptedAtTimeTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:439
+#: src/components/trading/TradingOverview.jsx:426
 msgid "TradeDetail.cancel"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:426
+#: src/components/trading/TradingOverview.jsx:415
 msgid "TradeDetail.cancelAndSpend"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:401
+#: src/components/trading/TradingOverview.jsx:392
 msgid "TradeDetail.coins"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:218
+#: src/components/trading/TradingOverview.jsx:210
 msgid "TradeDetail.confirmedAtBlock"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:222
+#: src/components/trading/TradingOverview.jsx:214
 msgid "TradeDetail.confirmedAtBlockTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:200
+#: src/components/trading/TradingOverview.jsx:190
 msgid "TradeDetail.createdAt"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:204
+#: src/components/trading/TradingOverview.jsx:194
 msgid "TradeDetail.createdAtTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:234
+#: src/components/trading/TradingOverview.jsx:226
 msgid "TradeDetail.createdByUs"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:238
+#: src/components/trading/TradingOverview.jsx:230
 msgid "TradeDetail.createdByUsTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:231
+#: src/components/trading/TradingOverview.jsx:223
 msgid "TradeDetail.no"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:248
+#: src/components/trading/TradingOverview.jsx:240
 msgid "TradeDetail.notAcceptedYet"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:212
+#: src/components/trading/TradingOverview.jsx:203
 msgid "TradeDetail.notConfirmedYet"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:193
+#: src/components/trading/TradingOverview.jsx:183
 msgid "TradeDetail.status"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:196
+#: src/components/trading/TradingOverview.jsx:186
 msgid "TradeDetail.statusTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:383
+#: src/components/trading/TradingOverview.jsx:376
 msgid "TradeDetail.title"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:182
+#: src/components/trading/TradingOverview.jsx:176
 msgid "TradeDetail.tradeId"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:186
+#: src/components/trading/TradingOverview.jsx:179
 msgid "TradeDetail.tradeIdTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:229
+#: src/components/trading/TradingOverview.jsx:221
 msgid "TradeDetail.yes"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:155
+#: src/components/trading/CreateOffer.jsx:150
 msgid "TradeList.amount"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:165
+#: src/components/trading/CreateOffer.jsx:160
 msgid "TradeList.colour"
 msgstr ""
 
-#: src/components/trading/CreateOffer.js:152
+#: src/components/trading/CreateOffer.jsx:147
 msgid "TradeList.side"
 msgstr ""
 
@@ -1216,31 +1373,31 @@ msgstr ""
 msgid "TradeManager.viewTrade"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:321
+#: src/components/trading/TradingOverview.jsx:313
 msgid "TradeOfferRow.buy"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:320
+#: src/components/trading/TradingOverview.jsx:311
 msgid "TradeOfferRow.sell"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:161
+#: src/components/trading/TradingOverview.jsx:155
 msgid "TradeOverviewTable.tradesShowUpHere"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:143
+#: src/components/trading/TradingOverview.jsx:139
 msgid "TradeOverviewTableHeader.date"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:132
+#: src/components/trading/TradingOverview.jsx:130
 msgid "TradeOverviewTableHeader.status"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:127
+#: src/components/trading/TradingOverview.jsx:127
 msgid "TradeOverviewTableHeader.tradeId"
 msgstr ""
 
-#: src/components/trading/TradingOverview.js:475
+#: src/components/trading/TradingOverview.jsx:458
 msgid "TradingHistory.title"
 msgstr ""
 

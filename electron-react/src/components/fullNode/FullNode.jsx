@@ -1,24 +1,24 @@
-import React from "react";
+import React from 'react';
 import { Trans } from '@lingui/macro';
-import Grid from "@material-ui/core/Grid";
-import { makeStyles } from "@material-ui/core/styles";
-import Container from "@material-ui/core/Container";
-import { useSelector, useDispatch } from "react-redux";
-import Typography from "@material-ui/core/Typography";
-import Box from "@material-ui/core/Box";
-import { Paper, Tooltip } from "@material-ui/core";
-import { unix_to_short_date } from "../../util/utils";
-import Connections from "../connections/Connections";
-import Block from "../block/Block";
-import Button from "@material-ui/core/Button";
-import TextField from "@material-ui/core/TextField";
-import HelpIcon from "@material-ui/icons/Help";
+import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core/styles';
+import Container from '@material-ui/core/Container';
+import { useSelector, useDispatch } from 'react-redux';
+import Typography from '@material-ui/core/Typography';
+import Box from '@material-ui/core/Box';
+import { Paper, Tooltip } from '@material-ui/core';
+import Button from '@material-ui/core/Button';
+import TextField from '@material-ui/core/TextField';
+import HelpIcon from '@material-ui/icons/Help';
+import { unix_to_short_date } from '../../util/utils';
+import Connections from '../connections/Connections';
+import Block from '../block/Block';
 import {
   closeConnection,
   openConnection,
   getBlock,
-  getHeader
-} from "../../modules/fullnodeMessages";
+  getHeader,
+} from '../../modules/fullnodeMessages';
 import DashboardTitle from '../dashboard/DashboardTitle';
 import Flex from '../flex/Flex';
 
@@ -26,143 +26,148 @@ import Flex from '../flex/Flex';
 
 const drawerWidth = 180;
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   menuButton: {
-    marginRight: 36
+    marginRight: 36,
   },
   searchHashButton: {
-    marginLeft: "10px",
-    height: "100%"
+    marginLeft: '10px',
+    height: '100%',
   },
   menuButtonHidden: {
-    display: "none"
+    display: 'none',
   },
   title: {
-    flexGrow: 1
+    flexGrow: 1,
   },
   drawerPaper: {
-    position: "relative",
-    whiteSpace: "nowrap",
+    position: 'relative',
+    whiteSpace: 'nowrap',
     width: drawerWidth,
-    transition: theme.transitions.create("width", {
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   drawerPaperClose: {
-    overflowX: "hidden",
-    transition: theme.transitions.create("width", {
+    overflowX: 'hidden',
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
+      duration: theme.transitions.duration.leavingScreen,
     }),
     width: theme.spacing(7),
-    [theme.breakpoints.up("sm")]: {
-      width: theme.spacing(9)
-    }
+    [theme.breakpoints.up('sm')]: {
+      width: theme.spacing(9),
+    },
   },
   content: {
     flexGrow: 1,
-    height: "calc(100vh - 64px)",
-    overflowX: "hidden"
+    height: 'calc(100vh - 64px)',
+    overflowX: 'hidden',
   },
   container: {
     paddingTop: theme.spacing(3),
     paddingLeft: theme.spacing(6),
     paddingRight: theme.spacing(6),
-    paddingBottom: theme.spacing(3)
+    paddingBottom: theme.spacing(3),
   },
   paper: {
     padding: theme.spacing(0),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column"
+    display: 'flex',
+    overflow: 'auto',
+    flexDirection: 'column',
   },
   fixedHeight: {
-    height: 240
+    height: 240,
   },
   drawerWallet: {
-    position: "relative",
-    whiteSpace: "nowrap",
+    position: 'relative',
+    whiteSpace: 'nowrap',
     width: drawerWidth,
-    height: "100%",
-    transition: theme.transitions.create("width", {
+    height: '100%',
+    transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   balancePaper: {
     padding: theme.spacing(2),
-    marginTop: theme.spacing(2)
+    marginTop: theme.spacing(2),
   },
   bottomOptions: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
-    width: "100%"
+    width: '100%',
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   cardSubSection: {
     paddingLeft: theme.spacing(3),
     paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1)
+    paddingTop: theme.spacing(1),
   },
   left_block_cell: {
     marginLeft: 10,
-    width: "25%",
-    textAlign: "left",
-    overflowWrap: "break-word"
+    width: '25%',
+    textAlign: 'left',
+    overflowWrap: 'break-word',
   },
   center_block_cell: {
-    width: "25%",
-    textAlign: "center",
-    overflowWrap: "break-word"
+    width: '25%',
+    textAlign: 'center',
+    overflowWrap: 'break-word',
   },
   center_block_cell_small: {
-    width: "15%",
-    textAlign: "center",
-    overflowWrap: "break-word"
+    width: '15%',
+    textAlign: 'center',
+    overflowWrap: 'break-word',
   },
   right_block_cell: {
     marginLeft: 30,
     marginRight: 10,
-    width: "25%",
-    textAlign: "right",
-    overflowWrap: "break-word"
+    width: '25%',
+    textAlign: 'right',
+    overflowWrap: 'break-word',
   },
   block_row: {
-    height: "30px",
-    cursor: "pointer",
-    borderBottom: "1px solid #eeeeee",
+    height: '30px',
+    cursor: 'pointer',
+    borderBottom: '1px solid #eeeeee',
     /* mouse over link */
-    "&:hover": {
-     // backgroundColor: "#eeeeee"
-    }
+    '&:hover': {
+      // backgroundColor: "#eeeeee"
+    },
   },
   block_row_unfinished: {
-    height: "30px",
-    borderBottom: "1px solid #eeeeee",
-    color: "orange"
+    height: '30px',
+    borderBottom: '1px solid #eeeeee',
+    color: 'orange',
   },
   block_header: {
-    marginBottom: 10
-  }
+    marginBottom: 10,
+  },
 }));
 
 const getStatusItems = (state, connected) => {
-  var status_items = [];
+  const status_items = [];
   if (state.sync && state.sync.sync_mode) {
     const progress = state.sync.sync_progress_height;
     const tip = state.sync.sync_tip_height;
     const item = {
       label: <Trans id="StatusItem.status">Status</Trans>,
-      value: <Trans id="StatusItem.statusValue">Syncing {progress}/{tip}</Trans>,
-      colour: "orange",
+      value: (
+        <Trans id="StatusItem.statusValue">
+          Syncing {progress}/{tip}
+        </Trans>
+      ),
+      colour: 'orange',
       tooltip: (
         <Trans id="StatusItem.statusTooltip">
-          The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain
+          The node is syncing, which means it is downloading blocks from other
+          nodes, to reach the latest block in the chain
         </Trans>
       ),
     };
@@ -171,19 +176,19 @@ const getStatusItems = (state, connected) => {
     const item = {
       label: <Trans id="StatusItem.status">Status</Trans>,
       value: <Trans id="StatusItem.statusSynced">Synced</Trans>,
-      colour: "#3AAC59",
+      colour: '#3AAC59',
       tooltip: (
         <Trans id="StatusItem.statusSyncedTooltip">
           This node is fully caught up and validating the network
         </Trans>
-      )
+      ),
     };
     status_items.push(item);
   } else {
     const item = {
       label: <Trans id="StatusItem.status">Status</Trans>,
       value: <Trans id="StatusItem.statusNotConnected">Not connected</Trans>,
-      colour: "black"
+      colour: 'black',
     };
     status_items.push(item);
   }
@@ -192,48 +197,52 @@ const getStatusItems = (state, connected) => {
     const lca_height = state.lca.data.height;
     const item = {
       label: <Trans id="StatusItem.lcaBlockHeight">LCA Block Height</Trans>,
-      value: "" + lca_height,
+      value: `${  lca_height}`,
     };
     status_items.push(item);
   } else {
     const item = {
       label: <Trans id="StatusItem.lcaBlockHeight">LCA Block Height</Trans>,
-      value: "0",
+      value: '0',
     };
     status_items.push(item);
   }
 
   if (state.tips) {
-    var max_height = 0;
-    for (let tip of state.tips) {
-      if (parseInt(tip.data.height) > max_height) {
-        max_height = parseInt(tip.data.height);
+    let max_height = 0;
+    for (const tip of state.tips) {
+      if (Number.parseInt(tip.data.height) > max_height) {
+        max_height = Number.parseInt(tip.data.height);
       }
     }
     const item = {
-      label: <Trans id="StatusItem.maxTipBlockHeight">Max Tip Block Height</Trans>,
-      value: "" + max_height
+      label: (
+        <Trans id="StatusItem.maxTipBlockHeight">Max Tip Block Height</Trans>
+      ),
+      value: `${  max_height}`,
     };
     status_items.push(item);
   } else {
     const item = {
-      label: <Trans id="StatusItem.maxTipBlockHeight">Max Tip Block Height</Trans>,
-      value: "0"
+      label: (
+        <Trans id="StatusItem.maxTipBlockHeight">Max Tip Block Height</Trans>
+      ),
+      value: '0',
     };
     status_items.push(item);
   }
 
   if (state.lca) {
     const lca_time = state.lca.data.timestamp;
-    const date_string = unix_to_short_date(parseInt(lca_time));
+    const date_string = unix_to_short_date(Number.parseInt(lca_time));
     const item = {
       label: <Trans id="StatusItem.lcaTime">LCA Time</Trans>,
       value: date_string,
       tooltip: (
         <Trans id="StatusItem.lcaTimeTooltip">
-          This is the time of the latest common ancestor,
-          which is a block ancestor of all tip blocks.
-          Note that the full node keeps track of up to three tips at each height.
+          This is the time of the latest common ancestor, which is a block
+          ancestor of all tip blocks. Note that the full node keeps track of up
+          to three tips at each height.
         </Trans>
       ),
     };
@@ -241,7 +250,7 @@ const getStatusItems = (state, connected) => {
   } else {
     const item = {
       label: <Trans id="StatusItem.lcaTime">LCA Time</Trans>,
-      value: ""
+      value: '',
     };
     status_items.push(item);
   }
@@ -250,31 +259,38 @@ const getStatusItems = (state, connected) => {
     const item = {
       label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
       value: <Trans id="StatusItem.connectionStatusConnected">Connected</Trans>,
-      colour: "#3AAC59"
+      colour: '#3AAC59',
     };
     status_items.push(item);
   } else {
     const item = {
       label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
-      value: <Trans id="StatusItem.connectionStatusNotConnected">Not connected</Trans>,
-      colour: "red"
+      value: (
+        <Trans id="StatusItem.connectionStatusNotConnected">
+          Not connected
+        </Trans>
+      ),
+      colour: 'red',
     };
     status_items.push(item);
   }
-  const difficulty = state.difficulty;
+  const {difficulty} = state;
   const diff_item = {
     label: <Trans id="StatusItem.difficulty">Difficulty</Trans>,
     value: difficulty,
   };
   status_items.push(diff_item);
 
-  const ips = state.ips;
+  const {ips} = state;
   const ips_item = {
-    label: <Trans id="StatusItem.iterationsPerSecond">Iterations per Second</Trans>,
+    label: (
+      <Trans id="StatusItem.iterationsPerSecond">Iterations per Second</Trans>
+    ),
     value: ips,
     tooltip: (
       <Trans id="StatusItem.iterationsPerSecondTooltip">
-        The estimated proof of time speed of the fastest timelord in the network.
+        The estimated proof of time speed of the fastest timelord in the
+        network.
       </Trans>
     ),
   };
@@ -288,13 +304,18 @@ const getStatusItems = (state, connected) => {
   status_items.push(min_item);
 
   const space =
-    (BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString() + "TiB";
+    `${(BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString()  }TiB`;
   const space_item = {
-    label: <Trans id="StatusItem.estimatedNetworkSpace">Estimated network space</Trans>,
+    label: (
+      <Trans id="StatusItem.estimatedNetworkSpace">
+        Estimated network space
+      </Trans>
+    ),
     value: space,
     tooltip: (
       <Trans id="StatusItem.estimatedNetworkSpaceTooltip">
-        Estimated sum of all the plotted disk space of all farmers in the network
+        Estimated sum of all the plotted disk space of all farmers in the
+        network
       </Trans>
     ),
   };
@@ -303,13 +324,13 @@ const getStatusItems = (state, connected) => {
   return status_items;
 };
 
-const StatusCell = props => {
+const StatusCell = (props) => {
   const classes = useStyles();
-  const item = props.item;
-  const label = item.label;
-  const value = item.value;
-  const tooltip = item.tooltip;
-  const colour = item.colour;
+  const {item} = props;
+  const {label} = item;
+  const {value} = item;
+  const {tooltip} = item;
+  const {colour} = item;
   return (
     <Grid item xs={6}>
       <div className={classes.cardSubSection}>
@@ -318,10 +339,10 @@ const StatusCell = props => {
             <Typography variant="subtitle1">{label}</Typography>
             {tooltip ? (
               <Tooltip title={tooltip}>
-                <HelpIcon style={{ color: "#c8c8c8", fontSize: 12 }}></HelpIcon>
+                <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
               </Tooltip>
             ) : (
-              ""
+              ''
             )}
           </Box>
           <Box>
@@ -335,12 +356,12 @@ const StatusCell = props => {
   );
 };
 
-const FullNodeStatus = props => {
+const FullNodeStatus = (props) => {
   const blockchain_state = useSelector(
-    state => state.full_node_state.blockchain_state
+    (state) => state.full_node_state.blockchain_state,
   );
   const connected = useSelector(
-    state => state.daemon_state.full_node_connected
+    (state) => state.daemon_state.full_node_connected,
   );
   const statusItems = getStatusItems(blockchain_state, connected);
 
@@ -351,14 +372,12 @@ const FullNodeStatus = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              <Trans id="FullNodeStatus.title">
-                Full Node Status
-              </Trans>
+              <Trans id="FullNodeStatus.title">Full Node Status</Trans>
             </Typography>
           </div>
         </Grid>
-        {statusItems.map(item => (
-          <StatusCell item={item} key={item.label.props.id}></StatusCell>
+        {statusItems.map((item) => (
+          <StatusCell item={item} key={item.label.props.id} />
         ))}
       </Grid>
     </Paper>
@@ -366,7 +385,7 @@ const FullNodeStatus = props => {
 };
 
 const BlocksCard = () => {
-  const headers = useSelector(state => state.full_node_state.headers);
+  const headers = useSelector((state) => state.full_node_state.headers);
   const dispatch = useDispatch();
 
   function clickedBlock(height, header_hash, prev_header_hash) {
@@ -383,9 +402,7 @@ const BlocksCard = () => {
       <Grid item xs={12}>
         <div className={classes.cardTitle}>
           <Typography component="h6" variant="h6">
-            <Trans id="BlocksCard.title">
-              Blocks
-            </Trans>
+            <Trans id="BlocksCard.title">Blocks</Trans>
           </Typography>
         </div>
       </Grid>
@@ -393,23 +410,17 @@ const BlocksCard = () => {
         <Box
           className={classes.block_header}
           display="flex"
-          key={"header"}
-          style={{ minWidth: "100%" }}
+          key="header"
+          style={{ minWidth: '100%' }}
         >
           <Box className={classes.left_block_cell}>
-            <Trans id="BlocksCard.headerHash">
-              Header Hash
-            </Trans>
+            <Trans id="BlocksCard.headerHash">Header Hash</Trans>
           </Box>
           <Box className={classes.center_block_cell_small}>
-            <Trans id="BlocksCard.height">
-              Height
-            </Trans>
+            <Trans id="BlocksCard.height">Height</Trans>
           </Box>
           <Box flexGrow={1} className={classes.center_block_cell}>
-            <Trans id="BlocksCard.timeCreated">
-              Time Created
-            </Trans>
+            <Trans id="BlocksCard.timeCreated">Time Created</Trans>
           </Box>
           <Box className={classes.right_block_cell}>
             <Trans id="BlocksCard.expectedFinishTime">
@@ -417,7 +428,7 @@ const BlocksCard = () => {
             </Trans>
           </Box>
         </Box>
-        {headers.map(header => (
+        {headers.map((header) => (
           <Box
             className={
               header.data.finished
@@ -429,28 +440,28 @@ const BlocksCard = () => {
                 ? clickedBlock(
                     header.data.height,
                     header.data.header_hash,
-                    header.data.prev_header_hash
+                    header.data.prev_header_hash,
                   )
                 : () => {}
             }
             display="flex"
             key={header.data.header_hash}
-            style={{ minWidth: "100%" }}
+            style={{ minWidth: '100%' }}
           >
             <Box className={classes.left_block_cell}>
-              {header.data.header_hash.substring(0, 12) + "..."}
-              {header.data.finished ? "" : " (unfinished)"}
+              {`${header.data.header_hash.slice(0, 12)  }...`}
+              {header.data.finished ? '' : ' (unfinished)'}
             </Box>
             <Box className={classes.center_block_cell_small}>
               {header.data.height}
             </Box>
             <Box flexGrow={1} className={classes.center_block_cell}>
-              {unix_to_short_date(parseInt(header.data.timestamp))}
+              {unix_to_short_date(Number.parseInt(header.data.timestamp))}
             </Box>
             <Box className={classes.right_block_cell}>
               {header.data.finished
-                ? "finished"
-                : unix_to_short_date(parseInt(header.data.finish_time))}
+                ? 'finished'
+                : unix_to_short_date(Number.parseInt(header.data.finish_time))}
             </Box>
           </Box>
         ))}
@@ -459,15 +470,15 @@ const BlocksCard = () => {
   );
 };
 
-const SearchBlock = props => {
+const SearchBlock = (props) => {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const [searchHash, setSearchHash] = React.useState("");
-  const handleChangeSearchHash = event => {
+  const [searchHash, setSearchHash] = React.useState('');
+  const handleChangeSearchHash = (event) => {
     setSearchHash(event.target.value);
   };
   const clickSearch = () => {
-    setSearchHash("");
+    setSearchHash('');
     dispatch(getBlock(searchHash));
   };
   return (
@@ -476,9 +487,7 @@ const SearchBlock = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              <Trans id="SearchBlock.title">
-                Search block by header hash
-              </Trans>
+              <Trans id="SearchBlock.title">Search block by header hash</Trans>
             </Typography>
           </div>
         </Grid>
@@ -501,9 +510,7 @@ const SearchBlock = props => {
                   color="secondary"
                   disableElevation
                 >
-                  <Trans id="SearchBlock.search">
-                    Search
-                  </Trans>
+                  <Trans id="SearchBlock.search">Search</Trans>
                 </Button>
               </Box>
             </Box>
@@ -518,39 +525,43 @@ export default function FullNode() {
   const classes = useStyles();
   const dispatch = useDispatch();
 
-  const connections = useSelector(state => state.full_node_state.connections);
+  const connections = useSelector((state) => state.full_node_state.connections);
   const connectionError = useSelector(
-    state => state.full_node_state.open_connection_error
+    (state) => state.full_node_state.open_connection_error,
   );
-  const block = useSelector(state => state.full_node_state.block);
-  const header = useSelector(state => state.full_node_state.header);
+  const block = useSelector((state) => state.full_node_state.block);
+  const header = useSelector((state) => state.full_node_state.header);
 
   const openConnectionCallback = (host, port) => {
     dispatch(openConnection(host, port));
   };
-  const closeConnectionCallback = node_id => {
+  const closeConnectionCallback = (node_id) => {
     dispatch(closeConnection(node_id));
   };
 
   return (
     <>
       <DashboardTitle>
-        <Trans id="FullNode.title">
-          Full Node
-        </Trans>
+        <Trans id="FullNode.title">Full Node</Trans>
       </DashboardTitle>
-      <Flex flexDirection="column" flexGrow={1} height="100%" overflow="auto" alignItems="center">
+      <Flex
+        flexDirection="column"
+        flexGrow={1}
+        height="100%"
+        overflow="auto"
+        alignItems="center"
+      >
         <Container maxWidth="lg">
           <Grid container spacing={3}>
             {block != null ? (
-              <Block block={block} prevHeader={header}></Block>
+              <Block block={block} prevHeader={header} />
             ) : (
               <>
                 <Grid item xs={12}>
-                  <FullNodeStatus></FullNodeStatus>
+                  <FullNodeStatus />
                 </Grid>
                 <Grid item xs={12}>
-                  <BlocksCard></BlocksCard>
+                  <BlocksCard />
                 </Grid>
                 <Grid item xs={12}>
                   <Connections
@@ -558,10 +569,10 @@ export default function FullNode() {
                     connectionError={connectionError}
                     openConnection={openConnectionCallback}
                     closeConnection={closeConnectionCallback}
-                  ></Connections>
+                   />
                 </Grid>
                 <Grid item xs={12}>
-                  <SearchBlock></SearchBlock>
+                  <SearchBlock />
                 </Grid>
               </>
             )}
@@ -570,4 +581,4 @@ export default function FullNode() {
       </Flex>
     </>
   );
-};
+}
