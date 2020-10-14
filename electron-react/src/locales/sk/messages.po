@@ -29,6 +29,18 @@ msgstr ""
 msgid "AddressCard.title"
 msgstr ""
 
+#: src/components/router/Router.tsx:19
+msgid "Application.closing"
+msgstr ""
+
+#: src/components/router/Router.tsx:26
+msgid "Application.connectingToWallet"
+msgstr ""
+
+#: src/components/router/Router.tsx:33
+msgid "Application.loggingIn"
+msgstr ""
+
 #: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "BalanceCard.balance"
 msgstr ""
@@ -211,6 +223,26 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.js:386
 msgid "BlocksCard.title"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:282
+msgid "Challenges.bestEstimate"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:267
+msgid "Challenges.challengeHash"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:272
+msgid "Challenges.height"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:277
+msgid "Challenges.numberOfProofs"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:253
+msgid "Challenges.title"
 msgstr ""
 
 #: src/components/wallet/coloured/WalletColoured.tsx:194
@@ -523,6 +555,44 @@ msgstr ""
 msgid "DeleteAllKeys.title"
 msgstr ""
 
+#: src/components/farmer/Farmer.js:734
+msgid "Farmer.title"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:120
+msgid "FarmerStatus.connected"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:119
+#: src/components/farmer/Farmer.js:126
+msgid "FarmerStatus.connectionStatus"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:152
+#: src/components/farmer/Farmer.js:157
+msgid "FarmerStatus.lastHeightFarmed"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:153
+msgid "FarmerStatus.noBlocksFarmedYet"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:127
+msgid "FarmerStatus.notConnected"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:224
+msgid "FarmerStatus.title"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:147
+msgid "FarmerStatus.totalChiaFarmed"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:136
+msgid "FarmerStatus.totalSizeOfLocalPlots"
+msgstr ""
+
 #: src/components/fullNode/FullNode.js:538
 msgid "FullNode.title"
 msgstr ""
@@ -569,6 +639,71 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.js:458
 msgid "PendingTrades.title"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:600
+msgid "Plots.back"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:435
+#: src/components/farmer/Farmer.js:609
+msgid "Plots.delete"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:586
+msgid "Plots.deleteAllKeys"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:592
+msgid "Plots.deleteAllKeysDescription"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:512
+msgid "Plots.deletePlotsDescription"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:544
+msgid "Plots.failedToOpenPlots"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:550
+msgid "Plots.failedToOpenPlotsDescription"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:410
+msgid "Plots.filename"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:385
+msgid "Plots.managePlotDirectories"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:506
+msgid "Plots.notFoundPlots"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:420
+msgid "Plots.plotId"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:425
+msgid "Plots.plotPk"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:430
+msgid "Plots.pootPk"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:372
+msgid "Plots.refreshPlots"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:415
+msgid "Plots.size"
+msgstr ""
+
+#: src/components/farmer/Farmer.js:362
+msgid "Plots.title"
 msgstr ""
 
 #: src/components/plotter/Plotter.js:286

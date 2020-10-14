@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { Trans } from '@lingui/macro';
 import Grid from "@material-ui/core/Grid";
 import { makeStyles, withStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
@@ -115,15 +116,15 @@ const getStatusItems = (
 
   if (connected) {
     const item = {
-      label: "Connection Status ",
-      value: "Connected",
+      label: <Trans id="FarmerStatus.connectionStatus">Connection Status</Trans>,
+      value: <Trans id="FarmerStatus.connected">Connected</Trans>,
       colour: "#3AAC59"
     };
     status_items.push(item);
   } else {
     const item = {
-      label: "Connection Status ",
-      value: "Not connected",
+      label: <Trans id="FarmerStatus.connectionStatus">Connection Status</Trans>,
+      value: <Trans id="FarmerStatus.notConnected">Not connected</Trans>,
       colour: "red"
     };
     status_items.push(item);
@@ -132,7 +133,7 @@ const getStatusItems = (
   const totalHours = 5.0 / proportion / 60;
 
   status_items.push({
-    label: "Total size of local plots",
+    label: <Trans id="FarmerStatus.totalSizeOfLocalPlots">Total size of local plots</Trans>,
     value: Math.floor(farmerSpace / Math.pow(1024, 3)).toString() + " GiB",
     tooltip:
       "You have " +
@@ -143,17 +144,17 @@ const getStatusItems = (
   });
 
   status_items.push({
-    label: "Total chia farmed",
+    label: <Trans id="FarmerStatus.totalChiaFarmed">Total chia farmed</Trans>,
     value: mojo_to_chia_string(totalChia)
   });
   if (biggestHeight === 0) {
     status_items.push({
-      label: "Last height farmed",
-      value: "No blocks farmed yet"
+      label: <Trans id="FarmerStatus.lastHeightFarmed">Last height farmed</Trans>,
+      value: <Trans id="FarmerStatus.noBlocksFarmedYet">No blocks farmed yet</Trans>
     });
   } else {
     status_items.push({
-      label: "Last height farmed",
+      label: <Trans id="FarmerStatus.lastHeightFarmed">Last height farmed</Trans>,
       value: biggestHeight
     });
   }
@@ -220,7 +221,9 @@ const FarmerStatus = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Farmer Status
+              <Trans id="FarmerStatus.title">
+                Farmer Status
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -247,7 +250,9 @@ const Challenges = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Challenges
+              <Trans id="Challenges.title">
+                Challenges
+              </Trans>
             </Typography>
           </div>
           <TableContainer component={Paper}>
@@ -258,10 +263,26 @@ const Challenges = props => {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Challenge hash</TableCell>
-                  <TableCell align="right">Height</TableCell>
-                  <TableCell align="right">Number of proofs</TableCell>
-                  <TableCell align="right">Best estimate</TableCell>
+                  <TableCell>
+                    <Trans id="Challenges.challengeHash">
+                      Challenge hash
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Challenges.height">
+                      Height
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Challenges.numberOfProofs">
+                      Number of proofs
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Challenges.bestEstimate">
+                      Best estimate
+                    </Trans>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -338,7 +359,9 @@ const Plots = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Plots
+              <Trans id="Plots.title">
+                Plots
+              </Trans>
               <Button
                 variant="contained"
                 color="primary"
@@ -346,7 +369,9 @@ const Plots = props => {
                 className={classes.refreshButton}
                 startIcon={<RefreshIcon />}
               >
-                Refresh plots
+                <Trans id="Plots.refreshPlots">
+                  Refresh plots
+                </Trans>
               </Button>
               <Button
                 variant="contained"
@@ -357,7 +382,9 @@ const Plots = props => {
                   addDirectorySetOpen(true);
                 }}
               >
-                Manage plot directories
+                <Trans id="Plots.managePlotDirectories">
+                  Manage plot directories
+                </Trans>
               </Button>
               <AddPlotDialog
                 classes={{
@@ -379,12 +406,36 @@ const Plots = props => {
             >
               <TableHead>
                 <TableRow>
-                  <TableCell>Filename</TableCell>
-                  <TableCell align="right">Size</TableCell>
-                  <TableCell align="right">Plot id</TableCell>
-                  <TableCell align="right">Plot pk</TableCell>
-                  <TableCell align="right">Pool pk</TableCell>
-                  <TableCell align="right">Delete</TableCell>
+                  <TableCell>
+                    <Trans id="Plots.filename">
+                      Filename
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Plots.size">
+                      Size
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Plots.plotId">
+                      Plot id
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Plots.plotPk">
+                      Plot pk
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Plots.pootPk">
+                      Pool pk
+                    </Trans>
+                  </TableCell>
+                  <TableCell align="right">
+                    <Trans id="Plots.delete">
+                      Delete
+                    </Trans>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -431,7 +482,7 @@ const Plots = props => {
                         }}
                         align="right"
                       >
-                        <DeleteForeverIcon fontSize="small"></DeleteForeverIcon>
+                        <DeleteForeverIcon fontSize="small" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -452,12 +503,16 @@ const Plots = props => {
             <span>
               <div className={classes.cardTitle}>
                 <Typography component="h6" variant="h6">
-                  Not found plots
+                  <Trans id="Plots.notFoundPlots">
+                    Not found plots
+                  </Trans>
                 </Typography>
               </div>
               <p>
-                Caution, deleting these plots will delete them forever. Check
-                that the storage devices are properly connected.
+                <Trans id="Plots.deletePlotsDescription">
+                  Caution, deleting these plots will delete them forever. Check
+                  that the storage devices are properly connected.
+                </Trans>
               </p>
               <List dense={classes.dense}>
                 {not_found_filenames.map(filename => (
@@ -486,11 +541,15 @@ const Plots = props => {
             <span>
               <div className={classes.cardTitle}>
                 <Typography component="h6" variant="h6">
-                  Failed to open (invalid plots)
+                  <Trans id="Plots.failedToOpenPlots">
+                    Failed to open (invalid plots)
+                  </Trans>
                 </Typography>
               </div>
               <p>
-                These plots are invalid, you might want to delete them forever.
+                <Trans id="Plots.failedToOpenPlotsDescription">
+                  These plots are invalid, you might want to delete them forever.
+                </Trans>
               </p>
               <List dense={classes.dense}>
                 {failed_to_open_filenames.map(filename => (
@@ -524,24 +583,32 @@ const Plots = props => {
         aria-describedby="alert-dialog-description"
       >
         <DialogTitle id="alert-dialog-title">
-          Delete all keys
+          <Trans id="Plots.deleteAllKeys">
+            Delete all keys
+          </Trans>
         </DialogTitle>
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
-            Are you sure you want to delete the plot? The plot cannot be
-            recovered.
+            <Trans id="Plots.deleteAllKeysDescription">
+              Are you sure you want to delete the plot? The plot cannot be
+              recovered.
+            </Trans>
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDeletePlot} color="secondary">
-            Back
+            <Trans id="Plots.back">
+              Back
+            </Trans>
           </Button>
           <Button
             onClick={handleCloseDeletePlotYes}
             color="secondary"
             autoFocus
           >
-            Delete
+            <Trans id="Plots.delete">
+              Delete
+            </Trans>
           </Button>
         </DialogActions>
       </Dialog>
@@ -596,7 +663,7 @@ const FarmerContent = props => {
   );
 };
 
-const Farmer = props => {
+export default function Farmer(props) {
   const dispatch = useDispatch();
 
   const [totalChiaFarmed, setTotalChiaFarmed] = useState(BigInt(0));
@@ -664,7 +731,9 @@ const Farmer = props => {
   return (
     <>
       <DashboardTitle>
-        Farming
+        <Trans id="Farmer.title">
+          Farming
+        </Trans>
       </DashboardTitle>
       <Flex flexDirection="column" flexGrow={1} height="100%" overflow="auto" alignItems="center">
         <Container maxWidth="lg">
@@ -676,6 +745,4 @@ const Farmer = props => {
       </Flex>
     </>
   );
-};
-
-export default withStyles(styles)(Farmer);
+}
