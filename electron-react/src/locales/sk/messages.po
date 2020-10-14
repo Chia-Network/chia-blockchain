@@ -33,11 +33,11 @@ msgstr ""
 msgid "Application.closing"
 msgstr ""
 
-#: src/components/router/Router.tsx:26
+#: src/components/router/Router.tsx:24
 msgid "Application.connectingToWallet"
 msgstr ""
 
-#: src/components/router/Router.tsx:33
+#: src/components/router/Router.tsx:29
 msgid "Application.loggingIn"
 msgstr ""
 
@@ -744,6 +744,178 @@ msgstr ""
 
 #: src/components/plotter/Plotter.js:247
 msgid "PlotterWorkLocation.temporaryFolderLocation"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:646
+msgid "RLBalanceCard.pendingBalance"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:651
+msgid "RLBalanceCard.pendingChange"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:641
+msgid "RLBalanceCard.pendingTotalBalance"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:618
+msgid "RLBalanceCard.spendableBalance"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:606
+msgid "RLBalanceCard.title"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:613
+msgid "RLBalanceCard.totalBalance"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:633
+msgid "RLBalanceCard.viewPendingBalances"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:464
+#: src/components/wallet/rateLimited/WalletRateLimited.js:538
+msgid "RLDetailsCard.copy"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:513
+msgid "RLDetailsCard.description"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:525
+msgid "RLDetailsCard.infoPacket"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:451
+msgid "RLDetailsCard.myPubkey"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:429
+#: src/components/wallet/rateLimited/WalletRateLimited.js:493
+msgid "RLDetailsCard.spendingInterval"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:436
+#: src/components/wallet/rateLimited/WalletRateLimited.js:500
+msgid "RLDetailsCard.spendingLimit"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:418
+#: src/components/wallet/rateLimited/WalletRateLimited.js:482
+msgid "RLDetailsCard.title"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:850
+msgid "RLHistoryCard.title"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:777
+msgid "RLSendCard.addressPuzzleHash"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:798
+msgid "RLSendCard.amount"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:735
+msgid "RLSendCard.enter0fee"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:710
+msgid "RLSendCard.enterValidAmount"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:718
+msgid "RLSendCard.enterValidFee"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:811
+msgid "RLSendCard.fee"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:828
+msgid "RLSendCard.send"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:754
+msgid "RLSendCard.title"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:696
+msgid "RLSendCard.waitForSyncing"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:912
+msgid "RLTransactionTable.amount"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:890
+msgid "RLTransactionTable.confirmed"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:906
+msgid "RLTransactionTable.date"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:915
+msgid "RLTransactionTable.fee"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:883
+msgid "RLTransactionTable.incoming"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:874
+msgid "RLTransactionTable.noPreviousTransactions"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:885
+msgid "RLTransactionTable.outgoing"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:891
+msgid "RLTransactionTable.pending"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:909
+msgid "RLTransactionTable.status"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:903
+msgid "RLTransactionTable.to"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:900
+msgid "RLTransactionTable.type"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:322
+msgid "RTIncompleteCard.copy"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:294
+msgid "RTIncompleteCard.description"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:335
+msgid "RTIncompleteCard.description2"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:352
+msgid "RTIncompleteCard.infoPacket"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:366
+msgid "RTIncompleteCard.submit"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:283
+msgid "RTIncompleteCard.title"
+msgstr ""
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:309
+msgid "RTIncompleteCard.userPubkey"
 msgstr ""
 
 #: src/components/fullNode/FullNode.js:491

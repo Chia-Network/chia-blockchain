@@ -33,11 +33,11 @@ msgstr "Receive Address"
 msgid "Application.closing"
 msgstr "Closing down node and server"
 
-#: src/components/router/Router.tsx:26
+#: src/components/router/Router.tsx:24
 msgid "Application.connectingToWallet"
 msgstr "Connecting to wallet"
 
-#: src/components/router/Router.tsx:33
+#: src/components/router/Router.tsx:29
 msgid "Application.loggingIn"
 msgstr "Logging in"
 
@@ -745,6 +745,178 @@ msgstr "Select"
 #: src/components/plotter/Plotter.js:247
 msgid "PlotterWorkLocation.temporaryFolderLocation"
 msgstr "Temporary folder location"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:646
+msgid "RLBalanceCard.pendingBalance"
+msgstr "Pending Balance"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:651
+msgid "RLBalanceCard.pendingChange"
+msgstr "Pending Change"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:641
+msgid "RLBalanceCard.pendingTotalBalance"
+msgstr "Pending Total Balance"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:618
+msgid "RLBalanceCard.spendableBalance"
+msgstr "Spendable Balance"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:606
+msgid "RLBalanceCard.title"
+msgstr "Balance"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:613
+msgid "RLBalanceCard.totalBalance"
+msgstr "Total Balance"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:633
+msgid "RLBalanceCard.viewPendingBalances"
+msgstr "View pending balances"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:464
+#: src/components/wallet/rateLimited/WalletRateLimited.js:538
+msgid "RLDetailsCard.copy"
+msgstr "Copy"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:513
+msgid "RLDetailsCard.description"
+msgstr "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:525
+msgid "RLDetailsCard.infoPacket"
+msgstr "Info Packet"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:451
+msgid "RLDetailsCard.myPubkey"
+msgstr "My Pubkey"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:429
+#: src/components/wallet/rateLimited/WalletRateLimited.js:493
+msgid "RLDetailsCard.spendingInterval"
+msgstr "Spending Interval (number of blocks): {interval}"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:436
+#: src/components/wallet/rateLimited/WalletRateLimited.js:500
+msgid "RLDetailsCard.spendingLimit"
+msgstr "Spending Limit (chia per interval): {0}"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:418
+#: src/components/wallet/rateLimited/WalletRateLimited.js:482
+msgid "RLDetailsCard.title"
+msgstr "Rate Limited Info"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:850
+msgid "RLHistoryCard.title"
+msgstr "History"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:777
+msgid "RLSendCard.addressPuzzleHash"
+msgstr "Address / Puzzle hash"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:798
+msgid "RLSendCard.amount"
+msgstr "Amount"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:735
+msgid "RLSendCard.enter0fee"
+msgstr "Please enter 0 fee. Positive fees not supported yet for RL."
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:710
+msgid "RLSendCard.enterValidAmount"
+msgstr "Please enter a valid numeric amount"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:718
+msgid "RLSendCard.enterValidFee"
+msgstr "Please enter a valid numeric fee"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:811
+msgid "RLSendCard.fee"
+msgstr "Fee"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:828
+msgid "RLSendCard.send"
+msgstr "Send"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:754
+msgid "RLSendCard.title"
+msgstr "Create Transaction"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:696
+msgid "RLSendCard.waitForSyncing"
+msgstr "Please finish syncing before making a transaction"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:912
+msgid "RLTransactionTable.amount"
+msgstr "Amount"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:890
+msgid "RLTransactionTable.confirmed"
+msgstr "Confirmed"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:906
+msgid "RLTransactionTable.date"
+msgstr "Date"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:915
+msgid "RLTransactionTable.fee"
+msgstr "Fee"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:883
+msgid "RLTransactionTable.incoming"
+msgstr "Incoming"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:874
+msgid "RLTransactionTable.noPreviousTransactions"
+msgstr "No previous transactions"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:885
+msgid "RLTransactionTable.outgoing"
+msgstr "Outgoing"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:891
+msgid "RLTransactionTable.pending"
+msgstr "Pending"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:909
+msgid "RLTransactionTable.status"
+msgstr "Status"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:903
+msgid "RLTransactionTable.to"
+msgstr "To"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:900
+msgid "RLTransactionTable.type"
+msgstr "Type"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:322
+msgid "RTIncompleteCard.copy"
+msgstr "Copy"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:294
+msgid "RTIncompleteCard.description"
+msgstr "Send your pubkey to your Rate Limited Wallet admin:"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:335
+msgid "RTIncompleteCard.description2"
+msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:352
+msgid "RTIncompleteCard.infoPacket"
+msgstr "Info Packet"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:366
+msgid "RTIncompleteCard.submit"
+msgstr "Submit"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:283
+msgid "RTIncompleteCard.title"
+msgstr "Rate Limited User Wallet Setup"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.js:309
+msgid "RTIncompleteCard.userPubkey"
+msgstr "User Pubkey"
 
 #: src/components/fullNode/FullNode.js:491
 msgid "SearchBlock.blockHash"

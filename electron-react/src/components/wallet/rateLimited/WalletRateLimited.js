@@ -958,37 +958,35 @@ export default function RateLimitedWallet(props) {
   const data = useSelector(state => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
   const type = data_parsed["type"];
-  var init_status = data_parsed["initialized"];
+  const initStatus = data_parsed["initialized"];
 
-  if (type === "user") {
-    if (init_status) {
-      return wallets.length > props.wallet_id ? (
+  if (wallets.length > props.wallet_id) {
+    if (type === "user") {
+      if (initStatus) {
+        return (
+          <Grid className={classes.walletContainer} item xs={12}>
+            <RLDetailsCard wallet_id={id} />
+            <BalanceCard wallet_id={id} />
+            <SendCard wallet_id={id} />
+            <HistoryCard wallet_id={id} />
+          </Grid>
+        );
+      } else {
+        return (
+          <Grid className={classes.walletContainer} item xs={12}>
+            <IncompleteCard wallet_id={id} />
+          </Grid>
+        );
+      }
+    } else if (type === "admin") {
+      return (
         <Grid className={classes.walletContainer} item xs={12}>
           <RLDetailsCard wallet_id={id} />
           <BalanceCard wallet_id={id} />
-          <SendCard wallet_id={id} />
-          <HistoryCard wallet_id={id} />
         </Grid>
-      ) : (
-        ""
-      );
-    } else {
-      return wallets.length > props.wallet_id ? (
-        <Grid className={classes.walletContainer} item xs={12}>
-          <IncompleteCard wallet_id={id} />
-        </Grid>
-      ) : (
-        ""
       );
     }
-  } else if (type === "admin") {
-    return wallets.length > props.wallet_id ? (
-      <Grid className={classes.walletContainer} item xs={12}>
-        <RLDetailsCard wallet_id={id} />
-        <BalanceCard wallet_id={id} />
-      </Grid>
-    ) : (
-      ""
-    );
   }
+
+  return null;
 }
