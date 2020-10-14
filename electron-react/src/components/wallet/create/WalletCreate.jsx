@@ -1,4 +1,5 @@
-import React from "react";
+import React from 'react';
+import { Trans } from '@lingui/macro';
 import {
   makeStyles,
   Typography,
@@ -12,7 +13,12 @@ import {
   ListItemText,
   Card,
   CardContent,
-} from "@material-ui/core";
+} from '@material-ui/core';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  ArrowBackIos as ArrowBackIosIcon,
+  InvertColors as InvertColorsIcon,
+} from '@material-ui/icons';
 import {
   changeCreateWallet,
   ALL_OPTIONS,
@@ -21,61 +27,59 @@ import {
   CREATE_NEW_CC,
   CREATE_RL_WALLET_OPTIONS,
   CREATE_RL_ADMIN,
-  CREATE_RL_USER
-} from "../../../modules/createWallet";
-import { useDispatch, useSelector } from "react-redux";
-import { ArrowBackIos as ArrowBackIosIcon, InvertColors as InvertColorsIcon } from "@material-ui/icons";
-import { CreateNewCCWallet } from "./createNewColouredCoin";
-import { CreateExistingCCWallet } from "./createExistingColouredCoin";
-import { CreateRLAdminWallet } from "./createRLAdmin";
-import { CreateRLUserWallet } from "./createRLUser";
+  CREATE_RL_USER,
+} from '../../../modules/createWallet';
+import { CreateNewCCWallet } from './createNewColouredCoin';
+import { CreateExistingCCWallet } from './createExistingColouredCoin';
+import { CreateRLAdminWallet } from './createRLAdmin';
+import { CreateRLUserWallet } from './createRLUser';
 
-export const useStyles = makeStyles(theme => ({
+export const useStyles = makeStyles((theme) => ({
   walletContainer: {
-    marginBottom: theme.spacing(5)
+    marginBottom: theme.spacing(5),
   },
   root: {
-    display: "flex",
-    paddingLeft: "0px",
-    color: "#000000"
+    display: 'flex',
+    paddingLeft: '0px',
+    color: '#000000',
   },
   appBarSpacer: theme.mixins.toolbar,
   content: {
     flexGrow: 1,
-    height: "100vh",
-    overflow: "auto"
+    height: '100vh',
+    overflow: 'auto',
   },
   container: {
     paddingTop: theme.spacing(0),
     paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0)
+    paddingRight: theme.spacing(0),
   },
   paper: {
     marginTop: theme.spacing(2),
     padding: theme.spacing(2),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column",
-    minWidth: "100%"
+    display: 'flex',
+    overflow: 'auto',
+    flexDirection: 'column',
+    minWidth: '100%',
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1)
+    marginBottom: theme.spacing(1),
   },
   title: {
-    paddingTop: 6
+    paddingTop: 6,
   },
   sendButton: {
     marginTop: theme.spacing(2),
     marginBottom: theme.spacing(2),
     width: 150,
-    height: 50
+    height: 50,
   },
   backdrop: {
     zIndex: 3000,
-    color: "#fff"
-  }
+    color: '#fff',
+  },
 }));
 
 export const MainWalletList = () => {
@@ -97,7 +101,7 @@ export const MainWalletList = () => {
           <Box display="flex">
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                Select Wallet Type
+                <Trans id="MainWalletList.title">Select Wallet Type</Trans>
               </Typography>
             </Box>
           </Box>
@@ -107,13 +111,21 @@ export const MainWalletList = () => {
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText primary="Coloured Coin" />
+            <ListItemText
+              primary={
+                <Trans id="MainWalletList.colouredCoin">Coloured Coin</Trans>
+              }
+            />
           </ListItem>
           <ListItem button onClick={select_option_rl}>
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText primary="Rate Limited" />
+            <ListItemText
+              primary={
+                <Trans id="MainWalletList.rateLimited">Rate Limited</Trans>
+              }
+            />
           </ListItem>
         </List>
       </Grid>
@@ -149,7 +161,7 @@ export const CCListItems = () => {
             </Box>
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                Coloured Coin Options
+                <Trans id="CCListItems.title">Coloured Coin Options</Trans>
               </Typography>
             </Box>
           </Box>
@@ -159,13 +171,25 @@ export const CCListItems = () => {
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText primary="Create new coloured coin" />
+            <ListItemText
+              primary={
+                <Trans id="MainWalletList.createNewColouredCoin">
+                  Create new coloured coin
+                </Trans>
+              }
+            />
           </ListItem>
           <ListItem button onClick={select_option_existing}>
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText primary="Create wallet for existing colour" />
+            <ListItemText
+              primary={
+                <Trans id="MainWalletList.createWalletForExistingColour">
+                  Create wallet for existing colour
+                </Trans>
+              }
+            />
           </ListItem>
         </List>
       </Grid>
@@ -196,12 +220,12 @@ export const RLListItems = () => {
           <Box display="flex">
             <Box>
               <Button onClick={goBack}>
-                <ArrowBackIosIcon> </ArrowBackIosIcon>
+                <ArrowBackIosIcon />
               </Button>
             </Box>
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                Rate Limited Options
+                <Trans id="RLListItems.title">Rate Limited Options</Trans>
               </Typography>
             </Box>
           </Box>
@@ -211,13 +235,25 @@ export const RLListItems = () => {
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText primary="Create admin wallet" />
+            <ListItemText
+              primary={
+                <Trans id="MainWalletList.createAdminWallet">
+                  Create admin wallet
+                </Trans>
+              }
+            />
           </ListItem>
           <ListItem button onClick={select_option_user}>
             <ListItemIcon>
               <InvertColorsIcon />
             </ListItemIcon>
-            <ListItemText primary="Create user wallet" />
+            <ListItemText
+              primary={
+                <Trans id="MainWalletList.createUserWallet">
+                  Create user wallet
+                </Trans>
+              }
+            />
           </ListItem>
         </List>
       </Grid>
@@ -226,32 +262,18 @@ export const RLListItems = () => {
 };
 
 export function CreateWalletView() {
-  const view = useSelector(state => state.create_options.view);
+  const view = useSelector((state) => state.create_options.view);
 
   return (
     <Card>
       <CardContent>
-        {view === ALL_OPTIONS && (
-          <MainWalletList />
-        )}
-        {view === CREATE_CC_WALLET_OPTIONS && (
-          <CCListItems />
-        )}
-        {view === CREATE_NEW_CC && (
-          <CreateNewCCWallet />
-        )}
-        {view === CREATE_EXISTING_CC && (
-          <CreateExistingCCWallet />
-        )}
-        {view === CREATE_RL_WALLET_OPTIONS && (
-          <RLListItems />
-        )}
-        {view === CREATE_RL_ADMIN && (
-          <CreateRLAdminWallet />
-        )}
-        {view === CREATE_RL_USER && (
-          <CreateRLUserWallet />
-        )}
+        {view === ALL_OPTIONS && <MainWalletList />}
+        {view === CREATE_CC_WALLET_OPTIONS && <CCListItems />}
+        {view === CREATE_NEW_CC && <CreateNewCCWallet />}
+        {view === CREATE_EXISTING_CC && <CreateExistingCCWallet />}
+        {view === CREATE_RL_WALLET_OPTIONS && <RLListItems />}
+        {view === CREATE_RL_ADMIN && <CreateRLAdminWallet />}
+        {view === CREATE_RL_USER && <CreateRLUserWallet />}
       </CardContent>
     </Card>
   );

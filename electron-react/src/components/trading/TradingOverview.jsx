@@ -1,99 +1,99 @@
-import { useDispatch, useSelector } from "react-redux";
-import React from "react";
+import { useDispatch, useSelector } from 'react-redux';
+import React from 'react';
 import { Trans } from '@lingui/macro';
-import { makeStyles } from "@material-ui/core/styles";
-import { Paper, Button, Tooltip, Divider, ListItem } from "@material-ui/core";
-import { unix_to_short_date } from "../../util/utils";
-import { Box, Typography } from "@material-ui/core";
-import { presetOverview, presentTrade } from "../../modules/trade";
-import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
-import Grid from "@material-ui/core/Grid";
-import HelpIcon from "@material-ui/icons/Help";
-import { mojo_to_chia_string } from "../../util/chia";
+import { makeStyles } from '@material-ui/core/styles';
+import { Paper, Button, Tooltip, Divider, ListItem , Box, Typography } from '@material-ui/core';
+
+import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
+import Grid from '@material-ui/core/Grid';
+import HelpIcon from '@material-ui/icons/Help';
+import { unix_to_short_date } from '../../util/utils';
+import { presetOverview, presentTrade } from '../../modules/trade';
+import { mojo_to_chia_string } from '../../util/chia';
 import {
   get_all_trades,
   cancel_trade_with_spend_action,
-  cancel_trade_action
-} from "../../modules/trade_messages";
+  cancel_trade_action,
+} from '../../modules/trade_messages';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   root: {
-    display: "flex",
-    paddingLeft: "0px"
+    display: 'flex',
+    paddingLeft: '0px',
   },
   content: {
     flexGrow: 1,
-    height: "calc(100vh - 64px)",
-    overflowX: "hidden"
+    height: 'calc(100vh - 64px)',
+    overflowX: 'hidden',
   },
   paper: {
     padding: theme.spacing(0),
-    display: "flex",
-    overflow: "auto",
-    flexDirection: "column",
-    margin: theme.spacing(3)
+    display: 'flex',
+    overflow: 'auto',
+    flexDirection: 'column',
+    margin: theme.spacing(3),
   },
   trade_table: {
-    padding: theme.spacing(0)
+    padding: theme.spacing(0),
   },
   pending_trades: {
-    padding: theme.spacing(1)
+    padding: theme.spacing(1),
   },
   empty: {
-    backgroundColor: "#999999",
+    backgroundColor: '#999999',
     height: 100,
-    width: "100%"
+    width: '100%',
   },
   centerText: {
     margin: 0,
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)"
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
   },
   accept: {
-    paddingLeft: "0px",
+    paddingLeft: '0px',
     marginLeft: theme.spacing(6),
     marginRight: theme.spacing(2),
     marginBottom: theme.spacing(2),
     height: 56,
-    width: 150
+    width: 150,
   },
   trade_row: {
-    cursor: "pointer",
-    borderBottom: "1px solid #eeeeee",
+    cursor: 'pointer',
+    borderBottom: '1px solid #eeeeee',
     /* mouse over link */
-    height: 40
+    height: 40,
   },
   cardTitle: {
     paddingLeft: theme.spacing(1),
     paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(4)
+    marginBottom: theme.spacing(4),
   },
   detail_items: {
     padding: theme.spacing(1),
-    backgroundColor: "#eeeeee"
+    backgroundColor: '#eeeeee',
   },
   tradeSubSection: {
-    color: "#000000",
+    color: '#000000',
     BorderRadiusBottomleft: 4,
     BorderRadiusBottomRight: 4,
-    backgroundColor: "#eeeeee",
+    backgroundColor: '#eeeeee',
     marginBottom: theme.spacing(5),
     padding: 15,
-    overflowWrap: "break-word"
-  }
+    overflowWrap: 'break-word',
+  },
 }));
 
-const TradeRow = props => {
-  const trade_id = props.trade.trade_id;
-  const status = props.trade.status;
+const TradeRow = (props) => {
+  const {trade_id} = props.trade;
+  const {status} = props.trade;
   const time = unix_to_short_date(props.trade.created_at_time);
   const classes = useStyles();
   const dispatch = useDispatch();
 
   function displayTrade() {
-    console.log("Show this trade");
+    console.log('Show this trade');
     dispatch(presentTrade(props.trade));
   }
 
@@ -101,16 +101,16 @@ const TradeRow = props => {
     <ListItem button onClick={displayTrade}>
       <Box
         display="flex"
-        style={{ minWidth: "100%" }}
+        style={{ minWidth: '100%' }}
         className={classes.trade_row}
       >
-        <Box flexGrow={1}>{trade_id.substring(0, 16)}</Box>
+        <Box flexGrow={1}>{trade_id.slice(0, 16)}</Box>
         <Box flexGrow={1}>{status}</Box>
         <Box
           style={{
             marginRight: 10,
-            textAlign: "right",
-            overflowWrap: "break-word"
+            textAlign: 'right',
+            overflowWrap: 'break-word',
           }}
         >
           {time}
@@ -122,41 +122,35 @@ const TradeRow = props => {
 
 export const TableHeader = () => {
   return (
-    <Box display="flex" style={{ minWidth: "100%" }}>
+    <Box display="flex" style={{ minWidth: '100%' }}>
       <Box flexGrow={1}>
-        <Trans id="TradeOverviewTableHeader.tradeId">
-          Trade ID
-        </Trans>
+        <Trans id="TradeOverviewTableHeader.tradeId">Trade ID</Trans>
       </Box>
       <Box flexGrow={1}>
-        <Trans id="TradeOverviewTableHeader.status">
-          Status
-        </Trans>
+        <Trans id="TradeOverviewTableHeader.status">Status</Trans>
       </Box>
       <Box
         style={{
           marginRight: 10,
-          textAlign: "right",
-          overflowWrap: "break-word"
+          textAlign: 'right',
+          overflowWrap: 'break-word',
         }}
       >
-        <Trans id="TradeOverviewTableHeader.date">
-          Date
-        </Trans>
+        <Trans id="TradeOverviewTableHeader.date">Date</Trans>
       </Box>
     </Box>
   );
 };
 
-export const TradeTable = props => {
-  const trades = props.trades;
+export const TradeTable = (props) => {
+  const {trades} = props;
   const classes = useStyles();
 
   if (trades.length === 0) {
     return (
       <div className={classes.trade_table}>
-        <TableHeader></TableHeader>
-        <Paper className={classes.empty} style={{ position: "relative" }}>
+        <TableHeader />
+        <Paper className={classes.empty} style={{ position: 'relative' }}>
           <div className={classes.centerText}>
             <Trans id="TradeOverviewTable.tradesShowUpHere">
               Trades will show up here
@@ -168,48 +162,46 @@ export const TradeTable = props => {
   }
   return (
     <div className={classes.trade_table}>
-      <TableHeader></TableHeader>
-      {trades.map(trade => (
-        <TradeRow key={trade.trade_id} trade={trade}></TradeRow>
+      <TableHeader />
+      {trades.map((trade) => (
+        <TradeRow key={trade.trade_id} trade={trade} />
       ))}
     </div>
   );
 };
 
-const getDetailItems = trade => {
-  var detail_items = [];
+const getDetailItems = (trade) => {
+  const detail_items = [];
   const trade_id_item = {
     label: <Trans id="TradeDetail.tradeId">Trade ID:</Trans>,
-    value: trade.trade_id.substring(0, 16),
-    colour: "black",
-    tooltip: (
-      <Trans id="TradeDetail.tradeIdTooltip">
-        Unique identifier
-      </Trans>
-    ),
+    value: trade.trade_id.slice(0, 16),
+    colour: 'black',
+    tooltip: <Trans id="TradeDetail.tradeIdTooltip">Unique identifier</Trans>,
   };
 
   const status_item = {
     label: <Trans id="TradeDetail.status">Status:</Trans>,
     value: trade.status,
-    colour: "black",
+    colour: 'black',
     tooltip: <Trans id="TradeDetail.statusTooltip">Current trade status</Trans>,
   };
 
   const date_item = {
     label: <Trans id="TradeDetail.createdAt">Created At:</Trans>,
     value: unix_to_short_date(trade.created_at_time),
-    colour: "black",
+    colour: 'black',
     tooltip: (
       <Trans id="TradeDetail.createdAtTooltip">
         Time this trade was created at this time
       </Trans>
     ),
   };
-  var confirmed_string = "";
-  var confirmed = trade.confirmed_at_index;
+  let confirmed_string = '';
+  const confirmed = trade.confirmed_at_index;
   if (confirmed === 0) {
-    confirmed_string = <Trans id="TradeDetail.notConfirmedYet">Not confirmed yet</Trans>;
+    confirmed_string = (
+      <Trans id="TradeDetail.notConfirmedYet">Not confirmed yet</Trans>
+    );
   } else {
     confirmed_string = trade.confirmed_at_index;
   }
@@ -217,14 +209,14 @@ const getDetailItems = trade => {
   const executed_at_item = {
     label: <Trans id="TradeDetail.confirmedAtBlock">Confirmed at block:</Trans>,
     value: confirmed_string,
-    colour: "black",
+    colour: 'black',
     tooltip: (
       <Trans id="TradeDetail.confirmedAtBlockTooltip">
         This trade was included on blockchain at this block height
       </Trans>
     ),
   };
-  var our = "";
+  let our = '';
   if (trade.my_offer === true) {
     our = <Trans id="TradeDetail.yes">Yes</Trans>;
   } else {
@@ -233,7 +225,7 @@ const getDetailItems = trade => {
   const offer_creator_item = {
     label: <Trans id="TradeDetail.createdByUs">Created by us:</Trans>,
     value: our,
-    colour: "black",
+    colour: 'black',
     tooltip: (
       <Trans id="TradeDetail.createdByUsTooltip">
         Indicated if this offer was created by us
@@ -241,8 +233,8 @@ const getDetailItems = trade => {
     ),
   };
 
-  var accepted = "";
-  var accepted_time = trade.accepted_at_time;
+  let accepted = '';
+  const accepted_time = trade.accepted_at_time;
 
   if (accepted_time === null) {
     accepted = <Trans id="TradeDetail.notAcceptedYet">Not accepted yet</Trans>;
@@ -253,7 +245,7 @@ const getDetailItems = trade => {
   const accepted_at_time = {
     label: <Trans id="TradeDetail.acceptedAtTime">Accepted at time:</Trans>,
     value: accepted,
-    colour: "black",
+    colour: 'black',
     tooltip: (
       <Trans id="TradeDetail.acceptedAtTimeTooltip">
         Indicated what time this offer was accepted
@@ -271,13 +263,13 @@ const getDetailItems = trade => {
   return detail_items;
 };
 
-const DetailCell = props => {
+const DetailCell = (props) => {
   const classes = useStyles();
-  const item = props.item;
-  const label = item.label;
-  const value = item.value;
-  const tooltip = item.tooltip;
-  const colour = item.colour;
+  const {item} = props;
+  const {label} = item;
+  const {value} = item;
+  const {tooltip} = item;
+  const {colour} = item;
   return (
     <Grid item xs={6}>
       <div className={classes.cardSubSection}>
@@ -286,10 +278,10 @@ const DetailCell = props => {
             <Typography>{label}</Typography>
             {tooltip ? (
               <Tooltip title={tooltip}>
-                <HelpIcon style={{ color: "#c8c8c8", fontSize: 12 }}></HelpIcon>
+                <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
               </Tooltip>
             ) : (
-              ""
+              ''
             )}
           </Box>
           <Box>
@@ -303,37 +295,38 @@ const DetailCell = props => {
   );
 };
 
-const OfferRow = props => {
-  const name = props.name;
-  const amount = props.amount;
-  var trade = props.trade;
-  var multiplier = 1;
+const OfferRow = (props) => {
+  const {name} = props;
+  const {amount} = props;
+  const {trade} = props;
+  let multiplier = 1;
   if (!trade) {
     multiplier = 1;
-  } else {
-    if (trade.my_offer === true) {
+  } else if (trade.my_offer === true) {
       multiplier = -1;
     }
-  }
 
-  const side = amount * multiplier < 0
-    ? <Trans id="TradeOfferRow.sell">Sell</Trans>
-    : <Trans id="TradeOfferRow.buy">Buy</Trans>;
+  const side =
+    amount * multiplier < 0 ? (
+      <Trans id="TradeOfferRow.sell">Sell</Trans>
+    ) : (
+      <Trans id="TradeOfferRow.buy">Buy</Trans>
+    );
 
   return (
-    <Box display="flex" style={{ minWidth: "100%" }}>
+    <Box display="flex" style={{ minWidth: '100%' }}>
       <Box
         style={{
           marginRight: 10,
-          width: "40%",
-          textAlign: "left",
-          overflowWrap: "break-word"
+          width: '40%',
+          textAlign: 'left',
+          overflowWrap: 'break-word',
         }}
       >
         {name}
       </Box>
       <Box flexGrow={1}>{side}</Box>
-      <Box flexGrow={1} style={{ textAlign: "right" }}>
+      <Box flexGrow={1} style={{ textAlign: 'right' }}>
         {mojo_to_chia_string(amount)}
       </Box>
     </Box>
@@ -343,16 +336,16 @@ const OfferRow = props => {
 export const TradeDetail = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const presented = useSelector(state => state.trade_state.trade_showed);
-  const status = presented.status;
+  const presented = useSelector((state) => state.trade_state.trade_showed);
+  const {status} = presented;
 
-  var visible = { visibility: "visible" };
+  let visible = { visibility: 'visible' };
   if (
-    status === "Confirmed" ||
-    status === "Pending Cancelled" ||
-    status === "Cancelled"
+    status === 'Confirmed' ||
+    status === 'Pending Cancelled' ||
+    status === 'Cancelled'
   ) {
-    visible = { visibility: "hidden" };
+    visible = { visibility: 'hidden' };
   }
   function goBack() {
     dispatch(presetOverview());
@@ -380,17 +373,15 @@ export const TradeDetail = () => {
             </Box>
             <Box flexGrow={1} className={classes.title}>
               <Typography component="h6" variant="h6">
-                <Trans id="TradeDetail.title">
-                  Trade Details
-                </Trans>
+                <Trans id="TradeDetail.title">Trade Details</Trans>
               </Typography>
             </Box>
           </Box>
         </div>
         <div className={classes.detail_items}>
           <Grid container spacing={3}>
-            {trade_detail_items.map(item => (
-              <DetailCell item={item} key={item.label}></DetailCell>
+            {trade_detail_items.map((item) => (
+              <DetailCell item={item} key={item.label} />
             ))}
           </Grid>
         </div>
@@ -398,23 +389,21 @@ export const TradeDetail = () => {
         <div>
           <div className={classes.tradeSubSection}>
             <Typography component="subtitle">
-              <Trans id="TradeDetail.coins">
-                Coins:
-              </Trans>
+              <Trans id="TradeDetail.coins">Coins:</Trans>
             </Typography>
-            {Object.keys(presented.offer_dict).map(name => (
+            {Object.keys(presented.offer_dict).map((name) => (
               <OfferRow
                 key={name}
                 name={name}
                 trade={presented}
                 amount={presented.offer_dict[name]}
-              ></OfferRow>
+               />
             ))}
           </div>
         </div>
         <div className={classes.card}>
           <Box display="flex">
-            <Box flexGrow={1}></Box>
+            <Box flexGrow={1} />
             <Box>
               <Button
                 onClick={secure_cancel}
@@ -423,9 +412,7 @@ export const TradeDetail = () => {
                 color="primary"
                 style={visible}
               >
-                <Trans id="TradeDetail.cancelAndSpend">
-                  Cancel and Spend
-                </Trans>
+                <Trans id="TradeDetail.cancelAndSpend">Cancel and Spend</Trans>
               </Button>
             </Box>
             <Box>
@@ -436,9 +423,7 @@ export const TradeDetail = () => {
                 color="primary"
                 style={visible}
               >
-                <Trans id="TradeDetail.cancel">
-                  Cancel
-                </Trans>
+                <Trans id="TradeDetail.cancel">Cancel</Trans>
               </Button>
             </Box>
           </Box>
@@ -450,16 +435,14 @@ export const TradeDetail = () => {
 
 export const PendingTrades = () => {
   const classes = useStyles();
-  const trades = useSelector(state => state.trade_state.pending_trades);
+  const trades = useSelector((state) => state.trade_state.pending_trades);
   return (
     <Paper className={classes.paper}>
       <div className={classes.pending_trades}>
         <Typography component="h6" variant="h6">
-          <Trans id="PendingTrades.title">
-            Offers Created
-          </Trans>
+          <Trans id="PendingTrades.title">Offers Created</Trans>
         </Typography>
-        <TradeTable trades={trades}></TradeTable>
+        <TradeTable trades={trades} />
       </div>
     </Paper>
   );
@@ -467,16 +450,14 @@ export const PendingTrades = () => {
 
 export const TradingHistory = () => {
   const classes = useStyles();
-  const trades = useSelector(state => state.trade_state.trade_history);
+  const trades = useSelector((state) => state.trade_state.trade_history);
   return (
     <Paper className={classes.paper}>
       <div className={classes.pending_trades}>
         <Typography component="h6" variant="h6">
-          <Trans id="TradingHistory.title">
-            Trading History
-          </Trans>
+          <Trans id="TradingHistory.title">Trading History</Trans>
         </Typography>
-        <TradeTable trades={trades}></TradeTable>
+        <TradeTable trades={trades} />
       </div>
     </Paper>
   );
@@ -484,7 +465,7 @@ export const TradingHistory = () => {
 
 export const TradingOverview = () => {
   const classes = useStyles();
-  const showing_trade = useSelector(state => state.trade_state.showing_trade);
+  const showing_trade = useSelector((state) => state.trade_state.showing_trade);
   const dispatch = useDispatch();
 
   dispatch(get_all_trades());
@@ -493,7 +474,7 @@ export const TradingOverview = () => {
     return (
       <div className={classes.root}>
         <main className={classes.content}>
-          <TradeDetail></TradeDetail>
+          <TradeDetail />
         </main>
       </div>
     );
@@ -501,8 +482,8 @@ export const TradingOverview = () => {
   return (
     <div className={classes.root}>
       <main className={classes.content}>
-        <PendingTrades></PendingTrades>
-        <TradingHistory></TradingHistory>
+        <PendingTrades />
+        <TradingHistory />
       </main>
     </div>
   );
