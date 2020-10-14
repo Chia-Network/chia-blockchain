@@ -719,24 +719,25 @@ export const exit_and_close = event => {
   };
 };
 
-export const create_did_wallet = (amount, backup_ids) => {
+export const create_did_wallet = (amount, backup_dids) => {
   var action = walletMessage();
   action.message.command = "create_new_wallet";
   action.message.data = {
     wallet_type: "did_wallet",
     did_type: "new",
     amount: amount,
-    backup_ids: backup_ids
+    backup_dids: backup_dids,
+    host: backup_host
   };
   console.log(action.message.data)
   return action;
 };
 
-export const create_did_action = (amount, backup_ids) => {
+export const create_did_action = (amount, backup_dids) => {
   return dispatch => {
     return async_api(
       dispatch,
-      create_did_wallet(amount, backup_ids),
+      create_did_wallet(amount, backup_dids),
       true
     ).then(response => {
       dispatch(closeProgress());
