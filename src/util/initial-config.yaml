@@ -1,4 +1,6 @@
 network_id: testnet  # testnet/mainnet
+min_mainnet_k_size: 32
+
 # Send a ping to all peers after ping_interval seconds
 ping_interval: 120
 self_hostname: &self_hostname "localhost"

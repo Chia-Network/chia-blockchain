@@ -51,6 +51,7 @@ def get_pool_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
 
 def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional[List] = None):
     config_filename = config_path_for_filename(root_path, "config.yaml")
+    config = load_config(root_path, config_filename)
 
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
@@ -70,6 +71,11 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
         num = args.num
     else:
         num = 1
+
+    if args.size < config["min_mainnet_k_size"]:
+        log.warn(
+            f"CREATING PLOTS WITH SIZE k={args.size}, which is less than the minimum required for mainnet"
+        )
     log.info(
         f"Creating {num} plots of size {args.size}, pool public key:  "
         f"{bytes(pool_public_key).hex()} farmer public key: {bytes(farmer_public_key).hex()}"
@@ -88,7 +94,6 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
     mkdir(args.final_dir)
 
     finished_filenames = []
-    config = load_config(root_path, config_filename)
     plot_filenames = get_plot_filenames(config["harvester"])
     for i in range(num):
         # Generate a random master secret key
