@@ -97,14 +97,19 @@ timelord:
     host: *self_hostname
     port: 8000
   logging: *logging
-  # Set 'True' if clients connecting to this timelord have a high number of CPUs.
+  # fast_algorithm refers to a faster proof generation algorithm. This speed
+  # trades off much less memory usage and a risk of OOM for significantly more
+  # parrallel proof generation and a larger resulting proof.
+  # Only set 'True' if clients connecting to this timelord have a large number
+  # of cores. An Intel i9 i9-10900K can run 2 normal vdf_clients but only 1
+  # fast_algorithm for a speed of ~221,000 ips.
   fast_algorithm: False
-  # Bluebox (sanatizing Timelord)
+  # Bluebox (sanatizing Timelord):
   # If set 'True', the timelord will create compact proofs of time, instead of
   # extending the chain. The attribute 'fast_algorithm' won't apply if timelord
   # is running in sanitizer_mode.
-  # You must set 'send_uncompact_interval' in 'full_node' > 0 below to have
-  # full_node send existing time proofs to be sanitized.
+  # You must set 'send_uncompact_interval' in 'full_node' > 0 in the full_node
+  # section below to have full_node send existing time proofs to be sanitized.
   sanitizer_mode: False
 
   ssl:
