@@ -5,14 +5,22 @@ from src.util.ints import uint64
 
 @dataclasses.dataclass(frozen=True)
 class ConsensusConstants:
-    NUMBER_OF_HEADS: int
+    SLOT_SUB_BLOCKS_TARGET: int
+    MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK: int
+    MAX_SLOT_SUB_BLOCKS: int
+    NUM_CHECKPOINTS_PER_SLOT: int
+    EXTRA_ITERS_SLOT_FACTOR: int
+    SLOT_ITERS_STARTING: int
+
     DIFFICULTY_STARTING: int
     DIFFICULTY_FACTOR: int
-    DIFFICULTY_EPOCH: int
+    SUB_EPOCH_SUB_BLOCKS: int
+    EPOCH_SUB_BLOCKS: int
+
     SIGNIFICANT_BITS: int  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     DISCRIMINANT_SIZE_BITS: int  # Max is 1024 (based on ClassGroupElement int size)
     NUMBER_ZERO_BITS_CHALLENGE_SIG: int  # H(plot signature of the challenge) must start with these many zeroes
-    BLOCK_TIME_TARGET: int  # The target number of seconds per block
+    SLOT_TIME_TARGET: int  # The target number of seconds per block
     # The proportion (denominator) of the total time that that the VDF must be run for, at a minimum
     # (1/min_iters_proportion). For example, if this is two, approximately half of the iterations
     # will be contant and required for all blocks.
@@ -58,17 +66,23 @@ class ConsensusConstants:
 
 
 testnet_kwargs = {
-    "NUMBER_OF_HEADS": 3,  # The number of tips each full node keeps track of and propagates
+    "SLOT_SUB_BLOCKS_TARGET": 16,
+    "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 5,
+    "MAX_SLOT_SUB_BLOCKS": 64,
+    "NUM_CHECKPOINTS_PER_SLOT": 32,
+    "EXTRA_ITERS_SLOT_FACTOR": 8,
+    "SLOT_ITERS_STARTING": 180000000,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of 2^32, to be used in the VDF iter calculation formula.
     "DIFFICULTY_STARTING": 2 ** 20,
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
-    "DIFFICULTY_EPOCH": 512,  # The number of blocks per epoch
+    "SUB_EPOCH_SUB_BLOCKS": 128,  # The number of sub-blocks per sub-epoch, mainnet 284
+    "EPOCH_SUB_BLOCKS": 4096,  # The number of sub-blocks per epoch, mainnet 32256
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_CHALLENGE_SIG": 8,  # H(plot signature of the challenge) must start with these many zeroes
-    "BLOCK_TIME_TARGET": 300,  # The target number of seconds per block
+    "SLOT_TIME_TARGET": 300,  # The target number of seconds per slot
     # The proportion (denominator) of the total time that that the VDF must be run for, at a minimum
     # (1/min_iters_proportion). For example, if this is two, approximately half of the iterations
     # will be contant and required for all blocks.
