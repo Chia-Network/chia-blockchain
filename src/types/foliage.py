@@ -3,19 +3,10 @@ from typing import List
 from blspy import G2Element
 
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint64, uint32
+from src.util.ints import uint64
 from src.util.streamable import Streamable, streamable
 from src.types.pool_target import PoolTarget
-
-
-@dataclass(frozen=True)
-@streamable
-class RewardClaim(Streamable):
-    # The pool and farmer coinbase rewards, as they are included into transaction block
-    sub_block_height: uint32
-    puzzle_hash: bytes32
-    amount: uint64
-    is_farmer_reward: bool   # Whether the reward is for the farmer or pool
+from src.types.coin import Coin
 
 
 @dataclass(frozen=True)
@@ -23,11 +14,11 @@ class RewardClaim(Streamable):
 class TransactionsInfo(Streamable):
     # Information that goes along with each transaction block
     previous_generators_root: bytes32  # This needs to be a tree hash
-    generator_root: bytes32            # This needs to be a tree hash
+    generator_root: bytes32  # This needs to be a tree hash
     aggregated_signature: G2Element
-    fees: uint64                       # This only includes user fees, not block rewards
+    fees: uint64  # This only includes user fees, not block rewards
     cost: uint64
-    reward_claims_incorporated: List[RewardClaim]
+    reward_claims_incorporated: List[Coin]
 
 
 @dataclass(frozen=True)
@@ -46,7 +37,7 @@ class FoliageBlock(Streamable):
 @streamable
 class FoliageSubBlockData(Streamable):
     # Part of the sub-block that is signed by the plot key
-    reward_block_hash: bytes32
+    unfinished_reward_block_hash: bytes32
     pool_target: PoolTarget
     pool_signature: G2Element
     farmer_reward_puzzle_hash: bytes32
@@ -60,6 +51,7 @@ class FoliageSubBlock(Streamable):
     # The entire sub-block, containing signature and the unsigned back pointer
     # The hash of this is the "block hash"
     prev_sub_block_hash: bytes32
+    reward_block_hash: bytes32
     is_block: bool
     signed_data: FoliageSubBlockData
     plot_key_signature: G2Element
