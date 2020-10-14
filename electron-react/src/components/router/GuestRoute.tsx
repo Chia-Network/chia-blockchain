@@ -9,6 +9,7 @@ export default function GuestRoute(props: Props) {
   const loggedIn = useSelector(
     (state: RootState) => state.wallet_state.logged_in,
   );
+
   if (loggedIn) {
     return <Redirect to="/dashboard" />;
   }

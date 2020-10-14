@@ -384,11 +384,11 @@ const RLDetailsCard = (props) => {
 
   const data = useSelector((state) => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
-  const {type} = data_parsed;
-  const {user_pubkey} = data_parsed;
-  const {admin_pubkey} = data_parsed;
-  const {interval} = data_parsed;
-  const {limit} = data_parsed;
+  const { type } = data_parsed;
+  const { user_pubkey } = data_parsed;
+  const { admin_pubkey } = data_parsed;
+  const { interval } = data_parsed;
+  const { limit } = data_parsed;
   const origin = data_parsed.rl_origin;
   const origin_string = JSON.stringify(origin);
   const infopacket = {
@@ -472,7 +472,8 @@ const RLDetailsCard = (props) => {
         </Grid>
       </Paper>
     );
-  } if (type === 'admin') {
+  }
+  if (type === 'admin') {
     return (
       <Paper className={classes.paper}>
         <Grid container spacing={0}>
@@ -559,9 +560,7 @@ const BalanceCardSubSection = (props) => {
               {props.title}
               {props.tooltip ? (
                 <Tooltip title={props.tooltip}>
-                  <HelpIcon
-                    style={{ color: '#c8c8c8', fontSize: 12 }}
-                   />
+                  <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
                 </Tooltip>
               ) : (
                 ''
@@ -898,9 +897,8 @@ const TransactionTable = (props) => {
   const incoming_string = (incoming) => {
     if (incoming) {
       return <Trans id="RLTransactionTable.incoming">Incoming</Trans>;
-    } 
-      return <Trans id="RLTransactionTable.outgoing">Outgoing</Trans>;
-    
+    }
+    return <Trans id="RLTransactionTable.outgoing">Outgoing</Trans>;
   };
   const confirmed_to_string = (confirmed) => {
     return confirmed ? (
@@ -976,7 +974,7 @@ export default function RateLimitedWallet(props) {
   const wallets = useSelector((state) => state.wallet_state.wallets);
   const data = useSelector((state) => state.wallet_state.wallets[id].data);
   const data_parsed = JSON.parse(data);
-  const {type} = data_parsed;
+  const { type } = data_parsed;
   const initStatus = data_parsed.initialized;
 
   if (wallets.length > props.wallet_id) {
@@ -990,14 +988,14 @@ export default function RateLimitedWallet(props) {
             <HistoryCard wallet_id={id} />
           </Grid>
         );
-      } 
-        return (
-          <Grid className={classes.walletContainer} item xs={12}>
-            <IncompleteCard wallet_id={id} />
-          </Grid>
-        );
-      
-    } if (type === 'admin') {
+      }
+      return (
+        <Grid className={classes.walletContainer} item xs={12}>
+          <IncompleteCard wallet_id={id} />
+        </Grid>
+      );
+    }
+    if (type === 'admin') {
       return (
         <Grid className={classes.walletContainer} item xs={12}>
           <RLDetailsCard wallet_id={id} />

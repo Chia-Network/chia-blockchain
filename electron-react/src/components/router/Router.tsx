@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Switch } from 'react-router-dom';
+import { Switch, Route } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import SelectKey from '../selectKey/SelectKey';
@@ -44,24 +44,22 @@ export default function Router() {
   }
 
   return (
-    <BrowserRouter>
-      <Switch>
-        <GuestRoute path="/" exact>
-          <SelectKey />
-        </GuestRoute>
-        <GuestRoute path="/wallet/add" exact>
-          <WalletAdd />
-        </GuestRoute>
-        <GuestRoute path="/wallet/import" exact>
-          <WalletImport />
-        </GuestRoute>
-        <GuestRoute path="/wallet/restore" exact>
-          <BackupRestore />
-        </GuestRoute>
-        <PrivateRoute path="/dashboard">
-          <Dashboard />
-        </PrivateRoute>
-      </Switch>
-    </BrowserRouter>
+    <Switch>
+      <Route path="/" exact>
+        <SelectKey />
+      </Route>
+      <Route path="/wallet/add" exact>
+        <WalletAdd />
+      </Route>
+      <Route path="/wallet/import" exact>
+        <WalletImport />
+      </Route>
+      <Route path="/wallet/restore" exact>
+        <BackupRestore />
+      </Route>
+      <PrivateRoute path="/dashboard">
+        <Dashboard />
+      </PrivateRoute>
+    </Switch>
   );
 }

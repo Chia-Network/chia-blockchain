@@ -56,8 +56,7 @@ export default function SelectKey() {
   async function handleClick(fingerprint: Fingerprint) {
     dispatch(resetMnemonic());
     dispatch(selectFingerprint(fingerprint));
-    await dispatch(login_action(fingerprint));
-    history.push('/dashboard');
+    dispatch(login_action(fingerprint));
   }
 
   function handleClickOpen() {

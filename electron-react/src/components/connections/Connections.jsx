@@ -51,8 +51,8 @@ const useStyles = makeStyles((theme) => ({
 export default function Connections(props) {
   const classes = useStyles();
 
-  const {connections} = props;
-  const {connectionError} = props;
+  const { connections } = props;
+  const { connectionError } = props;
   const connectionTime = props.connectionTime ? props.connectionTime : false;
 
   const [host, setHost] = React.useState('');
@@ -146,12 +146,16 @@ export default function Connections(props) {
 
                     {connectionTime ? (
                       <TableCell align="right">
-                        {unix_to_short_date(Number.parseInt(item.creation_time))}
+                        {unix_to_short_date(
+                          Number.parseInt(item.creation_time),
+                        )}
                       </TableCell>
                     ) : null}
                     {connectionTime ? (
                       <TableCell align="right">
-                        {unix_to_short_date(Number.parseInt(item.last_message_time))}
+                        {unix_to_short_date(
+                          Number.parseInt(item.last_message_time),
+                        )}
                       </TableCell>
                     ) : null}
                     <TableCell
