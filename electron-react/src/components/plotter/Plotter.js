@@ -2,6 +2,7 @@ import React from "react";
 import Grid from "@material-ui/core/Grid";
 import { makeStyles } from "@material-ui/core/styles";
 import { withRouter } from "react-router-dom";
+import { Trans } from '@lingui/macro';
 import { useSelector, useDispatch } from "react-redux";
 import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
@@ -225,7 +226,7 @@ const WorkLocation = () => {
       }
     } else {
       dispatch(
-        openDialog("", "This feature is available only from electron app")
+        openDialog("", <Trans id="PlotterWorkLocation.availableOnlyFromElectron">This feature is available only from electron app</Trans>)
       );
     }
   }
@@ -243,7 +244,7 @@ const WorkLocation = () => {
               onClick={select}
               label={
                 work_location === ""
-                  ? "Temporary folder location"
+                  ? <Trans id="PlotterWorkLocation.temporaryFolderLocation">Temporary folder location</Trans>
                   : work_location
               }
             />
@@ -255,7 +256,7 @@ const WorkLocation = () => {
               variant="contained"
               color="primary"
             >
-              Select
+              <Trans id="PlotterWorkLocation.select">Select</Trans>
             </Button>
           </Box>
         </Box>
@@ -282,7 +283,7 @@ const FinalLocation = () => {
       }
     } else {
       dispatch(
-        openDialog("", "This feature is available only from electron app")
+        openDialog("", <Trans id="PlotterFinalLocation.availableOnlyFromElectron">This feature is available only from electron app</Trans>)
       );
     }
   }
@@ -298,7 +299,9 @@ const FinalLocation = () => {
               onClick={select}
               fullWidth
               label={
-                final_location === "" ? "Final folder location" : final_location
+                final_location === ""
+                  ? <Trans id="PlotterFinalLocation.finalFolderLocation">Final folder location</Trans>
+                  : final_location
               }
               variant="outlined"
             />
@@ -310,7 +313,9 @@ const FinalLocation = () => {
               variant="contained"
               color="primary"
             >
-              Select
+              <Trans id="PlotterFinalLocation.select">
+                Select
+              </Trans>
             </Button>
           </Box>
         </Box>
@@ -362,7 +367,11 @@ const CreatePlot = () => {
 
   function create() {
     if (!work_location || !final_location) {
-      dispatch(openDialog("Please specify a temporary and final directory"));
+      dispatch(openDialog(
+        <Trans id="CreatePlot.specifyFinalDirectory">
+          Please specify a temporary and final directory
+        </Trans>
+      ));
       return;
     }
     const N = plotCount;
@@ -384,19 +393,22 @@ const CreatePlot = () => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Create Plot
+              <Trans id="CreatePlot.title">
+                Create Plot
+              </Trans>
             </Typography>
           </div>
         </Grid>
         <Grid className={classes.cardTitle} item xs={12}>
           <p>
-            {" "}
-            Using this tool, you can create plots, which are allocated space on
-            your hard drive used to farm and earn Chia. Also, temporary files
-            are created during the plotting process, which exceed the size of
-            the final plot files, so make sure you have enough space. Try to use
-            a fast drive like an SSD for the temporary folder, and a large slow
-            hard drive (like external HDD) for the final folder.
+            <Trans id="CreatePlot.description">
+              Using this tool, you can create plots, which are allocated space on
+              your hard drive used to farm and earn Chia. Also, temporary files
+              are created during the plotting process, which exceed the size of
+              the final plot files, so make sure you have enough space. Try to use
+              a fast drive like an SSD for the temporary folder, and a large slow
+              hard drive (like external HDD) for the final folder.
+            </Trans>
           </p>
         </Grid>
         <Grid item xs={12}>
@@ -408,11 +420,13 @@ const CreatePlot = () => {
                   variant="outlined"
                   className={classes.formControl}
                 >
-                  <InputLabel>Plot Size</InputLabel>
+                  <InputLabel>
+                    <Trans id="CreatePlot.plotSize">Plot Size</Trans>
+                  </InputLabel>
                   <Select
                     value={plotSize}
                     onChange={changePlotSize}
-                    label="Plot Size"
+                    label={<Trans id="CreatePlot.plotSize">Plot Size</Trans>}
                   >
                     {plot_size_options.map(option => (
                       <MenuItem
@@ -436,7 +450,7 @@ const CreatePlot = () => {
                   <Select
                     value={plotCount}
                     onChange={changePlotCount}
-                    label="Colour"
+                    label={<Trans id="CreatePlot.colour">Colour</Trans>}
                   >
                     {plot_count_options.map(option => (
                       <MenuItem value={option} key={"count" + option}>
@@ -452,18 +466,21 @@ const CreatePlot = () => {
                   variant="outlined"
                   className={classes.formControl}
                 >
-                  <InputLabel>RAM max usage</InputLabel>
+                  <InputLabel>
+                    <Trans id="CreatePlot.ramMaxUsage">RAM max usage</Trans>
+                  </InputLabel>
                   <Input
                     value={maxRam}
                     endAdornment={
                       <InputAdornment position="end">MiB</InputAdornment>
                     }
                     onChange={handleSetMaxRam}
-                    label="Colour"
                     type="number"
                   />
                   <FormHelperText id="standard-weight-helper-text">
-                    More memory slightly increases speed
+                    <Trans id="CreatePlot.ramMaxUsageDescription">
+                      More memory slightly increases speed
+                    </Trans>
                   </FormHelperText>
                 </FormControl>
               </Grid>
@@ -475,11 +492,14 @@ const CreatePlot = () => {
                 variant="outlined"
                 className={classes.formControl}
               >
-                <InputLabel>Number of threads</InputLabel>
+                <InputLabel>
+                  <Trans id="CreatePlot.numberOfThreads">
+                    Number of threads
+                  </Trans>
+                </InputLabel>
                 <Input
                 value={numThreads}
                 onChange={handleSetNumThreads}
-                label="Colour"
                 type="number"
               />
               </FormControl>
@@ -490,15 +510,20 @@ const CreatePlot = () => {
                 variant="outlined"
                 className={classes.formControl}
               >
-                <InputLabel>Number of buckets</InputLabel>
+                <InputLabel>
+                  <Trans id="CreatePlot.numberOfBuckets">
+                    Number of buckets
+                  </Trans>
+                </InputLabel>
                 <Input
                   value={numBuckets}
                   onChange={handleSetNumBuckets}
-                  label="Colour"
                   type="number"
                 />
               <FormHelperText id="standard-weight-helper-text">
-              0 automatically chooses bucket count
+                <Trans id="CreatePlot.numberOfBucketsDescription">
+                  0 automatically chooses bucket count
+                </Trans>
               </FormHelperText>
               </FormControl>
             </Grid>
@@ -508,11 +533,14 @@ const CreatePlot = () => {
                 variant="outlined"
                 className={classes.formControl}
               >
-                <InputLabel>Stripe Size</InputLabel>
+                <InputLabel>
+                  <Trans id="CreatePlot.stripeSize">
+                    Stripe Size
+                  </Trans>
+                </InputLabel>
                 <Input
                   value={stripeSize}
                   onChange={handleSetStripeSize}
-                  label="Colour"
                   type="number"
                 />
               </FormControl>
@@ -532,7 +560,9 @@ const CreatePlot = () => {
                   variant="contained"
                   color="primary"
                 >
-                  Create
+                  <Trans id="CreatePlot.create">
+                    Create
+                  </Trans>
                 </Button>
               </Grid>
             </Grid>
@@ -561,7 +591,9 @@ const Proggress = () => {
       <Paper className={classes.balancePaper}>
         <div className={classes.cardTitle}>
           <Typography component="h6" variant="h6">
-            Progress
+            <Trans id="PlotterProgress.title">
+              Progress
+            </Trans>
           </Typography>
         </div>
         <div className={classes.logPaper}>
@@ -570,7 +602,16 @@ const Proggress = () => {
           </Box>
         </div>
         <div className={classes.cardSubSection}>
-          {plotting_stopped ? <p>Plotting stopped succesfully.</p> : ""}
+          {plotting_stopped
+            ? (
+              <p>
+                <Trans id="PlotterProgress.plottingStoppedSuccesfully">
+                  Plotting stopped succesfully.
+                </Trans>
+              </p>
+            )
+            : ""
+          }
           <Grid container spacing={2}>
             <Grid item xs={12}>
               {!plotting_stopped ? (
@@ -580,7 +621,9 @@ const Proggress = () => {
                   variant="contained"
                   color="primary"
                 >
-                  Cancel
+                  <Trans id="PlotterProgress.cancel">
+                    Cancel
+                  </Trans>
                 </Button>
               ) : (
                 ""
@@ -591,7 +634,9 @@ const Proggress = () => {
                 variant="contained"
                 color="primary"
               >
-                Clear Log
+                <Trans id="PlotterProgress.clearLog">
+                  Clear Log
+                </Trans>
               </Button>
             </Grid>
           </Grid>
@@ -601,7 +646,7 @@ const Proggress = () => {
   );
 };
 
-const Plotter = () => {
+export default function Plotter() {
   const in_progress = useSelector(
     state => state.plot_control.plotting_in_proggress
   );
@@ -614,6 +659,4 @@ const Plotter = () => {
       {in_progress || plotting_stopped ? <Proggress></Proggress> : <div></div>}
     </div>
   );
-};
-
-export default withRouter(Plotter);
+}

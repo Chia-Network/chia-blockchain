@@ -13,75 +13,75 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/wallet/standard/WalletStandard.js:722
+#: src/components/wallet/standard/WalletStandard.tsx:513
 msgid "AddressCard.address"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:735
+#: src/components/wallet/standard/WalletStandard.tsx:517
 msgid "AddressCard.copy"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:752
+#: src/components/wallet/standard/WalletStandard.tsx:529
 msgid "AddressCard.newAddress"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:709
+#: src/components/wallet/standard/WalletStandard.tsx:505
 msgid "AddressCard.title"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:246
+#: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "BalanceCard.balance"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:303
+#: src/components/wallet/standard/WalletStandard.tsx:238
 msgid "BalanceCard.pendingBalance"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:306
+#: src/components/wallet/standard/WalletStandard.tsx:240
 msgid "BalanceCard.pendingBalanceTooltip"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:325
+#: src/components/wallet/standard/WalletStandard.tsx:253
 msgid "BalanceCard.pendingChange"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:328
+#: src/components/wallet/standard/WalletStandard.tsx:255
 msgid "BalanceCard.pendingChangeTooltip"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:314
+#: src/components/wallet/standard/WalletStandard.tsx:245
 msgid "BalanceCard.pendingFarmingRewards"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:317
+#: src/components/wallet/standard/WalletStandard.tsx:247
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:294
+#: src/components/wallet/standard/WalletStandard.tsx:231
 msgid "BalanceCard.pendingTotalBalance"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:297
+#: src/components/wallet/standard/WalletStandard.tsx:233
 msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:265
+#: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "BalanceCard.spendableBalance"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:268
+#: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "BalanceCard.spendableBalanceTooltip"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:253
+#: src/components/wallet/standard/WalletStandard.tsx:205
 msgid "BalanceCard.totalBalance"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:256
+#: src/components/wallet/standard/WalletStandard.tsx:205
 msgid "BalanceCard.totalBalanceTooltip"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:286
+#: src/components/wallet/standard/WalletStandard.tsx:224
 msgid "BalanceCard.viewPendingBalances"
 msgstr ""
 
@@ -213,6 +213,126 @@ msgstr ""
 msgid "BlocksCard.title"
 msgstr ""
 
+#: src/components/wallet/coloured/WalletColoured.tsx:194
+msgid "ColourCard.colour"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:210
+msgid "ColourCard.nickname"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:216
+msgid "ColourCard.rename"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:185
+msgid "ColourCard.title"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:584
+msgid "ColouredAddressCard.address"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:588
+msgid "ColouredAddressCard.copy"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:600
+msgid "ColouredAddressCard.newAddress"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:576
+msgid "ColouredAddressCard.title"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:312
+msgid "ColouredBalanceCard.spendableBalance"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:307
+msgid "ColouredBalanceCard.title"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:311
+msgid "ColouredBalanceCard.totalBalance"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:321
+msgid "ColouredBalanceCard.viewPendingBalances"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:481
+msgid "ColouredHistoryCard.title"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:430
+msgid "ColouredSendCard.address"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:442
+msgid "ColouredSendCard.amount"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:459
+msgid "ColouredSendCard.farm"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:449
+msgid "ColouredSendCard.fee"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:464
+msgid "ColouredSendCard.send"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:415
+msgid "ColouredSendCard.title"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:528
+msgid "ColouredTransactionTable.amount"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:509
+msgid "ColouredTransactionTable.confirmed"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:522
+msgid "ColouredTransactionTable.date"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:531
+msgid "ColouredTransactionTable.fee"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:504
+msgid "ColouredTransactionTable.incoming"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:497
+msgid "ColouredTransactionTable.noPreviousTransactions"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:506
+msgid "ColouredTransactionTable.outgoing"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:509
+msgid "ColouredTransactionTable.pending"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:525
+msgid "ColouredTransactionTable.status"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:519
+msgid "ColouredTransactionTable.to"
+msgstr ""
+
+#: src/components/wallet/coloured/WalletColoured.tsx:516
+msgid "ColouredTransactionTable.type"
+msgstr ""
+
 #: src/components/connections/Connections.js:208
 msgid "Connections.connect"
 msgstr ""
@@ -310,47 +430,96 @@ msgstr ""
 msgid "CreateOffer.title"
 msgstr ""
 
+#: src/components/plotter/Plotter.js:453
+msgid "CreatePlot.colour"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:563
+msgid "CreatePlot.create"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:404
+msgid "CreatePlot.description"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:514
+msgid "CreatePlot.numberOfBuckets"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:524
+msgid "CreatePlot.numberOfBucketsDescription"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:496
+msgid "CreatePlot.numberOfThreads"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:424
+#: src/components/plotter/Plotter.js:429
+msgid "CreatePlot.plotSize"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:470
+msgid "CreatePlot.ramMaxUsage"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:481
+msgid "CreatePlot.ramMaxUsageDescription"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:371
+msgid "CreatePlot.specifyFinalDirectory"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:537
+msgid "CreatePlot.stripeSize"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:396
+msgid "CreatePlot.title"
+msgstr ""
+
 #: src/components/wallet/Wallets.tsx:129
 msgid "CreateWallet.addWallet"
 msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:32
+#: src/components/dashboard/DashboardSideBar.tsx:38
 msgid "DashboardSideBar.farm"
 msgstr "Farma"
 
-#: src/components/dashboard/DashboardSideBar.tsx:29
+#: src/components/dashboard/DashboardSideBar.tsx:35
 msgid "DashboardSideBar.home"
 msgstr "Domov"
 
-#: src/components/dashboard/DashboardSideBar.tsx:34
+#: src/components/dashboard/DashboardSideBar.tsx:40
 msgid "DashboardSideBar.keys"
 msgstr "Kľúče"
 
-#: src/components/dashboard/DashboardSideBar.tsx:31
+#: src/components/dashboard/DashboardSideBar.tsx:37
 msgid "DashboardSideBar.plot"
 msgstr "Disky"
 
-#: src/components/dashboard/DashboardSideBar.tsx:33
+#: src/components/dashboard/DashboardSideBar.tsx:39
 msgid "DashboardSideBar.trade"
 msgstr "Obchody"
 
-#: src/components/dashboard/DashboardSideBar.tsx:30
+#: src/components/dashboard/DashboardSideBar.tsx:36
 msgid "DashboardSideBar.wallets"
 msgstr "Peňaženky"
 
-#: src/components/selectKey/SelectKey.tsx:138
+#: src/components/selectKey/SelectKey.tsx:134
 msgid "DeleteAllKeys.back"
 msgstr ""
 
-#: src/components/selectKey/SelectKey.tsx:143
+#: src/components/selectKey/SelectKey.tsx:137
 msgid "DeleteAllKeys.delete"
 msgstr ""
 
-#: src/components/selectKey/SelectKey.tsx:129
+#: src/components/selectKey/SelectKey.tsx:125
 msgid "DeleteAllKeys.description"
 msgstr ""
 
-#: src/components/selectKey/SelectKey.tsx:123
+#: src/components/selectKey/SelectKey.tsx:121
 msgid "DeleteAllKeys.title"
 msgstr ""
 
@@ -362,11 +531,11 @@ msgstr ""
 msgid "FullNodeStatus.title"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:558
+#: src/components/wallet/standard/WalletStandard.tsx:408
 msgid "HistoryCard.title"
 msgstr ""
 
-#: src/components/locale/LocaleToggle.tsx:34
+#: src/components/locale/LocaleToggle.tsx:36
 msgid "LocaleToggle.helpToTranslate"
 msgstr ""
 
@@ -400,6 +569,46 @@ msgstr ""
 
 #: src/components/trading/TradingOverview.js:458
 msgid "PendingTrades.title"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:286
+msgid "PlotterFinalLocation.availableOnlyFromElectron"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:303
+msgid "PlotterFinalLocation.finalFolderLocation"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:316
+msgid "PlotterFinalLocation.select"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:624
+msgid "PlotterProgress.cancel"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:637
+msgid "PlotterProgress.clearLog"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:608
+msgid "PlotterProgress.plottingStoppedSuccesfully"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:594
+msgid "PlotterProgress.title"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:229
+msgid "PlotterWorkLocation.availableOnlyFromElectron"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:259
+msgid "PlotterWorkLocation.select"
+msgstr ""
+
+#: src/components/plotter/Plotter.js:247
+msgid "PlotterWorkLocation.temporaryFolderLocation"
 msgstr ""
 
 #: src/components/fullNode/FullNode.js:491
@@ -446,63 +655,63 @@ msgstr "Prihlás sa"
 msgid "SelectKey.title"
 msgstr "Vyber kľúč"
 
-#: src/components/wallet/standard/WalletStandard.js:470
+#: src/components/wallet/standard/WalletStandard.tsx:359
 msgid "SendCard.address"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:492
+#: src/components/wallet/standard/WalletStandard.tsx:371
 msgid "SendCard.amount"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:418
+#: src/components/wallet/standard/WalletStandard.tsx:320
 msgid "SendCard.enterValidAddress"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:398
+#: src/components/wallet/standard/WalletStandard.tsx:306
 msgid "SendCard.enterValidAmount"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:406
+#: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "SendCard.enterValidFee"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:523
+#: src/components/wallet/standard/WalletStandard.tsx:386
 msgid "SendCard.farm"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:506
+#: src/components/wallet/standard/WalletStandard.tsx:376
 msgid "SendCard.fee"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:383
+#: src/components/wallet/standard/WalletStandard.tsx:296
 msgid "SendCard.finishSyncingBeforeTransaction"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:536
+#: src/components/wallet/standard/WalletStandard.tsx:391
 msgid "SendCard.send"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:446
+#: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "SendCard.title"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:166
+#: src/components/wallet/Wallets.tsx:159
 msgid "StatusCard.connections"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:158
+#: src/components/wallet/Wallets.tsx:153
 msgid "StatusCard.height"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:147
+#: src/components/wallet/Wallets.tsx:145
 msgid "StatusCard.status"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:153
+#: src/components/wallet/Wallets.tsx:148
 msgid "StatusCard.synced"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:152
+#: src/components/wallet/Wallets.tsx:148
 msgid "StatusCard.syncing"
 msgstr ""
 
@@ -684,7 +893,7 @@ msgstr ""
 msgid "TradeList.side"
 msgstr ""
 
-#: src/components/trading/TradeManager.tsx:70
+#: src/components/trading/TradeManager.tsx:68
 msgid "TradeManager.createTrade"
 msgstr ""
 
@@ -692,11 +901,11 @@ msgstr ""
 msgid "TradeManager.title"
 msgstr ""
 
-#: src/components/trading/TradeManager.tsx:65
+#: src/components/trading/TradeManager.tsx:63
 msgid "TradeManager.tradeOverview"
 msgstr ""
 
-#: src/components/trading/TradeManager.tsx:75
+#: src/components/trading/TradeManager.tsx:73
 msgid "TradeManager.viewTrade"
 msgstr ""
 
@@ -728,51 +937,51 @@ msgstr ""
 msgid "TradingHistory.title"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:638
+#: src/components/wallet/standard/WalletStandard.tsx:453
 msgid "TransactionTable.amount"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:601
+#: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "TransactionTable.confirmedAtHeight"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:628
+#: src/components/wallet/standard/WalletStandard.tsx:447
 msgid "TransactionTable.date"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:643
+#: src/components/wallet/standard/WalletStandard.tsx:456
 msgid "TransactionTable.fee"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:586
+#: src/components/wallet/standard/WalletStandard.tsx:427
 msgid "TransactionTable.incoming"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:592
+#: src/components/wallet/standard/WalletStandard.tsx:429
 msgid "TransactionTable.outgoing"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:606
+#: src/components/wallet/standard/WalletStandard.tsx:434
 msgid "TransactionTable.pending"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:633
+#: src/components/wallet/standard/WalletStandard.tsx:450
 msgid "TransactionTable.status"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:623
+#: src/components/wallet/standard/WalletStandard.tsx:444
 msgid "TransactionTable.to"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.js:618
+#: src/components/wallet/standard/WalletStandard.tsx:441
 msgid "TransactionTable.type"
 msgstr ""
 
-#: src/components/wallet/WalletAdd.tsx:43
+#: src/components/wallet/WalletAdd.tsx:41
 msgid "WalletAdd.description"
 msgstr ""
 
-#: src/components/wallet/WalletAdd.tsx:55
+#: src/components/wallet/WalletAdd.tsx:53
 msgid "WalletAdd.next"
 msgstr ""
 
@@ -780,11 +989,11 @@ msgstr ""
 msgid "WalletAdd.title"
 msgstr ""
 
-#: src/components/wallet/WalletImport.tsx:72
+#: src/components/wallet/WalletImport.tsx:70
 msgid "WalletImport.description"
 msgstr ""
 
-#: src/components/wallet/WalletImport.tsx:82
+#: src/components/wallet/WalletImport.tsx:80
 msgid "WalletImport.next"
 msgstr ""
 
@@ -828,6 +1037,6 @@ msgstr ""
 msgid "WalletStatusCard.title"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:184
+#: src/components/wallet/Wallets.tsx:175
 msgid "Wallets.title"
 msgstr ""
