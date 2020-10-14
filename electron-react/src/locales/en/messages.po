@@ -13,75 +13,75 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/wallet/standard/WalletStandard.js:722
+#: src/components/wallet/standard/WalletStandard.tsx:513
 msgid "AddressCard.address"
 msgstr "Address"
 
-#: src/components/wallet/standard/WalletStandard.js:735
+#: src/components/wallet/standard/WalletStandard.tsx:517
 msgid "AddressCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/standard/WalletStandard.js:752
+#: src/components/wallet/standard/WalletStandard.tsx:529
 msgid "AddressCard.newAddress"
 msgstr "New Address"
 
-#: src/components/wallet/standard/WalletStandard.js:709
+#: src/components/wallet/standard/WalletStandard.tsx:505
 msgid "AddressCard.title"
 msgstr "Receive Address"
 
-#: src/components/wallet/standard/WalletStandard.js:246
+#: src/components/wallet/standard/WalletStandard.tsx:201
 msgid "BalanceCard.balance"
 msgstr "Balance"
 
-#: src/components/wallet/standard/WalletStandard.js:303
+#: src/components/wallet/standard/WalletStandard.tsx:238
 msgid "BalanceCard.pendingBalance"
 msgstr "Pending Balance"
 
-#: src/components/wallet/standard/WalletStandard.js:306
+#: src/components/wallet/standard/WalletStandard.tsx:240
 msgid "BalanceCard.pendingBalanceTooltip"
 msgstr "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 
-#: src/components/wallet/standard/WalletStandard.js:325
+#: src/components/wallet/standard/WalletStandard.tsx:253
 msgid "BalanceCard.pendingChange"
 msgstr "Pending Change"
 
-#: src/components/wallet/standard/WalletStandard.js:328
+#: src/components/wallet/standard/WalletStandard.tsx:255
 msgid "BalanceCard.pendingChangeTooltip"
 msgstr "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 
-#: src/components/wallet/standard/WalletStandard.js:314
+#: src/components/wallet/standard/WalletStandard.tsx:245
 msgid "BalanceCard.pendingFarmingRewards"
 msgstr "Pending Farming Rewards"
 
-#: src/components/wallet/standard/WalletStandard.js:317
+#: src/components/wallet/standard/WalletStandard.tsx:247
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
 msgstr "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable. Farming rewards are frozen for 200 blocks."
 
-#: src/components/wallet/standard/WalletStandard.js:294
+#: src/components/wallet/standard/WalletStandard.tsx:231
 msgid "BalanceCard.pendingTotalBalance"
 msgstr "Pending Total Balance"
 
-#: src/components/wallet/standard/WalletStandard.js:297
+#: src/components/wallet/standard/WalletStandard.tsx:233
 msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr "This is the total balance + pending balance: it it what your balance will be after all pending transactions are confirmed."
 
-#: src/components/wallet/standard/WalletStandard.js:265
+#: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "BalanceCard.spendableBalance"
 msgstr "Spendable Balance"
 
-#: src/components/wallet/standard/WalletStandard.js:268
+#: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "BalanceCard.spendableBalanceTooltip"
 msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transctions, and Chia that you have just spent but is not yet in the blockchain."
 
-#: src/components/wallet/standard/WalletStandard.js:253
+#: src/components/wallet/standard/WalletStandard.tsx:205
 msgid "BalanceCard.totalBalance"
 msgstr "Total Balance"
 
-#: src/components/wallet/standard/WalletStandard.js:256
+#: src/components/wallet/standard/WalletStandard.tsx:205
 msgid "BalanceCard.totalBalanceTooltip"
 msgstr "This is the total amount of Chia in the blockchain at the LCA block (latest common ancestor) that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 
-#: src/components/wallet/standard/WalletStandard.js:286
+#: src/components/wallet/standard/WalletStandard.tsx:224
 msgid "BalanceCard.viewPendingBalances"
 msgstr "View pending balances"
 
@@ -213,6 +213,126 @@ msgstr "Time Created"
 msgid "BlocksCard.title"
 msgstr "Blocks"
 
+#: src/components/wallet/coloured/WalletColoured.tsx:194
+msgid "ColourCard.colour"
+msgstr "Colour:"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:210
+msgid "ColourCard.nickname"
+msgstr "Nickname"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:216
+msgid "ColourCard.rename"
+msgstr "Rename"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:185
+msgid "ColourCard.title"
+msgstr "Colour Info"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:584
+msgid "ColouredAddressCard.address"
+msgstr "Address"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:588
+msgid "ColouredAddressCard.copy"
+msgstr "Copy"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:600
+msgid "ColouredAddressCard.newAddress"
+msgstr "New Address"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:576
+msgid "ColouredAddressCard.title"
+msgstr "Receive Addresss"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:312
+msgid "ColouredBalanceCard.spendableBalance"
+msgstr "Spendable Balance"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:307
+msgid "ColouredBalanceCard.title"
+msgstr "Balance"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:311
+msgid "ColouredBalanceCard.totalBalance"
+msgstr "Total Balance"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:321
+msgid "ColouredBalanceCard.viewPendingBalances"
+msgstr "View pending balances..."
+
+#: src/components/wallet/coloured/WalletColoured.tsx:481
+msgid "ColouredHistoryCard.title"
+msgstr "History"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:430
+msgid "ColouredSendCard.address"
+msgstr "Address"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:442
+msgid "ColouredSendCard.amount"
+msgstr "Amount ({cc_unit})"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:459
+msgid "ColouredSendCard.farm"
+msgstr "Farm"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:449
+msgid "ColouredSendCard.fee"
+msgstr "Fee (TXCH)"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:464
+msgid "ColouredSendCard.send"
+msgstr "Send"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:415
+msgid "ColouredSendCard.title"
+msgstr "Create Transaction"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:528
+msgid "ColouredTransactionTable.amount"
+msgstr "Amount"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:509
+msgid "ColouredTransactionTable.confirmed"
+msgstr "Confirmed"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:522
+msgid "ColouredTransactionTable.date"
+msgstr "Date"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:531
+msgid "ColouredTransactionTable.fee"
+msgstr "Fee"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:504
+msgid "ColouredTransactionTable.incoming"
+msgstr "Incoming"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:497
+msgid "ColouredTransactionTable.noPreviousTransactions"
+msgstr "No previous transactions"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:506
+msgid "ColouredTransactionTable.outgoing"
+msgstr "Outgoing"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:509
+msgid "ColouredTransactionTable.pending"
+msgstr "Pending"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:525
+msgid "ColouredTransactionTable.status"
+msgstr "Status"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:519
+msgid "ColouredTransactionTable.to"
+msgstr "To"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:516
+msgid "ColouredTransactionTable.type"
+msgstr "Type"
+
 #: src/components/connections/Connections.js:208
 msgid "Connections.connect"
 msgstr "Connect"
@@ -310,47 +430,96 @@ msgstr "Please select coin type"
 msgid "CreateOffer.title"
 msgstr "Create Trade Offer"
 
+#: src/components/plotter/Plotter.js:453
+msgid "CreatePlot.colour"
+msgstr "Colour"
+
+#: src/components/plotter/Plotter.js:563
+msgid "CreatePlot.create"
+msgstr "Create"
+
+#: src/components/plotter/Plotter.js:404
+msgid "CreatePlot.description"
+msgstr "Using this tool, you can create plots, which are allocated space on your hard drive used to farm and earn Chia. Also, temporary files are created during the plotting process, which exceed the size of the final plot files, so make sure you have enough space. Try to use a fast drive like an SSD for the temporary folder, and a large slow hard drive (like external HDD) for the final folder."
+
+#: src/components/plotter/Plotter.js:514
+msgid "CreatePlot.numberOfBuckets"
+msgstr "Number of buckets"
+
+#: src/components/plotter/Plotter.js:524
+msgid "CreatePlot.numberOfBucketsDescription"
+msgstr "0 automatically chooses bucket count"
+
+#: src/components/plotter/Plotter.js:496
+msgid "CreatePlot.numberOfThreads"
+msgstr "Number of threads"
+
+#: src/components/plotter/Plotter.js:424
+#: src/components/plotter/Plotter.js:429
+msgid "CreatePlot.plotSize"
+msgstr "Plot Size"
+
+#: src/components/plotter/Plotter.js:470
+msgid "CreatePlot.ramMaxUsage"
+msgstr "RAM max usage"
+
+#: src/components/plotter/Plotter.js:481
+msgid "CreatePlot.ramMaxUsageDescription"
+msgstr "More memory slightly increases speed"
+
+#: src/components/plotter/Plotter.js:371
+msgid "CreatePlot.specifyFinalDirectory"
+msgstr "Please specify a temporary and final directory"
+
+#: src/components/plotter/Plotter.js:537
+msgid "CreatePlot.stripeSize"
+msgstr "Stripe Size"
+
+#: src/components/plotter/Plotter.js:396
+msgid "CreatePlot.title"
+msgstr "Create Plot"
+
 #: src/components/wallet/Wallets.tsx:129
 msgid "CreateWallet.addWallet"
 msgstr "Add Wallet"
 
-#: src/components/dashboard/DashboardSideBar.tsx:32
+#: src/components/dashboard/DashboardSideBar.tsx:38
 msgid "DashboardSideBar.farm"
 msgstr "Farm"
 
-#: src/components/dashboard/DashboardSideBar.tsx:29
+#: src/components/dashboard/DashboardSideBar.tsx:35
 msgid "DashboardSideBar.home"
 msgstr "Full Node"
 
-#: src/components/dashboard/DashboardSideBar.tsx:34
+#: src/components/dashboard/DashboardSideBar.tsx:40
 msgid "DashboardSideBar.keys"
 msgstr "Keys"
 
-#: src/components/dashboard/DashboardSideBar.tsx:31
+#: src/components/dashboard/DashboardSideBar.tsx:37
 msgid "DashboardSideBar.plot"
 msgstr "Plot"
 
-#: src/components/dashboard/DashboardSideBar.tsx:33
+#: src/components/dashboard/DashboardSideBar.tsx:39
 msgid "DashboardSideBar.trade"
 msgstr "Trade"
 
-#: src/components/dashboard/DashboardSideBar.tsx:30
+#: src/components/dashboard/DashboardSideBar.tsx:36
 msgid "DashboardSideBar.wallets"
 msgstr "Wallets"
 
-#: src/components/selectKey/SelectKey.tsx:138
+#: src/components/selectKey/SelectKey.tsx:134
 msgid "DeleteAllKeys.back"
 msgstr "Back"
 
-#: src/components/selectKey/SelectKey.tsx:143
+#: src/components/selectKey/SelectKey.tsx:137
 msgid "DeleteAllKeys.delete"
 msgstr "Delete"
 
-#: src/components/selectKey/SelectKey.tsx:129
+#: src/components/selectKey/SelectKey.tsx:125
 msgid "DeleteAllKeys.description"
 msgstr "Deleting all keys will permanatly remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 
-#: src/components/selectKey/SelectKey.tsx:123
+#: src/components/selectKey/SelectKey.tsx:121
 msgid "DeleteAllKeys.title"
 msgstr "Delete all keys"
 
@@ -362,11 +531,11 @@ msgstr "Full Node"
 msgid "FullNodeStatus.title"
 msgstr "Full Node Status"
 
-#: src/components/wallet/standard/WalletStandard.js:558
+#: src/components/wallet/standard/WalletStandard.tsx:408
 msgid "HistoryCard.title"
 msgstr "History"
 
-#: src/components/locale/LocaleToggle.tsx:34
+#: src/components/locale/LocaleToggle.tsx:36
 msgid "LocaleToggle.helpToTranslate"
 msgstr "Help to translate"
 
@@ -401,6 +570,46 @@ msgstr "View Offer"
 #: src/components/trading/TradingOverview.js:458
 msgid "PendingTrades.title"
 msgstr "Offers Created"
+
+#: src/components/plotter/Plotter.js:286
+msgid "PlotterFinalLocation.availableOnlyFromElectron"
+msgstr "This feature is available only from electron app"
+
+#: src/components/plotter/Plotter.js:303
+msgid "PlotterFinalLocation.finalFolderLocation"
+msgstr "Final folder location"
+
+#: src/components/plotter/Plotter.js:316
+msgid "PlotterFinalLocation.select"
+msgstr "Select"
+
+#: src/components/plotter/Plotter.js:624
+msgid "PlotterProgress.cancel"
+msgstr "Cancel"
+
+#: src/components/plotter/Plotter.js:637
+msgid "PlotterProgress.clearLog"
+msgstr "Clear Log"
+
+#: src/components/plotter/Plotter.js:608
+msgid "PlotterProgress.plottingStoppedSuccesfully"
+msgstr "Plotting stopped succesfully."
+
+#: src/components/plotter/Plotter.js:594
+msgid "PlotterProgress.title"
+msgstr "Progress"
+
+#: src/components/plotter/Plotter.js:229
+msgid "PlotterWorkLocation.availableOnlyFromElectron"
+msgstr "This feature is available only from electron app"
+
+#: src/components/plotter/Plotter.js:259
+msgid "PlotterWorkLocation.select"
+msgstr "Select"
+
+#: src/components/plotter/Plotter.js:247
+msgid "PlotterWorkLocation.temporaryFolderLocation"
+msgstr "Temporary folder location"
 
 #: src/components/fullNode/FullNode.js:491
 msgid "SearchBlock.blockHash"
@@ -446,63 +655,63 @@ msgstr "Sign In"
 msgid "SelectKey.title"
 msgstr "Select Key"
 
-#: src/components/wallet/standard/WalletStandard.js:470
+#: src/components/wallet/standard/WalletStandard.tsx:359
 msgid "SendCard.address"
 msgstr "Address / Puzzle hash"
 
-#: src/components/wallet/standard/WalletStandard.js:492
+#: src/components/wallet/standard/WalletStandard.tsx:371
 msgid "SendCard.amount"
 msgstr "Amount"
 
-#: src/components/wallet/standard/WalletStandard.js:418
+#: src/components/wallet/standard/WalletStandard.tsx:320
 msgid "SendCard.enterValidAddress"
 msgstr "Error: Cannot send chia to coloured address. Please enter a chia address."
 
-#: src/components/wallet/standard/WalletStandard.js:398
+#: src/components/wallet/standard/WalletStandard.tsx:306
 msgid "SendCard.enterValidAmount"
 msgstr "Please enter a valid numeric amount"
 
-#: src/components/wallet/standard/WalletStandard.js:406
+#: src/components/wallet/standard/WalletStandard.tsx:312
 msgid "SendCard.enterValidFee"
 msgstr "Please enter a valid numeric fee"
 
-#: src/components/wallet/standard/WalletStandard.js:523
+#: src/components/wallet/standard/WalletStandard.tsx:386
 msgid "SendCard.farm"
 msgstr "Farm"
 
-#: src/components/wallet/standard/WalletStandard.js:506
+#: src/components/wallet/standard/WalletStandard.tsx:376
 msgid "SendCard.fee"
 msgstr "Fee"
 
-#: src/components/wallet/standard/WalletStandard.js:383
+#: src/components/wallet/standard/WalletStandard.tsx:296
 msgid "SendCard.finishSyncingBeforeTransaction"
 msgstr "Please finish syncing before making a transaction"
 
-#: src/components/wallet/standard/WalletStandard.js:536
+#: src/components/wallet/standard/WalletStandard.tsx:391
 msgid "SendCard.send"
 msgstr "Send"
 
-#: src/components/wallet/standard/WalletStandard.js:446
+#: src/components/wallet/standard/WalletStandard.tsx:344
 msgid "SendCard.title"
 msgstr "Create Transaction"
 
-#: src/components/wallet/Wallets.tsx:166
+#: src/components/wallet/Wallets.tsx:159
 msgid "StatusCard.connections"
 msgstr "connections:"
 
-#: src/components/wallet/Wallets.tsx:158
+#: src/components/wallet/Wallets.tsx:153
 msgid "StatusCard.height"
 msgstr "height:"
 
-#: src/components/wallet/Wallets.tsx:147
+#: src/components/wallet/Wallets.tsx:145
 msgid "StatusCard.status"
 msgstr "status:"
 
-#: src/components/wallet/Wallets.tsx:153
+#: src/components/wallet/Wallets.tsx:148
 msgid "StatusCard.synced"
 msgstr "synced"
 
-#: src/components/wallet/Wallets.tsx:152
+#: src/components/wallet/Wallets.tsx:148
 msgid "StatusCard.syncing"
 msgstr "syncing"
 
@@ -684,7 +893,7 @@ msgstr "Colour"
 msgid "TradeList.side"
 msgstr "Side"
 
-#: src/components/trading/TradeManager.tsx:70
+#: src/components/trading/TradeManager.tsx:68
 msgid "TradeManager.createTrade"
 msgstr "Create Trade"
 
@@ -692,11 +901,11 @@ msgstr "Create Trade"
 msgid "TradeManager.title"
 msgstr "Trading"
 
-#: src/components/trading/TradeManager.tsx:65
+#: src/components/trading/TradeManager.tsx:63
 msgid "TradeManager.tradeOverview"
 msgstr "Trade Overview"
 
-#: src/components/trading/TradeManager.tsx:75
+#: src/components/trading/TradeManager.tsx:73
 msgid "TradeManager.viewTrade"
 msgstr "View Trade"
 
@@ -728,51 +937,51 @@ msgstr "Trade ID"
 msgid "TradingHistory.title"
 msgstr "Trading History"
 
-#: src/components/wallet/standard/WalletStandard.js:638
+#: src/components/wallet/standard/WalletStandard.tsx:453
 msgid "TransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/standard/WalletStandard.js:601
+#: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "Confirmed at height {0}"
 
-#: src/components/wallet/standard/WalletStandard.js:628
+#: src/components/wallet/standard/WalletStandard.tsx:447
 msgid "TransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/standard/WalletStandard.js:643
+#: src/components/wallet/standard/WalletStandard.tsx:456
 msgid "TransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/standard/WalletStandard.js:586
+#: src/components/wallet/standard/WalletStandard.tsx:427
 msgid "TransactionTable.incoming"
 msgstr "Incoming"
 
-#: src/components/wallet/standard/WalletStandard.js:592
+#: src/components/wallet/standard/WalletStandard.tsx:429
 msgid "TransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/standard/WalletStandard.js:606
+#: src/components/wallet/standard/WalletStandard.tsx:434
 msgid "TransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/standard/WalletStandard.js:633
+#: src/components/wallet/standard/WalletStandard.tsx:450
 msgid "TransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/standard/WalletStandard.js:623
+#: src/components/wallet/standard/WalletStandard.tsx:444
 msgid "TransactionTable.to"
 msgstr "To"
 
-#: src/components/wallet/standard/WalletStandard.js:618
+#: src/components/wallet/standard/WalletStandard.tsx:441
 msgid "TransactionTable.type"
 msgstr "Type"
 
-#: src/components/wallet/WalletAdd.tsx:43
+#: src/components/wallet/WalletAdd.tsx:41
 msgid "WalletAdd.description"
 msgstr "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
 
-#: src/components/wallet/WalletAdd.tsx:55
+#: src/components/wallet/WalletAdd.tsx:53
 msgid "WalletAdd.next"
 msgstr "Next"
 
@@ -780,11 +989,11 @@ msgstr "Next"
 msgid "WalletAdd.title"
 msgstr "New Wallet"
 
-#: src/components/wallet/WalletImport.tsx:72
+#: src/components/wallet/WalletImport.tsx:70
 msgid "WalletImport.description"
 msgstr "Enter the 24 word mmemonic that you have saved in order to restore your Chia wallet."
 
-#: src/components/wallet/WalletImport.tsx:82
+#: src/components/wallet/WalletImport.tsx:80
 msgid "WalletImport.next"
 msgstr "Next"
 
@@ -828,6 +1037,6 @@ msgstr "syncing"
 msgid "WalletStatusCard.title"
 msgstr "Status"
 
-#: src/components/wallet/Wallets.tsx:184
+#: src/components/wallet/Wallets.tsx:175
 msgid "Wallets.title"
 msgstr "Wallets"
