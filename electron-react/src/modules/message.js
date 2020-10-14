@@ -724,9 +724,11 @@ export const create_did_wallet = (amount, backup_ids) => {
   action.message.command = "create_new_wallet";
   action.message.data = {
     wallet_type: "did_wallet",
+    did_type: "new",
     amount: amount,
     backup_ids: backup_ids
   };
+  console.log(action.message.data)
   return action;
 };
 

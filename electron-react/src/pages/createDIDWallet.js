@@ -20,53 +20,113 @@ import { useStyles } from "./CreateWallet";
 import { create_did_action } from "../modules/message";
 import { chia_to_mojo } from "../util/chia";
 import { openDialog } from "../modules/dialogReducer";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 
 export const customStyles = makeStyles(theme => ({
   input: {
     marginLeft: theme.spacing(3),
-    marginRight: theme.spacing(3),
-    paddingRight: theme.spacing(3),
     height: 56
   },
-  send: {
-    paddingLeft: "0px",
+  inputLeft: {
+    marginLeft: theme.spacing(3),
+    width: "75%",
+    height: 56
+  },
+  inputDIDs: {
+    paddingTop: theme.spacing(3),
+    marginLeft: theme.spacing(0)
+  },
+  inputDID: {
+    marginLeft: theme.spacing(0),
+    marginBottom: theme.spacing(2),
+    width: "50%",
+    height: 56
+  },
+  inputRight: {
+    marginRight: theme.spacing(3),
+    marginLeft: theme.spacing(6),
+    height: 56
+  },
+  sendButton: {
     marginLeft: theme.spacing(6),
     marginRight: theme.spacing(2),
     height: 56,
     width: 150
   },
+  addButton: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    height: 56,
+    width: 50
+  },
   card: {
     paddingTop: theme.spacing(10),
     height: 200
-  }
+  },
+  topCard: {
+    height: 100
+  },
+  subCard: {
+    height: 100
+  },
+  topTitleCard: {
+    paddingTop: theme.spacing(6),
+    paddingBottom: theme.spacing(1)
+  },
+  titleCard: {
+    paddingBottom: theme.spacing(1)
+  },
+  inputTitleLeft: {
+    paddingTop: theme.spacing(3),
+    marginLeft: theme.spacing(3),
+    width: "50%"
+  },
+  inputTitleRight: {
+    marginLeft: theme.spacing(3),
+    width: "50%"
+  },
+  ul: {
+    listStyle: "none"
+  },
+  sideButton: {
+    marginTop: theme.spacing(0),
+    marginBottom: theme.spacing(2),
+    width: 50,
+    height: 56
+  },
 }));
 
 export const CreateDIDWallet = () => {
   const classes = useStyles();
   const custom = customStyles();
   const dispatch = useDispatch();
-  var amount_input = null;
-  var backup_ids = [];
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
 
+  const { register, handleSubmit, control } = useForm();
+
+  const { fields, append, remove } = useFieldArray(
+    {
+      control,
+      name: "backup_dids"
+    }
+  );
+
+  const onSubmit = (data) => {
+    console.log("data", data)
+    if (data.backup_dids === undefined) {
+      var didArray = []
+    } else {
+      let didArray = data.backup_dids.map(({ backupid }) => backupid)
+    }
+    console.log(didArray)
+    var amount_val = chia_to_mojo(parseInt(data.amount));
+    console.log(amount_val, didArray)
+    dispatch(create_did_action(amount_val, didArray));
+  };
+
   function goBack() {
     dispatch(changeCreateWallet(ALL_OPTIONS));
-  }
-
-  function create() {
-    if (
-      amount_input.value === "" ||
-      Number(amount_input.value) === 0 ||
-      !Number(amount_input.value) ||
-      isNaN(Number(amount_input.value))
-    ) {
-      dispatch(openDialog("Please enter a valid numeric amount"));
-      return;
-    }
-    dispatch(createState(true, true));
-    var amount = chia_to_mojo(amount_input.value);
-    dispatch(create_did_action(amount, backup_ids));
   }
 
   return (
@@ -85,33 +145,104 @@ export const CreateDIDWallet = () => {
           </Box>
         </Box>
       </div>
-      <div className={custom.card}>
-        <Box display="flex">
-          <Box flexGrow={1}>
-            <TextField
-              className={custom.input}
-              id="filled-secondary" // lgtm [js/duplicate-html-id]
-              variant="filled"
-              color="secondary"
-              fullWidth
-              inputRef={input => {
-                amount_input = input;
-              }}
-              label="Amount"
-            />
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className={custom.topTitleCard}>
+          <Box display="flex">
+            <Box flexGrow={6} className={custom.inputTitleLeft}>
+              <Typography variant="subtitle1">
+                Amount
+              </Typography>
+            </Box>
           </Box>
-          <Box>
-            <Button
-              onClick={create}
-              className={custom.send}
-              variant="contained"
-              color="primary"
-            >
-              Create
-            </Button>
+        </div>
+        <div className={custom.subCard}>
+          <Box display="flex">
+            <Box flexGrow={1}>
+              <Controller
+                as={TextField}
+                name="amount"
+                control={control}
+                label="Amount"
+                variant="filled"
+                color="secondary"
+                fullWidth
+                className={custom.input}
+                defaultValue=""
+                />
+            </Box>
+            <Box>
+              <Button
+                type="submit"
+                className={custom.sendButton}
+                variant="contained"
+                color="primary"
+              >
+                Create
+              </Button>
+            </Box>
           </Box>
-        </Box>
-      </div>
+        </div>
+        <div className={custom.inputLeft}>
+          <Box display="flex">
+            <Box flexGrow={6}>
+              <Typography variant="subtitle1">
+                (Optional) Add Backup IDs
+              </Typography>
+            </Box>
+          </Box>
+        </div>
+        <div className={custom.inputLeft}>
+          <Box display="flex">
+            <Box flexGrow={6}>
+              <Button
+                type="button"
+                className={custom.addButton}
+                variant="contained"
+                color="primary"
+                onClick={() => {
+                  append({ backupid: "Backup ID" });
+                }}
+              >
+                ADD
+              </Button>
+            </Box>
+          </Box>
+        </div>
+        <div>
+          <Box display="flex">
+            <Box flexGrow={1} className={custom.inputDIDs}>
+              <ul>
+                {fields.map((item, index) => {
+                  return (
+                    <li key={item.id} style={{ listStyleType: "none" }}>
+                      <Controller
+                        as={TextField}
+                        name={`backup_dids[${index}].backupid`}
+                        control={control}
+                        defaultValue=""
+                        label="Backup ID"
+                        variant="filled"
+                        color="secondary"
+                        className={custom.inputDID}
+                      />
+                      <Button
+                        type="button"
+                        className={custom.sideButton}
+                        variant="contained"
+                        color="secondary"
+                        disableElevation
+                        onClick={() => remove(index)}
+                      >
+                        Delete
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Box>
+          </Box>
+        </div>
+      </form>
       <Backdrop className={classes.backdrop} open={pending && created}>
         <CircularProgress color="inherit" />
       </Backdrop>
