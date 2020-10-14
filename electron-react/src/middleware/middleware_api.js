@@ -63,7 +63,7 @@ async function ping_wallet(store) {
   store.dispatch(pingWallet());
   await sleep(1000);
   const state = store.getState();
-  const {wallet_connected} = state.daemon_state;
+  const { wallet_connected } = state.daemon_state;
   if (!wallet_connected) {
     ping_wallet(store);
   }
@@ -83,7 +83,7 @@ async function ping_farmer(store) {
   store.dispatch(pingFarmer());
   await sleep(1000);
   const state = store.getState();
-  const {farmer_connected} = state.daemon_state;
+  const { farmer_connected } = state.daemon_state;
   if (!farmer_connected) {
     ping_farmer(store);
   }
@@ -93,7 +93,7 @@ async function ping_harvester(store) {
   store.dispatch(pingHarvester());
   await sleep(1000);
   const state = store.getState();
-  const {harvester_connected} = state.daemon_state;
+  const { harvester_connected } = state.daemon_state;
   if (!harvester_connected) {
     ping_harvester(store);
   }
@@ -105,9 +105,9 @@ async function track_progress(store, location) {
   if (!isElectron()) {
     return;
   }
-  const {Tail} = window.require('tail');
+  const { Tail } = window.require('tail');
 
-  const {dispatch} = store;
+  const { dispatch } = store;
   const options = { fromBeginning: true, follow: true, useWatchFile: true };
   if (!location) {
     return;
@@ -182,17 +182,14 @@ export const handle_message = (store, payload) => {
     }
   } else if (payload.command === 'get_private_key') {
     const text =
-      `Private key: ${ 
-      payload.data.private_key.sk 
-      }\n` +
-      `Public key: ${ 
-      payload.data.private_key.pk 
-      }\n${ 
-      payload.data.private_key.seed
-        ? `seed: ${  payload.data.private_key.seed}`
-        : 'No 24 word seed, since this key is imported.'}`;
+      `Private key: ${payload.data.private_key.sk}\n` +
+      `Public key: ${payload.data.private_key.pk}\n${
+        payload.data.private_key.seed
+          ? `seed: ${payload.data.private_key.seed}`
+          : 'No 24 word seed, since this key is imported.'
+      }`;
     store.dispatch(
-      openDialog(`Private key ${  payload.data.private_key.fingerprint}`, text),
+      openDialog(`Private key ${payload.data.private_key.fingerprint}`, text),
     );
   } else if (payload.command === 'delete_plot') {
     store.dispatch(refreshPlots());
@@ -200,7 +197,7 @@ export const handle_message = (store, payload) => {
     store.dispatch(getPlots());
   } else if (payload.command === 'get_wallets') {
     if (payload.data.success) {
-      const {wallets} = payload.data;
+      const { wallets } = payload.data;
       for (const wallet of wallets) {
         if (wallet.type === RATE_LIMITED) {
           const data = JSON.parse(wallet.data);
@@ -224,9 +221,9 @@ export const handle_message = (store, payload) => {
       }
     }
   } else if (payload.command === 'state_changed') {
-    const {state} = payload.data;
+    const { state } = payload.data;
     if (state === 'coin_added' || state === 'coin_removed') {
-      var {wallet_id} = payload.data;
+      var { wallet_id } = payload.data;
       store.dispatch(get_balance_for_wallet(wallet_id));
       store.dispatch(get_transactions(wallet_id));
     } else if (state === 'sync_changed') {
@@ -240,7 +237,7 @@ export const handle_message = (store, payload) => {
     }
   } else if (payload.command === 'cc_set_name') {
     if (payload.data.success) {
-      const {wallet_id} = payload.data;
+      const { wallet_id } = payload.data;
       store.dispatch(get_colour_name(wallet_id));
     }
   } else if (payload.command === 'respond_to_offer') {
@@ -257,7 +254,7 @@ export const handle_message = (store, payload) => {
       track_progress(store, payload.data.out_file);
     }
   } else if (payload.command === 'start_service') {
-    const {service} = payload.data;
+    const { service } = payload.data;
     if (payload.data.success) {
       if (service === service_wallet) {
         ping_wallet(store);
@@ -289,7 +286,7 @@ export const handle_message = (store, payload) => {
   } else if (payload.command === 'is_running') {
     if (payload.data.success) {
       const service = payload.data.service_name;
-      const {is_running} = payload.data;
+      const { is_running } = payload.data;
       if (service === service_plotter) {
         if (is_running) {
           track_progress(store, payload.data.out_file);

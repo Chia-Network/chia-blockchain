@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Switch } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { Trans } from '@lingui/macro';
 import SelectKey from '../selectKey/SelectKey';
 import WalletAdd from '../wallet/WalletAdd';
 import WalletImport from '../wallet/WalletImport';
@@ -21,13 +22,25 @@ export default function Router() {
   const exiting = useSelector((state: RootState) => state.daemon_state.exiting);
 
   if (exiting) {
-    return <LoadingScreen>Closing down node and server</LoadingScreen>;
+    return (
+      <LoadingScreen>
+        <Trans id="Application.closing">Closing down node and server</Trans>
+      </LoadingScreen>
+    );
   }
   if (!walletConnected) {
-    return <LoadingScreen>Connecting to wallet</LoadingScreen>;
+    return (
+      <LoadingScreen>
+        <Trans id="Application.connectingToWallet">Connecting to wallet</Trans>
+      </LoadingScreen>
+    );
   }
   if (!loggedInReceived) {
-    return <LoadingScreen>Logging in</LoadingScreen>;
+    return (
+      <LoadingScreen>
+        <Trans id="Application.loggingIn">Logging in</Trans>
+      </LoadingScreen>
+    );
   }
 
   return (
