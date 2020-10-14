@@ -296,7 +296,7 @@ function BalanceCardSubSection(props: BalanceCardSubSectionProps) {
   const classes = useStyles();
   let cc_unit = props.name;
   if (cc_unit.length > 10) {
-    cc_unit = `${cc_unit.slice(0, 10)  }...`;
+    cc_unit = `${cc_unit.slice(0, 10)}...`;
   }
   return (
     <Grid item xs={12}>
@@ -319,7 +319,7 @@ function BalanceCardSubSection(props: BalanceCardSubSectionProps) {
 function get_cc_unit(name: string): string {
   let cc_unit = name;
   if (cc_unit.length > 10) {
-    cc_unit = `${cc_unit.slice(0, 10)  }...`;
+    cc_unit = `${cc_unit.slice(0, 10)}...`;
   }
   return cc_unit;
 }
@@ -361,7 +361,7 @@ function BalanceCard(props: BalanceCardProps) {
   const balancebox_ptotal = 'Pending Total Balance';
   const balancebox_pending = 'Pending Transactions';
   const balancebox_change = 'Pending Change';
-  const balancebox_unit = ` ${  cc_unit}`;
+  const balancebox_unit = ` ${cc_unit}`;
   const balancebox_hline =
     "<tr><td colspan='2' style='text-align:center'><hr width='50%'></td></tr>";
   const balance_ptotal_chia = mojo_to_colouredcoin_string(balance_ptotal);
@@ -711,9 +711,8 @@ function TransactionTable(props: TransactionTableProps) {
   const incoming_string = (incoming: boolean) => {
     if (incoming) {
       return <Trans id="ColouredTransactionTable.incoming">Incoming</Trans>;
-    } 
-      return <Trans id="ColouredTransactionTable.outgoing">Outgoing</Trans>;
-    
+    }
+    return <Trans id="ColouredTransactionTable.outgoing">Outgoing</Trans>;
   };
   const confirmed_to_string = (confirmed: boolean) => {
     return confirmed ? (
