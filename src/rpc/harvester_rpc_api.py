@@ -61,3 +61,6 @@ class HarvesterRpcApi:
         if await self.service._remove_plot_directory(dirname):
             return {}
         raise ValueError(f"Did not remove plot directory {dirname}")
+
+    async def get_last_attempted_proofs(self, request: Dict) -> Dict:
+        return {"last_attempted_proofs": self.service.last_attempted_proofs}

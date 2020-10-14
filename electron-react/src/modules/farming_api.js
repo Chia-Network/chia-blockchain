@@ -10,7 +10,8 @@ const initial_state = {
     plots: [],
     not_found_filenames: [],
     failed_to_open_filenames: [],
-    plot_directories: []
+    plot_directories: [],
+    last_attempted_proofs: []
   }
 };
 
@@ -92,6 +93,19 @@ export const farmingReducer = (state = { ...initial_state }, action) => {
           harvester: {
             ...state.harvester,
             plot_directories: data.directories
+          }
+        };
+      }
+
+      if (command === "get_last_attempted_proofs") {
+        if (data.success !== true) {
+          return state;
+        }
+        return {
+          ...state,
+          harvester: {
+            ...state.harvester,
+            last_attempted_proofs: data.last_attempted_proofs
           }
         };
       }

@@ -55,7 +55,7 @@ export const useFarmedChiaInfo = () => {
         setLastHeightFarmed(biggestHeight);
       }
     })();
-  }, [wallets]);
+  }, [wallets, totalChiaFarmed]);
 
   return [totalChiaFarmed, lastHeightFarmed];
 };

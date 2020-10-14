@@ -58,6 +58,7 @@ class Harvester:
         self.server = None
         self.constants = constants
         self.cached_challenges = []
+        self.last_attempted_proofs = []
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -266,6 +267,12 @@ class Harvester:
             f" Found {total_proofs_found} proofs. Time: {time.time() - start}. "
             f"Total {len(self.provers)} plots"
         )
+
+        if total_proofs_found > 0:
+            self.last_attempted_proofs.append({
+                "challenge_hash": new_challenge.challenge_hash,
+                "timestamp": time.time()
+            })
 
     @api_request
     async def request_proof_of_space(

@@ -30,3 +30,6 @@ class HarvesterRpcClient(RpcClient):
         return (await self.fetch("remove_plot_directory", {"dirname": dirname}))[
             "success"
         ]
+
+    async def get_last_attempted_proofs(self) -> List[Dict]:
+        return await self.fetch("get_last_attempted_proofs", {})

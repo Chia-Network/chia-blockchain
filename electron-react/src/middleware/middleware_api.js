@@ -36,6 +36,7 @@ import {
 import {
   getPlots,
   getPlotDirectories,
+  getLastAttemptedProofs,
   pingHarvester,
   refreshPlots
 } from "../modules/harvesterMessages";
@@ -149,6 +150,7 @@ export const refreshAllState = dispatch => {
   dispatch(getFarmerConnections());
   dispatch(getPlots());
   dispatch(getPlotDirectories());
+  dispatch(getLastAttemptedProofs());
   dispatch(isServiceRunning(service_plotter));
   dispatch(get_all_trades());
 };
@@ -304,7 +306,6 @@ export const handle_message = (store, payload) => {
     }
   }
   if (payload.data.success === false) {
-    debugger;
     if (
       payload.data.error.includes("already running") ||
       payload.data.error === "not_initialized"

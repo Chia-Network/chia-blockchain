@@ -55,3 +55,10 @@ export const removePlotDirectory = dirname => {
   action.message.data = { dirname };
   return action;
 };
+
+export const getLastAttemptedProofs = () => {
+  var action = harvesterMessage();
+  action.message.command = "get_last_attempted_proofs";
+  action.message.data = {};
+  return action;
+};
