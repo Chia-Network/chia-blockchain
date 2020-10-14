@@ -171,6 +171,7 @@ const Block = (props) => {
     {
       name: <Trans id="Block.previousBlock">Previous block</Trans>,
       value: block.header.data.prev_header_hash,
+      previousBlock: true,
     },
     {
       name: <Trans id="Block.difficulty">Difficulty</Trans>,
@@ -296,7 +297,7 @@ const Block = (props) => {
                     </TableCell>
                     <TableCell
                       onClick={
-                        row.name === 'Previous block'
+                        row.previousBlock
                           ? () => handleGetBlock(row.value)
                           : () => {}
                       }
