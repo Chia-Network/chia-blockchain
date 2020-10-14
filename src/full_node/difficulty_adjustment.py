@@ -1,20 +1,114 @@
-from typing import Dict, Optional
+from typing import Dict
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_min_iters_from_iterations
 from src.types.sized_bytes import bytes32
 from src.full_node.sub_block_record import SubBlockRecord
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 from src.util.significant_bits import (
     count_significant_bits,
     truncate_to_significant_bits,
 )
 
 
+def _finishes_challenge_slot(
+    constants: ConsensusConstants, sub_blocks: Dict[bytes32, SubBlockRecord], header_hash: bytes32
+) -> bool:
+    """
+    Returns true if the next block after header_hash can start a new challenge_slot or not.
+    """
+    sub_block: SubBlockRecord = sub_blocks[header_hash]
+    next_height: uint32 = uint32(sub_block.height + 1)
+    prev_slot: uint32 = sub_block.challenge_slot_number
+    cur: SubBlockRecord = sub_block
+    deficit: int = constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+    while cur.challenge_slot_number == prev_slot and cur.height > 0:
+        cur = sub_blocks[cur.prev_hash]
+        deficit -= 1
+
+    # If last slot does not have enough blocks for a new challenge block to be infused, return same difficulty
+    if deficit > 0:
+        return False
+
+    # If we have not crossed the epoch barrier in this slot, return same difficulty
+    if (cur.height + 1) % constants.EPOCH_SUB_BLOCKS == next_height % constants.EPOCH_SUB_BLOCKS:
+        return False
+
+    return True
+
+
+def get_next_slot_iterations(
+    constants: ConsensusConstants,
+    height_to_hash: Dict[uint32, bytes32],
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    header_hash: bytes32,
+    new_slot: bool,
+) -> uint64:
+    """
+    Returns the slot iterations required for the next block after header hash, where new_slot is true iff
+    the next block will be in the next slot.
+    """
+    sub_block: SubBlockRecord = sub_blocks[header_hash]
+    next_height: uint32 = uint32(sub_block.height + 1)
+
+    if height_to_hash[sub_block.height] not in height_to_hash:
+        raise ValueError(f"Header hash {header_hash} not in height_to_hash chain")
+
+    if next_height < constants.EPOCH_SUB_BLOCKS:
+        return uint64(constants.SLOT_ITERS_STARTING)
+
+    # If we are in the same challenge slot as previous sub-block, return same slot iters
+    if not new_slot or not _finishes_challenge_slot(constants, sub_blocks, header_hash):
+        return sub_block.slot_iterations
+
+    #       prev epoch surpassed  prev epoch started                  epoch sur.  epoch started
+    #        v                       v                                v         v
+    #  |.B...B....B. B....B...|......B....B.....B...B.|.B.B.B..|..B...B.B.B...|.B.B.B. B.|........
+
+    height_epoch_surpass: uint32 = next_height % constants.EPOCH_SUB_BLOCKS
+    if height_epoch_surpass > constants.MAX_SLOT_SUB_BLOCKS:
+        raise ValueError(f"Height at {next_height} should not create a new slot, it is far past the epoch barrier")
+
+    # If the prev slot is the first slot, the iterations start at 0
+    # We will compute the timestamps of the last block in epoch, as well as the total iterations at infusion
+    first_sb_in_epoch: SubBlockRecord
+    prev_slot_start_iters: uint128
+
+    if height_epoch_surpass == 0:
+        prev_slot_start_iters = uint128(0)
+        # The genesis block is a edge case, where we measure from the first block in epoch, as opposed to the last
+        # block in the previous epoch
+        prev_slot_time_start = sub_blocks[height_to_hash[uint32(0)]].timestamp
+    else:
+        last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
+        prev_prev_sn: uint32 = last_sb_in_prev_epoch.challenge_slot_number
+
+        curr: SubBlockRecord = last_sb_in_prev_epoch
+        while curr.challenge_slot_number == prev_prev_sn:
+            last_sb_in_prev_epoch = curr
+            curr = sub_blocks[height_to_hash[curr.height + 1]]
+
+        prev_slot_start_iters = last_sb_in_prev_epoch.total_iters
+        prev_slot_time_start = last_sb_in_prev_epoch.timestamp
+
+    # This is computed as the iterations per second in last epoch, times the target number of seconds per slot
+    new_slot_iters_precise: uint64 = (
+        constants.SLOT_TIME_TARGET
+        * (sub_block.total_iters - prev_slot_start_iters)
+        // (sub_block.timestamp - prev_slot_time_start)
+    )
+    new_slot_iters = uint64(truncate_to_significant_bits(new_slot_iters_precise, constants.SIGNIFICANT_BITS))
+    assert count_significant_bits(new_slot_iters) <= constants.SIGNIFICANT_BITS
+    return new_slot_iters
+
+
 def get_difficulty(
     constants: ConsensusConstants, sub_blocks: Dict[bytes32, SubBlockRecord], header_hash: bytes32
 ) -> uint64:
+    """
+    Returns the difficulty of the sub-block referred to by header_hash
+    """
     sub_block = sub_blocks[header_hash]
+
     if sub_block.height == 0:
         return uint64(constants.DIFFICULTY_STARTING)
     return uint64(sub_block.weight - sub_blocks[sub_block.prev_hash].weight)
@@ -35,99 +129,52 @@ def get_next_difficulty(
     sub_block: SubBlockRecord = sub_blocks[header_hash]
     next_height: uint32 = uint32(sub_block.height + 1)
 
-    if next_height < constants.DIFFICULTY_EPOCH:
+    if height_to_hash[sub_block.height] not in height_to_hash:
+        raise ValueError(f"Header hash {header_hash} not in height_to_hash chain")
+
+    if next_height < constants.EPOCH_SUB_BLOCKS:
         # We are in the first epoch
         return uint64(constants.DIFFICULTY_STARTING)
 
     # If we are in the same slot as previous sub-block, return same difficulty
-    if not new_slot:
-        return get_difficulty(constants, sub_blocks, sub_block)
+    if not new_slot or not _finishes_challenge_slot(constants, sub_blocks, header_hash):
+        return get_difficulty(constants, sub_blocks, header_hash)
 
-    prev_slot: uint32 = sub_block.slot_number
-    cur: SubBlockRecord = sub_block
-    while cur.slot_number == prev_slot and cur.height > 0:
-        cur = sub_blocks[cur.prev_hash]
+    height_epoch_surpass: uint32 = next_height % constants.EPOCH_SUB_BLOCKS
+    if height_epoch_surpass > constants.MAX_SLOT_SUB_BLOCKS:
+        raise ValueError(f"Height at {next_height} should not create a new slot, it is far past the epoch barrier")
 
-    # If we have not crossed the epoch barrier in this slot, return same difficulty
-    if (cur.height + 1) % constants.DIFFICULTY_EPOCH == next_height % constants.DIFFICULTY_EPOCH:
-        return get_next_difficulty(constants, sub_blocks, sub_block)
+    # We will compute the timestamps of the last block in epoch, as well as the total iterations at infusion
+    first_sb_in_epoch: SubBlockRecord
 
-    # Epochs are defined as intervals of DIFFICULTY_EPOCH blocks, inclusive and indexed at 0.
-    # For example, [0-2047], [2048-4095], etc. The difficulty changes DIFFICULTY_DELAY into the
-    # epoch, as opposed to the first block (as in Bitcoin).
-    elif next_height % constants.DIFFICULTY_EPOCH != constants.DIFFICULTY_DELAY:
-        # Not at a point where difficulty would change
-        prev_block: Header = headers[block.prev_header_hash]
-        return uint64(block.weight - prev_block.weight)
-
-    #       old diff                  curr diff       new diff
-    # ----------|-----|----------------------|-----|-----...
-    #           h1    h2                     h3   i-1
-    # Height1 is the last block 2 epochs ago, so we can include the time to mine 1st block in previous epoch
-    height1 = uint32(next_height - constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY - 1)
-    # Height2 is the DIFFICULTY DELAYth block in the previous epoch
-    height2 = uint32(next_height - constants.DIFFICULTY_EPOCH - 1)
-    # Height3 is the last block in the previous epoch
-    height3 = uint32(next_height - constants.DIFFICULTY_DELAY - 1)
-
-    # h1 to h2 timestamps are mined on previous difficulty, while  and h2 to h3 timestamps are mined on the
-    # current difficulty
-
-    block1, block2, block3 = None, None, None
-
-    # We need to backtrack until we merge with the LCA chain, so we can use the height_to_hash dict.
-    # This is important if we are on a fork, or beyond the LCA.
-    curr: Optional[Header] = block
-    assert curr is not None
-    while curr.height not in height_to_hash or height_to_hash[curr.height] != curr.header_hash:
-        if curr.height == height1:
-            block1 = curr
-        elif curr.height == height2:
-            block2 = curr
-        elif curr.height == height3:
-            block3 = curr
-        curr = headers.get(curr.prev_header_hash, None)
-        assert curr is not None
-
-    # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
-    if not block1 and height1 >= 0:
-        # height1 could be -1, for the first difficulty calculation
-        block1 = headers[height_to_hash[height1]]
-    if not block2:
-        block2 = headers[height_to_hash[height2]]
-    if not block3:
-        block3 = headers[height_to_hash[height3]]
-    assert block2 is not None and block3 is not None
-
-    # Current difficulty parameter (diff of block h = i - 1)
-    Tc = get_next_difficulty(constants, headers, height_to_hash, headers[block.prev_header_hash])
-
-    # Previous difficulty parameter (diff of block h = i - 2048 - 1)
-    Tp = get_next_difficulty(constants, headers, height_to_hash, headers[block2.prev_header_hash])
-    if block1:
-        timestamp1 = int(block1.data.timestamp)  # i - 512 - 1
+    if height_epoch_surpass == 0:
+        # The genesis block is a edge case, where we measure from the first block in epoch, as opposed to the last
+        # block in the previous epoch
+        block_height_start = 0
+        prev_slot_time_start = sub_blocks[height_to_hash[uint32(0)]].timestamp
     else:
-        # In the case of height == -1, there is no timestamp here, so assume the genesis block
-        # took constants.BLOCK_TIME_TARGET seconds to mine.
-        genesis = headers[height_to_hash[uint32(0)]]
-        timestamp1 = genesis.data.timestamp - constants.BLOCK_TIME_TARGET
-    timestamp2 = block2.data.timestamp  # i - 2048 + 512 - 1
-    timestamp3 = block3.data.timestamp  # i - 512 - 1
+        last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
+        prev_prev_sn: uint32 = last_sb_in_prev_epoch.challenge_slot_number
 
-    # Numerator fits in 128 bits, so big int is not necessary
-    # We multiply by the denominators here, so we only have one fraction in the end (avoiding floating point)
-    term1 = constants.DIFFICULTY_DELAY * Tp * (timestamp3 - timestamp2) * constants.BLOCK_TIME_TARGET
-    term2 = (
-        (constants.DIFFICULTY_WARP_FACTOR - 1)
-        * (constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY)
-        * Tc
-        * (timestamp2 - timestamp1)
-        * constants.BLOCK_TIME_TARGET
-    )
+        curr: SubBlockRecord = last_sb_in_prev_epoch
+        while curr.challenge_slot_number == prev_prev_sn:
+            last_sb_in_prev_epoch = curr
+            curr = sub_blocks[height_to_hash[curr.height + 1]]
 
-    # Round down after the division
-    new_difficulty_precise: uint64 = uint64(
-        (term1 + term2) // (constants.DIFFICULTY_WARP_FACTOR * (timestamp3 - timestamp2) * (timestamp2 - timestamp1))
+        block_height_start = last_sb_in_prev_epoch.height
+        prev_slot_time_start = last_sb_in_prev_epoch.timestamp
+
+    actual_epoch_time = sub_block.timestamp - prev_slot_time_start
+    old_difficulty = get_difficulty(constants, sub_blocks, sub_block)
+
+    # Terms are rearranged so there is only one division.
+    # target_epoch_time = SLOT_TIME_TARGET * (height difference) // SLOTS_SUB_BLOCKS_TARGET
+
+    new_difficulty_precise = (
+        old_difficulty
+        * constants.SLOT_TIME_TARGET
+        * (sub_block.height - block_height_start)
+        // (constants.SLOT_SUB_BLOCKS_TARGET * actual_epoch_time)
     )
     # Take only DIFFICULTY_SIGNIFICANT_BITS significant bits
     new_difficulty = uint64(truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS))
@@ -136,96 +183,17 @@ def get_next_difficulty(
     # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
     max_diff = uint64(
         truncate_to_significant_bits(
-            constants.DIFFICULTY_FACTOR * Tc,
+            constants.DIFFICULTY_FACTOR * old_difficulty,
             constants.SIGNIFICANT_BITS,
         )
     )
     min_diff = uint64(
         truncate_to_significant_bits(
-            Tc // constants.DIFFICULTY_FACTOR,
+            old_difficulty // constants.DIFFICULTY_FACTOR,
             constants.SIGNIFICANT_BITS,
         )
     )
-    if new_difficulty >= Tc:
+    if new_difficulty >= old_difficulty:
         return min(new_difficulty, max_diff)
     else:
         return max([uint64(1), new_difficulty, min_diff])
-
-
-def get_next_min_iters(
-    constants: ConsensusConstants,
-    headers: Dict[bytes32, Header],
-    height_to_hash: Dict[uint32, bytes32],
-    block: Union[FullBlock, HeaderBlock],
-) -> uint64:
-    """
-    Returns the VDF speed in iterations per seconds, to be used for the next block. This depends on
-    the number of iterations of the last epoch, and changes at the same block as the difficulty.
-    """
-    next_height: uint32 = uint32(block.height + 1)
-    if next_height < constants.DIFFICULTY_EPOCH:
-        # First epoch has a hardcoded vdf speed
-        return constants.MIN_ITERS_STARTING
-
-    prev_block_header: Header = headers[block.prev_header_hash]
-
-    proof_of_space = block.proof_of_space
-    difficulty = get_next_difficulty(constants, headers, height_to_hash, prev_block_header)
-    iterations = uint64(block.header.data.total_iters - prev_block_header.data.total_iters)
-    prev_min_iters = calculate_min_iters_from_iterations(
-        proof_of_space,
-        difficulty,
-        iterations,
-        constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
-    )
-
-    if next_height % constants.DIFFICULTY_EPOCH != constants.DIFFICULTY_DELAY:
-        # Not at a point where ips would change, so return the previous ips
-        # TODO: cache this for efficiency
-        return prev_min_iters
-
-    # min iters (along with difficulty) will change in this block, so we need to calculate the new one.
-    # The calculation is (iters_2 - iters_1) // epoch size
-    # 1 and 2 correspond to height_1 and height_2, being the last block of the second to last, and last
-    # block of the last epochs. Basically, it's total iterations per block on average.
-
-    # Height1 is the last block 2 epochs ago, so we can include the iterations taken for mining first block in epoch
-    height1 = uint32(next_height - constants.DIFFICULTY_EPOCH - constants.DIFFICULTY_DELAY - 1)
-    # Height2 is the last block in the previous epoch
-    height2 = uint32(next_height - constants.DIFFICULTY_DELAY - 1)
-
-    block1: Optional[Header] = None
-    block2: Optional[Header] = None
-
-    # We need to backtrack until we merge with the LCA chain, so we can use the height_to_hash dict.
-    # This is important if we are on a fork, or beyond the LCA.
-    curr: Optional[Header] = block.header
-    assert curr is not None
-    while curr.height not in height_to_hash or height_to_hash[curr.height] != curr.header_hash:
-        if curr.height == height1:
-            block1 = curr
-        elif curr.height == height2:
-            block2 = curr
-        curr = headers.get(curr.prev_header_hash, None)
-        assert curr is not None
-
-    # Once we are before the fork point (and before the LCA), we can use the height_to_hash map
-    if block1 is None and height1 >= 0:
-        # height1 could be -1, for the first difficulty calculation
-        block1 = headers.get(height_to_hash[height1], None)
-    if block2 is None:
-        block2 = headers.get(height_to_hash[height2], None)
-    assert block2 is not None
-
-    if block1 is not None:
-        iters1 = block1.data.total_iters
-    else:
-        # In the case of height == -1, iters = 0
-        iters1 = uint64(0)
-
-    iters2 = block2.data.total_iters
-
-    min_iters_precise = uint64((iters2 - iters1) // (constants.DIFFICULTY_EPOCH * constants.MIN_ITERS_PROPORTION))
-    min_iters = uint64(truncate_to_significant_bits(min_iters_precise, constants.SIGNIFICANT_BITS))
-    assert count_significant_bits(min_iters) <= constants.SIGNIFICANT_BITS
-    return min_iters
