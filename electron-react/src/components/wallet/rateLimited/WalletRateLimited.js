@@ -280,7 +280,9 @@ const IncompleteCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Rate Limited User Wallet Setup
+              <Trans id="RTIncompleteCard.title">
+                Rate Limited User Wallet Setup
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -289,7 +291,9 @@ const IncompleteCard = props => {
             <Box display="flex">
               <Box flexGrow={1}>
                 <Typography variant="subtitle1">
-                  Send your pubkey to your Rate Limited Wallet admin:
+                  <Trans id="RTIncompleteCard.description">
+                    Send your pubkey to your Rate Limited Wallet admin:
+                  </Trans>
                 </Typography>
               </Box>
             </Box>
@@ -302,7 +306,7 @@ const IncompleteCard = props => {
                 <TextField
                   disabled
                   fullWidth
-                  label="User Pubkey"
+                  label={<Trans id="RTIncompleteCard.userPubkey">User Pubkey</Trans>}
                   value={pubkey}
                   variant="outlined"
                 />
@@ -315,7 +319,9 @@ const IncompleteCard = props => {
                   color="secondary"
                   disableElevation
                 >
-                  Copy
+                  <Trans id="RTIncompleteCard.copy">
+                    Copy
+                  </Trans>
                 </Button>
               </Box>
             </Box>
@@ -326,8 +332,10 @@ const IncompleteCard = props => {
             <Box display="flex">
               <Box flexGrow={1} style={{ marginTop: 10, marginBottom: 0 }}>
                 <Typography variant="subtitle1">
-                  When you receive the setup info packet from your admin, enter
-                  it below to complete your Rate Limited Wallet setup:
+                  <Trans id="RTIncompleteCard.description2">
+                    When you receive the setup info packet from your admin, enter
+                    it below to complete your Rate Limited Wallet setup:
+                  </Trans>
                 </Typography>
               </Box>
             </Box>
@@ -341,7 +349,7 @@ const IncompleteCard = props => {
                     ip_input = input;
                   }}
                   margin="normal"
-                  label="Info Packet"
+                  label={<Trans id="RTIncompleteCard.infoPacket">Info Packet</Trans>}
                 />
               </Box>
             </Box>
@@ -355,7 +363,9 @@ const IncompleteCard = props => {
                   variant="contained"
                   color="primary"
                 >
-                  Submit
+                  <Trans id="RTIncompleteCard.submit">
+                    Submit
+                  </Trans>
                 </Button>
               </Box>
             </Box>
@@ -405,7 +415,9 @@ const RLDetailsCard = props => {
           <Grid item xs={12}>
             <div className={classes.cardTitle}>
               <Typography component="h6" variant="h6">
-                Rate Limited Info
+                <Trans id="RLDetailsCard.title">
+                  Rate Limited Info
+                </Trans>
               </Typography>
             </div>
           </Grid>
@@ -414,13 +426,16 @@ const RLDetailsCard = props => {
               <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
                 <Box flexGrow={1}>
                   <Typography variant="subtitle1">
-                    Spending Interval (number of blocks): {interval}
+                    <Trans id="RLDetailsCard.spendingInterval">
+                      Spending Interval (number of blocks): {interval}
+                    </Trans>
                   </Typography>
                 </Box>
                 <Box flexGrow={1}>
                   <Typography variant="subtitle1">
-                    Spending Limit (chia per interval):{" "}
-                    {mojo_to_chia_string(limit)}
+                    <Trans id="RLDetailsCard.spendingLimit">
+                      Spending Limit (chia per interval): {mojo_to_chia_string(limit)}
+                    </Trans>
                   </Typography>
                 </Box>
               </Box>
@@ -433,7 +448,7 @@ const RLDetailsCard = props => {
                   <TextField
                     disabled
                     fullWidth
-                    label="My Pubkey"
+                    label={<Trans id="RLDetailsCard.myPubkey">My Pubkey</Trans>}
                     value={user_pubkey}
                     variant="outlined"
                   />
@@ -446,7 +461,9 @@ const RLDetailsCard = props => {
                     color="secondary"
                     disableElevation
                   >
-                    Copy
+                    <Trans id="RLDetailsCard.copy">
+                      Copy
+                    </Trans>
                   </Button>
                 </Box>
               </Box>
@@ -462,7 +479,9 @@ const RLDetailsCard = props => {
           <Grid item xs={12}>
             <div className={classes.cardTitle}>
               <Typography component="h6" variant="h6">
-                Rate Limited Info
+                <Trans id="RLDetailsCard.title">
+                  Rate Limited Info
+                </Trans>
               </Typography>
             </div>
           </Grid>
@@ -471,13 +490,16 @@ const RLDetailsCard = props => {
               <Box display="flex" style={{ marginBottom: 20, marginTop: 20 }}>
                 <Box flexGrow={1}>
                   <Typography variant="subtitle1">
-                    Spending Interval (number of blocks): {interval}
+                    <Trans id="RLDetailsCard.spendingInterval">
+                      Spending Interval (number of blocks): {interval}
+                    </Trans>
                   </Typography>
                 </Box>
                 <Box flexGrow={1}>
                   <Typography variant="subtitle1">
-                    Spending Limit (chia per interval):{" "}
-                    {mojo_to_chia_string(limit)}
+                    <Trans id="RLDetailsCard.spendingLimit">
+                      Spending Limit (chia per interval): {mojo_to_chia_string(limit)}
+                    </Trans>
                   </Typography>
                 </Box>
               </Box>
@@ -488,8 +510,10 @@ const RLDetailsCard = props => {
               <Box display="flex">
                 <Box flexGrow={1} style={{ marginTop: 5, marginBottom: 20 }}>
                   <Typography variant="subtitle1">
-                    Send this info packet to your Rate Limited Wallet user who
-                    must use it to complete setup of their wallet:
+                    <Trans id="RLDetailsCard.description">
+                      Send this info packet to your Rate Limited Wallet user who
+                      must use it to complete setup of their wallet:
+                    </Trans>
                   </Typography>
                 </Box>
               </Box>
@@ -498,7 +522,7 @@ const RLDetailsCard = props => {
                   <TextField
                     disabled
                     fullWidth
-                    label="Info Packet"
+                    label={<Trans id="RLDetailsCard.infoPacket">Info Packet</Trans>}
                     value={ip_hex}
                     variant="outlined"
                   />
@@ -511,7 +535,9 @@ const RLDetailsCard = props => {
                     color="secondary"
                     disableElevation
                   >
-                    Copy
+                    <Trans id="RLDetailsCard.copy">
+                      Copy
+                    </Trans>
                   </Button>
                 </Box>
               </Box>
@@ -577,17 +603,19 @@ const BalanceCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Balance
+              <Trans id="RLBalanceCard.title">
+                Balance
+              </Trans>
             </Typography>
           </div>
         </Grid>
         <BalanceCardSubSection
-          title="Total Balance"
+          title={<Trans id="RLBalanceCard.totalBalance">Total Balance</Trans>}
           balance={balance}
           tooltip=""
         />
         <BalanceCardSubSection
-          title="Spendable Balance"
+          title={<Trans id="RLBalanceCard.spendableBalance">Spendable Balance</Trans>}
           balance={balance_spendable}
           tooltip={""}
         />
@@ -602,23 +630,25 @@ const BalanceCard = props => {
                     id="panel1a-header"
                   >
                     <Typography className={classes.heading}>
-                      View pending balances
+                      <Trans id="RLBalanceCard.viewPendingBalances">
+                        View pending balances
+                      </Trans>
                     </Typography>
                   </AccordionSummary>
                   <AccordionDetails>
                     <Grid container spacing={0}>
                       <BalanceCardSubSection
-                        title="Pending Total Balance"
+                        title={<Trans id="RLBalanceCard.pendingTotalBalance">Pending Total Balance</Trans>}
                         balance={balance_ptotal}
                         tooltip={""}
                       />
                       <BalanceCardSubSection
-                        title="Pending Balance"
+                        title={<Trans id="RLBalanceCard.pendingBalance">Pending Balance</Trans>}
                         balance={balance_pending}
                         tooltip={""}
                       />
                       <BalanceCardSubSection
-                        title="Pending Change"
+                        title={<Trans id="RLBalanceCard.pendingChange">Pending Change</Trans>}
                         balance={balance_change}
                         tooltip={""}
                       />
@@ -662,7 +692,11 @@ const SendCard = props => {
       return;
     }
     if (syncing) {
-      dispatch(openDialog("Please finish syncing before making a transaction"));
+      dispatch(openDialog(
+        <Trans id="RLSendCard.waitForSyncing">
+          Please finish syncing before making a transaction
+        </Trans>
+      ));
       return;
     }
     let address = address_input.value.trim();
@@ -672,11 +706,19 @@ const SendCard = props => {
       !Number(amount_input.value) ||
       isNaN(Number(amount_input.value))
     ) {
-      dispatch(openDialog("Please enter a valid numeric amount"));
+      dispatch(openDialog(
+        <Trans id="RLSendCard.enterValidAmount">
+          Please enter a valid numeric amount
+        </Trans>
+      ));
       return;
     }
     if (fee_input.value === "" || isNaN(Number(fee_input.value))) {
-      dispatch(openDialog("Please enter a valid numeric fee"));
+      dispatch(openDialog(
+        <Trans id="RLSendCard.enterValidFee">
+          Please enter a valid numeric fee
+        </Trans>
+      ));
       return;
     }
     const amount = chia_to_mojo(amount_input.value);
@@ -689,11 +731,11 @@ const SendCard = props => {
     const amount_value = parseFloat(Number(amount));
     const fee_value = parseFloat(Number(fee));
     if (fee_value !== 0) {
-      dispatch(
-        openDialog(
-          "Please enter 0 fee. Positive fees not supported yet for RL."
-        )
-      );
+      dispatch(openDialog(
+        <Trans id="RLSendCard.enter0fee">
+          Please enter 0 fee. Positive fees not supported yet for RL.
+        </Trans>
+      ));
       return;
     }
 
@@ -709,7 +751,9 @@ const SendCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              Create Transaction
+              <Trans id="RLSendCard.title">
+                Create Transaction
+              </Trans>
             </Typography>
           </div>
         </Grid>
@@ -730,7 +774,7 @@ const SendCard = props => {
                   inputRef={input => {
                     address_input = input;
                   }}
-                  label="Address / Puzzle hash"
+                  label={<Trans id="RLSendCard.addressPuzzleHash">Address / Puzzle hash</Trans>}
                 />
               </Box>
               <Box></Box>
@@ -751,7 +795,7 @@ const SendCard = props => {
                   inputRef={input => {
                     amount_input = input;
                   }}
-                  label="Amount"
+                  label={<Trans id="RLSendCard.amount">Amount</Trans>}
                 />
               </Box>
               <Box flexGrow={6}>
@@ -764,7 +808,7 @@ const SendCard = props => {
                   inputRef={input => {
                     fee_input = input;
                   }}
-                  label="Fee"
+                  label={<Trans id="RLSendCard.fee">Fee</Trans>}
                 />
               </Box>
             </Box>
@@ -781,7 +825,9 @@ const SendCard = props => {
                   color="primary"
                   disabled={sending_transaction}
                 >
-                  Send
+                  <Trans id="RLSendCard.send">
+                    Send
+                  </Trans>
                 </Button>
               </Box>
             </Box>
@@ -792,55 +838,6 @@ const SendCard = props => {
   );
 };
 
-// TODO(lipa): use this / clean up
-// const ClawbackCard = props => {
-//   var id = props.wallet_id;
-//   const classes = useStyles();
-//   const dispatch = useDispatch();
-
-//   function clawback() {
-//     dispatch(clawback_rl_coin(id));
-//   }
-//   return (
-//     <Paper className={classes.paper}>
-//       <Grid container spacing={0}>
-//         <Grid item xs={12}>
-//           <div className={classes.cardTitle}>
-//             <Typography component="h6" variant="h6">
-//               Clawback Rate Limited Coin
-//             </Typography>
-//           </div>
-//         </Grid>
-//         <Grid item xs={12}>
-//           <div className={classes.cardSubSection}>
-//             <Box display="flex" style={{ marginTop: 20 }}>
-//               <Box flexGrow={1}>
-//                 <Typography variant="subtitle1">You may use the clawback feature to retrieve your coin at any time. If you do so, your Rate Limited User will no longer be able to spend the coin.</Typography>
-//               </Box>
-//             </Box>
-//           </div>
-//         </Grid>
-//         <Grid item xs={12}>
-//           <div className={classes.cardSubSection}>
-//             <Box display="flex">
-//               <Box>
-//                 <Button
-//                   onClick={clawback}
-//                   className={classes.clawbackButton}
-//                   variant="contained"
-//                   color="primary"
-//                 >
-//                   Clawback Coin
-//                 </Button>
-//               </Box>
-//             </Box>
-//           </div>
-//         </Grid>
-//       </Grid>
-//     </Paper>
-//   );
-// };
-
 const HistoryCard = props => {
   var id = props.wallet_id;
   const classes = useStyles();
@@ -850,12 +847,14 @@ const HistoryCard = props => {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              History
+              <Trans id="RLHistoryCard.title">
+                History
+              </Trans>
             </Typography>
           </div>
         </Grid>
         <Grid item xs={12}>
-          <TransactionTable wallet_id={id}> </TransactionTable>
+          <TransactionTable wallet_id={id} />
         </Grid>
       </Grid>
     </Paper>
@@ -870,18 +869,26 @@ const TransactionTable = props => {
   );
 
   if (transactions.length === 0) {
-    return <div style={{ margin: "30px" }}>No previous transactions</div>;
+    return (
+      <div style={{ margin: "30px" }}>
+        <Trans id="RLTransactionTable.noPreviousTransactions">
+          No previous transactions
+        </Trans>
+      </div>
+    );
   }
 
   const incoming_string = incoming => {
     if (incoming) {
-      return "Incoming";
+      return <Trans id="RLTransactionTable.incoming">Incoming</Trans>;
     } else {
-      return "Outgoing";
+      return <Trans id="RLTransactionTable.outgoing">Outgoing</Trans>;
     }
   };
   const confirmed_to_string = confirmed => {
-    return confirmed ? "Confirmed" : "Pending";
+    return confirmed
+      ? <Trans id="RLTransactionTable.confirmed">Confirmed</Trans>
+      : <Trans id="RLTransactionTable.pending">Pending</Trans>;
   };
 
   return (
@@ -889,12 +896,24 @@ const TransactionTable = props => {
       <Table stickyHeader className={classes.table}>
         <TableHead className={classes.head}>
           <TableRow className={classes.row}>
-            <TableCell className={classes.cell_short}>Type</TableCell>
-            <TableCell className={classes.cell_short}>To</TableCell>
-            <TableCell className={classes.cell_short}>Date</TableCell>
-            <TableCell className={classes.cell_short}>Status</TableCell>
-            <TableCell className={classes.cell_short}>Amount</TableCell>
-            <TableCell className={classes.cell_short}>Fee</TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="RLTransactionTable.type">Type</Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="RLTransactionTable.to">To</Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="RLTransactionTable.date">Date</Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="RLTransactionTable.status">Status</Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="RLTransactionTable.amount">Amount</Trans>
+            </TableCell>
+            <TableCell className={classes.cell_short}>
+              <Trans id="RLTransactionTable.fee">Fee</Trans>
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody className={classes.tableBody}>
@@ -932,7 +951,7 @@ const TransactionTable = props => {
   );
 };
 
-const RateLimitedWallet = props => {
+export default function RateLimitedWallet(props) {
   const classes = useStyles();
   const id = useSelector(state => state.wallet_menu.id);
   const wallets = useSelector(state => state.wallet_state.wallets);
@@ -945,10 +964,10 @@ const RateLimitedWallet = props => {
     if (init_status) {
       return wallets.length > props.wallet_id ? (
         <Grid className={classes.walletContainer} item xs={12}>
-          <RLDetailsCard wallet_id={id}></RLDetailsCard>
-          <BalanceCard wallet_id={id}></BalanceCard>
-          <SendCard wallet_id={id}></SendCard>
-          <HistoryCard wallet_id={id}></HistoryCard>
+          <RLDetailsCard wallet_id={id} />
+          <BalanceCard wallet_id={id} />
+          <SendCard wallet_id={id} />
+          <HistoryCard wallet_id={id} />
         </Grid>
       ) : (
         ""
@@ -956,7 +975,7 @@ const RateLimitedWallet = props => {
     } else {
       return wallets.length > props.wallet_id ? (
         <Grid className={classes.walletContainer} item xs={12}>
-          <IncompleteCard wallet_id={id}></IncompleteCard>
+          <IncompleteCard wallet_id={id} />
         </Grid>
       ) : (
         ""
@@ -965,13 +984,11 @@ const RateLimitedWallet = props => {
   } else if (type === "admin") {
     return wallets.length > props.wallet_id ? (
       <Grid className={classes.walletContainer} item xs={12}>
-        <RLDetailsCard wallet_id={id}></RLDetailsCard>
-        <BalanceCard wallet_id={id}></BalanceCard>
+        <RLDetailsCard wallet_id={id} />
+        <BalanceCard wallet_id={id} />
       </Grid>
     ) : (
       ""
     );
   }
-};
-
-export default withRouter(RateLimitedWallet);
+}
