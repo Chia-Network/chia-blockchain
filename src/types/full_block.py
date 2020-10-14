@@ -10,7 +10,7 @@ from src.util.streamable import Streamable, streamable
 from src.types.proof_of_time import ProofOfTime
 from src.types.challenge_slot import ChallengeSlot
 from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot
-from src.types.reward_chain_sub_block import RewardChainInfusionPoint, RewardChainSubBlock
+from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
 from src.types.header_block import HeaderBlock
 from src.types.program import Program
@@ -28,12 +28,11 @@ class FullBlock(Streamable):
     challenge_chain_icp_signature: Optional[G2Element]  # If included in challenge chain
     challenge_chain_ip_pot: Optional[ProofOfTime]  # If included in challenge chain
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
-    reward_chain_infusion_point: RewardChainInfusionPoint  # Data to complete the sub-block
     reward_chain_icp_pot: ProofOfTime
     reward_chain_ip_pot: ProofOfTime
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
-    transactions_filter: bytes  # Filter for block transactions
+    transactions_filter: Optional[bytes]  # Filter for block transactions
     transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
     transactions_generator: Optional[Program]  # Program that generates transactions
 
@@ -77,14 +76,7 @@ class FullBlock(Streamable):
     def get_included_reward_coins(self) -> List[Coin]:
         if not self.is_block():
             return []
-        reward_coins: List[Coin] = []
-        for reward_claim in self.transactions_info.reward_claims_incorporated:
-            if reward_claim.is_farmer_reward:
-                coin = create_farmer_coin(reward_claim.sub_block_height, reward_claim.puzzle_hash, reward_claim.amount)
-            else:
-                coin = create_pool_coin(reward_claim.sub_block_height, reward_claim.puzzle_hash, reward_claim.amount)
-            reward_coins.append(coin)
-        return reward_coins
+        return self.transactions_info.reward_claims_incorporated
 
     def additions(self) -> List[Coin]:
         additions: List[Coin] = []
