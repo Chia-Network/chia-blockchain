@@ -1,4 +1,6 @@
 import { combineReducers } from 'redux';
+import { History } from 'history';
+import { connectRouter } from 'connected-react-router';
 import websocketReducer from './websocket';
 import incomingReducer from './incoming';
 import mnemonicReducer from './mnemonic';
@@ -14,7 +16,7 @@ import plotControlReducer from './plotterControl';
 import progressReducer from './progress';
 import backupReducer from './backup';
 
-const rootReducer = combineReducers({
+const reducers = {
   daemon_state: daemonReducer,
   websocket: websocketReducer,
   wallet_state: incomingReducer,
@@ -29,8 +31,15 @@ const rootReducer = combineReducers({
   plot_control: plotControlReducer,
   progress: progressReducer,
   backup_state: backupReducer,
-});
+};
 
-export type RootState = ReturnType<typeof rootReducer>;
+const rootReducerWithoutRouter = combineReducers(reducers);
 
-export default rootReducer;
+export type RootState = ReturnType<typeof rootReducerWithoutRouter>;
+
+export function createRootReducer(history: History) {
+  return combineReducers({
+    ...reducers,
+    router: connectRouter(history),
+  });
+}

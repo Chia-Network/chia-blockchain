@@ -20,7 +20,7 @@ import {
 import { useStyles } from './WalletCreate';
 import { chia_to_mojo } from '../../../util/chia';
 import { create_cc_for_colour_action } from '../../../modules/message';
-import { openDialog } from "../../../modules/dialog";
+import { openDialog } from '../../../modules/dialog';
 
 export const customStyles = makeStyles((theme) => ({
   input: {

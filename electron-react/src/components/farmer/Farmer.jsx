@@ -133,7 +133,8 @@ const getStatusItems = (
     };
     status_items.push(item);
   }
-  const proportion = Number.parseFloat(farmerSpace) / Number.parseFloat(totalNetworkSpace);
+  const proportion =
+    Number.parseFloat(farmerSpace) / Number.parseFloat(totalNetworkSpace);
   const totalHours = 5 / proportion / 60;
 
   status_items.push({
@@ -142,13 +143,12 @@ const getStatusItems = (
         Total size of local plots
       </Trans>
     ),
-    value: `${Math.floor(farmerSpace / Math.pow(1024, 3)).toString()  } GiB`,
-    tooltip:
-      `You have ${ 
-      (proportion * 100).toFixed(6) 
-      }% of the space on the network, so farming a block will take ${ 
-      totalHours.toFixed(3) 
-      } hours in expectation`,
+    value: `${Math.floor(farmerSpace / Math.pow(1024, 3)).toString()} GiB`,
+    tooltip: `You have ${(proportion * 100).toFixed(
+      6,
+    )}% of the space on the network, so farming a block will take ${totalHours.toFixed(
+      3,
+    )} hours in expectation`,
   });
 
   status_items.push({
@@ -178,11 +178,11 @@ const getStatusItems = (
 
 const StatusCell = (props) => {
   const classes = useStyles();
-  const {item} = props;
-  const {label} = item;
-  const {value} = item;
-  const {colour} = item;
-  const {tooltip} = item;
+  const { item } = props;
+  const { label } = item;
+  const { value } = item;
+  const { colour } = item;
+  const { tooltip } = item;
   return (
     <Grid item xs={6}>
       <div className={classes.cardSubSection}>
@@ -301,7 +301,7 @@ const Challenges = (props) => {
                       {item.estimates.length > 0
                         ? `${Math.floor(
                             Math.min.apply(Math, item.estimates) / 60,
-                          ).toString()  } minutes`
+                          ).toString()} minutes`
                         : ''}
                     </TableCell>
                   </TableRow>
@@ -450,16 +450,12 @@ const Plots = (props) => {
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title={item.plot_public_key} interactive>
-                          <span>
-                            {item.plot_public_key.slice(0, 10)}...
-                          </span>
+                          <span>{item.plot_public_key.slice(0, 10)}...</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell align="right">
                         <Tooltip title={item.pool_public_key} interactive>
-                          <span>
-                            {item.pool_public_key.slice(0, 10)}...
-                          </span>
+                          <span>{item.pool_public_key.slice(0, 10)}...</span>
                         </Tooltip>
                       </TableCell>
                       <TableCell
@@ -623,7 +619,7 @@ const FarmerContent = (props) => {
           <FarmerStatus
             totalChiaFarmed={props.totalChiaFarmed}
             biggestHeight={props.biggestHeight}
-           />
+          />
         </Grid>
         <Grid item xs={12}>
           <Challenges />
@@ -637,7 +633,7 @@ const FarmerContent = (props) => {
             connectionError={connectionError}
             openConnection={openConnectionCallback}
             closeConnection={closeConnectionCallback}
-           />
+          />
         </Grid>
       </Grid>
     </>
@@ -653,7 +649,7 @@ export default function Farmer(props) {
 
   const wallets = useSelector((state) => state.wallet_state.wallets);
 
-  const {classes} = props;
+  const { classes } = props;
 
   const checkRewards = useCallback(async () => {
     let totalChia = BigInt(0);
@@ -725,7 +721,7 @@ export default function Farmer(props) {
           <FarmerContent
             totalChiaFarmed={totalChiaFarmed}
             biggestHeight={biggestHeight}
-           />
+          />
         </Container>
       </Flex>
     </>

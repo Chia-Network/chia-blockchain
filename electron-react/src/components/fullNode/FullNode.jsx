@@ -197,7 +197,7 @@ const getStatusItems = (state, connected) => {
     const lca_height = state.lca.data.height;
     const item = {
       label: <Trans id="StatusItem.lcaBlockHeight">LCA Block Height</Trans>,
-      value: `${  lca_height}`,
+      value: `${lca_height}`,
     };
     status_items.push(item);
   } else {
@@ -219,7 +219,7 @@ const getStatusItems = (state, connected) => {
       label: (
         <Trans id="StatusItem.maxTipBlockHeight">Max Tip Block Height</Trans>
       ),
-      value: `${  max_height}`,
+      value: `${max_height}`,
     };
     status_items.push(item);
   } else {
@@ -274,14 +274,14 @@ const getStatusItems = (state, connected) => {
     };
     status_items.push(item);
   }
-  const {difficulty} = state;
+  const { difficulty } = state;
   const diff_item = {
     label: <Trans id="StatusItem.difficulty">Difficulty</Trans>,
     value: difficulty,
   };
   status_items.push(diff_item);
 
-  const {ips} = state;
+  const { ips } = state;
   const ips_item = {
     label: (
       <Trans id="StatusItem.iterationsPerSecond">Iterations per Second</Trans>
@@ -303,8 +303,9 @@ const getStatusItems = (state, connected) => {
   };
   status_items.push(min_item);
 
-  const space =
-    `${(BigInt(state.space) / BigInt(Math.pow(1024, 4))).toString()  }TiB`;
+  const space = `${(
+    BigInt(state.space) / BigInt(Math.pow(1024, 4))
+  ).toString()}TiB`;
   const space_item = {
     label: (
       <Trans id="StatusItem.estimatedNetworkSpace">
@@ -326,11 +327,11 @@ const getStatusItems = (state, connected) => {
 
 const StatusCell = (props) => {
   const classes = useStyles();
-  const {item} = props;
-  const {label} = item;
-  const {value} = item;
-  const {tooltip} = item;
-  const {colour} = item;
+  const { item } = props;
+  const { label } = item;
+  const { value } = item;
+  const { tooltip } = item;
+  const { colour } = item;
   return (
     <Grid item xs={6}>
       <div className={classes.cardSubSection}>
@@ -449,7 +450,7 @@ const BlocksCard = () => {
             style={{ minWidth: '100%' }}
           >
             <Box className={classes.left_block_cell}>
-              {`${header.data.header_hash.slice(0, 12)  }...`}
+              {`${header.data.header_hash.slice(0, 12)}...`}
               {header.data.finished ? '' : ' (unfinished)'}
             </Box>
             <Box className={classes.center_block_cell_small}>
@@ -569,7 +570,7 @@ export default function FullNode() {
                     connectionError={connectionError}
                     openConnection={openConnectionCallback}
                     closeConnection={closeConnectionCallback}
-                   />
+                  />
                 </Grid>
                 <Grid item xs={12}>
                   <SearchBlock />

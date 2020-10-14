@@ -29,6 +29,7 @@
     "@material-ui/icons": "^4.9.1",
     "@rehooks/local-storage": "^2.4.0",
     "about-window": "^1.13.4",
+    "connected-react-router": "^6.8.0",
     "is-electron": "^2.2.0",
     "npm-audit-resolver": "^2.2.1",
     "polished": "^4.0.2",

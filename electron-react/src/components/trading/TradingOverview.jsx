@@ -2,7 +2,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { makeStyles } from '@material-ui/core/styles';
-import { Paper, Button, Tooltip, Divider, ListItem , Box, Typography } from '@material-ui/core';
+import {
+  Paper,
+  Button,
+  Tooltip,
+  Divider,
+  ListItem,
+  Box,
+  Typography,
+} from '@material-ui/core';
 
 import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
 import Grid from '@material-ui/core/Grid';
@@ -86,8 +94,8 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const TradeRow = (props) => {
-  const {trade_id} = props.trade;
-  const {status} = props.trade;
+  const { trade_id } = props.trade;
+  const { status } = props.trade;
   const time = unix_to_short_date(props.trade.created_at_time);
   const classes = useStyles();
   const dispatch = useDispatch();
@@ -143,7 +151,7 @@ export const TableHeader = () => {
 };
 
 export const TradeTable = (props) => {
-  const {trades} = props;
+  const { trades } = props;
   const classes = useStyles();
 
   if (trades.length === 0) {
@@ -265,11 +273,11 @@ const getDetailItems = (trade) => {
 
 const DetailCell = (props) => {
   const classes = useStyles();
-  const {item} = props;
-  const {label} = item;
-  const {value} = item;
-  const {tooltip} = item;
-  const {colour} = item;
+  const { item } = props;
+  const { label } = item;
+  const { value } = item;
+  const { tooltip } = item;
+  const { colour } = item;
   return (
     <Grid item xs={6}>
       <div className={classes.cardSubSection}>
@@ -296,15 +304,15 @@ const DetailCell = (props) => {
 };
 
 const OfferRow = (props) => {
-  const {name} = props;
-  const {amount} = props;
-  const {trade} = props;
+  const { name } = props;
+  const { amount } = props;
+  const { trade } = props;
   let multiplier = 1;
   if (!trade) {
     multiplier = 1;
   } else if (trade.my_offer === true) {
-      multiplier = -1;
-    }
+    multiplier = -1;
+  }
 
   const side =
     amount * multiplier < 0 ? (
@@ -337,7 +345,7 @@ export const TradeDetail = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
   const presented = useSelector((state) => state.trade_state.trade_showed);
-  const {status} = presented;
+  const { status } = presented;
 
   let visible = { visibility: 'visible' };
   if (
@@ -397,7 +405,7 @@ export const TradeDetail = () => {
                 name={name}
                 trade={presented}
                 amount={presented.offer_dict[name]}
-               />
+              />
             ))}
           </div>
         </div>

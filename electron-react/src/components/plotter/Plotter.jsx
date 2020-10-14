@@ -459,7 +459,7 @@ const CreatePlot = () => {
                     {plot_size_options.map((option) => (
                       <MenuItem
                         value={option.value}
-                        key={`size${  option.value}`}
+                        key={`size${option.value}`}
                       >
                         {option.label} (k={option.value}, temporary space:{' '}
                         {option.workspace})
@@ -481,7 +481,7 @@ const CreatePlot = () => {
                     label={<Trans id="CreatePlot.colour">Colour</Trans>}
                   >
                     {plot_count_options.map((option) => (
-                      <MenuItem value={option} key={`count${  option}`}>
+                      <MenuItem value={option} key={`count${option}`}>
                         {option}
                       </MenuItem>
                     ))}

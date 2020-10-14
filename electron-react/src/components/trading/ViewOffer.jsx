@@ -14,7 +14,8 @@ import {
   resetTrades,
   offerParsingName,
   parsingStarted,
- parsingStatePending } from '../../modules/trade';
+  parsingStatePending,
+} from '../../modules/trade';
 import { mojo_to_chia_string } from '../../util/chia';
 
 import {
@@ -270,8 +271,8 @@ export const OfferView = () => {
 };
 
 const OfferRow = (props) => {
-  const {name} = props;
-  const {amount} = props;
+  const { name } = props;
+  const { amount } = props;
   const side =
     amount < 0 ? (
       <Trans id="OfferRow.sell">Sell</Trans>
@@ -302,7 +303,6 @@ export const OfferSwitch = () => {
 
   if (show_offer) {
     return <OfferView />;
-  } 
-    return <DropView />;
-  
+  }
+  return <DropView />;
 };

@@ -11,7 +11,12 @@ import TableCell from '@material-ui/core/TableCell';
 import TableContainer from '@material-ui/core/TableContainer';
 import { useDispatch } from 'react-redux';
 import HelpIcon from '@material-ui/icons/Help';
-import { unix_to_short_date , hex_to_array, arr_to_hex, sha256 } from '../../util/utils';
+import {
+  unix_to_short_date,
+  hex_to_array,
+  arr_to_hex,
+  sha256,
+} from '../../util/utils';
 import {
   clearBlock,
   getHeader,
@@ -60,8 +65,8 @@ const Block = (props) => {
   const [plotId, setPlotId] = useState('');
   const [didMount, setDidMount] = useState(false);
 
-  const {prev_header_hash} = props.block.header.data;
-  const {height} = props.block.header.data;
+  const { prev_header_hash } = props.block.header.data;
+  const { height } = props.block.header.data;
 
   const dispatch = useDispatch();
 
@@ -113,9 +118,9 @@ const Block = (props) => {
     [prev_header_hash, height, didMount, setDidMount, fetchHeaderIfNecessary],
   );
 
-  const {classes} = props;
-  const {block} = props;
-  const {prevHeader} = props;
+  const { classes } = props;
+  const { block } = props;
+  const { prevHeader } = props;
 
   let diff = 0;
   if (block.header.data.height === 0) {
@@ -123,8 +128,8 @@ const Block = (props) => {
   } else if (prevHeader) {
     diff = block.header.data.weight - prevHeader.data.weight;
   }
-  const newHeaderHash = `0x${  headerHash}`;
-  const newPlotId = `0x${  plotId}`;
+  const newHeaderHash = `0x${headerHash}`;
+  const newPlotId = `0x${plotId}`;
 
   const chia_cb = chia_formatter(
     Number.parseFloat(calculate_block_reward(block.header.data.height)),
@@ -237,7 +242,7 @@ const Block = (props) => {
     },
     {
       name: <Trans id="Block.coinbaseAmount">Coinbase Amount</Trans>,
-      value: `${chia_cb  } TXCH`,
+      value: `${chia_cb} TXCH`,
       tooltip: (
         <Trans id="Block.coinbaseAmountTooltip">
           The Chia block reward, goes to the pool (or farmer if not pooling)
@@ -250,7 +255,7 @@ const Block = (props) => {
     },
     {
       name: <Trans id="Block.feesAmount">Fees Amount</Trans>,
-      value: `${chia_fees  } TXCH`,
+      value: `${chia_fees} TXCH`,
       tooltip: (
         <Trans id="Block.feesAmountTooltip">
           The total fees in this block, goes to the farmer
@@ -289,7 +294,7 @@ const Block = (props) => {
                         <Tooltip title={row.tooltip}>
                           <HelpIcon
                             style={{ color: '#c8c8c8', fontSize: 12 }}
-                           />
+                          />
                         </Tooltip>
                       ) : (
                         ''

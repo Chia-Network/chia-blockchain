@@ -1,3 +1,4 @@
+import { push } from 'connected-react-router';
 import isElectron from 'is-electron';
 import {
   get_address,
@@ -178,7 +179,7 @@ export const handle_message = (store, payload) => {
     }
   } else if (payload.command === 'get_public_keys') {
     if (payload.data.success) {
-      store.dispatch(changeEntranceMenu(presentSelectKeys));
+      store.dispatch(push('/'));
     }
   } else if (payload.command === 'get_private_key') {
     const text =

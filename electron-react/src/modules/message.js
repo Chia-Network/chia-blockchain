@@ -1,12 +1,8 @@
+import { push } from 'connected-react-router';
 import { service_wallet } from '../util/service_names';
 import { openProgress, closeProgress } from './progress';
 import { refreshAllState } from '../middleware/middleware_api';
 import { setIncorrectWord, resetMnemonic } from './mnemonic';
-import {
-  changeEntranceMenu,
-  presentRestoreBackup,
-  presentOldWallet,
-} from './entranceMenu';
 import { openDialog } from './dialog';
 import { createState, changeCreateWallet, ALL_OPTIONS } from './createWallet';
 import {
@@ -143,12 +139,13 @@ export const add_new_key_action = (mnemonic) => {
         dispatch(resetMnemonic());
         dispatch(format_message('get_public_keys', {}));
         refreshAllState(dispatch);
+        dispatch(push('/dashboard'));
       } else {
         if (response.data.word) {
           dispatch(setIncorrectWord(response.data.word));
-          dispatch(changeEntranceMenu(presentOldWallet));
+          dispatch(push('/wallet/import'));
         } else if (response.data.error === 'Invalid order of mnemonic words') {
-          dispatch(changeEntranceMenu(presentOldWallet));
+          dispatch(push('/wallet/import'));
         }
         const { error } = response.data;
         dispatch(openDialog('Error', error));
@@ -170,11 +167,11 @@ export const add_and_skip_backup = (mnemonic) => {
         } else {
           if (response.data.word) {
             dispatch(setIncorrectWord(response.data.word));
-            dispatch(changeEntranceMenu(presentOldWallet));
+            dispatch(push('/wallet/import'));
           } else if (
             response.data.error === 'Invalid order of mnemonic words'
           ) {
-            dispatch(changeEntranceMenu(presentOldWallet));
+            dispatch(push('/wallet/import'));
           }
           const { error } = response.data;
           dispatch(openDialog('Error', error));
@@ -199,9 +196,9 @@ export const add_and_restore_from_backup = (mnemonic, file_path) => {
       } else {
         if (response.data.word) {
           dispatch(setIncorrectWord(response.data.word));
-          dispatch(changeEntranceMenu(presentOldWallet));
+          dispatch(push('/wallet/import'));
         } else if (response.data.error === 'Invalid order of mnemonic words') {
-          dispatch(changeEntranceMenu(presentOldWallet));
+          dispatch(push('/wallet/import'));
         }
         const { error } = response.data;
         dispatch(openDialog('Error', error));
@@ -273,7 +270,7 @@ export const log_in_and_import_backup_action = (fingerprint, file_path) => {
       } else {
         const { error } = response.data;
         if (error === 'not_initialized') {
-          dispatch(changeEntranceMenu(presentRestoreBackup));
+          dispatch(push('/wallet/restore'));
           // Go to restore from backup screen
         } else {
           dispatch(openDialog('Error', error));
@@ -295,7 +292,7 @@ export const login_and_skip_action = (fingerprint) => {
         } else {
           const { error } = response.data;
           if (error === 'not_initialized') {
-            dispatch(changeEntranceMenu(presentRestoreBackup));
+            dispatch(push('/wallet/restore'));
             // Go to restore from backup screen
           } else {
             dispatch(openDialog('Error', error));
@@ -314,12 +311,13 @@ export const login_action = (fingerprint) => {
       if (response.data.success) {
         // Go to wallet
         refreshAllState(dispatch);
+        dispatch(push('/dashboard'));
       } else {
         const { error } = response.data;
         if (error === 'not_initialized') {
           const { backup_info } = response.data;
           const { backup_path } = response.data;
-          dispatch(changeEntranceMenu(presentRestoreBackup));
+          dispatch(push('/wallet/restore'));
           if (backup_info && backup_path) {
             dispatch(setBackupInfo(backup_info));
             dispatch(selectFilePath(backup_path));
