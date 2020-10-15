@@ -6,7 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## Unreleased
+
+### Added
+- Better documented the various timelord options in the default config.yaml.
+
+### Changed
+- Updated to chiapos 0.12.32. This update significantly speeds up the F1/first table plot generation. It also now can log disk usage while plotting and generate graphs. More details: https://github.com/Chia-Network/chiapos/releases/tag/0.12.32
+- Node losing or not connecting to another peer node (which is entirely normal behaviour) is now logged at INFO and not WARNING. Your logs will be quieter.
+- SSL Certificate handling was refactored along with Consensus constants, service launching, and internal configuration management.
+- Updated to clvm 0.5.3. This fixed a bug in the `point_add` operator, that was causing taproot issues. This also removed the `SExp.is_legit_list` function. There were significant refactoring of various smart transactions for simplicity and efficiency.
+- WalletTool was generally removed.
+- Deprecated pep517.build for the new standard `python -m build --sdist --outdir dist .`
+
+### Fixed
+- A bug in bls-singatures/blspy could cause a stack overflow if too many signatures were verified at once. This caused the block of death at 11997 of the Beta 15 chain. Updated to 0.2.4 to address the issue.
+- chiapos 0.12.32 fixed a an out of bounds read that could crash the plotter. It also contains a fix to better handle the case of drive letters on Windows.
+
 ## [1.0beta15] aka Beta 1.15 - 2020-10-07
+
+### Added
+- Choosing a larger k size in the GUI also increases the default memory buffer.
 
 ### Changed
 - The development tool WalletTool was refactored out.
@@ -16,9 +36,6 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 - Over time the new peer gossip protocol could slowly disconnect all peers and take your node offline.
 - Sometimes on restart the peer connections database could cause fullnode to crash.
-
-### Added
-- Choosing a larger k size in the GUI also increases the default memory buffer.
 
 ## [1.0beta14] aka Beta 1.14 - 2020-10-01
 
