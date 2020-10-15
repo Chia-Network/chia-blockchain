@@ -42,7 +42,7 @@ class FoliageSubBlockData(Streamable):
     pool_signature: G2Element
     farmer_reward_puzzle_hash: bytes32
     extension_data: bytes32
-    transaction_block_hash: bytes32
+    foliage_block_hash: bytes32
 
 
 @dataclass(frozen=True)
