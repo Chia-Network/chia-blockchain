@@ -21,14 +21,8 @@ class ConsensusConstants:
     DISCRIMINANT_SIZE_BITS: int  # Max is 1024 (based on ClassGroupElement int size)
     NUMBER_ZERO_BITS_CHALLENGE_SIG: int  # H(plot signature of the challenge) must start with these many zeroes
     SLOT_TIME_TARGET: int  # The target number of seconds per block
-    # The proportion (denominator) of the total time that that the VDF must be run for, at a minimum
-    # (1/min_iters_proportion). For example, if this is two, approximately half of the iterations
-    # will be contant and required for all blocks.
-    MIN_ITERS_PROPORTION: int
-    # For the first epoch, since we have no previous blocks, we can't estimate vdf iterations per second
-    MIN_ITERS_STARTING: uint64
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
-    NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBEBR_OF_TIMESTAMPS blocks
+    NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # If an unfinished block is more than these many seconds slower than the best unfinished block,
     # don't propagate it.
     PROPAGATION_THRESHOLD: int
@@ -58,9 +52,6 @@ class ConsensusConstants:
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
     MAX_BLOCK_COST_CLVM: int
 
-    def __post_init__(self):
-        assert self.DIFFICULTY_EPOCH == self.DIFFICULTY_DELAY * self.DIFFICULTY_WARP_FACTOR
-
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
 
@@ -83,14 +74,8 @@ testnet_kwargs = {
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_CHALLENGE_SIG": 8,  # H(plot signature of the challenge) must start with these many zeroes
     "SLOT_TIME_TARGET": 300,  # The target number of seconds per slot
-    # The proportion (denominator) of the total time that that the VDF must be run for, at a minimum
-    # (1/min_iters_proportion). For example, if this is two, approximately half of the iterations
-    # will be contant and required for all blocks.
-    "MIN_ITERS_PROPORTION": 10,
-    # For the first epoch, since we have no previous blocks, we can't estimate vdf iterations per second
-    "MIN_ITERS_STARTING": (2 ** 22),
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more
-    "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBEBR_OF_TIMESTAMPS blocks
+    "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # If an unfinished block is more than these many seconds slower than the best unfinished block,
     # don't propagate it.
     "PROPAGATION_THRESHOLD": 300,

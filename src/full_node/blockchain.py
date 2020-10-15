@@ -6,7 +6,7 @@ from enum import Enum
 import multiprocessing
 import concurrent
 from typing import Dict, List, Optional, Set, Tuple
-from blspy import AugSchemeMPL
+from blspy import AugSchemeMPL, G2Element
 
 from chiabip158 import PyBIP158
 
@@ -18,7 +18,7 @@ from src.full_node.block_header_validation import (
 )
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iterations
+from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters
 from src.types.coin import Coin, hash_coin_list
 from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
@@ -38,6 +38,7 @@ from src.full_node.block_root_validation import validate_block_merkle_roots
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
+from src.types.name_puzzle_condition import NPC
 
 log = logging.getLogger(__name__)
 
@@ -321,7 +322,7 @@ class Blockchain:
         return get_next_difficulty(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
 
     def get_next_slot_iters(self, header_hash: bytes32) -> uint64:
-        return get_next_slot_iterations(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
+        return get_next_slot_iters(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
 
     async def pre_validate_blocks_multiprocessing(
         self, blocks: List[FullBlock]
@@ -465,109 +466,59 @@ class Blockchain:
         if block.transactions_info.reward_claims_incorporated != expected_reward_coins:
             return Err.INVALID_REWARD_COINS
 
-        # 6. The compact block filter must be correct, according to the body (BIP158)
-        # if std_hash(block.transactions_filter) != block.foliage_block.filter_hash:
-        #     return Err.INVALID_TRANSACTIONS_FILTER_HASH
-        #
-        # fee_base = calculate_base_fee(block.height)
-        #
-        # # target reward_fee = 1/8 coinbase reward + tx fees
-        # if block.transactions_generator is not None:
-        #     # 14. Make sure transactions generator hash is valid (or all 0 if not present)
-        #     if block.transactions_generator.get_tree_hash() != block.header.data.generator_hash:
-        #         return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
-        #
-        #     # 15. If not genesis, the transactions must be valid and fee must be valid
-        #     # Verifies that fee_base + TX fees = fee_coin.amount
-        #     err = await self._validate_transactions(block, fee_base)
-        #     if err is not None:
-        #         return err
-        # else:
-        #     # Make sure transactions generator hash is valid (or all 0 if not present)
-        #     if block.header.data.generator_hash != bytes32(bytes([0] * 32)):
-        #         return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
-        #
-        #     # 16. If genesis, the fee must be the base fee, agg_sig must be None, and merkle roots must be valid
-        #     if fee_base != block.header.data.total_transaction_fees:
-        #         return Err.INVALID_BLOCK_FEE_AMOUNT
-        #     root_error = validate_block_merkle_roots(block)
-        #     if root_error:
-        #         return root_error
-        #
-        #     # 17. Verify the pool signature even if there are no transactions
-        #     pool_target_m = bytes(block.header.data.pool_target)
-        #     validates = AugSchemeMPL.verify(
-        #         block.proof_of_space.pool_public_key,
-        #         pool_target_m,
-        #         block.header.data.aggregated_signature,
-        #     )
-        #     if not validates:
-        #         return Err.BAD_AGGREGATE_SIGNATURE
-        #
-        # return None
+        return await self._validate_transactions(block, block_pool_coin, block_farmer_coin)
 
-    async def _validate_transactions_empty(self, block: FullBlock) -> Optional[Err]:
-        pass
-        # removals
-        # additions
-        # Block fees
-        # Cost
-        # Merkle roots
-        # Filter
-        # agg sig
-
-    async def _validate_transactions(self, block: FullBlock, fee_base: uint64) -> Optional[Err]:
+    async def _validate_transactions(self, block: FullBlock, pool_coin: Coin, farmer_coin: Coin) -> Optional[Err]:
         # TODO(straya): review, further test the code, and number all the validation steps
 
-        # 1. Check that transactions generator is present
-        if not block.transactions_generator:
-            return Err.UNKNOWN
-        # Get List of names removed, puzzles hashes for removed coins and conditions crated
-        error, npc_list, cost = calculate_cost_of_program(
-            block.transactions_generator, self.constants.CLVM_COST_RATIO_CONSTANT
-        )
-
-        # 2. Check that cost <= MAX_BLOCK_COST_CLVM
-        if cost > self.constants.MAX_BLOCK_COST_CLVM:
-            return Err.BLOCK_COST_EXCEEDS_MAX
-        if error:
-            return error
-
-        prev_header: Header
-        if block.prev_header_hash in self.headers:
-            prev_header = self.headers[block.prev_header_hash]
-        else:
-            return Err.EXTENDS_UNKNOWN_BLOCK
-
         removals: List[bytes32] = []
+        coinbase_additions: List[Coin] = [farmer_coin, pool_coin]
+        additions: List[Coin] = []
+        npc_list: List[NPC] = []
         removals_puzzle_dic: Dict[bytes32, bytes32] = {}
-        for npc in npc_list:
-            removals.append(npc.coin_name)
-            removals_puzzle_dic[npc.coin_name] = npc.puzzle_hash
+        cost: uint64 = uint64(0)
 
-        additions: List[Coin] = additions_for_npc(npc_list)
+        if block.transactions_generator is not None:
+            # Get List of names removed, puzzles hashes for removed coins and conditions crated
+            error, npc_list, cost = calculate_cost_of_program(
+                block.transactions_generator, self.constants.CLVM_COST_RATIO_CONSTANT
+            )
+
+            # 11. Check that cost <= MAX_BLOCK_COST_CLVM
+            if cost > self.constants.MAX_BLOCK_COST_CLVM:
+                return Err.BLOCK_COST_EXCEEDS_MAX
+            if error:
+                return error
+
+            for npc in npc_list:
+                removals.append(npc.coin_name)
+                removals_puzzle_dic[npc.coin_name] = npc.puzzle_hash
+
+            additions = additions_for_npc(npc_list)
+
+        # 12. Check that the correct cost is in the transactions info
+        if block.transactions_info.cost != cost:
+            return Err.INVALID_BLOCK_COST
+
         additions_dic: Dict[bytes32, Coin] = {}
-        # Check additions for max coin amount
-        for coin in additions:
+        # 13. Check additions for max coin amount
+        for coin in additions + coinbase_additions:
             additions_dic[coin.name()] = coin
             if coin.amount >= self.constants.MAX_COIN_AMOUNT:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
-        # Validate addition and removal roots
-        root_error = validate_block_merkle_roots(block, additions, removals)
+        # 14. Validate addition and removal roots
+        root_error = validate_block_merkle_roots(block, additions + coinbase_additions, removals)
         if root_error:
             return root_error
 
-        # Validate filter
+        # 15. Validate filter
         byte_array_tx: List[bytes32] = []
 
-        for coin in additions:
+        for coin in additions + coinbase_additions:
             byte_array_tx.append(bytearray(coin.puzzle_hash))
         for coin_name in removals:
             byte_array_tx.append(bytearray(coin_name))
-
-        byte_array_tx.append(bytearray(block.header.data.farmer_rewards_puzzle_hash))
-        byte_array_tx.append(bytearray(block.header.data.pool_target.puzzle_hash))
 
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded_filter = bytes(bip158.GetEncoded())
@@ -576,20 +527,21 @@ class Blockchain:
         if filter_hash != block.header.data.filter_hash:
             return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
-        # Watch out for duplicate outputs
-        addition_counter = collections.Counter(_.name() for _ in additions)
+        # 16. Check for duplicate outputs in additions
+        addition_counter = collections.Counter(_.name() for _ in additions + coinbase_additions)
         for k, v in addition_counter.items():
             if v > 1:
                 return Err.DUPLICATE_OUTPUT
 
-        # Check for duplicate spends inside block
+        # 17. Check for duplicate spends inside block
         removal_counter = collections.Counter(removals)
         for k, v in removal_counter.items():
             if v > 1:
                 return Err.DOUBLE_SPEND
 
-        # Check if removals exist and were not previously spend. (unspent_db + diff_store + this_block)
-        fork_h = find_fork_point_in_chain(self.headers, self.lca_block, block.header)
+        # 18. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
+        new_ips = self.get_next_slot_iters(block.prev_header_hash)
+        fork_h = find_fork_point_in_chain(self.sub_blocks, self.get_tip(), block.get_sub_block_record(new_ips))
 
         # Get additions and removals since (after) fork_h but not including this block
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
@@ -605,18 +557,8 @@ class Blockchain:
             for c in additions_in_curr:
                 additions_since_fork[c.name()] = (c, curr.height)
 
-            coinbase_coin = curr.get_coinbase()
-            fees_coin = curr.get_fees_coin()
-            additions_since_fork[coinbase_coin.name()] = (
-                coinbase_coin,
-                curr.height,
-            )
-            additions_since_fork[fees_coin.name()] = (
-                fees_coin,
-                curr.height,
-            )
-            coinbases_since_fork[coinbase_coin.name()] = curr.height
-            coinbases_since_fork[fees_coin.name()] = curr.height
+            for coinbase_coin in curr.get_included_reward_coins():
+                coinbases_since_fork[coinbase_coin.name()] = curr.height
             curr = await self.block_store.get_block(curr.prev_header_hash)
             assert curr is not None
 
@@ -628,13 +570,12 @@ class Blockchain:
                 new_unspent: CoinRecord = CoinRecord(rem_coin, block.height, uint32(0), False, False)
                 removal_coin_records[new_unspent.name] = new_unspent
             else:
-                assert prev_header is not None
-                unspent = await self.coin_store.get_coin_record(rem, prev_header)
+                unspent = await self.coin_store.get_coin_record(rem)
                 if unspent is not None and unspent.confirmed_block_index <= fork_h:
                     # Spending something in the current chain, confirmed before fork
                     # (We ignore all coins confirmed after fork)
                     if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
-                        # Spend in an ancestor block, so this is a double spend
+                        # Check for coins spent in an ancestor block
                         return Err.DOUBLE_SPEND
                     # If it's a coinbase, check that it's not frozen
                     if unspent.coinbase == 1:
@@ -644,7 +585,7 @@ class Blockchain:
                 else:
                     # This coin is not in the current heaviest chain, so it must be in the fork
                     if rem not in additions_since_fork:
-                        # This coin does not exist in the fork
+                        # Check for spending a coin that does not exist in this fork
                         # TODO: fix this, there is a consensus bug here
                         return Err.UNKNOWN_UNSPENT
                     if rem in coinbases_since_fork:
@@ -676,6 +617,7 @@ class Blockchain:
         for coin in additions:
             added += coin.amount
 
+        # 19. Check that the total coin amount for added is <= removed
         if removed < added:
             return Err.MINTING_COIN
 
@@ -689,25 +631,23 @@ class Blockchain:
                     fee = int_from_bytes(cvp.vars[0])
                     assert_fee_sum = assert_fee_sum + fee
 
+        # 20. Check that the assert fee sum <= fees
         if fees < assert_fee_sum:
             return Err.ASSERT_FEE_CONDITION_FAILED
 
-        # Check coinbase reward
-        if fees + fee_base != block.header.data.total_transaction_fees:
-            return Err.BAD_COINBASE_REWARD
+        # 21. Check that the computed fees are equal to the fees in the block header
+        if block.transactions_info.fees != fees:
+            return Err.INVALID_BLOCK_FEE_AMOUNT
 
-        # Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
+        # 22. Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
         for unspent in removal_coin_records.values():
             if unspent.coin.puzzle_hash != removals_puzzle_dic[unspent.name]:
                 return Err.WRONG_PUZZLE_HASH
 
-        # Verify conditions, create hash_key list for aggsig check
-        pool_target_m = bytes(block.header.data.pool_target)
-
-        # The pool signature on the pool target is checked here as well, since the pool signature is
-        # aggregated along with the transaction signatures
-        pairs_pks = [block.proof_of_space.pool_public_key]
-        pairs_msgs = [pool_target_m]
+        # 23. Verify conditions
+        # create hash_key list for aggsig check
+        pairs_pks = []
+        pairs_msgs = []
         for npc in npc_list:
             unspent = removal_coin_records[npc.coin_name]
             error = blockchain_check_conditions_dict(
@@ -722,12 +662,12 @@ class Blockchain:
                 pairs_pks.append(pk)
                 pairs_msgs.append(m)
 
-        # Verify aggregated signature
+        # 24. Verify aggregated signature
         # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
-        if not block.header.data.aggregated_signature:
+        if not block.transactions_info.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
 
-        validates = AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.header.data.aggregated_signature)
+        validates = AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature)
         if not validates:
             return Err.BAD_AGGREGATE_SIGNATURE
 
