@@ -12,7 +12,7 @@ for setuptools_scm/PEP 440 reasons.
 - Better documented the various timelord options in the default config.yaml.
 
 ### Changed
-- Updated to chiapos 0.12.32. This update significantly speeds up the F1/first table plot generation. It also now can log disk usage while plotting and generate graphs. More details: https://github.com/Chia-Network/chiapos/releases/tag/0.12.32
+- Updated to chiapos 0.12.32. This update significantly speeds up the F1/first table plot generation. It also now can log disk usage while plotting and generate graphs. More details in the [chiapos release notes](https://github.com/Chia-Network/chiapos/releases/tag/0.12.32).
 - Node losing or not connecting to another peer node (which is entirely normal behaviour) is now logged at INFO and not WARNING. Your logs will be quieter.
 - SSL Certificate handling was refactored along with Consensus constants, service launching, and internal configuration management.
 - Updated to clvm 0.5.3. This fixed a bug in the `point_add` operator, that was causing taproot issues. This also removed the `SExp.is_legit_list` function. There were significant refactoring of various smart transactions for simplicity and efficiency.
