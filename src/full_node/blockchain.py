@@ -1,6 +1,7 @@
 import asyncio
 import collections
 import logging
+import time
 from enum import Enum
 import multiprocessing
 import concurrent
@@ -35,6 +36,8 @@ from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.full_node.block_root_validation import validate_block_merkle_roots
 from src.consensus.find_fork_point import find_fork_point_in_chain
+from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 
 log = logging.getLogger(__name__)
 
@@ -363,9 +366,12 @@ class Blockchain:
 
     async def validate_block_body(self, block: FullBlock) -> Optional[Err]:
         """
+        This assumes the header block has been completely validated.
         Validates the transactions and body of the block. Returns None if everything
         validates correctly, or an Err if something does not validate.
         """
+
+        # 1. For non block sub-blocks, foliage block, transaction filter, transactions info, and generator must be empty
         # If it is a sub block but not a block, there is no body to validate. Check that all fields are None
         if not block.foliage_sub_block.is_block:
             if (
@@ -375,50 +381,140 @@ class Blockchain:
                 or block.transactions_generator is not None
             ):
                 return Err.NOT_BLOCK_BUT_HAS_DATA
+            return None  # This means the sub-block is valid
 
+        # 2. For blocks, foliage block, transaction filter, transactions info must not be empty
         if block.foliage_block is None or block.transactions_filter is None or block.transactions_info is None:
             return Err.IS_BLOCK_BUT_NO_DATA
 
-        # 6. The compact block filter must be correct, according to the body (BIP158)
-        if std_hash(block.transactions_filter) != block.foliage_block.filter_hash:
+        # keeps track of the reward coins that need to be incorporated
+        expected_reward_coins: Set[Coin] = set()
+
+        # 3. The prev block hash in Foliage Block must be the prev block
+        if block.height == 0:
+            if block.foliage_block.prev_block_hash != bytes([0] * 32):
+                return Err.INVALID_PREV_BLOCK_HASH
+        else:
+            curr: SubBlockRecord = self.sub_blocks[block.prev_header_hash]
+            while not curr.is_block:
+                pool_coin = create_pool_coin(curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height))
+                farmer_coin = create_farmer_coin(
+                    curr.height, curr.farmer_puzzle_hash, calculate_base_farmer_reward(curr.height)
+                )
+                expected_reward_coins.add(pool_coin)
+                expected_reward_coins.add(farmer_coin)
+                curr = self.sub_blocks[curr.prev_hash]
+            if not block.foliage_block.prev_block_hash == curr.header_hash:
+                return Err.INVALID_PREV_BLOCK_HASH
+
+        # 4. The timestamp in Foliage Block must comply with the timestamp rules
+        if block.height > 0:
+            last_timestamps: List[uint64] = []
+            curr: SubBlockRecord = self.sub_blocks[block.foliage_block.prev_block_hash]
+            while len(last_timestamps) < self.constants.NUMBER_OF_TIMESTAMPS:
+                last_timestamps.append(curr.timestamp)
+                fetched: Optional[SubBlockRecord] = self.sub_blocks.get(curr.prev_block_hash, None)
+                if not fetched:
+                    break
+                curr = fetched
+            if len(last_timestamps) != self.constants.NUMBER_OF_TIMESTAMPS:
+                # For blocks 1 to 10, average timestamps of all previous blocks
+                assert curr.height == 0
+            prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
+            if block.foliage_block.timestamp < prev_time:
+                return Err.TIMESTAMP_TOO_FAR_IN_PAST
+            if block.foliage_block.timestamp > int(time.time() + self.constants.MAX_FUTURE_TIME):
+                return Err.TIMESTAMP_TOO_FAR_IN_FUTURE
+
+        # 5. The filter hash in the Foliage Block must be the hash of the filter
+        if block.foliage_block.filter_hash != std_hash(block.transactions_filter):
             return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
-        fee_base = calculate_base_fee(block.height)
+        # 6. The transaction info hash in the Foliage block must match the transaction info
+        if block.foliage_block.transactions_info_hash != std_hash(block.transactions_info):
+            return Err.INVALID_TRANSACTIONS_INFO_HASH
 
-        # target reward_fee = 1/8 coinbase reward + tx fees
+        # 7. The foliage block hash in the foliage sub block must match the foliage block
+        if block.foliage_sub_block.signed_data.foliage_block_hash != std_hash(block.foliage_block):
+            return Err.INVALID_FOLIAGE_BLOCK_HASH
+
+        # 8. The prev generators root must be valid
+        # TODO(straya): implement prev generators
+
+        # 9. The generator root must be the tree-hash of the generator (or zeroes if no generator)
         if block.transactions_generator is not None:
-            # 14. Make sure transactions generator hash is valid (or all 0 if not present)
-            if block.transactions_generator.get_tree_hash() != block.header.data.generator_hash:
-                return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
-
-            # 15. If not genesis, the transactions must be valid and fee must be valid
-            # Verifies that fee_base + TX fees = fee_coin.amount
-            err = await self._validate_transactions(block, fee_base)
-            if err is not None:
-                return err
+            if block.transactions_generator.get_tree_hash() != block.transactions_info.generator_root:
+                return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
         else:
-            # Make sure transactions generator hash is valid (or all 0 if not present)
-            if block.header.data.generator_hash != bytes32(bytes([0] * 32)):
-                return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+            if block.transactions_info.generator_root != bytes([0] * 32):
+                return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
 
-            # 16. If genesis, the fee must be the base fee, agg_sig must be None, and merkle roots must be valid
-            if fee_base != block.header.data.total_transaction_fees:
-                return Err.INVALID_BLOCK_FEE_AMOUNT
-            root_error = validate_block_merkle_roots(block)
-            if root_error:
-                return root_error
+        # 10. The reward claims must be valid for the previous sub-blocks, and current block fees
+        block_pool_coin = create_pool_coin(
+            block.height,
+            block.foliage_sub_block.signed_data.pool_target.puzzle_hash,
+            calculate_pool_reward(block.height),
+        )
+        block_farmer_coin = create_farmer_coin(
+            block.height,
+            block.foliage_sub_block.signed_data.farmer_reward_puzzle_hash,
+            calculate_base_farmer_reward(block.height) + block.transactions_info.fees,
+        )
+        expected_reward_coins.add(block_pool_coin)
+        expected_reward_coins.add(block_farmer_coin)
+        if block.transactions_info.reward_claims_incorporated != expected_reward_coins:
+            return Err.INVALID_REWARD_COINS
 
-            # 17. Verify the pool signature even if there are no transactions
-            pool_target_m = bytes(block.header.data.pool_target)
-            validates = AugSchemeMPL.verify(
-                block.proof_of_space.pool_public_key,
-                pool_target_m,
-                block.header.data.aggregated_signature,
-            )
-            if not validates:
-                return Err.BAD_AGGREGATE_SIGNATURE
+        # 6. The compact block filter must be correct, according to the body (BIP158)
+        # if std_hash(block.transactions_filter) != block.foliage_block.filter_hash:
+        #     return Err.INVALID_TRANSACTIONS_FILTER_HASH
+        #
+        # fee_base = calculate_base_fee(block.height)
+        #
+        # # target reward_fee = 1/8 coinbase reward + tx fees
+        # if block.transactions_generator is not None:
+        #     # 14. Make sure transactions generator hash is valid (or all 0 if not present)
+        #     if block.transactions_generator.get_tree_hash() != block.header.data.generator_hash:
+        #         return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+        #
+        #     # 15. If not genesis, the transactions must be valid and fee must be valid
+        #     # Verifies that fee_base + TX fees = fee_coin.amount
+        #     err = await self._validate_transactions(block, fee_base)
+        #     if err is not None:
+        #         return err
+        # else:
+        #     # Make sure transactions generator hash is valid (or all 0 if not present)
+        #     if block.header.data.generator_hash != bytes32(bytes([0] * 32)):
+        #         return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
+        #
+        #     # 16. If genesis, the fee must be the base fee, agg_sig must be None, and merkle roots must be valid
+        #     if fee_base != block.header.data.total_transaction_fees:
+        #         return Err.INVALID_BLOCK_FEE_AMOUNT
+        #     root_error = validate_block_merkle_roots(block)
+        #     if root_error:
+        #         return root_error
+        #
+        #     # 17. Verify the pool signature even if there are no transactions
+        #     pool_target_m = bytes(block.header.data.pool_target)
+        #     validates = AugSchemeMPL.verify(
+        #         block.proof_of_space.pool_public_key,
+        #         pool_target_m,
+        #         block.header.data.aggregated_signature,
+        #     )
+        #     if not validates:
+        #         return Err.BAD_AGGREGATE_SIGNATURE
+        #
+        # return None
 
-        return None
+    async def _validate_transactions_empty(self, block: FullBlock) -> Optional[Err]:
+        pass
+        # removals
+        # additions
+        # Block fees
+        # Cost
+        # Merkle roots
+        # Filter
+        # agg sig
 
     async def _validate_transactions(self, block: FullBlock, fee_base: uint64) -> Optional[Err]:
         # TODO(straya): review, further test the code, and number all the validation steps
