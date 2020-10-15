@@ -293,8 +293,8 @@ async def connection_to_message(
         asyncio.TimeoutError,
     ) as e:
         tb = traceback.format_exc()
-        connection.log.error(tb)
-        connection.log.error(
+        connection.log.info(tb)
+        connection.log.info(
             f"Timeout/OSError {e} in connection with peer {connection.get_peername()}, closing connection."
         )
     finally:
