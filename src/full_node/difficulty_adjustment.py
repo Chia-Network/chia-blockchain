@@ -18,10 +18,9 @@ def _finishes_challenge_slot(
     """
     sub_block: SubBlockRecord = sub_blocks[header_hash]
     next_height: uint32 = uint32(sub_block.height + 1)
-    prev_slot: uint32 = sub_block.challenge_slot_number
     cur: SubBlockRecord = sub_block
-    deficit: int = constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
-    while cur.challenge_slot_number == prev_slot and cur.height > 0:
+    deficit: int = constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
+    while not cur.first_block_in_challenge_slot and cur.height > 0:
         cur = sub_blocks[cur.prev_hash]
         deficit -= 1
 
@@ -56,9 +55,9 @@ def get_next_ips(
     if next_height < constants.EPOCH_SUB_BLOCKS:
         return uint64(constants.SLOT_ITERS_STARTING)
 
-    # If we are in the same challenge slot as previous sub-block, return same slot iters
+    # If we are in the same challenge slot as previous sub-block, return same ips
     if not new_slot or not _finishes_challenge_slot(constants, sub_blocks, header_hash):
-        return sub_block.slot_iterations
+        return sub_block.ips
 
     #       prev epoch surpassed  prev epoch started                  epoch sur.  epoch started
     #        v                       v                                v         v
@@ -80,10 +79,9 @@ def get_next_ips(
         prev_slot_time_start = sub_blocks[height_to_hash[uint32(0)]].timestamp
     else:
         last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
-        prev_prev_sn: uint32 = last_sb_in_prev_epoch.challenge_slot_number
 
-        curr: SubBlockRecord = last_sb_in_prev_epoch
-        while curr.challenge_slot_number == prev_prev_sn:
+        curr: SubBlockRecord = sub_blocks[height_to_hash[last_sb_in_prev_epoch.height + 1]]
+        while not curr.first_block_in_challenge_slot:
             last_sb_in_prev_epoch = curr
             curr = sub_blocks[height_to_hash[curr.height + 1]]
 
@@ -97,6 +95,16 @@ def get_next_ips(
     new_ips = uint64(truncate_to_significant_bits(new_ips_precise, constants.SIGNIFICANT_BITS))
     assert count_significant_bits(new_ips) <= constants.SIGNIFICANT_BITS
     return new_ips
+
+
+def get_next_slot_iters(
+    constants: ConsensusConstants,
+    height_to_hash: Dict[uint32, bytes32],
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    header_hash: bytes32,
+    new_slot: bool,
+) -> uint64:
+    return get_next_ips(constants, height_to_hash, sub_blocks, header_hash, new_slot) * constants.SLOT_TIME_TARGET
 
 
 def get_difficulty(
@@ -153,10 +161,9 @@ def get_next_difficulty(
         prev_slot_start_weight = 0
     else:
         last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
-        prev_prev_sn: uint32 = last_sb_in_prev_epoch.challenge_slot_number
 
-        curr: SubBlockRecord = last_sb_in_prev_epoch
-        while curr.challenge_slot_number == prev_prev_sn:
+        curr: SubBlockRecord = sub_blocks[height_to_hash[last_sb_in_prev_epoch.height + 1]]
+        while not curr.first_block_in_challenge_slot:
             last_sb_in_prev_epoch = curr
             curr = sub_blocks[height_to_hash[curr.height + 1]]
 

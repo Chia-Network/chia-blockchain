@@ -16,6 +16,8 @@ from src.types.header_block import HeaderBlock
 from src.types.program import Program
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from src.full_node.sub_block_record import SubBlockRecord
+from src.util.ints import uint64
 
 
 @dataclass(frozen=True)
@@ -113,6 +115,27 @@ class FullBlock(Streamable):
             additions.extend(additions_for_npc(npc_list))
 
         return removals, additions
+
+    def get_sub_block_record(self, ips: uint64):
+        prev_block_hash = self.foliage_block.prev_block_hash if self.foliage_block is not None else None
+        timestamp = self.foliage_block.timestamp if self.foliage_block is not None else None
+        first_block_in_challenge_slot = (
+            self.finished_reward_slots[-1].deficit == 0 if len(self.finished_reward_slots) > 0 else False
+        )
+        return SubBlockRecord(
+            self.header_hash,
+            self.prev_header_hash,
+            prev_block_hash,
+            self.height,
+            self.weight,
+            self.total_iters,
+            self.is_block(),
+            first_block_in_challenge_slot,
+            ips,
+            self.foliage_sub_block.signed_data.pool_target.puzzle_hash,
+            self.foliage_sub_block.signed_data.farmer_reward_puzzle_hash,
+            timestamp,
+        )
 
     def get_header_block(self):
         """
