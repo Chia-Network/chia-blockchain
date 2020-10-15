@@ -36,7 +36,7 @@ def _finishes_challenge_slot(
     return True
 
 
-def get_next_slot_iterations(
+def get_next_ips(
     constants: ConsensusConstants,
     height_to_hash: Dict[uint32, bytes32],
     sub_blocks: Dict[bytes32, SubBlockRecord],
@@ -91,14 +91,12 @@ def get_next_slot_iterations(
         prev_slot_time_start = last_sb_in_prev_epoch.timestamp
 
     # This is computed as the iterations per second in last epoch, times the target number of seconds per slot
-    new_slot_iters_precise: uint64 = (
-        constants.SLOT_TIME_TARGET
-        * (sub_block.total_iters - prev_slot_start_iters)
-        // (sub_block.timestamp - prev_slot_time_start)
+    new_ips_precise: uint64 = uint64(
+        (sub_block.total_iters - prev_slot_start_iters) // (sub_block.timestamp - prev_slot_time_start)
     )
-    new_slot_iters = uint64(truncate_to_significant_bits(new_slot_iters_precise, constants.SIGNIFICANT_BITS))
-    assert count_significant_bits(new_slot_iters) <= constants.SIGNIFICANT_BITS
-    return new_slot_iters
+    new_ips = uint64(truncate_to_significant_bits(new_ips_precise, constants.SIGNIFICANT_BITS))
+    assert count_significant_bits(new_ips) <= constants.SIGNIFICANT_BITS
+    return new_ips
 
 
 def get_difficulty(
@@ -151,7 +149,8 @@ def get_next_difficulty(
         # The genesis block is a edge case, where we measure from the first block in epoch, as opposed to the last
         # block in the previous epoch
         block_height_start = 0
-        prev_slot_time_start = sub_blocks[height_to_hash[uint32(0)]].timestamp
+        prev_slot_start_timestamp = sub_blocks[height_to_hash[uint32(0)]].timestamp
+        prev_slot_start_weight = 0
     else:
         last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
         prev_prev_sn: uint32 = last_sb_in_prev_epoch.challenge_slot_number
@@ -162,19 +161,19 @@ def get_next_difficulty(
             curr = sub_blocks[height_to_hash[curr.height + 1]]
 
         block_height_start = last_sb_in_prev_epoch.height
-        prev_slot_time_start = last_sb_in_prev_epoch.timestamp
+        prev_slot_start_timestamp = last_sb_in_prev_epoch.timestamp
+        prev_slot_start_weight = last_sb_in_prev_epoch.weight
 
-    actual_epoch_time = sub_block.timestamp - prev_slot_time_start
+    actual_epoch_time = sub_block.timestamp - prev_slot_start_timestamp
     old_difficulty = get_difficulty(constants, sub_blocks, sub_block)
 
     # Terms are rearranged so there is only one division.
-    # target_epoch_time = SLOT_TIME_TARGET * (height difference) // SLOTS_SUB_BLOCKS_TARGET
-
     new_difficulty_precise = (
-        old_difficulty
+        (sub_block.weight - prev_slot_start_weight)
+        * constants.EPOCH_SUB_BLOCKS
         * constants.SLOT_TIME_TARGET
         * (sub_block.height - block_height_start)
-        // (constants.SLOT_SUB_BLOCKS_TARGET * actual_epoch_time)
+        // (constants.SLOT_SUB_BLOCKS_TARGET * constants.SLOT_SUB_BLOCKS_TARGET * actual_epoch_time)
     )
     # Take only DIFFICULTY_SIGNIFICANT_BITS significant bits
     new_difficulty = uint64(truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS))
