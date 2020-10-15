@@ -418,26 +418,34 @@ class WalletRpcApi:
     async def get_wallet_balance(self, request: Dict) -> Dict:
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(int(request["wallet_id"]))
-        wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        balance = await wallet.get_confirmed_balance()
-        pending_balance = await wallet.get_unconfirmed_balance()
-        spendable_balance = await wallet.get_spendable_balance()
-        pending_change = await wallet.get_pending_change_balance()
-        if wallet.type() == WalletType.COLOURED_COIN:
-            frozen_balance = 0
-        else:
-            frozen_balance = await wallet.get_frozen_amount()
+        try:
+            wallet = self.service.wallet_state_manager.wallets[wallet_id]
+            balance = await wallet.get_confirmed_balance()
+            pending_balance = await wallet.get_unconfirmed_balance()
+            spendable_balance = await wallet.get_spendable_balance()
+            pending_change = await wallet.get_pending_change_balance()
+            if wallet.type() == WalletType.COLOURED_COIN:
+                frozen_balance = 0
+            else:
+                frozen_balance = await wallet.get_frozen_amount()
 
-        wallet_balance = {
-            "wallet_id": wallet_id,
-            "confirmed_wallet_balance": balance,
-            "unconfirmed_wallet_balance": pending_balance,
-            "spendable_balance": spendable_balance,
-            "frozen_balance": frozen_balance,
-            "pending_change": pending_change,
-        }
+            wallet_balance = {
+                "wallet_id": wallet_id,
+                "confirmed_wallet_balance": balance,
+                "unconfirmed_wallet_balance": pending_balance,
+                "spendable_balance": spendable_balance,
+                "frozen_balance": frozen_balance,
+                "pending_change": pending_change,
+            }
 
-        return {"wallet_balance": wallet_balance}
+            return {"wallet_balance": wallet_balance}
+        except Exception:
+            keys = list(self.service.wallet_state_manager.wallets.keys())
+            wallet_balance = {
+                "wallet_id": wallet_id,
+                "debug_data": keys,
+            }
+            return{"wallet_balance": keys}
 
     async def get_transaction(self, request: Dict) -> Dict:
         assert self.service.wallet_state_manager is not None

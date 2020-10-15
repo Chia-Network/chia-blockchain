@@ -24,3 +24,4 @@ class BlockRecord(Streamable):
     total_iters: Optional[uint64]
     new_challenge_hash: Optional[bytes32]
     timestamp: uint64
+    transactions_filter: bytes
