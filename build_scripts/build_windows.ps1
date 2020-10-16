@@ -1,5 +1,7 @@
 # $env:path should contain a path to editbin.exe and signtool.exe
 
+$ErrorActionPreference = "Stop"
+
 mkdir build_scripts\win_build
 Set-Location -Path ".\build_scripts\win_build" -PassThru
 
