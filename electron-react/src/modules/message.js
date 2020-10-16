@@ -164,6 +164,7 @@ export const add_and_skip_backup = (mnemonic) => {
           dispatch(resetMnemonic());
           dispatch(format_message('get_public_keys', {}));
           refreshAllState(dispatch);
+          dispatch(push('/dashboard'));
         } else {
           if (response.data.word) {
             dispatch(setIncorrectWord(response.data.word));
@@ -267,6 +268,7 @@ export const log_in_and_import_backup_action = (fingerprint, file_path) => {
       if (response.data.success) {
         // Go to wallet
         refreshAllState(dispatch);
+        dispatch(push('/dashboard'));
       } else {
         const { error } = response.data;
         if (error === 'not_initialized') {
@@ -289,6 +291,7 @@ export const login_and_skip_action = (fingerprint) => {
         if (response.data.success) {
           // Go to wallet
           refreshAllState(dispatch);
+          dispatch(push('/dashboard'));
         } else {
           const { error } = response.data;
           if (error === 'not_initialized') {
