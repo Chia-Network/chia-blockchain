@@ -13,8 +13,8 @@ from chiapos import DiskProver
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from src.protocols import harvester_protocol
-from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+from src.server.ws_connection import WSChiaConnection
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
@@ -52,7 +52,6 @@ class Harvester:
         self.no_key_filenames = set()
 
         self._is_shutdown = False
-        self.global_connections: Optional[PeerConnections] = None
         self.farmer_public_keys = []
         self.pool_public_keys = []
         self.match_str = None
@@ -60,6 +59,8 @@ class Harvester:
         self.state_changed_callback = None
         self.server = None
         self.constants = constants
+        self.cached_challenges = []
+        self.log = log
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -73,8 +74,6 @@ class Harvester:
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
-        if self.global_connections is not None:
-            self.global_connections.set_state_changed_callback(callback)
 
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
@@ -145,11 +144,9 @@ class Harvester:
         remove_plot_directory(str_path, self.root_path)
         return True
 
-    def _set_global_connections(self, global_connections: Optional[PeerConnections]):
-        self.global_connections = global_connections
-
     def _set_server(self, server):
         self.server = server
+
 
     @api_request
     async def harvester_handshake(self, harvester_handshake: harvester_protocol.HarvesterHandshake):
@@ -183,6 +180,7 @@ class Harvester:
         4. Looks up the full proof of space in the plot for each quality, approximately 64 reads per quality
         5. Returns the proof of space to the farmer
         """
+
         if len(self.pool_public_keys) == 0 or len(self.farmer_public_keys) == 0:
             # This means that we have not received the handshake yet
             return
@@ -268,11 +266,8 @@ class Harvester:
         for sublist_awaitable in asyncio.as_completed(awaitables):
             for response in await sublist_awaitable:
                 total_proofs_found += 1
-                yield OutboundMessage(
-                    NodeType.FARMER,
-                    Message("challenge_response", response),
-                    Delivery.RESPOND,
-                )
+                msg = Message("challenge_response", response)
+                yield msg
         log.info(
             f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
             f" Found {total_proofs_found} proofs. Time: {time.time() - start}. "

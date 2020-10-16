@@ -1,15 +1,9 @@
 import asyncio
 import logging
 import time
-from typing import AsyncGenerator, Dict, Optional
+from typing import Dict, Optional
 from src.types.sized_bytes import bytes32
-from src.protocols.introducer_protocol import RespondPeers, RequestPeers
-from src.server.connection import PeerConnections
-from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
-from src.util.api_decorators import api_request
-from src.types.peer_info import PeerInfo, TimestampedPeerInfo
-from src.util.ints import uint64
 
 log = logging.getLogger(__name__)
 
@@ -22,6 +16,7 @@ class Introducer:
         self.recent_peer_threshold = recent_peer_threshold
         self._shut_down = False
         self.server: Optional[ChiaServer] = None
+        self.log = log
 
     async def _start(self):
         self._vetting_task = asyncio.create_task(self._vetting_loop())
@@ -41,10 +36,10 @@ class Introducer:
                 return
             try:
                 log.info("Vetting random peers.")
-                if self.global_connections.introducer_peers is None:
+                if self.server.introducer_peers is None:
                     await asyncio.sleep(3)
                     continue
-                rawpeers = self.global_connections.introducer_peers.get_peers(
+                rawpeers = self.server.introducer_peers.get_peers(
                     100, True, 3 * self.recent_peer_threshold
                 )
 
@@ -80,42 +75,3 @@ class Introducer:
                 if self._shut_down:
                     return
                 await asyncio.sleep(1)
-
-    def _set_global_connections(self, global_connections: PeerConnections):
-        self.global_connections: PeerConnections = global_connections
-
-    @api_request
-    async def request_peers_with_peer_info(
-        self,
-        request: RequestPeers,
-        peer_info: PeerInfo,
-    ) -> AsyncGenerator[OutboundMessage, None]:
-        max_peers = self.max_peers_to_send
-        if self.global_connections.introducer_peers is None:
-            return
-        rawpeers = self.global_connections.introducer_peers.get_peers(
-            max_peers * 5, True, self.recent_peer_threshold
-        )
-
-        peers = []
-        for peer in rawpeers:
-            if peer.get_hash() not in self.vetted:
-                continue
-            if self.vetted[peer.get_hash()]:
-                if peer.host == peer_info.host and peer.port == peer_info.port:
-                    continue
-                peer_without_timestamp = TimestampedPeerInfo(
-                    peer.host,
-                    peer.port,
-                    uint64(0),
-                )
-                peers.append(peer_without_timestamp)
-
-            if len(peers) >= max_peers:
-                break
-
-        log.info(f"Sending vetted {peers}")
-
-        msg = Message("respond_peers", RespondPeers(peers))
-        yield OutboundMessage(NodeType.FULL_NODE, msg, Delivery.RESPOND)
-        yield OutboundMessage(NodeType.WALLET, msg, Delivery.RESPOND)
