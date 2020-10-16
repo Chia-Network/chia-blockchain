@@ -4,8 +4,8 @@ from blspy import G2Element
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint128
 from src.util.streamable import Streamable, streamable
-from src.types.proof_of_time import ProofOfTime, ProofOfTimeOutput
 from src.types.proof_of_space import ProofOfSpace
+from src.types.classgroup import ClassgroupElement
 
 
 @dataclass(frozen=True)
@@ -16,10 +16,9 @@ class RewardChainSubBlockUnfinished(Streamable):
     total_iters: uint128
     challenge_slot_hash: bytes32
     proof_of_space: ProofOfSpace
-    icp_prev_icp: bytes32
-    infusion_challenge_point: ProofOfTimeOutput
+    icp_prev_ip: bytes32
+    infusion_challenge_point: ClassgroupElement
     infusion_challenge_point_sig: G2Element
-    is_challenge_block: bool
 
 
 @dataclass(frozen=True)
@@ -30,9 +29,8 @@ class RewardChainSubBlock(Streamable):
     total_iters: uint128
     challenge_slot_hash: bytes32
     proof_of_space: ProofOfSpace
-    icp_prev_icp: bytes32
-    infusion_challenge_point: ProofOfTimeOutput
+    icp_prev_ip: bytes32
+    infusion_challenge_point: ClassgroupElement
     infusion_challenge_point_sig: G2Element
-    is_challenge_block: bool
-    ip_prev_icp: bytes32
-    infusion_point: ProofOfTimeOutput
+    ip_prev_ip: bytes32
+    infusion_point: ClassgroupElement
