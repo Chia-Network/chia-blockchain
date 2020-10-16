@@ -39,7 +39,11 @@ def make_push_callback(push):
 
 
 def rpc_stream(ws, msg_aiter_in, async_msg_out_callback):
-    return RPCStream(msg_aiter_in, async_msg_out_callback, JSONMessage,)
+    return RPCStream(
+        msg_aiter_in,
+        async_msg_out_callback,
+        JSONMessage,
+    )
 
 
 """

@@ -2,14 +2,15 @@ from secrets import token_bytes
 
 from src.full_node.full_node import FullNode
 from typing import AsyncGenerator, List, Optional
+
+from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import (
     full_node_protocol,
-    wallet_protocol,
 )
+from src.server.ws_connection import WSChiaConnection
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.full_node.bundle_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
-from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 
@@ -21,9 +22,10 @@ from src.util.ints import uint64
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 
-class FullNodeSimulator(FullNode):
-    def __init__(self, config, root_path, consensus_constants, name, bt):
-        super().__init__(config, root_path, consensus_constants, name)
+class FullNodeSimulator(FullNodeAPI):
+    def __init__(self, full_node, bt):
+        super().__init__(full_node)
+        self.full_node = full_node
         self.bt = bt
 
     def _set_server(self, server: ChiaServer):

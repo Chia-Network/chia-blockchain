@@ -1,5 +1,4 @@
 def one_shot(method):
-
     async def new_f(*args, **kwargs):
         await method(*args, **kwargs)
         return None

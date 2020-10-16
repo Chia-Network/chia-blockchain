@@ -4,10 +4,12 @@ import signal
 from secrets import token_bytes
 from typing import Dict, Tuple, List, Optional
 from src.consensus.constants import ConsensusConstants
+from src.farmer_api import FarmerAPI
 from src.full_node.full_node import FullNode
 from src.server.server import ChiaServer
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.block_tools import BlockTools, test_constants
+from src.types.peer_info import PeerInfo
 from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.server.connection import PeerInfo
 from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
@@ -57,7 +59,7 @@ async def setup_full_node(
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
     config["peer_connect_interval"] = 3
-    config["introducer_peer"]["host"] = "::1"
+    config["introducer_peer"]["host"] = "localhost"
     if introducer_port is not None:
         config["introducer_peer"]["port"] = introducer_port
     config["port"] = port
@@ -112,7 +114,7 @@ async def setup_wallet_node(
     config["database_path"] = str(db_name)
     config["testing"] = True
 
-    config["introducer_peer"]["host"] = "::1"
+    config["introducer_peer"]["host"] = "localhost"
     if introducer_port is not None:
         config["introducer_peer"]["port"] = introducer_port
         config["peer_connect_interval"] = 10
@@ -289,7 +291,7 @@ async def setup_simulators_and_wallets(
     dic: Dict,
     starting_height=None,
 ):
-    simulators: List[Tuple[FullNode, ChiaServer]] = []
+    simulators: List[Tuple[FullNode, ChiaServer, FullNodeAPI]] = []
     wallets = []
     node_iters = []
 
@@ -351,9 +353,10 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
     farmer, farmer_server = await node_iters[2].__anext__()
 
     async def num_connections():
-        return len(harvester.global_connections.get_connections())
+        count = len(harvester.server.global_connections.items())
+        return count
 
-    await time_out_assert(10, num_connections, 1)
+    await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
     vdf = await node_iters[3].__anext__()
     timelord, timelord_server = await node_iters[4].__anext__()

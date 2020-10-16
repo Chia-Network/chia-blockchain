@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict
 
 from src.consensus.constants import ConsensusConstants
+from src.full_node.full_node import FullNode
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
@@ -29,17 +30,28 @@ def service_kwargs_for_full_node_simulator(
 ) -> Dict:
     mkdir(path_from_root(root_path, config["database_path"]).parent)
 
-    api = FullNodeSimulator(
+    node = FullNode(
         config,
         root_path=root_path,
         consensus_constants=consensus_constants,
         name=SERVICE_NAME,
-        bt=bt,
     )
+
+    peer_api = FullNodeSimulator(node, bt=BlockTools())
+
+    async def start_callback():
+        await node._start()
+
+    def stop_callback():
+        node._close()
+
+    async def await_closed_callback():
+        await node._await_closed()
 
     kwargs = dict(
         root_path=root_path,
-        api=api,
+        node=node,
+        peer_api=peer_api,
         node_type=NodeType.FULL_NODE,
         advertised_port=config["port"],
         service_name=SERVICE_NAME,
