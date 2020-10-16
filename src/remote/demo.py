@@ -12,7 +12,7 @@ class DemoAPI:
         self._v += 1
 
 
-'''
+"""
 You can run this demo from the command-line, using ipython
 
 pip install ipython
@@ -45,4 +45,4 @@ TO LOG THE JSON, apply this patch:
          return cls(json.loads(text))
  
      def serialize(self):
-'''
+"""

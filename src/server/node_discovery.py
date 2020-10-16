@@ -1,9 +1,14 @@
 import asyncio
 import time
 import math
+from pathlib import Path
+
 import aiosqlite
 import traceback
 from random import Random
+
+from src.server.server import ChiaServer
+from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.util.path import path_from_root, mkdir
 from src.server.outbound_message import (
@@ -29,20 +34,17 @@ OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 class FullNodeDiscovery:
     def __init__(
         self,
-        server,
-        root_path,
-        global_connections,
-        target_outbound_count,
-        peer_db_path,
-        introducer_info,
-        peer_connect_interval,
+        server: ChiaServer,
+        root_path: Path,
+        target_outbound_count: int,
+        peer_db_path: str,
+        introducer_info: PeerInfo,
+        peer_connect_interval: int,
         log,
     ):
-        self.server = server
-        assert self.server is not None
+        self.server: ChiaServer = server
         self.message_queue = asyncio.Queue()
         self.is_closed = False
-        self.global_connections = global_connections
         self.target_outbound_count = target_outbound_count
         self.peer_db_path = path_from_root(root_path, peer_db_path)
         self.introducer_info = PeerInfo(
@@ -114,9 +116,10 @@ class FullNodeDiscovery:
             except Exception as e:
                 self.log.error(f"Exception in process message: {e}")
 
-    def _num_needed_peers(self) -> int:
+    async def _num_needed_peers(self) -> int:
         diff = self.target_outbound_count
-        diff -= self.global_connections.count_outbound_connections()
+        outgoing = await self.server.get_outgoing_connections()
+        diff -= len(outgoing)
         return diff if diff >= 0 else 0
 
     """
@@ -140,9 +143,9 @@ class FullNodeDiscovery:
 
         await self.server.start_client(self.introducer_info, on_connect)
         # If we are still connected to introducer, disconnect
-        for connection in self.global_connections.get_connections():
+        for id, connection in self.server.global_connections.items():
             if connection.connection_type == NodeType.INTRODUCER:
-                self.global_connections.close(connection)
+                await connection.close()
 
     async def _connect_to_peers(self, random):
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
@@ -313,7 +316,6 @@ class FullNodePeers(FullNodeDiscovery):
         self,
         server,
         root_path,
-        global_connections,
         max_inbound_count,
         target_outbound_count,
         peer_db_path,
@@ -324,14 +326,12 @@ class FullNodePeers(FullNodeDiscovery):
         super().__init__(
             server,
             root_path,
-            global_connections,
             target_outbound_count,
             peer_db_path,
             introducer_info,
             peer_connect_interval,
             log,
         )
-        self.global_connections.max_inbound_count = max_inbound_count
         self.relay_queue = asyncio.Queue()
         self.lock = asyncio.Lock()
         self.neighbour_known_peers = {}
@@ -339,7 +339,6 @@ class FullNodePeers(FullNodeDiscovery):
 
     async def start(self):
         await self.initialize_address_manager()
-        self.global_connections.set_full_node_peers_callback(self.add_message)
         self.self_advertise_task = asyncio.create_task(
             self._periodically_self_advertise()
         )
@@ -360,7 +359,7 @@ class FullNodePeers(FullNodeDiscovery):
                     for neighbour in list(self.neighbour_known_peers.keys()):
                         self.neighbour_known_peers[neighbour].clear()
                 # Self advertise every 24 hours.
-                peer = await self.global_connections.get_local_peerinfo()
+                peer = PeerInfo(self.server._host, self.server._port)
                 if peer is None:
                     continue
                 timestamped_peer = [
@@ -370,16 +369,12 @@ class FullNodePeers(FullNodeDiscovery):
                         uint64(int(time.time())),
                     )
                 ]
-                outbound_message = OutboundMessage(
-                    NodeType.FULL_NODE,
-                    Message(
-                        "respond_peers_full_node",
-                        full_node_protocol.RespondPeers(timestamped_peer),
-                    ),
-                    Delivery.BROADCAST,
+                msg = Message(
+                    "respond_peers_full_node",
+                    full_node_protocol.RespondPeers(timestamped_peer),
                 )
-                if self.server is not None:
-                    self.server.push_message(outbound_message)
+                await self.server.send_to_all([msg], NodeType.FULL_NODE)
+
             except Exception as e:
                 self.log.error(f"Exception in self advertise: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
@@ -393,15 +388,10 @@ class FullNodePeers(FullNodeDiscovery):
                 if peer.host not in self.neighbour_known_peers[neighbour_data]:
                     self.neighbour_known_peers[neighbour_data].add(peer.host)
 
-    async def request_peers(self, peer_info):
+    async def request_peers(self, peer: WSChiaConnection):
         try:
-            conns = self.global_connections.get_outbound_connections()
-            is_outbound = False
-            for conn in conns:
-                conn_peer_info = conn.get_peer_info()
-                if conn_peer_info == peer_info:
-                    is_outbound = True
-                    break
+            if peer.is_outbound:
+                return
 
             # Prevent a fingerprint attack: do not send peers to inbound connections.
             # This asymmetric behavior for inbound and outbound connections was introduced
@@ -409,28 +399,17 @@ class FullNodePeers(FullNodeDiscovery):
             # to users' AddrMan and later request them by sending getaddr messages.
             # Making nodes which are behind NAT and can only make outgoing connections ignore
             # the request_peers message mitigates the attack.
-            if is_outbound:
-                return
+
             peers = await self.address_manager.get_peers()
+            peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
             await self.add_peers_neighbour(peers, peer_info)
-            outbound_message = OutboundMessage(
-                NodeType.FULL_NODE,
-                Message(
-                    "respond_peers_full_node",
-                    full_node_protocol.RespondPeers(peers),
-                ),
-                Delivery.RESPOND,
+
+            msg = Message(
+                "respond_peers_full_node",
+                full_node_protocol.RespondPeers(peers),
             )
-            yield outbound_message
-            outbound_message2 = OutboundMessage(
-                NodeType.WALLET,
-                Message(
-                    "respond_peers_full_node",
-                    full_node_protocol.RespondPeers(peers),
-                ),
-                Delivery.RESPOND,
-            )
-            yield outbound_message2
+
+            await peer.send_message(msg)
         except Exception as e:
             self.log.error(f"Request peers exception: {e}")
 
@@ -451,10 +430,10 @@ class FullNodePeers(FullNodeDiscovery):
                 if not relay_peer_info.is_valid():
                     continue
                 # https://en.bitcoin.it/wiki/Satoshi_Client_Node_Discovery#Address_Relay
-                connections = self.global_connections.get_full_node_connections()
+                connections = self.server.global_connections.items()
                 hashes = []
                 cur_day = int(time.time()) // (24 * 60 * 60)
-                for connection in connections:
+                for id, connection in connections:
                     peer_info = connection.get_peer_info()
                     cur_hash = int.from_bytes(
                         bytes(
@@ -482,18 +461,13 @@ class FullNodePeers(FullNodeDiscovery):
                         if pair not in self.neighbour_known_peers:
                             self.neighbour_known_peers[pair] = set()
                         self.neighbour_known_peers[pair].add(relay_peer.host)
-                    if connection.node_id is None:
+                    if connection.peer_node_id is None:
                         continue
-                    msg = OutboundMessage(
-                        NodeType.FULL_NODE,
-                        Message(
-                            "respond_peers_full_node",
-                            full_node_protocol.RespondPeers([relay_peer]),
-                        ),
-                        Delivery.SPECIFIC,
-                        connection.node_id,
+                    msg = Message(
+                        "respond_peers_full_node",
+                        full_node_protocol.RespondPeers([relay_peer]),
                     )
-                    self.server.push_message(msg)
+                    await connection.send_message(msg)
             except Exception as e:
                 self.log.error(f"Exception in address relay: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
@@ -504,7 +478,6 @@ class WalletPeers(FullNodeDiscovery):
         self,
         server,
         root_path,
-        global_connections,
         target_outbound_count,
         peer_db_path,
         introducer_info,
@@ -514,7 +487,6 @@ class WalletPeers(FullNodeDiscovery):
         super().__init__(
             server,
             root_path,
-            global_connections,
             target_outbound_count,
             peer_db_path,
             introducer_info,
@@ -524,7 +496,6 @@ class WalletPeers(FullNodeDiscovery):
 
     async def start(self):
         await self.initialize_address_manager()
-        self.global_connections.set_wallet_callback(self.add_message)
         await self.start_tasks()
 
     async def ensure_is_closed(self):

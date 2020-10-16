@@ -1,81 +1,21 @@
 import asyncio
 import logging
-import ssl
-
+import time
+from asyncio import Queue
 from pathlib import Path
-from secrets import token_bytes
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Dict, Tuple, Callable, Optional
 
-from aiter import iter_to_aiter, map_aiter, push_aiter
-from aiter.server import start_server_aiter
-
-from src.protocols.shared_protocol import Ping
-from src.server.connection import OnConnectFunc, PeerConnections
-from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+import aiohttp
+from aiohttp import web
+from src.server.introducer_peers import IntroducerPeers
+from src.server.outbound_message import NodeType, Message
+from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
+from src.util.errors import ProtocolError, Err
 from src.util.network import create_node_id
-
-from .pipeline import initialize_pipeline
-
-
-def ssl_context_for_server(
-    private_cert_path: Path, private_key_path: Path, require_cert: bool = False
-) -> Optional[ssl.SSLContext]:
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
-    ssl_context.load_cert_chain(certfile=private_cert_path, keyfile=private_key_path)
-    ssl_context.load_verify_locations(str(private_cert_path))
-    ssl_context.verify_mode = ssl.CERT_REQUIRED if require_cert else ssl.CERT_NONE
-    return ssl_context
-
-
-def ssl_context_for_client(
-    private_cert_path: Path, private_key_path: Path, auth: bool
-) -> Optional[ssl.SSLContext]:
-    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
-    ssl_context.load_cert_chain(certfile=private_cert_path, keyfile=private_key_path)
-    if auth:
-        ssl_context.verify_mode = ssl.CERT_REQUIRED
-        ssl_context.load_verify_locations(str(private_cert_path))
-    else:
-        ssl_context.verify_mode = ssl.CERT_NONE
-    return ssl_context
-
-
-async def start_server(
-    self: "ChiaServer", on_connect: OnConnectFunc = None
-) -> asyncio.AbstractServer:
-    """
-    Launches a listening server on host and port specified, to connect to NodeType nodes. On each
-    connection, the on_connect asynchronous generator will be called, and responses will be sent.
-    Whenever a new TCP connection is made, a new srwt tuple is sent through the pipeline.
-    """
-    require_cert = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
-    ssl_context = ssl_context_for_server(
-        self._private_cert_path, self._private_key_path, require_cert
-    )
-
-    server, aiter = await start_server_aiter(
-        self._port, host=None, reuse_address=True, ssl=ssl_context
-    )
-
-    def add_connection_type(
-        srw: Tuple[asyncio.StreamReader, asyncio.StreamWriter]
-    ) -> Tuple[asyncio.StreamReader, asyncio.StreamWriter, OnConnectFunc, bool, bool]:
-        ssl_object = srw[1].get_extra_info(name="ssl_object")
-        peer_cert = ssl_object.getpeercert()
-        self.log.info(f"Client authed as {peer_cert}")
-        # Inbound peer, not a feeler.
-        return (srw[0], srw[1], on_connect, False, False)
-
-    srwt_aiter = map_aiter(add_connection_type, aiter)
-
-    # Push aiters that come from the server into the pipeline
-    if not self._srwt_aiter.is_stopped():
-        self._srwt_aiter.push(srwt_aiter)
-
-    self.log.info(f"Server started on port {self._port}")
-    return server
+from src.protocols.shared_protocol import protocol_version, Ping, Pong
+import traceback
 
 
 class ChiaServer:
@@ -91,27 +31,21 @@ class ChiaServer:
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
-        self.global_connections: PeerConnections = PeerConnections(local_type, [])
+        self.global_connections: Dict[bytes32, WSChiaConnection] = {}
+        self.full_nodes: Dict[str, WSChiaConnection] = {}
+        self.wallets: Dict[str, WSChiaConnection] = {}
 
+        self.connection_by_type: Dict[NodeType, Dict[str, WSChiaConnection]] = {}
         self._port = port  # TCP port to identify our node
-        self._local_type = local_type  # NodeType (farmer, full node, timelord, pool, harvester, wallet)
+        self._local_type: NodeType = local_type
 
         self._ping_interval = ping_interval
-        # (StreamReader, StreamWriter, NodeType) aiter, gets things from server and clients and
-        # sends them through the pipeline
-        self._srwt_aiter: push_aiter = push_aiter()
-
-        # Aiter used to broadcase messages
-        self._outbound_aiter: push_aiter = push_aiter()
-
+        self._network_id = network_id
         # Open connection tasks. These will be cancelled if
         self._oc_tasks: List[asyncio.Task] = []
 
         # Taks list to keep references to tasks, so they don'y get GCd
         self._tasks: List[asyncio.Task] = []
-        if local_type != NodeType.INTRODUCER:
-            # Introducers should not keep connections alive, they should close them
-            self._tasks.append(self._initialize_ping_task())
 
         if name:
             self.log = logging.getLogger(name)
@@ -119,35 +53,80 @@ class ChiaServer:
             self.log = logging.getLogger(__name__)
 
         # Our unique random node id that we will send to other peers, regenerated on launch
-        node_id = create_node_id()
+        self.node_id = create_node_id()
+        self.api = api
+        self.root_path = root_path
+        self.config = config
+        self.on_connect: Optional[Callable] = None
+        self.incoming_messages: Queue[
+            Tuple[Message, WSChiaConnection]
+        ] = asyncio.Queue()
+        self.shut_down_event = asyncio.Event()
 
-        if hasattr(api, "_set_global_connections"):
-            api._set_global_connections(self.global_connections)
+        if self._local_type is NodeType.INTRODUCER:
+            self.introducer_peers = IntroducerPeers()
 
-        # Tasks for entire server pipeline
-        self._pipeline_task: asyncio.Future = asyncio.ensure_future(
-            initialize_pipeline(
-                self._srwt_aiter,
-                api,
-                self._port,
-                self._outbound_aiter,
-                self.global_connections,
+        self.incoming_task = asyncio.create_task(self.incoming_api_task())
+        self.app = None
+        self.site = None
+
+    async def start_server(self, on_connect: Callable = None):
+        self.app = web.Application()
+        self.on_connect = on_connect
+        routes = [
+            web.get("/ws", self.incoming_connection),
+        ]
+        self.app.add_routes(routes)
+        runner = web.AppRunner(self.app, access_log=None)
+        await runner.setup()
+        self.site = web.TCPSite(runner, port=self._port)
+        await self.site.start()
+        self.log.info(f"Started listening on port: {self._port}")
+
+    async def incoming_connection(self, request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        close_event = asyncio.Event()
+
+        try:
+            connection = WSChiaConnection(
                 self._local_type,
-                node_id,
-                network_id,
+                ws,
+                self._port,
                 self.log,
+                False,
+                False,
+                request.remote,
+                self.incoming_messages,
+                close_event,
             )
-        )
+            handshake = await connection.perform_handshake(
+                self._network_id,
+                protocol_version,
+                self.node_id,
+                self._port,
+                self._local_type,
+            )
 
-        self._private_cert_path = private_cert_path
-        self._private_key_path = private_key_path
+            assert handshake is True
+            self.global_connections[connection.peer_node_id] = connection
+            if self.on_connect is not None:
+                await self.on_connect(connection)
+            if self._local_type is NodeType.INTRODUCER:
+                self.introducer_peers.add(connection.get_peer_info())
+        except Exception as e:
+            error_stack = traceback.format_exc()
+            self.log.error(f"Exception: {e}")
+            self.log.error(f"Exception Stack: {error_stack}")
+            close_event.set()
 
-        self._pending_connections: List = []
+        await close_event.wait()
+        return ws
 
     async def start_client(
         self,
         target_node: PeerInfo,
-        on_connect: OnConnectFunc = None,
+        on_connect: Callable = None,
         auth: bool = False,
         is_feeler: bool = False,
     ) -> bool:
@@ -155,95 +134,150 @@ class ChiaServer:
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
-        self.log.info(f"Trying to connect with {target_node}.")
-        if self._pipeline_task.done():
-            self.log.error("Starting client after server closed")
-            return False
-
-        ssl_context = ssl_context_for_client(
-            self._private_cert_path, self._private_key_path, auth
-        )
+        session = None
         try:
-            # Sometimes open_connection takes a long time, so we add it as a task, and cancel
-            # the task in the event of closing the node.
-            peer_info = (target_node.host, target_node.port)
-            if peer_info in self._pending_connections:
-                return False
-            self._pending_connections.append(peer_info)
-            oc_task: asyncio.Task = asyncio.create_task(
-                asyncio.open_connection(
-                    target_node.host, int(target_node.port), ssl=ssl_context
+            timeout = aiohttp.ClientTimeout(total=10)
+            session = aiohttp.ClientSession(timeout=timeout)
+            url = f"ws://{target_node.host}:{target_node.port}/ws"
+            self.log.info(f"Connecting: {url}")
+            ws = await session.ws_connect(
+                url,
+                autoclose=False,
+                autoping=True,
+            )
+            if ws is not None:
+                connection = WSChiaConnection(
+                    self._local_type,
+                    ws,
+                    self._port,
+                    self.log,
+                    True,
+                    False,
+                    target_node.host,
+                    self.incoming_messages,
+                    session=session,
                 )
-            )
-            self._oc_tasks.append(oc_task)
-            reader, writer = await oc_task
-            self._pending_connections.remove(peer_info)
-            self._oc_tasks.remove(oc_task)
+                handshake = await connection.perform_handshake(
+                    self._network_id,
+                    protocol_version,
+                    self.node_id,
+                    self._port,
+                    self._local_type,
+                )
+                assert handshake is True
+                if on_connect is not None:
+                    await on_connect(connection)
+                self.global_connections[connection.peer_node_id] = connection
+                self.log.info("Connected")
+            return True
         except Exception as e:
-            self.log.info(
-                f"Could not connect to {target_node}. {type(e)}{str(e)}. Aborting and removing peer."
-            )
-            self.global_connections.failed_connection(target_node)
-            if self.global_connections.introducer_peers is not None:
-                self.global_connections.introducer_peers.remove(target_node)
-            if peer_info in self._pending_connections:
-                self._pending_connections.remove(peer_info)
-            return False
-        if not self._srwt_aiter.is_stopped():
-            self._srwt_aiter.push(
-                iter_to_aiter([(reader, writer, on_connect, True, is_feeler)])
-            )
+            error_stack = traceback.format_exc()
+            self.log.error(f"Exception: {e}")
+            if session is not None:
+                await session.close()
+            self.log.error(f"Exception Stack: {error_stack}")
 
-        ssl_object = writer.get_extra_info(name="ssl_object")
-        peer_cert = ssl_object.getpeercert()
-        self.log.info(f"Server authed as {peer_cert}")
+        return False
 
-        return True
+    def connection_disconnected(self, connection: WSChiaConnection):
+        self.log.info(f"connection with disconnected: {connection.peer_host}")
+        if connection.peer_node_id in self.global_connections:
+            self.global_connections.pop(connection.peer_node_id)
 
-    async def await_closed(self):
-        """
-        Await until the pipeline is done, after which the server and all clients are closed.
-        """
-        await self._pipeline_task
+    async def incoming_api_task(self):
+        self.tasks = set()
+        while True:
+            full_message, connection = await self.incoming_messages.get()
+            if full_message is None or connection is None:
+                continue
 
-    def push_message(self, message: OutboundMessage):
-        """
-        Sends a message into the middle of the pipeline, to be sent to peers.
-        """
-        if not self._outbound_aiter.is_stopped():
-            self._outbound_aiter.push(message)
+            try:
+                connection.log.info(
+                    f"<- {full_message.function} from peer {connection.peer_node_id}"
+                )
+                if len(full_message.function) == 0 or full_message.function.startswith(
+                    "_"
+                ):
+                    # This prevents remote calling of private methods that start with "_"
+                    raise ProtocolError(
+                        Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                    )
+
+                f = getattr(self.api, full_message.function, None)
+
+                if f is None:
+                    raise ProtocolError(
+                        Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                    )
+
+                response = await f(full_message.data, connection)
+
+                if response is not None:
+                    await connection.send_message(response)
+
+            except Exception as e:
+                tb = traceback.format_exc()
+                connection.log.error(
+                    f"Exception: {e}, closing connection {connection}. {tb}"
+                )
+                await connection.close()
+
+    async def send_to_others(
+        self, messages: List[Message], type: NodeType, origin_peer: WSChiaConnection
+    ):
+        for id, connection in self.global_connections.items():
+            if id == origin_peer.peer_node_id:
+                continue
+            if connection.connection_type is type:
+                for message in messages:
+                    await connection.outgoing_queue.put(message)
+
+    async def send_to_all(self, messages: List[Message], type: NodeType):
+        for id, connection in self.global_connections.items():
+            if connection.connection_type is type:
+                for message in messages:
+                    await connection.send_message(message)
+
+    async def send_to_specific(self, messages: List[Message], node_id: bytes32):
+        if node_id in self.global_connections:
+            connection = self.global_connections[node_id]
+            for message in messages:
+                await connection.send_message(message)
+
+    async def get_outgoing_connections(self) -> List[WSChiaConnection]:
+        result = []
+        for id, connection in self.global_connections.items():
+            if connection.is_outbound:
+                result.append(connection)
+
+        return result
+
+    def get_full_node_connections(self) -> List[WSChiaConnection]:
+        result = []
+        for id, connection in self.global_connections.items():
+            if connection.connection_type is NodeType.FULL_NODE:
+                result.append(connection)
+
+        return result
 
     def close_all(self):
-        """
-        Starts closing all the clients and servers, by stopping the server and stopping the aiters.
-        """
-        self.global_connections.close_all_connections()
-        if not self._outbound_aiter.is_stopped():
-            self._outbound_aiter.stop()
-        if not self._srwt_aiter.is_stopped():
-            self._srwt_aiter.stop()
-        for task in self._oc_tasks:
-            task.cancel()
+        for id, connection in self.global_connections.items():
+            asyncio.ensure_future(connection.close())
 
-    def _initialize_ping_task(self):
-        async def ping():
-            while not self._pipeline_task.done():
-                msg = Message("ping", Ping(bytes32(token_bytes(32))))
-                self.push_message(
-                    OutboundMessage(NodeType.FARMER, msg, Delivery.BROADCAST)
-                )
-                self.push_message(
-                    OutboundMessage(NodeType.TIMELORD, msg, Delivery.BROADCAST)
-                )
-                self.push_message(
-                    OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
-                )
-                self.push_message(
-                    OutboundMessage(NodeType.HARVESTER, msg, Delivery.BROADCAST)
-                )
-                self.push_message(
-                    OutboundMessage(NodeType.WALLET, msg, Delivery.BROADCAST)
-                )
-                await asyncio.sleep(self._ping_interval)
+        self.site_shutdown_task = asyncio.create_task(self.site.stop())
+        self.app_shut_down_task = asyncio.create_task(self.app.shutdown())
 
-        return asyncio.create_task(ping())
+        self.shut_down_event.set()
+        if self.incoming_task is not None:
+            self.incoming_task.cancel()
+
+    async def await_closed(self):
+        self.log.info("Await Closed")
+        await self.shut_down_event.wait()
+        await self.app_shut_down_task
+        await self.site_shutdown_task
+
+    def get_peer_info(self):
+        host = ""
+        # Do aws get port
+        return PeerInfo(host, self._port)

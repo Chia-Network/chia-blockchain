@@ -1,4 +1,6 @@
 import asyncio
+import concurrent
+import functools
 import logging
 import traceback
 import time
@@ -29,7 +31,6 @@ from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
 from src.protocols import (
-    introducer_protocol,
     farmer_protocol,
     full_node_protocol,
     timelord_protocol,
@@ -51,8 +52,6 @@ from src.consensus.block_creation import create_unfinished_block, unfinished_blo
 from src.util.errors import ConsensusError
 from src.util.ints import uint32, uint64, uint128, uint8
 from src.util.path import mkdir, path_from_root
-from src.server.node_discovery import FullNodePeers
-from src.types.peer_info import PeerInfo
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
@@ -60,7 +59,7 @@ OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 class FullNode:
     block_store: BlockStore
     full_node_store: FullNodeStore
-    full_node_peers: FullNodePeers
+    # full_node_peers: FullNodePeers
     sync_store: SyncStore
     coin_store: CoinStore
     mempool_manager: MempoolManager
@@ -68,7 +67,6 @@ class FullNode:
     sync_peers_handler: Optional[SyncPeersHandler]
     blockchain: Blockchain
     config: Dict
-    global_connections: Optional[PeerConnections]
     server: Optional[ChiaServer]
     log: logging.Logger
     constants: ConsensusConstants
@@ -94,10 +92,11 @@ class FullNode:
         else:
             self.log = logging.getLogger(__name__)
 
-        self.global_connections = None
-
         self.db_path = path_from_root(root_path, config["database_path"])
         mkdir(self.db_path.parent)
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
 
     async def _start(self):
         # create the store (db) and full node instance
@@ -120,6 +119,7 @@ class FullNode:
 
         self.state_changed_callback = None
         try:
+            """
             self.full_node_peers = FullNodePeers(
                 self.server,
                 self.root_path,
@@ -132,126 +132,168 @@ class FullNode:
                 self.log,
             )
             await self.full_node_peers.start()
+            """
         except Exception as e:
             self.log.error(f"Exception in peer discovery: {e}")
 
-    def _set_global_connections(self, global_connections: PeerConnections):
-        self.global_connections = global_connections
+        # TODO(mariano)
+        # uncompact_interval = self.config["send_uncompact_interval"]
+        # if uncompact_interval > 0:
+        #     self.broadcast_uncompact_task = asyncio.create_task(self.broadcast_uncompact_blocks(uncompact_interval))
 
     def _set_server(self, server: ChiaServer):
         self.server = server
-
-    def _set_state_changed_callback(self, callback: Callable):
-        self.state_changed_callback = callback
-        if self.global_connections is not None:
-            self.global_connections.set_state_changed_callback(callback)
 
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
-    async def _send_peak_to_timelords(self) -> OutboundMessageGenerator:
+    async def _send_tips_to_farmers(self):
+        """
+        Sends all of the current heads to all farmer peers. Also sends the latest
+        estimated proof of time rate, so farmer can calulate which proofs are good.
+        """
+
+        requests: List[farmer_protocol.ProofOfSpaceFinalized] = []
+        async with self.blockchain.lock:
+            tips: List[Header] = self.blockchain.get_current_tips()
+            for tip in tips:
+                full_tip: Optional[FullBlock] = await self.block_store.get_block(
+                    tip.header_hash
+                )
+                assert full_tip is not None
+                challenge: Optional[Challenge] = self.blockchain.get_challenge(full_tip)
+                assert challenge is not None
+                challenge_hash = challenge.get_hash()
+                if tip.height > 0:
+                    difficulty: uint64 = self.blockchain.get_next_difficulty(
+                        self.blockchain.headers[tip.prev_header_hash]
+                    )
+                else:
+                    difficulty = uint64(tip.weight)
+                requests.append(
+                    farmer_protocol.ProofOfSpaceFinalized(
+                        challenge_hash, tip.height, tip.weight, difficulty
+                    )
+                )
+            full_block: Optional[FullBlock] = await self.block_store.get_block(
+                tips[0].header_hash
+            )
+            assert full_block is not None
+            proof_of_time_min_iters: uint64 = self.blockchain.get_next_min_iters(
+                full_block
+            )
+            proof_of_time_rate: uint64 = uint64(
+                proof_of_time_min_iters
+                * self.constants.MIN_ITERS_PROPORTION
+                // (self.constants.BLOCK_TIME_TARGET)
+            )
+        rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
+        messages = [Message("proof_of_time_rate", rate_update)]
+
+        for request in requests:
+            messages.append(Message("proof_of_space_finalized", request))
+
+        await self.server.send_to_all(messages, NodeType.FARMER)
+
+    async def _send_challenges_to_timelords(
+        self, time_lords: List[WSChiaConnection] = None
+    ):
         """
         Sends all of the current peaks (as well as unfinished blocks) to timelords
         """
-        peak_block = await self.blockchain.get_full_peak()
-        peak = self.blockchain.sub_blocks[peak_block.header_hash]
-        difficulty = self.blockchain.get_next_difficulty(peak, False)
-        if peak is not None:
-            ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-                self.constants,
-                self.blockchain.sub_blocks,
-                self.blockchain.height_to_hash,
-                peak.signage_point_index,
-                peak.sub_slot_itsub_slot_iters,
-                peak_block,
-            )
-            timelord_new_peak: timelord_protocol.NewPeak = timelord_protocol.NewPeak(
-                peak_block.reward_chain_sub_block, difficulty, peak.deficit, peak.sub_slot_iters, ses
+        full_messages = []
+        timelord_messages = []
+
+        challenge_requests: List[timelord_protocol.ChallengeStart] = []
+        pos_info_requests: List[timelord_protocol.ProofOfSpaceInfo] = []
+        tips: List[Header] = self.blockchain.get_current_tips()
+        tips_blocks: List[Optional[FullBlock]] = [
+            await self.block_store.get_block(tip.header_hash) for tip in tips
+        ]
+        for tip in tips_blocks:
+            assert tip is not None
+            challenge = self.blockchain.get_challenge(tip)
+            assert challenge is not None
+            challenge_requests.append(
+                timelord_protocol.ChallengeStart(challenge.get_hash(), tip.weight)
             )
 
-            # Tell timelord about the new peak
-            yield OutboundMessage(
-                NodeType.TIMELORD,
-                Message("new_peak", timelord_new_peak),
-                Delivery.BROADCAST,
+        tip_hashes = [tip.header_hash for tip in tips]
+        tip_infos = [
+            (tup[0], tup[1])
+            for tup in list(
+                (await self.full_node_store.get_unfinished_blocks()).items()
             )
+            if tup[1].prev_header_hash in tip_hashes
+        ]
+        for ((chall, iters), _) in tip_infos:
+            pos_info_requests.append(timelord_protocol.ProofOfSpaceInfo(chall, iters))
 
-    async def _on_connect(self) -> OutboundMessageGenerator:
+        # Sends our best unfinished block (proof of space) to peer
+        for ((_, iters), block) in sorted(tip_infos, key=lambda t: t[0][1]):
+            if block.height < self.full_node_store.get_unfinished_block_leader()[0]:
+                continue
+            unfinished_block_msg = full_node_protocol.NewUnfinishedBlock(
+                block.prev_header_hash, iters, block.header_hash
+            )
+            full_messages.append(Message("new_unfinished_block", unfinished_block_msg))
+            break
+        for challenge_msg in challenge_requests:
+            timelord_messages.append(Message("challenge_start", challenge_msg))
+        for pos_info_msg in pos_info_requests:
+            timelord_messages.append(Message("proof_of_space_info", pos_info_msg))
+
+        if self.server is not None:
+            await self.server.send_to_all(timelord_messages, NodeType.TIMELORD)
+            await self.server.send_to_all(full_messages, NodeType.FULL_NODE)
+
+    async def _on_connect(self, connection: WSChiaConnection):
         """
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
         """
-        peak_full: FullBlock = await self.blockchain.get_full_peak()
-        peak: SubBlockRecord = self.blockchain.sub_blocks[peak_full.header_hash]
-        request_node = full_node_protocol.NewPeak(
-            peak.header_hash,
-            peak.sub_block_height,
-            peak.weight,
-            peak.sub_block_height,
-            peak_full.reward_chain_sub_block.get_unfinished().get_hash(),
-        )
-        yield OutboundMessage(NodeType.FULL_NODE, Message("new_peak", request_node), Delivery.RESPOND)
+        if connection.connection_type is NodeType.FULL_NODE:
+            tips: List[Header] = self.blockchain.get_current_tips()
+            for t in tips:
+                request = full_node_protocol.NewTip(t.height, t.weight, t.header_hash)
+                msg = Message("new_tip", request)
+                await connection.send_message(msg)
 
-        # If connected to a wallet, send the LCA
-        request_wallet = wallet_protocol.NewPeak(
-            peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height
-        )
-        yield OutboundMessage(NodeType.WALLET, Message("new_peak", request_wallet), Delivery.RESPOND)
+            # Send filter to node and request mempool items that are not in it
+            my_filter = self.mempool_manager.get_filter()
+            mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
+            msg = Message("request_mempool_transactions", mempool_request)
+            await connection.send_message(msg)
+        elif connection.connection_type is NodeType.WALLET:
+            # If connected to a wallet, send the LCA
+            lca = self.blockchain.lca_block
+            new_lca = wallet_protocol.NewLCA(lca.header_hash, lca.height, lca.weight)
+            msg = Message("new_lca", new_lca)
+            await connection.send_message(msg)
+        elif connection.connection_type is NodeType.TIMELORD:
+            await self._send_challenges_to_timelords()
+        elif connection.connection_type is NodeType.FARMER:
+            await self._send_tips_to_farmers()
 
-        # Send filter to node and request mempool items that are not in it
-        my_filter = self.mempool_manager.get_filter()
-        mempool_request = full_node_protocol.RequestMempoolTransactions(my_filter)
-
-        yield OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("request_mempool_transactions", mempool_request),
-            Delivery.RESPOND,
-        )
-        async for msg in self._send_peak_to_timelords():
-            yield msg
-
-    @api_request
-    async def request_peers_with_peer_info(
-        self,
-        request: full_node_protocol.RequestPeers,
-        peer_info: PeerInfo,
-    ):
-        async for msg in self.full_node_peers.request_peers(peer_info):
-            yield msg
-
-    @api_request
-    async def respond_peers_with_peer_info(
-        self,
-        request: introducer_protocol.RespondPeers,
-        peer_info: PeerInfo,
-    ) -> OutboundMessageGenerator:
-        await self.full_node_peers.respond_peers(request, peer_info, False)
-        # Pseudo-message to close the connection
-        yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
-
-    @api_request
-    async def respond_peers_full_node_with_peer_info(
-        self,
-        request: full_node_protocol.RespondPeers,
-        peer_info: PeerInfo,
-    ):
-        await self.full_node_peers.respond_peers(request, peer_info, True)
+    async def _on_disconnect(self, connection: WSChiaConnection):
+        self.log.info("peer disconnected")
 
     def _num_needed_peers(self) -> int:
-        assert self.global_connections is not None
-        diff = self.config["target_peer_count"] - len(self.global_connections.get_full_node_connections())
+        assert self.server is not None
+        assert self.server.global_connections is not None
+        diff = self.config["target_peer_count"] - len(self.server.global_connections)
         return diff if diff >= 0 else 0
 
     def _close(self):
         self._shut_down = True
         self.blockchain.shut_down()
-        self._stop_task = asyncio.create_task(self.full_node_peers.close())
+        # asyncio.create_task(self.full_node_peers.close())
 
     async def _await_closed(self):
         await self.connection.close()
 
-    async def _sync(self) -> OutboundMessageGenerator:
+    async def _sync(self):
         """
         Performs a full sync of the blockchain.
             - Check which are the heaviest peaks
@@ -269,8 +311,12 @@ class FullNode:
         # TODO: fix DOS issue. Attacker can request syncing to an invalid blockchain
         await asyncio.sleep(2)
         highest_weight: uint128 = uint128(0)
-        peak_height: uint32 = uint32(0)
+        tip_block: Optional[FullBlock] = None
+        tip_height = 0
         sync_start_time = time.time()
+
+        if self.server is None:
+            return
 
         # Based on responses from peers about the current heads, see which head is the heaviest
         # (similar to longest chain rule).
@@ -298,11 +344,13 @@ class FullNode:
         fork_point_height: uint32 = uint32(0)
         self.log.info(f"Fork point at height {fork_point_height}")
 
-        assert self.global_connections is not None
         peers = [
-            con.node_id
-            for con in self.global_connections.get_connections()
-            if (con.node_id is not None and con.connection_type == NodeType.FULL_NODE)
+            con.peer_node_id
+            for id, con in self.server.global_connections.items()
+            if (
+                con.peer_node_id is not None
+                and con.connection_type == NodeType.FULL_NODE
+            )
         ]
 
         self.sync_peers_handler = SyncPeersHandler(
@@ -326,8 +374,6 @@ class FullNode:
                 break
             if block_processor_task.done():
                 break
-            async for msg in self.sync_peers_handler.monitor_timeouts():
-                yield msg  # Disconnects from peers that are not responding
 
             cur_peers = [
                 con.node_id
@@ -379,11 +425,14 @@ class FullNode:
             f"{round((time.time() - sync_start_time)/60, 2)} minutes."
         )
 
-    async def _finish_sync(self) -> OutboundMessageGenerator:
+    async def _finish_sync(self):
         """
         Finalize sync by setting sync mode to False, clearing all sync information, and adding any final
         blocks that we have finalized recently.
         """
+        if self.server is None:
+            return
+
         potential_fut_blocks = (self.sync_store.get_potential_future_blocks()).copy()
         self.sync_store.set_sync_mode(False)
 

@@ -76,31 +76,14 @@ class SyncPeersHandler:
         # We have received all blocks
         return True
 
-    async def monitor_timeouts(self) -> OutboundMessageGenerator:
-        """
-        If any of our requests have timed out, disconnects from the node that should
-        have responded.
-        """
-        current_time = time.time()
-        remove_node_ids = []
-        for node_id, outbound_set in self.current_outbound_sets.items():
-            for _, time_requested in outbound_set.items():
-                if current_time - float(time_requested) > self.BLOCK_RESPONSE_TIMEOUT:
-                    remove_node_ids.append(node_id)
-        for rn_id in remove_node_ids:
-            if rn_id in self.current_outbound_sets:
-                log.warning(f"Timeout receiving block, closing connection with node {rn_id}")
-                self.current_outbound_sets.pop(rn_id, None)
-                yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE, rn_id)
-
-    async def add_to_request_sets(self) -> OutboundMessageGenerator:
+    async def _add_to_request_sets(self) -> List[OutboundMessage]:
         """
         Refreshes the pointers of how far we validated and how far we downloaded. Then goes through
         all peers and sends requests to peers for the blocks we have not requested yet, or have
         requested to a peer that did not respond in time or disconnected.
         """
         if not self.sync_store.get_sync_mode():
-            return
+            return []
 
         #     fork       fully validated                           MAX_GAP   target (peak)
         # $$$$$X$$$$$$$$$$$$$$$X================----==---=--====---=--X------->
@@ -166,15 +149,21 @@ class SyncPeersHandler:
 
             to_yield.append(full_node_protocol.RequestSubBlock(height, True))
 
+        requests = []
         for request in to_yield:
-            yield OutboundMessage(
+            msg = OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("request_block", request),
                 Delivery.SPECIFIC,
-                node_id,
+                request.node_id,
             )
+            requests.append(msg)
 
-    async def new_block(self, block: Union[FullBlock, HeaderBlock]) -> OutboundMessageGenerator:
+        return requests
+
+    async def new_block(
+        self, block: Union[FullBlock, HeaderBlock]
+    ) -> List[OutboundMessage]:
         """
         A new block was received from a peer.
         """
@@ -189,7 +178,7 @@ class SyncPeersHandler:
         # save block to DB
         self.potential_blocks[block.height] = block
         if not self.sync_store.get_sync_mode():
-            return
+            return []
 
         assert block.height in self.potential_blocks_received
 
@@ -200,8 +189,8 @@ class SyncPeersHandler:
             request_set.pop(header_hash, None)
 
         # add to request sets
-        async for msg in self.add_to_request_sets():
-            yield msg
+        requests = await self._add_to_request_sets()
+        return requests
 
     def new_node_connected(self, node_id: bytes32):
         """

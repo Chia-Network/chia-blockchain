@@ -5,6 +5,7 @@ from typing import Dict
 from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.harvester import Harvester
+from src.harvester_api import HarvesterAPI
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.util.config import load_config_cli
@@ -28,11 +29,22 @@ def service_kwargs_for_harvester(
         PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])
     ]
 
-    api = Harvester(root_path, consensus_constants)
+    harvester = Harvester(root_path, constants: ConsensusConstants=)
+    peer_api = HarvesterAPI(harvester)
+
+    async def start_callback():
+        await harvester._start()
+
+    def stop_callback():
+        harvester._close()
+
+    async def await_closed_callback():
+        await harvester._await_closed()
 
     kwargs = dict(
         root_path=root_path,
-        api=api,
+        node=harvester,
+        peer_api=peer_api,
         node_type=NodeType.HARVESTER,
         advertised_port=config["port"],
         service_name=SERVICE_NAME,
