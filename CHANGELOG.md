@@ -22,6 +22,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Fixed
 - A bug in bls-singatures/blspy could cause a stack overflow if too many signatures were verified at once. This caused the block of death at 11997 of the Beta 15 chain. Updated to 0.2.4 to address the issue.
 - chiapos 0.12.32 fixed a an out of bounds read that could crash the plotter. It also contains a fix to better handle the case of drive letters on Windows.
+- Node would fail to start on Windows Server 2016 with lots of cores. This [python issue explains]( https://bugs.python.org/issue26903).
 
 ## [1.0beta15] aka Beta 1.15 - 2020-10-07
 
