@@ -1,4 +1,4 @@
-# chia-blockchain
+# chia-blockchain [dev]
 ![Alt text](https://www.chia.net/img/chia_logo.svg)
 
 | Current Release/master | Development Branch/dev |
