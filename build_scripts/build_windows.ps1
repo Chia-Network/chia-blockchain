@@ -74,8 +74,16 @@ npm install
 Write-Output "   ---"
 Write-Output "Electron package Windows Installer"
 Write-Output "   ---"
-npm run build
-
+Try
+{
+    npm run build
+}
+Catch
+{
+    $ErrorMessage = $_.Exception.Message
+    $FailedItem = $_.Exception.ItemName
+    Throw "npm run build failed with error: $FailedItem - $ErrorMessage"
+}
 Write-Output "   ---"
 Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
 # editbin.exe needs to be in the path
