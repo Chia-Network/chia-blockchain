@@ -76,7 +76,7 @@ Write-Output "Electron package Windows Installer"
 Write-Output "   ---"
 npm run build
 If ($LastExitCode -gt 0){
-    Throw "npm run build failed! ExitCode $LastExitCode"
+    Throw "npm run build failed!"
 }
 
 Write-Output "   ---"

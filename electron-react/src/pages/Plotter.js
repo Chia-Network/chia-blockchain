@@ -339,7 +339,7 @@ const CreatePlot = () => {
   const changePlotSize = event => {
     setPlotSize(event.target.value);
     for (let pso of plot_size_options) {
-        if (pso.value == event.target.value) {
+        if (pso.value === event.target.value) {
             setMaxRam(pso.default_ram);
         }
     }
