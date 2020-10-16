@@ -12,14 +12,13 @@ except ImportError:
     uvloop = None
 
 from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer, start_server
+from src.server.server import ChiaServer
 from src.server.upnp import upnp_remap_port
 from src.types.peer_info import PeerInfo
 from src.util.logging import initialize_logging
 from src.util.config import load_config, load_config_cli
 from src.util.setproctitle import setproctitle
 from src.rpc.rpc_server import start_rpc_server
-from src.server.connection import OnConnectFunc
 
 from .reconnect_task import start_reconnect_task
 from .ssl_context import load_ssl_paths
@@ -29,7 +28,8 @@ class Service:
     def __init__(
         self,
         root_path,
-        api: Any,
+        node: Any,
+        peer_api: Any,
         node_type: NodeType,
         advertised_port: int,
         service_name: str,
@@ -37,7 +37,7 @@ class Service:
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
         auth_connect_peers: bool = True,
-        on_connect_callback: Optional[OnConnectFunc] = None,
+        on_connect_callback: Optional[Callable] = None,
         rpc_info: Optional[Tuple[type, int]] = None,
         parse_cli_args=True,
     ):
@@ -67,7 +67,7 @@ class Service:
 
         self._server = ChiaServer(
             advertised_port,
-            api,
+            peer_api,
             node_type,
             ping_interval,
             network_id,
@@ -76,7 +76,7 @@ class Service:
             name=f"{service_name}_server",
         )
         for _ in ["set_server", "_set_server"]:
-            f = getattr(api, _, None)
+            f = getattr(node, _, None)
             if f:
                 f(self._server)
 

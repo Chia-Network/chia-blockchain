@@ -6,15 +6,15 @@ import socket
 import logging
 from blspy import PrivateKey
 
+from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.protocols import wallet_protocol
 from src.consensus.constants import ConsensusConstants
-from src.server.connection import PeerConnections
 from src.server.server import ChiaServer
 from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
 from src.server.node_discovery import WalletPeers
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
 from src.wallet.settings.settings_objects import BackupInitialized
 from src.wallet.transaction_record import TransactionRecord
@@ -61,7 +61,6 @@ class WalletNode:
     # How far away from LCA we must be to perform a full sync. Before then, do a short sync,
     # which is consecutive requests for the previous block
     short_sync_threshold: int
-    sync_generator_task: Optional[AsyncGenerator]
     _shut_down: bool
     root_path: Path
     state_changed_callback: Optional[Callable]
@@ -98,7 +97,6 @@ class WalletNode:
         self.state_changed_callback = None
         self.wallet_state_manager = None
         self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
-        self.sync_generator_task = None
         self.server = None
         self.wsm_close_task = None
 
@@ -172,7 +170,6 @@ class WalletNode:
         self.wallet_peers = WalletPeers(
             self.server,
             self.root_path,
-            self.global_connections,
             self.config["target_peer_count"],
             self.config["wallet_peers_path"],
             self.config["introducer_peer"],
@@ -187,14 +184,14 @@ class WalletNode:
         self._shut_down = True
         if self.wallet_state_manager is None:
             return
-        self.wsm_close_task = asyncio.create_task(self.wallet_state_manager.close_all_stores())
-        self.global_connections.close_all_connections()
-        self.wallet_peers_task = asyncio.create_task(self.wallet_peers.ensure_is_closed())
+        self.wsm_close_task = asyncio.create_task(
+            self.wallet_state_manager.close_all_stores()
+        )
+        self.wallet_peers_task = asyncio.create_task(
+            self.wallet_peers.ensure_is_closed()
+        )
 
     async def _await_closed(self):
-        if self.sync_generator_task is not None:
-            async for _ in self.sync_generator_task:
-                pass
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         if self.wsm_close_task is not None:
@@ -204,8 +201,6 @@ class WalletNode:
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
-        if self.global_connections is not None:
-            self.global_connections.set_state_changed_callback(callback)
 
         if self.wallet_state_manager is not None:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
@@ -216,11 +211,13 @@ class WalletNode:
             return
         asyncio.ensure_future(self._resend_queue())
 
-    async def _action_messages(self) -> List[OutboundMessage]:
+    async def _action_messages(self) -> List[Message]:
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return []
-        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
-        result: List[OutboundMessage] = []
+        actions: List[
+            WalletAction
+        ] = await self.wallet_state_manager.action_store.get_all_pending_actions()
+        result: List[Message] = []
         for action in actions:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
@@ -231,8 +228,7 @@ class WalletNode:
                     "request_generator",
                     wallet_protocol.RequestGenerator(height, header_hash),
                 )
-                out_msg = OutboundMessage(NodeType.FULL_NODE, msg, Delivery.BROADCAST)
-                result.append(out_msg)
+                result.append(msg)
 
         return result
 
@@ -253,7 +249,7 @@ class WalletNode:
                 or self.backup_initialized is None
             ):
                 return
-            self.server.push_message(msg)
+            await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
         for msg in await self._action_messages():
             if (
@@ -263,64 +259,65 @@ class WalletNode:
                 or self.backup_initialized is None
             ):
                 return
-            self.server.push_message(msg)
+            await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-    async def _messages_to_resend(self) -> List[OutboundMessage]:
-        if self.wallet_state_manager is None or self.backup_initialized is False or self._shut_down:
+    async def _messages_to_resend(self) -> List[Message]:
+        if (
+            self.wallet_state_manager is None
+            or self.backup_initialized is False
+            or self._shut_down
+        ):
             return []
-        messages: List[OutboundMessage] = []
+        messages: List[Message] = []
 
         records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent()
 
         for record in records:
             if record.spend_bundle is None:
                 continue
-            msg = OutboundMessage(
-                NodeType.FULL_NODE,
-                Message(
-                    "send_transaction",
-                    wallet_protocol.SendTransaction(record.spend_bundle),
-                ),
-                Delivery.BROADCAST,
+            msg = Message(
+                "send_transaction",
+                wallet_protocol.SendTransaction(record.spend_bundle),
             )
             messages.append(msg)
 
         return messages
 
-    def _set_global_connections(self, global_connections: PeerConnections):
-        self.global_connections = global_connections
-
     def _set_server(self, server: ChiaServer):
         self.server = server
 
-    async def _on_connect(self) -> AsyncGenerator[OutboundMessage, None]:
+    async def _on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         messages = await self._messages_to_resend()
-
         for msg in messages:
-            yield msg
+            await peer.send_message(msg)
 
     async def _periodically_check_full_node(self):
         tries = 0
         while not self._shut_down and tries < 5:
-            if self._has_full_node():
+            if self.has_full_node():
                 await self.wallet_peers.ensure_is_closed()
                 break
             tries += 1
             await asyncio.sleep(180)
 
-    def _has_full_node(self) -> bool:
+    def has_full_node(self) -> bool:
+        assert self.server is not None
         if "full_node_peer" in self.config:
             full_node_peer = PeerInfo(
                 self.config["full_node_peer"]["host"],
                 self.config["full_node_peer"]["port"],
             )
-            peers = [c.get_peer_info() for c in self.global_connections.get_full_node_connections()]
-            full_node_resolved = PeerInfo(socket.gethostbyname(full_node_peer.host), full_node_peer.port)
+            peers = [c.get_peer_info() for c in self.server.get_full_node_connections()]
+            full_node_resolved = PeerInfo(
+                socket.gethostbyname(full_node_peer.host), full_node_peer.port
+            )
             if full_node_peer in peers or full_node_resolved in peers:
-                self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
-                for connection in self.global_connections.get_full_node_connections():
+                self.log.info(
+                    f"Will not attempt to connect to other nodes, already connected to {full_node_peer}"
+                )
+                for connection in self.server.get_full_node_connections():
                     if (
                         connection.get_peer_info() != full_node_peer
                         and connection.get_peer_info() != full_node_resolved

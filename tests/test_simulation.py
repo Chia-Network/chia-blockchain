@@ -34,8 +34,8 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation):
         node1, node2, _, _, _, _, _, _, _, server1 = simulation
-        await asyncio.sleep(10)
-        await server1.start_client(PeerInfo("::1", uint16(21238)))
+        await asyncio.sleep(1)
+        await server1.start_client(PeerInfo("localhost", uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
         await time_out_assert(500, node_height_at_least, True, node2, 10)
 

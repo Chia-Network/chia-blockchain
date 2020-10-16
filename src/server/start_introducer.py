@@ -3,6 +3,7 @@ import pathlib
 from typing import Dict
 
 from src.introducer import Introducer
+from src.introducer_api import IntroducerAPI
 from src.server.outbound_message import NodeType
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -19,11 +20,20 @@ def service_kwargs_for_introducer(
     root_path: pathlib.Path,
     config: Dict,
 ) -> Dict:
-    api = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
+    introducer = Introducer(
+        config["max_peers_to_send"], config["recent_peer_threshold"]
+    )
+    node__api = IntroducerAPI(introducer)
 
+    async def start_callback():
+        await introducer._start()
+
+    def stop_callback():
+        introducer._close()
     kwargs = dict(
         root_path=root_path,
-        api=api,
+        node=introducer,
+        peer_api=node__api,
         node_type=NodeType.INTRODUCER,
         advertised_port=config["port"],
         service_name=SERVICE_NAME,
