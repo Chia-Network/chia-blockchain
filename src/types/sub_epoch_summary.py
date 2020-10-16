@@ -8,9 +8,9 @@ from src.util.streamable import Streamable, streamable
 
 @dataclass(frozen=True)
 @streamable
-class SubepochSummary(Streamable):
+class SubEpochSummary(Streamable):
     prev_subepoch_summary_hash: bytes32
-    reward_chain_hash: bytes32         # hash of reward chain at end of last segment
-    num_subblocks_overflow: uint32     # How many more sub-blocks than 384*(N-1)
+    reward_chain_hash: bytes32  # hash of reward chain at end of last segment
+    num_subblocks_overflow: uint32  # How many more sub-blocks than 384*(N-1)
     new_difficulty: Optional[uint128]  # Only once per epoch (diff adjustment)
-    new_ips: Optional[uint64]          # Only once per epoch (diff adjustment)
+    new_ips: Optional[uint64]  # Only once per epoch (diff adjustment)
