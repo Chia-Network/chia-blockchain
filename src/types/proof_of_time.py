@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 
 from chiavdf import create_discriminant
 from src.types.classgroup import ClassgroupElement
@@ -6,14 +7,6 @@ from src.types.sized_bytes import bytes32
 from src.util.classgroup_utils import ClassGroup, check_proof_of_time_nwesolowski
 from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
-
-
-@dataclass(frozen=True)
-@streamable
-class ProofOfTimeOutput(Streamable):
-    challenge_hash: bytes32
-    number_of_iterations: uint64
-    output: ClassgroupElement
 
 
 @dataclass(frozen=True)
@@ -35,6 +28,7 @@ class ProofOfTime(Streamable):
             y = ClassGroup.from_ab_discriminant(self.output.a, self.output.b, disc)
         except Exception:
             return False
+        # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
         return check_proof_of_time_nwesolowski(
             disc,
             x,
@@ -43,3 +37,15 @@ class ProofOfTime(Streamable):
             discriminant_size_bits,
             self.witness_type,
         )
+
+
+async def validate_composite_proof_of_time(
+    challenge: bytes32, iters: uint64, output: ClassgroupElement, proofs: List[ProofOfTime]
+) -> bool:
+    # TODO: parallelize somehow
+    if len(proofs) == 0:
+        return False
+    if challenge != proofs[0].challenge_hash:
+        return False
+    if output != proofs[-1].output:
+        return False
