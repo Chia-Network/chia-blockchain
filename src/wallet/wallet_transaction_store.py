@@ -215,22 +215,22 @@ class WalletTransactionStore:
         await self.add_transaction_record(tx)
         return True
 
-    async def set_not_sent(self, id: bytes32):
+    async def tx_reorged(self, id: bytes32):
         """
-        Updates transaction sent count to 0.
+        Updates transaction sent count to 0 and resets confirmation data
         """
 
         current: Optional[TransactionRecord] = await self.get_transaction_record(id)
         if current is None:
             return
         tx: TransactionRecord = TransactionRecord(
-            confirmed_at_index=current.confirmed_at_index,
+            confirmed_at_index=uint32(0),
             created_at_time=current.created_at_time,
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
             fee_amount=current.fee_amount,
             incoming=current.incoming,
-            confirmed=current.confirmed,
+            confirmed=False,
             sent=uint32(0),
             spend_bundle=current.spend_bundle,
             additions=current.additions,
