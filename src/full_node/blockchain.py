@@ -5,8 +5,8 @@ import time
 from enum import Enum
 import multiprocessing
 import concurrent
-from typing import Dict, List, Optional, Set, Tuple
-from blspy import AugSchemeMPL, G2Element
+from typing import Dict, List, Optional, Set, Tuple, Union
+from blspy import AugSchemeMPL
 
 from chiabip158 import PyBIP158
 
@@ -19,11 +19,12 @@ from src.full_node.block_header_validation import (
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters
-from src.types.coin import Coin, hash_coin_list
+from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.full_block import FullBlock, additions_for_npc
+from src.types.unfinished_block import UnfinishedBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.full_node.blockchain_check_conditions import blockchain_check_conditions_dict
@@ -255,8 +256,6 @@ class Blockchain:
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code
 
-        # Validate block body
-        # TODO(mariano): check
         error_code = await self.validate_block_body(block)
 
         if error_code is not None:
@@ -349,13 +348,11 @@ class Blockchain:
             results[i] = val, pos
         return results
 
-    async def validate_unfinished_block(
-        self, block: FullBlock, prev_full_block: FullBlock
-    ) -> Tuple[Optional[Err], Optional[uint64]]:
+    async def validate_unfinished_block(self, block: FullBlock, prev_full_block: FullBlock) -> Optional[Err]:
         # TODO(mariano): review
         prev_hb = prev_full_block.get_header_block()
         assert prev_hb is not None
-        return await validate_unfinished_block_header(
+        err = await validate_unfinished_block_header(
             self.constants,
             self.sub_blocks,
             self.height_to_hash,
@@ -364,8 +361,12 @@ class Blockchain:
             prev_hb,
             False,
         )
+        if err is not None:
+            return err
 
-    async def validate_block_body(self, block: FullBlock) -> Optional[Err]:
+        return await self.validate_block_body(block)
+
+    async def validate_block_body(self, block: Union[FullBlock, UnfinishedBlock]) -> Optional[Err]:
         """
         This assumes the header block has been completely validated.
         Validates the transactions and body of the block. Returns None if everything
@@ -396,31 +397,33 @@ class Blockchain:
             if block.foliage_block.prev_block_hash != bytes([0] * 32):
                 return Err.INVALID_PREV_BLOCK_HASH
         else:
-            curr: SubBlockRecord = self.sub_blocks[block.prev_header_hash]
-            while not curr.is_block:
-                pool_coin = create_pool_coin(curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height))
+            curr_sb: SubBlockRecord = self.sub_blocks[block.prev_header_hash]
+            while not curr_sb.is_block:
+                pool_coin = create_pool_coin(
+                    curr_sb.height, curr_sb.pool_puzzle_hash, calculate_pool_reward(curr_sb.height)
+                )
                 farmer_coin = create_farmer_coin(
-                    curr.height, curr.farmer_puzzle_hash, calculate_base_farmer_reward(curr.height)
+                    curr_sb.height, curr_sb.farmer_puzzle_hash, calculate_base_farmer_reward(curr_sb.height)
                 )
                 expected_reward_coins.add(pool_coin)
                 expected_reward_coins.add(farmer_coin)
-                curr = self.sub_blocks[curr.prev_hash]
-            if not block.foliage_block.prev_block_hash == curr.header_hash:
+                curr_sb = self.sub_blocks[curr_sb.prev_hash]
+            if not block.foliage_block.prev_block_hash == curr_sb.header_hash:
                 return Err.INVALID_PREV_BLOCK_HASH
 
         # 4. The timestamp in Foliage Block must comply with the timestamp rules
         if block.height > 0:
             last_timestamps: List[uint64] = []
-            curr: SubBlockRecord = self.sub_blocks[block.foliage_block.prev_block_hash]
+            curr_sb: SubBlockRecord = self.sub_blocks[block.foliage_block.prev_block_hash]
             while len(last_timestamps) < self.constants.NUMBER_OF_TIMESTAMPS:
-                last_timestamps.append(curr.timestamp)
-                fetched: Optional[SubBlockRecord] = self.sub_blocks.get(curr.prev_block_hash, None)
+                last_timestamps.append(curr_sb.timestamp)
+                fetched: Optional[SubBlockRecord] = self.sub_blocks.get(curr_sb.prev_block_hash, None)
                 if not fetched:
                     break
-                curr = fetched
+                curr_sb = fetched
             if len(last_timestamps) != self.constants.NUMBER_OF_TIMESTAMPS:
                 # For blocks 1 to 10, average timestamps of all previous blocks
-                assert curr.height == 0
+                assert curr_sb.height == 0
             prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
             if block.foliage_block.timestamp < prev_time:
                 return Err.TIMESTAMP_TOO_FAR_IN_PAST
@@ -451,25 +454,20 @@ class Blockchain:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
 
         # 10. The reward claims must be valid for the previous sub-blocks, and current block fees
-        block_pool_coin = create_pool_coin(
+        pool_coin = create_pool_coin(
             block.height,
             block.foliage_sub_block.signed_data.pool_target.puzzle_hash,
             calculate_pool_reward(block.height),
         )
-        block_farmer_coin = create_farmer_coin(
+        farmer_coin = create_farmer_coin(
             block.height,
             block.foliage_sub_block.signed_data.farmer_reward_puzzle_hash,
             calculate_base_farmer_reward(block.height) + block.transactions_info.fees,
         )
-        expected_reward_coins.add(block_pool_coin)
-        expected_reward_coins.add(block_farmer_coin)
+        expected_reward_coins.add(pool_coin)
+        expected_reward_coins.add(farmer_coin)
         if block.transactions_info.reward_claims_incorporated != expected_reward_coins:
             return Err.INVALID_REWARD_COINS
-
-        return await self._validate_transactions(block, block_pool_coin, block_farmer_coin)
-
-    async def _validate_transactions(self, block: FullBlock, pool_coin: Coin, farmer_coin: Coin) -> Optional[Err]:
-        # TODO(straya): review, further test the code, and number all the validation steps
 
         removals: List[bytes32] = []
         coinbase_additions: List[Coin] = [farmer_coin, pool_coin]
@@ -512,7 +510,7 @@ class Blockchain:
         if root_error:
             return root_error
 
-        # 15. Validate filter
+        # 15. The additions and removals must result in the correct filter
         byte_array_tx: List[bytes32] = []
 
         for coin in additions + coinbase_additions:
@@ -608,7 +606,6 @@ class Blockchain:
                     # This coin was spent in the fork
                     return Err.DOUBLE_SPEND
 
-        # Check fees
         removed = 0
         for unspent in removal_coin_records.values():
             removed += unspent.coin.amount

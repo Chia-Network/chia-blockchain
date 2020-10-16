@@ -12,6 +12,7 @@ def create_puzzlehash_for_pk(pub_key: G1Element) -> bytes32:
 
 
 def signature_for_coinbase(coin: Coin, pool_private_key: PrivateKey):
+    # noinspection PyTypeChecker
     return G2Element.from_bytes(bytes(AugSchemeMPL.sign(pool_private_key, bytes(coin))))
 
 

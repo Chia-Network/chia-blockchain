@@ -9,7 +9,6 @@ class ConsensusConstants:
     MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK: int
     MAX_SLOT_SUB_BLOCKS: int
     NUM_CHECKPOINTS_PER_SLOT: int
-    EXTRA_ITERS_SLOT_FACTOR: int
     SLOT_ITERS_STARTING: int
 
     DIFFICULTY_STARTING: int
@@ -21,6 +20,7 @@ class ConsensusConstants:
     DISCRIMINANT_SIZE_BITS: int  # Max is 1024 (based on ClassGroupElement int size)
     NUMBER_ZERO_BITS_CHALLENGE_SIG: int  # H(plot signature of the challenge) must start with these many zeroes
     SLOT_TIME_TARGET: int  # The target number of seconds per block
+    EXTRA_ITERS_TIME_TARGET: float
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # If an unfinished block is more than these many seconds slower than the best unfinished block,
@@ -61,7 +61,6 @@ testnet_kwargs = {
     "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 5,
     "MAX_SLOT_SUB_BLOCKS": 64,
     "NUM_CHECKPOINTS_PER_SLOT": 32,
-    "EXTRA_ITERS_SLOT_FACTOR": 8,
     "SLOT_ITERS_STARTING": 180000000,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of 2^32, to be used in the VDF iter calculation formula.
@@ -74,6 +73,7 @@ testnet_kwargs = {
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_CHALLENGE_SIG": 8,  # H(plot signature of the challenge) must start with these many zeroes
     "SLOT_TIME_TARGET": 300,  # The target number of seconds per slot
+    "EXTRA_ITERS_TIME_TARGET": 37.5,
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more
     "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     # If an unfinished block is more than these many seconds slower than the best unfinished block,
