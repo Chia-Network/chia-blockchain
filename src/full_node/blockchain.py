@@ -98,6 +98,8 @@ class Blockchain:
         self = Blockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
         cpu_count = multiprocessing.cpu_count()
+        if cpu_count > 61:
+            cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
         self.pool = concurrent.futures.ProcessPoolExecutor(
             max_workers=max(cpu_count - 1, 1)
         )
