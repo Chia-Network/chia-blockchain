@@ -75,6 +75,9 @@ Write-Output "   ---"
 Write-Output "Electron package Windows Installer"
 Write-Output "   ---"
 npm run build
+If ($LastExitCode -gt 0){
+    Throw "npm run build failed!"
+}
 
 Write-Output "   ---"
 Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"
