@@ -52,6 +52,7 @@ class Harvester:
         self.global_connections: Optional[PeerConnections] = None
         self.farmer_public_keys = []
         self.pool_public_keys = []
+        self.match_str = None
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
         self.state_changed_callback = None
         self.server = None
@@ -117,6 +118,7 @@ class Harvester:
                     self.failed_to_open_filenames,
                     self.farmer_public_keys,
                     self.pool_public_keys,
+                    self.match_str,
                     self.root_path,
                 )
         if changed:
