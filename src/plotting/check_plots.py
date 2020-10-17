@@ -7,7 +7,7 @@ from src.util.config import load_config
 from src.plotting.plot_tools import load_plots
 from src.util.hash import std_hash
 from src.wallet.derive_keys import master_sk_to_farmer_sk
-
+import os
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +18,10 @@ def check_plots(args, root_path):
         num = args.num
     else:
         num = 20
+    if args.final_dir is not None:
+        check_dir = str(args.final_dir)
+    else:
+        check_dir = None
 
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
@@ -44,40 +48,42 @@ def check_plots(args, root_path):
     total_size = 0
 
     for plot_path, plot_info in provers.items():
-        pr = plot_info.prover
-        log.info(f"Testing plot {plot_path} k={pr.get_size()}")
-        log.info(f"\tPool public key: {plot_info.pool_public_key}")
-        log.info(f"\tFarmer public key: {plot_info.farmer_public_key}")
-        log.info(f"\tLocal sk: {plot_info.local_sk}")
-        total_proofs = 0
-        try:
-            for i in range(num):
-                challenge = std_hash(i.to_bytes(32, "big"))
-                for index, quality_str in enumerate(
-                    pr.get_qualities_for_challenge(challenge)
-                ):
-                    proof = pr.get_full_proof(challenge, index)
-                    total_proofs += 1
-                    ver_quality_str = v.validate_proof(
-                        pr.get_id(), pr.get_size(), challenge, proof
-                    )
-                    assert quality_str == ver_quality_str
-        except BaseException as e:
-            if isinstance(e, KeyboardInterrupt):
-                log.warning("Interrupted, closing")
-                return
-            log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
-        if total_proofs > 0:
-            log.info(
-                f"\tProofs {total_proofs} / {num}, {round(total_proofs/float(num), 4)}"
-            )
-            total_good_plots[pr.get_size()] += 1
-            total_size += plot_path.stat().st_size
-        else:
-            total_bad_plots += 1
-            log.error(
-                f"\tProofs {total_proofs} / {num}, {round(total_proofs/float(num), 4)}"
-            )
+        plot_path_dir=os.path.abspath(plot_path)
+        if check_dir in plot_path_dir:
+            pr = plot_info.prover
+            log.info(f"Testing plot {plot_path} k={pr.get_size()}")
+            log.info(f"\tPool public key: {plot_info.pool_public_key}")
+            log.info(f"\tFarmer public key: {plot_info.farmer_public_key}")
+            log.info(f"\tLocal sk: {plot_info.local_sk}")
+            total_proofs = 0
+            try:
+                for i in range(num):
+                    challenge = std_hash(i.to_bytes(32, "big"))
+                    for index, quality_str in enumerate(
+                        pr.get_qualities_for_challenge(challenge)
+                    ):
+                        proof = pr.get_full_proof(challenge, index)
+                        total_proofs += 1
+                        ver_quality_str = v.validate_proof(
+                            pr.get_id(), pr.get_size(), challenge, proof
+                        )
+                        assert quality_str == ver_quality_str
+            except BaseException as e:
+                if isinstance(e, KeyboardInterrupt):
+                    log.warning("Interrupted, closing")
+                    return
+                log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
+            if total_proofs > 0:
+                log.info(
+                    f"\tProofs {total_proofs} / {num}, {round(total_proofs/float(num), 4)}"
+                )
+                total_good_plots[pr.get_size()] += 1
+                total_size += plot_path.stat().st_size
+            else:
+                total_bad_plots += 1
+                log.error(
+                    f"\tProofs {total_proofs} / {num}, {round(total_proofs/float(num), 4)}"
+                )
     log.info("")
     log.info("")
     log.info("Summary")
