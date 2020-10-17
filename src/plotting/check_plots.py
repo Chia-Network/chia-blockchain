@@ -48,7 +48,7 @@ def check_plots(args, root_path):
     total_size = 0
 
     for plot_path, plot_info in provers.items():
-        plot_path_dir=os.path.abspath(plot_path)
+        plot_path_dir = os.path.abspath(plot_path)
         if check_dir in plot_path_dir:
             pr = plot_info.prover
             log.info(f"Testing plot {plot_path} k={pr.get_size()}")
