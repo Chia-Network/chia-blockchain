@@ -150,10 +150,11 @@ class BlockTools:
         farmer_pubkeys: List[G1Element] = [
             master_sk_to_farmer_sk(sk).get_g1() for sk, _ in self.all_sks
         ]
+        self.match_str = None
         if len(self.pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
         _, self.plots, _, _ = load_plots(
-            {}, {}, farmer_pubkeys, self.pool_pubkeys, root_path
+            {}, {}, farmer_pubkeys, self.pool_pubkeys, self.match_str, root_path
         )
         self._config = load_config(self.root_path, "config.yaml")
 

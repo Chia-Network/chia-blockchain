@@ -26,8 +26,9 @@ def help_message():
         + " -f [farmer pk] -p [pool pk] -t [tmp dir] -2 [tmp dir 2] -d [final dir]  (creates plots)"
     )
     print("-i [plotid] [-m memo] are available for debugging")
-    print("chia plots check -n [num checks]  (checks plots in all directories)")
-    print("chia plots check -n [num checks] -d [directory] (checks plots in a directory)")
+    print("chia plots check -n [num checks] -g [string] (checks plots)")
+    print("  Default: check all plots in every directory")
+    print("  -g: checks plots with file or directory name containing [string]")
     print("chia plots add -d [directory] (adds a directory of plots)")
     print("chia plots remove -d [directory] (removes a directory of plots from config)")
     print("chia plots show (shows the directory of current plots)")
@@ -52,6 +53,13 @@ def make_parser(parser):
         "-f",
         "--farmer_public_key",
         help="Hex farmer public key",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "-g",
+        "--grep_string",
+        help="Shows only plots that contain the string in the filename or directory name",
         type=str,
         default=None,
     )
