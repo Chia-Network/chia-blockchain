@@ -101,7 +101,7 @@ class Blockchain:
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
         self.pool = concurrent.futures.ProcessPoolExecutor(
-            max_workers=max(cpu_count - 1, 1)
+            max_workers=max(cpu_count - 2, 1)
         )
         self.constants = consensus_constants
         self.tips = []
