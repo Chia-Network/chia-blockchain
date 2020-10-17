@@ -28,6 +28,7 @@ import {
 } from '../../modules/plotter_messages';
 import { stopService } from '../../modules/daemon_messages';
 import { service_plotter } from '../../util/service_names';
+import DashboardTitle from '../dashboard/DashboardTitle';
 
 const drawerWidth = 180;
 
@@ -474,7 +475,7 @@ const CreatePlot = () => {
                   variant="outlined"
                   className={classes.formControl}
                 >
-                  <InputLabel>Plot Count</InputLabel>
+                  <InputLabel><Trans id="CreatePlot.plotCount">Plot Count</Trans></InputLabel>
                   <Select
                     value={plotCount}
                     onChange={changePlotCount}
@@ -672,6 +673,9 @@ export default function Plotter() {
   );
   return (
     <div>
+      <DashboardTitle>
+        <Trans id="Plotter.title">Plot</Trans>
+      </DashboardTitle>
       <CreatePlot />
       {in_progress || plotting_stopped ? <Proggress /> : <div />}
     </div>

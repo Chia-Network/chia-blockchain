@@ -29,15 +29,15 @@ msgstr "New Address"
 msgid "AddressCard.title"
 msgstr "Receive Address"
 
-#: src/components/router/Router.tsx:19
+#: src/components/router/Router.tsx:18
 msgid "Application.closing"
 msgstr "Closing down node and server"
 
-#: src/components/router/Router.tsx:24
+#: src/components/router/Router.tsx:23
 msgid "Application.connectingToWallet"
 msgstr "Connecting to wallet"
 
-#: src/components/router/Router.tsx:29
+#: src/components/router/Router.tsx:28
 msgid "Application.loggingIn"
 msgstr "Logging in"
 
@@ -97,131 +97,131 @@ msgstr "This is the total amount of Chia in the blockchain at the LCA block (lat
 msgid "BalanceCard.viewPendingBalances"
 msgstr "View pending balances"
 
-#: src/components/block/Block.jsx:190
+#: src/components/block/Block.jsx:196
 msgid "Block.blockVDFIterations"
 msgstr "Block VDF Iterations"
 
-#: src/components/block/Block.jsx:193
+#: src/components/block/Block.jsx:199
 msgid "Block.blockVDFIterationsTooltip"
 msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 
-#: src/components/block/Block.jsx:238
+#: src/components/block/Block.jsx:244
 msgid "Block.coinbaseAmount"
 msgstr "Coinbase Amount"
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:247
 msgid "Block.coinbaseAmountTooltip"
 msgstr "The Chia block reward, goes to the pool (or farmer if not pooling)"
 
-#: src/components/block/Block.jsx:247
+#: src/components/block/Block.jsx:253
 msgid "Block.coinbasePuzzleHash"
 msgstr "Coinbase Puzzle Hash"
 
-#: src/components/block/Block.jsx:274
+#: src/components/block/Block.jsx:280
 msgid "Block.description"
 msgstr "Block at height {0} in the Chia blockchain"
 
-#: src/components/block/Block.jsx:176
+#: src/components/block/Block.jsx:182
 msgid "Block.difficulty"
 msgstr "Difficulty"
 
-#: src/components/block/Block.jsx:251
+#: src/components/block/Block.jsx:257
 msgid "Block.feesAmount"
 msgstr "Fees Amount"
 
-#: src/components/block/Block.jsx:254
+#: src/components/block/Block.jsx:260
 msgid "Block.feesAmountTooltip"
 msgstr "The total fees in this block, goes to the farmer"
 
-#: src/components/block/Block.jsx:260
+#: src/components/block/Block.jsx:266
 msgid "Block.feesPuzzleHash"
 msgstr "Fees Puzzle Hash"
 
-#: src/components/block/Block.jsx:144
+#: src/components/block/Block.jsx:149
 msgid "Block.headerHash"
 msgstr "Header hash"
 
-#: src/components/block/Block.jsx:158
+#: src/components/block/Block.jsx:163
 msgid "Block.height"
 msgstr "Height"
 
-#: src/components/block/Block.jsx:212
+#: src/components/block/Block.jsx:218
 msgid "Block.plotId"
 msgstr "Plot Id"
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:221
 msgid "Block.plotIdTooltip"
 msgstr "The seed used to create the plot, this depends on the pool pk and plot pk"
 
-#: src/components/block/Block.jsx:204
+#: src/components/block/Block.jsx:210
 msgid "Block.plotPublicKey"
 msgstr "Plot Public Key"
 
-#: src/components/block/Block.jsx:208
+#: src/components/block/Block.jsx:214
 msgid "Block.poolPublicKey"
 msgstr "Pool Public Key"
 
-#: src/components/block/Block.jsx:172
+#: src/components/block/Block.jsx:177
 msgid "Block.previousBlock"
 msgstr "Previous block"
 
-#: src/components/block/Block.jsx:200
+#: src/components/block/Block.jsx:206
 msgid "Block.proofOfSpaceSize"
 msgstr "Proof of Space Size"
 
-#: src/components/block/Block.jsx:148
+#: src/components/block/Block.jsx:153
 msgid "Block.timestamp"
 msgstr "Timestamp"
 
-#: src/components/block/Block.jsx:151
+#: src/components/block/Block.jsx:156
 msgid "Block.timestampTooltip"
 msgstr "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 
-#: src/components/block/Block.jsx:270
+#: src/components/block/Block.jsx:276
 msgid "Block.title"
 msgstr "Block"
 
-#: src/components/block/Block.jsx:180
+#: src/components/block/Block.jsx:186
 msgid "Block.totalVDFIterations"
 msgstr "Total VDF Iterations"
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:189
 msgid "Block.totalVDFIterationsTooltip"
 msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
 
-#: src/components/block/Block.jsx:223
+#: src/components/block/Block.jsx:229
 msgid "Block.transactionsFilterHash"
 msgstr "Transactions Filter Hash"
 
-#: src/components/block/Block.jsx:231
+#: src/components/block/Block.jsx:237
 msgid "Block.transactionsGeneratorHash"
 msgstr "Transactions Generator Hash"
 
-#: src/components/block/Block.jsx:162
+#: src/components/block/Block.jsx:167
 msgid "Block.weight"
 msgstr "Weight"
 
-#: src/components/block/Block.jsx:165
+#: src/components/block/Block.jsx:170
 msgid "Block.weightTooltip"
 msgstr "Weight is the total added difficulty of all blocks up to and including this one"
 
-#: src/components/fullNode/FullNode.jsx:426
+#: src/components/fullNode/FullNode.jsx:427
 msgid "BlocksCard.expectedFinishTime"
 msgstr "Expected finish time"
 
-#: src/components/fullNode/FullNode.jsx:417
+#: src/components/fullNode/FullNode.jsx:418
 msgid "BlocksCard.headerHash"
 msgstr "Header Hash"
 
-#: src/components/fullNode/FullNode.jsx:420
+#: src/components/fullNode/FullNode.jsx:421
 msgid "BlocksCard.height"
 msgstr "Height"
 
-#: src/components/fullNode/FullNode.jsx:423
+#: src/components/fullNode/FullNode.jsx:424
 msgid "BlocksCard.timeCreated"
 msgstr "Time Created"
 
-#: src/components/fullNode/FullNode.jsx:405
+#: src/components/fullNode/FullNode.jsx:406
 msgid "BlocksCard.title"
 msgstr "Blocks"
 
@@ -369,11 +369,11 @@ msgstr "To"
 msgid "ColouredTransactionTable.type"
 msgstr "Type"
 
-#: src/components/connections/Connections.jsx:194
+#: src/components/connections/Connections.jsx:198
 msgid "Connections.connect"
 msgstr "Connect"
 
-#: src/components/connections/Connections.jsx:170
+#: src/components/connections/Connections.jsx:174
 msgid "Connections.connectToOtherPeersTitle"
 msgstr "Connect to other peers"
 
@@ -393,7 +393,7 @@ msgstr "Delete"
 msgid "Connections.ipAddress"
 msgstr "Ip address"
 
-#: src/components/connections/Connections.jsx:177
+#: src/components/connections/Connections.jsx:181
 msgid "Connections.ipAddressHost"
 msgstr "Ip address / host"
 
@@ -406,7 +406,7 @@ msgid "Connections.nodeId"
 msgstr "Node Id"
 
 #: src/components/connections/Connections.jsx:103
-#: src/components/connections/Connections.jsx:183
+#: src/components/connections/Connections.jsx:187
 msgid "Connections.port"
 msgstr "Port"
 
@@ -510,52 +510,56 @@ msgstr "Please select coin type"
 msgid "CreateOffer.title"
 msgstr "Create Trade Offer"
 
-#: src/components/plotter/Plotter.jsx:481
+#: src/components/plotter/Plotter.jsx:482
 msgid "CreatePlot.colour"
 msgstr "Colour"
 
-#: src/components/plotter/Plotter.jsx:589
+#: src/components/plotter/Plotter.jsx:590
 msgid "CreatePlot.create"
 msgstr "Create"
 
-#: src/components/plotter/Plotter.jsx:432
+#: src/components/plotter/Plotter.jsx:433
 msgid "CreatePlot.description"
 msgstr "Using this tool, you can create plots, which are allocated space on your hard drive used to farm and earn Chia. Also, temporary files are created during the plotting process, which exceed the size of the final plot files, so make sure you have enough space. Try to use a fast drive like an SSD for the temporary folder, and a large slow hard drive (like external HDD) for the final folder."
 
-#: src/components/plotter/Plotter.jsx:542
+#: src/components/plotter/Plotter.jsx:543
 msgid "CreatePlot.numberOfBuckets"
 msgstr "Number of buckets"
 
-#: src/components/plotter/Plotter.jsx:552
+#: src/components/plotter/Plotter.jsx:553
 msgid "CreatePlot.numberOfBucketsDescription"
 msgstr "0 automatically chooses bucket count"
 
-#: src/components/plotter/Plotter.jsx:524
+#: src/components/plotter/Plotter.jsx:525
 msgid "CreatePlot.numberOfThreads"
 msgstr "Number of threads"
 
-#: src/components/plotter/Plotter.jsx:452
-#: src/components/plotter/Plotter.jsx:457
+#: src/components/plotter/Plotter.jsx:478
+msgid "CreatePlot.plotCount"
+msgstr "Plot Count"
+
+#: src/components/plotter/Plotter.jsx:453
+#: src/components/plotter/Plotter.jsx:458
 msgid "CreatePlot.plotSize"
 msgstr "Plot Size"
 
-#: src/components/plotter/Plotter.jsx:498
+#: src/components/plotter/Plotter.jsx:499
 msgid "CreatePlot.ramMaxUsage"
 msgstr "RAM max usage"
 
-#: src/components/plotter/Plotter.jsx:509
+#: src/components/plotter/Plotter.jsx:510
 msgid "CreatePlot.ramMaxUsageDescription"
 msgstr "More memory slightly increases speed"
 
-#: src/components/plotter/Plotter.jsx:388
+#: src/components/plotter/Plotter.jsx:389
 msgid "CreatePlot.specifyFinalDirectory"
 msgstr "Please specify a temporary and final directory"
 
-#: src/components/plotter/Plotter.jsx:565
+#: src/components/plotter/Plotter.jsx:566
 msgid "CreatePlot.stripeSize"
 msgstr "Stripe Size"
 
-#: src/components/plotter/Plotter.jsx:426
+#: src/components/plotter/Plotter.jsx:427
 msgid "CreatePlot.title"
 msgstr "Create Plot"
 
@@ -664,23 +668,23 @@ msgstr "Trade"
 msgid "DashboardSideBar.wallets"
 msgstr "Wallets"
 
-#: src/components/selectKey/SelectKey.tsx:134
+#: src/components/selectKey/SelectKey.tsx:133
 msgid "DeleteAllKeys.back"
 msgstr "Back"
 
-#: src/components/selectKey/SelectKey.tsx:137
+#: src/components/selectKey/SelectKey.tsx:136
 msgid "DeleteAllKeys.delete"
 msgstr "Delete"
 
-#: src/components/selectKey/SelectKey.tsx:125
+#: src/components/selectKey/SelectKey.tsx:124
 msgid "DeleteAllKeys.description"
 msgstr "Deleting all keys will permanatly remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 
-#: src/components/selectKey/SelectKey.tsx:121
+#: src/components/selectKey/SelectKey.tsx:120
 msgid "DeleteAllKeys.title"
 msgstr "Delete all keys"
 
-#: src/components/farmer/Farmer.jsx:715
+#: src/components/farmer/Farmer.jsx:711
 msgid "Farmer.title"
 msgstr "Farming"
 
@@ -714,15 +718,15 @@ msgstr "Farmer Status"
 msgid "FarmerStatus.totalChiaFarmed"
 msgstr "Total chia farmed"
 
-#: src/components/farmer/Farmer.jsx:141
+#: src/components/farmer/Farmer.jsx:142
 msgid "FarmerStatus.totalSizeOfLocalPlots"
 msgstr "Total size of local plots"
 
-#: src/components/fullNode/FullNode.jsx:545
+#: src/components/fullNode/FullNode.jsx:546
 msgid "FullNode.title"
 msgstr "Full Node"
 
-#: src/components/fullNode/FullNode.jsx:375
+#: src/components/fullNode/FullNode.jsx:376
 msgid "FullNodeStatus.title"
 msgstr "Full Node Status"
 
@@ -762,64 +766,64 @@ msgstr "Rate Limited"
 msgid "MainWalletList.title"
 msgstr "Select Wallet Type"
 
-#: src/components/trading/ViewOffer.jsx:195
+#: src/components/trading/ViewOffer.jsx:196
 msgid "OfferDropView.dragAndDropOfferFile"
 msgstr "Drag and drop offer file"
 
-#: src/components/trading/ViewOffer.jsx:181
+#: src/components/trading/ViewOffer.jsx:182
 msgid "OfferDropView.title"
 msgstr "View Offer"
 
-#: src/components/trading/ViewOffer.jsx:279
+#: src/components/trading/ViewOffer.jsx:280
 msgid "OfferRow.buy"
 msgstr "Buy"
 
-#: src/components/trading/ViewOffer.jsx:277
+#: src/components/trading/ViewOffer.jsx:278
 msgid "OfferRow.sell"
 msgstr "Sell"
 
-#: src/components/trading/ViewOffer.jsx:251
+#: src/components/trading/ViewOffer.jsx:252
 msgid "OfferView.accept"
 msgstr "Accept"
 
-#: src/components/trading/ViewOffer.jsx:261
+#: src/components/trading/ViewOffer.jsx:262
 msgid "OfferView.cancel"
 msgstr "Cancel"
 
-#: src/components/trading/ViewOffer.jsx:230
+#: src/components/trading/ViewOffer.jsx:231
 msgid "OfferView.title"
 msgstr "View Offer"
 
-#: src/components/trading/TradingOverview.jsx:443
+#: src/components/trading/TradingOverview.jsx:451
 msgid "PendingTrades.title"
 msgstr "Offers Created"
 
-#: src/components/farmer/Farmer.jsx:585
+#: src/components/farmer/Farmer.jsx:581
 msgid "Plots.back"
 msgstr "Back"
 
 #: src/components/farmer/Farmer.jsx:425
-#: src/components/farmer/Farmer.jsx:592
+#: src/components/farmer/Farmer.jsx:588
 msgid "Plots.delete"
 msgstr "Delete"
 
-#: src/components/farmer/Farmer.jsx:573
+#: src/components/farmer/Farmer.jsx:569
 msgid "Plots.deleteAllKeys"
 msgstr "Delete all keys"
 
-#: src/components/farmer/Farmer.jsx:577
+#: src/components/farmer/Farmer.jsx:573
 msgid "Plots.deleteAllKeysDescription"
 msgstr "Are you sure you want to delete the plot? The plot cannot be recovered."
 
-#: src/components/farmer/Farmer.jsx:498
+#: src/components/farmer/Farmer.jsx:494
 msgid "Plots.deletePlotsDescription"
 msgstr "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
 
-#: src/components/farmer/Farmer.jsx:530
+#: src/components/farmer/Farmer.jsx:526
 msgid "Plots.failedToOpenPlots"
 msgstr "Failed to open (invalid plots)"
 
-#: src/components/farmer/Farmer.jsx:536
+#: src/components/farmer/Farmer.jsx:532
 msgid "Plots.failedToOpenPlotsDescription"
 msgstr "These plots are invalid, you might want to delete them forever."
 
@@ -831,7 +835,7 @@ msgstr "Filename"
 msgid "Plots.managePlotDirectories"
 msgstr "Manage plot directories"
 
-#: src/components/farmer/Farmer.jsx:494
+#: src/components/farmer/Farmer.jsx:490
 msgid "Plots.notFoundPlots"
 msgstr "Not found plots"
 
@@ -859,84 +863,88 @@ msgstr "Size"
 msgid "Plots.title"
 msgstr "Plots"
 
-#: src/components/plotter/Plotter.jsx:297
+#: src/components/plotter/Plotter.jsx:677
+msgid "Plotter.title"
+msgstr "Plot"
+
+#: src/components/plotter/Plotter.jsx:298
 msgid "PlotterFinalLocation.availableOnlyFromElectron"
 msgstr "This feature is available only from electron app"
 
-#: src/components/plotter/Plotter.jsx:317
+#: src/components/plotter/Plotter.jsx:318
 msgid "PlotterFinalLocation.finalFolderLocation"
 msgstr "Final folder location"
 
-#: src/components/plotter/Plotter.jsx:334
+#: src/components/plotter/Plotter.jsx:335
 msgid "PlotterFinalLocation.select"
 msgstr "Select"
 
-#: src/components/plotter/Plotter.jsx:645
+#: src/components/plotter/Plotter.jsx:646
 msgid "PlotterProgress.cancel"
 msgstr "Cancel"
 
-#: src/components/plotter/Plotter.jsx:656
+#: src/components/plotter/Plotter.jsx:657
 msgid "PlotterProgress.clearLog"
 msgstr "Clear Log"
 
-#: src/components/plotter/Plotter.jsx:629
+#: src/components/plotter/Plotter.jsx:630
 msgid "PlotterProgress.plottingStoppedSuccesfully"
 msgstr "Plotting stopped succesfully."
 
-#: src/components/plotter/Plotter.jsx:618
+#: src/components/plotter/Plotter.jsx:619
 msgid "PlotterProgress.title"
 msgstr "Progress"
 
-#: src/components/plotter/Plotter.jsx:231
+#: src/components/plotter/Plotter.jsx:232
 msgid "PlotterWorkLocation.availableOnlyFromElectron"
 msgstr "This feature is available only from electron app"
 
-#: src/components/plotter/Plotter.jsx:268
+#: src/components/plotter/Plotter.jsx:269
 msgid "PlotterWorkLocation.select"
 msgstr "Select"
 
-#: src/components/plotter/Plotter.jsx:252
+#: src/components/plotter/Plotter.jsx:253
 msgid "PlotterWorkLocation.temporaryFolderLocation"
 msgstr "Temporary folder location"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:650
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
 msgid "RLBalanceCard.pendingBalance"
 msgstr "Pending Balance"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:659
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
 msgid "RLBalanceCard.pendingChange"
 msgstr "Pending Change"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:641
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:640
 msgid "RLBalanceCard.pendingTotalBalance"
 msgstr "Pending Total Balance"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:616
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:615
 msgid "RLBalanceCard.spendableBalance"
 msgstr "Spendable Balance"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:605
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
 msgid "RLBalanceCard.title"
 msgstr "Balance"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:610
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:609
 msgid "RLBalanceCard.totalBalance"
 msgstr "Total Balance"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:632
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:631
 msgid "RLBalanceCard.viewPendingBalances"
 msgstr "View pending balances"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:539
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:540
 msgid "RLDetailsCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:512
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:513
 msgid "RLDetailsCard.description"
 msgstr "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:525
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:526
 msgid "RLDetailsCard.infoPacket"
 msgstr "Info Packet"
 
@@ -945,21 +953,21 @@ msgid "RLDetailsCard.myPubkey"
 msgstr "My Pubkey"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:430
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:491
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:492
 msgid "RLDetailsCard.spendingInterval"
 msgstr "Spending Interval (number of blocks): {interval}"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:437
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:498
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:499
 msgid "RLDetailsCard.spendingLimit"
 msgstr "Spending Limit (chia per interval): {0}"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:421
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:482
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:483
 msgid "RLDetailsCard.title"
 msgstr "Rate Limited Info"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:869
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:868
 msgid "RLHistoryCard.title"
 msgstr "History"
 
@@ -967,83 +975,83 @@ msgstr "History"
 msgid "RLListItems.title"
 msgstr "Rate Limited Options"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:795
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:794
 msgid "RLSendCard.addressPuzzleHash"
 msgstr "Address / Puzzle hash"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:819
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:818
 msgid "RLSendCard.amount"
 msgstr "Amount"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:753
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:752
 msgid "RLSendCard.enter0fee"
 msgstr "Please enter 0 fee. Positive fees not supported yet for RL."
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:724
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:723
 msgid "RLSendCard.enterValidAmount"
 msgstr "Please enter a valid numeric amount"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:734
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
 msgid "RLSendCard.enterValidFee"
 msgstr "Please enter a valid numeric fee"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:832
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:831
 msgid "RLSendCard.fee"
 msgstr "Fee"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:849
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:848
 msgid "RLSendCard.send"
 msgstr "Send"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:773
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:772
 msgid "RLSendCard.title"
 msgstr "Create Transaction"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:708
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:707
 msgid "RLSendCard.waitForSyncing"
 msgstr "Please finish syncing before making a transaction"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:931
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:929
 msgid "RLTransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:907
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:905
 msgid "RLTransactionTable.confirmed"
 msgstr "Confirmed"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:925
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:923
 msgid "RLTransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:934
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:932
 msgid "RLTransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:900
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:899
 msgid "RLTransactionTable.incoming"
 msgstr "Incoming"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:891
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:890
 msgid "RLTransactionTable.noPreviousTransactions"
 msgstr "No previous transactions"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:902
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:901
 msgid "RLTransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:909
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:907
 msgid "RLTransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:928
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:926
 msgid "RLTransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:922
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:920
 msgid "RLTransactionTable.to"
 msgstr "To"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:919
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:917
 msgid "RLTransactionTable.type"
 msgstr "Type"
 
@@ -1075,47 +1083,47 @@ msgstr "Rate Limited User Wallet Setup"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "User Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:500
+#: src/components/fullNode/FullNode.jsx:501
 msgid "SearchBlock.blockHash"
 msgstr "Block hash"
 
-#: src/components/fullNode/FullNode.jsx:513
+#: src/components/fullNode/FullNode.jsx:514
 msgid "SearchBlock.search"
 msgstr "Search"
 
-#: src/components/fullNode/FullNode.jsx:490
+#: src/components/fullNode/FullNode.jsx:491
 msgid "SearchBlock.title"
 msgstr "Search block by header hash"
 
-#: src/components/selectKey/SelectKey.tsx:101
+#: src/components/selectKey/SelectKey.tsx:100
 msgid "SelectKey.createNewPrivateKey"
 msgstr "Create a new private key"
 
-#: src/components/selectKey/SelectKey.tsx:114
+#: src/components/selectKey/SelectKey.tsx:113
 msgid "SelectKey.deleteAllKeys"
 msgstr "Delete all keys"
 
-#: src/components/selectKey/SelectKey.tsx:108
+#: src/components/selectKey/SelectKey.tsx:107
 msgid "SelectKey.importFromMnemonics"
 msgstr "Import from Mnemonics (24 words)"
 
-#: src/components/selectKey/SelectKey.tsx:79
+#: src/components/selectKey/SelectKey.tsx:78
 msgid "SelectKey.selectFingerprint"
 msgstr "Private key with public fingerprint {fingerprint}"
 
-#: src/components/selectKey/SelectKey.tsx:81
+#: src/components/selectKey/SelectKey.tsx:80
 msgid "SelectKey.selectKeyCanBeBacked"
 msgstr "Can be backed up to mnemonic seed"
 
-#: src/components/selectKey/SelectKey.tsx:69
+#: src/components/selectKey/SelectKey.tsx:68
 msgid "SelectKey.signInDescription"
 msgstr "Welcome to Chia. Please log in with an existing key, or create a a new key."
 
-#: src/components/selectKey/SelectKey.tsx:66
+#: src/components/selectKey/SelectKey.tsx:65
 msgid "SelectKey.signInTitle"
 msgstr "Sign In"
 
-#: src/components/selectKey/SelectKey.tsx:63
+#: src/components/selectKey/SelectKey.tsx:62
 msgid "SelectKey.title"
 msgstr "Select Key"
 
@@ -1200,11 +1208,11 @@ msgstr "Not connected"
 msgid "StatusItem.difficulty"
 msgstr "Difficulty"
 
-#: src/components/fullNode/FullNode.jsx:310
+#: src/components/fullNode/FullNode.jsx:311
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "Estimated network space"
 
-#: src/components/fullNode/FullNode.jsx:316
+#: src/components/fullNode/FullNode.jsx:317
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "Estimated sum of all the plotted disk space of all farmers in the network"
 
@@ -1265,83 +1273,83 @@ msgstr "The node is syncing, which means it is downloading blocks from other nod
 msgid "StatusItem.statusValue"
 msgstr "Syncing {progress}/{tip}"
 
-#: src/components/trading/TradingOverview.jsx:246
+#: src/components/trading/TradingOverview.jsx:254
 msgid "TradeDetail.acceptedAtTime"
 msgstr "Accepted at time:"
 
-#: src/components/trading/TradingOverview.jsx:250
+#: src/components/trading/TradingOverview.jsx:258
 msgid "TradeDetail.acceptedAtTimeTooltip"
 msgstr "Indicated what time this offer was accepted"
 
-#: src/components/trading/TradingOverview.jsx:426
+#: src/components/trading/TradingOverview.jsx:434
 msgid "TradeDetail.cancel"
 msgstr "Cancel"
 
-#: src/components/trading/TradingOverview.jsx:415
+#: src/components/trading/TradingOverview.jsx:423
 msgid "TradeDetail.cancelAndSpend"
 msgstr "Cancel and Spend"
 
-#: src/components/trading/TradingOverview.jsx:392
+#: src/components/trading/TradingOverview.jsx:400
 msgid "TradeDetail.coins"
 msgstr "Coins:"
 
-#: src/components/trading/TradingOverview.jsx:210
+#: src/components/trading/TradingOverview.jsx:218
 msgid "TradeDetail.confirmedAtBlock"
 msgstr "Confirmed at block:"
 
-#: src/components/trading/TradingOverview.jsx:214
+#: src/components/trading/TradingOverview.jsx:222
 msgid "TradeDetail.confirmedAtBlockTooltip"
 msgstr "This trade was included on blockchain at this block height"
 
-#: src/components/trading/TradingOverview.jsx:190
+#: src/components/trading/TradingOverview.jsx:198
 msgid "TradeDetail.createdAt"
 msgstr "Created At:"
 
-#: src/components/trading/TradingOverview.jsx:194
+#: src/components/trading/TradingOverview.jsx:202
 msgid "TradeDetail.createdAtTooltip"
 msgstr "Time this trade was created at this time"
 
-#: src/components/trading/TradingOverview.jsx:226
+#: src/components/trading/TradingOverview.jsx:234
 msgid "TradeDetail.createdByUs"
 msgstr "Created by us:"
 
-#: src/components/trading/TradingOverview.jsx:230
+#: src/components/trading/TradingOverview.jsx:238
 msgid "TradeDetail.createdByUsTooltip"
 msgstr "Indicated if this offer was created by us"
 
-#: src/components/trading/TradingOverview.jsx:223
+#: src/components/trading/TradingOverview.jsx:231
 msgid "TradeDetail.no"
 msgstr "No"
 
-#: src/components/trading/TradingOverview.jsx:240
+#: src/components/trading/TradingOverview.jsx:248
 msgid "TradeDetail.notAcceptedYet"
 msgstr "Not accepted yet"
 
-#: src/components/trading/TradingOverview.jsx:203
+#: src/components/trading/TradingOverview.jsx:211
 msgid "TradeDetail.notConfirmedYet"
 msgstr "Not confirmed yet"
 
-#: src/components/trading/TradingOverview.jsx:183
+#: src/components/trading/TradingOverview.jsx:191
 msgid "TradeDetail.status"
 msgstr "Status:"
 
-#: src/components/trading/TradingOverview.jsx:186
+#: src/components/trading/TradingOverview.jsx:194
 msgid "TradeDetail.statusTooltip"
 msgstr "Current trade status"
 
-#: src/components/trading/TradingOverview.jsx:376
+#: src/components/trading/TradingOverview.jsx:384
 msgid "TradeDetail.title"
 msgstr "Trade Details"
 
-#: src/components/trading/TradingOverview.jsx:176
+#: src/components/trading/TradingOverview.jsx:184
 msgid "TradeDetail.tradeId"
 msgstr "Trade ID:"
 
-#: src/components/trading/TradingOverview.jsx:179
+#: src/components/trading/TradingOverview.jsx:187
 msgid "TradeDetail.tradeIdTooltip"
 msgstr "Unique identifier"
 
-#: src/components/trading/TradingOverview.jsx:221
+#: src/components/trading/TradingOverview.jsx:229
 msgid "TradeDetail.yes"
 msgstr "Yes"
 
@@ -1373,31 +1381,31 @@ msgstr "Trade Overview"
 msgid "TradeManager.viewTrade"
 msgstr "View Trade"
 
-#: src/components/trading/TradingOverview.jsx:313
+#: src/components/trading/TradingOverview.jsx:321
 msgid "TradeOfferRow.buy"
 msgstr "Buy"
 
-#: src/components/trading/TradingOverview.jsx:311
+#: src/components/trading/TradingOverview.jsx:319
 msgid "TradeOfferRow.sell"
 msgstr "Sell"
 
-#: src/components/trading/TradingOverview.jsx:155
+#: src/components/trading/TradingOverview.jsx:163
 msgid "TradeOverviewTable.tradesShowUpHere"
 msgstr "Trades will show up here"
 
-#: src/components/trading/TradingOverview.jsx:139
+#: src/components/trading/TradingOverview.jsx:147
 msgid "TradeOverviewTableHeader.date"
 msgstr "Date"
 
-#: src/components/trading/TradingOverview.jsx:130
+#: src/components/trading/TradingOverview.jsx:138
 msgid "TradeOverviewTableHeader.status"
 msgstr "Status"
 
-#: src/components/trading/TradingOverview.jsx:127
+#: src/components/trading/TradingOverview.jsx:135
 msgid "TradeOverviewTableHeader.tradeId"
 msgstr "Trade ID"
 
-#: src/components/trading/TradingOverview.jsx:458
+#: src/components/trading/TradingOverview.jsx:466
 msgid "TradingHistory.title"
 msgstr "Trading History"
 
