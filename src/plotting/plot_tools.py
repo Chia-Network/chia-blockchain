@@ -9,7 +9,6 @@ import traceback
 from src.types.proof_of_space import ProofOfSpace
 from src.util.config import load_config, save_config
 from src.wallet.derive_keys import master_sk_to_local_sk
-import os
 
 
 log = logging.getLogger(__name__)
@@ -129,7 +128,7 @@ def load_plots(
     new_provers: Dict[Path, PlotInfo] = {}
 
     for filename in all_filenames:
-        filename_str = os.path.abspath(filename)
+        filename_str = str(filename)
         if match_str is not None and match_str not in filename_str:
             continue
         if filename.exists():
