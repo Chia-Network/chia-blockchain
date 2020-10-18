@@ -127,6 +127,9 @@ def load_plots(
     total_size = 0
     new_provers: Dict[Path, PlotInfo] = {}
 
+    if match_str is not None:
+        log.info(f'-g is set, checking plots that contain "{match_str}" in the file or directory name')
+
     for filename in all_filenames:
         filename_str = str(filename)
         if match_str is not None and match_str not in filename_str:
