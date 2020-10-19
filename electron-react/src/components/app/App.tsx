@@ -16,8 +16,8 @@ import { exit_and_close } from '../../modules/message';
 import ThemeProvider from '../theme/ThemeProvider';
 import en from '../../locales/en/messages';
 import sk from '../../locales/sk/messages';
-import styles from './App.module.css';
 import useLocale from '../../hooks/useLocale';
+import './App.css';
 
 const catalogs = {
   en,
@@ -56,5 +56,3 @@ export default function App() {
     </Provider>
   );
 }
-
-App.styles = styles;
