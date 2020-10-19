@@ -94,6 +94,7 @@ class Err(Enum):
     INVALID_CHALLENGE_SLOT_HASH_RC = 67
     INVALID_PRIOR_POINT_RC = 68
     INVALID_DEFICIT = 69
+    INVALID_SUB_EPOCH_SUMMARY = 70
 
 
 class ConsensusError(Exception):
