@@ -67,7 +67,7 @@ msgstr "Nespracované odmeny za ťažbu"
 
 #: src/components/wallet/standard/WalletStandard.tsx:247
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
-msgstr "Toto je celková suma nedávno získaných ťažiarskych odmien, ktoré boli potvrdené, ale zatiaľ nie sú vyplatiteľné. Odmeny za ťaženie sú zmrazené na 200 blokov."
+msgstr "Toto je celková suma nedávno získaných odmien za ťažbu, ktoré boli potvrdené, ale zatiaľ nie sú vyplatiteľné. Odmeny za ťaženie sú zmrazené na 200 blokov."
 
 #: src/components/wallet/standard/WalletStandard.tsx:231
 msgid "BalanceCard.pendingTotalBalance"
@@ -83,7 +83,7 @@ msgstr "Disponibilný zostatok"
 
 #: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "BalanceCard.spendableBalanceTooltip"
-msgstr "Toto je množstvo Chia, ktoré môžete v súčasnosti použiť na uskutočnenie transakcií. Nezahŕňa nespracované ťažiarske odmeny, nespracované prichádzajúce transakcie a Chia, ktorú ste práve minuli, ale ešte nie su v blockchaine."
+msgstr "Toto je množstvo Chia, ktoré môžete v súčasnosti použiť na uskutočnenie transakcií. Nezahŕňa nespracované odmeny za ťažbu, nespracované prichádzajúce transakcie a Chia, ktorú ste práve minuli, ale ešte nie je v blockchaine."
 
 #: src/components/wallet/standard/WalletStandard.tsx:205
 msgid "BalanceCard.totalBalance"
@@ -95,7 +95,7 @@ msgstr "Toto je celkové množstvo Chia v blockchaine v LCA bloku (najnovší sp
 
 #: src/components/wallet/standard/WalletStandard.tsx:224
 msgid "BalanceCard.viewPendingBalances"
-msgstr "Zobrazit nespracované zostatky"
+msgstr "Zobraziť nespracované zostatky"
 
 #: src/components/block/Block.jsx:196
 msgid "Block.blockVDFIterations"
@@ -119,7 +119,7 @@ msgstr "Coinbase adresa"
 
 #: src/components/block/Block.jsx:280
 msgid "Block.description"
-msgstr "Block na pozícii {0} v Chia blockchaine"
+msgstr "Blok na pozícii {0} v Chia blockchaine"
 
 #: src/components/block/Block.jsx:182
 msgid "Block.difficulty"
@@ -131,7 +131,7 @@ msgstr "Množstvo odmeny"
 
 #: src/components/block/Block.jsx:260
 msgid "Block.feesAmountTooltip"
-msgstr "Celkové poplatky v tomto bloku idú ťažiarovy"
+msgstr "Celkové poplatky v tomto bloku idú ťažiarovi"
 
 #: src/components/block/Block.jsx:266
 msgid "Block.feesPuzzleHash"
@@ -151,7 +151,7 @@ msgstr "Id poľa"
 
 #: src/components/block/Block.jsx:221
 msgid "Block.plotIdTooltip"
-msgstr "Semienko použité na vytvorenie poľa, záleží to na pk poolu a pk poľa"
+msgstr "Seedy použité na vytvorenie poľa, záleží to na pk poolu a pk poľa"
 
 #: src/components/block/Block.jsx:210
 msgid "Block.plotPublicKey"
@@ -175,7 +175,7 @@ msgstr "Časová značka"
 
 #: src/components/block/Block.jsx:156
 msgid "Block.timestampTooltip"
-msgstr "Toto je čas, kedy ťažiar vytvoril blok, a to ešte predtým, ako bol finalizovaný s dôkaz o čase"
+msgstr "Toto je čas, kedy ťažiar vytvoril blok, a to ešte predtým, ako bol finalizovaný s dôkazom o čase"
 
 #: src/components/block/Block.jsx:276
 msgid "Block.title"
@@ -199,11 +199,11 @@ msgstr ""
 
 #: src/components/block/Block.jsx:167
 msgid "Block.weight"
-msgstr "Velkosť"
+msgstr "Veľkosť"
 
 #: src/components/block/Block.jsx:170
 msgid "Block.weightTooltip"
-msgstr "Velkosť je celková pridaná obtiažnosť všetkých blokov až po tento"
+msgstr "Veľkosť je celková pridaná obtiažnosť všetkých blokov až po tento"
 
 #: src/components/fullNode/FullNode.jsx:427
 msgid "BlocksCard.expectedFinishTime"
@@ -403,7 +403,7 @@ msgstr "Posledná správa"
 
 #: src/components/connections/Connections.jsx:97
 msgid "Connections.nodeId"
-msgstr "Id uzlu"
+msgstr "Id uzla"
 
 #: src/components/connections/Connections.jsx:103
 #: src/components/connections/Connections.jsx:187
@@ -460,7 +460,7 @@ msgstr "Poplatok"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:101
 msgid "CreateNewCCWallet.generateNewColour"
-msgstr "Vytvoriť novy colour"
+msgstr "Vytvoriť nový colour"
 
 #: src/components/trading/CreateOffer.jsx:354
 msgid "CreateOffer.add"
@@ -678,7 +678,7 @@ msgstr "Zmazať"
 
 #: src/components/selectKey/SelectKey.tsx:124
 msgid "DeleteAllKeys.description"
-msgstr "Po stlačení tlačisla zmazať odstrániťe natrvalo všetký kľúče z počítača. Uistite sa, že máte zálohu. Ste si istý, že chcete pokračovať?"
+msgstr "Po stlačení tlačidla zmazať odstránite natrvalo všetký kľúče z počítača. Uistite sa, že máte zálohu. Ste si istý, že chcete pokračovať?"
 
 #: src/components/selectKey/SelectKey.tsx:120
 msgid "DeleteAllKeys.title"
@@ -716,7 +716,7 @@ msgstr "Stav ťaženia"
 
 #: src/components/farmer/Farmer.jsx:155
 msgid "FarmerStatus.totalChiaFarmed"
-msgstr "Celková vyťažená chia"
+msgstr "Celková vyťažená Chia"
 
 #: src/components/farmer/Farmer.jsx:142
 msgid "FarmerStatus.totalSizeOfLocalPlots"
@@ -1117,7 +1117,7 @@ msgstr "Možnosť zálohovať pomocou mnemotechnickej pomôcky"
 
 #: src/components/selectKey/SelectKey.tsx:68
 msgid "SelectKey.signInDescription"
-msgstr "Vitajte v Chia. Prosím prihláste sa s existujúcim kľúčom, alebo si vytvorte nový."
+msgstr "Vitajte v Chia. Prosím prihláste sa s existujúcim kľúčom alebo si vytvorte nový."
 
 #: src/components/selectKey/SelectKey.tsx:65
 msgid "SelectKey.signInTitle"
@@ -1295,7 +1295,7 @@ msgstr "Mince:"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "TradeDetail.confirmedAtBlock"
-msgstr "Potvrdené v kloku:"
+msgstr "Potvrdené v bloku:"
 
 #: src/components/trading/TradingOverview.jsx:222
 msgid "TradeDetail.confirmedAtBlockTooltip"
@@ -1463,7 +1463,7 @@ msgstr "Pridať peňaženku"
 
 #: src/components/wallet/WalletImport.tsx:70
 msgid "WalletImport.description"
-msgstr "Zadaj 24 slov v presnom poradí, ktoré si si uložil pre obnovu tvojej Chia peňaženky."
+msgstr "Zadaj 24 slov v presnom poradí, ktoré si si uložil pre obnovu svojej Chia peňaženky."
 
 #: src/components/wallet/WalletImport.tsx:80
 msgid "WalletImport.next"
@@ -1471,7 +1471,7 @@ msgstr "Ďalej"
 
 #: src/components/wallet/WalletImport.tsx:67
 msgid "WalletImport.title"
-msgstr "Obnoviť peňaženku pomocou mnemotechnické pomôcky"
+msgstr "Obnoviť peňaženku pomocou mnemotechnickej pomôcky"
 
 #: src/components/wallet/Wallets.tsx:91
 msgid "WalletItem.ccWallet"
