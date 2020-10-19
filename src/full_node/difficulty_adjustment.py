@@ -10,8 +10,11 @@ from src.util.significant_bits import (
 )
 
 
-def _finishes_challenge_slot(
-    constants: ConsensusConstants, sub_blocks: Dict[bytes32, SubBlockRecord], header_hash: bytes32
+def finishes_sub_epoch(
+    constants: ConsensusConstants,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    header_hash: bytes32,
+    also_finishes_epoch: bool,
 ) -> bool:
     """
     Returns true if the next block after header_hash can start a new challenge_slot or not.
@@ -28,9 +31,13 @@ def _finishes_challenge_slot(
     if deficit > 0:
         return False
 
-    # If we have not crossed the epoch barrier in this slot, return same difficulty
-    if (cur.height + 1) % constants.EPOCH_SUB_BLOCKS == next_height % constants.EPOCH_SUB_BLOCKS:
-        return False
+    # If we have not crossed the (sub)epoch barrier in this slot, cannot start new (sub)epoch
+    if also_finishes_epoch:
+        if cur.height // constants.EPOCH_SUB_BLOCKS == next_height // constants.EPOCH_SUB_BLOCKS:
+            return False
+    else:
+        if cur.height // constants.SUB_EPOCH_SUB_BLOCKS == next_height // constants.SUB_EPOCH_SUB_BLOCKS:
+            return False
 
     return True
 
@@ -55,8 +62,8 @@ def get_next_ips(
     if next_height < constants.EPOCH_SUB_BLOCKS:
         return uint64(constants.SLOT_ITERS_STARTING)
 
-    # If we are in the same challenge slot as previous sub-block, return same ips
-    if not new_slot or not _finishes_challenge_slot(constants, sub_blocks, header_hash):
+    # If we are in the same epoch, return same ips
+    if not new_slot or not finishes_sub_epoch(constants, sub_blocks, header_hash, True):
         return sub_block.ips
 
     #       prev epoch surpassed  prev epoch started                  epoch sur.  epoch started
@@ -143,7 +150,7 @@ def get_next_difficulty(
         return uint64(constants.DIFFICULTY_STARTING)
 
     # If we are in the same slot as previous sub-block, return same difficulty
-    if not new_slot or not _finishes_challenge_slot(constants, sub_blocks, header_hash):
+    if not new_slot or not finishes_sub_epoch(constants, sub_blocks, header_hash, True):
         return get_difficulty(constants, sub_blocks, header_hash)
 
     height_epoch_surpass: uint32 = next_height % constants.EPOCH_SUB_BLOCKS
@@ -156,7 +163,6 @@ def get_next_difficulty(
     if height_epoch_surpass == 0:
         # The genesis block is a edge case, where we measure from the first block in epoch, as opposed to the last
         # block in the previous epoch
-        block_height_start = 0
         prev_slot_start_timestamp = sub_blocks[height_to_hash[uint32(0)]].timestamp
         prev_slot_start_weight = 0
     else:
@@ -167,7 +173,6 @@ def get_next_difficulty(
             last_sb_in_prev_epoch = curr
             curr = sub_blocks[height_to_hash[curr.height + 1]]
 
-        block_height_start = last_sb_in_prev_epoch.height
         prev_slot_start_timestamp = last_sb_in_prev_epoch.timestamp
         prev_slot_start_weight = last_sb_in_prev_epoch.weight
 
