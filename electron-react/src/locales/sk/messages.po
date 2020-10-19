@@ -848,7 +848,7 @@ msgid "Plots.plotPk"
 msgstr "Pk poľa"
 
 #: src/components/farmer/Farmer.jsx:422
-msgid "Plots.pootPk"
+msgid "Plots.poolPk"
 msgstr "Pk poolu"
 
 #: src/components/farmer/Farmer.jsx:374

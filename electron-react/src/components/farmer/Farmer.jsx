@@ -419,7 +419,7 @@ const Plots = (props) => {
                     <Trans id="Plots.plotPk">Plot pk</Trans>
                   </TableCell>
                   <TableCell align="right">
-                    <Trans id="Plots.pootPk">Pool pk</Trans>
+                    <Trans id="Plots.poolPk">Pool pk</Trans>
                   </TableCell>
                   <TableCell align="right">
                     <Trans id="Plots.delete">Delete</Trans>
