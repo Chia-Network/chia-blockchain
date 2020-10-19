@@ -101,7 +101,24 @@ def get_next_ips(
     )
     new_ips = uint64(truncate_to_significant_bits(new_ips_precise, constants.SIGNIFICANT_BITS))
     assert count_significant_bits(new_ips) <= constants.SIGNIFICANT_BITS
-    return new_ips
+
+    # Only change by a max factor as a sanity check
+    max_ips = uint64(
+        truncate_to_significant_bits(
+            constants.DIFFICULTY_FACTOR * sub_block.ips,
+            constants.SIGNIFICANT_BITS,
+        )
+    )
+    min_ips = uint64(
+        truncate_to_significant_bits(
+            sub_block.ips // constants.DIFFICULTY_FACTOR,
+            constants.SIGNIFICANT_BITS,
+        )
+    )
+    if new_ips >= sub_block.ips:
+        return min(new_ips, max_ips)
+    else:
+        return max([uint64(1), new_ips, min_ips])
 
 
 def get_next_slot_iters(
