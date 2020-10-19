@@ -3,7 +3,6 @@ import { Trans } from '@lingui/macro';
 import {
   makeStyles,
   Typography,
-  Paper,
   Grid,
   List,
   Button,

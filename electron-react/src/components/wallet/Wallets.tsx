@@ -20,7 +20,6 @@ import DashboardTitle from '../dashboard/DashboardTitle';
 import StandardWallet from './standard/WalletStandard';
 import {
   changeWalletMenu,
-  createWallet,
   standardWallet,
   CCWallet,
   RLWallet,

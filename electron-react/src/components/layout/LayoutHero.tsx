@@ -1,10 +1,9 @@
 import React, { ReactNode } from 'react';
-import { AppBar, Toolbar, Box, Container } from '@material-ui/core';
+import { AppBar, Toolbar, Box } from '@material-ui/core';
 import styled from 'styled-components';
 import Flex from '../flex/Flex';
 import DarkModeToggle from '../darkMode/DarkModeToggle';
 import LocaleToggle from '../locale/LocaleToggle';
-import ToolbarSpacing from '../toolbar/ToolbarSpacing';
 
 const StyledWrapper = styled(Box)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}px`};

@@ -6,7 +6,6 @@ import SelectKey from '../selectKey/SelectKey';
 import WalletAdd from '../wallet/WalletAdd';
 import WalletImport from '../wallet/WalletImport';
 import PrivateRoute from './PrivateRoute';
-import GuestRoute from './GuestRoute';
 import Dashboard from '../dashboard/Dashboard';
 import BackupRestore from '../backup/BackupRestore';
 import type { RootState } from '../../modules/rootReducer';

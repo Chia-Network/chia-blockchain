@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector, useDispatch } from 'react-redux';
-import { useHistory } from 'react-router';
 import styled from 'styled-components';
 import {
   Card,
@@ -44,7 +43,6 @@ const StyledFingerprintListItem = styled(ListItem)`
 `;
 
 export default function SelectKey() {
-  const history = useHistory();
   const dispatch = useDispatch();
   const [open, setOpen] = useState<boolean>(false);
   const publicKeyFingerprints = useSelector(

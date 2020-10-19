@@ -867,11 +867,7 @@ type ColouredWalletProps = {
 };
 
 export default function ColouredWallet(props: ColouredWalletProps) {
-  const classes = useStyles();
   const id = useSelector((state: RootState) => state.wallet_menu.id);
-  const name = useSelector(
-    (state: RootState) => state.wallet_state.wallets[id].name,
-  );
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
 
   if (wallets.length > props.wallet_id) {

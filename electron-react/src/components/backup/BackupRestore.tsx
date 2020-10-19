@@ -44,7 +44,6 @@ const StyledDropPaper = styled(Paper)`
 `;
 
 function UIPart() {
-  const history = useHistory();
   const dispatch = useDispatch();
   const classes = myStyle();
   let words = useSelector(

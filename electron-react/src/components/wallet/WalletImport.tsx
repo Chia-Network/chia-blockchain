@@ -7,7 +7,6 @@ import { useHistory } from 'react-router';
 import TextField from '../form/TextField';
 import Brand from '../brand/Brand';
 import Flex from '../flex/Flex';
-import Link from '../router/Link';
 import LayoutHero from '../layout/LayoutHero';
 import { mnemonic_word_added, resetMnemonic } from '../../modules/mnemonic';
 import { unselectFingerprint } from '../../modules/message';

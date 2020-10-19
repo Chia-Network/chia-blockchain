@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Trans } from '@lingui/macro';
 import Grid from '@material-ui/core/Grid';
-import { makeStyles, withStyles } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import Container from '@material-ui/core/Container';
 import { useSelector, useDispatch } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
@@ -594,7 +594,6 @@ const Plots = (props) => {
 };
 
 const FarmerContent = (props) => {
-  const classes = useStyles();
   const dispatch = useDispatch();
 
   const connections = useSelector(
@@ -648,8 +647,6 @@ export default function Farmer(props) {
   const [didMount, setDidMount] = useState(false);
 
   const wallets = useSelector((state) => state.wallet_state.wallets);
-
-  const { classes } = props;
 
   const checkRewards = useCallback(async () => {
     let totalChia = BigInt(0);
