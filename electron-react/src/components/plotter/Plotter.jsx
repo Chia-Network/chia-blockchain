@@ -395,7 +395,7 @@ const CreatePlot = () => {
     const N = plotCount;
     const K = plotSize;
     if (!t2 || t2 === '') {
-      t2 = final_location;
+      t2 = work_location;
     }
     dispatch(
       startPlotting(
