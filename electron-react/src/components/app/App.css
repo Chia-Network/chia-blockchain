@@ -1,10 +1,10 @@
 html,
 body,
-:global(#root) {
+#root {
   height: 100%;
 }
 
-:global(#root) {
+#root {
   display: flex;
   flex-direction: column;
 }
