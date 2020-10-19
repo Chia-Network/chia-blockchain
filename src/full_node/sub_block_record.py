@@ -17,21 +17,22 @@ class SubBlockRecord(Streamable):
 
     header_hash: bytes32
     prev_hash: bytes32  # Header hash of the previous sub-block
-    prev_block_hash: Optional[bytes32]  # Header hash of the previous transaction block
+    prev_block_hash: Optional[bytes32]  # Header hash of the previous transaction block (iff is_block)
     sub_block_height: uint32
     weight: uint128  # Total cumulative difficulty of all ancestor blocks since genesis
     total_iters: uint128  # Total number of VDF iterations since genesis, including this sub-block
     is_block: bool  # Whether or not this sub-block is also a block
-    challenge_chain_data_hash: Optional[bytes32]  # The hash of ChallengeChain data, if made a challenge
-    required_iters: Optional[uint64]  # The number of iters required for this proof of space, if made a challenge
+    challenge_chain_data_hash: Optional[bytes32]  # The hash of ChallengeChain data (iff makes_challenge_block)
+    required_iters: Optional[uint64]  # The number of iters required for this proof of space (iff makes_challenge_block)
     reward_infusion_output: bytes32  # The reward chain infusion output, input to next VDF
     makes_challenge_block: bool
     ips: uint64  # Current network iterations per second parameter
     pool_puzzle_hash: bytes32  # Need to keep track of these because Coins are created in a future block
     farmer_puzzle_hash: bytes32
-    timestamp: Optional[uint64]  # Present iff is_block
+    timestamp: Optional[uint64]  # (iff is_block)
     finished_challenge_slot_hash: Optional[bytes32]  # Present iff this is the first SB after slot
     finished_reward_slot_hash: Optional[bytes32]  # Present iff this is the first SB after slot
+    sub_epoch_summary_included_hash: Optional[bytes32]  # If this is the first SB after sub-epoch
 
     @property
     def height(self):

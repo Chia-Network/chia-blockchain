@@ -12,7 +12,7 @@ from src.types.classgroup import ClassgroupElement
 class RewardChainEndOfSlot(Streamable):
     prior_point: bytes32  # TODO: check what this is (VDF challenge?)
     end_of_slot_output: ClassgroupElement
-    challenge_slot_hash: bytes32
+    challenge_slot_hash_no_ses: bytes32
     deficit: uint8  # 5 or less. usually zero
 
 

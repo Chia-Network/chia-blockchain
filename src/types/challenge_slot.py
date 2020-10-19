@@ -18,3 +18,17 @@ class ChallengeSlot(Streamable):
     icp_signature: Optional[G2Element]
     ip_proof_of_time_output: Optional[ClassgroupElement]
     end_of_slot_proof_of_time_output: ClassgroupElement
+
+    # Used for reward chain including challenge chain
+    def get_hash_no_ses(self) -> bytes32:
+        if self.subepoch_summary_hash is None:
+            return self.get_hash()
+        return ChallengeSlot(
+            self.prev_slot_hash,
+            None,
+            self.proof_of_space,
+            self.icp_proof_of_time_output,
+            self.icp_signature,
+            self.ip_proof_of_time_output,
+            self.end_of_slot_proof_of_time_output,
+        ).get_hash()
