@@ -41,7 +41,6 @@ import {
   pingHarvester,
   refreshPlots,
 } from '../modules/harvesterMessages';
-import { changeEntranceMenu, presentSelectKeys } from '../modules/entranceMenu';
 import {
   addProgress,
   resetProgress,

@@ -523,7 +523,6 @@ const SearchBlock = (props) => {
 };
 
 export default function FullNode() {
-  const classes = useStyles();
   const dispatch = useDispatch();
 
   const connections = useSelector((state) => state.full_node_state.connections);

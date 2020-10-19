@@ -1,7 +1,6 @@
 import React from 'react';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
-import { withRouter } from 'react-router-dom';
 import { Trans } from '@lingui/macro';
 import { useSelector, useDispatch } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
@@ -361,7 +360,7 @@ const CreatePlot = () => {
   const changePlotSize = (event) => {
     setPlotSize(event.target.value);
     for (const pso of plot_size_options) {
-      if (pso.value == event.target.value) {
+      if (pso.value === event.target.value) {
         setMaxRam(pso.default_ram);
       }
     }
