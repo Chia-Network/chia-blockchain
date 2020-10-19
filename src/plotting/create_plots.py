@@ -51,7 +51,7 @@ def create_plots(
     config_filename = config_path_for_filename(root_path, "config.yaml")
 
     if args.tmp2_dir is None:
-        args.tmp2_dir = args.final_dir
+        args.tmp2_dir = args.tmp_dir
 
     farmer_public_key: G1Element
     if args.farmer_public_key is not None:
