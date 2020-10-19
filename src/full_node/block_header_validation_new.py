@@ -77,6 +77,8 @@ async def validate_unfinished_header_block(
             if challenge_slot.subepoch_summary_hash is not None:
                 assert not have_ses_hash
                 have_ses_hash = True
+                if header_block.subepoch_summary is None:
+                    return Err.INVALID_SUB_EPOCH_SUMMARY
                 if header_block.subepoch_summary.get_hash() != challenge_slot.subepoch_summary_hash:
                     return Err.INVALID_SUB_EPOCH_SUMMARY_HASH
             if finished_slot_n != 0:
@@ -188,3 +190,6 @@ async def validate_unfinished_header_block(
         # 2. Check sub-epoch summary
         if not have_ses_hash and header_block.subepoch_summary is not None:
             return Err.NO_SUB_EPOCH_SUMMARY_HASH
+        # If have_ses_hash, hash has already been validated (subepoch summary guaranteed to not be None)
+        if have_ses_hash:
+            assert header_block.subepoch_summary is not None
