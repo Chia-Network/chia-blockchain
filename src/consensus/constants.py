@@ -57,6 +57,7 @@ class ConsensusConstants:
 
 
 testnet_kwargs = {
+    # TODO(mariano): write comments here
     "SLOT_SUB_BLOCKS_TARGET": 16,
     "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 5,
     "MAX_SLOT_SUB_BLOCKS": 64,
