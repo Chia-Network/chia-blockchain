@@ -120,7 +120,7 @@ class FullBlock(Streamable):
     def get_sub_block_record(self, ips: uint64):
         prev_block_hash = self.foliage_block.prev_block_hash if self.foliage_block is not None else None
         timestamp = self.foliage_block.timestamp if self.foliage_block is not None else None
-        first_block_in_challenge_slot = (
+        makes_challenge_block = (
             self.finished_reward_slots[-1].deficit == 0 if len(self.finished_reward_slots) > 0 else False
         )
         return SubBlockRecord(
@@ -131,7 +131,7 @@ class FullBlock(Streamable):
             self.weight,
             self.total_iters,
             self.is_block(),
-            first_block_in_challenge_slot,
+            makes_challenge_block,
             ips,
             self.foliage_sub_block.signed_data.pool_target.puzzle_hash,
             self.foliage_sub_block.signed_data.farmer_reward_puzzle_hash,
