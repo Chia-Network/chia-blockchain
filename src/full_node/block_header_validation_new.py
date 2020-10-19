@@ -1,7 +1,5 @@
 import logging
-import time
-from typing import Dict, List, Optional, Tuple
-import blspy
+from typing import Dict, Optional
 
 from src.consensus.constants import ConsensusConstants
 from src.types.sized_bytes import bytes32

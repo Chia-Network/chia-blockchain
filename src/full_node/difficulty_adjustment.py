@@ -177,10 +177,8 @@ def get_next_difficulty(
     # Terms are rearranged so there is only one division.
     new_difficulty_precise = (
         (sub_block.weight - prev_slot_start_weight)
-        * constants.EPOCH_SUB_BLOCKS
         * constants.SLOT_TIME_TARGET
-        * (sub_block.height - block_height_start)
-        // (constants.SLOT_SUB_BLOCKS_TARGET * constants.SLOT_SUB_BLOCKS_TARGET * actual_epoch_time)
+        // (constants.SLOT_SUB_BLOCKS_TARGET * actual_epoch_time)
     )
     # Take only DIFFICULTY_SIGNIFICANT_BITS significant bits
     new_difficulty = uint64(truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS))
