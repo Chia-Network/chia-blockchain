@@ -20,7 +20,7 @@ def _finishes_challenge_slot(
     next_height: uint32 = uint32(sub_block.height + 1)
     cur: SubBlockRecord = sub_block
     deficit: int = constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
-    while not cur.first_block_in_challenge_slot and cur.height > 0:
+    while not cur.makes_challenge_block and cur.height > 0:
         cur = sub_blocks[cur.prev_hash]
         deficit -= 1
 
@@ -74,14 +74,14 @@ def get_next_ips(
 
     if height_epoch_surpass == 0:
         prev_slot_start_iters = uint128(0)
-        # The genesis block is a edge case, where we measure from the first block in epoch, as opposed to the last
+        # The genesis block is an edge case, where we measure from the first block in epoch, as opposed to the last
         # block in the previous epoch
         prev_slot_time_start = sub_blocks[height_to_hash[uint32(0)]].timestamp
     else:
         last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
 
         curr: SubBlockRecord = sub_blocks[height_to_hash[last_sb_in_prev_epoch.height + 1]]
-        while not curr.first_block_in_challenge_slot:
+        while not curr.makes_challenge_block:
             last_sb_in_prev_epoch = curr
             curr = sub_blocks[height_to_hash[curr.height + 1]]
 
@@ -163,7 +163,7 @@ def get_next_difficulty(
         last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
 
         curr: SubBlockRecord = sub_blocks[height_to_hash[last_sb_in_prev_epoch.height + 1]]
-        while not curr.first_block_in_challenge_slot:
+        while not curr.makes_challenge_block:
             last_sb_in_prev_epoch = curr
             curr = sub_blocks[height_to_hash[curr.height + 1]]
 

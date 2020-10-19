@@ -7,6 +7,7 @@ from src.types.sized_bytes import bytes32
 from src.util.classgroup_utils import ClassGroup, check_proof_of_time_nwesolowski
 from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
+from src.consensus.constants import ConsensusConstants
 
 
 @dataclass(frozen=True)
@@ -40,12 +41,23 @@ class ProofOfTime(Streamable):
 
 
 async def validate_composite_proof_of_time(
-    challenge: bytes32, iters: uint64, output: ClassgroupElement, proofs: List[ProofOfTime]
+    constants: ConsensusConstants,
+    challenge: bytes32,
+    iters: uint64,
+    output: ClassgroupElement,
+    proofs: List[ProofOfTime],
 ) -> bool:
-    # TODO: parallelize somehow
+    # TODO: parallelize somehow, and cache already verified proofs
+
     if len(proofs) == 0:
         return False
     if challenge != proofs[0].challenge_hash:
         return False
     if output != proofs[-1].output:
         return False
+    if iters != sum(pr.number_of_iterations for pr in proofs):
+        return False
+    for proof in proofs:
+        if not proof.is_valid(constants.DISCRIMINANT_SIZE_BITS):
+            return False
+    return True

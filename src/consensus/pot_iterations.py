@@ -5,10 +5,14 @@ from src.consensus.pos_quality import quality_str_to_quality
 from src.consensus.constants import ConsensusConstants
 
 
+def calculate_slot_iters(constants: ConsensusConstants, ips: uint64) -> uint64:
+    return ips * constants.SLOT_TIME_TARGET
+
+
 def calculate_infusion_challenge_point_iters(
     constants: ConsensusConstants, ips: uint64, required_iters: uint64
 ) -> uint64:
-    slot_iters: uint64 = ips * constants.SLOT_TIME_TARGET
+    slot_iters: uint64 = calculate_slot_iters(constants, ips)
     if required_iters >= slot_iters:
         raise ValueError(f"Required iters {required_iters} is not below the slot iterations")
     checkpoint_size: uint64 = uint64(slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
@@ -17,7 +21,7 @@ def calculate_infusion_challenge_point_iters(
 
 def calculate_infusion_point_iters(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint64:
     # Note that the IPS is for the block passed in, which might be in the previous epoch
-    slot_iters: uint64 = ips * constants.SLOT_TIME_TARGET
+    slot_iters: uint64 = calculate_slot_iters(constants, ips)
     if required_iters >= slot_iters:
         raise ValueError(f"Required iters {required_iters} is not below the slot iterations")
     extra_iters: uint64 = uint64(int(float(ips) * constants.EXTRA_ITERS_TIME_TARGET))
