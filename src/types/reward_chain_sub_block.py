@@ -16,7 +16,7 @@ class RewardChainSubBlockUnfinished(Streamable):
     total_iters: uint128
     challenge_slot_hash: bytes32
     proof_of_space: ProofOfSpace
-    icp_prev_ip: bytes32
+    icp_prev_ip: bytes32  # Prev block after infusion (or challenge slot hash if more recent)
     infusion_challenge_point: ClassgroupElement
     infusion_challenge_point_sig: G2Element
 
@@ -29,8 +29,8 @@ class RewardChainSubBlock(Streamable):
     total_iters: uint128
     challenge_slot_hash: bytes32
     proof_of_space: ProofOfSpace
-    icp_prev_ip: bytes32
+    icp_prev_ip: bytes32  # Prev block after infusion (or challenge slot hash if more recent)
     infusion_challenge_point: ClassgroupElement
     infusion_challenge_point_sig: G2Element
-    ip_prev_ip: bytes32
+    ip_prev_ip: bytes32  # Prev block after infusion (or challenge slot hash if more recent)
     infusion_point: ClassgroupElement

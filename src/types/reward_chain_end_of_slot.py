@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from dataclasses import dataclass
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint8
@@ -10,7 +10,7 @@ from src.types.classgroup import ClassgroupElement
 @dataclass(frozen=True)
 @streamable
 class RewardChainEndOfSlot(Streamable):
-    prior_point: bytes32  # TODO: check what this is
+    prior_point: bytes32  # TODO: check what this is (VDF challenge?)
     end_of_slot_output: ClassgroupElement
     challenge_slot_hash: bytes32
     deficit: uint8  # 5 or less. usually zero
@@ -19,7 +19,7 @@ class RewardChainEndOfSlot(Streamable):
 @dataclass(frozen=True)
 @streamable
 class EndOfSlotProofs(Streamable):
-    challenge_chain_icp_proof: Optional[ProofOfTime]
-    challenge_chain_ip_proof: Optional[ProofOfTime]
-    challenge_chain_slot_proof: ProofOfTime
-    reward_chain_slot_proof: ProofOfTime
+    challenge_chain_icp_proof: Optional[List[ProofOfTime]]
+    challenge_chain_ip_proof: Optional[List[ProofOfTime]]
+    challenge_chain_slot_proof: List[ProofOfTime]
+    reward_chain_slot_proof: List[ProofOfTime]

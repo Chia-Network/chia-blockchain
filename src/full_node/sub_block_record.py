@@ -22,9 +22,10 @@ class SubBlockRecord(Streamable):
     weight: uint128  # Total cumulative difficulty of all ancestor blocks since genesis
     total_iters: uint128  # Total number of VDF iterations since genesis, including this sub-block
     is_block: bool  # Whether or not this sub-block is also a block
-    challenge_chain_pos_hash: bytes32  # The hash of the proof of space in challenge chain
-    required_iters: uint64  # The number of iters required for this proof of space
-    first_block_in_challenge_slot: bool
+    challenge_chain_data_hash: Optional[bytes32]  # The hash of ChallengeChain data, if made a challenge
+    required_iters: Optional[uint64]  # The number of iters required for this proof of space, if made a challenge
+    reward_infusion_output: bytes32  # The reward chain infusion output, input to next VDF
+    makes_challenge_block: bool
     ips: uint64  # Current network iterations per second parameter
     pool_puzzle_hash: bytes32  # Need to keep track of these because Coins are created in a future block
     farmer_puzzle_hash: bytes32
