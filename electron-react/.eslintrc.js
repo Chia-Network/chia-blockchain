@@ -37,8 +37,8 @@ module.exports = {
     },
   },
   rules: {
-    "no-use-before-define": "off",
-    "@typescript-eslint/no-use-before-define": "warn",
+    "no-use-before-define": [0],
+    '@typescript-eslint/no-use-before-define': [1],
     "unicorn/no-null": "off",
     "unicorn/prevent-abbreviations": "off",
     "unicorn/filename-case": ["error", {
