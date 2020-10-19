@@ -534,10 +534,6 @@ msgstr "0 automatically chooses bucket count"
 msgid "CreatePlot.numberOfThreads"
 msgstr "Number of threads"
 
-#: src/components/plotter/Plotter.jsx:478
-msgid "CreatePlot.plotCount"
-msgstr "Plot Count"
-
 #: src/components/plotter/Plotter.jsx:453
 #: src/components/plotter/Plotter.jsx:458
 msgid "CreatePlot.plotSize"

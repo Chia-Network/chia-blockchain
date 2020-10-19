@@ -51,7 +51,7 @@ msgstr "Nespracovaný zostatok"
 
 #: src/components/wallet/standard/WalletStandard.tsx:240
 msgid "BalanceCard.pendingBalanceTooltip"
-msgstr ""
+msgstr "Toto je súčet prichádzajúcich a odchádzajúcich nespracovaných transakcií (ešte nie sú zahrnuté do blockchainu). To nezahŕňa odmeny za ťažbu."
 
 #: src/components/wallet/standard/WalletStandard.tsx:253
 msgid "BalanceCard.pendingChange"
@@ -59,7 +59,7 @@ msgstr "Nespracované zmeny"
 
 #: src/components/wallet/standard/WalletStandard.tsx:255
 msgid "BalanceCard.pendingChangeTooltip"
-msgstr ""
+msgstr "Toto je nespracovaná zmena. Sú to mince, ktoré ste si poslali, ale zatiaľ neboli spracované."
 
 #: src/components/wallet/standard/WalletStandard.tsx:245
 msgid "BalanceCard.pendingFarmingRewards"
@@ -67,7 +67,7 @@ msgstr "Nespracované odmeny za ťažbu"
 
 #: src/components/wallet/standard/WalletStandard.tsx:247
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
-msgstr ""
+msgstr "Toto je celková suma nedávno získaných ťažiarskych odmien, ktoré boli potvrdené, ale zatiaľ nie sú vyplatiteľné. Odmeny za ťaženie sú zmrazené na 200 blokov."
 
 #: src/components/wallet/standard/WalletStandard.tsx:231
 msgid "BalanceCard.pendingTotalBalance"
@@ -75,7 +75,7 @@ msgstr "Celkový nespracovaný zostatok"
 
 #: src/components/wallet/standard/WalletStandard.tsx:233
 msgid "BalanceCard.pendingTotalBalanceTooltip"
-msgstr ""
+msgstr "Toto je celkový zostatok + nespracovaný zostatok alebo to, aký bude váš zostatok po potvrdení všetkých nespracovaných transakcií."
 
 #: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "BalanceCard.spendableBalance"
@@ -83,7 +83,7 @@ msgstr "Disponibilný zostatok"
 
 #: src/components/wallet/standard/WalletStandard.tsx:211
 msgid "BalanceCard.spendableBalanceTooltip"
-msgstr ""
+msgstr "Toto je množstvo Chia, ktoré môžete v súčasnosti použiť na uskutočnenie transakcií. Nezahŕňa nespracované ťažiarske odmeny, nespracované prichádzajúce transakcie a Chia, ktorú ste práve minuli, ale ešte nie su v blockchaine."
 
 #: src/components/wallet/standard/WalletStandard.tsx:205
 msgid "BalanceCard.totalBalance"
@@ -91,7 +91,7 @@ msgstr "Celkový zostatok"
 
 #: src/components/wallet/standard/WalletStandard.tsx:205
 msgid "BalanceCard.totalBalanceTooltip"
-msgstr ""
+msgstr "Toto je celkové množstvo Chia v blockchaine v LCA bloku (najnovší spoločný predok), ktorý je kontrolovaný vašimi súkromnými kľúčmi. Zahŕňa odmeny za zmrazené ťaženie, ale nie nespracované prichádzajúce a odchádzajúce transakcie."
 
 #: src/components/wallet/standard/WalletStandard.tsx:224
 msgid "BalanceCard.viewPendingBalances"
@@ -99,11 +99,11 @@ msgstr "Zobrazit nespracované zostatky"
 
 #: src/components/block/Block.jsx:196
 msgid "Block.blockVDFIterations"
-msgstr ""
+msgstr "Block VDF iterácii"
 
 #: src/components/block/Block.jsx:199
 msgid "Block.blockVDFIterationsTooltip"
-msgstr ""
+msgstr "Celkový počet VDF (overiteľná funkcia oneskorenia) alebo dôkaz o časových iteráciách v tomto bloku."
 
 #: src/components/block/Block.jsx:244
 msgid "Block.coinbaseAmount"
@@ -111,15 +111,15 @@ msgstr "Množstvo coinbase"
 
 #: src/components/block/Block.jsx:247
 msgid "Block.coinbaseAmountTooltip"
-msgstr ""
+msgstr "Bloková Chia odmena, ide do poolu (alebo ťaženia, ak sa nepoužíva pool)"
 
 #: src/components/block/Block.jsx:253
 msgid "Block.coinbasePuzzleHash"
-msgstr ""
+msgstr "Coinbase adresa"
 
 #: src/components/block/Block.jsx:280
 msgid "Block.description"
-msgstr ""
+msgstr "Block na pozícii {0} v Chia blockchaine"
 
 #: src/components/block/Block.jsx:182
 msgid "Block.difficulty"
@@ -131,7 +131,7 @@ msgstr "Množstvo odmeny"
 
 #: src/components/block/Block.jsx:260
 msgid "Block.feesAmountTooltip"
-msgstr ""
+msgstr "Celkové poplatky v tomto bloku idú ťažiarovy"
 
 #: src/components/block/Block.jsx:266
 msgid "Block.feesPuzzleHash"
@@ -147,19 +147,19 @@ msgstr "Poradie"
 
 #: src/components/block/Block.jsx:218
 msgid "Block.plotId"
-msgstr ""
+msgstr "Id poľa"
 
 #: src/components/block/Block.jsx:221
 msgid "Block.plotIdTooltip"
-msgstr ""
+msgstr "Semienko použité na vytvorenie poľa, záleží to na pk poolu a pk poľa"
 
 #: src/components/block/Block.jsx:210
 msgid "Block.plotPublicKey"
-msgstr "Verejný kľúč plotu"
+msgstr "Verejný kľúč poľa"
 
 #: src/components/block/Block.jsx:214
 msgid "Block.poolPublicKey"
-msgstr ""
+msgstr "Verejný kľúč poolu"
 
 #: src/components/block/Block.jsx:177
 msgid "Block.previousBlock"
@@ -167,7 +167,7 @@ msgstr "Predchádzajúci blok"
 
 #: src/components/block/Block.jsx:206
 msgid "Block.proofOfSpaceSize"
-msgstr ""
+msgstr "Dôkaz o veľkosti priestoru"
 
 #: src/components/block/Block.jsx:153
 msgid "Block.timestamp"
@@ -175,7 +175,7 @@ msgstr "Časová značka"
 
 #: src/components/block/Block.jsx:156
 msgid "Block.timestampTooltip"
-msgstr ""
+msgstr "Toto je čas, kedy ťažiar vytvoril blok, a to ešte predtým, ako bol finalizovaný s dôkaz o čase"
 
 #: src/components/block/Block.jsx:276
 msgid "Block.title"
@@ -183,7 +183,7 @@ msgstr "Bloky"
 
 #: src/components/block/Block.jsx:186
 msgid "Block.totalVDFIterations"
-msgstr ""
+msgstr "Celkový počet iterácií VDF"
 
 #: src/components/block/Block.jsx:189
 msgid "Block.totalVDFIterationsTooltip"
@@ -199,11 +199,11 @@ msgstr ""
 
 #: src/components/block/Block.jsx:167
 msgid "Block.weight"
-msgstr ""
+msgstr "Velkosť"
 
 #: src/components/block/Block.jsx:170
 msgid "Block.weightTooltip"
-msgstr ""
+msgstr "Velkosť je celková pridaná obtiažnosť všetkých blokov až po tento"
 
 #: src/components/fullNode/FullNode.jsx:427
 msgid "BlocksCard.expectedFinishTime"
@@ -227,7 +227,7 @@ msgstr "Bloky"
 
 #: src/components/wallet/create/WalletCreate.jsx:164
 msgid "CCListItems.title"
-msgstr ""
+msgstr "Možnosti coloured mincí"
 
 #: src/components/farmer/Farmer.jsx:288
 msgid "Challenges.bestEstimate"
@@ -295,7 +295,7 @@ msgstr "Celkový zostatok"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:321
 msgid "ColouredBalanceCard.viewPendingBalances"
-msgstr ""
+msgstr "Zobraziť nespracované zostatky ..."
 
 #: src/components/wallet/coloured/WalletColoured.tsx:481
 msgid "ColouredHistoryCard.title"
@@ -403,7 +403,7 @@ msgstr "Posledná správa"
 
 #: src/components/connections/Connections.jsx:97
 msgid "Connections.nodeId"
-msgstr "Node Id"
+msgstr "Id uzlu"
 
 #: src/components/connections/Connections.jsx:103
 #: src/components/connections/Connections.jsx:187
@@ -460,7 +460,7 @@ msgstr "Poplatok"
 
 #: src/components/wallet/create/createNewColouredCoin.jsx:101
 msgid "CreateNewCCWallet.generateNewColour"
-msgstr ""
+msgstr "Vytvoriť novy colour"
 
 #: src/components/trading/CreateOffer.jsx:354
 msgid "CreateOffer.add"
@@ -520,7 +520,7 @@ msgstr "Vytvoriť"
 
 #: src/components/plotter/Plotter.jsx:433
 msgid "CreatePlot.description"
-msgstr "Pomocou tohto nástroja môžete vytvárať ploty, ktoré sú alokované na vašom pevnom disku a slúžia na ťažbu a zarábanie Chia. Počas vytvárania plot súboru sa vytvárajú aj dočasné súbory, ktoré sú vačšie ako veľkosť konečných plot súborov, takže sa uistite, že máte dostatok miesta. Skúste použiť rýchly disk ako SSD pre dočasné súbory a na výsledný adresár veľký pomalý pevný disk (napríklad externý pevný disk)."
+msgstr "Pomocou tohto nástroja môžete vytvárať polia, ktoré sú alokované na vašom pevnom disku a slúžia na ťažbu a zarábanie Chia. Počas vytvárania súborov polí sa vytvárajú aj dočasné súbory, ktoré sú vačšie ako veľkosť konečných súborov polí, takže sa uistite, že máte dostatok miesta. Skúste použiť rýchly disk ako SSD pre dočasné súbory a na výsledný adresár veľký pomalý pevný disk (napríklad externý pevný disk)."
 
 #: src/components/plotter/Plotter.jsx:543
 msgid "CreatePlot.numberOfBuckets"
@@ -549,11 +549,11 @@ msgstr "Maximálne využitie RAM"
 
 #: src/components/plotter/Plotter.jsx:510
 msgid "CreatePlot.ramMaxUsageDescription"
-msgstr ""
+msgstr "Viac pamäte mierne zvyšuje rýchlosť"
 
 #: src/components/plotter/Plotter.jsx:389
 msgid "CreatePlot.specifyFinalDirectory"
-msgstr ""
+msgstr "Zadajte dočasný a cieľový adresár"
 
 #: src/components/plotter/Plotter.jsx:566
 msgid "CreatePlot.stripeSize"
@@ -561,11 +561,11 @@ msgstr "Veľkosť sektora"
 
 #: src/components/plotter/Plotter.jsx:427
 msgid "CreatePlot.title"
-msgstr "Vytvoriť plot"
+msgstr "Vytvoriť pole"
 
 #: src/components/wallet/create/createRLAdmin.jsx:248
 msgid "CreateRLAdminWallet.amountForInitialCoin"
-msgstr ""
+msgstr "Počiatočná suma"
 
 #: src/components/wallet/create/createRLAdmin.jsx:322
 msgid "CreateRLAdminWallet.create"
@@ -577,19 +577,19 @@ msgstr ""
 
 #: src/components/wallet/create/createRLAdmin.jsx:138
 msgid "CreateRLAdminWallet.enterValidInitialCoin"
-msgstr ""
+msgstr "Prosím zadajte platnú počiatočnú sumu"
 
 #: src/components/wallet/create/createRLAdmin.jsx:148
 msgid "CreateRLAdminWallet.enterValidNumericFee"
-msgstr ""
+msgstr "Prosím zadajte platný poplatok"
 
 #: src/components/wallet/create/createRLAdmin.jsx:98
 msgid "CreateRLAdminWallet.enterValidNumericInterval"
-msgstr ""
+msgstr "Prosím zadajte platnú dĺžku intervalu"
 
 #: src/components/wallet/create/createRLAdmin.jsx:123
 msgid "CreateRLAdminWallet.enterValidPubkey"
-msgstr ""
+msgstr "Zadajte platný verejný kľúč"
 
 #: src/components/wallet/create/createRLAdmin.jsx:113
 msgid "CreateRLAdminWallet.enterValidSpendableAmount"
@@ -618,11 +618,11 @@ msgstr "Disponibilný zostatok"
 
 #: src/components/wallet/create/createRLAdmin.jsx:205
 msgid "CreateRLAdminWallet.spendableAmountPerInterval"
-msgstr ""
+msgstr "Disponibilná suma na interval"
 
 #: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "CreateRLAdminWallet.spendingIntervalLength"
-msgstr ""
+msgstr "Dĺžka disponibilného intervalu (počet blokov)"
 
 #: src/components/wallet/create/createRLAdmin.jsx:296
 msgid "CreateRLAdminWallet.userPubkey"
@@ -658,7 +658,7 @@ msgstr "Kľúče"
 
 #: src/components/dashboard/DashboardSideBar.tsx:37
 msgid "DashboardSideBar.plot"
-msgstr "Plot"
+msgstr "Polia"
 
 #: src/components/dashboard/DashboardSideBar.tsx:39
 msgid "DashboardSideBar.trade"
@@ -720,15 +720,15 @@ msgstr "Celková vyťažená chia"
 
 #: src/components/farmer/Farmer.jsx:142
 msgid "FarmerStatus.totalSizeOfLocalPlots"
-msgstr "Celková veľkosť lokálnych plotov"
+msgstr "Celková veľkosť lokálnych polí"
 
 #: src/components/fullNode/FullNode.jsx:546
 msgid "FullNode.title"
-msgstr "Všetky nody"
+msgstr "Všetky uzly"
 
 #: src/components/fullNode/FullNode.jsx:376
 msgid "FullNodeStatus.title"
-msgstr "Stav setkých nodov"
+msgstr "Stav všetkých uzlov"
 
 #: src/components/wallet/standard/WalletStandard.tsx:408
 msgid "HistoryCard.title"
@@ -768,7 +768,7 @@ msgstr "Vyberte typ peňaženky"
 
 #: src/components/trading/ViewOffer.jsx:196
 msgid "OfferDropView.dragAndDropOfferFile"
-msgstr ""
+msgstr "Súbor s ponukami presuňte tu"
 
 #: src/components/trading/ViewOffer.jsx:182
 msgid "OfferDropView.title"
@@ -813,19 +813,19 @@ msgstr "Zmazať všetky kľúče"
 
 #: src/components/farmer/Farmer.jsx:573
 msgid "Plots.deleteAllKeysDescription"
-msgstr ""
+msgstr "Naozaj chcete odstrániť pole? Pole nie je možné získať späť."
 
 #: src/components/farmer/Farmer.jsx:494
 msgid "Plots.deletePlotsDescription"
-msgstr ""
+msgstr "Pozor, tieto polia sa odstránia navždy. Skontrolujte, či sú pamäťové zariadenia správne pripojené."
 
 #: src/components/farmer/Farmer.jsx:526
 msgid "Plots.failedToOpenPlots"
-msgstr ""
+msgstr "Nepodarilo sa otvoriť (neplatné polia)"
 
 #: src/components/farmer/Farmer.jsx:532
 msgid "Plots.failedToOpenPlotsDescription"
-msgstr ""
+msgstr "Tieto polia sú neplatné, asi ich budete chcieť odstrániť navždy."
 
 #: src/components/farmer/Farmer.jsx:410
 msgid "Plots.filename"
@@ -833,27 +833,27 @@ msgstr "Názov súboru"
 
 #: src/components/farmer/Farmer.jsx:385
 msgid "Plots.managePlotDirectories"
-msgstr "Spravovať adresáre plotov"
+msgstr "Spravovať adresáre polí"
 
 #: src/components/farmer/Farmer.jsx:490
 msgid "Plots.notFoundPlots"
-msgstr ""
+msgstr "Polia sa nenašli"
 
 #: src/components/farmer/Farmer.jsx:416
 msgid "Plots.plotId"
-msgstr ""
+msgstr "Id poľa"
 
 #: src/components/farmer/Farmer.jsx:419
 msgid "Plots.plotPk"
-msgstr ""
+msgstr "Pk poľa"
 
 #: src/components/farmer/Farmer.jsx:422
 msgid "Plots.pootPk"
-msgstr ""
+msgstr "Pk poolu"
 
 #: src/components/farmer/Farmer.jsx:374
 msgid "Plots.refreshPlots"
-msgstr "Aktualizovať ploty"
+msgstr "Aktualizovať polia"
 
 #: src/components/farmer/Farmer.jsx:413
 msgid "Plots.size"
@@ -861,11 +861,11 @@ msgstr "Velkosť"
 
 #: src/components/farmer/Farmer.jsx:366
 msgid "Plots.title"
-msgstr "Ploty"
+msgstr "Polia"
 
 #: src/components/plotter/Plotter.jsx:677
 msgid "Plotter.title"
-msgstr "Plot"
+msgstr "Pole"
 
 #: src/components/plotter/Plotter.jsx:298
 msgid "PlotterFinalLocation.availableOnlyFromElectron"
@@ -889,7 +889,7 @@ msgstr "Zmazať záznamy"
 
 #: src/components/plotter/Plotter.jsx:630
 msgid "PlotterProgress.plottingStoppedSuccesfully"
-msgstr ""
+msgstr "Vytváranie polí sa úspešne zastavilo."
 
 #: src/components/plotter/Plotter.jsx:619
 msgid "PlotterProgress.title"
@@ -909,15 +909,15 @@ msgstr "Dočasný adresár"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
 msgid "RLBalanceCard.pendingBalance"
-msgstr ""
+msgstr "Nespracovaný zostatok"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
 msgid "RLBalanceCard.pendingChange"
-msgstr ""
+msgstr "Nespracované zmeny"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:640
 msgid "RLBalanceCard.pendingTotalBalance"
-msgstr ""
+msgstr "Celkový nespracovaný zostatok"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:615
 msgid "RLBalanceCard.spendableBalance"
@@ -933,7 +933,7 @@ msgstr "Celkový zostatok"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:631
 msgid "RLBalanceCard.viewPendingBalances"
-msgstr ""
+msgstr "Zoraziť nespracované zostatky"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:540
@@ -977,7 +977,7 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:794
 msgid "RLSendCard.addressPuzzleHash"
-msgstr "Adresa / Puzzle hash"
+msgstr "Adresa"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:818
 msgid "RLSendCard.amount"
@@ -989,11 +989,11 @@ msgstr ""
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:723
 msgid "RLSendCard.enterValidAmount"
-msgstr ""
+msgstr "Prosím zadajte platnú sumu"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
 msgid "RLSendCard.enterValidFee"
-msgstr ""
+msgstr "Prosím zadajte platný poplatok"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:831
 msgid "RLSendCard.fee"
@@ -1009,7 +1009,7 @@ msgstr "Vytvoriť transakciu"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:707
 msgid "RLSendCard.waitForSyncing"
-msgstr ""
+msgstr "Pred uskutočnením transakcie dokončite synchronizáciu"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:929
 msgid "RLTransactionTable.amount"
@@ -1041,7 +1041,7 @@ msgstr "Odchádzajúce"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:907
 msgid "RLTransactionTable.pending"
-msgstr ""
+msgstr "Nespracované"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:926
 msgid "RLTransactionTable.status"
@@ -1129,7 +1129,7 @@ msgstr "Vyberte kľúč"
 
 #: src/components/wallet/standard/WalletStandard.tsx:359
 msgid "SendCard.address"
-msgstr "Adresa / Puzzle hash"
+msgstr "Adresa"
 
 #: src/components/wallet/standard/WalletStandard.tsx:371
 msgid "SendCard.amount"
@@ -1214,7 +1214,7 @@ msgstr "Odhadovaná velkosť siete"
 
 #: src/components/fullNode/FullNode.jsx:317
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
-msgstr ""
+msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ťažiarov v sieti"
 
 #: src/components/fullNode/FullNode.jsx:287
 msgid "StatusItem.iterationsPerSecond"
@@ -1222,7 +1222,7 @@ msgstr "Iterácii za sekundu"
 
 #: src/components/fullNode/FullNode.jsx:291
 msgid "StatusItem.iterationsPerSecondTooltip"
-msgstr ""
+msgstr "Odhadovaný dôkaz časovej rýchlosti najrýchlejšieho timelorda v sieti."
 
 #: src/components/fullNode/FullNode.jsx:199
 #: src/components/fullNode/FullNode.jsx:205
