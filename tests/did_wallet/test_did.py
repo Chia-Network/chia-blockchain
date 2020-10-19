@@ -137,12 +137,20 @@ class TestDIDWallet:
         # Wallet1 sets up DIDWallet2 with DIDWallet1 as backup
         backup_ids = [bytes.fromhex(did_wallet.get_my_DID())]
         did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
-            wallet_node.wallet_state_manager, wallet, uint64(100), backup_ids
+            wallet_node.wallet_state_manager, wallet, uint64(200), backup_ids
         )
+
+        for i in range(1, num_blocks):
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+
+        await self.time_out_assert(15, did_wallet_2.get_confirmed_balance, 200)
+        await self.time_out_assert(15, did_wallet_2.get_unconfirmed_balance, 200)
+
         filename = "test.backup"
         did_wallet_2.create_backup(filename)
 
         # Wallet2 recovers DIDWallet2 to a new set of keys
+        breakpoint()
         did_wallet_3 = await DIDWallet.create_new_did_wallet_from_recovery(wallet_node_2.wallet_state_manager, wallet2, filename)
 
         parent_innerpuzhash_amounts_for_recovery_ids = [did_wallet.get_info_for_recovery()]
