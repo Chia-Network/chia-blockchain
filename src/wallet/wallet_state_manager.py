@@ -240,6 +240,17 @@ class WalletStateManager:
                 )
                 self.wallets[wallet_info.id] = wallet
 
+    # search through the blockrecords and return the most recent coin to use a given puzzlehash
+    async def search_blockrecords_for_puzzlehash(self, puzzlehash):
+        additions_of_interest = []
+        for header_hash in self.block_records:
+            record = self.block_records[header_hash]
+            tx_filter = PyBIP158([b for b in record.transactions_filter])
+            if tx_filter.Match(bytearray(puzzlehash)):
+                additions_of_interest.append(header_hash)
+        breakpoint()
+        return
+
     async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
         index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(hash)
         if index_for_puzzlehash is None:
