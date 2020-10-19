@@ -7,10 +7,15 @@ from src.util.errors import Err
 from src.util.ints import uint32, uint64
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.full_node.sub_block_record import SubBlockRecord
-from src.full_node.difficulty_adjustment import get_next_ips
+from src.full_node.difficulty_adjustment import get_next_ips, get_next_difficulty
 from src.types.proof_of_time import validate_composite_proof_of_time
-from src.consensus.pot_iterations import calculate_infusion_point_iters, calculate_slot_iters
+from src.consensus.pot_iterations import (
+    calculate_infusion_point_iters,
+    calculate_slot_iters,
+    calculate_iterations_quality,
+)
 from src.consensus.infusion import infuse_signature
+from src.full_node.difficulty_adjustment import finishes_sub_epoch
 from src.full_node.challenge_chain_data import ChallengeChainData
 from src.util.hash import std_hash
 
@@ -30,9 +35,10 @@ async def validate_unfinished_header_block(
 
     prev_sb: SubBlockRecord = sub_blocks[header_block.prev_header_hash]
     challenge: Optional[bytes32] = None
+    new_slot: bool = len(header_block.finished_slots) > 0
 
     # 1. Check finished slots
-    if len(header_block.finished_slots) == 0:
+    if not new_slot:
         # Not crossed a slot since previous block. Gets the challenge
         if header_block.subepoch_summary is not None:
             return Err.NO_END_OF_SLOT_INFO
@@ -54,11 +60,9 @@ async def validate_unfinished_header_block(
                 seen_challenges += 1
                 challenge = curr.finished_challenge_slot_hash
             curr = sub_blocks[curr.prev_hash]
-
-        # If sub_block state is correct, we should always find a challenge here
-        assert challenge is not None
     else:
         # Finished a slot(s) since previous block
+        challenge = header_block.finished_slots[-1][0].get_hash()
         have_ses_hash: bool = False
         for finished_slot_n, (challenge_slot, reward_slot, slot_proofs) in enumerate(header_block.finished_slots):
             # 1a. check prev slot hash
@@ -151,7 +155,7 @@ async def validate_unfinished_header_block(
                     return Err.INVALID_CC_EOS_VDF
 
             # 1g. Check challenge slot hash in reward slot
-            if reward_slot.challenge_slot_hash != challenge_slot.get_hash():
+            if reward_slot.challenge_slot_hash != challenge_slot.get_hash_no_ses():
                 return Err.INVALID_CHALLENGE_SLOT_HASH_RC
 
             # 1h. Check prior point
@@ -190,6 +194,79 @@ async def validate_unfinished_header_block(
         # 2. Check sub-epoch summary
         if not have_ses_hash and header_block.subepoch_summary is not None:
             return Err.NO_SUB_EPOCH_SUMMARY_HASH
+
         # If have_ses_hash, hash has already been validated (subepoch summary guaranteed to not be None)
-        if have_ses_hash:
-            assert header_block.subepoch_summary is not None
+        if new_slot and finishes_sub_epoch(constants, sub_blocks, prev_sb.header_hash, False):
+            # 2a. If new sub-epoch, sub-epoch summary and hash
+            if header_block.subepoch_summary is None or not have_ses_hash:
+                return Err.INVALID_SUB_EPOCH_SUMMARY
+            curr = prev_sb
+            while curr.sub_epoch_summary_included_hash is None:
+                curr = sub_blocks[curr.prev_hash]
+            # 2b. check prev sub-epoch summary hash
+            if curr.sub_epoch_summary_included_hash != header_block.subepoch_summary.prev_subepoch_summary_hash:
+                return Err.INVALID_PREV_SUB_EPOCH_SUMMARY_HASH
+
+            # 2c. Check reward chain hash
+            if header_block.finished_slots[0][1].get_hash() != header_block.subepoch_summary.reward_chain_hash:
+                return Err.INVALID_REWARD_CHAIN_HASH
+
+            # 2d. Check sub-epoch overflow
+            if (
+                header_block.height % constants.SUB_EPOCH_SUB_BLOCKS
+                != header_block.subepoch_summary.num_subblocks_overflow
+            ):
+                return Err.INVALID_SUB_EPOCH_OVERFLOW
+
+            finishes_epoch: bool = finishes_sub_epoch(constants, sub_blocks, prev_sb.header_hash, True)
+            # 2e. Check difficulty and new ips on new epoch
+            if finishes_epoch:
+                next_diff = get_next_difficulty(constants, sub_blocks, height_to_hash, prev_sb.header_hash, True)
+                next_ips = get_next_ips(constants, sub_blocks, height_to_hash, prev_sb.header_hash, True)
+                if next_diff != header_block.subepoch_summary.new_difficulty:
+                    return Err.INVALID_NEW_DIFFICULTY
+                if next_ips != header_block.subepoch_summary.new_ips:
+                    return Err.INVALID_NEW_IPS
+
+            # 2f. Check difficulty and new ips not present if not new epoch
+            if header_block.subepoch_summary.new_difficulty is not None:
+                return Err.INVALID_NEW_DIFFICULTY
+            if header_block.subepoch_summary.new_ips is not None:
+                return Err.INVALID_NEW_IPS
+
+        else:
+            # 2a. If not new sub-epoch, no sub-epoch summary
+            if have_ses_hash or header_block.subepoch_summary is not None:
+                return Err.INVALID_SUB_EPOCH_SUMMARY
+
+        # If sub_block state is correct, we should always find a challenge here
+        assert challenge is not None
+
+        # 3. Check proof of space
+        if challenge != header_block.reward_chain_sub_block.proof_of_space.challenge_hash:
+            return Err.INVALID_POSPACE_CHALLENGE
+
+        q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
+            constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
+        )
+        if q_str is None:
+            return Err.INVALID_POSPACE
+        required_iters: uint64 = calculate_iterations_quality(
+            q_str,
+            header_block.reward_chain_sub_block.proof_of_space.size,
+        )
+
+        # If first sub-block in challenge slot
+        if new_slot and header_block.finished_slots[0][1].deficit == 0:
+            cc_icp_challenge = header_block.finished_slots[-1][0].get_hash()
+            output = header_block.reward_chain_sub_block.infusion_point
+            iters = 3
+            if not await validate_composite_proof_of_time(
+                constants, cc_icp_challenge, iters, output, header_block.challenge_chain_icp_pot
+            ):
+                pass
+        # 4a. Check cc icp
+        # 4b. Check cc icp sig
+
+        # 5. Else, check that these are empty
+        # 6.
