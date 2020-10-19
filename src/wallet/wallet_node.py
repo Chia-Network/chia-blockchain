@@ -1027,6 +1027,19 @@ class WalletNode:
                 response = respond_header_msg
 
     @api_request
+    async def send_additions_request(self, block, additions):
+        if len(additions) > 0:
+            request_a = wallet_protocol.RequestAdditions(
+                block.height, block.header_hash, additions
+            )
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("request_additions", request_a),
+                Delivery.RESPOND,
+            )
+            return
+
+    @api_request
     async def reject_header_request(
         self, response: wallet_protocol.RejectHeaderRequest
     ):
