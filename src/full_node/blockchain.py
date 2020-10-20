@@ -392,60 +392,22 @@ class Blockchain:
         # keeps track of the reward coins that need to be incorporated
         expected_reward_coins: Set[Coin] = set()
 
-        # 3. The prev block hash in Foliage Block must be the prev block
-        if block.height == 0:
-            if block.foliage_block.prev_block_hash != bytes([0] * 32):
-                return Err.INVALID_PREV_BLOCK_HASH
-        else:
-            curr_sb: SubBlockRecord = self.sub_blocks[block.prev_header_hash]
-            while not curr_sb.is_block:
-                pool_coin = create_pool_coin(
-                    curr_sb.height, curr_sb.pool_puzzle_hash, calculate_pool_reward(curr_sb.height)
-                )
-                farmer_coin = create_farmer_coin(
-                    curr_sb.height, curr_sb.farmer_puzzle_hash, calculate_base_farmer_reward(curr_sb.height)
-                )
-                expected_reward_coins.add(pool_coin)
-                expected_reward_coins.add(farmer_coin)
-                curr_sb = self.sub_blocks[curr_sb.prev_hash]
-            if not block.foliage_block.prev_block_hash == curr_sb.header_hash:
-                return Err.INVALID_PREV_BLOCK_HASH
-
-        # 4. The timestamp in Foliage Block must comply with the timestamp rules
-        if block.height > 0:
-            last_timestamps: List[uint64] = []
-            curr_sb: SubBlockRecord = self.sub_blocks[block.foliage_block.prev_block_hash]
-            while len(last_timestamps) < self.constants.NUMBER_OF_TIMESTAMPS:
-                last_timestamps.append(curr_sb.timestamp)
-                fetched: Optional[SubBlockRecord] = self.sub_blocks.get(curr_sb.prev_block_hash, None)
-                if not fetched:
-                    break
-                curr_sb = fetched
-            if len(last_timestamps) != self.constants.NUMBER_OF_TIMESTAMPS:
-                # For blocks 1 to 10, average timestamps of all previous blocks
-                assert curr_sb.height == 0
-            prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
-            if block.foliage_block.timestamp < prev_time:
-                return Err.TIMESTAMP_TOO_FAR_IN_PAST
-            if block.foliage_block.timestamp > int(time.time() + self.constants.MAX_FUTURE_TIME):
-                return Err.TIMESTAMP_TOO_FAR_IN_FUTURE
-
-        # 5. The filter hash in the Foliage Block must be the hash of the filter
+        # 3. The filter hash in the Foliage Block must be the hash of the filter
         if block.foliage_block.filter_hash != std_hash(block.transactions_filter):
             return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
-        # 6. The transaction info hash in the Foliage block must match the transaction info
+        # 4. The transaction info hash in the Foliage block must match the transaction info
         if block.foliage_block.transactions_info_hash != std_hash(block.transactions_info):
             return Err.INVALID_TRANSACTIONS_INFO_HASH
 
-        # 7. The foliage block hash in the foliage sub block must match the foliage block
+        # 5. The foliage block hash in the foliage sub block must match the foliage block
         if block.foliage_sub_block.signed_data.foliage_block_hash != std_hash(block.foliage_block):
             return Err.INVALID_FOLIAGE_BLOCK_HASH
 
-        # 8. The prev generators root must be valid
+        # 6. The prev generators root must be valid
         # TODO(straya): implement prev generators
 
-        # 9. The generator root must be the tree-hash of the generator (or zeroes if no generator)
+        # 7. The generator root must be the tree-hash of the generator (or zeroes if no generator)
         if block.transactions_generator is not None:
             if block.transactions_generator.get_tree_hash() != block.transactions_info.generator_root:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
@@ -453,7 +415,7 @@ class Blockchain:
             if block.transactions_info.generator_root != bytes([0] * 32):
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
 
-        # 10. The reward claims must be valid for the previous sub-blocks, and current block fees
+        # 8. The reward claims must be valid for the previous sub-blocks, and current block fees
         pool_coin = create_pool_coin(
             block.height,
             block.foliage_sub_block.signed_data.pool_target.puzzle_hash,
@@ -482,7 +444,7 @@ class Blockchain:
                 block.transactions_generator, self.constants.CLVM_COST_RATIO_CONSTANT
             )
 
-            # 11. Check that cost <= MAX_BLOCK_COST_CLVM
+            # 9. Check that cost <= MAX_BLOCK_COST_CLVM
             if cost > self.constants.MAX_BLOCK_COST_CLVM:
                 return Err.BLOCK_COST_EXCEEDS_MAX
             if error:
@@ -494,23 +456,23 @@ class Blockchain:
 
             additions = additions_for_npc(npc_list)
 
-        # 12. Check that the correct cost is in the transactions info
+        # 10. Check that the correct cost is in the transactions info
         if block.transactions_info.cost != cost:
             return Err.INVALID_BLOCK_COST
 
         additions_dic: Dict[bytes32, Coin] = {}
-        # 13. Check additions for max coin amount
+        # 11. Check additions for max coin amount
         for coin in additions + coinbase_additions:
             additions_dic[coin.name()] = coin
             if coin.amount >= self.constants.MAX_COIN_AMOUNT:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
-        # 14. Validate addition and removal roots
+        # 12. Validate addition and removal roots
         root_error = validate_block_merkle_roots(block, additions + coinbase_additions, removals)
         if root_error:
             return root_error
 
-        # 15. The additions and removals must result in the correct filter
+        # 13. The additions and removals must result in the correct filter
         byte_array_tx: List[bytes32] = []
 
         for coin in additions + coinbase_additions:
@@ -525,19 +487,19 @@ class Blockchain:
         if filter_hash != block.header.data.filter_hash:
             return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
-        # 16. Check for duplicate outputs in additions
+        # 14. Check for duplicate outputs in additions
         addition_counter = collections.Counter(_.name() for _ in additions + coinbase_additions)
         for k, v in addition_counter.items():
             if v > 1:
                 return Err.DUPLICATE_OUTPUT
 
-        # 17. Check for duplicate spends inside block
+        # 15. Check for duplicate spends inside block
         removal_counter = collections.Counter(removals)
         for k, v in removal_counter.items():
             if v > 1:
                 return Err.DOUBLE_SPEND
 
-        # 18. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
+        # 16. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
         new_ips = self.get_next_slot_iters(block.prev_header_hash)
         fork_h = find_fork_point_in_chain(self.sub_blocks, self.get_tip(), block.get_sub_block_record(new_ips))
 
@@ -614,7 +576,7 @@ class Blockchain:
         for coin in additions:
             added += coin.amount
 
-        # 19. Check that the total coin amount for added is <= removed
+        # 17. Check that the total coin amount for added is <= removed
         if removed < added:
             return Err.MINTING_COIN
 
@@ -628,20 +590,20 @@ class Blockchain:
                     fee = int_from_bytes(cvp.vars[0])
                     assert_fee_sum = assert_fee_sum + fee
 
-        # 20. Check that the assert fee sum <= fees
+        # 18. Check that the assert fee sum <= fees
         if fees < assert_fee_sum:
             return Err.ASSERT_FEE_CONDITION_FAILED
 
-        # 21. Check that the computed fees are equal to the fees in the block header
+        # 19. Check that the computed fees are equal to the fees in the block header
         if block.transactions_info.fees != fees:
             return Err.INVALID_BLOCK_FEE_AMOUNT
 
-        # 22. Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
+        # 20. Verify that removed coin puzzle_hashes match with calculated puzzle_hashes
         for unspent in removal_coin_records.values():
             if unspent.coin.puzzle_hash != removals_puzzle_dic[unspent.name]:
                 return Err.WRONG_PUZZLE_HASH
 
-        # 23. Verify conditions
+        # 21. Verify conditions
         # create hash_key list for aggsig check
         pairs_pks = []
         pairs_msgs = []
@@ -659,7 +621,7 @@ class Blockchain:
                 pairs_pks.append(pk)
                 pairs_msgs.append(m)
 
-        # 24. Verify aggregated signature
+        # 22. Verify aggregated signature
         # TODO: move this to pre_validate_blocks_multiprocessing so we can sync faster
         if not block.transactions_info.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
