@@ -134,12 +134,16 @@ class DIDWallet:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-        # load backup will also set our DIDInfo
-        await self.load_backup(filename)
+        self.did_info = DIDInfo(
+            None, [], [], None, None
+        )
         info_as_string = bytes(self.did_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
         )
+        # load backup will also set our DIDInfo
+        await self.load_backup(filename)
+
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
@@ -174,7 +178,7 @@ class DIDWallet:
         return uint8(WalletType.DISTRIBUTED_ID)
 
     def id(self):
-        return self.wallet_id
+        return self.wallet_info.id
 
     async def get_confirmed_balance(self) -> uint64:
         record_list: Set[
@@ -433,6 +437,7 @@ class DIDWallet:
             BlockRecord
         ] = await self.wallet_state_manager.wallet_store.get_block_record(header_hash)
         assert block is not None
+        breakpoint()
         if block.removals is not None:
             parent_found = await self.search_for_parent_info(generator, block.removals)
             if parent_found:
@@ -489,6 +494,7 @@ class DIDWallet:
                 genesis_id, backup_ids, [], innerpuz, None
             )
             await self.save_info(did_info)
+            await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
             return
         except Exception as e:
             raise e
@@ -501,6 +507,7 @@ class DIDWallet:
             BlockRecord
         ] = await self.wallet_state_manager.wallet_store.get_block_record(header_hash)
         assert block is not None
+        breakpoint()
         if block.removals is not None:
             parent_found = await self.search_for_parent_info(generator, block.removals)
             if parent_found:

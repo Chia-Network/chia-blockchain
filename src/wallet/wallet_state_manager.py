@@ -251,9 +251,9 @@ class WalletStateManager:
         for header_hash in self.block_records:
             record = self.block_records[header_hash]
             tx_filter = PyBIP158([b for b in record.transactions_filter])
-            if tx_filter.Match(bytearray(puzzlehash)) and record.block_height > heighest_block_height:
+            if tx_filter.Match(bytearray(puzzlehash)) and record.height > heighest_block_height:
                 header_hash_of_interest = header_hash
-                heighest_block_height = record.block_height
+                heighest_block_height = record.height
         return heighest_block_height, header_hash_of_interest
 
     async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
