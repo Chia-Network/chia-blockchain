@@ -49,7 +49,10 @@ def rl_puzzle_for_pk(
 
     TEMPLATE_MY_PARENT_ID_2 = "(sha256 (f (r (r (r (r (r (r (r (r 1))))))))) (f (r 1)) (f (r (r (r (r (r (r (r 1)))))))))"  # noqa: E501
     TEMPLATE_SINGLETON_RL_2 = f'((c (i (i (= {TEMPLATE_MY_PARENT_ID_2} (f (r (r (r (r (r 1))))))) (q 1) (= (f (r (r (r (r (r 1)))))) (q 0x{origin_id}))) (q ()) (q (x (q "Parent doesnt satisfy RL conditions")))) 1))'  # noqa: E501
-    CREATE_CONSOLIDATED = f"(c (q 0x{opcode_create}) (c (f (r 1)) (c (+ (f (r (r (r (r 1))))) (f (r (r (r (r (r (r 1)))))))) (q ()))))"  # noqa: E501
+    CREATE_CONSOLIDATED = make_list(hexstr(opcode_create),
+                                    args(1),
+                                    (add(args(4),
+                                         args(6))))
     MODE_TWO_ME_STRING = make_list(hexstr(opcode_myid),
                                    sha256(args(5),
                                           args(1),
