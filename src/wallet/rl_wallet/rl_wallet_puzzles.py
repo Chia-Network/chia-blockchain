@@ -60,7 +60,11 @@ def rl_puzzle_for_pk(
     )
 
     WHOLE_PUZZLE = f"(c {AGGSIG_ENTIRE_SOLUTION} ((c (i (= (f 1) (q 1)) (q ((c (q {RATE_LIMIT_PUZZLE}) (r 1)))) (q {MODE_TWO})) 1)) (q ()))"  # noqa: E501
-    CLAWBACK = f"(c (c (q 0x{opcode_aggsig}) (c (q 0x{clawback_pk_str}) (c (sha256tree 1) (q ())))) (r 1))"
+    CLAWBACK = cons(make_list(hexstr(opcode_aggsig),
+                              hexstr(clawback_pk_str),
+                              sha256tree(args())),
+                    rest(args()))
+
     WHOLE_PUZZLE_WITH_CLAWBACK = \
         make_if(equal(args(0), quote(3)),
                 CLAWBACK,

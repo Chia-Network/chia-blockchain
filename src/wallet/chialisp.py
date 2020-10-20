@@ -94,3 +94,7 @@ def subtract(*argv):
 
 def is_zero(obj):
     return equal(obj, quote('0'))
+
+
+def hexstr(str):
+    return quote("0x" + str)
