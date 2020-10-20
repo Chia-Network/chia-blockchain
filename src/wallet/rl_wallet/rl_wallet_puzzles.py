@@ -239,12 +239,19 @@ def rl_make_aggregation_puzzle(wallet_puzzle):
     """
     opcode_myid = hexlify(ConditionOpcode.ASSERT_MY_COIN_ID).decode("ascii")
     opcode_consumed = hexlify(ConditionOpcode.ASSERT_COIN_CONSUMED).decode("ascii")
-    me_is_my_id = f"(c (q 0x{opcode_myid}) (c (f 1) (q ())))"
+    me_is_my_id = make_list(hexstr(opcode_myid), args(0))
 
     # lock_puzzle is the hash of '(r (c (q "merge in ID") (q ())))'
-    lock_puzzle = "(sha256tree (c (q 7) (c (c (q 5) (c (c (q 1) (c (f 1) (q ()))) (c (q (q ())) (q ())))) (q ()))))"
-    parent_coin_id = f"(sha256 (f (r 1)) (q 0x{wallet_puzzle}) (f (r (r 1))))"
-    input_of_lock = f"(c (q 0x{opcode_consumed}) (c (sha256 {parent_coin_id} {lock_puzzle} (q 0)) (q ())))"
-    puz = f"(c {me_is_my_id} (c {input_of_lock} (q ())))"
+    lock_puzzle = sha256tree(
+        make_list(
+            quote(7),
+            make_list(quote(5), make_list(quote(1), args(0)), quote(quote(sexp()))),
+        )
+    )
+    parent_coin_id = sha256(args(1), hexstr(wallet_puzzle), args(2))
+    input_of_lock = make_list(
+        hexstr(opcode_consumed), sha256(parent_coin_id, lock_puzzle, quote(0))
+    )
+    puz = make_list(me_is_my_id, input_of_lock)
 
     return Program(binutils.assemble(puz))

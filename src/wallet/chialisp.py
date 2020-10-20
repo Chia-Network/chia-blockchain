@@ -94,7 +94,7 @@ def iff(*argv):
 
 
 def hexstr(str):
-    return quote("0x" + str)
+    return quote(f"0x{str}")
 
 
 def greater(*argv):
