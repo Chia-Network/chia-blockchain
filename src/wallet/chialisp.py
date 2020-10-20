@@ -99,3 +99,7 @@ def iff(*argv):
 
 def hexstr(str):
     return quote("0x" + str)
+
+
+def greater(*argv):
+    return apply('>', argv)
