@@ -156,9 +156,9 @@ def rl_puzzle_for_pk(
 
 
 def rl_make_aggregation_solution(myid, wallet_coin_primary_input, wallet_coin_amount):
-    opcode_myid = hexlify(myid).decode("ascii")
-    primary_input = hexlify(wallet_coin_primary_input).decode("ascii")
-    sol = f"(0x{opcode_myid} 0x{primary_input} {wallet_coin_amount})"
+    opcode_myid = "0x" + hexlify(myid).decode("ascii")
+    primary_input = "0x" + hexlify(wallet_coin_primary_input).decode("ascii")
+    sol = sexp(opcode_myid, primary_input, wallet_coin_amount)
     return Program(binutils.assemble(sol))
 
 
