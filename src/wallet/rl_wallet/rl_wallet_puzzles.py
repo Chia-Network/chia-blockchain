@@ -59,10 +59,10 @@ def rl_puzzle_for_pk(
                                        hexstr(hex_pk),
                                        sha256tree(args()))
     WHOLE_PUZZLE = cons(AGGSIG_ENTIRE_SOLUTION,
-                         make_if(equal(args(0), quote(1)),
-                                 eval(quote(RATE_LIMIT_PUZZLE),
-                                      rest(args())),
-                                 MODE_TWO))
+                        make_if(equal(args(0), quote(1)),
+                                eval(quote(RATE_LIMIT_PUZZLE),
+                                     rest(args())),
+                                MODE_TWO))
     CLAWBACK = cons(make_list(hexstr(opcode_aggsig),
                               hexstr(clawback_pk_str),
                               sha256tree(args())),
