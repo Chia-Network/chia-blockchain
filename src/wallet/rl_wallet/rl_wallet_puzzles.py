@@ -217,9 +217,17 @@ def solution_for_rl(
     """
 
     min_block_count = math.ceil((out_amount * interval) / limit)
-    solution = (
-        f"(1 0x{my_parent_id.hex()} 0x{my_puzzlehash.hex()} {my_amount} 0x{out_puzzlehash.hex()} {out_amount}"
-        f" {min_block_count} 0x{my_parent_parent_id.hex()} {parent_amount} {fee})"
+    solution = sexp(
+        1,
+        "0x" + my_parent_id.hex(),
+        "0x" + my_puzzlehash.hex(),
+        my_amount,
+        "0x" + out_puzzlehash.hex(),
+        out_amount,
+        min_block_count,
+        "0x" + my_parent_parent_id.hex(),
+        parent_amount,
+        fee,
     )
     return Program(binutils.assemble(solution))
 
