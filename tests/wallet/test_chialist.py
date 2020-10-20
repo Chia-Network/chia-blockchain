@@ -1,4 +1,18 @@
-from src.wallet.chialisp import *
+from src.wallet.chialisp import (
+    sexp,
+    cons,
+    first,
+    rest,
+    nth,
+    args,
+    apply,
+    eval,
+    quote,
+    make_if,
+    make_list,
+    fail,
+    is_zero,
+)
 
 
 class TestChialisp:

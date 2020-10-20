@@ -7,7 +7,26 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
-from src.wallet.chialisp import *
+from src.wallet.chialisp import (
+    eval,
+    sexp,
+    sha256,
+    args,
+    make_if,
+    iff,
+    equal,
+    quote,
+    hexstr,
+    fail,
+    multiply,
+    greater,
+    make_list,
+    subtract,
+    add,
+    sha256tree,
+    cons,
+    rest,
+)
 
 
 def rl_puzzle_for_pk(
@@ -39,94 +58,99 @@ def rl_puzzle_for_pk(
     opcode_create = ConditionOpcode.CREATE_COIN.hex()
     opcode_myid = ConditionOpcode.ASSERT_MY_COIN_ID.hex()
 
-    TEMPLATE_MY_PARENT_ID = sha256(args(6),
-                                   args(1),
-                                   args(7))
-    TEMPLATE_SINGLETON_RL = make_if(iff(equal(TEMPLATE_MY_PARENT_ID,
-                                              args(0)),
-                                        quote(1),
-                                        equal(args(0),
-                                              hexstr(origin_id))),
-                                    sexp(),
-                                    fail(quote("Parent doesnt satisfy RL conditions")))
-    TEMPLATE_BLOCK_AGE = make_if(iff(equal(multiply(args(5),
-                                                    quote(rate_amount)),
-                                           multiply(args(4),
-                                                    quote(interval_time))),
-                                     quote(1),
-                                     quote(greater(multiply(args(5),
-                                                            quote(rate_amount)),
-                                                   multiply(args(4)),  # multiply looks wrong
-                                                   quote(interval_time)))),
-                                 make_list(hexstr(opcode_coin_block_age),
-                                           args(5)),
-                                 fail("wrong min block time"))
-    TEMPLATE_MY_ID = make_list(hexstr(opcode_myid),
-                               sha256(args(0),
-                                      args(1),
-                                      args(2)))
-    CREATE_CHANGE = make_list(hexstr(opcode_create),
-                              args(1),
-                              subtract(args(2),
-                                       add(args(4),
-                                           args(8))))
-    CREATE_NEW_COIN = make_list(hexstr(opcode_create),
-                                args(3),
-                                args(4))
-    RATE_LIMIT_PUZZLE = make_list(TEMPLATE_SINGLETON_RL,
-                                  TEMPLATE_BLOCK_AGE,
-                                  CREATE_CHANGE,
-                                  TEMPLATE_MY_ID,
-                                  CREATE_NEW_COIN)
+    TEMPLATE_MY_PARENT_ID = sha256(args(6), args(1), args(7))
+    TEMPLATE_SINGLETON_RL = make_if(
+        iff(
+            equal(TEMPLATE_MY_PARENT_ID, args(0)),
+            quote(1),
+            equal(args(0), hexstr(origin_id)),
+        ),
+        sexp(),
+        fail(quote("Parent doesnt satisfy RL conditions")),
+    )
+    TEMPLATE_BLOCK_AGE = make_if(
+        iff(
+            equal(
+                multiply(args(5), quote(rate_amount)),
+                multiply(args(4), quote(interval_time)),
+            ),
+            quote(1),
+            quote(
+                greater(
+                    multiply(args(5), quote(rate_amount)),
+                    multiply(args(4)),  # multiply looks wrong
+                    quote(interval_time),
+                )
+            ),
+        ),
+        make_list(hexstr(opcode_coin_block_age), args(5)),
+        fail("wrong min block time"),
+    )
+    TEMPLATE_MY_ID = make_list(hexstr(opcode_myid), sha256(args(0), args(1), args(2)))
+    CREATE_CHANGE = make_list(
+        hexstr(opcode_create), args(1), subtract(args(2), add(args(4), args(8)))
+    )
+    CREATE_NEW_COIN = make_list(hexstr(opcode_create), args(3), args(4))
+    RATE_LIMIT_PUZZLE = make_list(
+        TEMPLATE_SINGLETON_RL,
+        TEMPLATE_BLOCK_AGE,
+        CREATE_CHANGE,
+        TEMPLATE_MY_ID,
+        CREATE_NEW_COIN,
+    )
 
-    TEMPLATE_MY_PARENT_ID_2 = sha256(args(8),
-                                     args(1),
-                                     args(7))
-    TEMPLATE_SINGLETON_RL_2 = make_if(iff(equal(TEMPLATE_MY_PARENT_ID_2,
-                                                args(5)),
-                                          quote(1),
-                                          equal(hexstr(origin_id),
-                                                args(5))),
-                                      sexp(),
-                                      fail(quote("Parent doesnt satisfy RL conditions")))
-    CREATE_CONSOLIDATED = make_list(hexstr(opcode_create),
-                                    args(1),
-                                    (add(args(4),
-                                         args(6))))
-    MODE_TWO_ME_STRING = make_list(hexstr(opcode_myid),
-                                   sha256(args(5),
-                                          args(1),
-                                          args(6)))
-    CREATE_LOCK = make_list(hexstr(opcode_create),
-                            sha256tree(make_list(quote(7),
-                                                 make_list(quote(5),
-                                                           make_list(quote(1),
-                                                                     sha256(args(2),
-                                                                            args(3),
-                                                                            args(4))),
-                                                           quote(make_list())))),  # why?
-                            quote(0))
-    MODE_TWO = make_list(TEMPLATE_SINGLETON_RL_2,
-                         MODE_TWO_ME_STRING,
-                         CREATE_LOCK,
-                         CREATE_CONSOLIDATED)
-    AGGSIG_ENTIRE_SOLUTION = make_list(hexstr(opcode_aggsig),
-                                       hexstr(hex_pk),
-                                       sha256tree(args()))
-    WHOLE_PUZZLE = cons(AGGSIG_ENTIRE_SOLUTION,
-                        make_if(equal(args(0), quote(1)),
-                                eval(quote(RATE_LIMIT_PUZZLE),
-                                     rest(args())),
-                                MODE_TWO))
-    CLAWBACK = cons(make_list(hexstr(opcode_aggsig),
-                              hexstr(clawback_pk_str),
-                              sha256tree(args())),
-                    rest(args()))
+    TEMPLATE_MY_PARENT_ID_2 = sha256(args(8), args(1), args(7))
+    TEMPLATE_SINGLETON_RL_2 = make_if(
+        iff(
+            equal(TEMPLATE_MY_PARENT_ID_2, args(5)),
+            quote(1),
+            equal(hexstr(origin_id), args(5)),
+        ),
+        sexp(),
+        fail(quote("Parent doesnt satisfy RL conditions")),
+    )
+    CREATE_CONSOLIDATED = make_list(
+        hexstr(opcode_create), args(1), (add(args(4), args(6)))
+    )
+    MODE_TWO_ME_STRING = make_list(
+        hexstr(opcode_myid), sha256(args(5), args(1), args(6))
+    )
+    CREATE_LOCK = make_list(
+        hexstr(opcode_create),
+        sha256tree(
+            make_list(
+                quote(7),
+                make_list(
+                    quote(5),
+                    make_list(quote(1), sha256(args(2), args(3), args(4))),
+                    quote(make_list()),
+                ),
+            )
+        ),  # why?
+        quote(0),
+    )
+    MODE_TWO = make_list(
+        TEMPLATE_SINGLETON_RL_2, MODE_TWO_ME_STRING, CREATE_LOCK, CREATE_CONSOLIDATED
+    )
+    AGGSIG_ENTIRE_SOLUTION = make_list(
+        hexstr(opcode_aggsig), hexstr(hex_pk), sha256tree(args())
+    )
+    WHOLE_PUZZLE = cons(
+        AGGSIG_ENTIRE_SOLUTION,
+        make_if(
+            equal(args(0), quote(1)),
+            eval(quote(RATE_LIMIT_PUZZLE), rest(args())),
+            MODE_TWO,
+        ),
+    )
+    CLAWBACK = cons(
+        make_list(hexstr(opcode_aggsig), hexstr(clawback_pk_str), sha256tree(args())),
+        rest(args()),
+    )
 
-    WHOLE_PUZZLE_WITH_CLAWBACK = \
-        make_if(equal(args(0), quote(3)),
-                CLAWBACK,
-                WHOLE_PUZZLE)
+    WHOLE_PUZZLE_WITH_CLAWBACK = make_if(
+        equal(args(0), quote(3)), CLAWBACK, WHOLE_PUZZLE
+    )
 
     return Program(binutils.assemble(WHOLE_PUZZLE_WITH_CLAWBACK))
 
