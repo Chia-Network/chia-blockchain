@@ -1,5 +1,6 @@
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, List
+import time
 
 from blspy import AugSchemeMPL
 
@@ -381,7 +382,44 @@ async def validate_unfinished_header_block(
                 return Err.INVALID_FOLIAGE_BLOCK_HASH
 
             # 18. Check prev block hash
-            # 19. Check timestamp
+            if header_block.height == 0:
+                if header_block.foliage_block.prev_block_hash != bytes([0] * 32):
+                    return Err.INVALID_PREV_BLOCK_HASH
+            else:
+                curr_sb: SubBlockRecord = prev_sb
+                while not curr_sb.is_block:
+                    curr_sb = sub_blocks[curr_sb.prev_hash]
+                if not header_block.foliage_block.prev_block_hash == curr_sb.header_hash:
+                    return Err.INVALID_PREV_BLOCK_HASH
+
+            # 19. The timestamp in Foliage Block must comply with the timestamp rules
+            if header_block.height > 0:
+                last_timestamps: List[uint64] = []
+                curr_sb: SubBlockRecord = sub_blocks[header_block.foliage_block.prev_block_hash]
+                while len(last_timestamps) < constants.NUMBER_OF_TIMESTAMPS:
+                    last_timestamps.append(curr_sb.timestamp)
+                    fetched: Optional[SubBlockRecord] = sub_blocks.get(curr_sb.prev_block_hash, None)
+                    if not fetched:
+                        break
+                    curr_sb = fetched
+                if len(last_timestamps) != constants.NUMBER_OF_TIMESTAMPS:
+                    # For blocks 1 to 10, average timestamps of all previous blocks
+                    assert curr_sb.height == 0
+                prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
+                if header_block.foliage_block.timestamp < prev_time:
+                    return Err.TIMESTAMP_TOO_FAR_IN_PAST
+                if header_block.foliage_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME):
+                    return Err.TIMESTAMP_TOO_FAR_IN_FUTURE
 
         # Wow, everything was valid, amazing!
         return None
+
+
+async def validate_finished_header_block(
+    constants: ConsensusConstants,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    height_to_hash: Dict[uint32, bytes32],
+    header_block: UnfinishedHeaderBlock,
+) -> Optional[Err]:
+    # TODO: implement
+    return None
