@@ -16,7 +16,7 @@ class IntroducerAPI:
         self.introducer = introducer
 
     @api_request
-    async def request_peers_with_peer_info(
+    async def request_peers(
         self,
         request: RequestPeers,
         peer: WSChiaConnection,

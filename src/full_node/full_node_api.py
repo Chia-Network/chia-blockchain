@@ -57,28 +57,19 @@ class FullNodeAPI:
     async def request_peers(
         self, request: full_node_protocol.RequestPeers, peer: WSChiaConnection
     ):
-        msgs = await self.full_node.full_node_peers.request_peers(peer)
-        await peer.send_messages(msgs)
+        await self.full_node.full_node_peers.request_peers(peer)
 
     @api_request
-    async def respond_peers_with_peer_info(
+    async def respond_peers(
         self,
         request: introducer_protocol.RespondPeers,
-        peer_info: PeerInfo,
         peer: WSChiaConnection,
     ):
-        await self.full_node.full_node_peers.respond_peers(request, peer_info, False)
+        await self.full_node.full_node_peers.respond_peers(
+            request, peer.get_peer_info(), True
+        )
         # Pseudo-message to close the connection
         await peer.close()
-
-    @api_request
-    async def respond_peers_full_node_with_peer_info(
-        self,
-        request: full_node_protocol.RespondPeers,
-        peer_info: PeerInfo,
-        peer: WSChiaConnection,
-    ):
-        await self.full_node.full_node_peers.respond_peers(request, peer_info, True)
 
     @api_request
     async def new_tip(self, request: full_node_protocol.NewTip, peer: WSChiaConnection):
