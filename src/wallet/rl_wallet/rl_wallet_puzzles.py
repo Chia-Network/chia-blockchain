@@ -51,8 +51,15 @@ def rl_puzzle_for_pk(
     TEMPLATE_SINGLETON_RL_2 = f'((c (i (i (= {TEMPLATE_MY_PARENT_ID_2} (f (r (r (r (r (r 1))))))) (q 1) (= (f (r (r (r (r (r 1)))))) (q 0x{origin_id}))) (q ()) (q (x (q "Parent doesnt satisfy RL conditions")))) 1))'  # noqa: E501
     CREATE_CONSOLIDATED = f"(c (q 0x{opcode_create}) (c (f (r 1)) (c (+ (f (r (r (r (r 1))))) (f (r (r (r (r (r (r 1)))))))) (q ()))))"  # noqa: E501
     MODE_TWO_ME_STRING = f"(c (q 0x{opcode_myid}) (c (sha256 (f (r (r (r (r (r 1)))))) (f (r 1)) (f (r (r (r (r (r (r 1)))))))) (q ())))"  # noqa: E501
-    CREATE_LOCK = f"(c (q 0x{opcode_create}) (c (sha256tree (c (q 7) (c (c (q 5) (c (c (q 1) (c (sha256 (f (r (r 1))) (f (r (r (r 1)))) (f (r (r (r (r 1)))))) (q ()))) (c (q (q ())) (q ())))) (q ())))) (c (q 0) (q ()))))"  # noqa: E501
-
+    CREATE_LOCK = make_list(hexstr(opcode_create),
+                            sha256tree(make_list(quote(7),
+                                                 make_list(quote(5),
+                                                           make_list(quote(1),
+                                                                     sha256(args(2),
+                                                                            args(3),
+                                                                            args(4))),
+                                                           quote(quote(make_list()))))),  # why?
+                            quote(0))
     MODE_TWO = make_list(TEMPLATE_SINGLETON_RL_2,
                          MODE_TWO_ME_STRING,
                          CREATE_LOCK,
