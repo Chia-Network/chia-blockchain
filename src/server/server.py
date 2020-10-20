@@ -13,6 +13,7 @@ from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
 from src.util.errors import ProtocolError, Err
+from src.util.ints import uint16
 from src.util.network import create_node_id
 from src.protocols.shared_protocol import protocol_version, Ping, Pong
 import traceback
@@ -112,7 +113,10 @@ class ChiaServer:
             self.global_connections[connection.peer_node_id] = connection
             if self.on_connect is not None:
                 await self.on_connect(connection)
-            if self._local_type is NodeType.INTRODUCER:
+            if (
+                self._local_type is NodeType.INTRODUCER
+                and connection.connection_type is NodeType.FULL_NODE
+            ):
                 self.introducer_peers.add(connection.get_peer_info())
         except Exception as e:
             error_stack = traceback.format_exc()
@@ -244,7 +248,7 @@ class ChiaServer:
             for message in messages:
                 await connection.send_message(message)
 
-    async def get_outgoing_connections(self) -> List[WSChiaConnection]:
+    def get_outgoing_connections(self) -> List[WSChiaConnection]:
         result = []
         for id, connection in self.global_connections.items():
             if connection.is_outbound:
@@ -277,7 +281,21 @@ class ChiaServer:
         await self.app_shut_down_task
         await self.site_shutdown_task
 
-    def get_peer_info(self):
-        host = ""
-        # Do aws get port
-        return PeerInfo(host, self._port)
+    async def get_peer_info(self) -> Optional[PeerInfo]:
+        ip = None
+        port = self._port
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get("https://checkip.amazonaws.com/") as resp:
+                    if resp.status == 200:
+                        ip = str(await resp.text())
+                        ip = ip.rstrip()
+        except Exception:
+            ip = None
+        if ip is None:
+            return None
+        peer = PeerInfo(ip, uint16(port))
+        if not peer.is_valid():
+            return None
+        return peer
