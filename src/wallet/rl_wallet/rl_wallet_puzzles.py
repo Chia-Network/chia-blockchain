@@ -184,7 +184,17 @@ def rl_make_solution_mode_2(
         "ascii"
     )
     primary_input = hexlify(my_primary_input).decode("ascii")
-    sol = f"(2 0x{my_puzzle_hash} 0x{consolidating_primary_input} 0x{consolidating_coin_puzzle_hash} {outgoing_amount} 0x{primary_input} {incoming_amount} {parent_amount} 0x{my_parent_parent_id})"  # noqa: E501
+    sol = sexp(
+        2,
+        "0x" + my_puzzle_hash,
+        "0x" + consolidating_primary_input,
+        "0x" + consolidating_coin_puzzle_hash,
+        outgoing_amount,
+        "0x" + primary_input,
+        incoming_amount,
+        parent_amount,
+        "0x" + str(my_parent_parent_id),
+    )
     return Program(binutils.assemble(sol))
 
 
