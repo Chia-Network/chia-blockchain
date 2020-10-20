@@ -34,3 +34,15 @@ class RewardChainSubBlock(Streamable):
     infusion_challenge_point_sig: G2Element
     ip_prev_ip: bytes32  # Prev block after infusion (or challenge slot hash if more recent)
     infusion_point: ClassgroupElement
+
+    def get_unfinished(self) -> RewardChainSubBlockUnfinished:
+        return RewardChainSubBlockUnfinished(
+            self.weight,
+            self.sub_block_height,
+            self.total_iters,
+            self.challenge_slot_hash,
+            self.proof_of_space,
+            self.icp_prev_ip,
+            self.infusion_challenge_point,
+            self.infusion_challenge_point_sig,
+        )
