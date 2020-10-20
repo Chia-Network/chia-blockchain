@@ -150,7 +150,6 @@ class TestDIDWallet:
         did_wallet_2.create_backup(filename)
 
         # Wallet2 recovers DIDWallet2 to a new set of keys
-        breakpoint()
         did_wallet_3 = await DIDWallet.create_new_did_wallet_from_recovery(wallet_node_2.wallet_state_manager, wallet2, filename)
 
         parent_innerpuzhash_amounts_for_recovery_ids = [did_wallet.get_info_for_recovery()]

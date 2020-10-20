@@ -462,14 +462,49 @@ class DIDWallet:
                 backup_ids.append(bytes.fromhex(d))
             innerpuz = Program.from_bytes(bytes.fromhex(details[2]))
             full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, genesis_id)
-            coin = await self.wallet_state_manager.search_blockrecords_for_puzzlehash(full_puz.get_tree_hash())
+            height, header_hash = await self.wallet_state_manager.search_blockrecords_for_puzzlehash(full_puz.get_tree_hash())
+            if header_hash is not None:
+                data: Dict[str, Any] = {
+                    "data": {
+                        "action_data": {
+                            "api_name": "request_generator",
+                            "height": height,
+                            "header_hash": header_hash,
+                        }
+                    }
+                }
+
+                data_str = dict_to_json_str(data)
+                await self.wallet_state_manager.create_action(
+                    name="request_generator",
+                    wallet_id=self.id(),
+                    type=self.type(),
+                    callback="load_backup_callback",
+                    done=False,
+                    data=data_str,
+                )
+            else:
+                raise
             did_info = DIDInfo(
-                genesis_id, backup_ids, [], innerpuz, coin
+                genesis_id, backup_ids, [], innerpuz, None
             )
             await self.save_info(did_info)
             return
         except Exception as e:
             raise e
+
+    async def load_backup_callback(
+        self, height: uint32, header_hash: bytes32, generator: Program, action_id: int
+    ):
+        """ Notification that wallet has received a generator it asked for. """
+        block: Optional[
+            BlockRecord
+        ] = await self.wallet_state_manager.wallet_store.get_block_record(header_hash)
+        assert block is not None
+        if block.removals is not None:
+            parent_found = await self.search_for_parent_info(generator, block.removals)
+            if parent_found:
+                await self.wallet_state_manager.set_action_done(action_id)
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
