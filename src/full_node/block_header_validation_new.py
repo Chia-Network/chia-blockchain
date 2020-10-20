@@ -433,7 +433,10 @@ async def validate_finished_header_block(
     height_to_hash: Dict[uint32, bytes32],
     header_block: HeaderBlock,
 ) -> Optional[Err]:
-    # TODO: implement
+    """
+    Fully validates the header of a sub-block. A header block is the same as a full block, but
+    without transactions and transaction info.
+    """
 
     unfinished_header_block = UnfinishedHeaderBlock(
         header_block.subepoch_summary,
@@ -453,19 +456,66 @@ async def validate_finished_header_block(
     if validate_unfinished_result is not None:
         return validate_unfinished_result
 
+    prev_sb: SubBlockRecord = sub_blocks[header_block.prev_header_hash]
     new_slot: bool = len(header_block.finished_slots) > 0
-    makes_challenge_block: bool = new_slot and header_block.finished_slots[0][1].deficit == 0
     ips: uint64 = get_next_ips(constants, sub_blocks, height_to_hash, header_block.prev_header_hash, new_slot)
-    # ip_iters: uint64 = calculate_infusion_point_iters(constants, ips, /)
+    q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
+        constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
+    )
+    # TODO: remove redundant verification of PoSpace
+    required_iters: uint64 = calculate_iterations_quality(
+        q_str,
+        header_block.reward_chain_sub_block.proof_of_space.size,
+    )
+    icp_iters: uint64 = calculate_infusion_challenge_point_iters(constants, ips, required_iters)
+    ip_iters: uint64 = calculate_infusion_point_iters(constants, ips, required_iters)
 
-    # 23. Check challenge chain infusion point VDF
+    makes_challenge_block: bool = new_slot and header_block.finished_slots[0][1].deficit == 0
     if makes_challenge_block:
-        vdf_challenge = header_block.finished_slots[-1][0].get_hash()
+        # 23. Check challenge chain infusion point VDF
+        cc_vdf_challenge: bytes32 = header_block.finished_slots[-1][0].get_hash()
+        if not validate_composite_proof_of_time(
+            constants,
+            cc_vdf_challenge,
+            ip_iters,
+            header_block.challenge_chain_ip_pot[-1].output,
+            header_block.challenge_chain_ip_pot,
+        ):
+            return Err.INVALID_CC_IP_VDF
 
     else:
-        pass
+        if header_block.challenge_chain_ip_pot:
+            return Err.IP_SHOULD_BE_NONE
+
     # 24. Check reward chain infusion point prev
+    # Check from more recent of (slot start, ICP, prev_block)
+    slot_start: uint128 = header_block.reward_chain_sub_block.total_iters - ip_iters
+    icp: uint128 = slot_start + icp_iters
+    if prev_sb.total_iters == min(prev_sb.total_iters, slot_start, icp):
+        rc_vdf_challenge: bytes32 = prev_sb.reward_infusion_output
+    elif icp == min(prev_sb.total_iters, slot_start, icp):
+        rc_vdf_challenge = header_block.reward_chain_sub_block.infusion_challenge_point.get_hash()
+    else:
+        if new_slot:
+            rc_vdf_challenge = header_block.finished_slots[-1][1].get_hash()
+        else:
+            curr = prev_sb
+            while curr.finished_challenge_slot_hashes is None:
+                curr = sub_blocks[curr.prev_hash]
+            rc_vdf_challenge = curr.finished_reward_slot_hashes[-1]
+
     # 25. Check reward chain infusion point VDF
+    if not validate_composite_proof_of_time(
+        constants,
+        rc_vdf_challenge,
+        ip_iters,
+        header_block.reward_chain_ip_pot[-1].output,
+        header_block.reward_chain_ip_pot,
+    ):
+        return Err.INVALID_CC_IP_VDF
+
     # 26. Check reward block hash
+    if header_block.foliage_sub_block.reward_block_hash != header_block.reward_chain_sub_block.get_hash():
+        return Err.INVALID_REWARD_BLOCK_HASH
 
     return None
