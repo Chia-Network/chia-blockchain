@@ -44,7 +44,9 @@ def rl_puzzle_for_pk(
     TEMPLATE_BLOCK_AGE = f'((c (i (i (= (* (f (r (r (r (r (r 1)))))) (q {rate_amount})) (* (f (r (r (r (r 1))))) (q {interval_time}))) (q 1) (q (> (* (f (r (r (r (r (r 1)))))) (q {rate_amount})) (* (f (r (r (r (r 1)))))) (q {interval_time})))) (q (c (q 0x{opcode_coin_block_age}) (c (f (r (r (r (r (r 1)))))) (q ())))) (q (x (q "wrong min block time")))) 1 ))'  # noqa: E501
     TEMPLATE_MY_ID = f"(c (q 0x{opcode_myid}) (c (sha256 (f 1) (f (r 1)) (f (r (r 1)))) (q ())))"  # noqa: E501
     CREATE_CHANGE = f"(c (q 0x{opcode_create}) (c (f (r 1)) (c (- (f (r (r 1))) (+ (f (r (r (r (r 1))))) (f (r (r (r (r (r (r (r (r 1))))))))))) (q ()))))"  # noqa: E501
-    CREATE_NEW_COIN = f"(c (q 0x{opcode_create}) (c (f (r (r (r 1)))) (c (f (r (r (r (r 1))))) (q ()))))"  # noqa: E501
+    CREATE_NEW_COIN = make_list(hexstr(opcode_create),
+                                args(3),
+                                args(4))
     RATE_LIMIT_PUZZLE = make_list(TEMPLATE_SINGLETON_RL,
                                   TEMPLATE_BLOCK_AGE,
                                   CREATE_CHANGE,
