@@ -151,6 +151,7 @@ class TestWalletStore:
                 None,
                 None,
                 uint64(0),
+                None
             )
             assert await store.get_block_record(br_1.header_hash) is None
             await store.add_block_record(br_1, False)
