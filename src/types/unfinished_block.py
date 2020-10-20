@@ -9,6 +9,7 @@ from src.types.reward_chain_sub_block import RewardChainSubBlockUnfinished
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
 from src.types.program import Program
 from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 
 @dataclass(frozen=True)
@@ -49,3 +50,19 @@ class UnfinishedBlock(Streamable):
 
     def is_block(self):
         return self.foliage_sub_block.is_block
+
+    def get_unfinished_header_block(self):
+        """
+        Returns the block but without TransactionInfo and Transactions generator
+        """
+        return UnfinishedHeaderBlock(
+            self.subepoch_summary,
+            self.finished_slots,
+            self.challenge_chain_icp_pot,
+            self.challenge_chain_icp_signature,
+            self.reward_chain_sub_block,
+            self.reward_chain_icp_pot,
+            self.foliage_sub_block,
+            self.foliage_block,
+            self.transactions_filter,
+        )
