@@ -6,7 +6,7 @@ from blspy import AugSchemeMPL
 from src.consensus.constants import ConsensusConstants
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.full_node.sub_block_record import SubBlockRecord
 from src.full_node.difficulty_adjustment import get_next_ips, get_next_difficulty
@@ -14,6 +14,7 @@ from src.types.proof_of_time import validate_composite_proof_of_time
 from src.consensus.pot_iterations import (
     is_overflow_sub_block,
     calculate_infusion_point_iters,
+    calculate_infusion_challenge_point_iters,
     calculate_slot_iters,
     calculate_iterations_quality,
 )
@@ -39,7 +40,6 @@ async def validate_unfinished_header_block(
     prev_sb: SubBlockRecord = sub_blocks[header_block.prev_header_hash]
     challenge: Optional[bytes32] = None
     new_slot: bool = len(header_block.finished_slots) > 0
-    overflow: bool = False
 
     # 1. Check finished slots
     if not new_slot:
@@ -224,7 +224,7 @@ async def validate_unfinished_header_block(
             if have_ses_hash or header_block.subepoch_summary is not None:
                 return Err.INVALID_SUB_EPOCH_SUMMARY
 
-        # 3a. Check proof of space
+        # 3. Check proof of space
         q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
             constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
         )
@@ -236,10 +236,13 @@ async def validate_unfinished_header_block(
         )
 
         ips: uint64 = get_next_ips(constants, sub_blocks, height_to_hash, prev_sb.header_hash, new_slot)
-        icp_iters: uint64 = calculate_infusion_point_iters(constants, ips, required_iters)
+        icp_iters: uint64 = calculate_infusion_challenge_point_iters(constants, ips, required_iters)
+        ip_iters: uint64 = calculate_infusion_point_iters(constants, ips, required_iters)
+        slot_iters: uint64 = calculate_slot_iters(constants, ips)
+        overflow = is_overflow_sub_block(constants, ips, required_iters)
 
         # If sub_block state is correct, we should always find a challenge here
-        if is_overflow_sub_block(constants, ips, required_iters):
+        if overflow:
             # Overflow infusion, so get the second to last challenge
             challenges_to_look_for = 2
         else:
@@ -253,7 +256,7 @@ async def validate_unfinished_header_block(
             curr = sub_blocks[curr.prev_hash]
         assert challenge is not None
 
-        # 3b. Check challenge in proof of space is valid
+        # 4. Check challenge in proof of space is valid
         if challenge != header_block.reward_chain_sub_block.proof_of_space.challenge_hash:
             return Err.INVALID_POSPACE_CHALLENGE
 
@@ -261,7 +264,7 @@ async def validate_unfinished_header_block(
         makes_challenge_block: bool = new_slot and header_block.finished_slots[0][1].deficit == 0
 
         if makes_challenge_block:
-            # 4a. Check cc icp
+            # 5a. Check cc icp
             cc_icp_challenge: bytes32 = header_block.finished_slots[-1][0].get_hash()
             output: bytes32 = header_block.reward_chain_sub_block.infusion_point
             if not await validate_composite_proof_of_time(
@@ -269,19 +272,116 @@ async def validate_unfinished_header_block(
             ):
                 return Err.INVALID_CC_ICP_VDF
 
-            # 4b. Check cc icp sig
+            # 5b. Check cc icp sig
             if not AugSchemeMPL.verify(
                 header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
-                bytes(header_block.reward_chain_sub_block),
+                bytes(header_block.challenge_chain_icp_pot[-1].output),
                 header_block.challenge_chain_icp_signature,
             ):
                 return Err.INVALID_CC_SIGNATURE
         else:
-            # 5. Else, check that these are empty
+            # 6. Else, check that these are empty
             if (
                 header_block.challenge_chain_icp_pot is not None
                 or header_block.challenge_chain_icp_signature is not None
             ):
                 return Err.CANNOT_MAKE_CC_BLOCK
 
-        # 6.
+        # 7. Check total iters
+        prev_sb_iters = calculate_infusion_point_iters(constants, prev_sb.ips, prev_sb.required_iters)
+        if new_slot:
+            total_iters: uint128 = prev_sb.total_iters
+            prev_sb_slot_iters = calculate_slot_iters(constants, prev_sb.ips)
+            # Add the rest of the slot of prev_sb
+            total_iters += prev_sb_slot_iters - prev_sb_iters
+            # Add other empty slots
+            total_iters += slot_iters * (len(header_block.finished_slot) - 1)
+        else:
+            # Slot iters is guaranteed to be the same for header_block and prev_sb
+            # This takes the beginning of the slot, and adds ip_iters
+            total_iters = uint128(prev_sb.total_iters - prev_sb_iters) + ip_iters
+        if total_iters != header_block.reward_chain_sub_block.total_iters:
+            return Err.INVALID_TOTAL_ITERS
+
+        # 8. Check icp_prev_ip
+        if new_slot and not overflow:
+            # Start from start of this slot. Case of no overflow slots.
+            if header_block.reward_chain_sub_block.icp_prev_ip != header_block.finished_slots[-1][1].get_hash():
+                return Err.INVALID_RC_ICP_PREV_IP
+        elif new_slot and overflow and len(header_block.finished_slots) > 1:
+            # Start from start of prev slot. Rare case of empty prev slot.
+            if header_block.reward_chain_sub_block.icp_prev_ip != header_block.finished_slots[-2][1].get_hash():
+                return Err.INVALID_RC_ICP_PREV_IP
+        else:
+            # Start from prev block. This is when there is no new slot or if there is a new slot and we overflow
+            # but the prev block was is in the same slot (prev slot). This is the normal overflow case.
+            if header_block.reward_chain_sub_block.icp_prev_ip != prev_sb.reward_infusion_output:
+                return Err.INVALID_RC_ICP_PREV_IP
+
+        # 9. Check icp
+        if not await validate_composite_proof_of_time(
+            constants,
+            header_block.reward_chain_sub_block.icp_prev_ip,
+            icp_iters,
+            header_block.reward_chain_sub_block.infusion_challenge_point,
+            header_block.reward_chain_icp_pot,
+        ):
+            return Err.INVALID_RC_ICP_VDF
+
+        # 10. Check icp signature
+        if not AugSchemeMPL.verify(
+            header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
+            bytes(header_block.reward_chain_sub_block.infusion_challenge_point),
+            header_block.reward_chain_sub_block.infusion_challenge_point_sig,
+        ):
+            return Err.INVALID_RC_SIGNATURE
+
+        # 11. Check is_block
+        if (total_iters - ip_iters + icp_iters > prev_sb.total_iters) != header_block.foliage_sub_block.is_block:
+            return Err.INVALID_IS_BLOCK
+
+        # 12. Check foliage signature by plot key
+        if not AugSchemeMPL.verify(
+            header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
+            bytes(header_block.foliage_sub_block.signed_data),
+            header_block.foliage_sub_block.plot_key_signature,
+        ):
+            return Err.INVALID_PLOT_SIGNATURE
+
+        # 13. Check unfinished reward chain sub block hash
+        if (
+            header_block.reward_chain_sub_block.get_hash()
+            != header_block.foliage_sub_block.signed_data.unfinished_reward_block_hash
+        ):
+            return Err.INVALID_URSB_HASH
+
+        # 14. Check pool target max height
+        if (
+            header_block.foliage_sub_block.signed_data.pool_target.max_height != 0
+            and header_block.foliage_sub_block.signed_data.pool_target.max_height < header_block.height
+        ):
+            return Err.OLD_POOL_TARGET
+
+        # 15. Check pool target signature
+        if not AugSchemeMPL.verify(
+            header_block.reward_chain_sub_block.proof_of_space.pool_public_key,
+            bytes(header_block.foliage_sub_block.signed_data.pool_target),
+            header_block.foliage_sub_block.signed_data.pool_signature,
+        ):
+            return Err.INVALID_POOL_SIGNATURE
+
+        # 16. Check extension data if applicable. None for mainnet.
+        # 17. Check if foliage block is present
+        if header_block.foliage_sub_block.is_block != (header_block.foliage_block is not None):
+            return Err.INVALID_FOLIAGE_BLOCK_PRESENCE
+
+        if header_block.foliage_block is not None:
+            # 17. Check foliage block hash
+            if header_block.foliage_block.get_hash() != header_block.foliage_sub_block.signed_data.foliage_block_hash:
+                return Err.INVALID_FOLIAGE_BLOCK_HASH
+
+            # 18. Check prev block hash
+            # 19. Check timestamp
+
+        # Wow, everything was valid, amazing!
+        return None
