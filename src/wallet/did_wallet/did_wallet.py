@@ -141,13 +141,13 @@ class DIDWallet:
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
         )
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         # load backup will also set our DIDInfo
         await self.load_backup(filename)
 
         if self.wallet_info is None:
             raise ValueError("Internal Error")
         self.wallet_id = self.wallet_info.id
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         return self
 
     @staticmethod
@@ -308,7 +308,6 @@ class DIDWallet:
         """ Notification from wallet state manager that wallet has been received. """
         self.log.info("DID wallet has been notified that coin was added")
 
-        search_for_parent: bool = True
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
         new_info = DIDInfo(
             self.did_info.my_did,
@@ -324,124 +323,6 @@ class DIDWallet:
         )
 
         await self.add_parent(coin.name(), future_parent)
-
-        for name, ccparent in self.did_info.parent_info:
-            if coin.parent_coin_info == name:
-                search_for_parent = False
-                break
-
-        if search_for_parent:
-            data: Dict[str, Any] = {
-                "data": {
-                    "action_data": {
-                        "api_name": "request_generator",
-                        "height": height,
-                        "header_hash": header_hash,
-                    }
-                }
-            }
-
-            data_str = dict_to_json_str(data)
-            await self.wallet_state_manager.create_action(
-                name="request_generator",
-                wallet_id=self.wallet_info.id,
-                type=self.wallet_info.type,
-                callback="generator_received",
-                done=False,
-                data=data_str,
-            )
-
-    # This is used in the case of recovery
-    async def search_for_parent_info(
-        self, block_program: Program, removals: List[Coin]
-    ) -> bool:
-
-        """
-        Returns an error if it's unable to evaluate, otherwise
-        returns a list of NPC (coin_name, solved_puzzle_hash, conditions_dict)
-        """
-        try:
-            cost_run, sexp = block_program.run_with_cost([])
-        except EvalError:
-            return False
-
-        for name_solution in sexp.as_iter():
-            _ = name_solution.as_python()
-            if len(_) != 2:
-                return False
-            if not isinstance(_[0], bytes) or len(_[0]) != 32:
-                return False
-            coin_name = bytes32(_[0])
-            if not isinstance(_[1], list) or len(_[1]) != 2:
-                return False
-            puzzle_solution_program = name_solution.rest().first()
-            puzzle_program = puzzle_solution_program.first()
-            try:
-                error, conditions_dict, cost_run = conditions_dict_for_solution(
-                    puzzle_solution_program
-                )
-                if error:
-                    return False
-            except clvm.EvalError:
-
-                return False
-            if conditions_dict is None:
-                conditions_dict = {}
-
-            if ConditionOpcode.CREATE_COIN in conditions_dict:
-                created_output_conditions = conditions_dict[ConditionOpcode.CREATE_COIN]
-            else:
-                continue
-            for cvp in created_output_conditions:
-                result = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(
-                    cvp.var1
-                )
-                if result is None:
-                    continue
-
-                wallet_id, wallet_type = result
-                if wallet_id != self.wallet_info.id:
-                    continue
-
-                coin = None
-                for removed in removals:
-                    if removed.name() == coin_name:
-                        coin = removed
-                        break
-
-                if coin is not None:
-                    if did_wallet_puzzles.check_is_did_puzzle(puzzle_program):
-                        inner_puzzle_hash = did_wallet_puzzles.get_innerpuzzle_from_puzzle(
-                            puzzle_program
-                        )
-                        self.log.info(
-                            f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle_hash.hex()}"
-                        )
-
-                        await self.add_parent(
-                            coin_name,
-                            CCParent(
-                                coin.parent_coin_info, inner_puzzle_hash, coin.amount
-                            ),
-                        )
-
-                return True
-
-        return False
-
-    async def generator_received(
-        self, height: uint32, header_hash: bytes32, generator: Program, action_id: int
-    ):
-        """ Notification that wallet has received a generator it asked for. """
-        block: Optional[
-            BlockRecord
-        ] = await self.wallet_state_manager.wallet_store.get_block_record(header_hash)
-        assert block is not None
-        breakpoint()
-        if block.removals is not None:
-            parent_found = await self.search_for_parent_info(generator, block.removals)
-            if parent_found:
-                await self.wallet_state_manager.set_action_done(action_id)
 
     def create_backup(self, filename: str):
         try:
@@ -507,11 +388,52 @@ class DIDWallet:
             BlockRecord
         ] = await self.wallet_state_manager.wallet_store.get_block_record(header_hash)
         assert block is not None
-        breakpoint()
-        if block.removals is not None:
-            parent_found = await self.search_for_parent_info(generator, block.removals)
-            if parent_found:
-                await self.wallet_state_manager.set_action_done(action_id)
+        full_puz = did_wallet_puzzles.create_fullpuz(self.did_info.current_inner, self.did_info.my_did)
+        fullpuzhash = full_puz.get_tree_hash()
+        spent_coins = []
+        try:
+            cost_run, sexp = generator.run_with_cost([])
+        except EvalError:
+            return False
+        for name_solution in sexp.as_iter():
+            _ = name_solution.as_python()
+            if len(_) != 2:
+                return False
+            if not isinstance(_[0], bytes) or len(_[0]) != 32:
+                return False
+            coin_name = bytes32(_[0])
+            if not isinstance(_[1], list) or len(_[1]) != 2:
+                return False
+            puzzle_solution_program = name_solution.rest().first()
+            try:
+                error, conditions_dict, cost_run = conditions_dict_for_solution(
+                    puzzle_solution_program
+                )
+                if error:
+                    return False
+            except clvm.EvalError:
+
+                return False
+            if conditions_dict is None:
+                conditions_dict = {}
+
+            if ConditionOpcode.CREATE_COIN in conditions_dict:
+                for varpair in conditions_dict[ConditionOpcode.CREATE_COIN]:
+                    if varpair.var1 == fullpuzhash:
+                        spent_coins.append(coin_name)
+                        my_coin = Coin(coin_name, fullpuzhash, int.from_bytes(varpair.var2, "big"))
+                        future_parent = CCParent(
+                            coin_name, self.did_info.current_inner.get_tree_hash(), int.from_bytes(varpair.var2, "big"),
+                        )
+                        await self.add_parent(my_coin.name(), future_parent)
+            for c in spent_coins:
+                my_coin = Coin(c, fullpuzhash, int.from_bytes(varpair.var2, "big"))
+                if my_coin.name() not in spent_coins:
+                    did_info = DIDInfo(
+                        self.did_info.my_did, self.did_info.backup_ids, self.did_info.parent_info, self.did_info.current_inner, my_coin
+                    )
+                    await self.save_info(did_info)
+        await self.wallet_state_manager.set_action_done(action_id)
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
@@ -713,7 +635,6 @@ class DIDWallet:
             spend_bundle = spend_bundle.aggregate(
                 [spend_bundle, SpendBundle(list_of_solutions, aggsig)]
             )
-
         did_record = TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),

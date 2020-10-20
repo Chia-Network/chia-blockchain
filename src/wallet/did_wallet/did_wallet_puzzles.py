@@ -85,6 +85,8 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
 
 
 def create_recovery_message_puzzle(recovering_coin, newpuz, pubkey):
+    if isinstance(pubkey, bytes):
+        pubkey = pubkey.hex()
     puzstring = f"(r (c (q 0x{recovering_coin}) (q ((50 0x{pubkey} 0x{newpuz})))))"
     puz = binutils.assemble(puzstring)
     # return DID_RECOVERY_MESSAGE_MOD.curry(recovering_coin, newpuz, pubkey)
