@@ -45,7 +45,11 @@ def rl_puzzle_for_pk(
     TEMPLATE_MY_ID = f"(c (q 0x{opcode_myid}) (c (sha256 (f 1) (f (r 1)) (f (r (r 1)))) (q ())))"  # noqa: E501
     CREATE_CHANGE = f"(c (q 0x{opcode_create}) (c (f (r 1)) (c (- (f (r (r 1))) (+ (f (r (r (r (r 1))))) (f (r (r (r (r (r (r (r (r 1))))))))))) (q ()))))"  # noqa: E501
     CREATE_NEW_COIN = f"(c (q 0x{opcode_create}) (c (f (r (r (r 1)))) (c (f (r (r (r (r 1))))) (q ()))))"  # noqa: E501
-    RATE_LIMIT_PUZZLE = f"(c {TEMPLATE_SINGLETON_RL} (c {TEMPLATE_BLOCK_AGE} (c {CREATE_CHANGE} (c {TEMPLATE_MY_ID} (c {CREATE_NEW_COIN} (q ()))))))"  # noqa: E501
+    RATE_LIMIT_PUZZLE = make_list(TEMPLATE_SINGLETON_RL,
+                                  TEMPLATE_BLOCK_AGE,
+                                  CREATE_CHANGE,
+                                  TEMPLATE_MY_ID,
+                                  CREATE_NEW_COIN)
 
     TEMPLATE_MY_PARENT_ID_2 = sha256(args(8),
                                      args(1),
