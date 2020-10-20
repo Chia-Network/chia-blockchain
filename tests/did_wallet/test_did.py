@@ -150,7 +150,9 @@ class TestDIDWallet:
         did_wallet_2.create_backup(filename)
 
         # Wallet2 recovers DIDWallet2 to a new set of keys
-        did_wallet_3 = await DIDWallet.create_new_did_wallet_from_recovery(wallet_node_2.wallet_state_manager, wallet2, filename)
+        did_wallet_3 = await DIDWallet.create_new_did_wallet_from_recovery(
+            wallet_node_2.wallet_state_manager, wallet2, filename
+        )
         coins = await did_wallet_2.select_coins(1)
         coin = coins.copy().pop()
         assert did_wallet_3.did_info.temp_coin == coin
@@ -165,7 +167,9 @@ class TestDIDWallet:
                 )
             ).pubkey
         )
-        message_spend_bundle = await did_wallet.create_attestment(did_wallet_3.did_info.temp_coin.name(), newpuzhash, pubkey)
+        message_spend_bundle = await did_wallet.create_attestment(
+            did_wallet_3.did_info.temp_coin.name(), newpuzhash, pubkey
+        )
         await did_wallet_3.recovery_spend(
             did_wallet_3.did_info.temp_coin,
             newpuzhash,
