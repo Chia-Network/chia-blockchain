@@ -53,7 +53,7 @@ def rl_puzzle_for_pk(
                                           quote(1),
                                           equal(hexstr(origin_id),
                                                 args(5))),
-                                      make_list(),
+                                      sexp(),
                                       fail(quote("Parent doesnt satisfy RL conditions")))
     CREATE_CONSOLIDATED = make_list(hexstr(opcode_create),
                                     args(1),
@@ -70,7 +70,7 @@ def rl_puzzle_for_pk(
                                                                      sha256(args(2),
                                                                             args(3),
                                                                             args(4))),
-                                                           quote(quote(make_list()))))),  # why?
+                                                           quote(make_list())))),  # why?
                             quote(0))
     MODE_TWO = make_list(TEMPLATE_SINGLETON_RL_2,
                          MODE_TWO_ME_STRING,

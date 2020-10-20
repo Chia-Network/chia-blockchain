@@ -28,11 +28,11 @@ class TestChialisp:
     def test_args(self):
         assert args() == "1"
         assert args(0) == "2"
-        assert args(1) == "6"
-        assert args(2) == "14"
-        assert args(2, 0) == "28"
-        assert args(2, 1) == "58"
-        assert args(2, 2) == "118"
+        assert args(1) == "5"
+        assert args(2) == "11"
+        assert args(2, 0) == "22"
+        assert args(2, 1) == "45"
+        assert args(2, 2) == "91"
 
     def test_eval(self):
         assert eval("code") == "((c code 1))"

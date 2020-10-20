@@ -26,13 +26,10 @@ def nth(obj, *path):
         return nth(rest(obj), *(path[0]-1,) + path[1:])
 
 
-def args(*path, p=NodePath()):
+def args(*path, p=1):
     if len(path) == 0:
-        return str(p.as_short_path())
-    if path[0] == 0:
-        return args(*path[1:], p=p.first())
-    else:
-        return args(*(path[0] - 1,) + path[1:], p=p.rest())
+        return str(p)
+    return args(*path[1:], p=(2 * p << path[0]) | (2 ** path[0] - 1))
 
 
 def eval(code, env=args()):
