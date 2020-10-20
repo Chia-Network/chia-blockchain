@@ -53,8 +53,10 @@ def rl_puzzle_for_pk(
     MODE_TWO_ME_STRING = f"(c (q 0x{opcode_myid}) (c (sha256 (f (r (r (r (r (r 1)))))) (f (r 1)) (f (r (r (r (r (r (r 1)))))))) (q ())))"  # noqa: E501
     CREATE_LOCK = f"(c (q 0x{opcode_create}) (c (sha256tree (c (q 7) (c (c (q 5) (c (c (q 1) (c (sha256 (f (r (r 1))) (f (r (r (r 1)))) (f (r (r (r (r 1)))))) (q ()))) (c (q (q ())) (q ())))) (q ())))) (c (q 0) (q ()))))"  # noqa: E501
 
-    MODE_TWO = f"(c {TEMPLATE_SINGLETON_RL_2} (c {MODE_TWO_ME_STRING} (c {CREATE_LOCK} (c {CREATE_CONSOLIDATED} (q ())))))"  # noqa: E501
-
+    MODE_TWO = make_list(TEMPLATE_SINGLETON_RL_2,
+                         MODE_TWO_ME_STRING,
+                         CREATE_LOCK,
+                         CREATE_CONSOLIDATED)
     AGGSIG_ENTIRE_SOLUTION = make_list(hexstr(opcode_aggsig),
                                        hexstr(hex_pk),
                                        sha256tree(args()))
