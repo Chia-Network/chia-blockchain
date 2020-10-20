@@ -11,11 +11,6 @@ from blspy import AugSchemeMPL
 from chiabip158 import PyBIP158
 
 from src.consensus.constants import ConsensusConstants
-from src.full_node.block_header_validation import (
-    validate_unfinished_block_header,
-    validate_finished_block_header,
-    pre_validate_finished_block_header,
-)
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters
@@ -40,6 +35,7 @@ from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.types.name_puzzle_condition import NPC
+from src.full_node.block_header_validation_new import validate_unfinished_header_block, validate_finished_header_block
 
 log = logging.getLogger(__name__)
 
@@ -240,17 +236,12 @@ class Blockchain:
 
         curr_header_block = block.get_header_block()
         assert curr_header_block is not None
-        # Validate block header
-        # TODO(mariano): check
-        error_code: Optional[Err] = await validate_finished_block_header(
+
+        error_code: Optional[Err] = await validate_finished_header_block(
             self.constants,
             self.sub_blocks,
             self.height_to_hash,
             curr_header_block,
-            prev_header_block,
-            genesis,
-            pre_validated,
-            pos_quality_string,
         )
 
         if error_code is not None:
@@ -327,42 +318,43 @@ class Blockchain:
         self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
         # TODO(mariano): review
-        futures = []
-        # Pool of workers to validate blocks concurrently
-        for block in blocks:
-            if self._shut_down:
-                return [(False, None) for _ in range(len(blocks))]
-            futures.append(
-                asyncio.get_running_loop().run_in_executor(
-                    self.pool,
-                    pre_validate_finished_block_header,
-                    self.constants,
-                    bytes(block),
-                )
-            )
-        results = await asyncio.gather(*futures)
+        # futures = []
+        # # Pool of workers to validate blocks concurrently
+        # for block in blocks:
+        #     if self._shut_down:
+        #         return [(False, None) for _ in range(len(blocks))]
+        #     futures.append(
+        #         asyncio.get_running_loop().run_in_executor(
+        #             self.pool,
+        #             pre_validate_finished_block_header,
+        #             self.constants,
+        #             bytes(block),
+        #         )
+        #     )
+        # results = await asyncio.gather(*futures)
+        #
+        # for i, (val, pos) in enumerate(results):
+        #     if pos is not None:
+        #         pos = bytes32(pos)
+        #     results[i] = val, pos
+        # return results
+        return []
 
-        for i, (val, pos) in enumerate(results):
-            if pos is not None:
-                pos = bytes32(pos)
-            results[i] = val, pos
-        return results
-
-    async def validate_unfinished_block(self, block: FullBlock, prev_full_block: FullBlock) -> Optional[Err]:
-        # TODO(mariano): review
-        prev_hb = prev_full_block.get_header_block()
-        assert prev_hb is not None
-        err = await validate_unfinished_block_header(
+    async def validate_unfinished_block(self, block: UnfinishedBlock) -> Optional[Err]:
+        error_code: Optional[Err] = await validate_finished_header_block(
             self.constants,
             self.sub_blocks,
             self.height_to_hash,
-            block.header,
-            block.proof_of_space,
-            prev_hb,
-            False,
+            block.get_unfinished_header_block(),
         )
-        if err is not None:
-            return err
+
+        if error_code is not None:
+            return error_code
+
+        error_code = await self.validate_block_body(block)
+
+        if error_code is not None:
+            return error_code
 
         return await self.validate_block_body(block)
 
