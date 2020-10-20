@@ -5,7 +5,7 @@ from time import struct_time, localtime
 
 from typing import List, Optional
 
-from src.server.connection import NodeType
+from src.server.outbound_message import NodeType
 from src.types.header_block import HeaderBlock
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.byte_types import hexstr_to_bytes

@@ -167,16 +167,7 @@ class WalletNode:
 
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
-        self.wallet_peers = WalletPeers(
-            self.server,
-            self.root_path,
-            self.config["target_peer_count"],
-            self.config["wallet_peers_path"],
-            self.config["introducer_peer"],
-            self.config["peer_connect_interval"],
-            self.log,
-        )
-        await self.wallet_peers.start()
+
         asyncio.create_task(self._periodically_check_full_node())
         return True
 
@@ -285,6 +276,16 @@ class WalletNode:
 
     def _set_server(self, server: ChiaServer):
         self.server = server
+        self.wallet_peers = WalletPeers(
+            self.server,
+            self.root_path,
+            self.config["target_peer_count"],
+            self.config["wallet_peers_path"],
+            self.config["introducer_peer"],
+            self.config["peer_connect_interval"],
+            self.log,
+        )
+        asyncio.create_task(self.wallet_peers.start())
 
     async def _on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:
