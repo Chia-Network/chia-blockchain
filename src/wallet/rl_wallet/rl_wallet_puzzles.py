@@ -55,10 +55,9 @@ def rl_puzzle_for_pk(
 
     MODE_TWO = f"(c {TEMPLATE_SINGLETON_RL_2} (c {MODE_TWO_ME_STRING} (c {CREATE_LOCK} (c {CREATE_CONSOLIDATED} (q ())))))"  # noqa: E501
 
-    AGGSIG_ENTIRE_SOLUTION = (
-        f"(c (q 0x{opcode_aggsig}) (c (q 0x{hex_pk}) (c (sha256tree 1) (q ()))))"
-    )
-
+    AGGSIG_ENTIRE_SOLUTION = make_list(hexstr(opcode_aggsig),
+                                       hexstr(hex_pk),
+                                       sha256tree(args()))
     WHOLE_PUZZLE = cons(AGGSIG_ENTIRE_SOLUTION,
                          make_if(equal(args(0), quote(1)),
                                  eval(quote(RATE_LIMIT_PUZZLE),
