@@ -48,7 +48,13 @@ def rl_puzzle_for_pk(
     RATE_LIMIT_PUZZLE = f"(c {TEMPLATE_SINGLETON_RL} (c {TEMPLATE_BLOCK_AGE} (c {CREATE_CHANGE} (c {TEMPLATE_MY_ID} (c {CREATE_NEW_COIN} (q ()))))))"  # noqa: E501
 
     TEMPLATE_MY_PARENT_ID_2 = "(sha256 (f (r (r (r (r (r (r (r (r 1))))))))) (f (r 1)) (f (r (r (r (r (r (r (r 1)))))))))"  # noqa: E501
-    TEMPLATE_SINGLETON_RL_2 = f'((c (i (i (= {TEMPLATE_MY_PARENT_ID_2} (f (r (r (r (r (r 1))))))) (q 1) (= (f (r (r (r (r (r 1)))))) (q 0x{origin_id}))) (q ()) (q (x (q "Parent doesnt satisfy RL conditions")))) 1))'  # noqa: E501
+    TEMPLATE_SINGLETON_RL_2 = make_if(iff(equal(TEMPLATE_MY_PARENT_ID_2,
+                                                args(5)),
+                                          quote(1),
+                                          equal(hexstr(origin_id),
+                                                args(5))),
+                                      make_list(),
+                                      fail(quote("Parent doesnt satisfy RL conditions")))
     CREATE_CONSOLIDATED = make_list(hexstr(opcode_create),
                                     args(1),
                                     (add(args(4),
