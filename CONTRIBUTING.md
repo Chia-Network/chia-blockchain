@@ -42,6 +42,16 @@ If you want verbose logging for tests, edit the tests/pytest.ini file.
 7. Preferences > Settings > Formatting > Python > Provider > black
 6. Preferences > Settings > mypy > Targets: set to ./src and ./tests
 
+## Configure Pycharm
+Pycharm is an amazing and beautiful python IDE that some of us use to work on this project.
+If you combine it with python black and formatting on save, you will get a very efficient
+workflow. 
+
+1. pip install black
+2. Run blackd in a terminal
+3. Install BlackConnect plugin
+4. Set to run python black on save
+
 ## Submit changes
 To submit changes, please make a pull request to the `dev` development branch.
 

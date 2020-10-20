@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 from src.util.ints import uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
@@ -30,8 +30,8 @@ class SubBlockRecord(Streamable):
     pool_puzzle_hash: bytes32  # Need to keep track of these because Coins are created in a future block
     farmer_puzzle_hash: bytes32
     timestamp: Optional[uint64]  # (iff is_block)
-    finished_challenge_slot_hash: Optional[bytes32]  # Present iff this is the first SB after slot
-    finished_reward_slot_hash: Optional[bytes32]  # Present iff this is the first SB after slot
+    finished_challenge_slot_hashes: Optional[List[bytes32]]  # Present iff this is the first SB after slot
+    finished_reward_slot_hashes: Optional[List[bytes32]]  # Present iff this is the first SB after slot
     sub_epoch_summary_included_hash: Optional[bytes32]  # If this is the first SB after sub-epoch
 
     @property
