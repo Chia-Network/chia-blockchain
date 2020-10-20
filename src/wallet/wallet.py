@@ -37,9 +37,7 @@ class Wallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
-        info: WalletInfo,
-        name: str = None,
+        wallet_state_manager: Any, info: WalletInfo, name: str = None,
     ):
         self = Wallet()
         if name:
@@ -73,18 +71,14 @@ class Wallet:
         return await self.wallet_state_manager.get_frozen_balance(self.id())
 
     async def get_spendable_balance(self) -> uint64:
-        spendable_am = (
-            await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-                self.id()
-            )
+        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+            self.id()
         )
         return spendable_am
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = (
-            await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-                self.id()
-            )
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            self.id()
         )
         addition_amount = 0
 

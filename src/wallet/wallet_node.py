@@ -382,9 +382,7 @@ class WalletNode:
 
     @api_request
     async def respond_peers_with_peer_info(
-        self,
-        request: introducer_protocol.RespondPeers,
-        peer_info: PeerInfo,
+        self, request: introducer_protocol.RespondPeers, peer_info: PeerInfo,
     ) -> OutboundMessageGenerator:
         if not self._has_full_node():
             await self.wallet_peers.respond_peers(request, peer_info, False)
@@ -394,9 +392,7 @@ class WalletNode:
 
     @api_request
     async def respond_peers_full_node_with_peer_info(
-        self,
-        request: full_node_protocol.RespondPeers,
-        peer_info: PeerInfo,
+        self, request: full_node_protocol.RespondPeers, peer_info: PeerInfo,
     ):
         if not self._has_full_node():
             await self.wallet_peers.respond_peers(request, peer_info, True)
@@ -546,11 +542,13 @@ class WalletNode:
                             uint32(query_heights[batch_start_index])
                         ].is_set()
                         if (
-                            time.time() - last_request_time > sleep_interval
-                            and blocks_missing
-                        ) or (
-                            query_heights[batch_start_index]
-                        ) > highest_height_requested:
+                            (
+                                time.time() - last_request_time > sleep_interval
+                                and blocks_missing
+                            )
+                            or (query_heights[batch_start_index])
+                            > highest_height_requested
+                        ):
                             self.log.info(
                                 f"Requesting sync header {query_heights[batch_start_index]}"
                             )
@@ -638,7 +636,7 @@ class WalletNode:
                     total_iters,
                     None,
                     uint64(0),
-                    bytes(0)
+                    bytes(0),
                 )
                 res = await self.wallet_state_manager.receive_block(block_record, None)
                 assert (
@@ -688,8 +686,7 @@ class WalletNode:
                             highest_height_requested = uint32(batch_end - 1)
                         request_made = True
                         request_header = wallet_protocol.RequestHeader(
-                            uint32(batch_start),
-                            self.header_hashes[batch_start],
+                            uint32(batch_start), self.header_hashes[batch_start],
                         )
                         yield OutboundMessage(
                             NodeType.FULL_NODE,
@@ -944,7 +941,7 @@ class WalletNode:
                 response.header_block.header.data.total_iters,
                 response.header_block.challenge.get_hash(),
                 response.header_block.header.data.timestamp,
-                response.transactions_filter
+                response.transactions_filter,
             )
 
             if self.wallet_state_manager.sync_mode:
@@ -975,8 +972,7 @@ class WalletNode:
                     # Only requests the previous block if we are not in sync mode, close to the new block,
                     # and don't have prev
                     header_request = wallet_protocol.RequestHeader(
-                        uint32(block_record.height - 1),
-                        block_record.prev_header_hash,
+                        uint32(block_record.height - 1), block_record.prev_header_hash,
                     )
                     yield OutboundMessage(
                         NodeType.FULL_NODE,
@@ -1014,7 +1010,7 @@ class WalletNode:
                 block_record.total_iters,
                 block_record.new_challenge_hash,
                 block_record.timestamp,
-                response.transactions_filter
+                response.transactions_filter,
             )
             respond_header_msg: Optional[
                 wallet_protocol.RespondHeader
@@ -1133,7 +1129,7 @@ class WalletNode:
             block_record.total_iters,
             header_block.challenge.get_hash(),
             header_block.header.data.timestamp,
-            block_record.transactions_filter
+            block_record.transactions_filter,
         )
         self.cached_blocks[response.header_hash] = (
             new_br,
@@ -1189,7 +1185,7 @@ class WalletNode:
                 new_br.total_iters,
                 new_br.new_challenge_hash,
                 new_br.timestamp,
-                new_br.transactions_filter
+                new_br.transactions_filter,
             )
             respond_header_msg: Optional[
                 wallet_protocol.RespondHeader
@@ -1273,7 +1269,7 @@ class WalletNode:
             block_record.total_iters,
             header_block.challenge.get_hash(),
             header_block.header.data.timestamp,
-            block_record.transactions_filter
+            block_record.transactions_filter,
         )
 
         self.cached_blocks[response.header_hash] = (

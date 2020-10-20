@@ -117,10 +117,7 @@ class WalletPuzzleStore:
         """
         cursor = await self.db_connection.execute(
             "SELECT * FROM derivation_paths WHERE derivation_index=? and wallet_id=?;",
-            (
-                index,
-                wallet_id,
-            ),
+            (index, wallet_id,),
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -143,8 +140,7 @@ class WalletPuzzleStore:
         Returns the derivation record by index and wallet id.
         """
         cursor = await self.db_connection.execute(
-            "SELECT * FROM derivation_paths WHERE puzzle_hash=?;",
-            (puzzle_hash,),
+            "SELECT * FROM derivation_paths WHERE puzzle_hash=?;", (puzzle_hash,),
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -165,8 +161,7 @@ class WalletPuzzleStore:
         Sets a derivation path to used so we don't use it again.
         """
         cursor = await self.db_connection.execute(
-            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
-            (index,),
+            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?", (index,),
         )
         await cursor.close()
         await self.db_connection.commit()
@@ -239,10 +234,7 @@ class WalletPuzzleStore:
         """
         cursor = await self.db_connection.execute(
             "SELECT * from derivation_paths WHERE puzzle_hash=? and wallet_id=?;",
-            (
-                puzzle_hash.hex(),
-                wallet_id,
-            ),
+            (puzzle_hash.hex(), wallet_id,),
         )
         row = await cursor.fetchone()
         await cursor.close()

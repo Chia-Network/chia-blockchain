@@ -49,9 +49,7 @@ class TradeManager:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
-        db_connection,
-        name: str = None,
+        wallet_state_manager: Any, db_connection, name: str = None,
     ):
         self = TradeManager()
         if name:
@@ -216,10 +214,8 @@ class TradeManager:
         result = {}
         removals = bundle.removals()
         for coin in removals:
-            coin_record = (
-                await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
-                    coin.name()
-                )
+            coin_record = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
+                coin.name()
             )
             if coin_record is None:
                 continue
@@ -309,14 +305,12 @@ class TradeManager:
                         for add in additions:
                             if add not in removals and add.amount == 0:
                                 zero_val_coin = add
-                        new_spend_bundle = (
-                            await wallet.create_spend_bundle_relative_amount(
-                                amount, zero_val_coin
-                            )
+                        new_spend_bundle = await wallet.create_spend_bundle_relative_amount(
+                            amount, zero_val_coin
                         )
                     else:
-                        new_spend_bundle = (
-                            await wallet.create_spend_bundle_relative_amount(amount)
+                        new_spend_bundle = await wallet.create_spend_bundle_relative_amount(
+                            amount
                         )
                 elif isinstance(wallet, Wallet):
                     if spend_bundle is None:
@@ -436,10 +430,8 @@ class TradeManager:
                     wallets[
                         colour
                     ] = await self.wallet_state_manager.get_wallet_for_colour(colour)
-                unspent = (
-                    await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                        wallets[colour].id()
-                    )
+                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    wallets[colour].id()
                 )
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, None, "can't respond to own offer"
@@ -461,8 +453,8 @@ class TradeManager:
 
             else:
                 # standard chia coin
-                unspent = (
-                    await self.wallet_state_manager.get_spendable_coins_for_wallet(1)
+                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(
+                    1
                 )
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, None, "can't respond to own offer"
@@ -540,10 +532,7 @@ class TradeManager:
                 )
                 assert inner_puzzle is not None
 
-                sigs = await wallets[colour].get_sigs(
-                    inner_puzzle,
-                    inner_solution,
-                )
+                sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution,)
                 sigs.append(aggsig)
                 aggsig = AugSchemeMPL.aggregate(sigs)
 
@@ -596,10 +585,7 @@ class TradeManager:
             )
             innersol_list.append(inner_solution)
 
-            sigs = await wallets[colour].get_sigs(
-                inner_puzzle,
-                inner_solution,
-            )
+            sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution,)
             sigs.append(aggsig)
             aggsig = AugSchemeMPL.aggregate(sigs)
             if spend_bundle is None:

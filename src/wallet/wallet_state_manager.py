@@ -153,11 +153,7 @@ class WalletStateManager:
                 wallet = await Wallet.create(config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN:
-                wallet = await CCWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
+                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.RATE_LIMITED:
                 wallet = await RLWallet.create(self, wallet_info)
@@ -210,7 +206,7 @@ class WalletStateManager:
                     genesis_hb.header.data.total_iters,
                     genesis_challenge.get_hash(),
                     genesis_hb.header.data.timestamp,
-                    genesis.transactions_filter
+                    genesis.transactions_filter,
                 ),
                 genesis_hb,
             )
@@ -237,11 +233,7 @@ class WalletStateManager:
                 wallet = await Wallet.create(self.config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN:
-                wallet = await CCWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
+                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
                 self.wallets[wallet_info.id] = wallet
 
     # search through the blockrecords and return the most recent coin to use a given puzzlehash
@@ -251,7 +243,10 @@ class WalletStateManager:
         for header_hash in self.block_records:
             record = self.block_records[header_hash]
             tx_filter = PyBIP158([b for b in record.transactions_filter])
-            if tx_filter.Match(bytearray(puzzlehash)) and record.height > heighest_block_height:
+            if (
+                tx_filter.Match(bytearray(puzzlehash))
+                and record.height > heighest_block_height
+            ):
                 header_hash_of_interest = header_hash
                 heighest_block_height = record.height
         return heighest_block_height, header_hash_of_interest
@@ -825,9 +820,7 @@ class WalletStateManager:
             raise ValueError("Invalid genesis block")
 
     async def receive_block(
-        self,
-        block: BlockRecord,
-        header_block: Optional[HeaderBlock] = None,
+        self, block: BlockRecord, header_block: Optional[HeaderBlock] = None,
     ) -> ReceiveBlockResult:
         """
         Adds a new block to the blockchain. It doesn't have to be a new tip, can also be an orphan,
@@ -1071,10 +1064,7 @@ class WalletStateManager:
                 return False
 
         number_of_iters: uint64 = calculate_iterations_quality(
-            quality_str,
-            header_block.proof_of_space.size,
-            difficulty,
-            min_iters,
+            quality_str, header_block.proof_of_space.size, difficulty, min_iters,
         )
 
         if header_block.proof_of_time is None:
@@ -1288,10 +1278,7 @@ class WalletStateManager:
                 min_iters, self.constants.SIGNIFICANT_BITS
             )
             number_of_iters: uint64 = calculate_iterations_quality(
-                quality_str,
-                header_block.proof_of_space.size,
-                difficulty,
-                trunc,
+                quality_str, header_block.proof_of_space.size, difficulty, trunc,
             )
 
             # Validate potime
