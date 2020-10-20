@@ -116,9 +116,9 @@ class FullNodeDiscovery:
             except Exception as e:
                 self.log.error(f"Exception in process message: {e}")
 
-    async def _num_needed_peers(self) -> int:
+    def _num_needed_peers(self) -> int:
         diff = self.target_outbound_count
-        outgoing = await self.server.get_outgoing_connections()
+        outgoing = self.server.get_outgoing_connections()
         diff -= len(outgoing)
         return diff if diff >= 0 else 0
 
@@ -137,22 +137,25 @@ class FullNodeDiscovery:
         )
 
     async def _introducer_client(self):
-        async def on_connect() -> OutboundMessageGenerator:
+        async def on_connect(peer: WSChiaConnection):
             msg = Message("request_peers", introducer_protocol.RequestPeers())
-            yield OutboundMessage(NodeType.INTRODUCER, msg, Delivery.RESPOND)
+            await peer.send_message(msg)
 
         await self.server.start_client(self.introducer_info, on_connect)
         # If we are still connected to introducer, disconnect
-        for id, connection in self.server.global_connections.items():
-            if connection.connection_type == NodeType.INTRODUCER:
-                await connection.close()
+
+        async def disconnect_after_sleep():
+            await asyncio.sleep(10)
+            for id, connection in self.server.global_connections.items():
+                if connection.connection_type == NodeType.INTRODUCER:
+                    await connection.close()
+
+        asyncio.create_task(disconnect_after_sleep())
 
     async def _connect_to_peers(self, random):
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
         empty_tables = False
-        local_peerinfo: Optional[
-            PeerInfo
-        ] = await self.global_connections.get_local_peerinfo()
+        local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
         while not self.is_closed:
             try:
@@ -359,7 +362,7 @@ class FullNodePeers(FullNodeDiscovery):
                     for neighbour in list(self.neighbour_known_peers.keys()):
                         self.neighbour_known_peers[neighbour].clear()
                 # Self advertise every 24 hours.
-                peer = PeerInfo(self.server._host, self.server._port)
+                peer = await self.server.get_peer_info()
                 if peer is None:
                     continue
                 timestamped_peer = [

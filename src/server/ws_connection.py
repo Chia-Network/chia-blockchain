@@ -202,10 +202,13 @@ class WSChiaConnection:
                 self.last_message_time = time.time()
                 return Message(full_message_loaded["f"], full_message_loaded["d"])
             else:
-                self.log.error(f"Weird message: {message}")
+                self.log.error(f"Not binary message: {message}")
                 await self.close()
         except asyncio.TimeoutError:
             raise TimeoutError("self.reader.readexactly(full_message_length)")
 
     def get_peer_info(self):
-        return PeerInfo(self.peer_host, self.peer_server_port)
+        connection_host, connection_port = self.ws._writer.transport.get_extra_info(
+            "peername"
+        )
+        return PeerInfo(connection_host, self.peer_server_port)
