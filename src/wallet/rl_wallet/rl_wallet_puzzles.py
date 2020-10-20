@@ -40,7 +40,13 @@ def rl_puzzle_for_pk(
     opcode_myid = ConditionOpcode.ASSERT_MY_COIN_ID.hex()
 
     TEMPLATE_MY_PARENT_ID = "(sha256 (f (r (r (r (r (r (r 1))))))) (f (r 1)) (f (r (r (r (r (r (r (r 1)))))))))"
-    TEMPLATE_SINGLETON_RL = f'((c (i (i (= {TEMPLATE_MY_PARENT_ID} (f 1)) (q 1) (= (f 1) (q 0x{origin_id}))) (q ()) (q (x (q "Parent doesnt satisfy RL conditions")))) 1))'  # noqa: E501
+    TEMPLATE_SINGLETON_RL = make_if(iff(equal(TEMPLATE_MY_PARENT_ID,
+                                              args(0)),
+                                        quote(1),
+                                        equal(args(0),
+                                              hexstr(origin_id))),
+                                    sexp(),
+                                    fail(quote("Parent doesnt satisfy RL conditions")))
     TEMPLATE_BLOCK_AGE = make_if(iff(equal(multiply(args(5),
                                                     quote(rate_amount)),
                                            multiply(args(4),
