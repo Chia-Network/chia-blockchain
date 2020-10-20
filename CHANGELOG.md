@@ -9,10 +9,13 @@ for setuptools_scm/PEP 440 reasons.
 ## Unreleased
 
 ### Added
+- The Chia GUI now supports dark and light mode.
+- The GUI now supports translations and localizations. If you'd like to add your language you can see the examples in [the locales directory](https://github.com/Chia-Network/chia-blockchain/tree/dev/electron-react/src/locales) of the chia-blockchain repository.
 - `chia check plots` now takes a `-g` option that allows you to specify a matching path string to only check a single plot file, a wild card list of plot files, or all plots in a single directory instead of the default behavior of checking every directory listed in your config.yaml. A big thank you to @eFishCent for this pull request!
 - Better documentation of the various timelord options in the default config.yaml.
 
 ### Changed
+- The entire GUI has been refactored for code quality and performance.
 - Updated to chiapos 0.12.32. This update significantly speeds up the F1/first table plot generation. It also now can log disk usage while plotting and generate graphs. More details in the [chiapos release notes](https://github.com/Chia-Network/chiapos/releases/tag/0.12.32).
 - Node losing or not connecting to another peer node (which is entirely normal behaviour) is now logged at INFO and not WARNING. Your logs will be quieter.
 - Both the GUI and CLI now default to putting the second temporary directory files into the specified temporary directory.
@@ -23,8 +26,12 @@ for setuptools_scm/PEP 440 reasons.
 
 ### Fixed
 - A bug in bls-singatures/blspy could cause a stack overflow if too many signatures were verified at once. This caused the block of death at 11997 of the Beta 15 chain. Updated to 0.2.4 to address the issue.
+- GUI Wallet now correctly updates around reorgs.
 - chiapos 0.12.32 fixed a an out of bounds read that could crash the plotter. It also contains a fix to better handle the case of drive letters on Windows.
-- Node would fail to start on Windows Server 2016 with lots of cores. This [python issue explains]( https://bugs.python.org/issue26903).
+- Node would fail to start on Windows Server 2016 with lots of cores. This [python issue explains]( https://bugs.python.org/issue26903) the problem.
+
+### Known Issues
+- On NTFS, plotting and farming can't use a path that includes a non root mountpoint. This is fixed in an upcoming version but did not have enough testing time for this release.
 
 ## [1.0beta15] aka Beta 1.15 - 2020-10-07
 
