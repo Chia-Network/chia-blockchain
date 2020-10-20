@@ -7,6 +7,7 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
+from src.wallet.chialisp import *
 
 
 def rl_puzzle_for_pk(
@@ -60,9 +61,11 @@ def rl_puzzle_for_pk(
 
     WHOLE_PUZZLE = f"(c {AGGSIG_ENTIRE_SOLUTION} ((c (i (= (f 1) (q 1)) (q ((c (q {RATE_LIMIT_PUZZLE}) (r 1)))) (q {MODE_TWO})) 1)) (q ()))"  # noqa: E501
     CLAWBACK = f"(c (c (q 0x{opcode_aggsig}) (c (q 0x{clawback_pk_str}) (c (sha256tree 1) (q ())))) (r 1))"
-    WHOLE_PUZZLE_WITH_CLAWBACK = (
-        f"((c (i (= (f 1) (q 3)) (q {CLAWBACK}) (q {WHOLE_PUZZLE})) 1))"
-    )
+    WHOLE_PUZZLE_WITH_CLAWBACK = \
+        make_if(equal(args(0), quote(3)),
+                CLAWBACK,
+                WHOLE_PUZZLE)
+
     return Program(binutils.assemble(WHOLE_PUZZLE_WITH_CLAWBACK))
 
 
