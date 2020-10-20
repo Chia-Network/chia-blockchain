@@ -39,7 +39,9 @@ def rl_puzzle_for_pk(
     opcode_create = ConditionOpcode.CREATE_COIN.hex()
     opcode_myid = ConditionOpcode.ASSERT_MY_COIN_ID.hex()
 
-    TEMPLATE_MY_PARENT_ID = "(sha256 (f (r (r (r (r (r (r 1))))))) (f (r 1)) (f (r (r (r (r (r (r (r 1)))))))))"
+    TEMPLATE_MY_PARENT_ID = sha256(args(6),
+                                   args(1),
+                                   args(7))
     TEMPLATE_SINGLETON_RL = make_if(iff(equal(TEMPLATE_MY_PARENT_ID,
                                               args(0)),
                                         quote(1),
