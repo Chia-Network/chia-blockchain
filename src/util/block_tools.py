@@ -31,7 +31,7 @@ from src.types.coin import Coin, hash_coin_list
 from src.types.program import Program
 from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
-from src.types.proof_of_time import ProofOfTime
+from src.types.vdf import ProofOfTime
 from src.types.pool_target import PoolTarget
 from src.types.sized_bytes import bytes32
 from src.util.config import load_config
@@ -53,9 +53,7 @@ from src.wallet.derive_keys import (
 
 
 def get_plot_dir():
-    cache_path = (
-        Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
-    )
+    cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
     mkdir(cache_path)
     return cache_path
 
@@ -113,10 +111,7 @@ class BlockTools:
             args.buckets = 0
             args.stripe_size = 2000
             args.num_threads = 0
-            args.nobitfield = False
-            test_private_keys = [
-                AugSchemeMPL.key_gen(std_hash(bytes([i]))) for i in range(args.num)
-            ]
+            test_private_keys = [AugSchemeMPL.key_gen(std_hash(bytes([i]))) for i in range(args.num)]
             try:
                 # No datetime in the filename, to get deterministic filenames and not replot
                 create_plots(
@@ -137,43 +132,23 @@ class BlockTools:
             self.farmer_master_sk = sk_and_ent[0]
             self.pool_master_sk = sk_and_ent[0]
 
-        self.farmer_ph = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
-        )
-        self.pool_ph = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
-        )
+        self.farmer_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1())
+        self.pool_ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1())
 
         self.all_sks = self.keychain.get_all_private_keys()
-        self.pool_pubkeys: List[G1Element] = [
-            master_sk_to_pool_sk(sk).get_g1() for sk, _ in self.all_sks
-        ]
-        farmer_pubkeys: List[G1Element] = [
-            master_sk_to_farmer_sk(sk).get_g1() for sk, _ in self.all_sks
-        ]
-        self.match_str = None
+        self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk, _ in self.all_sks]
+        farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in self.all_sks]
         if len(self.pool_pubkeys) == 0 or len(farmer_pubkeys) == 0:
             raise RuntimeError("Keys not generated. Run `chia generate keys`")
-        _, self.plots, _, _ = load_plots(
-            {}, {}, farmer_pubkeys, self.pool_pubkeys, self.match_str, root_path
-        )
-        self._config = load_config(self.root_path, "config.yaml")
+        _, self.plots, _, _ = load_plots({}, {}, farmer_pubkeys, self.pool_pubkeys, root_path)
 
-    @property
-    def config(self) -> Dict:
-        return copy.deepcopy(self._config)
-
-    def get_plot_signature(
-        self, header_data: HeaderData, plot_pk: G1Element
-    ) -> Optional[G2Element]:
+    def get_plot_signature(self, header_data: HeaderData, plot_pk: G1Element) -> Optional[G2Element]:
         """
         Returns the plot signature of the header data.
         """
         farmer_sk = master_sk_to_farmer_sk(self.all_sks[0][0])
         for _, plot_info in self.plots.items():
-            agg_pk = ProofOfSpace.generate_plot_public_key(
-                plot_info.local_sk.get_g1(), plot_info.farmer_public_key
-            )
+            agg_pk = ProofOfSpace.generate_plot_public_key(plot_info.local_sk.get_g1(), plot_info.farmer_public_key)
             if agg_pk == plot_pk:
                 m = header_data.get_hash()
                 harv_share = AugSchemeMPL.sign(plot_info.local_sk, m, agg_pk)
@@ -182,9 +157,7 @@ class BlockTools:
 
         return None
 
-    def get_pool_key_signature(
-        self, pool_target: PoolTarget, pool_pk: G1Element
-    ) -> Optional[G2Element]:
+    def get_pool_key_signature(self, pool_target: PoolTarget, pool_pk: G1Element) -> Optional[G2Element]:
         for sk, _ in self.all_sks:
             sk_child = master_sk_to_pool_sk(sk)
             if sk_child.get_g1() == pool_pk:
@@ -218,9 +191,7 @@ class BlockTools:
             prev_difficulty = test_constants.DIFFICULTY_STARTING
             curr_difficulty = prev_difficulty
             curr_min_iters = test_constants.MIN_ITERS_STARTING
-        elif len(block_list) < (
-            test_constants.DIFFICULTY_EPOCH + test_constants.DIFFICULTY_DELAY
-        ):
+        elif len(block_list) < (test_constants.DIFFICULTY_EPOCH + test_constants.DIFFICULTY_DELAY):
             # First epoch (+delay), so just get first difficulty
             prev_difficulty = block_list[0].weight
             curr_difficulty = block_list[0].weight
@@ -245,18 +216,10 @@ class BlockTools:
         for next_height in range(starting_height, starting_height + num_blocks):
             if (
                 next_height > test_constants.DIFFICULTY_EPOCH
-                and next_height % test_constants.DIFFICULTY_EPOCH
-                == test_constants.DIFFICULTY_DELAY
+                and next_height % test_constants.DIFFICULTY_EPOCH == test_constants.DIFFICULTY_DELAY
             ):
                 # Calculates new difficulty
-                height1 = uint64(
-                    next_height
-                    - (
-                        test_constants.DIFFICULTY_EPOCH
-                        + test_constants.DIFFICULTY_DELAY
-                    )
-                    - 1
-                )
+                height1 = uint64(next_height - (test_constants.DIFFICULTY_EPOCH + test_constants.DIFFICULTY_DELAY) - 1)
                 height2 = uint64(next_height - (test_constants.DIFFICULTY_EPOCH) - 1)
                 height3 = uint64(next_height - (test_constants.DIFFICULTY_DELAY) - 1)
                 if height1 >= 0:
@@ -265,9 +228,7 @@ class BlockTools:
                     timestamp1 = block1.header.data.timestamp
                 else:
                     block1 = block_list[0]
-                    timestamp1 = uint64(
-                        block1.header.data.timestamp - test_constants.BLOCK_TIME_TARGET
-                    )
+                    timestamp1 = uint64(block1.header.data.timestamp - test_constants.BLOCK_TIME_TARGET)
                     iters1 = uint64(0)
                 timestamp2 = block_list[height2].header.data.timestamp
                 timestamp3 = block_list[height3].header.data.timestamp
@@ -283,10 +244,7 @@ class BlockTools:
 
                 term2 = (
                     (test_constants.DIFFICULTY_WARP_FACTOR - 1)
-                    * (
-                        test_constants.DIFFICULTY_EPOCH
-                        - test_constants.DIFFICULTY_DELAY
-                    )
+                    * (test_constants.DIFFICULTY_EPOCH - test_constants.DIFFICULTY_DELAY)
                     * curr_difficulty
                     * (timestamp2 - timestamp1)
                     * test_constants.BLOCK_TIME_TARGET
@@ -295,16 +253,10 @@ class BlockTools:
                 # Round down after the division
                 new_difficulty_precise: uint64 = uint64(
                     (term1 + term2)
-                    // (
-                        test_constants.DIFFICULTY_WARP_FACTOR
-                        * (timestamp3 - timestamp2)
-                        * (timestamp2 - timestamp1)
-                    )
+                    // (test_constants.DIFFICULTY_WARP_FACTOR * (timestamp3 - timestamp2) * (timestamp2 - timestamp1))
                 )
                 new_difficulty = uint64(
-                    truncate_to_significant_bits(
-                        new_difficulty_precise, test_constants.SIGNIFICANT_BITS
-                    )
+                    truncate_to_significant_bits(new_difficulty_precise, test_constants.SIGNIFICANT_BITS)
                 )
                 max_diff = uint64(
                     truncate_to_significant_bits(
@@ -327,16 +279,10 @@ class BlockTools:
                     new_difficulty = max([uint64(1), new_difficulty, min_diff])
 
                 min_iters_precise = uint64(
-                    (iters3 - iters1)
-                    // (
-                        test_constants.DIFFICULTY_EPOCH
-                        * test_constants.MIN_ITERS_PROPORTION
-                    )
+                    (iters3 - iters1) // (test_constants.DIFFICULTY_EPOCH * test_constants.MIN_ITERS_PROPORTION)
                 )
                 curr_min_iters = uint64(
-                    truncate_to_significant_bits(
-                        min_iters_precise, test_constants.SIGNIFICANT_BITS
-                    )
+                    truncate_to_significant_bits(min_iters_precise, test_constants.SIGNIFICANT_BITS)
                 )
                 prev_difficulty = curr_difficulty
                 curr_difficulty = new_difficulty
@@ -348,10 +294,7 @@ class BlockTools:
             if next_height in transaction_data_at_height:
                 transactions, aggsig = transaction_data_at_height[next_height]
 
-            update_difficulty = (
-                next_height % test_constants.DIFFICULTY_EPOCH
-                == test_constants.DIFFICULTY_DELAY
-            )
+            update_difficulty = next_height % test_constants.DIFFICULTY_EPOCH == test_constants.DIFFICULTY_DELAY
             block_list.append(
                 self.create_next_block(
                     test_constants,
@@ -415,19 +358,13 @@ class BlockTools:
         if update_difficulty:
             challenge = Challenge(
                 prev_block.proof_of_space.challenge_hash,
-                std_hash(
-                    prev_block.proof_of_space.get_hash()
-                    + prev_block.proof_of_time.output.get_hash()
-                ),
+                std_hash(prev_block.proof_of_space.get_hash() + prev_block.proof_of_time.output.get_hash()),
                 uint64(difficulty),
             )
         else:
             challenge = Challenge(
                 prev_block.proof_of_space.challenge_hash,
-                std_hash(
-                    prev_block.proof_of_space.get_hash()
-                    + prev_block.proof_of_time.output.get_hash()
-                ),
+                std_hash(prev_block.proof_of_space.get_hash() + prev_block.proof_of_time.output.get_hash()),
                 None,
             )
 
@@ -461,7 +398,6 @@ class BlockTools:
         difficulty: int,
         min_iters: int,
         seed: bytes,
-        genesis: bool = False,
         reward_puzzlehash: bytes32 = None,
         transactions: Program = None,
         aggsig: G2Element = None,
@@ -475,10 +411,7 @@ class BlockTools:
         selected_proof_index = 0
         selected_quality: Optional[bytes] = None
         best_quality = 0
-        plots = [
-            pinfo
-            for _, pinfo in sorted(list(self.plots.items()), key=lambda x: str(x[0]))
-        ]
+        plots = [pinfo for _, pinfo in sorted(list(self.plots.items()), key=lambda x: str(x[0]))]
         if self.use_any_pos:
             random.seed(seed)
             for i in range(len(plots) * 3):
@@ -524,9 +457,7 @@ class BlockTools:
         if selected_quality is None:
             raise RuntimeError("No proofs for this challenge")
 
-        proof_xs: bytes = selected_plot_info.prover.get_full_proof(
-            challenge_hash, selected_proof_index
-        )
+        proof_xs: bytes = selected_plot_info.prover.get_full_proof(challenge_hash, selected_proof_index)
 
         plot_pk = ProofOfSpace.generate_plot_public_key(
             selected_plot_info.local_sk.get_g1(),
@@ -551,9 +482,7 @@ class BlockTools:
 
         int_size = (test_constants.DISCRIMINANT_SIZE_BITS + 16) >> 4
 
-        result = prove(
-            challenge_hash, test_constants.DISCRIMINANT_SIZE_BITS, number_iters
-        )
+        result = prove(challenge_hash, test_constants.DISCRIMINANT_SIZE_BITS, number_iters)
 
         output = ClassgroupElement(
             int512(
@@ -639,17 +568,11 @@ class BlockTools:
         additions_root = addition_merkle_set.get_root()
         removal_root = removal_merkle_set.get_root()
 
-        generator_hash = (
-            transactions.get_tree_hash()
-            if transactions is not None
-            else bytes32([0] * 32)
-        )
+        generator_hash = transactions.get_tree_hash() if transactions is not None else bytes32([0] * 32)
         filter_hash = std_hash(encoded)
 
         pool_target = PoolTarget(pool_ph, uint32(height))
-        pool_target_signature = self.get_pool_key_signature(
-            pool_target, proof_of_space.pool_public_key
-        )
+        pool_target_signature = self.get_pool_key_signature(pool_target, proof_of_space.pool_public_key)
         assert pool_target_signature is not None
         final_aggsig: G2Element = pool_target_signature
         if aggsig is not None:
@@ -678,9 +601,7 @@ class BlockTools:
 
         header: Header = Header(header_data, header_hash_sig)
 
-        full_block: FullBlock = FullBlock(
-            proof_of_space, proof_of_time, header, transactions, encoded
-        )
+        full_block: FullBlock = FullBlock(proof_of_space, proof_of_time, header, transactions, encoded)
 
         return full_block
 
