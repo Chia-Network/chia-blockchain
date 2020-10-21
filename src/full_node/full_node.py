@@ -36,11 +36,7 @@ from src.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
-<<<<<<< HEAD
-from src.server.connection import PeerConnections
-=======
 from src.server.node_discovery import FullNodePeers
->>>>>>> test_wallet & peer discovery
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -616,9 +612,17 @@ class FullNode:
 
             # This is a block we asked for during sync
             if self.sync_peers_handler is not None:
-                async for req in self.sync_peers_handler.new_block(sub_block):
-                    yield req
-            return
+                resp: List[OutboundMessage] = await self.sync_peers_handler.new_block(
+                    respond_block.block
+                )
+                for req in resp:
+                    type = req.peer_type
+                    node_id = req.specific_peer_node_id
+                    message = req.message
+                    if node_id is None:
+                        await self.server.send_to_all([message], type)
+                    else:
+                        await self.server.send_to_specific([message], node_id)
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
         header_hash = sub_block.header.get_hash()

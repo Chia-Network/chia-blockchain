@@ -429,7 +429,7 @@ class WalletNodeAPI:
         if not self.wallet_node.wallet_state_manager.sync_mode:
             self.wallet_node.log.warning("Receiving header hashes while not syncing.")
             return
-        self.header_hashes = response.hashes
+        self.wallet_node.header_hashes = response.hashes
 
     @api_request
     async def reject_all_header_hashes_after_request(
@@ -446,7 +446,7 @@ class WalletNodeAPI:
             or self.wallet_node.backup_initialized is False
         ):
             return
-        self.header_hashes_error = True
+        self.wallet_node.header_hashes_error = True
 
     @api_request
     async def new_lca(self, request: wallet_protocol.NewLCA, peer: WSChiaConnection):
