@@ -18,10 +18,10 @@ class UnfinishedBlock(Streamable):
     # Full block, without the final VDFs
     subepoch_summary: Optional[SubEpochSummary]  # If end of a sub-epoch
     finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
-    challenge_chain_icp_pot: Optional[List[ProofOfTime]]  # If included in challenge chain
+    challenge_chain_icp_pot: Optional[ProofOfTime]  # If included in challenge chain
     challenge_chain_icp_signature: Optional[G2Element]  # If included in challenge chain
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
-    reward_chain_icp_pot: List[ProofOfTime]
+    reward_chain_icp_pot: ProofOfTime
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
     transactions_filter: bytes  # Filter for block transactions
