@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Callable
 
 from src.introducer import Introducer
 from src.server.outbound_message import Message
@@ -14,6 +14,9 @@ class IntroducerAPI:
 
     def __init__(self, introducer):
         self.introducer = introducer
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.introducer.state_changed_callback = callback
 
     @api_request
     async def request_peers(

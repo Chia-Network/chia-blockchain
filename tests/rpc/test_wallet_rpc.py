@@ -27,7 +27,8 @@ class TestWalletRpc:
         test_rpc_port = uint16(21529)
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
-        full_node_1, server_1 = full_nodes[0]
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -35,10 +36,12 @@ class TestWalletRpc:
         ph = await wallet.get_new_puzzlehash()
         ph_2 = await wallet_2.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         initial_funds = sum(
             [

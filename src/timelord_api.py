@@ -1,3 +1,5 @@
+from typing import Callable
+
 from src.protocols import timelord_protocol
 from src.server.ws_connection import WSChiaConnection
 from src.timelord import Timelord
@@ -9,6 +11,9 @@ class TimelordAPI:
 
     def __init__(self, timelord):
         self.timelord = timelord
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.timelord.state_changed_callback = callback
 
     @api_request
     async def challenge_start(
