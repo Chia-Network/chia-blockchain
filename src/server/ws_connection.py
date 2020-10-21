@@ -40,6 +40,7 @@ class WSChiaConnection:
         is_feeler: bool,  # Special type of connection, that disconnects after the handshake.
         peer_host,
         incoming_queue,
+        close_callback: Callable,
         close_event=None,
         session=None,
     ):
@@ -50,6 +51,12 @@ class WSChiaConnection:
         self.local_port = server_port
         # Remote properties
         self.peer_host = peer_host
+
+        connection_host, connection_port = self.ws._writer.transport.get_extra_info(
+            "peername"
+        )
+
+        self.peer_port = connection_port
         self.peer_server_port: Optional[int] = None
         self.peer_node_id = None
 
@@ -76,6 +83,7 @@ class WSChiaConnection:
         self.active = False  # once handshake is successful this will be changed to True
         self.close_event = close_event
         self.session = session
+        self.close_callback = close_callback
 
     async def perform_handshake(
         self, network_id, protocol_version, node_id, server_port, local_type
@@ -146,11 +154,10 @@ class WSChiaConnection:
             self.outbound_task.cancel()
         if self.session is not None:
             await self.session.close()
-        await self.closed()
 
-    async def closed(self):
         if self.close_event is not None:
             self.close_event.set()
+        self.close_callback(self)
 
     async def outbound_handler(self):
         try:

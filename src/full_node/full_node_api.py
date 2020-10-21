@@ -1,7 +1,7 @@
 import asyncio
 import time
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List, Optional, Tuple
+from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
 from chiabip158 import PyBIP158
 from chiapos import Verifier
 from blspy import G2Element, AugSchemeMPL
@@ -52,6 +52,13 @@ class FullNodeAPI:
 
     def __init__(self, full_node):
         self.full_node = full_node
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.full_node.state_changed_callback = callback
+
+    @property
+    def server(self):
+        return self.full_node.server
 
     @api_request
     async def request_peers(
