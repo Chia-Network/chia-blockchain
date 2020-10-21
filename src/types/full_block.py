@@ -139,23 +139,6 @@ class FullBlock(Streamable):
             timestamp,
         )
 
-    def get_header_block(self):
-        """
-        Returns the block but without TransactionInfo and Transactions generator
-        """
-        return HeaderBlock(
-            self.finished_slots,
-            self.challenge_chain_icp_proof,
-            self.challenge_chain_icp_signature,
-            self.challenge_chain_ip_proof,
-            self.reward_chain_sub_block,
-            self.reward_chain_icp_proof,
-            self.reward_chain_ip_proof,
-            self.foliage_sub_block,
-            self.foliage_block,
-            self.transactions_filter,
-        )
-
 
 def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
     additions: List[Coin] = []

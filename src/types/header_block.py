@@ -13,7 +13,7 @@ from src.types.sub_epoch_summary import SubEpochSummary
 @dataclass(frozen=True)
 @streamable
 class HeaderBlock(Streamable):
-    # Same as a FullBlock but without TransactionInfo and Generator, used by light clients
+    # Same as a FullBlock but without TransactionInfo and Generator (but with filter), used by light clients
     subepoch_summary: Optional[SubEpochSummary]  # If end of a sub-epoch
     finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
     challenge_chain_icp_vdf: Optional[VDFInfo]  # If included in challenge chain
