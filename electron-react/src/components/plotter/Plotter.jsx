@@ -1,4 +1,5 @@
 import React from 'react';
+import styled from 'styled-components';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import { Trans } from '@lingui/macro';
@@ -6,12 +7,15 @@ import { useSelector, useDispatch } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
 import {
-  Paper,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  Container,
+  Card,
+  CardContent,
 } from '@material-ui/core';
+import { Alert } from '@material-ui/lab';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import InputAdornment from '@material-ui/core/InputAdornment';
@@ -28,6 +32,12 @@ import {
 import { stopService } from '../../modules/daemon_messages';
 import { service_plotter } from '../../util/service_names';
 import DashboardTitle from '../dashboard/DashboardTitle';
+import Flex from '../flex/Flex';
+import Log from '../log/Log';
+
+const StyledContainer = styled(Container)`
+  margin-top: ${({ theme }) => `${theme.spacing(2)}px`};
+`;
 
 const drawerWidth = 180;
 
@@ -175,22 +185,6 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(3),
     marginTop: theme.spacing(3),
   },
-  cancelButton: {
-    float: 'right',
-    width: 150,
-    paddingLeft: theme.spacing(2),
-    height: 56,
-    marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2),
-  },
-  clearButton: {
-    float: 'right',
-    width: 150,
-    marginRight: theme.spacing(2),
-    height: 56,
-    marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(2),
-  },
 }));
 
 const plot_size_options = [
@@ -209,7 +203,6 @@ const plot_size_options = [
 ];
 
 const WorkLocation = () => {
-  const classes = useStyles();
   const dispatch = useDispatch();
   const work_location = useSelector(
     (state) => state.plot_control.workspace_location,
@@ -237,45 +230,35 @@ const WorkLocation = () => {
   }
 
   return (
-    <Grid item xs={12}>
-      <div className={classes.cardSubSection}>
-        <Box display="flex">
-          <Box flexGrow={1}>
-            <TextField
-              disabled
-              variant="outlined"
-              className={classes.input}
-              fullWidth
-              onClick={select}
-              label={
-                work_location === '' ? (
-                  <Trans id="PlotterWorkLocation.temporaryFolderLocation">
-                    Temporary folder location
-                  </Trans>
-                ) : (
-                  work_location
-                )
-              }
-            />
-          </Box>
-          <Box>
-            <Button
-              onClick={select}
-              className={classes.selectButton}
-              variant="contained"
-              color="primary"
-            >
-              <Trans id="PlotterWorkLocation.select">Select</Trans>
-            </Button>
-          </Box>
-        </Box>
-      </div>
-    </Grid>
+    <Box display="flex">
+      <Box flexGrow={1}>
+        <TextField
+          variant="outlined"
+          fullWidth
+          onClick={select}
+          inputProps={{
+            readOnly: true,
+          }}
+          value={work_location}
+          label={(
+            <Trans id="PlotterWorkLocation.temporaryFolderLocation">
+              Temporary folder location
+            </Trans>
+          )}
+        />
+      </Box>
+      <Button
+        onClick={select}
+        variant="contained"
+        size="large"
+      >
+        <Trans id="PlotterWorkLocation.select">Select</Trans>
+      </Button>
+    </Box>
   );
 };
 
 const FinalLocation = () => {
-  const classes = useStyles();
   const dispatch = useDispatch();
   const final_location = useSelector(
     (state) => state.plot_control.final_location,
@@ -303,44 +286,35 @@ const FinalLocation = () => {
   }
 
   return (
-    <Grid item xs={12}>
-      <div className={classes.cardSubSection}>
-        <Box display="flex">
-          <Box flexGrow={1}>
-            <TextField
-              disabled
-              className={classes.input}
-              onClick={select}
-              fullWidth
-              label={
-                final_location === '' ? (
-                  <Trans id="PlotterFinalLocation.finalFolderLocation">
-                    Final folder location
-                  </Trans>
-                ) : (
-                  final_location
-                )
-              }
-              variant="outlined"
-            />
-          </Box>
-          <Box>
-            <Button
-              onClick={select}
-              className={classes.selectButton}
-              variant="contained"
-              color="primary"
-            >
-              <Trans id="PlotterFinalLocation.select">Select</Trans>
-            </Button>
-          </Box>
-        </Box>
-      </div>
-    </Grid>
+    <Box display="flex">
+      <Box flexGrow={1}>
+        <TextField
+          onClick={select}
+          fullWidth
+          label={(
+            <Trans id="PlotterFinalLocation.finalFolderLocation">
+              Final folder location
+            </Trans>
+          )}
+          value={final_location}
+          inputProps={{
+            readOnly: true,
+          }}
+          variant="outlined"
+        />
+      </Box>
+      <Button
+        onClick={select}
+        size="large"
+        variant="contained"
+      >
+        <Trans id="PlotterFinalLocation.select">Select</Trans>
+      </Button>
+    </Box>
   );
 };
 
-const CreatePlot = () => {
+function CreatePlot() {
   const dispatch = useDispatch();
   const classes = useStyles();
   const work_location = useSelector(
@@ -418,29 +392,27 @@ const CreatePlot = () => {
   }
 
   return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
+    <Card>
+      <CardContent>
+        <Grid container spacing={3}>
+          <Grid xs={12} item>
             <Typography component="h6" variant="h6">
               <Trans id="CreatePlot.title">Create Plot</Trans>
             </Typography>
-          </div>
-        </Grid>
-        <Grid className={classes.cardTitle} item xs={12}>
-          <p>
-            <Trans id="CreatePlot.description">
-              Using this tool, you can create plots, which are allocated space
-              on your hard drive used to farm and earn Chia. Also, temporary
-              files are created during the plotting process, which exceed the
-              size of the final plot files, so make sure you have enough space.
-              Try to use a fast drive like an SSD for the temporary folder, and
-              a large slow hard drive (like external HDD) for the final folder.
-            </Trans>
-          </p>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
+          </Grid>
+          <Grid xs={12} item>
+            <Typography variant="body2">
+              <Trans id="CreatePlot.description">
+                Using this tool, you can create plots, which are allocated space
+                on your hard drive used to farm and earn Chia. Also, temporary
+                files are created during the plotting process, which exceed the
+                size of the final plot files, so make sure you have enough space.
+                Try to use a fast drive like an SSD for the temporary folder, and
+                a large slow hard drive (like external HDD) for the final folder.
+              </Trans>
+            </Typography>
+          </Grid>
+          <Grid xs={12} item>
             <Grid container spacing={2}>
               <Grid item xs={4}>
                 <FormControl
@@ -572,111 +544,134 @@ const CreatePlot = () => {
                 </FormControl>
               </Grid>
             </Grid>
-          </div>
-        </Grid>
-        <WorkLocation />
-        <FinalLocation />
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
+          </Grid>
+          <Grid xs={12} md={8} lg={6} item>
+            <Grid spacing={2} container>
+              <Grid xs={12} item>
+                <WorkLocation />
+              </Grid>
+              <Grid xs={12} item>
+                <FinalLocation />
+              </Grid>
+            </Grid>
+          </Grid>
+          <Grid xs={12} item>
+            <Grid justify="flex-end" container>
+              <Grid item>
                 <Button
                   onClick={create}
-                  className={classes.createButton}
                   variant="contained"
                   color="primary"
+                  size="large"
                 >
                   <Trans id="CreatePlot.create">Create</Trans>
                 </Button>
               </Grid>
             </Grid>
-          </div>
+          </Grid>
         </Grid>
-      </Grid>
-    </Paper>
+      </CardContent>
+    </Card>
   );
-};
+}
 
-const Proggress = () => {
+function Proggress() {
   const progress = useSelector((state) => state.plot_control.progress);
-  const classes = useStyles();
   const dispatch = useDispatch();
+
+  const inProgress = useSelector(
+    (state) => state.plot_control.plotting_in_proggress,
+  );
+  const plottingStopped = useSelector(
+    (state) => state.plot_control.plotting_stopped,
+  );
+
   function clearLog() {
     dispatch(resetProgress());
   }
   function cancel() {
     dispatch(stopService(service_plotter));
   }
-  const plotting_stopped = useSelector(
-    (state) => state.plot_control.plotting_stopped,
-  );
+
+  if (!inProgress && !plottingStopped) {
+    return null;
+  }
+
   return (
-    <div>
-      <Paper className={classes.balancePaper}>
-        <div className={classes.cardTitle}>
-          <Typography component="h6" variant="h6">
-            <Trans id="PlotterProgress.title">Progress</Trans>
-          </Typography>
-        </div>
-        <div className={classes.logPaper}>
-          <Box className={classes.logContainer} fontFamily="Monospace">
-            {progress}
-          </Box>
-        </div>
-        <div className={classes.cardSubSection}>
-          {plotting_stopped ? (
-            <p>
-              <Trans id="PlotterProgress.plottingStoppedSuccesfully">
-                Plotting stopped succesfully.
-              </Trans>
-            </p>
-          ) : (
-            ''
+    <Card>
+      <CardContent>
+        <Grid container spacing={3}>
+          <Grid xs={12} item>
+            <Typography component="h6" variant="h6">
+              <Trans id="PlotterProgress.title">Progress</Trans>
+            </Typography>
+          </Grid>
+          <Grid xs={12} item>
+            <Log>
+              {progress.trim()}
+            </Log>
+          </Grid>
+          {plottingStopped && (
+            <Grid xs={12} item>
+              <Alert severity="success">
+                <Trans id="PlotterProgress.plottingStoppedSuccesfully">
+                  Plotting stopped succesfully.
+                </Trans>
+              </Alert>
+            </Grid>
           )}
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              {!plotting_stopped ? (
-                <Button
-                  onClick={cancel}
-                  className={classes.cancelButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="PlotterProgress.cancel">Cancel</Trans>
-                </Button>
-              ) : (
-                ''
+          <Grid xs={12} item>
+            <Grid justify="flex-end" spacing={2} container>
+              {!plottingStopped && (
+                <Grid item>
+                  <Button
+                    onClick={cancel}
+                    variant="contained"
+                  >
+                    <Trans id="PlotterProgress.cancel">Cancel</Trans>
+                  </Button>
+                </Grid>
               )}
-              <Button
-                onClick={clearLog}
-                className={classes.clearButton}
-                variant="contained"
-                color="primary"
-              >
-                <Trans id="PlotterProgress.clearLog">Clear Log</Trans>
-              </Button>
+              <Grid item>
+                <Button
+                  onClick={clearLog}
+                  variant="contained"
+                >
+                  <Trans id="PlotterProgress.clearLog">Clear Log</Trans>
+                </Button>
+              </Grid>
             </Grid>
           </Grid>
-        </div>
-      </Paper>
-    </div>
+        </Grid>
+      </CardContent>
+    </Card>
   );
-};
+}
 
 export default function Plotter() {
-  const in_progress = useSelector(
-    (state) => state.plot_control.plotting_in_proggress,
-  );
-  const plotting_stopped = useSelector(
-    (state) => state.plot_control.plotting_stopped,
-  );
   return (
-    <div>
+    <>
       <DashboardTitle>
         <Trans id="Plotter.title">Plot</Trans>
       </DashboardTitle>
-      <CreatePlot />
-      {in_progress || plotting_stopped ? <Proggress /> : <div />}
-    </div>
+      <Flex
+        flexDirection="column"
+        flexGrow={1}
+        height="100%"
+        overflow="auto"
+        alignItems="center"
+      >
+        <StyledContainer maxWidth="lg">
+          <Grid container spacing={3}>
+            <Grid xs={12} item>
+              <CreatePlot />
+            </Grid>
+            <Grid xs={12} item>
+              <Proggress />
+            </Grid>
+          </Grid>
+        </StyledContainer>
+      </Flex>
+    </>
   );
 }
