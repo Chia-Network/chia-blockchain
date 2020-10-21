@@ -403,6 +403,7 @@ class WalletRpcApi:
                     wallet_state_manager, main_wallet, int(request["amount"]), backup_dids
                 )
                 my_did = did_wallet.get_my_DID()
+                logging.exception(self.service.wallet_state_manager.wallets)
                 return {
                     "type": did_wallet.type(),
                     "my_did": my_did,
