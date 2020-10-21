@@ -57,6 +57,7 @@ async def validate_unfinished_header_block(
                 curr: SubBlockRecord = prev_sb
                 while curr.finished_challenge_slot_hashes is None:
                     curr = sub_blocks[curr.prev_hash]
+                assert curr.finished_challenge_slot_hashes is not None
                 if not curr.finished_challenge_slot_hashes[-1] != challenge_slot.prev_slot_hash:
                     return Err.INVALID_PREV_CHALLENGE_SLOT_HASH
             else:
@@ -231,9 +232,11 @@ async def validate_unfinished_header_block(
         )
         if q_str is None:
             return Err.INVALID_POSPACE
+        difficulty = get_next_difficulty(constants, sub_blocks, height_to_hash, prev_sb.header_hash, new_slot)
         required_iters: uint64 = calculate_iterations_quality(
             q_str,
             header_block.reward_chain_sub_block.proof_of_space.size,
+            difficulty,
         )
 
         ips: uint64 = get_next_ips(constants, sub_blocks, height_to_hash, prev_sb.header_hash, new_slot)
@@ -241,7 +244,6 @@ async def validate_unfinished_header_block(
         ip_iters: uint64 = calculate_infusion_point_iters(constants, ips, required_iters)
         slot_iters: uint64 = calculate_slot_iters(constants, ips)
         overflow = is_overflow_sub_block(constants, ips, required_iters)
-        difficulty = get_next_difficulty(constants, sub_blocks, height_to_hash, prev_sb.header_hash, new_slot)
 
         # If sub_block state is correct, we should always find a challenge here
         if overflow:
@@ -269,7 +271,7 @@ async def validate_unfinished_header_block(
             # 5a. Check cc icp
             cc_icp_challenge: bytes32 = header_block.finished_slots[-1][0].get_hash()
             output: bytes32 = header_block.reward_chain_sub_block.infusion_point
-            if not await validate_composite_proof_of_time(
+            if not validate_composite_proof_of_time(
                 constants, cc_icp_challenge, icp_iters, output, header_block.challenge_chain_icp_pot
             ):
                 return Err.INVALID_CC_ICP_VDF
@@ -329,7 +331,7 @@ async def validate_unfinished_header_block(
                 return Err.INVALID_RC_ICP_PREV_IP
 
         # 11. Check icp
-        if not await validate_composite_proof_of_time(
+        if not validate_composite_proof_of_time(
             constants,
             header_block.reward_chain_sub_block.icp_prev_ip,
             icp_iters,
@@ -459,6 +461,9 @@ async def validate_finished_header_block(
     prev_sb: SubBlockRecord = sub_blocks[header_block.prev_header_hash]
     new_slot: bool = len(header_block.finished_slots) > 0
     ips: uint64 = get_next_ips(constants, sub_blocks, height_to_hash, header_block.prev_header_hash, new_slot)
+    difficulty: uint64 = get_next_difficulty(
+        constants, sub_blocks, height_to_hash, header_block.prev_header_hash, new_slot
+    )
     q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
         constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
     )
@@ -466,6 +471,7 @@ async def validate_finished_header_block(
     required_iters: uint64 = calculate_iterations_quality(
         q_str,
         header_block.reward_chain_sub_block.proof_of_space.size,
+        difficulty,
     )
     icp_iters: uint64 = calculate_infusion_challenge_point_iters(constants, ips, required_iters)
     ip_iters: uint64 = calculate_infusion_point_iters(constants, ips, required_iters)
