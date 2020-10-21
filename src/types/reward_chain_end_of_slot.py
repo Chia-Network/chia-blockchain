@@ -19,7 +19,7 @@ class RewardChainEndOfSlot(Streamable):
 @dataclass(frozen=True)
 @streamable
 class EndOfSlotProofs(Streamable):
-    challenge_chain_icp_proof: Optional[List[ProofOfTime]]
-    challenge_chain_ip_proof: Optional[List[ProofOfTime]]
-    challenge_chain_slot_proof: List[ProofOfTime]
-    reward_chain_slot_proof: List[ProofOfTime]
+    challenge_chain_icp_proof: Optional[ProofOfTime]
+    challenge_chain_ip_proof: Optional[ProofOfTime]
+    challenge_chain_slot_proof: ProofOfTime
+    reward_chain_slot_proof: ProofOfTime

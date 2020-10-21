@@ -5,7 +5,7 @@ from chiavdf import create_discriminant
 from src.types.classgroup import ClassgroupElement
 from src.types.sized_bytes import bytes32
 from src.util.classgroup_utils import ClassGroup, check_proof_of_time_nwesolowski
-from src.util.ints import uint8, uint64
+from src.util.ints import uint16, uint64
 from src.util.streamable import Streamable, streamable
 from src.consensus.constants import ConsensusConstants
 
@@ -16,7 +16,7 @@ class ProofOfTime(Streamable):
     challenge_hash: bytes32
     number_of_iterations: uint64
     output: ClassgroupElement
-    witness_type: uint8
+    witness_type: uint16
     witness: bytes
 
     def is_valid(self, discriminant_size_bits):
@@ -30,6 +30,7 @@ class ProofOfTime(Streamable):
         except Exception:
             return False
         # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
+        # TODO: check for maximum witness type
         return check_proof_of_time_nwesolowski(
             disc,
             x,
@@ -40,24 +41,35 @@ class ProofOfTime(Streamable):
         )
 
 
-async def validate_composite_proof_of_time(
+def validate_composite_proof_of_time(
     constants: ConsensusConstants,
     challenge: bytes32,
     iters: uint64,
     output: ClassgroupElement,
-    proofs: List[ProofOfTime],
+    proof: ProofOfTime,
 ) -> bool:
-    # TODO: parallelize somehow, and cache already verified proofs
-
-    if len(proofs) == 0:
+    if challenge != proof.challenge_hash:
         return False
-    if challenge != proofs[0].challenge_hash:
+    if output != proof.output:
         return False
-    if output != proofs[-1].output:
+    if iters != proof.number_of_iterations:
         return False
-    if iters != sum(pr.number_of_iterations for pr in proofs):
+    if not proof.is_valid(constants.DISCRIMINANT_SIZE_BITS):
         return False
-    for proof in proofs:
-        if not proof.is_valid(constants.DISCRIMINANT_SIZE_BITS):
-            return False
     return True
+
+
+def combine_proofs_of_time(constants: ConsensusConstants, proofs: List[ProofOfTime]) -> ProofOfTime:
+    # proof3 y2 proof2 y1 proof1
+    combined_proof: bytes = b""
+    for proof in reversed(proofs)[1:]:
+        y = ClassGroup.from_ab_discriminant(proof.output.a, proof.output.b, constants.DISCRIMINANT_SIZE_BITS)
+        combined_proof += y.serialize() + proof.witness
+    combined_proof = proofs[-1].witness + combined_proof
+    return ProofOfTime(
+        proofs[0].challenge_hash,
+        sum(p.number_of_iterations for p in proofs),
+        proofs[-1].output,
+        uint16(sum(p.witness_type + 1 for p in proofs) - 1),
+        combined_proof,
+    )
