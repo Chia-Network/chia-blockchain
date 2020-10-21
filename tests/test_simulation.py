@@ -20,7 +20,7 @@ bt = None  # TODO: almog
 
 
 def node_height_at_least(node, h):
-    if (max([h.height for h in node.blockchain.get_current_tips()])) >= h:
+    if (max([h.height for h in node.full_node.blockchain.get_current_tips()])) >= h:
         return True
     return False
 
@@ -40,12 +40,12 @@ class TestSimulation:
         await time_out_assert(500, node_height_at_least, True, node2, 10)
 
         # Wait additional 2 minutes to get a compact block.
-        max_height = node1.blockchain.lca_block.height
+        max_height = node1.full_node.blockchain.lca_block.height
 
         async def has_compact(node1, node2, max_height):
             for h in range(1, max_height):
-                blocks_1: List[FullBlock] = await node1.block_store.get_full_blocks_at([uint32(h)])
-                blocks_2: List[FullBlock] = await node2.block_store.get_full_blocks_at([uint32(h)])
+                blocks_1: List[FullBlock] = await node1.full_node.block_store.get_full_blocks_at([uint32(h)])
+                blocks_2: List[FullBlock] = await node2.full_node.block_store.get_full_blocks_at([uint32(h)])
                 has_compact_1 = False
                 has_compact_2 = False
                 for block in blocks_1:

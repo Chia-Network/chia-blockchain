@@ -31,15 +31,18 @@ class TestCCWalletBackup:
     async def test_coin_backup(self, two_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
-        full_node_1, server_1 = full_nodes[0]
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         funds = sum(
             [
@@ -55,7 +58,7 @@ class TestCCWalletBackup:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -76,7 +79,9 @@ class TestCCWalletBackup:
         assert started is False
 
         await wallet_node._start(backup_file=file_path)
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
 
         all_wallets = wallet_node.wallet_state_manager.wallets
         assert len(all_wallets) == 2

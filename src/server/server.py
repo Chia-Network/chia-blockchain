@@ -195,36 +195,39 @@ class ChiaServer:
             if full_message is None or connection is None:
                 continue
 
-            try:
-                connection.log.info(
-                    f"<- {full_message.function} from peer {connection.peer_node_id}"
-                )
-                if len(full_message.function) == 0 or full_message.function.startswith(
-                    "_"
-                ):
-                    # This prevents remote calling of private methods that start with "_"
-                    raise ProtocolError(
-                        Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+            async def api_call(full_message, connection):
+                try:
+                    connection.log.info(
+                        f"<- {full_message.function} from peer {connection.peer_node_id}"
                     )
+                    if len(
+                        full_message.function
+                    ) == 0 or full_message.function.startswith("_"):
+                        # This prevents remote calling of private methods that start with "_"
+                        raise ProtocolError(
+                            Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                        )
 
-                f = getattr(self.api, full_message.function, None)
+                    f = getattr(self.api, full_message.function, None)
 
-                if f is None:
-                    raise ProtocolError(
-                        Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                    if f is None:
+                        raise ProtocolError(
+                            Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                        )
+
+                    response = await f(full_message.data, connection)
+
+                    if response is not None:
+                        await connection.send_message(response)
+
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    connection.log.error(
+                        f"Exception: {e}, closing connection {connection}. {tb}"
                     )
+                    await connection.close()
 
-                response = await f(full_message.data, connection)
-
-                if response is not None:
-                    await connection.send_message(response)
-
-            except Exception as e:
-                tb = traceback.format_exc()
-                connection.log.error(
-                    f"Exception: {e}, closing connection {connection}. {tb}"
-                )
-                await connection.close()
+            asyncio.create_task(api_call(full_message, connection))
 
     async def send_to_others(
         self, messages: List[Message], type: NodeType, origin_peer: WSChiaConnection
@@ -264,9 +267,15 @@ class ChiaServer:
 
         return result
 
-    def close_all(self):
+    async def close_all_connections(self):
         for id, connection in self.global_connections.items():
-            asyncio.ensure_future(connection.close())
+            try:
+                await connection.close()
+            except Exception as e:
+                self.log.error(f"exeption while closing connection {e}")
+
+    def close_all(self):
+        asyncio.ensure_future(self.close_all_connections())
 
         self.site_shutdown_task = asyncio.create_task(self.site.stop())
         self.app_shut_down_task = asyncio.create_task(self.app.shutdown())

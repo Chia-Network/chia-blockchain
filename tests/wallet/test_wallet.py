@@ -125,7 +125,6 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, new_funds - 10)
         await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - 10)
 
-
     @pytest.mark.asyncio
     async def test_wallet_coinbase_reorg(self, wallet_node):
         num_blocks = 5
@@ -136,7 +135,9 @@ class TestWalletSimulator:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(fn_server._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(fn_server._port)), None
+        )
         for i in range(1, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
@@ -193,12 +194,8 @@ class TestWalletSimulator:
         all_blocks = await full_node_api_0.get_current_blocks(full_node_api_0.get_tip())
 
         for block in all_blocks:
-            await full_node_1._respond_block(
-                full_node_protocol.RespondBlock(block)
-            )
-            await full_node_2._respond_block(
-                full_node_protocol.RespondBlock(block)
-            )
+            await full_node_1._respond_block(full_node_protocol.RespondBlock(block))
+            await full_node_2._respond_block(full_node_protocol.RespondBlock(block))
 
         funds = sum(
             [
@@ -291,7 +288,9 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet_0.get_unconfirmed_balance, funds - 10)
 
         for i in range(0, 4):
-            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(token_bytes()), None)
+            await full_node_api_0.farm_new_block(
+                FarmNewBlockProtocol(token_bytes()), None
+            )
 
         new_funds = sum(
             [
@@ -311,7 +310,9 @@ class TestWalletSimulator:
         await wallet_1.push_transaction(tx)
 
         for i in range(0, 4):
-            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(token_bytes()), None)
+            await full_node_api_0.farm_new_block(
+                FarmNewBlockProtocol(token_bytes()), None
+            )
 
         await wallet_0.get_confirmed_balance()
         await wallet_0.get_unconfirmed_balance()
