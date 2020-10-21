@@ -99,6 +99,7 @@ class ChiaServer:
                 False,
                 request.remote,
                 self.incoming_messages,
+                self.connection_closed,
                 close_event,
             )
             handshake = await connection.perform_handshake(
@@ -159,6 +160,7 @@ class ChiaServer:
                     False,
                     target_node.host,
                     self.incoming_messages,
+                    self.connection_closed,
                     session=session,
                 )
                 handshake = await connection.perform_handshake(
@@ -183,7 +185,7 @@ class ChiaServer:
 
         return False
 
-    def connection_disconnected(self, connection: WSChiaConnection):
+    def connection_closed(self, connection: WSChiaConnection):
         self.log.info(f"connection with disconnected: {connection.peer_host}")
         if connection.peer_node_id in self.global_connections:
             self.global_connections.pop(connection.peer_node_id)
@@ -265,6 +267,12 @@ class ChiaServer:
             if connection.connection_type is NodeType.FULL_NODE:
                 result.append(connection)
 
+        return result
+
+    def get_connections(self) -> List[WSChiaConnection]:
+        result = []
+        for id, connection in self.global_connections.items():
+            result.append(connection)
         return result
 
     async def close_all_connections(self):

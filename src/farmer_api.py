@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional
+from typing import Optional, Callable
 
 from blspy import AugSchemeMPL, G2Element
 
@@ -20,6 +20,9 @@ class FarmerAPI:
 
     def __init__(self, farmer):
         self.farmer = farmer
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.farmer.state_changed_callback = callback
 
     @api_request
     async def challenge_response(
