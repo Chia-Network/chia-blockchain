@@ -43,7 +43,7 @@ from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
 from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
-from src.types.proof_of_time import ProofOfTime
+from src.types.vdf import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.util.api_decorators import api_request
@@ -110,12 +110,8 @@ class FullNode:
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.connection)
         self.log.info("Initializing blockchain from disk")
-        self.blockchain = await Blockchain.create(
-            self.coin_store, self.block_store, self.constants
-        )
-        self.log.info(
-            f"Blockchain initialized to tips at {[t.height for t in self.blockchain.get_current_tips()]}"
-        )
+        self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
+        self.log.info(f"Blockchain initialized to tips at {[t.height for t in self.blockchain.get_current_tips()]}")
 
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
@@ -125,8 +121,7 @@ class FullNode:
                 self.server,
                 self.root_path,
                 self.global_connections,
-                self.config["target_peer_count"]
-                - self.config["target_outbound_peer_count"],
+                self.config["target_peer_count"] - self.config["target_outbound_peer_count"],
                 self.config["target_outbound_peer_count"],
                 self.config["peer_db_path"],
                 self.config["introducer_peer"],
@@ -138,17 +133,11 @@ class FullNode:
             self.log.error(f"Exception in peer discovery: {e}")
         uncompact_interval = self.config["send_uncompact_interval"]
         if uncompact_interval > 0:
-            self.broadcast_uncompact_task = asyncio.create_task(
-                self.broadcast_uncompact_blocks(uncompact_interval)
-            )
+            self.broadcast_uncompact_task = asyncio.create_task(self.broadcast_uncompact_blocks(uncompact_interval))
 
-        for ((_, _), block) in (
-            await self.full_node_store.get_unfinished_blocks()
-        ).items():
+        for ((_, _), block) in (await self.full_node_store.get_unfinished_blocks()).items():
             if block.height > self.full_node_store.get_unfinished_block_leader()[0]:
-                self.full_node_store.set_unfinished_block_leader(
-                    (block.height, 999999999999)
-                )
+                self.full_node_store.set_unfinished_block_leader((block.height, 999999999999))
 
     def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections = global_connections
@@ -165,9 +154,7 @@ class FullNode:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
-    async def _send_tips_to_farmers(
-        self, delivery: Delivery = Delivery.BROADCAST
-    ) -> OutboundMessageGenerator:
+    async def _send_tips_to_farmers(self, delivery: Delivery = Delivery.BROADCAST) -> OutboundMessageGenerator:
         """
         Sends all of the current heads to all farmer peers. Also sends the latest
         estimated proof of time rate, so farmer can calulate which proofs are good.
@@ -176,9 +163,7 @@ class FullNode:
         async with self.blockchain.lock:
             tips: List[Header] = self.blockchain.get_current_tips()
             for tip in tips:
-                full_tip: Optional[FullBlock] = await self.block_store.get_block(
-                    tip.header_hash
-                )
+                full_tip: Optional[FullBlock] = await self.block_store.get_block(tip.header_hash)
                 assert full_tip is not None
                 challenge: Optional[Challenge] = self.blockchain.get_challenge(full_tip)
                 assert challenge is not None
@@ -190,57 +175,37 @@ class FullNode:
                 else:
                     difficulty = uint64(tip.weight)
                 requests.append(
-                    farmer_protocol.ProofOfSpaceFinalized(
-                        challenge_hash, tip.height, tip.weight, difficulty
-                    )
+                    farmer_protocol.ProofOfSpaceFinalized(challenge_hash, tip.height, tip.weight, difficulty)
                 )
-            full_block: Optional[FullBlock] = await self.block_store.get_block(
-                tips[0].header_hash
-            )
+            full_block: Optional[FullBlock] = await self.block_store.get_block(tips[0].header_hash)
             assert full_block is not None
-            proof_of_time_min_iters: uint64 = self.blockchain.get_next_min_iters(
-                full_block
-            )
+            proof_of_time_min_iters: uint64 = self.blockchain.get_next_min_iters(full_block)
             proof_of_time_rate: uint64 = uint64(
-                proof_of_time_min_iters
-                * self.constants.MIN_ITERS_PROPORTION
-                // (self.constants.BLOCK_TIME_TARGET)
+                proof_of_time_min_iters * self.constants.MIN_ITERS_PROPORTION // (self.constants.BLOCK_TIME_TARGET)
             )
         rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
-        yield OutboundMessage(
-            NodeType.FARMER, Message("proof_of_time_rate", rate_update), delivery
-        )
+        yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update), delivery)
         for request in requests:
-            yield OutboundMessage(
-                NodeType.FARMER, Message("proof_of_space_finalized", request), delivery
-            )
+            yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", request), delivery)
 
-    async def _send_challenges_to_timelords(
-        self, delivery: Delivery = Delivery.BROADCAST
-    ) -> OutboundMessageGenerator:
+    async def _send_challenges_to_timelords(self, delivery: Delivery = Delivery.BROADCAST) -> OutboundMessageGenerator:
         """
         Sends all of the current heads (as well as Pos infos) to all timelord peers.
         """
         challenge_requests: List[timelord_protocol.ChallengeStart] = []
         pos_info_requests: List[timelord_protocol.ProofOfSpaceInfo] = []
         tips: List[Header] = self.blockchain.get_current_tips()
-        tips_blocks: List[Optional[FullBlock]] = [
-            await self.block_store.get_block(tip.header_hash) for tip in tips
-        ]
+        tips_blocks: List[Optional[FullBlock]] = [await self.block_store.get_block(tip.header_hash) for tip in tips]
         for tip in tips_blocks:
             assert tip is not None
             challenge = self.blockchain.get_challenge(tip)
             assert challenge is not None
-            challenge_requests.append(
-                timelord_protocol.ChallengeStart(challenge.get_hash(), tip.weight)
-            )
+            challenge_requests.append(timelord_protocol.ChallengeStart(challenge.get_hash(), tip.weight))
 
         tip_hashes = [tip.header_hash for tip in tips]
         tip_infos = [
             (tup[0], tup[1])
-            for tup in list(
-                (await self.full_node_store.get_unfinished_blocks()).items()
-            )
+            for tup in list((await self.full_node_store.get_unfinished_blocks()).items())
             if tup[1].prev_header_hash in tip_hashes
         ]
         for ((chall, iters), _) in tip_infos:
@@ -260,9 +225,7 @@ class FullNode:
             )
             break
         for challenge_msg in challenge_requests:
-            yield OutboundMessage(
-                NodeType.TIMELORD, Message("challenge_start", challenge_msg), delivery
-            )
+            yield OutboundMessage(NodeType.TIMELORD, Message("challenge_start", challenge_msg), delivery)
         for pos_info_msg in pos_info_requests:
             yield OutboundMessage(
                 NodeType.TIMELORD,
@@ -278,15 +241,11 @@ class FullNode:
         tips: List[Header] = self.blockchain.get_current_tips()
         for t in tips:
             request = full_node_protocol.NewTip(t.height, t.weight, t.header_hash)
-            yield OutboundMessage(
-                NodeType.FULL_NODE, Message("new_tip", request), Delivery.RESPOND
-            )
+            yield OutboundMessage(NodeType.FULL_NODE, Message("new_tip", request), Delivery.RESPOND)
         # If connected to a wallet, send the LCA
         lca = self.blockchain.lca_block
         new_lca = wallet_protocol.NewLCA(lca.header_hash, lca.height, lca.weight)
-        yield OutboundMessage(
-            NodeType.WALLET, Message("new_lca", new_lca), Delivery.RESPOND
-        )
+        yield OutboundMessage(NodeType.WALLET, Message("new_lca", new_lca), Delivery.RESPOND)
 
         # Send filter to node and request mempool items that are not in it
         my_filter = self.mempool_manager.get_filter()
@@ -333,9 +292,7 @@ class FullNode:
 
     def _num_needed_peers(self) -> int:
         assert self.global_connections is not None
-        diff = self.config["target_peer_count"] - len(
-            self.global_connections.get_full_node_connections()
-        )
+        diff = self.config["target_peer_count"] - len(self.global_connections.get_full_node_connections())
         return diff if diff >= 0 else 0
 
     def _close(self):
@@ -372,32 +329,24 @@ class FullNode:
         # (similar to longest chain rule).
         self.sync_store.set_waiting_for_tips(False)
 
-        potential_tips: List[
-            Tuple[bytes32, FullBlock]
-        ] = self.sync_store.get_potential_tips_tuples()
+        potential_tips: List[Tuple[bytes32, FullBlock]] = self.sync_store.get_potential_tips_tuples()
         self.log.info(f"Have collected {len(potential_tips)} potential tips")
         if self._shut_down:
             return
 
         for header_hash, potential_tip_block in potential_tips:
             if potential_tip_block.proof_of_time is None:
-                raise ValueError(
-                    f"Invalid tip block {potential_tip_block.header_hash} received"
-                )
+                raise ValueError(f"Invalid tip block {potential_tip_block.header_hash} received")
             if potential_tip_block.weight > highest_weight:
                 highest_weight = potential_tip_block.weight
                 tip_block = potential_tip_block
                 tip_height = potential_tip_block.height
-        if highest_weight <= max(
-            [t.weight for t in self.blockchain.get_current_tips()]
-        ):
+        if highest_weight <= max([t.weight for t in self.blockchain.get_current_tips()]):
             self.log.info("Not performing sync, already caught up.")
             return
 
         assert tip_block
-        self.log.info(
-            f"Tip block {tip_block.header_hash} tip height {tip_block.height}"
-        )
+        self.log.info(f"Tip block {tip_block.header_hash} tip height {tip_block.height}")
 
         self.sync_store.set_potential_hashes_received(asyncio.Event())
 
@@ -435,9 +384,7 @@ class FullNode:
 
         async with self.blockchain.lock:
             # Lock blockchain so we can copy over the headers without any reorgs
-            fork_point_height: uint32 = self.blockchain.find_fork_point_alternate_chain(
-                header_hashes
-            )
+            fork_point_height: uint32 = self.blockchain.find_fork_point_alternate_chain(header_hashes)
 
         fork_point_hash: bytes32 = header_hashes[fork_point_height]
         self.log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}")
@@ -449,9 +396,7 @@ class FullNode:
             if (con.node_id is not None and con.connection_type == NodeType.FULL_NODE)
         ]
 
-        self.sync_peers_handler = SyncPeersHandler(
-            self.sync_store, peers, fork_point_height, self.blockchain
-        )
+        self.sync_peers_handler = SyncPeersHandler(self.sync_store, peers, fork_point_height, self.blockchain)
 
         # Start processing blocks that we have received (no block yet)
         block_processor = SyncBlocksProcessor(
@@ -475,10 +420,7 @@ class FullNode:
             cur_peers = [
                 con.node_id
                 for con in self.global_connections.get_connections()
-                if (
-                    con.node_id is not None
-                    and con.connection_type == NodeType.FULL_NODE
-                )
+                if (con.node_id is not None and con.connection_type == NodeType.FULL_NODE)
             ]
             for node_id in cur_peers:
                 if node_id not in peers:
@@ -499,9 +441,7 @@ class FullNode:
                     new_lca.height,
                     new_lca.weight,
                 )
-                yield OutboundMessage(
-                    NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST
-                )
+                yield OutboundMessage(NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST)
 
             self._state_changed("block")
             await asyncio.sleep(5)
@@ -554,15 +494,11 @@ class FullNode:
 
         lca = self.blockchain.lca_block
         new_lca = wallet_protocol.NewLCA(lca.header_hash, lca.height, lca.weight)
-        yield OutboundMessage(
-            NodeType.WALLET, Message("new_lca", new_lca), Delivery.BROADCAST
-        )
+        yield OutboundMessage(NodeType.WALLET, Message("new_lca", new_lca), Delivery.BROADCAST)
         self._state_changed("block")
 
     @api_request
-    async def new_tip(
-        self, request: full_node_protocol.NewTip
-    ) -> OutboundMessageGenerator:
+    async def new_tip(self, request: full_node_protocol.NewTip) -> OutboundMessageGenerator:
         """
         A peer notifies us that they have added a new tip to their blockchain. If we don't have it,
         we can ask for it.
@@ -580,9 +516,7 @@ class FullNode:
         yield OutboundMessage(NodeType.FULL_NODE, message, Delivery.RESPOND)
 
     @api_request
-    async def removing_tip(
-        self, request: full_node_protocol.RemovingTip
-    ) -> OutboundMessageGenerator:
+    async def removing_tip(self, request: full_node_protocol.RemovingTip) -> OutboundMessageGenerator:
         """
         A peer notifies us that they have removed a tip from their blockchain.
         """
@@ -590,9 +524,7 @@ class FullNode:
             yield _
 
     @api_request
-    async def new_transaction(
-        self, transaction: full_node_protocol.NewTransaction
-    ) -> OutboundMessageGenerator:
+    async def new_transaction(self, transaction: full_node_protocol.NewTransaction) -> OutboundMessageGenerator:
         """
         A peer notifies us of a new transaction.
         Requests a full transaction if we haven't seen it previously, and if the fees are enough.
@@ -605,9 +537,7 @@ class FullNode:
             return
 
         if self.mempool_manager.is_fee_enough(transaction.fees, transaction.cost):
-            requestTX = full_node_protocol.RequestTransaction(
-                transaction.transaction_id
-            )
+            requestTX = full_node_protocol.RequestTransaction(transaction.transaction_id)
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("request_transaction", requestTX),
@@ -615,9 +545,7 @@ class FullNode:
             )
 
     @api_request
-    async def request_transaction(
-        self, request: full_node_protocol.RequestTransaction
-    ) -> OutboundMessageGenerator:
+    async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> OutboundMessageGenerator:
         """ Peer has requested a full transaction from us. """
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
@@ -642,9 +570,7 @@ class FullNode:
         self.log.info(f"sending transaction (tx_id: {spend_bundle.name()}) to peer")
 
     @api_request
-    async def respond_transaction(
-        self, tx: full_node_protocol.RespondTransaction
-    ) -> OutboundMessageGenerator:
+    async def respond_transaction(self, tx: full_node_protocol.RespondTransaction) -> OutboundMessageGenerator:
         """
         Receives a full transaction from peer.
         If tx is added to mempool, send tx_id to others. (new_transaction)
@@ -657,9 +583,7 @@ class FullNode:
             # Ignore if we have already added this transaction
             if self.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
                 return
-            cost, status, error = await self.mempool_manager.add_spendbundle(
-                tx.transaction
-            )
+            cost, status, error = await self.mempool_manager.add_spendbundle(tx.transaction)
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
                 fees = tx.transaction.fees()
@@ -693,29 +617,20 @@ class FullNode:
             yield _
 
     @api_request
-    async def new_proof_of_time(
-        self, new_proof_of_time: full_node_protocol.NewProofOfTime
-    ) -> OutboundMessageGenerator:
+    async def new_proof_of_time(self, new_proof_of_time: full_node_protocol.NewProofOfTime) -> OutboundMessageGenerator:
         if new_proof_of_time.witness_type == 0:
             # A honest sanitizer will always sanitize until the LCA block.
             if new_proof_of_time.height >= self.blockchain.lca_block.height:
                 return
             # If we already have the compact PoT in a connected to header block, return
-            blocks: List[FullBlock] = await self.block_store.get_blocks_at(
-                [new_proof_of_time.height]
-            )
+            blocks: List[FullBlock] = await self.block_store.get_blocks_at([new_proof_of_time.height])
             if new_proof_of_time.height not in self.blockchain.height_to_hash:
-                self.log.error(
-                    f"Height {new_proof_of_time.height} not found in height_to_hash."
-                )
+                self.log.error(f"Height {new_proof_of_time.height} not found in height_to_hash.")
                 return
             header_hash = self.blockchain.height_to_hash[new_proof_of_time.height]
             for block in blocks:
                 assert block.proof_of_time is not None
-                if (
-                    block.proof_of_time.witness_type == 0
-                    and block.header_hash == header_hash
-                ):
+                if block.proof_of_time.witness_type == 0 and block.header_hash == header_hash:
                     return
         else:
             # If we don't have an unfinished block for this PoT, we don't care about it
@@ -734,10 +649,8 @@ class FullNode:
             for block in blocks:
                 if (
                     block.proof_of_time is not None
-                    and block.proof_of_time.challenge_hash
-                    == new_proof_of_time.challenge_hash
-                    and block.proof_of_time.number_of_iterations
-                    == new_proof_of_time.number_of_iterations
+                    and block.proof_of_time.challenge_hash == new_proof_of_time.challenge_hash
+                    and block.proof_of_time.number_of_iterations == new_proof_of_time.number_of_iterations
                 ):
                     return
 
@@ -767,18 +680,13 @@ class FullNode:
     async def request_proof_of_time(
         self, request_proof_of_time: full_node_protocol.RequestProofOfTime
     ) -> OutboundMessageGenerator:
-        blocks: List[FullBlock] = await self.block_store.get_blocks_at(
-            [request_proof_of_time.height]
-        )
+        blocks: List[FullBlock] = await self.block_store.get_blocks_at([request_proof_of_time.height])
         for block in blocks:
             if (
                 block.proof_of_time is not None
-                and block.proof_of_time.challenge_hash
-                == request_proof_of_time.challenge_hash
-                and block.proof_of_time.number_of_iterations
-                == request_proof_of_time.number_of_iterations
-                and block.proof_of_time.witness_type
-                == request_proof_of_time.witness_type
+                and block.proof_of_time.challenge_hash == request_proof_of_time.challenge_hash
+                and block.proof_of_time.number_of_iterations == request_proof_of_time.number_of_iterations
+                and block.proof_of_time.witness_type == request_proof_of_time.witness_type
             ):
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
@@ -843,9 +751,7 @@ class FullNode:
                     Delivery.BROADCAST_TO_OTHERS,
                 )
             if not processed:
-                request = timelord_protocol.ProofOfTimeFinished(
-                    respond_proof_of_time.proof
-                )
+                request = timelord_protocol.ProofOfTimeFinished(respond_proof_of_time.proof)
                 async for msg in self.proof_of_time_finished(request):
                     yield msg
 
@@ -882,8 +788,7 @@ class FullNode:
             if (
                 block.proof_of_time.witness_type != 0
                 and block.proof_of_time.challenge_hash == proof.challenge_hash
-                and block.proof_of_time.number_of_iterations
-                == proof.number_of_iterations
+                and block.proof_of_time.number_of_iterations == proof.number_of_iterations
             ):
                 block_new = FullBlock(
                     block.proof_of_space,
@@ -915,9 +820,7 @@ class FullNode:
 
     # Periodically scans for blocks with non compact proof of time
     # (witness_type != 0) and sends them to the connected timelords.
-    async def broadcast_uncompact_blocks(
-        self, uncompact_interval, delivery: Delivery = Delivery.BROADCAST
-    ):
+    async def broadcast_uncompact_blocks(self, uncompact_interval, delivery: Delivery = Delivery.BROADCAST):
         min_height = 1
         while not self._shut_down:
             while self.sync_store.get_sync_mode():
@@ -934,9 +837,7 @@ class FullNode:
             for h in range(min_height, max_height):
                 if self._shut_down:
                     return
-                blocks: List[FullBlock] = await self.block_store.get_blocks_at(
-                    [uint32(h)]
-                )
+                blocks: List[FullBlock] = await self.block_store.get_blocks_at([uint32(h)])
                 header_hash = self.blockchain.height_to_hash[uint32(h)]
                 for block in blocks:
                     assert block.proof_of_time is not None
@@ -993,9 +894,7 @@ class FullNode:
                             delivery,
                         )
                     )
-            self.log.info(
-                f"Broadcasted {len(broadcast_list)} uncompact blocks to timelords."
-            )
+            self.log.info(f"Broadcasted {len(broadcast_list)} uncompact blocks to timelords.")
             await asyncio.sleep(uncompact_interval)
 
     @api_request
@@ -1004,13 +903,9 @@ class FullNode:
     ) -> OutboundMessageGenerator:
         if self.blockchain.contains_block(new_unfinished_block.new_header_hash):
             return
-        if not self.blockchain.contains_block(
-            new_unfinished_block.previous_header_hash
-        ):
+        if not self.blockchain.contains_block(new_unfinished_block.previous_header_hash):
             return
-        prev_block: Optional[FullBlock] = await self.block_store.get_block(
-            new_unfinished_block.previous_header_hash
-        )
+        prev_block: Optional[FullBlock] = await self.block_store.get_block(new_unfinished_block.previous_header_hash)
         if prev_block is not None:
             challenge = self.blockchain.get_challenge(prev_block)
             if challenge is not None:
@@ -1031,9 +926,7 @@ class FullNode:
                 NodeType.FULL_NODE,
                 Message(
                     "request_unfinished_block",
-                    full_node_protocol.RequestUnfinishedBlock(
-                        new_unfinished_block.new_header_hash
-                    ),
+                    full_node_protocol.RequestUnfinishedBlock(new_unfinished_block.new_header_hash),
                 ),
                 Delivery.RESPOND,
             )
@@ -1053,9 +946,7 @@ class FullNode:
                     Delivery.RESPOND,
                 )
                 return
-        fetched: Optional[FullBlock] = await self.block_store.get_block(
-            request_unfinished_block.header_hash
-        )
+        fetched: Optional[FullBlock] = await self.block_store.get_block(request_unfinished_block.header_hash)
         if fetched is not None:
             yield OutboundMessage(
                 NodeType.FULL_NODE,
@@ -1069,9 +960,7 @@ class FullNode:
 
         reject = Message(
             "reject_unfinished_block_request",
-            full_node_protocol.RejectUnfinishedBlockRequest(
-                request_unfinished_block.header_hash
-            ),
+            full_node_protocol.RejectUnfinishedBlockRequest(request_unfinished_block.header_hash),
         )
         yield OutboundMessage(NodeType.FULL_NODE, reject, Delivery.RESPOND)
 
@@ -1093,9 +982,7 @@ class FullNode:
         if not self.blockchain.is_child_of_head(block):
             return
 
-        prev_full_block: Optional[FullBlock] = await self.block_store.get_block(
-            block.prev_header_hash
-        )
+        prev_full_block: Optional[FullBlock] = await self.block_store.get_block(block.prev_header_hash)
 
         assert prev_full_block is not None
         async with self.blockchain.lock:
@@ -1112,64 +999,38 @@ class FullNode:
         assert challenge is not None
         challenge_hash = challenge.get_hash()
 
-        if (
-            await (
-                self.full_node_store.get_unfinished_block(
-                    (challenge_hash, iterations_needed)
-                )
-            )
-            is not None
-        ):
+        if await (self.full_node_store.get_unfinished_block((challenge_hash, iterations_needed))) is not None:
             return
 
-        expected_time: uint64 = uint64(
-            int(
-                iterations_needed
-                / (self.full_node_store.get_proof_of_time_estimate_ips())
-            )
-        )
+        expected_time: uint64 = uint64(int(iterations_needed / (self.full_node_store.get_proof_of_time_estimate_ips())))
 
         if expected_time > self.constants.PROPAGATION_DELAY_THRESHOLD:
             self.log.info(f"Block is slow, expected {expected_time} seconds, waiting")
             # If this block is slow, sleep to allow faster blocks to come out first
             await asyncio.sleep(5)
 
-        leader: Tuple[
-            uint32, uint64
-        ] = self.full_node_store.get_unfinished_block_leader()
+        leader: Tuple[uint32, uint64] = self.full_node_store.get_unfinished_block_leader()
         if leader is None or block.height > leader[0]:
-            self.log.info(
-                f"This is the first unfinished block at height {block.height}, so propagate."
-            )
+            self.log.info(f"This is the first unfinished block at height {block.height}, so propagate.")
             # If this is the first block we see at this height, propagate
-            self.full_node_store.set_unfinished_block_leader(
-                (block.height, expected_time)
-            )
+            self.full_node_store.set_unfinished_block_leader((block.height, expected_time))
         elif block.height == leader[0]:
             if expected_time > leader[1] + self.constants.PROPAGATION_THRESHOLD:
                 # If VDF is expected to finish X seconds later than the best, don't propagate
-                self.log.info(
-                    f"VDF will finish too late {expected_time} seconds, so don't propagate"
-                )
+                self.log.info(f"VDF will finish too late {expected_time} seconds, so don't propagate")
                 return
             elif expected_time < leader[1]:
                 self.log.info(f"New best unfinished block at height {block.height}")
                 # If this will be the first block to finalize, update our leader
-                self.full_node_store.set_unfinished_block_leader(
-                    (leader[0], expected_time)
-                )
+                self.full_node_store.set_unfinished_block_leader((leader[0], expected_time))
         else:
             # If we have seen an unfinished block at a greater or equal height, don't propagate
             self.log.info("Unfinished block at old height, so don't propagate")
             return
 
-        await self.full_node_store.add_unfinished_block(
-            (challenge_hash, iterations_needed), block
-        )
+        await self.full_node_store.add_unfinished_block((challenge_hash, iterations_needed), block)
 
-        timelord_request = timelord_protocol.ProofOfSpaceInfo(
-            challenge_hash, iterations_needed
-        )
+        timelord_request = timelord_protocol.ProofOfSpaceInfo(challenge_hash, iterations_needed)
 
         yield OutboundMessage(
             NodeType.TIMELORD,
@@ -1200,9 +1061,7 @@ class FullNode:
     ) -> OutboundMessageGenerator:
         try:
             header_hashes = self.blockchain.get_header_hashes(request.tip_header_hash)
-            message = Message(
-                "all_header_hashes", full_node_protocol.AllHeaderHashes(header_hashes)
-            )
+            message = Message("all_header_hashes", full_node_protocol.AllHeaderHashes(header_hashes))
             yield OutboundMessage(NodeType.FULL_NODE, message, Delivery.RESPOND)
         except ValueError:
             self.log.info("Do not have requested header hashes.")
@@ -1220,15 +1079,11 @@ class FullNode:
             yield _
 
     @api_request
-    async def request_header_block(
-        self, request: full_node_protocol.RequestHeaderBlock
-    ) -> OutboundMessageGenerator:
+    async def request_header_block(self, request: full_node_protocol.RequestHeaderBlock) -> OutboundMessageGenerator:
         """
         A peer requests a list of header blocks, by height. Used for syncing or light clients.
         """
-        full_block: Optional[FullBlock] = await self.block_store.get_block(
-            request.header_hash
-        )
+        full_block: Optional[FullBlock] = await self.block_store.get_block(request.header_hash)
         if full_block is not None:
             header_block: Optional[HeaderBlock] = full_block.get_header_block()
             if header_block is not None and header_block.height == request.height:
@@ -1239,9 +1094,7 @@ class FullNode:
                     Delivery.RESPOND,
                 )
                 return
-        reject = full_node_protocol.RejectHeaderBlockRequest(
-            request.height, request.header_hash
-        )
+        reject = full_node_protocol.RejectHeaderBlockRequest(request.height, request.header_hash)
         yield OutboundMessage(
             NodeType.FULL_NODE,
             Message("reject_header_block_request", reject),
@@ -1249,9 +1102,7 @@ class FullNode:
         )
 
     @api_request
-    async def respond_header_block(
-        self, request: full_node_protocol.RespondHeaderBlock
-    ) -> OutboundMessageGenerator:
+    async def respond_header_block(self, request: full_node_protocol.RespondHeaderBlock) -> OutboundMessageGenerator:
         """
         Receive header blocks from a peer.
         """
@@ -1269,9 +1120,7 @@ class FullNode:
             yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
 
     @api_request
-    async def request_header_hash(
-        self, request: farmer_protocol.RequestHeaderHash
-    ) -> OutboundMessageGenerator:
+    async def request_header_hash(self, request: farmer_protocol.RequestHeaderHash) -> OutboundMessageGenerator:
         """
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
         by the farmer, and sends the hash of the header data back to the farmer.
@@ -1289,9 +1138,7 @@ class FullNode:
 
         # Retrieves the correct tip for the challenge
         tips: List[Header] = self.blockchain.get_current_tips()
-        tips_blocks: List[Optional[FullBlock]] = [
-            await self.block_store.get_block(tip.header_hash) for tip in tips
-        ]
+        tips_blocks: List[Optional[FullBlock]] = [await self.block_store.get_block(tip.header_hash) for tip in tips]
         target_tip_block: Optional[FullBlock] = None
         target_tip: Optional[Header] = None
         for tip in tips_blocks:
@@ -1302,17 +1149,13 @@ class FullNode:
                 target_tip_block = tip
                 target_tip = tip.header
         if target_tip is None:
-            self.log.warning(
-                f"Challenge hash: {request.challenge_hash} not in one of three tips"
-            )
+            self.log.warning(f"Challenge hash: {request.challenge_hash} not in one of three tips")
             return
 
         assert target_tip is not None
         # Grab best transactions from Mempool for given tip target
         async with self.blockchain.lock:
-            spend_bundle: Optional[
-                SpendBundle
-            ] = await self.mempool_manager.create_bundle_for_tip(target_tip)
+            spend_bundle: Optional[SpendBundle] = await self.mempool_manager.create_bundle_for_tip(target_tip)
         spend_bundle_fees = 0
         aggregate_sig: G2Element = request.pool_target_signature
         solution_program: Optional[Program] = None
@@ -1320,9 +1163,7 @@ class FullNode:
         if spend_bundle:
             solution_program = best_solution_program(spend_bundle)
             spend_bundle_fees = spend_bundle.fees()
-            aggregate_sig = AugSchemeMPL.aggregate(
-                [spend_bundle.aggregated_signature, aggregate_sig]
-            )
+            aggregate_sig = AugSchemeMPL.aggregate([spend_bundle.aggregated_signature, aggregate_sig])
 
         base_fee_reward = calculate_base_fee(target_tip.height + 1)
         full_fee_reward = uint64(int(base_fee_reward + spend_bundle_fees))
@@ -1330,9 +1171,7 @@ class FullNode:
         # Calculate the cost of transactions
         cost = uint64(0)
         if solution_program:
-            _, _, cost = calculate_cost_of_program(
-                solution_program, self.constants.CLVM_COST_RATIO_CONSTANT
-            )
+            _, _, cost = calculate_cost_of_program(solution_program, self.constants.CLVM_COST_RATIO_CONSTANT)
 
         extension_data: bytes32 = bytes32([0] * 32)
 
@@ -1384,9 +1223,7 @@ class FullNode:
         for coin in removals:
             removal_merkle_set.add_already_hashed(coin.name())
         cb_reward = calculate_block_reward(target_tip.height + 1)
-        cb_coin = create_coinbase_coin(
-            target_tip.height + 1, request.pool_target.puzzle_hash, cb_reward
-        )
+        cb_coin = create_coinbase_coin(target_tip.height + 1, request.pool_target.puzzle_hash, cb_reward)
         fees_coin = create_fees_coin(
             target_tip.height + 1,
             request.farmer_rewards_puzzle_hash,
@@ -1409,11 +1246,7 @@ class FullNode:
         additions_root = addition_merkle_set.get_root()
         removal_root = removal_merkle_set.get_root()
 
-        generator_hash = (
-            solution_program.get_tree_hash()
-            if solution_program is not None
-            else bytes32([0] * 32)
-        )
+        generator_hash = solution_program.get_tree_hash() if solution_program is not None else bytes32([0] * 32)
         filter_hash = std_hash(encoded_filter)
 
         block_header_data: HeaderData = HeaderData(
@@ -1447,17 +1280,11 @@ class FullNode:
             target_tip.height + 1,
         )
 
-        message = farmer_protocol.HeaderHash(
-            proof_of_space_hash, block_header_data_hash
-        )
-        yield OutboundMessage(
-            NodeType.FARMER, Message("header_hash", message), Delivery.RESPOND
-        )
+        message = farmer_protocol.HeaderHash(proof_of_space_hash, block_header_data_hash)
+        yield OutboundMessage(NodeType.FARMER, Message("header_hash", message), Delivery.RESPOND)
 
     @api_request
-    async def header_signature(
-        self, header_signature: farmer_protocol.HeaderSignature
-    ) -> OutboundMessageGenerator:
+    async def header_signature(self, header_signature: farmer_protocol.HeaderSignature) -> OutboundMessageGenerator:
         """
         Signature of header hash, by the harvester. This is enough to create an unfinished
         block, which only needs a Proof of Time to be finished. If the signature is valid,
@@ -1467,21 +1294,15 @@ class FullNode:
             Tuple[Optional[Program], bytes, HeaderData, ProofOfSpace]
         ] = self.full_node_store.get_candidate_block(header_signature.pos_hash)
         if candidate is None:
-            self.log.warning(
-                f"PoS hash {header_signature.pos_hash} not found in database"
-            )
+            self.log.warning(f"PoS hash {header_signature.pos_hash} not found in database")
             return
         # Verifies that we have the correct header and body stored
         generator, filt, block_header_data, pos = candidate
 
         assert block_header_data.get_hash() == header_signature.header_hash
 
-        block_header: Header = Header(
-            block_header_data, header_signature.header_signature
-        )
-        unfinished_block_obj: FullBlock = FullBlock(
-            pos, None, block_header, generator, filt
-        )
+        block_header: Header = Header(block_header_data, header_signature.header_signature)
+        unfinished_block_obj: FullBlock = FullBlock(pos, None, block_header, generator, filt)
 
         # Propagate to ourselves (which validates and does further propagations)
         request = full_node_protocol.RespondUnfinishedBlock(unfinished_block_obj)
@@ -1491,9 +1312,7 @@ class FullNode:
 
     # TIMELORD PROTOCOL
     @api_request
-    async def proof_of_time_finished(
-        self, request: timelord_protocol.ProofOfTimeFinished
-    ) -> OutboundMessageGenerator:
+    async def proof_of_time_finished(self, request: timelord_protocol.ProofOfTimeFinished) -> OutboundMessageGenerator:
         """
         A proof of time, received by a peer timelord. We can use this to complete a block,
         and call the block routine (which handles propagation and verification of blocks).
@@ -1507,14 +1326,10 @@ class FullNode:
             request.proof.number_of_iterations,
         )
 
-        unfinished_block_obj: Optional[
-            FullBlock
-        ] = await self.full_node_store.get_unfinished_block(dict_key)
+        unfinished_block_obj: Optional[FullBlock] = await self.full_node_store.get_unfinished_block(dict_key)
         if not unfinished_block_obj:
             if request.proof.witness_type > 0:
-                self.log.warning(
-                    f"Received a proof of time that we cannot use to complete a block {dict_key}"
-                )
+                self.log.warning(f"Received a proof of time that we cannot use to complete a block {dict_key}")
             return
 
         new_full_block: FullBlock = FullBlock(
@@ -1528,18 +1343,12 @@ class FullNode:
         if self.sync_store.get_sync_mode():
             self.sync_store.add_potential_future_block(new_full_block)
         else:
-            async for msg in self.respond_block(
-                full_node_protocol.RespondBlock(new_full_block)
-            ):
+            async for msg in self.respond_block(full_node_protocol.RespondBlock(new_full_block)):
                 yield msg
 
     @api_request
-    async def request_block(
-        self, request_block: full_node_protocol.RequestBlock
-    ) -> OutboundMessageGenerator:
-        block: Optional[FullBlock] = await self.block_store.get_block(
-            request_block.header_hash
-        )
+    async def request_block(self, request_block: full_node_protocol.RequestBlock) -> OutboundMessageGenerator:
+        block: Optional[FullBlock] = await self.block_store.get_block(request_block.header_hash)
         if block is not None:
             yield OutboundMessage(
                 NodeType.FULL_NODE,
@@ -1549,16 +1358,12 @@ class FullNode:
             return
         reject = Message(
             "reject_block_request",
-            full_node_protocol.RejectBlockRequest(
-                request_block.height, request_block.header_hash
-            ),
+            full_node_protocol.RejectBlockRequest(request_block.height, request_block.header_hash),
         )
         yield OutboundMessage(NodeType.FULL_NODE, reject, Delivery.RESPOND)
 
     @api_request
-    async def respond_block(
-        self, respond_block: full_node_protocol.RespondBlock
-    ) -> OutboundMessageGenerator:
+    async def respond_block(self, respond_block: full_node_protocol.RespondBlock) -> OutboundMessageGenerator:
         """
         Receive a full block from a peer full node (or ourselves).
         """
@@ -1584,13 +1389,9 @@ class FullNode:
 
         async with self.blockchain.lock:
             # Tries to add the block to the blockchain
-            added, error_code = await self.blockchain.receive_block(
-                respond_block.block, False, None, sync_mode=False
-            )
+            added, error_code = await self.blockchain.receive_block(respond_block.block, False, None, sync_mode=False)
             if added == ReceiveBlockResult.NEW_TIP:
-                await self.mempool_manager.new_tips(
-                    await self.blockchain.get_full_tips()
-                )
+                await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
 
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
@@ -1602,17 +1403,10 @@ class FullNode:
             raise ConsensusError(error_code, header_hash)
 
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
-            self.log.info(
-                f"Disconnected block {header_hash} at height {respond_block.block.height}"
-            )
-            tip_height = min(
-                [head.height for head in self.blockchain.get_current_tips()]
-            )
+            self.log.info(f"Disconnected block {header_hash} at height {respond_block.block.height}")
+            tip_height = min([head.height for head in self.blockchain.get_current_tips()])
 
-            if (
-                respond_block.block.height
-                > tip_height + self.config["sync_blocks_behind_threshold"]
-            ):
+            if respond_block.block.height > tip_height + self.config["sync_blocks_behind_threshold"]:
                 async with self.blockchain.lock:
                     if self.sync_store.get_sync_mode():
                         return
@@ -1653,18 +1447,14 @@ class FullNode:
             return
         elif added == ReceiveBlockResult.NEW_TIP:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
-            self.log.info(
-                f"Updated heads, new heights: {[b.height for b in self.blockchain.get_current_tips()]}"
-            )
+            self.log.info(f"Updated heads, new heights: {[b.height for b in self.blockchain.get_current_tips()]}")
 
             difficulty = self.blockchain.get_next_difficulty(
                 self.blockchain.headers[respond_block.block.prev_header_hash]
             )
             next_vdf_min_iters = self.blockchain.get_next_min_iters(respond_block.block)
             next_vdf_ips = uint64(
-                next_vdf_min_iters
-                * self.constants.MIN_ITERS_PROPORTION
-                // self.constants.BLOCK_TIME_TARGET
+                next_vdf_min_iters * self.constants.MIN_ITERS_PROPORTION // self.constants.BLOCK_TIME_TARGET
             )
             self.log.info(f"Difficulty {difficulty} IPS {next_vdf_ips}")
             if next_vdf_ips != self.full_node_store.get_proof_of_time_estimate_ips():
@@ -1679,9 +1469,7 @@ class FullNode:
                 # Occasionally clear the seen list to keep it small
                 await self.full_node_store.clear_seen_unfinished_blocks()
 
-            challenge: Optional[Challenge] = self.blockchain.get_challenge(
-                respond_block.block
-            )
+            challenge: Optional[Challenge] = self.blockchain.get_challenge(respond_block.block)
             assert challenge is not None
             challenge_hash: bytes32 = challenge.get_hash()
             farmer_request = farmer_protocol.ProofOfSpaceFinalized(
@@ -1722,9 +1510,7 @@ class FullNode:
                     new_lca.height,
                     new_lca.weight,
                 )
-                yield OutboundMessage(
-                    NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST
-                )
+                yield OutboundMessage(NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST)
 
             # Tell farmer about the new block
             yield OutboundMessage(
@@ -1734,25 +1520,19 @@ class FullNode:
             )
 
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
-            self.log.info(
-                f"Received orphan block of height {respond_block.block.height}"
-            )
+            self.log.info(f"Received orphan block of height {respond_block.block.height}")
         else:
             # Should never reach here, all the cases are covered
             raise RuntimeError(f"Invalid result from receive_block {added}")
 
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
-        next_block: Optional[
-            FullBlock
-        ] = self.full_node_store.get_disconnected_block_by_prev(
+        next_block: Optional[FullBlock] = self.full_node_store.get_disconnected_block_by_prev(
             respond_block.block.header_hash
         )
 
         # Recursively process the next block if we have it
         if next_block is not None:
-            async for ret_msg in self.respond_block(
-                full_node_protocol.RespondBlock(next_block)
-            ):
+            async for ret_msg in self.respond_block(full_node_protocol.RespondBlock(next_block)):
                 yield ret_msg
 
         # Removes all temporary data for old blocks
@@ -1764,9 +1544,7 @@ class FullNode:
         self._state_changed("block")
 
     @api_request
-    async def reject_block_request(
-        self, reject: full_node_protocol.RejectBlockRequest
-    ) -> OutboundMessageGenerator:
+    async def reject_block_request(self, reject: full_node_protocol.RejectBlockRequest) -> OutboundMessageGenerator:
         self.log.warning(f"Rejected block request {reject}")
         if self.sync_store.get_sync_mode():
             yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
@@ -1779,9 +1557,7 @@ class FullNode:
     ) -> OutboundMessageGenerator:
         received_filter = PyBIP158(bytearray(request.filter))
 
-        items: List[MempoolItem] = await self.mempool_manager.get_items_not_in_filter(
-            received_filter
-        )
+        items: List[MempoolItem] = await self.mempool_manager.get_items_not_in_filter(received_filter)
 
         for item in items:
             transaction = full_node_protocol.RespondTransaction(item.spend_bundle)
@@ -1793,22 +1569,16 @@ class FullNode:
 
     # WALLET PROTOCOL
     @api_request
-    async def send_transaction(
-        self, tx: wallet_protocol.SendTransaction
-    ) -> OutboundMessageGenerator:
+    async def send_transaction(self, tx: wallet_protocol.SendTransaction) -> OutboundMessageGenerator:
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.UNKNOWN
         else:
             async with self.blockchain.lock:
-                cost, status, error = await self.mempool_manager.add_spendbundle(
-                    tx.transaction
-                )
+                cost, status, error = await self.mempool_manager.add_spendbundle(tx.transaction)
                 if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.info(
-                        f"Added transaction to mempool: {tx.transaction.name()}"
-                    )
+                    self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     fees = tx.transaction.fees()
@@ -1832,22 +1602,14 @@ class FullNode:
 
         error_name = error.name if error is not None else None
         if status == MempoolInclusionStatus.SUCCESS:
-            response = wallet_protocol.TransactionAck(
-                tx.transaction.name(), status, error_name
-            )
+            response = wallet_protocol.TransactionAck(tx.transaction.name(), status, error_name)
         else:
             # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
             if self.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
-                response = wallet_protocol.TransactionAck(
-                    tx.transaction.name(), MempoolInclusionStatus.SUCCESS, None
-                )
+                response = wallet_protocol.TransactionAck(tx.transaction.name(), MempoolInclusionStatus.SUCCESS, None)
             else:
-                response = wallet_protocol.TransactionAck(
-                    tx.transaction.name(), status, error_name
-                )
-        yield OutboundMessage(
-            NodeType.WALLET, Message("transaction_ack", response), Delivery.RESPOND
-        )
+                response = wallet_protocol.TransactionAck(tx.transaction.name(), status, error_name)
+        yield OutboundMessage(NodeType.WALLET, Message("transaction_ack", response), Delivery.RESPOND)
 
     @api_request
     async def request_all_proof_hashes(
@@ -1860,18 +1622,11 @@ class FullNode:
         while curr.height > 0:
             difficulty_update: Optional[uint64] = None
             iters_update: Optional[uint64] = None
-            if (
-                curr.height % self.constants.DIFFICULTY_EPOCH
-                == self.constants.DIFFICULTY_DELAY
-            ):
-                difficulty_update = self.blockchain.get_next_difficulty(
-                    self.blockchain.headers[curr.prev_header_hash]
-                )
+            if curr.height % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
+                difficulty_update = self.blockchain.get_next_difficulty(self.blockchain.headers[curr.prev_header_hash])
             if (curr.height + 1) % self.constants.DIFFICULTY_EPOCH == 0:
                 iters_update = curr.data.total_iters
-            hashes.append(
-                (proof_hashes_map[curr.header_hash], difficulty_update, iters_update)
-            )
+            hashes.append((proof_hashes_map[curr.header_hash], difficulty_update, iters_update))
             curr = self.blockchain.headers[curr.prev_header_hash]
 
         hashes.append(
@@ -1892,9 +1647,7 @@ class FullNode:
     async def request_all_header_hashes_after(
         self, request: wallet_protocol.RequestAllHeaderHashesAfter
     ) -> OutboundMessageGenerator:
-        header_hash: Optional[bytes32] = self.blockchain.height_to_hash.get(
-            request.starting_height, None
-        )
+        header_hash: Optional[bytes32] = self.blockchain.height_to_hash.get(request.starting_height, None)
         if header_hash is None:
             reject = wallet_protocol.RejectAllHeaderHashesAfterRequest(
                 request.starting_height, request.previous_challenge_hash
@@ -1906,9 +1659,7 @@ class FullNode:
             )
             return
         block: Optional[FullBlock] = await self.block_store.get_block(header_hash)
-        header_hash_again: Optional[bytes32] = self.blockchain.height_to_hash.get(
-            request.starting_height, None
-        )
+        header_hash_again: Optional[bytes32] = self.blockchain.height_to_hash.get(request.starting_height, None)
 
         if (
             block is None
@@ -1925,9 +1676,7 @@ class FullNode:
             )
             return
         header_hashes: List[bytes32] = []
-        for height in range(
-            request.starting_height, self.blockchain.lca_block.height + 1
-        ):
+        for height in range(request.starting_height, self.blockchain.lca_block.height + 1):
             header_hashes.append(self.blockchain.height_to_hash[uint32(height)])
         response = wallet_protocol.RespondAllHeaderHashesAfter(
             request.starting_height, request.previous_challenge_hash, header_hashes
@@ -1939,27 +1688,19 @@ class FullNode:
         )
 
     @api_request
-    async def request_header(
-        self, request: wallet_protocol.RequestHeader
-    ) -> OutboundMessageGenerator:
-        full_block: Optional[FullBlock] = await self.block_store.get_block(
-            request.header_hash
-        )
+    async def request_header(self, request: wallet_protocol.RequestHeader) -> OutboundMessageGenerator:
+        full_block: Optional[FullBlock] = await self.block_store.get_block(request.header_hash)
         if full_block is not None:
             header_block: Optional[HeaderBlock] = full_block.get_header_block()
             if header_block is not None and header_block.height == request.height:
-                response = wallet_protocol.RespondHeader(
-                    header_block, full_block.transactions_filter
-                )
+                response = wallet_protocol.RespondHeader(header_block, full_block.transactions_filter)
                 yield OutboundMessage(
                     NodeType.WALLET,
                     Message("respond_header", response),
                     Delivery.RESPOND,
                 )
                 return
-        reject = wallet_protocol.RejectHeaderRequest(
-            request.height, request.header_hash
-        )
+        reject = wallet_protocol.RejectHeaderRequest(request.height, request.header_hash)
         yield OutboundMessage(
             NodeType.WALLET,
             Message("reject_header_request", reject),
@@ -1967,21 +1708,15 @@ class FullNode:
         )
 
     @api_request
-    async def request_removals(
-        self, request: wallet_protocol.RequestRemovals
-    ) -> OutboundMessageGenerator:
-        block: Optional[FullBlock] = await self.block_store.get_block(
-            request.header_hash
-        )
+    async def request_removals(self, request: wallet_protocol.RequestRemovals) -> OutboundMessageGenerator:
+        block: Optional[FullBlock] = await self.block_store.get_block(request.header_hash)
         if (
             block is None
             or block.height != request.height
             or block.height not in self.blockchain.height_to_hash
             or self.blockchain.height_to_hash[block.height] != block.header_hash
         ):
-            reject = wallet_protocol.RejectRemovalsRequest(
-                request.height, request.header_hash
-            )
+            reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
             yield OutboundMessage(
                 NodeType.WALLET,
                 Message("reject_removals_request", reject),
@@ -2002,17 +1737,13 @@ class FullNode:
                 proofs = None
             else:
                 proofs = []
-            response = wallet_protocol.RespondRemovals(
-                block.height, block.header_hash, [], proofs
-            )
+            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, [], proofs)
         elif request.coin_names is None or len(request.coin_names) == 0:
             for removal in all_removals:
                 cr = await self.coin_store.get_coin_record(removal)
                 assert cr is not None
                 coins_map.append((cr.coin.name(), cr.coin))
-            response = wallet_protocol.RespondRemovals(
-                block.height, block.header_hash, coins_map, None
-            )
+            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
         else:
             assert block.transactions_generator
             removal_merkle_set = MerkleSet()
@@ -2030,9 +1761,7 @@ class FullNode:
                 else:
                     coins_map.append((coin_name, None))
                     assert not result
-            response = wallet_protocol.RespondRemovals(
-                block.height, block.header_hash, coins_map, proofs_map
-            )
+            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, proofs_map)
 
         yield OutboundMessage(
             NodeType.WALLET,
@@ -2041,21 +1770,15 @@ class FullNode:
         )
 
     @api_request
-    async def request_additions(
-        self, request: wallet_protocol.RequestAdditions
-    ) -> OutboundMessageGenerator:
-        block: Optional[FullBlock] = await self.block_store.get_block(
-            request.header_hash
-        )
+    async def request_additions(self, request: wallet_protocol.RequestAdditions) -> OutboundMessageGenerator:
+        block: Optional[FullBlock] = await self.block_store.get_block(request.header_hash)
         if (
             block is None
             or block.height != request.height
             or block.height not in self.blockchain.height_to_hash
             or self.blockchain.height_to_hash[block.height] != block.header_hash
         ):
-            reject = wallet_protocol.RejectAdditionsRequest(
-                request.height, request.header_hash
-            )
+            reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)
             yield OutboundMessage(
                 NodeType.WALLET,
                 Message("reject_additions_request", reject),
@@ -2078,9 +1801,7 @@ class FullNode:
         if request.puzzle_hashes is None:
             for puzzle_hash, coins in puzzlehash_coins_map.items():
                 coins_map.append((puzzle_hash, coins))
-            response = wallet_protocol.RespondAdditions(
-                block.height, block.header_hash, coins_map, None
-            )
+            response = wallet_protocol.RespondAdditions(block.height, block.header_hash, coins_map, None)
         else:
             # Create addition Merkle set
             addition_merkle_set = MerkleSet()
@@ -2091,15 +1812,11 @@ class FullNode:
 
             assert addition_merkle_set.get_root() == block.header.data.additions_root
             for puzzle_hash in request.puzzle_hashes:
-                result, proof = addition_merkle_set.is_included_already_hashed(
-                    puzzle_hash
-                )
+                result, proof = addition_merkle_set.is_included_already_hashed(puzzle_hash)
                 if puzzle_hash in puzzlehash_coins_map:
                     coins_map.append((puzzle_hash, puzzlehash_coins_map[puzzle_hash]))
                     hash_coin_str = hash_coin_list(puzzlehash_coins_map[puzzle_hash])
-                    result_2, proof_2 = addition_merkle_set.is_included_already_hashed(
-                        hash_coin_str
-                    )
+                    result_2, proof_2 = addition_merkle_set.is_included_already_hashed(hash_coin_str)
                     assert result
                     assert result_2
                     proofs_map.append((puzzle_hash, proof, proof_2))
@@ -2107,9 +1824,7 @@ class FullNode:
                     coins_map.append((puzzle_hash, []))
                     assert not result
                     proofs_map.append((puzzle_hash, proof, None))
-            response = wallet_protocol.RespondAdditions(
-                block.height, block.header_hash, coins_map, proofs_map
-            )
+            response = wallet_protocol.RespondAdditions(block.height, block.header_hash, coins_map, proofs_map)
 
         yield OutboundMessage(
             NodeType.WALLET,
@@ -2118,12 +1833,8 @@ class FullNode:
         )
 
     @api_request
-    async def request_generator(
-        self, request: wallet_protocol.RequestGenerator
-    ) -> OutboundMessageGenerator:
-        full_block: Optional[FullBlock] = await self.block_store.get_block(
-            request.header_hash
-        )
+    async def request_generator(self, request: wallet_protocol.RequestGenerator) -> OutboundMessageGenerator:
+        full_block: Optional[FullBlock] = await self.block_store.get_block(request.header_hash)
         if full_block is not None:
             if full_block.transactions_generator is not None:
                 wrapper = GeneratorResponse(
@@ -2139,9 +1850,7 @@ class FullNode:
                 )
                 return
 
-        reject = wallet_protocol.RejectGeneratorRequest(
-            request.height, request.header_hash
-        )
+        reject = wallet_protocol.RejectGeneratorRequest(request.height, request.header_hash)
         yield OutboundMessage(
             NodeType.WALLET,
             Message("reject_generator_request", reject),
