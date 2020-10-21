@@ -4,7 +4,7 @@ from chiavdf import create_discriminant
 from src.types.classgroup import ClassgroupElement
 from src.types.sized_bytes import bytes32
 from src.util.classgroup_utils import ClassGroup, check_proof_of_time_nwesolowski
-from src.util.ints import uint16, uint32, uint64
+from src.util.ints import uint16, uint64
 from src.util.streamable import Streamable, streamable
 from src.consensus.constants import ConsensusConstants
 
@@ -24,6 +24,8 @@ class VDFProof(Streamable):
     witness: bytes
 
     def is_valid(self, constants: ConsensusConstants, info: VDFInfo):
+        if self.witness_type > constants.MAX_VDF_WITNESS_SIZE:
+            return False
         try:
             disc: int = int(
                 create_discriminant(info.challenge_hash, constants.DISCRIMINANT_SIZE_BITS),
