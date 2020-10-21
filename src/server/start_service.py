@@ -59,7 +59,7 @@ class Service:
             service_config = load_config_cli(root_path, "config.yaml", service_name)
         else:
             service_config = load_config(root_path, "config.yaml", service_name)
-        initialize_logging(service_name, config["logging"], root_path)
+        initialize_logging(service_name, service_config["logging"], root_path)
 
         self._rpc_info = rpc_info
 
