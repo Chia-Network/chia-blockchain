@@ -277,10 +277,10 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
         setup_wallet_node(21235, consensus_constants, None, starting_height=starting_height),
     ]
 
-    full_node, s1 = await node_iters[0].__anext__()
+    full_node_api = await node_iters[0].__anext__()
     wallet, s2 = await node_iters[1].__anext__()
 
-    yield full_node, wallet, s1, s2
+    yield (full_node_api, wallet, full_node_api.full_node.server, s2)
 
     await _teardown_nodes(node_iters)
 
@@ -291,7 +291,7 @@ async def setup_simulators_and_wallets(
     dic: Dict,
     starting_height=None,
 ):
-    simulators: List[Tuple[FullNode, ChiaServer, FullNodeAPI]] = []
+    simulators: List[FullNodeAPI] = []
     wallets = []
     node_iters = []
 
@@ -360,14 +360,14 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
 
     vdf = await node_iters[3].__anext__()
     timelord, timelord_server = await node_iters[4].__anext__()
-    node1, node1_server = await node_iters[5].__anext__()
-    node2, node2_server = await node_iters[6].__anext__()
+    node_api_1 = await node_iters[5].__anext__()
+    node_api_2 = await node_iters[6].__anext__()
     vdf_sanitizer = await node_iters[7].__anext__()
     sanitizer, sanitizer_server = await node_iters[8].__anext__()
 
     yield (
-        node1,
-        node2,
+        node_api_1,
+        node_api_2,
         harvester,
         farmer,
         introducer,
@@ -375,7 +375,7 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         vdf,
         sanitizer,
         vdf_sanitizer,
-        node1_server,
+        node_api_1.full_node.server,
     )
 
     await _teardown_nodes(node_iters)

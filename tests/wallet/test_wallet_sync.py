@@ -46,15 +46,16 @@ class TestWalletSync:
     async def test_basic_sync_wallet(self, wallet_node):
         num_blocks = 300  # This must be greater than the short_sync in wallet_node
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [])
-        full_node_1, wallet_node, server_1, server_2 = wallet_node
+        full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
         for i in range(1, len(blocks)):
-            async for _ in full_node_1.respond_block(
+            await full_node_api.full_node._respond_block(
                 full_node_protocol.RespondBlock(blocks[i])
-            ):
-                pass
+            )
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await wallet_server.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1.
@@ -65,10 +66,9 @@ class TestWalletSync:
         # Tests a reorg with the wallet
         blocks_reorg = bt.get_consecutive_blocks(test_constants, 15, blocks[:-5])
         for i in range(1, len(blocks_reorg)):
-            async for msg in full_node_1.respond_block(
+            await full_node_api.full_node._respond_block(
                 full_node_protocol.RespondBlock(blocks_reorg[i])
-            ):
-                server_1.push_message(msg)
+            )
 
         await time_out_assert(200, wallet_height_at_least, True, wallet_node, 33)
 
@@ -79,10 +79,9 @@ class TestWalletSync:
         full_node_1, wallet_node, server_1, server_2 = wallet_node_starting_height
 
         for i in range(1, len(blocks)):
-            async for _ in full_node_1.respond_block(
+            await full_node_1.full_node._respond_block(
                 full_node_protocol.RespondBlock(blocks[i])
-            ):
-                pass
+            )
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
@@ -97,10 +96,9 @@ class TestWalletSync:
         full_node_1, wallet_node, server_1, server_2 = wallet_node
 
         for i in range(1, len(blocks)):
-            async for _ in full_node_1.respond_block(
+            await full_node_1.full_node._respond_block(
                 full_node_protocol.RespondBlock(blocks[i])
-            ):
-                pass
+            )
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 3)
@@ -120,16 +118,14 @@ class TestWalletSync:
             test_constants, 3, [], 10, b"", coinbase_puzzlehash
         )
         for block in blocks:
-            [
-                _
-                async for _ in full_node_1.respond_block(
-                    full_node_protocol.RespondBlock(block)
-                )
-            ]
+            await full_node_1.full_node._respond_block(
+                full_node_protocol.RespondBlock(block)
+            )
+
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 1)
 
-        server_2.global_connections.close_all_connections()
+        await server_2.close_all_connections()
 
         dic_h = {}
         prev_coin = blocks[1].get_coinbase()
@@ -150,16 +146,15 @@ class TestWalletSync:
         )
         # Move chain to height 16, with consecutive transactions in blocks 4 to 14
         for block in blocks:
-            async for _ in full_node_1.respond_block(
+            await full_node_1.full_node._respond_block(
                 full_node_protocol.RespondBlock(block)
-            ):
-                pass
+            )
 
         # Do a short sync from 0 to 14
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 14)
 
-        server_2.global_connections.close_all_connections()
+        await server_2.close_all_connections()
 
         # 3 block rewards and 3 fees - 1000 coins spent
         assert (
@@ -205,16 +200,15 @@ class TestWalletSync:
 
         # Move chain to height 34, with consecutive transactions in blocks 4 to 14
         for block in blocks:
-            async for _ in full_node_1.respond_block(
+            await full_node_1.full_node._respond_block(
                 full_node_protocol.RespondBlock(block)
-            ):
-                pass
+            )
 
         # Do a sync from 0 to 22
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 28)
-        server_2.global_connections.close_all_connections()
+        await server_2.close_all_connections()
 
         # 3 block rewards and 3 fees - 1000 coins spent
         assert (
@@ -272,10 +266,9 @@ class TestWalletSync:
             dic_h,
         )
         for block in blocks:
-            async for _ in full_node_1.respond_block(
+            await full_node_1.full_node._respond_block(
                 full_node_protocol.RespondBlock(block)
-            ):
-                pass
+            )
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 38)
