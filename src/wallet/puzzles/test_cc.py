@@ -55,9 +55,9 @@ def int_as_bytes32(v: int) -> bytes32:
 
 
 def generate_farmed_coin(
-        block_index: int,
-        puzzle_hash: bytes32,
-        amount: int,
+    block_index: int,
+    puzzle_hash: bytes32,
+    amount: int,
 ) -> Coin:
     """
     Generate a (fake) coin which can be used as a starting point for a chain

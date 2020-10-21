@@ -377,7 +377,7 @@ class DIDWallet:
                     data=data_str,
                 )
             else:
-                raise
+                raise Exception
             did_info = DIDInfo(genesis_id, backup_ids, [], innerpuz, None)
             await self.save_info(did_info)
             await self.wallet_state_manager.update_wallet_puzzle_hashes(

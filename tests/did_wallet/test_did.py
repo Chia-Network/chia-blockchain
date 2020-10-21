@@ -700,7 +700,8 @@ class TestDIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = did_wallet.did_info.current_inner
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
-            innerpuz, did_wallet.did_info.my_did,
+            innerpuz,
+            did_wallet.did_info.my_did,
         )
         fullsol = Program.to(
             [
