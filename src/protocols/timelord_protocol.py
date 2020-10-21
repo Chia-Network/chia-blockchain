@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from src.types.proof_of_time import ProofOfTime
+from src.types.vdf import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint64, uint128
