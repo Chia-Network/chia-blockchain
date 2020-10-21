@@ -16,6 +16,7 @@ class UnfinishedHeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator, used by light clients
     subepoch_summary: Optional[SubEpochSummary]  # If end of a sub-epoch
     finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
+    challenge_chain_icp_vdf: Optional[VDFInfo]  # If included in challenge chain
     challenge_chain_icp_proof: Optional[VDFProof]  # If included in challenge chain
     challenge_chain_icp_signature: Optional[G2Element]  # If included in challenge chain
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data

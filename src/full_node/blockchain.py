@@ -18,6 +18,7 @@ from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.full_block import FullBlock, additions_for_npc
+from src.types.header_block import HeaderBlock
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.sized_bytes import bytes32
 from src.full_node.blockchain_check_conditions import blockchain_check_conditions_dict
@@ -33,7 +34,8 @@ from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.types.name_puzzle_condition import NPC
-from src.full_node.block_header_validation_new import validate_finished_header_block
+from src.full_node.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
+from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 log = logging.getLogger(__name__)
 
@@ -225,14 +227,24 @@ class Blockchain:
         if block.prev_header_hash not in self.sub_blocks and not genesis:
             return ReceiveBlockResult.DISCONNECTED_BLOCK, None
 
-        curr_header_block = block.get_header_block()
-        assert curr_header_block is not None
+        curr_header_block = HeaderBlock(
+            block.subepoch_summary,
+            block.finished_slots,
+            block.challenge_chain_icp_vdf,
+            block.challenge_chain_icp_proof,
+            block.challenge_chain_icp_signature,
+            block.challenge_chain_ip_vdf,
+            block.challenge_chain_ip_proof,
+            block.reward_chain_sub_block,
+            block.reward_chain_icp_proof,
+            block.reward_chain_ip_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            b"",  # Nofilter
+        )
 
         error_code: Optional[Err] = await validate_finished_header_block(
-            self.constants,
-            self.sub_blocks,
-            self.height_to_hash,
-            curr_header_block,
+            self.constants, self.sub_blocks, self.height_to_hash, curr_header_block, False
         )
 
         if error_code is not None:
@@ -243,13 +255,8 @@ class Blockchain:
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code
 
-        sub_block = SubBlockRecord(
-            block.header_hash,
-            block.prev_header_hash,
-            block.height,
-            block.weight,
-            block.total_iters,
-        )
+        # TODO: fill
+        sub_block = block.get_sub_block_record(0)
 
         # Always add the block to the database
         await self.block_store.add_block(block)
@@ -332,11 +339,21 @@ class Blockchain:
         return []
 
     async def validate_unfinished_block(self, block: UnfinishedBlock) -> Optional[Err]:
-        error_code: Optional[Err] = await validate_finished_header_block(
-            self.constants,
-            self.sub_blocks,
-            self.height_to_hash,
-            block.get_unfinished_header_block(),
+        unfinished_header_block = UnfinishedHeaderBlock(
+            block.subepoch_summary,
+            block.finished_slots,
+            block.challenge_chain_icp_vdf,
+            block.challenge_chain_icp_proof,
+            block.challenge_chain_icp_signature,
+            block.reward_chain_sub_block,
+            block.reward_chain_icp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            b"",
+        )
+
+        error_code: Optional[Err] = await validate_unfinished_header_block(
+            self.constants, self.sub_blocks, self.height_to_hash, unfinished_header_block, False
         )
 
         if error_code is not None:

@@ -2,14 +2,13 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from blspy import G2Element
 from src.util.streamable import Streamable, streamable
-from src.types.vdf import VDFProof
+from src.types.vdf import VDFProof, VDFInfo
 from src.types.challenge_slot import ChallengeSlot
 from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot, EndOfSlotProofs
 from src.types.reward_chain_sub_block import RewardChainSubBlockUnfinished
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
 from src.types.program import Program
 from src.types.sub_epoch_summary import SubEpochSummary
-from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 
 @dataclass(frozen=True)
@@ -18,6 +17,7 @@ class UnfinishedBlock(Streamable):
     # Full block, without the final VDFs
     subepoch_summary: Optional[SubEpochSummary]  # If end of a sub-epoch
     finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
+    challenge_chain_icp_vdf: Optional[VDFInfo]  # If included in challenge chain
     challenge_chain_icp_proof: Optional[VDFProof]  # If included in challenge chain
     challenge_chain_icp_signature: Optional[G2Element]  # If included in challenge chain
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
@@ -49,19 +49,3 @@ class UnfinishedBlock(Streamable):
 
     def is_block(self):
         return self.foliage_sub_block.is_block
-
-    def get_unfinished_header_block(self):
-        """
-        Returns the block but without TransactionInfo and Transactions generator
-        """
-        return UnfinishedHeaderBlock(
-            self.subepoch_summary,
-            self.finished_slots,
-            self.challenge_chain_icp_proof,
-            self.challenge_chain_icp_signature,
-            self.reward_chain_sub_block,
-            self.reward_chain_icp_proof,
-            self.foliage_sub_block,
-            self.foliage_block,
-            self.transactions_filter,  # TODO: make filter from generator
-        )
