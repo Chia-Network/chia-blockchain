@@ -382,7 +382,9 @@ class WalletNode:
 
     @api_request
     async def respond_peers_with_peer_info(
-        self, request: introducer_protocol.RespondPeers, peer_info: PeerInfo,
+        self,
+        request: introducer_protocol.RespondPeers,
+        peer_info: PeerInfo,
     ) -> OutboundMessageGenerator:
         if not self._has_full_node():
             await self.wallet_peers.respond_peers(request, peer_info, False)
@@ -392,7 +394,9 @@ class WalletNode:
 
     @api_request
     async def respond_peers_full_node_with_peer_info(
-        self, request: full_node_protocol.RespondPeers, peer_info: PeerInfo,
+        self,
+        request: full_node_protocol.RespondPeers,
+        peer_info: PeerInfo,
     ):
         if not self._has_full_node():
             await self.wallet_peers.respond_peers(request, peer_info, True)
@@ -542,13 +546,11 @@ class WalletNode:
                             uint32(query_heights[batch_start_index])
                         ].is_set()
                         if (
-                            (
-                                time.time() - last_request_time > sleep_interval
-                                and blocks_missing
-                            )
-                            or (query_heights[batch_start_index])
-                            > highest_height_requested
-                        ):
+                            time.time() - last_request_time > sleep_interval
+                            and blocks_missing
+                        ) or (
+                            query_heights[batch_start_index]
+                        ) > highest_height_requested:
                             self.log.info(
                                 f"Requesting sync header {query_heights[batch_start_index]}"
                             )
@@ -686,7 +688,8 @@ class WalletNode:
                             highest_height_requested = uint32(batch_end - 1)
                         request_made = True
                         request_header = wallet_protocol.RequestHeader(
-                            uint32(batch_start), self.header_hashes[batch_start],
+                            uint32(batch_start),
+                            self.header_hashes[batch_start],
                         )
                         yield OutboundMessage(
                             NodeType.FULL_NODE,
@@ -972,7 +975,8 @@ class WalletNode:
                     # Only requests the previous block if we are not in sync mode, close to the new block,
                     # and don't have prev
                     header_request = wallet_protocol.RequestHeader(
-                        uint32(block_record.height - 1), block_record.prev_header_hash,
+                        uint32(block_record.height - 1),
+                        block_record.prev_header_hash,
                     )
                     yield OutboundMessage(
                         NodeType.FULL_NODE,

@@ -400,7 +400,10 @@ class WalletRpcApi:
                 for d in request["backup_dids"]:
                     backup_dids.append(bytes.fromhex(d))
                 did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
-                    wallet_state_manager, main_wallet, int(request["amount"]), backup_dids
+                    wallet_state_manager,
+                    main_wallet,
+                    int(request["amount"]),
+                    backup_dids,
                 )
                 my_did = did_wallet.get_my_DID()
                 return {
@@ -445,7 +448,7 @@ class WalletRpcApi:
                 "wallet_id": wallet_id,
                 "debug_data": keys,
             }
-            return{"wallet_balance": keys}
+            return {"wallet_balance": keys}
 
     async def get_transaction(self, request: Dict) -> Dict:
         assert self.service.wallet_state_manager is not None
@@ -610,17 +613,23 @@ class WalletRpcApi:
         # convert info dict into recovery list - same order as wallet
         info_list = []
         for entry in my_recovery_list:
-            info_list.append([
-                bytes.fromhex(info_dict[entry.hex()][0]),
-                bytes.fromhex(info_dict[entry.hex()][1]),
-                info_dict[entry.hex()][2]
-            ])
+            info_list.append(
+                [
+                    bytes.fromhex(info_dict[entry.hex()][0]),
+                    bytes.fromhex(info_dict[entry.hex()][1]),
+                    info_dict[entry.hex()][2],
+                ]
+            )
         message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
 
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
 
         success = await wallet.recovery_spend(
-            request["coin_name"], bytes.fromhex(request["puzhash"]), info_list, pubkey, message_spend_bundle
+            request["coin_name"],
+            bytes.fromhex(request["puzhash"]),
+            info_list,
+            pubkey,
+            message_spend_bundle,
         )
         return {"success": success}
 
@@ -632,7 +641,8 @@ class WalletRpcApi:
                 await wallet.wallet_state_manager.get_unused_derivation_record(
                     wallet_id
                 )
-            ).pubkey).hex()
+            ).pubkey
+        ).hex()
         return {"success": True, "punkey": pubkey}
 
     async def did_create_attest(self, request):
@@ -642,7 +652,7 @@ class WalletRpcApi:
         coin = Coin(
             bytes.fromhex(request["coin_tuple"][0]),
             bytes.fromhex(request["coin_tuple"][1]),
-            request["coin_tuple"][2]
+            request["coin_tuple"][2],
         )
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
         spend_bundle = await wallet.create_attestment(
@@ -652,12 +662,10 @@ class WalletRpcApi:
             return {
                 "success": True,
                 "message_spend_bundle": bytes(spend_bundle).hex(),
-                "info": [info[0].hex(), info[1].hex(), info[2]]
+                "info": [info[0].hex(), info[1].hex(), info[2]],
             }
         else:
-            return {
-                "success": False
-            }
+            return {"success": False}
 
     async def cc_set_name(self, request):
         assert self.service.wallet_state_manager is not None
