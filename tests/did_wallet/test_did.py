@@ -185,8 +185,8 @@ class TestDIDWallet:
         await self.time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 200)
 
         # DIDWallet3 spends the money back to itself
-        ph = await wallet2.get_new_puzzlehash()
-        await did_wallet_3.create_spend(ph)
+        ph2 = await wallet2.get_new_puzzlehash()
+        await did_wallet_3.create_spend(ph2)
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -289,13 +289,13 @@ class TestDIDWallet:
         did_wallet_3: DIDWallet = await DIDWallet.create_new_did_wallet(
             wallet_node_2.wallet_state_manager, wallet2, uint64(200), recovery_list
         )
-
+        ph2 = await wallet.get_new_puzzlehash()
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
 
         assert did_wallet_3.did_info.backup_ids == recovery_list
 
-        coins = await did_wallet_2.select_coins(1)
+        coins = await did_wallet_3.select_coins(1)
         coin = coins.pop()
         info1 = await did_wallet.get_info_for_recovery()
         info2 = await did_wallet_2.get_info_for_recovery()
@@ -318,10 +318,9 @@ class TestDIDWallet:
         await did_wallet_3.recovery_spend(coin, ph, info, pubkey, message_spend_bundle)
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
-
-        await self.time_out_assert(15, wallet2.get_confirmed_balance, 390000000000800)
-        await self.time_out_assert(15, wallet2.get_unconfirmed_balance, 390000000000800)
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
+        await self.time_out_assert(15, wallet2.get_confirmed_balance, 287999999999900)
+        await self.time_out_assert(15, wallet2.get_unconfirmed_balance, 287999999999900)
         await self.time_out_assert(15, did_wallet_3.get_confirmed_balance, 0)
         await self.time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 0)
 
