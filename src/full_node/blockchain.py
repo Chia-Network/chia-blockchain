@@ -1,7 +1,6 @@
 import asyncio
 import collections
 import logging
-import time
 from enum import Enum
 import multiprocessing
 import concurrent
@@ -20,7 +19,6 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.full_block import FullBlock, additions_for_npc
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.full_node.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.full_node.sub_block_record import SubBlockRecord
@@ -35,7 +33,7 @@ from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.types.name_puzzle_condition import NPC
-from src.full_node.block_header_validation_new import validate_unfinished_header_block, validate_finished_header_block
+from src.full_node.block_header_validation_new import validate_finished_header_block
 
 log = logging.getLogger(__name__)
 
@@ -227,13 +225,6 @@ class Blockchain:
         if block.prev_header_hash not in self.sub_blocks and not genesis:
             return ReceiveBlockResult.DISCONNECTED_BLOCK, None
 
-        prev_header_block: Optional[HeaderBlock] = None
-        if not genesis:
-            prev_full_block = await self.block_store.get_block(block.prev_header_hash)
-            assert prev_full_block is not None
-            prev_header_block = prev_full_block.get_header_block()
-            assert prev_header_block is not None
-
         curr_header_block = block.get_header_block()
         assert curr_header_block is not None
 
@@ -263,13 +254,13 @@ class Blockchain:
         # Always add the block to the database
         await self.block_store.add_block(block)
 
-        new_tip = await self._reconsider_tip(sub_block, genesis, sync_mode)
+        new_tip = await self._reconsider_tip(sub_block, genesis)
         if new_tip:
             return ReceiveBlockResult.NEW_TIP, None
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None
 
-    async def _reconsider_tip(self, sub_block: SubBlockRecord, genesis: bool, sync_mode: bool) -> bool:
+    async def _reconsider_tip(self, sub_block: SubBlockRecord, genesis: bool) -> bool:
         """
         When a new block is added, this is called, to check if the new block is the new tip of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.

@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 from blspy import G2Element
 
-from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint128
 from src.util.streamable import Streamable, streamable
 from src.types.proof_of_space import ProofOfSpace
-from src.types.classgroup import ClassgroupElement
+from src.types.vdf import VDFInfo
 
 
 @dataclass(frozen=True)
@@ -15,8 +14,7 @@ class RewardChainSubBlockUnfinished(Streamable):
     sub_block_height: uint32
     total_iters: uint128
     proof_of_space: ProofOfSpace
-    icp_prev_ip: bytes32  # Prev block after infusion (or challenge slot hash if more recent)
-    infusion_challenge_point: ClassgroupElement
+    infusion_challenge_point_vdf: VDFInfo
     infusion_challenge_point_sig: G2Element
 
 
@@ -27,11 +25,9 @@ class RewardChainSubBlock(Streamable):
     sub_block_height: uint32
     total_iters: uint128
     proof_of_space: ProofOfSpace
-    icp_prev_ip: bytes32  # Prev block after infusion (or challenge slot hash if more recent)
-    infusion_challenge_point: ClassgroupElement
+    infusion_challenge_point_vdf: VDFInfo
     infusion_challenge_point_sig: G2Element
-    ip_prev_ip: bytes32  # Prev block after infusion (or challenge slot hash if more recent)
-    infusion_point: ClassgroupElement
+    infusion_point_vdf: VDFInfo
 
     def get_unfinished(self) -> RewardChainSubBlockUnfinished:
         return RewardChainSubBlockUnfinished(
@@ -39,7 +35,6 @@ class RewardChainSubBlock(Streamable):
             self.sub_block_height,
             self.total_iters,
             self.proof_of_space,
-            self.icp_prev_ip,
-            self.infusion_challenge_point,
+            self.infusion_challenge_point_vdf,
             self.infusion_challenge_point_sig,
         )

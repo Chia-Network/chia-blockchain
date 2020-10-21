@@ -4,7 +4,7 @@ from typing import List
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
-from src.types.proof_of_time import ProofOfTime
+from src.types.vdf import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint8, uint32, uint64, uint128
