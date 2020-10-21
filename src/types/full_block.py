@@ -27,12 +27,12 @@ class FullBlock(Streamable):
     # All the information required to validate a block
     subepoch_summary: Optional[SubEpochSummary]  # If end of a sub-epoch
     finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
-    challenge_chain_icp_pot: Optional[List[ProofOfTime]]  # If included in challenge chain
+    challenge_chain_icp_pot: Optional[ProofOfTime]  # If included in challenge chain
     challenge_chain_icp_signature: Optional[G2Element]  # If included in challenge chain
-    challenge_chain_ip_pot: Optional[List[ProofOfTime]]  # If included in challenge chain
+    challenge_chain_ip_pot: Optional[ProofOfTime]  # If included in challenge chain
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
-    reward_chain_icp_pot: List[ProofOfTime]
-    reward_chain_ip_pot: List[ProofOfTime]
+    reward_chain_icp_pot: ProofOfTime
+    reward_chain_ip_pot: ProofOfTime
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
     transactions_filter: Optional[bytes]  # Filter for block transactions
