@@ -1,9 +1,9 @@
 # chia-blockchain
 ![Alt text](https://www.chia.net/img/chia_logo.svg)
 
-| Current Release/master | Development Branch/dev |
+| Current Release/main | Development Branch/dev |
 |         :---:          |          :---:         |
-| ![Build Ubuntu and MacOS](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Ubuntu%20and%20MacOS/badge.svg) ![Build Windows Installer](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Windows%20Installer/badge.svg) |  ![Build Ubuntu and MacOS](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Ubuntu%20and%20MacOS/badge.svg?branch=dev) ![Build Windows Installer](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Windows%20Installer/badge.svg?branch=dev) |
+| ![Build Ubuntu on Python 3.7 and 3.8](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Ubuntu%20on%20Python%203.7%20and%203.8/badge.svg) ![Build MacOS](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20MacOS/badge.svg) ![Build Windows](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Windows/badge.svg)  |  ![Build MacOS](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20MacOS/badge.svg?branch=dev) ![Build Windows](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Windows/badge.svg?branch=dev) ![Build Ubuntu on Python 3.7 and 3.8](https://github.com/Chia-Network/chia-blockchain/workflows/Build%20Ubuntu%20on%20Python%203.7%20and%203.8/badge.svg?branch=dev) |
 
 ![GitHub contributors](https://img.shields.io/github/contributors/Chia-Network/chia-blockchain?logo=GitHub)
 
