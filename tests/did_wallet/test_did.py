@@ -310,7 +310,9 @@ class TestDIDWallet:
         message_spend_bundle2 = await did_wallet_2.create_attestment(
             coin.name(), ph, pubkey
         )
-        message_spend_bundle = message_spend_bundle.aggregate([message_spend_bundle, message_spend_bundle2])
+        message_spend_bundle = message_spend_bundle.aggregate(
+            [message_spend_bundle, message_spend_bundle2]
+        )
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
         info = Program.to([info1, info2])
