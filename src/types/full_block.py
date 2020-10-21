@@ -7,7 +7,7 @@ from src.types.sized_bytes import bytes32
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.condition_tools import created_outputs_for_conditions_dict
 from src.util.streamable import Streamable, streamable
-from src.types.proof_of_time import ProofOfTime
+from src.types.vdf import VDFProof, VDFInfo
 from src.types.challenge_slot import ChallengeSlot
 from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot, EndOfSlotProofs
 from src.types.reward_chain_sub_block import RewardChainSubBlock
@@ -27,15 +27,16 @@ class FullBlock(Streamable):
     # All the information required to validate a block
     subepoch_summary: Optional[SubEpochSummary]  # If end of a sub-epoch
     finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
-    challenge_chain_icp_pot: Optional[ProofOfTime]  # If included in challenge chain
+    challenge_chain_icp_vdf: Optional[VDFInfo]  # If included in challenge chain
+    challenge_chain_icp_proof: Optional[VDFProof]  # If included in challenge chain
     challenge_chain_icp_signature: Optional[G2Element]  # If included in challenge chain
-    challenge_chain_ip_pot: Optional[ProofOfTime]  # If included in challenge chain
+    challenge_chain_ip_vdf: Optional[VDFInfo]  # If included in challenge chain
+    challenge_chain_ip_proof: Optional[VDFProof]  # If included in challenge chain
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
-    reward_chain_icp_pot: ProofOfTime
-    reward_chain_ip_pot: ProofOfTime
+    reward_chain_icp_proof: VDFProof
+    reward_chain_ip_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
-    transactions_filter: Optional[bytes]  # Filter for block transactions
     transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
     transactions_generator: Optional[Program]  # Program that generates transactions
 
@@ -144,12 +145,12 @@ class FullBlock(Streamable):
         """
         return HeaderBlock(
             self.finished_slots,
-            self.challenge_chain_icp_pot,
+            self.challenge_chain_icp_proof,
             self.challenge_chain_icp_signature,
-            self.challenge_chain_ip_pot,
+            self.challenge_chain_ip_proof,
             self.reward_chain_sub_block,
-            self.reward_chain_icp_pot,
-            self.reward_chain_ip_pot,
+            self.reward_chain_icp_proof,
+            self.reward_chain_ip_proof,
             self.foliage_sub_block,
             self.foliage_block,
             self.transactions_filter,
