@@ -28,7 +28,8 @@ class TestCCWallet:
     async def test_create_rl_coin(self, two_wallet_nodes):
         num_blocks = 4
         full_nodes, wallets = two_wallet_nodes
-        full_node_1, server_1 = full_nodes[0]
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
         wallet_node_1, wallet_server_1 = wallets[1]
 
@@ -36,13 +37,15 @@ class TestCCWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
         await wallet_server_1.start_client(
-            PeerInfo("localhost", uint16(server_1._port)), None
+            PeerInfo("localhost", uint16(full_node_server._port)), None
         )
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         rl_admin: RLWallet = await RLWallet.create_rl_admin(
             wallet_node.wallet_state_manager
@@ -70,10 +73,10 @@ class TestCCWallet:
         )
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
 
         await time_out_assert(15, rl_user.get_confirmed_balance, 100)
         balance = await rl_user.rl_available_balance()
@@ -83,7 +86,7 @@ class TestCCWallet:
         await wallet_node_1.wallet_state_manager.main_wallet.push_transaction(tx_record)
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
 
         balance = await rl_user.get_confirmed_balance()
         print(balance)
