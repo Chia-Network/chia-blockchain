@@ -44,15 +44,18 @@ class TestCCWallet:
     async def test_colour_creation(self, two_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
-        full_node_1, server_1 = full_nodes[0]
+        full_node__api = full_nodes[0]
+        full_node_server = full_node__api.server
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node__api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         funds = sum(
             [
@@ -68,7 +71,7 @@ class TestCCWallet:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node__api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -77,7 +80,8 @@ class TestCCWallet:
     async def test_cc_spend(self, two_wallet_nodes):
         num_blocks = 8
         full_nodes, wallets = two_wallet_nodes
-        full_node_1, server_1 = full_nodes[0]
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -85,11 +89,15 @@ class TestCCWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
+        await server_3.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
 
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         funds = sum(
             [
@@ -105,7 +113,7 @@ class TestCCWallet:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -129,7 +137,7 @@ class TestCCWallet:
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
@@ -143,7 +151,7 @@ class TestCCWallet:
         )
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 55)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 55)
@@ -152,16 +160,19 @@ class TestCCWallet:
     async def test_get_wallet_for_colour(self, two_wallet_nodes):
         num_blocks = 5
         full_nodes, wallets = two_wallet_nodes
-        full_node_1, server_1 = full_nodes[0]
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
 
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         funds = sum(
             [
@@ -177,7 +188,7 @@ class TestCCWallet:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         colour = cc_wallet.get_colour()
         assert (
@@ -189,7 +200,8 @@ class TestCCWallet:
     async def test_generate_zero_val(self, two_wallet_nodes):
         num_blocks = 10
         full_nodes, wallets = two_wallet_nodes
-        full_node_1, server_1 = full_nodes[0]
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -197,10 +209,14 @@ class TestCCWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
+        await server_3.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         funds = sum(
             [
@@ -216,7 +232,7 @@ class TestCCWallet:
 
         ph = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -236,7 +252,7 @@ class TestCCWallet:
         await cc_wallet_2.generate_zero_val_coin()
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         unspent: List[WalletCoinRecord] = list(
             await cc_wallet_2.wallet_state_manager.get_spendable_coins_for_wallet(
@@ -250,7 +266,8 @@ class TestCCWallet:
     async def test_cc_spend_uncoloured(self, two_wallet_nodes):
         num_blocks = 8
         full_nodes, wallets = two_wallet_nodes
-        full_node_1, server_1 = full_nodes[0]
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -258,11 +275,15 @@ class TestCCWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
+        await server_3.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
 
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         funds = sum(
             [
@@ -278,7 +299,7 @@ class TestCCWallet:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
@@ -301,7 +322,7 @@ class TestCCWallet:
         )
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 40)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 40)
@@ -318,7 +339,9 @@ class TestCCWallet:
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_api.farm_new_block(
+                FarmNewBlockProtocol(token_bytes()), None
+            )
 
         id = cc_wallet_2.id()
         wsm = cc_wallet_2.wallet_state_manager
@@ -330,7 +353,8 @@ class TestCCWallet:
     async def test_cc_spend_multiple(self, three_wallet_nodes):
         num_blocks = 8
         full_nodes, wallets = three_wallet_nodes
-        full_node_1, server_1 = full_nodes[0]
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
         wallet_node_0, wallet_server_0 = wallets[0]
         wallet_node_1, wallet_server_1 = wallets[1]
         wallet_node_2, wallet_server_2 = wallets[2]
@@ -341,17 +365,17 @@ class TestCCWallet:
         ph = await wallet_0.get_new_puzzlehash()
 
         await wallet_server_0.start_client(
-            PeerInfo("localhost", uint16(server_1._port)), None
+            PeerInfo("localhost", uint16(full_node_server._port)), None
         )
         await wallet_server_1.start_client(
-            PeerInfo("localhost", uint16(server_1._port)), None
+            PeerInfo("localhost", uint16(full_node_server._port)), None
         )
         await wallet_server_2.start_client(
-            PeerInfo("localhost", uint16(server_1._port)), None
+            PeerInfo("localhost", uint16(full_node_server._port)), None
         )
 
         for i in range(1, 4):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         funds = sum(
             [
@@ -367,7 +391,7 @@ class TestCCWallet:
         )
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet_0.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet_0.get_unconfirmed_balance, 100)
@@ -401,7 +425,7 @@ class TestCCWallet:
         await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet_0.get_confirmed_balance, 20)
         await time_out_assert(15, cc_wallet_0.get_unconfirmed_balance, 20)
@@ -425,7 +449,7 @@ class TestCCWallet:
         await wallet_2.wallet_state_manager.add_pending_transaction(tx_record_2)
 
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         await time_out_assert(15, cc_wallet_0.get_confirmed_balance, 55)
         await time_out_assert(15, cc_wallet_0.get_unconfirmed_balance, 55)
