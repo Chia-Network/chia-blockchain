@@ -1,7 +1,8 @@
 from src.full_node.full_node import FullNode
 from typing import Callable, List, Optional, Dict
 
-# from src.types.header import Header
+from src.full_node.full_node_api import FullNodeAPI
+#from src.types.header import Header
 from src.types.full_block import FullBlock
 from src.util.ints import uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
@@ -12,8 +13,9 @@ from src.util.ws_message import create_payload
 
 
 class FullNodeRpcApi:
-    def __init__(self, full_node: FullNode):
-        self.service = full_node
+    def __init__(self, full_node_api: FullNodeAPI):
+        self.service = full_node_api
+        self.full_node = full_node_api.full_node
         self.service_name = "chia_full_node"
         self.cached_blockchain_state: Optional[Dict] = None
 

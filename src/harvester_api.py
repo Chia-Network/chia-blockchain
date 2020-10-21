@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Callable
 
 from blspy import AugSchemeMPL, G2Element
 from chiapos import DiskProver
@@ -19,6 +19,9 @@ class HarvesterAPI:
 
     def __init__(self, harvester):
         self.harvester = harvester
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.harvester.state_changed_callback = callback
 
     @api_request
     async def harvester_handshake(
