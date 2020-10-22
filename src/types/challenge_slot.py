@@ -11,7 +11,6 @@ from src.types.vdf import VDFInfo
 @dataclass(frozen=True)
 @streamable
 class ChallengeSlot(Streamable):
-    prev_slot_hash: bytes32
     subepoch_summary_hash: Optional[bytes32]  # Only once per subepoch, and one sub-epoch delayed
     proof_of_space: Optional[ProofOfSpace]
     icp_vdf: Optional[VDFInfo]
