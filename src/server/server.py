@@ -79,9 +79,9 @@ class ChiaServer:
             web.get("/ws", self.incoming_connection),
         ]
         self.app.add_routes(routes)
-        runner = web.AppRunner(self.app, access_log=None)
-        await runner.setup()
-        self.site = web.TCPSite(runner, port=self._port)
+        self.runner = web.AppRunner(self.app, access_log=None)
+        await self.runner.setup()
+        self.site = web.TCPSite(self.runner, port=self._port, shutdown_timeout=3)
         await self.site.start()
         self.log.info(f"Started listening on port: {self._port}")
 
@@ -293,9 +293,8 @@ class ChiaServer:
                 self.log.error(f"exeption while closing connection {e}")
 
     def close_all(self):
-        asyncio.ensure_future(self.close_all_connections())
-
-        self.site_shutdown_task = asyncio.create_task(self.site.stop())
+        self.connection_close_taks = asyncio.create_task(self.close_all_connections())
+        self.site_shutdown_task = asyncio.create_task(self.runner.cleanup())
         self.app_shut_down_task = asyncio.create_task(self.app.shutdown())
 
         self.shut_down_event.set()
@@ -305,6 +304,7 @@ class ChiaServer:
     async def await_closed(self):
         self.log.info("Await Closed")
         await self.shut_down_event.wait()
+        await self.connection_close_taks
         await self.app_shut_down_task
         await self.site_shutdown_task
 
