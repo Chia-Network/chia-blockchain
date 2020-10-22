@@ -42,14 +42,17 @@ class TestTransactions:
     async def test_wallet_coinbase(self, wallet_node):
         num_blocks = 5
         full_nodes, wallets = wallet_node
-        full_node_1, server_1 = full_nodes[0]
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_2.start_client(
+            PeerInfo("localhost", uint16(full_node_server._port)), None
+        )
         for i in range(1, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         funds = sum(
             [
@@ -68,9 +71,12 @@ class TestTransactions:
 
         wallet_0, wallet_server_0 = wallets[0]
         wallet_1, wallet_server_1 = wallets[1]
-        full_node_0, server_0 = full_nodes[0]
-        full_node_1, server_1 = full_nodes[1]
-        full_node_2, server_2 = full_nodes[2]
+        full_node_api_0 = full_nodes[0]
+        server_0 = full_node_api_0.server
+        full_node_api_1 = full_nodes[1]
+        server_1 = full_node_api_1.server
+        full_node_api_2 = full_nodes[2]
+        server_2 = full_node_api_2.server
 
         ph = await wallet_0.wallet_state_manager.main_wallet.get_new_puzzlehash()
         ph1 = await wallet_1.wallet_state_manager.main_wallet.get_new_puzzlehash()
@@ -88,7 +94,7 @@ class TestTransactions:
         )
 
         for i in range(1, num_blocks):
-            await full_node_0.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph), None)
 
         funds = sum(
             [
@@ -108,18 +114,29 @@ class TestTransactions:
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(
-            10, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name()
+            10,
+            full_node_api_0.full_node.mempool_manager.get_spendbundle,
+            tx.spend_bundle,
+            tx.name(),
         )
         await time_out_assert(
-            10, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name()
+            10,
+            full_node_api_1.full_node.mempool_manager.get_spendbundle,
+            tx.spend_bundle,
+            tx.name(),
         )
         await time_out_assert(
-            10, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name()
+            10,
+            full_node_api_2.full_node.mempool_manager.get_spendbundle,
+            tx.spend_bundle,
+            tx.name(),
         )
 
         # Farm another block
         for i in range(1, 8):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+            await full_node_api_1.farm_new_block(
+                FarmNewBlockProtocol(token_bytes()), None
+            )
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -141,9 +158,12 @@ class TestTransactions:
         full_nodes, wallets = three_nodes_two_wallets
 
         wallet_0, wallet_server_0 = wallets[0]
-        full_node_0, server_0 = full_nodes[0]
-        full_node_1, server_1 = full_nodes[1]
-        full_node_2, server_2 = full_nodes[2]
+        full_node_api_0 = full_nodes[0]
+        server_0 = full_node_api_0.server
+        full_node_api_1 = full_nodes[1]
+        server_1 = full_node_api_1.server
+        full_node_api_2 = full_nodes[2]
+        server_2 = full_node_api_2.server
 
         ph = await wallet_0.wallet_state_manager.main_wallet.get_new_puzzlehash()
 
@@ -155,15 +175,14 @@ class TestTransactions:
         await server_0.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, num_blocks):
-            await full_node_0.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph), None)
 
-        all_blocks = await full_node_0.get_current_blocks(full_node_0.get_tip())
+        all_blocks = await full_node_api_0.get_current_blocks(full_node_api_0.get_tip())
 
         for block in all_blocks:
-            async for _ in full_node_2.respond_block(
+            await full_node_api_2.full_node._respond_block(
                 full_node_protocol.RespondBlock(block)
-            ):
-                pass
+            )
 
         funds = sum(
             [
@@ -183,13 +202,22 @@ class TestTransactions:
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(
-            10, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name()
+            10,
+            full_node_api_0.full_node.mempool_manager.get_spendbundle,
+            tx.spend_bundle,
+            tx.name(),
         )
         await time_out_assert(
-            10, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name()
+            10,
+            full_node_api_1.full_node.mempool_manager.get_spendbundle,
+            tx.spend_bundle,
+            tx.name(),
         )
         await time_out_assert(
-            10, full_node_2.mempool_manager.get_spendbundle, None, tx.name()
+            10,
+            full_node_api_2.full_node.mempool_manager.get_spendbundle,
+            None,
+            tx.name(),
         )
 
         # make a final connection.
@@ -198,11 +226,20 @@ class TestTransactions:
         await server_1.start_client(PeerInfo("localhost", uint16(server_2._port)), None)
 
         await time_out_assert(
-            10, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name()
+            10,
+            full_node_api_0.full_node.mempool_manager.get_spendbundle,
+            tx.spend_bundle,
+            tx.name(),
         )
         await time_out_assert(
-            10, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name()
+            10,
+            full_node_api_1.full_node.mempool_manager.get_spendbundle,
+            tx.spend_bundle,
+            tx.name(),
         )
         await time_out_assert(
-            10, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name()
+            10,
+            full_node_api_2.full_node.mempool_manager.get_spendbundle,
+            tx.spend_bundle,
+            tx.name(),
         )

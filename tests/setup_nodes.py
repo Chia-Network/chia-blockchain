@@ -59,11 +59,14 @@ async def setup_full_node(
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
     config["peer_connect_interval"] = 3
-    config["introducer_peer"]["host"] = "localhost"
     if introducer_port is not None:
+        config["introducer_peer"]["host"] = "localhost"
         config["introducer_peer"]["port"] = introducer_port
+    else:
+        config["introducer_peer"] = None
     config["port"] = port
     config["rpc_port"] = port + 1000
+
 
     if simulator:
         kwargs = service_kwargs_for_full_node_simulator(bt.root_path, config, consensus_constants, bt)
