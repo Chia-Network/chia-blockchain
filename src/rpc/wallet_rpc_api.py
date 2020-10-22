@@ -411,7 +411,7 @@ class WalletRpcApi:
                     "wallet_id": did_wallet.id(),
                 }
             elif request["did_type"] == "recovery":
-                did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet_from_recovery(
+                did_wallet = await DIDWallet.create_new_did_wallet_from_recovery(
                     wallet_state_manager, main_wallet, request["filename"]
                 )
                 my_did = did_wallet.get_my_DID()
