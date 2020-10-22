@@ -412,7 +412,27 @@ class WalletRpcApi:
                     "wallet_id": did_wallet.id(),
                 }
             elif request["did_type"] == "recovery":
-                print()
+                did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet_from_recovery(
+                    wallet_state_manager, main_wallet, request["filename"]
+                )
+                my_did = did_wallet.get_my_DID()
+                coin_name = did_wallet.did_info.temp_coin.name().hex()
+                coin_list = did_wallet.did_info.temp_coin.as_list()
+                newpuzhash = (await did_wallet.get_new_puzzle()).get_tree_hash().hex()
+                pubkey = bytes((
+                    await wallet_state_manager.get_unused_derivation_record(
+                        did_wallet.wallet_info.id
+                    )
+                ).pubkey).hex()
+                return {
+                    "type": did_wallet.type(),
+                    "my_did": my_did,
+                    "wallet_id": did_wallet.id(),
+                    "coin_name": coin_name,
+                    "coin_list": coin_list,
+                    "newpuzhash": newpuzhash,
+                    "pubkey": pubkey
+                }
 
     ##########################################################################################
     # Wallet
@@ -625,7 +645,7 @@ class WalletRpcApi:
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
 
         success = await wallet.recovery_spend(
-            request["coin_name"],
+            bytes.fromhex(request["coin_name"]),
             bytes.fromhex(request["puzhash"]),
             info_list,
             pubkey,
@@ -649,11 +669,7 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         info = await wallet.get_info_for_recovery()
-        coin = Coin(
-            bytes.fromhex(request["coin_tuple"][0]),
-            bytes.fromhex(request["coin_tuple"][1]),
-            request["coin_tuple"][2],
-        )
+        coin = bytes.fromhex(request["coin_name"])
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
         spend_bundle = await wallet.create_attestment(
             coin, bytes.fromhex(request["puzhash"]), pubkey

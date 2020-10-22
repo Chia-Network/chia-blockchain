@@ -535,17 +535,17 @@ class DIDWallet:
 
     # Pushes the a SpendBundle to create a message coin on the blockchain
     # Returns a SpendBundle for the recoverer to spend the message coin
-    async def create_attestment(self, identity, newpuz, pubkey) -> SpendBundle:
+    async def create_attestment(self, recovering_coin_name, newpuz, pubkey) -> SpendBundle:
         coins = await self.select_coins(1)
         assert coins is not None and coins != set()
         coin = coins.pop()
         message = did_wallet_puzzles.create_recovery_message_puzzle(
-            identity, newpuz, pubkey
+            recovering_coin_name, newpuz, pubkey
         )
         innermessage = message.get_tree_hash()
         # innerpuz solution is (mode amount new_puz identity my_puz)
         innersol = Program.to(
-            [1, coin.amount, innermessage, identity, coin.puzzle_hash]
+            [1, coin.amount, innermessage, recovering_coin_name, coin.puzzle_hash]
         )
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = self.did_info.current_inner
