@@ -147,19 +147,18 @@ class SyncPeersHandler:
             node_id, request_set = outbound_sets_list[index % len(outbound_sets_list)]
             request_set[uint32(height)] = uint64(int(time.time()))
 
-            to_yield.append(full_node_protocol.RequestSubBlock(height, True))
-
-        requests = []
-        for request in to_yield:
+            request = full_node_protocol.RequestBlock(
+                height, self.header_hashes[height]
+            )
             msg = OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("request_block", request),
                 Delivery.SPECIFIC,
-                request.node_id,
+                node_id,
             )
-            requests.append(msg)
+            to_yield.append(msg)
 
-        return requests
+        return to_yield
 
     async def new_block(
         self, block: Union[FullBlock, HeaderBlock]
