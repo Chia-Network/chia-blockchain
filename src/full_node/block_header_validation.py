@@ -54,15 +54,20 @@ async def validate_unfinished_header_block(
         have_ses_hash: bool = False
         for finished_slot_n, (challenge_slot, reward_slot, slot_proofs) in enumerate(header_block.finished_slots):
             # 1a. check prev slot hash
+            if challenge_slot.icp_vdf is not None:
+                prev_slot_hash = challenge_slot.icp_vdf.chalenge_hash
+            else:
+                prev_slot_hash = challenge_slot.end_of_slot_vdf.challenge_hash
             if finished_slot_n == 0:
                 curr: SubBlockRecord = prev_sb
                 while curr.finished_challenge_slot_hashes is None:
                     curr = sub_blocks[curr.prev_hash]
                 assert curr.finished_challenge_slot_hashes is not None
-                if not curr.finished_challenge_slot_hashes[-1] != challenge_slot.prev_slot_hash:
+                if not curr.finished_challenge_slot_hashes[-1] != prev_slot_hash:
                     return Err.INVALID_PREV_CHALLENGE_SLOT_HASH
             else:
-                if not header_block.finished_slots[finished_slot_n - 1][0].get_hash() == challenge_slot.prev_slot_hash:
+
+                if not header_block.finished_slots[finished_slot_n - 1][0].get_hash() == prev_slot_hash:
                     return Err.INVALID_PREV_CHALLENGE_SLOT_HASH
 
             # 1b. check sub-epoch summary hash
