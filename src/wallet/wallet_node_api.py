@@ -2,7 +2,7 @@ import traceback
 from typing import List, Optional
 
 from src.protocols import wallet_protocol, introducer_protocol
-from src.server.outbound_message import Message
+from src.server.outbound_message import Message, NodeType
 from src.server.ws_connection import WSChiaConnection
 from src.types.coin import Coin, hash_coin_list
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -514,5 +514,5 @@ class WalletNodeAPI:
         else:
             await self.wallet_node.wallet_peers.ensure_is_closed()
 
-        if peer is not None:
+        if peer is not None and peer.connection_type is NodeType.INTRODUCER:
             await peer.close()

@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 from asyncio import Queue
+from copy import copy
 from pathlib import Path
 from typing import Any, List, Dict, Tuple, Callable, Optional
 
@@ -186,7 +187,7 @@ class ChiaServer:
         return False
 
     def connection_closed(self, connection: WSChiaConnection):
-        self.log.info(f"connection with disconnected: {connection.peer_host}")
+        self.log.info(f"Connection closed: {connection.peer_host}")
         if connection.peer_node_id in self.global_connections:
             self.global_connections.pop(connection.peer_node_id)
 
@@ -282,9 +283,12 @@ class ChiaServer:
         return result
 
     async def close_all_connections(self):
-        for id, connection in self.global_connections.items():
+        keys = [a for a, b in self.global_connections.items()]
+        for id in keys:
             try:
-                await connection.close()
+                if id in self.global_connections:
+                    connection = self.global_connections[id]
+                    await connection.close()
             except Exception as e:
                 self.log.error(f"exeption while closing connection {e}")
 

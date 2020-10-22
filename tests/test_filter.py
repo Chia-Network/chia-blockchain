@@ -22,7 +22,6 @@ class TestFilter:
     @pytest.mark.asyncio
     async def test_basic_filter_test(self, wallet_and_node):
         full_nodes, wallets = wallet_and_node
-        full_node_1, server_1 = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
 
