@@ -268,6 +268,10 @@ class FullNode:
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
         """
+
+        self.full_node_peers.add_message(
+            "new_inbound_connection", connection.get_peer_info()
+        )
         if connection.connection_type is NodeType.FULL_NODE:
             tips: List[Header] = self.blockchain.get_current_tips()
             for t in tips:

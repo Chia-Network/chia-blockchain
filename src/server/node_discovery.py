@@ -38,7 +38,7 @@ class FullNodeDiscovery:
         root_path: Path,
         target_outbound_count: int,
         peer_db_path: str,
-        introducer_info: PeerInfo,
+        introducer_info: Optional[PeerInfo],
         peer_connect_interval: int,
         log,
     ):
@@ -47,10 +47,13 @@ class FullNodeDiscovery:
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
         self.peer_db_path = path_from_root(root_path, peer_db_path)
-        self.introducer_info = PeerInfo(
-            introducer_info["host"],
-            introducer_info["port"],
-        )
+        if introducer_info is not None:
+            self.introducer_info = PeerInfo(
+                introducer_info["host"],
+                introducer_info["port"],
+            )
+        else:
+            self.introducer_info = None
         self.peer_connect_interval = peer_connect_interval
         self.log = log
         self.relay_queue = None
@@ -137,6 +140,9 @@ class FullNodeDiscovery:
         )
 
     async def _introducer_client(self):
+        if self.introducer_info is None:
+            return
+
         async def on_connect(peer: WSChiaConnection):
             msg = Message("request_peers", introducer_protocol.RequestPeers())
             await peer.send_message(msg)
@@ -373,7 +379,7 @@ class FullNodePeers(FullNodeDiscovery):
                     )
                 ]
                 msg = Message(
-                    "respond_peers_full_node",
+                    "respond_peers",
                     full_node_protocol.RespondPeers(timestamped_peer),
                 )
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
@@ -391,10 +397,8 @@ class FullNodePeers(FullNodeDiscovery):
                 if peer.host not in self.neighbour_known_peers[neighbour_data]:
                     self.neighbour_known_peers[neighbour_data].add(peer.host)
 
-    async def request_peers(self, peer: WSChiaConnection):
+    async def request_peers(self, peer_info: PeerInfo):
         try:
-            if peer.is_outbound:
-                return
 
             # Prevent a fingerprint attack: do not send peers to inbound connections.
             # This asymmetric behavior for inbound and outbound connections was introduced
@@ -404,15 +408,14 @@ class FullNodePeers(FullNodeDiscovery):
             # the request_peers message mitigates the attack.
 
             peers = await self.address_manager.get_peers()
-            peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
             await self.add_peers_neighbour(peers, peer_info)
 
             msg = Message(
-                "respond_peers_full_node",
+                "respond_peers",
                 full_node_protocol.RespondPeers(peers),
             )
 
-            await peer.send_message(msg)
+            return msg
         except Exception as e:
             self.log.error(f"Request peers exception: {e}")
 
@@ -467,7 +470,7 @@ class FullNodePeers(FullNodeDiscovery):
                     if connection.peer_node_id is None:
                         continue
                     msg = Message(
-                        "respond_peers_full_node",
+                        "respond_peers",
                         full_node_protocol.RespondPeers([relay_peer]),
                     )
                     await connection.send_message(msg)
