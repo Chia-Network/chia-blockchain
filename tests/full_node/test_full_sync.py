@@ -10,7 +10,7 @@ from tests.time_out_assert import time_out_assert
 
 
 def node_height_at_least(node, h):
-    if (max([h.height for h in node.blockchain.get_current_tips()])) >= h:
+    if (max([h.height for h in node.full_node.blockchain.get_current_tips()])) >= h:
         return True
     return False
 
@@ -34,10 +34,9 @@ class TestFullSync:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         for i in range(1, num_blocks):
-            async for _ in full_node_1.respond_block(
+            await full_node_1.full_node._respond_block(
                 full_node_protocol.RespondBlock(blocks[i])
-            ):
-                pass
+            )
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
@@ -60,22 +59,20 @@ class TestFullSync:
 
         # 10 blocks to node_1
         for i in range(1, num_blocks):
-            async for _ in full_node_1.respond_block(
+            await full_node_1.full_node._respond_block(
                 full_node_protocol.RespondBlock(blocks[i])
-            ):
-                pass
+            )
+
         # 4 different blocks to node_2
         for i in range(1, num_blocks_2):
-            async for _ in full_node_2.respond_block(
+            await full_node_2.full_node._respond_block(
                 full_node_protocol.RespondBlock(blocks_2[i])
-            ):
-                pass
+            )
 
         # 6th block from node_1 to node_2
-        async for _ in full_node_2.respond_block(
+        await full_node_2.full_node._respond_block(
             full_node_protocol.RespondBlock(blocks[5])
-        ):
-            pass
+        )
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(

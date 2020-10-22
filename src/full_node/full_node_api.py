@@ -64,7 +64,9 @@ class FullNodeAPI:
     async def request_peers(
         self, request: full_node_protocol.RequestPeers, peer: WSChiaConnection
     ):
-        await self.full_node.full_node_peers.request_peers(peer)
+        peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
+        msg = await self.full_node.full_node_peers.request_peers(peer_info)
+        return msg
 
     @api_request
     async def respond_peers(
@@ -94,7 +96,7 @@ class FullNodeAPI:
             "request_block",
             full_node_protocol.RequestBlock(request.height, request.header_hash),
         )
-        await peer.send_message(message)
+        return message
 
     @api_request
     async def removing_tip(

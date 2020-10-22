@@ -206,6 +206,9 @@ class ChiaServer:
                         full_message.function
                     ) == 0 or full_message.function.startswith("_"):
                         # This prevents remote calling of private methods that start with "_"
+                        self.log.error(
+                            f"Non existing function: {full_message.function}"
+                        )
                         raise ProtocolError(
                             Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
                         )
@@ -213,6 +216,9 @@ class ChiaServer:
                     f = getattr(self.api, full_message.function, None)
 
                     if f is None:
+                        self.log.error(
+                            f"Non existing function: {full_message.function}"
+                        )
                         raise ProtocolError(
                             Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
                         )
