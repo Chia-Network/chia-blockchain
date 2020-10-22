@@ -645,7 +645,7 @@ class WalletRpcApi:
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
 
         success = await wallet.recovery_spend(
-            bytes.fromhex(request["coin_name"]),
+            wallet.did_info.temp_coin,
             bytes.fromhex(request["puzhash"]),
             info_list,
             pubkey,

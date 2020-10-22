@@ -574,7 +574,7 @@ class DIDWallet:
             )
         ]
         message_spend = did_wallet_puzzles.create_spend_for_message(
-            coin.name(), identity, newpuz, pubkey
+            coin.name(), recovering_coin_name, newpuz, pubkey
         )
 
         message_spend_bundle = SpendBundle([message_spend], AugSchemeMPL.aggregate([]))
