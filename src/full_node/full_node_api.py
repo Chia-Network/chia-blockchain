@@ -78,7 +78,8 @@ class FullNodeAPI:
             request, peer.get_peer_info(), True
         )
         # Pseudo-message to close the connection
-        await peer.close()
+        if peer.connection_type is NodeType.INTRODUCER:
+            await peer.close()
 
     @api_request
     async def new_tip(self, request: full_node_protocol.NewTip, peer: WSChiaConnection):
