@@ -535,7 +535,9 @@ class DIDWallet:
 
     # Pushes the a SpendBundle to create a message coin on the blockchain
     # Returns a SpendBundle for the recoverer to spend the message coin
-    async def create_attestment(self, recovering_coin_name, newpuz, pubkey) -> SpendBundle:
+    async def create_attestment(
+        self, recovering_coin_name, newpuz, pubkey
+    ) -> SpendBundle:
         coins = await self.select_coins(1)
         assert coins is not None and coins != set()
         coin = coins.pop()

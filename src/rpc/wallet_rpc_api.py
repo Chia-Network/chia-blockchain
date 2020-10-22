@@ -418,11 +418,13 @@ class WalletRpcApi:
                 coin_name = did_wallet.did_info.temp_coin.name().hex()
                 coin_list = did_wallet.did_info.temp_coin.as_list()
                 newpuzhash = (await did_wallet.get_new_puzzle()).get_tree_hash().hex()
-                pubkey = bytes((
-                    await wallet_state_manager.get_unused_derivation_record(
-                        did_wallet.wallet_info.id
-                    )
-                ).pubkey).hex()
+                pubkey = bytes(
+                    (
+                        await wallet_state_manager.get_unused_derivation_record(
+                            did_wallet.wallet_info.id
+                        )
+                    ).pubkey
+                ).hex()
                 return {
                     "type": did_wallet.type(),
                     "my_did": my_did,
@@ -430,7 +432,7 @@ class WalletRpcApi:
                     "coin_name": coin_name,
                     "coin_list": coin_list,
                     "newpuzhash": newpuzhash,
-                    "pubkey": pubkey
+                    "pubkey": pubkey,
                 }
 
     ##########################################################################################
