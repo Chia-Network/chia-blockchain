@@ -119,7 +119,10 @@ class DIDWallet:
 
     @staticmethod
     async def create_new_did_wallet_from_recovery(
-        wallet_state_manager: Any, wallet: Wallet, filename: str, name: str = None,
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        filename: str,
+        name: str = None,
     ):
         self = DIDWallet()
         self.base_puzzle_program = None
@@ -192,8 +195,10 @@ class DIDWallet:
         return uint64(amount)
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-            self.id()
+        unconfirmed_tx = (
+            await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+                self.id()
+            )
         )
         addition_amount = 0
 
@@ -314,7 +319,9 @@ class DIDWallet:
         await self.save_info(new_info)
 
         future_parent = CCParent(
-            coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount,
+            coin.parent_coin_info,
+            inner_puzzle.get_tree_hash(),
+            coin.amount,
         )
 
         await self.add_parent(coin.name(), future_parent)
@@ -475,7 +482,8 @@ class DIDWallet:
         innerpuz = self.did_info.current_inner
 
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
-            innerpuz, self.did_info.my_did,
+            innerpuz,
+            self.did_info.my_did,
         )
         parent_info = await self.get_parent_for_coin(coin)
 
@@ -491,7 +499,10 @@ class DIDWallet:
             ]
         )
         list_of_solutions = [
-            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
+            CoinSolution(
+                coin,
+                clvm.to_sexp_f([full_puzzle, fullsol]),
+            )
         ]
         # sign for AGG_SIG_ME
         message = bytes(puzhash) + bytes(coin.name())
@@ -542,7 +553,8 @@ class DIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = self.did_info.current_inner
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
-            innerpuz, self.did_info.my_did,
+            innerpuz,
+            self.did_info.my_did,
         )
         parent_info = await self.get_parent_for_coin(coin)
         assert parent_info is not None
@@ -559,7 +571,10 @@ class DIDWallet:
             ]
         )
         list_of_solutions = [
-            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
+            CoinSolution(
+                coin,
+                clvm.to_sexp_f([full_puzzle, fullsol]),
+            )
         ]
         message_spend = did_wallet_puzzles.create_spend_for_message(
             coin.name(), recovering_coin_name, newpuz, pubkey
@@ -625,13 +640,17 @@ class DIDWallet:
         # full solution is (parent_info my_amount solution)
         innerpuz = self.did_info.current_inner
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
-            innerpuz, self.did_info.my_did,
+            innerpuz,
+            self.did_info.my_did,
         )
         parent_info = await self.get_parent_for_coin(coin)
         assert parent_info is not None
         fullsol = Program.to([parent_info.as_list(), coin.amount, innersol])
         list_of_solutions = [
-            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
+            CoinSolution(
+                coin,
+                clvm.to_sexp_f([full_puzzle, fullsol]),
+            )
         ]
         sigs = []
 
@@ -726,10 +745,14 @@ class DIDWallet:
         )
         eve_coin = Coin(origin_id, did_puzzle_hash, amount)
         future_parent = CCParent(
-            eve_coin.parent_coin_info, did_inner_hash, eve_coin.amount,
+            eve_coin.parent_coin_info,
+            did_inner_hash,
+            eve_coin.amount,
         )
         eve_parent = CCParent(
-            origin.parent_coin_info, origin.puzzle_hash, origin.amount,
+            origin.parent_coin_info,
+            origin.puzzle_hash,
+            origin.amount,
         )
         await self.add_parent(eve_coin.parent_coin_info, eve_parent)
         await self.add_parent(eve_coin.name(), future_parent)
@@ -763,7 +786,10 @@ class DIDWallet:
         # full solution is (parent_info my_amount innersolution)
         fullsol = Program.to([coin.parent_coin_info, coin.amount, innersol])
         list_of_solutions = [
-            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
+            CoinSolution(
+                coin,
+                clvm.to_sexp_f([full_puzzle, fullsol]),
+            )
         ]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())
@@ -780,8 +806,10 @@ class DIDWallet:
         return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
     async def get_spendable_balance(self) -> uint64:
-        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.wallet_info.id
+        spendable_am = (
+            await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+                self.wallet_info.id
+            )
         )
         return spendable_am
 
