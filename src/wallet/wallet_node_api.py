@@ -7,7 +7,7 @@ from src.server.ws_connection import WSChiaConnection
 from src.types.coin import Coin, hash_coin_list
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.sized_bytes import bytes32
-from src.util.api_decorators import api_request
+from src.util.api_decorators import api_request, peer_required
 from src.util.errors import Err
 from src.util.ints import uint32
 from src.util.merkle_set import (
@@ -27,6 +27,7 @@ class WalletNodeAPI:
     def __init__(self, wallet_node):
         self.wallet_node = wallet_node
 
+    @peer_required
     @api_request
     async def respond_removals(
         self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection
@@ -141,7 +142,7 @@ class WalletNodeAPI:
 
     @api_request
     async def reject_additions_request(
-        self, response: wallet_protocol.RejectAdditionsRequest, peer: WSChiaConnection
+        self, response: wallet_protocol.RejectAdditionsRequest
     ):
         """
         The full node has rejected our request for additions.
@@ -155,9 +156,7 @@ class WalletNodeAPI:
         self.wallet_node.log.error("Additions request rejected")
 
     @api_request
-    async def respond_generator(
-        self, response: wallet_protocol.RespondGenerator, peer: WSChiaConnection
-    ):
+    async def respond_generator(self, response: wallet_protocol.RespondGenerator):
         """
         The full node respond with transaction generator
         """
@@ -176,9 +175,7 @@ class WalletNodeAPI:
             )
 
     @api_request
-    async def reject_generator(
-        self, response: wallet_protocol.RejectGeneratorRequest, peer: WSChiaConnection
-    ):
+    async def reject_generator(self, response: wallet_protocol.RejectGeneratorRequest):
         """
         The full node rejected our request for generator
         """
@@ -192,7 +189,7 @@ class WalletNodeAPI:
 
     @api_request
     async def reject_header_request(
-        self, response: wallet_protocol.RejectHeaderRequest, peer: WSChiaConnection
+        self, response: wallet_protocol.RejectHeaderRequest
     ):
         """
         The full node has rejected our request for a header.
@@ -205,6 +202,7 @@ class WalletNodeAPI:
             return
         self.wallet_node.log.error("Header request rejected")
 
+    @peer_required
     @api_request
     async def respond_additions(
         self, response: wallet_protocol.RespondAdditions, peer: WSChiaConnection
@@ -358,6 +356,7 @@ class WalletNodeAPI:
             if respond_header_msg is not None:
                 await self.wallet_node._respond_header(respond_header_msg, peer)
 
+    @peer_required
     @api_request
     async def transaction_ack(
         self, ack: wallet_protocol.TransactionAck, peer: WSChiaConnection
@@ -396,7 +395,7 @@ class WalletNodeAPI:
 
     @api_request
     async def respond_all_proof_hashes(
-        self, response: wallet_protocol.RespondAllProofHashes, peer: WSChiaConnection
+        self, response: wallet_protocol.RespondAllProofHashes
     ):
         """
         Receipt of proof hashes, used during sync for interactive weight verification protocol.
@@ -415,7 +414,6 @@ class WalletNodeAPI:
     async def respond_all_header_hashes_after(
         self,
         response: wallet_protocol.RespondAllHeaderHashesAfter,
-        peer: WSChiaConnection,
     ):
         """
         Response containing all header hashes after a point. This is used to find the fork
@@ -435,7 +433,6 @@ class WalletNodeAPI:
     async def reject_all_header_hashes_after_request(
         self,
         response: wallet_protocol.RejectAllHeaderHashesAfterRequest,
-        peer: WSChiaConnection,
     ):
         """
         Error in requesting all header hashes.
@@ -448,6 +445,7 @@ class WalletNodeAPI:
             return
         self.wallet_node.header_hashes_error = True
 
+    @peer_required
     @api_request
     async def new_lca(self, request: wallet_protocol.NewLCA, peer: WSChiaConnection):
         """
@@ -497,12 +495,14 @@ class WalletNodeAPI:
         # Try sending queued up transaction when new LCA arrives
         await self.wallet_node._resend_queue()
 
+    @peer_required
     @api_request
     async def respond_header(
         self, response: wallet_protocol.RespondHeader, peer: WSChiaConnection
     ):
         await self.wallet_node._respond_header(response, peer)
 
+    @peer_required
     @api_request
     async def respond_peers(
         self, request: introducer_protocol.RespondPeers, peer: WSChiaConnection

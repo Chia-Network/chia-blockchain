@@ -16,9 +16,7 @@ class TimelordAPI:
         self.timelord.state_changed_callback = callback
 
     @api_request
-    async def challenge_start(
-        self, challenge_start: timelord_protocol.ChallengeStart, peer: WSChiaConnection
-    ):
+    async def challenge_start(self, challenge_start: timelord_protocol.ChallengeStart):
         """
         The full node notifies the timelord node that a new challenge is active, and work
         should be started on it. We add the challenge into the queue if it's worth it to have.
@@ -66,7 +64,6 @@ class TimelordAPI:
     async def proof_of_space_info(
         self,
         proof_of_space_info: timelord_protocol.ProofOfSpaceInfo,
-        peer: WSChiaConnection,
     ):
         """
         Notification from full node about a new proof of space for a challenge. If we already

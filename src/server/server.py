@@ -224,7 +224,10 @@ class ChiaServer:
                             Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
                         )
 
-                    response = await f(full_message.data, connection)
+                    if hasattr(f, "peer_required"):
+                        response = await f(full_message.data, connection)
+                    else:
+                        response = await f(full_message.data)
 
                     if response is not None:
                         await connection.send_message(response)

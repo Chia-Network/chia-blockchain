@@ -4,7 +4,7 @@ from src.introducer import Introducer
 from src.server.outbound_message import Message
 from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import TimestampedPeerInfo
-from src.util.api_decorators import api_request
+from src.util.api_decorators import api_request, peer_required
 from src.util.ints import uint64
 from src.protocols.introducer_protocol import RespondPeers, RequestPeers
 
@@ -18,6 +18,7 @@ class IntroducerAPI:
     def _set_state_changed_callback(self, callback: Callable):
         self.introducer.state_changed_callback = callback
 
+    @peer_required
     @api_request
     async def request_peers(
         self,

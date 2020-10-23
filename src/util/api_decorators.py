@@ -30,3 +30,11 @@ def api_request(f):
         return f(**inter)
 
     return f_substitute
+
+
+def peer_required(func):
+    def inner():
+        setattr(func, "peer_required", True)
+        return func
+
+    return inner()
