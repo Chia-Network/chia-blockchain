@@ -60,7 +60,7 @@ def get_next_ips(
         raise ValueError(f"Header hash {header_hash} not in height_to_hash chain")
 
     if next_height < constants.EPOCH_SUB_BLOCKS:
-        return uint64(constants.SLOT_ITERS_STARTING)
+        return uint64(constants.IPS_STARTING)
 
     # If we are in the same epoch, return same ips
     if not new_slot or not finishes_sub_epoch(constants, sub_blocks, header_hash, True):
@@ -104,16 +104,10 @@ def get_next_ips(
 
     # Only change by a max factor as a sanity check
     max_ips = uint64(
-        truncate_to_significant_bits(
-            constants.DIFFICULTY_FACTOR * sub_block.ips,
-            constants.SIGNIFICANT_BITS,
-        )
+        truncate_to_significant_bits(constants.DIFFICULTY_FACTOR * sub_block.ips, constants.SIGNIFICANT_BITS,)
     )
     min_ips = uint64(
-        truncate_to_significant_bits(
-            sub_block.ips // constants.DIFFICULTY_FACTOR,
-            constants.SIGNIFICANT_BITS,
-        )
+        truncate_to_significant_bits(sub_block.ips // constants.DIFFICULTY_FACTOR, constants.SIGNIFICANT_BITS,)
     )
     if new_ips >= sub_block.ips:
         return min(new_ips, max_ips)
@@ -208,16 +202,10 @@ def get_next_difficulty(
 
     # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
     max_diff = uint64(
-        truncate_to_significant_bits(
-            constants.DIFFICULTY_FACTOR * old_difficulty,
-            constants.SIGNIFICANT_BITS,
-        )
+        truncate_to_significant_bits(constants.DIFFICULTY_FACTOR * old_difficulty, constants.SIGNIFICANT_BITS,)
     )
     min_diff = uint64(
-        truncate_to_significant_bits(
-            old_difficulty // constants.DIFFICULTY_FACTOR,
-            constants.SIGNIFICANT_BITS,
-        )
+        truncate_to_significant_bits(old_difficulty // constants.DIFFICULTY_FACTOR, constants.SIGNIFICANT_BITS,)
     )
     if new_difficulty >= old_difficulty:
         return min(new_difficulty, max_diff)
