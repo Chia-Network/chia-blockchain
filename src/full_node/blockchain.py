@@ -79,9 +79,7 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        coin_store: CoinStore,
-        block_store: BlockStore,
-        consensus_constants: ConsensusConstants,
+        coin_store: CoinStore, block_store: BlockStore, consensus_constants: ConsensusConstants,
     ):
         """
         Initializes a blockchain with the header blocks from disk, assuming they have all been
@@ -240,7 +238,7 @@ class Blockchain:
             block.reward_chain_ip_proof,
             block.foliage_sub_block,
             block.foliage_block,
-            b"",  # Nofilter
+            b"",  # No filter
         )
 
         error_code: Optional[Err] = await validate_finished_header_block(
@@ -256,7 +254,7 @@ class Blockchain:
             return ReceiveBlockResult.INVALID_BLOCK, error_code
 
         # TODO: fill
-        sub_block = block.get_sub_block_record(0)
+        sub_block = block.get_sub_block_record(uint64(0))
 
         # Always add the block to the database
         await self.block_store.add_block(block)
@@ -550,11 +548,7 @@ class Blockchain:
                             return Err.COINBASE_NOT_YET_SPENDABLE
                     new_coin, confirmed_height = additions_since_fork[rem]
                     new_coin_record: CoinRecord = CoinRecord(
-                        new_coin,
-                        confirmed_height,
-                        uint32(0),
-                        False,
-                        (rem in coinbases_since_fork),
+                        new_coin, confirmed_height, uint32(0), False, (rem in coinbases_since_fork),
                     )
                     removal_coin_records[new_coin_record.name] = new_coin_record
 
@@ -605,12 +599,7 @@ class Blockchain:
         pairs_msgs = []
         for npc in npc_list:
             unspent = removal_coin_records[npc.coin_name]
-            error = blockchain_check_conditions_dict(
-                unspent,
-                removal_coin_records,
-                npc.condition_dict,
-                block.header,
-            )
+            error = blockchain_check_conditions_dict(unspent, removal_coin_records, npc.condition_dict, block.header,)
             if error:
                 return error
             for pk, m in pkm_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name):
