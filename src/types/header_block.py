@@ -19,8 +19,8 @@ class HeaderBlock(Streamable):
     challenge_chain_icp_vdf: Optional[VDFInfo]  # If included in challenge chain
     challenge_chain_icp_proof: Optional[VDFProof]  # If included in challenge chain
     challenge_chain_icp_signature: Optional[G2Element]  # If included in challenge chain
-    challenge_chain_ip_vdf: Optional[VDFInfo]  # If included in challenge chain
-    challenge_chain_ip_proof: Optional[VDFProof]  # If included in challenge chain
+    challenge_chain_ip_vdf: VDFInfo  # From the previous icp iters (but without infusion)
+    challenge_chain_ip_proof: VDFProof  # From the previous icp iters (but without infusion)
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
     reward_chain_icp_proof: VDFProof
     reward_chain_ip_proof: VDFProof
@@ -43,3 +43,7 @@ class HeaderBlock(Streamable):
     @property
     def header_hash(self):
         return self.foliage_sub_block.get_hash()
+
+    @property
+    def total_iters(self):
+        return self.reward_chain_sub_block.total_iters
