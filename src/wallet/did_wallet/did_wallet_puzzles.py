@@ -16,7 +16,8 @@ DID_GROUP_MOD = load_clvm("did_groups.clvm")
 
 
 def create_innerpuz(pubkey: bytes, identities: List[bytes]) -> Program:
-    return DID_INNERPUZ_MOD.curry(DID_CORE_MOD.get_tree_hash(), pubkey, identities)
+    backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
+    return DID_INNERPUZ_MOD.curry(DID_CORE_MOD.get_tree_hash(), pubkey, backup_ids_hash)
 
 
 def create_fullpuz(innerpuz, genesis_id) -> Program:
