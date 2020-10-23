@@ -51,6 +51,7 @@ workflow.
 2. Run blackd in a terminal
 3. Install BlackConnect plugin
 4. Set to run python black on save
+5. Set line length to 120
 
 ## Submit changes
 To submit changes, please make a pull request to the `dev` development branch.
