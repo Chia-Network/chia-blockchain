@@ -114,6 +114,7 @@ class Err(Enum):
     INVALID_RC_IP_VDF = 89
     IP_SHOULD_BE_NONE = 90
     INVALID_REWARD_BLOCK_HASH = 91
+    INVALID_MADE_NON_OVERFLOW_INFUSIONS = 92
 
 
 class ConsensusError(Exception):
