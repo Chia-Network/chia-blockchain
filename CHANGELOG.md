@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## [1.0beta17] aka Beta 1.17 - 2020-10-22
+
+### Changed
+- Bumped aiohttp to 3.6.3
+
+### Fixed
+- In the GUI there was [a regression](https://github.com/Chia-Network/chia-blockchain/issues/484) that removed the scroll bar on the Plot page. The scroll bar has returned!
+- In Dark Mode you couldn't read the white on white plotting log text.
+- To fix a bug in Beta 15's plotter we introduced a fixed that slowed plotting by as much as 25%.
+- Certain NTFS root mount points couldn't be used for plotting or farming.
+- Logging had [a regression](https://github.com/Chia-Network/chia-blockchain/issues/485) where log level could no longer be set by service.
+
 ## [1.0beta16] aka Beta 1.16 - 2020-10-20
 
 ### Added
