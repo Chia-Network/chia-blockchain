@@ -10,7 +10,7 @@ from src.protocols import harvester_protocol
 from src.server.outbound_message import Message
 from src.server.ws_connection import WSChiaConnection
 from src.types.proof_of_space import ProofOfSpace
-from src.util.api_decorators import api_request
+from src.util.api_decorators import api_request, peer_required
 from src.util.ints import uint8
 
 
@@ -23,6 +23,7 @@ class HarvesterAPI:
     def _set_state_changed_callback(self, callback: Callable):
         self.harvester.state_changed_callback = callback
 
+    @peer_required
     @api_request
     async def harvester_handshake(
         self,
@@ -52,6 +53,7 @@ class HarvesterAPI:
         self.harvester.cached_challenges = []
         self.harvester._state_changed("plots")
 
+    @peer_required
     @api_request
     async def new_challenge(
         self, new_challenge: harvester_protocol.NewChallenge, peer: WSChiaConnection
@@ -61,7 +63,7 @@ class HarvesterAPI:
 
     @api_request
     async def request_proof_of_space(
-        self, request: harvester_protocol.RequestProofOfSpace, peer: WSChiaConnection
+        self, request: harvester_protocol.RequestProofOfSpace
     ):
         """
         The farmer requests a proof of space, for one of the plots.
@@ -117,9 +119,7 @@ class HarvesterAPI:
             return msg
 
     @api_request
-    async def request_signature(
-        self, request: harvester_protocol.RequestSignature, peer: WSChiaConnection
-    ):
+    async def request_signature(self, request: harvester_protocol.RequestSignature):
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
         A signature is created on the header hash using the harvester private key. This can also
