@@ -43,7 +43,6 @@ async def validate_unfinished_header_block(
     """
 
     prev_sb: SubBlockRecord = sub_blocks[header_block.prev_header_hash]
-    challenge: Optional[bytes32] = None
     new_slot: bool = len(header_block.finished_slots) > 0
 
     # 1. Check finished slots
@@ -86,10 +85,10 @@ async def validate_unfinished_header_block(
 
             if challenge_slot.proof_of_space is not None:
                 # There is a challenge block in this finished slot
-                # 1c. Check that we are allowed to make a challenge block
+                # 1c. Check that there was a challenge block made in the target slot, and find it
                 if finished_slot_n != 0:
                     return Err.SHOULD_NOT_MAKE_CHALLENGE_BLOCK
-                curr: SubBlockRecord = prev_sb
+                curr: SubBlockRecord = prev_sb  # prev_sb is guaranteed to be in challenge slot
                 while not curr.makes_challenge_block:
                     if curr.finished_challenge_slot_hashes is not None:
                         return Err.SHOULD_NOT_MAKE_CHALLENGE_BLOCK
@@ -184,6 +183,12 @@ async def validate_unfinished_header_block(
             if max(deficit, 0) != reward_slot.deficit:
                 return Err.INVALID_DEFICIT
 
+            # 1k. Check made_non_overflow_infusions
+            curr: SubBlockRecord = prev_sb
+            while not curr.first_in_slot and curr.height > 0:
+                # TODO: implement check
+                curr = sub_blocks[curr.prev_block_hash]
+
         # 2. Check sub-epoch summary
         if not have_ses_hash and header_block.subepoch_summary is not None:
             return Err.NO_SUB_EPOCH_SUMMARY_HASH
@@ -248,18 +253,31 @@ async def validate_unfinished_header_block(
         overflow = is_overflow_sub_block(constants, ips, required_iters)
 
         # If sub_block state is correct, we should always find a challenge here
-        if overflow:
-            # Overflow infusion, so get the second to last challenge
-            challenges_to_look_for = 2
+        # This computes what the challenge should be for this sub-block
+        if new_slot:
+            if overflow:
+                if header_block.finished_slots[-1][0].proof_of_space is not None:
+                    # New slot with overflow block, where prev slot had challenge block
+                    challenge = header_block.finished_slots[-1][0].proof_of_space.challenge_hash
+                else:
+                    # New slot with overflow block, where prev slot had no challenge block
+                    challenge = header_block.finished_slots[-1][0].end_of_slot_vdf.challenge_hash
+            else:
+                # No overflow, new slot with a new challenge
+                challenge = header_block.finished_slots[-1][0].get_hash()
         else:
-            challenges_to_look_for = 1
-        seen_challenges = 0
-        curr: SubBlockRecord = prev_sb
-        while seen_challenges < challenges_to_look_for:
-            if curr.finished_challenge_slot_hashes is not None:
-                seen_challenges += 1
-                challenge = curr.finished_challenge_slot_hashes[-1]
-            curr = sub_blocks[curr.prev_hash]
+            if overflow:
+                # Overflow infusion, so get the second to last challenge
+                challenges_to_look_for = 2
+            else:
+                challenges_to_look_for = 1
+            reversed_challenge_hashes: List[bytes32] = []
+            curr: SubBlockRecord = prev_sb
+            while len(reversed_challenge_hashes) < challenges_to_look_for:
+                if curr.first_in_slot:
+                    reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
+                curr = sub_blocks[curr.prev_hash]
+            challenge = reversed_challenge_hashes[-challenges_to_look_for]
         assert challenge is not None
 
         # 4. Check challenge in proof of space is valid
@@ -328,16 +346,23 @@ async def validate_unfinished_header_block(
         ):
             return Err.INVALID_RC_SIGNATURE
 
-        # We can only make a challenge block if deficit is zero
-        makes_challenge_block: bool = new_slot and header_block.finished_slots[0][1].deficit == 0
+        # Can only make a challenge block if deficit is zero AND (not overflow or not prev_slot_non_overflow_infusions)
+        if new_slot:
+            deficit = header_block.finished_slots[-1][1].deficit
+            prev_slot_non_overflow_infusions = header_block.finished_slots[-1][1].made_non_overflow_infusions
+            cc_vdf_challenge = header_block.finished_slots[-1][0].get_hash()
+        else:
+            curr: SubBlockRecord = prev_sb
+            while not curr.first_in_slot:
+                curr = sub_blocks[curr.prev_hash]
+            deficit = curr.deficit
+            prev_slot_non_overflow_infusions = curr.previous_slot_non_overflow_infusions
+            cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
-        if makes_challenge_block:
+        if deficit == 0 and (not overflow or not prev_slot_non_overflow_infusions):
             # 11a. Check cc icp
             target_vdf_info = VDFInfo(
-                header_block.finished_slots[-1][0].get_hash(),
-                cc_vdf_input,
-                icp_vdf_iters,
-                header_block.challenge_chain_icp_vdf.output,
+                cc_vdf_challenge, cc_vdf_input, icp_vdf_iters, header_block.challenge_chain_icp_vdf.output,
             )
             if not header_block.challenge_chain_icp_proof.is_valid(
                 constants, header_block.challenge_chain_icp_vdf, target_vdf_info
