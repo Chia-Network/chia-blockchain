@@ -28,7 +28,6 @@ class FarmerAPI:
     async def challenge_response(
         self,
         challenge_response: harvester_protocol.ChallengeResponse,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         """
         This is a response from the harvester, for a NewChallenge. Here we check if the proof
@@ -88,7 +87,7 @@ class FarmerAPI:
 
     @api_request
     async def respond_proof_of_space(
-        self, response: harvester_protocol.RespondProofOfSpace, peer: WSChiaConnection
+        self, response: harvester_protocol.RespondProofOfSpace
     ) -> Optional[Message]:
         """
         This is a response from the harvester with a proof of space. We check it's validity,
@@ -164,9 +163,7 @@ class FarmerAPI:
         return None
 
     @api_request
-    async def respond_signature(
-        self, response: harvester_protocol.RespondSignature, peer: WSChiaConnection
-    ):
+    async def respond_signature(self, response: harvester_protocol.RespondSignature):
         """
         Receives a signature on a block header hash, which is required for submitting
         a block to the blockchain.
@@ -201,9 +198,7 @@ class FarmerAPI:
     """
 
     @api_request
-    async def header_hash(
-        self, response: farmer_protocol.HeaderHash, peer: WSChiaConnection
-    ):
+    async def header_hash(self, response: farmer_protocol.HeaderHash):
         """
         Full node responds with the hash of the created header
         """
@@ -230,7 +225,6 @@ class FarmerAPI:
     async def proof_of_space_finalized(
         self,
         proof_of_space_finalized: farmer_protocol.ProofOfSpaceFinalized,
-        peer: WSChiaConnection,
     ):
         """
         Full node notifies farmer that a proof of space has been completed. It gets added to the
@@ -281,7 +275,6 @@ class FarmerAPI:
     async def proof_of_space_arrived(
         self,
         proof_of_space_arrived: farmer_protocol.ProofOfSpaceArrived,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
 
         """
@@ -300,7 +293,6 @@ class FarmerAPI:
     async def proof_of_time_rate(
         self,
         proof_of_time_rate: farmer_protocol.ProofOfTimeRate,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         """
         Updates our internal estimate of the iterations per second for the fastest proof of time

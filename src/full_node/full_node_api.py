@@ -35,7 +35,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
-from src.util.api_decorators import api_request
+from src.util.api_decorators import api_request, peer_required
 from src.full_node.bundle_tools import best_solution_program
 from src.full_node.cost_calculator import calculate_cost_of_program
 from src.util.errors import ConsensusError, Err
@@ -60,6 +60,7 @@ class FullNodeAPI:
     def server(self):
         return self.full_node.server
 
+    @peer_required
     @api_request
     async def request_peers(
         self, request: full_node_protocol.RequestPeers, peer: WSChiaConnection
@@ -68,6 +69,7 @@ class FullNodeAPI:
         msg = await self.full_node.full_node_peers.request_peers(peer_info)
         return msg
 
+    @peer_required
     @api_request
     async def respond_peers(
         self,
@@ -82,7 +84,7 @@ class FullNodeAPI:
             await peer.close()
 
     @api_request
-    async def new_tip(self, request: full_node_protocol.NewTip, peer: WSChiaConnection):
+    async def new_tip(self, request: full_node_protocol.NewTip):
         """
         A peer notifies us that they have added a new tip to their blockchain. If we don't have it,
         we can ask for it.
@@ -100,9 +102,7 @@ class FullNodeAPI:
         return message
 
     @api_request
-    async def removing_tip(
-        self, request: full_node_protocol.RemovingTip, peer: WSChiaConnection
-    ):
+    async def removing_tip(self, request: full_node_protocol.RemovingTip):
         """
         A peer notifies us that they have removed a tip from their blockchain.
         """
@@ -110,7 +110,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_transaction(
-        self, request: full_node_protocol.RequestTransaction, peer: WSChiaConnection
+        self, request: full_node_protocol.RequestTransaction
     ) -> Optional[Message]:
         """ Peer has requested a full transaction from us. """
         # Ignore if syncing
@@ -134,7 +134,7 @@ class FullNodeAPI:
 
     @api_request
     async def respond_transaction(
-        self, tx: full_node_protocol.RespondTransaction, peer: WSChiaConnection
+        self, tx: full_node_protocol.RespondTransaction
     ) -> Optional[Message]:
         """
         Receives a full transaction from peer.
@@ -182,7 +182,6 @@ class FullNodeAPI:
     async def reject_transaction_request(
         self,
         reject: full_node_protocol.RejectTransactionRequest,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         """
         The peer rejects the request for a transaction.
@@ -194,7 +193,6 @@ class FullNodeAPI:
     async def new_proof_of_time(
         self,
         new_proof_of_time: full_node_protocol.NewProofOfTime,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         if new_proof_of_time.witness_type == 0:
             # A honest sanitizer will always sanitize until the LCA block.
@@ -267,7 +265,6 @@ class FullNodeAPI:
     async def request_proof_of_time(
         self,
         request_proof_of_time: full_node_protocol.RequestProofOfTime,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_at(
             [request_proof_of_time.height]
@@ -300,7 +297,6 @@ class FullNodeAPI:
     async def respond_proof_of_time(
         self,
         respond_proof_of_time: full_node_protocol.RespondProofOfTime,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         """
         A proof of time, received by a peer full node. If we have the rest of the block,
@@ -310,7 +306,7 @@ class FullNodeAPI:
         if respond_proof_of_time.proof.witness_type == 0:
             request = timelord_protocol.ProofOfTimeFinished(respond_proof_of_time.proof)
 
-            await self.proof_of_time_finished(request, peer)
+            await self.proof_of_time_finished(request)
             processed = True
 
         if (
@@ -347,21 +343,18 @@ class FullNodeAPI:
                 request = timelord_protocol.ProofOfTimeFinished(
                     respond_proof_of_time.proof
                 )
-                await self.proof_of_time_finished(request, peer)
+                await self.proof_of_time_finished(request)
         return None
 
     @api_request
     async def reject_proof_of_time_request(
         self,
         reject: full_node_protocol.RejectProofOfTimeRequest,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         self.full_node.log.warning(f"Rejected PoT Request {reject}")
         return None
 
-    async def _respond_compact_proof_of_time(
-        self, proof: ProofOfTime, peer: WSChiaConnection
-    ):
+    async def _respond_compact_proof_of_time(self, proof: ProofOfTime):
         """
         A proof of time, received by a peer full node. If we have the rest of the block,
         we can complete it. Otherwise, we just verify and propagate the proof.
@@ -423,7 +416,6 @@ class FullNodeAPI:
     async def new_unfinished_block(
         self,
         new_unfinished_block: full_node_protocol.NewUnfinishedBlock,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         if self.full_node.blockchain.contains_block(
             new_unfinished_block.new_header_hash
@@ -466,7 +458,6 @@ class FullNodeAPI:
     async def request_unfinished_block(
         self,
         request_unfinished_block: full_node_protocol.RequestUnfinishedBlock,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         for _, block in (
             await self.full_node.full_node_store.get_unfinished_blocks()
@@ -498,7 +489,7 @@ class FullNodeAPI:
     # WALLET PROTOCOL
     @api_request
     async def send_transaction(
-        self, tx: wallet_protocol.SendTransaction, peer: WSChiaConnection
+        self, tx: wallet_protocol.SendTransaction
     ) -> Optional[Message]:
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
@@ -559,7 +550,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_all_proof_hashes(
-        self, request: wallet_protocol.RequestAllProofHashes, peer: WSChiaConnection
+        self, request: wallet_protocol.RequestAllProofHashes
     ) -> Optional[Message]:
         proof_hashes_map = await self.full_node.block_store.get_proof_hashes()
         curr = self.full_node.blockchain.lca_block
@@ -598,7 +589,6 @@ class FullNodeAPI:
     async def request_all_header_hashes_after(
         self,
         request: wallet_protocol.RequestAllHeaderHashesAfter,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash.get(
             request.starting_height, None
@@ -642,7 +632,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_header(
-        self, request: wallet_protocol.RequestHeader, peer: WSChiaConnection
+        self, request: wallet_protocol.RequestHeader
     ) -> Optional[Message]:
         full_block: Optional[FullBlock] = await self.full_node.block_store.get_block(
             request.header_hash
@@ -666,7 +656,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_removals(
-        self, request: wallet_protocol.RequestRemovals, peer: WSChiaConnection
+        self, request: wallet_protocol.RequestRemovals
     ) -> Optional[Message]:
         block: Optional[FullBlock] = await self.full_node.block_store.get_block(
             request.header_hash
@@ -734,7 +724,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_additions(
-        self, request: wallet_protocol.RequestAdditions, peer: WSChiaConnection
+        self, request: wallet_protocol.RequestAdditions
     ) -> Optional[Message]:
         block: Optional[FullBlock] = await self.full_node.block_store.get_block(
             request.header_hash
@@ -805,7 +795,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_generator(
-        self, request: wallet_protocol.RequestGenerator, peer: WSChiaConnection
+        self, request: wallet_protocol.RequestGenerator
     ) -> Optional[Message]:
         full_block: Optional[FullBlock] = await self.full_node.block_store.get_block(
             request.header_hash
@@ -830,7 +820,7 @@ class FullNodeAPI:
 
     @api_request
     async def respond_header_block(
-        self, request: full_node_protocol.RespondHeaderBlock, peer: WSChiaConnection
+        self, request: full_node_protocol.RespondHeaderBlock
     ) -> Optional[Message]:
         """
         Receive header blocks from a peer.
@@ -851,6 +841,7 @@ class FullNodeAPI:
                     await self.full_node.server.send_to_all([msg], NodeType.FULL_NODE)
         return None
 
+    @peer_required
     @api_request
     async def reject_header_block_request(
         self,
@@ -864,7 +855,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_header_hash(
-        self, request: farmer_protocol.RequestHeaderHash, peer: WSChiaConnection
+        self, request: farmer_protocol.RequestHeaderHash
     ) -> Optional[Message]:
         """
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
@@ -1053,7 +1044,7 @@ class FullNodeAPI:
 
     @api_request
     async def header_signature(
-        self, header_signature: farmer_protocol.HeaderSignature, peer: WSChiaConnection
+        self, header_signature: farmer_protocol.HeaderSignature
     ) -> Optional[Message]:
         """
         Signature of header hash, by the harvester. This is enough to create an unfinished
@@ -1084,12 +1075,12 @@ class FullNodeAPI:
 
         # Propagate to ourselves (which validates and does further propagations)
         request = full_node_protocol.RespondUnfinishedBlock(unfinished_block_obj)
-        await self.respond_unfinished_block(request, peer)
-        return None
+        msg = await self.respond_unfinished_block(request)
+        return msg
 
     @api_request
     async def new_transaction(
-        self, transaction: full_node_protocol.NewTransaction, peer: WSChiaConnection
+        self, transaction: full_node_protocol.NewTransaction
     ) -> Optional[Message]:
         """
         A peer notifies us of a new transaction.
@@ -1115,14 +1106,14 @@ class FullNodeAPI:
     # TIMELORD PROTOCOL
     @api_request
     async def proof_of_time_finished(
-        self, request: timelord_protocol.ProofOfTimeFinished, peer: WSChiaConnection
+        self, request: timelord_protocol.ProofOfTimeFinished
     ) -> Optional[Message]:
         """
         A proof of time, received by a peer timelord. We can use this to complete a block,
         and call the block routine (which handles propagation and verification of blocks).
         """
         if request.proof.witness_type == 0:
-            await self._respond_compact_proof_of_time(request.proof, peer)
+            await self._respond_compact_proof_of_time(request.proof)
 
         dict_key = (
             request.proof.challenge_hash,
@@ -1150,14 +1141,12 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             self.full_node.sync_store.add_potential_future_block(new_full_block)
         else:
-            await self.respond_block(
-                full_node_protocol.RespondBlock(new_full_block), peer
-            )
+            await self.respond_block(full_node_protocol.RespondBlock(new_full_block))
         return None
 
     @api_request
     async def request_block(
-        self, request_block: full_node_protocol.RequestBlock, peer: WSChiaConnection
+        self, request_block: full_node_protocol.RequestBlock
     ) -> Optional[Message]:
         block: Optional[FullBlock] = await self.full_node.block_store.get_block(
             request_block.header_hash
@@ -1175,11 +1164,12 @@ class FullNodeAPI:
 
     @api_request
     async def respond_block(
-        self, respond_block: full_node_protocol.RespondBlock, peer: WSChiaConnection
+        self, respond_block: full_node_protocol.RespondBlock
     ) -> Optional[Message]:
         await self.full_node._respond_block(respond_block)
         return None
 
+    @peer_required
     @api_request
     async def reject_block_request(
         self, reject: full_node_protocol.RejectBlockRequest, peer: WSChiaConnection
@@ -1189,6 +1179,7 @@ class FullNodeAPI:
             await peer.close()
         return None
 
+    @peer_required
     @api_request
     async def request_mempool_transactions(
         self,
@@ -1211,9 +1202,7 @@ class FullNodeAPI:
 
     @api_request
     async def respond_unfinished_block(
-        self,
-        respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock,
-        peer: WSChiaConnection,
+        self, respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock
     ) -> Optional[Message]:
         """
         We have received an unfinished block, either created by us, or from another peer.
@@ -1335,14 +1324,13 @@ class FullNodeAPI:
     async def reject_unfinished_block_request(
         self,
         reject: full_node_protocol.RejectUnfinishedBlockRequest,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         self.full_node.log.warning(f"Rejected unfinished block request {reject}")
         return None
 
     @api_request
     async def request_all_header_hashes(
-        self, request: full_node_protocol.RequestAllHeaderHashes, peer: WSChiaConnection
+        self, request: full_node_protocol.RequestAllHeaderHashes
     ) -> Optional[Message]:
         try:
             header_hashes = self.full_node.blockchain.get_header_hashes(
@@ -1360,7 +1348,6 @@ class FullNodeAPI:
     async def all_header_hashes(
         self,
         all_header_hashes: full_node_protocol.AllHeaderHashes,
-        peer: WSChiaConnection,
     ) -> Optional[Message]:
         assert len(all_header_hashes.header_hashes) > 0
         self.full_node.sync_store.set_potential_hashes(all_header_hashes.header_hashes)
@@ -1371,7 +1358,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_header_block(
-        self, request: full_node_protocol.RequestHeaderBlock, peer: WSChiaConnection
+        self, request: full_node_protocol.RequestHeaderBlock
     ) -> Optional[Message]:
         """
         A peer requests a list of header blocks, by height. Used for syncing or light clients.
