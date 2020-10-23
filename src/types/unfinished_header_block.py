@@ -40,3 +40,7 @@ class UnfinishedHeaderBlock(Streamable):
     @property
     def header_hash(self):
         return self.foliage_sub_block.get_hash()
+
+    @property
+    def total_iters(self):
+        return self.reward_chain_sub_block.total_iters

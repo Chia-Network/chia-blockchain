@@ -12,7 +12,6 @@ from src.types.challenge_slot import ChallengeSlot
 from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot, EndOfSlotProofs
 from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
-from src.types.header_block import HeaderBlock
 from src.types.program import Program
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
@@ -30,8 +29,8 @@ class FullBlock(Streamable):
     challenge_chain_icp_vdf: Optional[VDFInfo]  # If included in challenge chain
     challenge_chain_icp_proof: Optional[VDFProof]  # If included in challenge chain
     challenge_chain_icp_signature: Optional[G2Element]  # If included in challenge chain
-    challenge_chain_ip_vdf: Optional[VDFInfo]  # If included in challenge chain
-    challenge_chain_ip_proof: Optional[VDFProof]  # If included in challenge chain
+    challenge_chain_ip_vdf: VDFInfo  # From the previous icp iters (but without infusion)
+    challenge_chain_ip_proof: VDFProof  # From the previous icp iters (but without infusion)
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
     reward_chain_icp_proof: VDFProof
     reward_chain_ip_proof: VDFProof
