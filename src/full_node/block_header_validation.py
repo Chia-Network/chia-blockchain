@@ -184,10 +184,20 @@ async def validate_unfinished_header_block(
                 return Err.INVALID_DEFICIT
 
             # 1k. Check made_non_overflow_infusions
-            curr: SubBlockRecord = prev_sb
-            while not curr.first_in_slot and curr.height > 0:
-                # TODO: implement check
-                curr = sub_blocks[curr.prev_block_hash]
+            if finished_slot_n > 0:
+                if reward_slot.made_non_overflow_infusions:
+                    return Err.INVALID_MADE_NON_OVERFLOW_INFUSIONS
+            else:
+                curr: SubBlockRecord = prev_sb
+                made_non_overflow_infusion: bool = False
+                while not curr.first_in_slot and curr.height > 0:
+                    if is_overflow_sub_block(constants, curr.ips, curr.required_iters):
+                        made_non_overflow_infusion = True
+                    curr = sub_blocks[curr.prev_block_hash]
+                if is_overflow_sub_block(constants, curr.ips, curr.required_iters):
+                    made_non_overflow_infusion = True
+                if made_non_overflow_infusion != reward_slot.made_non_overflow_infusions:
+                    return Err.INVALID_MADE_NON_OVERFLOW_INFUSIONS
 
         # 2. Check sub-epoch summary
         if not have_ses_hash and header_block.subepoch_summary is not None:
