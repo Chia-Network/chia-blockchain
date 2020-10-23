@@ -7,7 +7,7 @@ class ConsensusConstants:
     MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK: int
     MAX_SLOT_SUB_BLOCKS: int
     NUM_CHECKPOINTS_PER_SLOT: int
-    SLOT_ITERS_STARTING: int
+    IPS_STARTING: int
 
     DIFFICULTY_STARTING: int
     DIFFICULTY_FACTOR: int
@@ -29,6 +29,8 @@ class ConsensusConstants:
     PROPAGATION_DELAY_THRESHOLD: int
     # Hardcoded genesis block, generated using tests/block_tools.py
     # Replace this any time the constants change.
+    FIRST_CC_CHALLENGE: bytes
+    FIRST_RC_CHALLENGE: bytes
     GENESIS_BLOCK: bytes
     FIRST_CHALLENGE: bytes
     GENESIS_PRE_FARM_PUZZLE_HASH: bytes
@@ -63,7 +65,7 @@ testnet_kwargs = {
     "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 5,
     "MAX_SLOT_SUB_BLOCKS": 64,
     "NUM_CHECKPOINTS_PER_SLOT": 32,
-    "SLOT_ITERS_STARTING": 180000000,
+    "IPS_STARTING": 400000,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of 2^32, to be used in the VDF iter calculation formula.
     "DIFFICULTY_STARTING": 2 ** 20,
@@ -86,7 +88,8 @@ testnet_kwargs = {
     "PROPAGATION_DELAY_THRESHOLD": 1500,
     # Hardcoded genesis block, generated using tests/block_tools.py
     # Replace this any time the constants change.
-    "FIRST_CHALLENGE": bytes([0x00] * 32),
+    "FIRST_CC_CHALLENGE": bytes([0x00] * 32),
+    "FIRST_RC_CHALLENGE": bytes([0x00] * 32),
     "GENESIS_PRE_FARM_PUZZLE_HASH": bytes.fromhex("7a916bdc50d3d0337b0998668a4f439670339467d7e9039b8650ba7b1d4fc1a0"),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec
