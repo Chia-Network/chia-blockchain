@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from chiavdf import create_discriminant
 from src.types.classgroup import ClassgroupElement
@@ -12,7 +13,8 @@ from src.consensus.constants import ConsensusConstants
 @dataclass(frozen=True)
 @streamable
 class VDFInfo(Streamable):
-    challenge_hash: bytes32
+    challenge_hash: bytes32  # Used to generate the discriminant (VDF group)
+    input: ClassgroupElement  # Used as the input element for the VDF
     number_of_iterations: uint64
     output: ClassgroupElement
 
@@ -23,13 +25,17 @@ class VDFProof(Streamable):
     witness_type: uint16
     witness: bytes
 
-    def is_valid(self, constants: ConsensusConstants, info: VDFInfo):
+    def is_valid(self, constants: ConsensusConstants, info: VDFInfo, target_vdf_info: Optional[VDFInfo] = None):
+        """
+        If target_vdf_info is passed in, it is compared with info.
+        """
+        if target_vdf_info is not None and info != target_vdf_info:
+            return False
         if self.witness_type > constants.MAX_VDF_WITNESS_SIZE:
             return False
         try:
             disc: int = int(
-                create_discriminant(info.challenge_hash, constants.DISCRIMINANT_SIZE_BITS),
-                16,
+                create_discriminant(info.challenge_hash, constants.DISCRIMINANT_SIZE_BITS), 16,
             )
             x = ClassGroup.from_ab_discriminant(2, 1, disc)
             y = ClassGroup.from_ab_discriminant(info.output.a, info.output.b, disc)

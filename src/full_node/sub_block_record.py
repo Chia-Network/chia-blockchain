@@ -4,6 +4,7 @@ from typing import Optional, List
 from src.util.ints import uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
+from src.types.classgroup import ClassgroupElement
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,7 @@ class SubBlockRecord(Streamable):
     is_block: bool  # Whether or not this sub-block is also a block
     challenge_chain_data_hash: Optional[bytes32]  # The hash of ChallengeChain data (iff makes_challenge_block)
     required_iters: Optional[uint64]  # The number of iters required for this proof of space (iff makes_challenge_block)
+    challenge_vdf_output: ClassgroupElement  # This is the intermediary VDF output at ip_iters in challenge chain
     reward_infusion_output: bytes32  # The reward chain infusion output, input to next VDF
     makes_challenge_block: bool
     ips: uint64  # Current network iterations per second parameter
