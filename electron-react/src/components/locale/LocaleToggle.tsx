@@ -60,7 +60,7 @@ export default function LocaleToggle() {
         ))}
         <MenuItem
           component="a"
-          href="https://github.com/Chia-Network/chia-blockchain/tree/master/electron-react/src/locales/README.md"
+          href="https://github.com/Chia-Network/chia-blockchain/tree/main/electron-react/src/locales/README.md"
           target="_blank"
           onClick={() => handleClose()}
         >
