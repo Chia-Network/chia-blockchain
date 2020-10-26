@@ -14,6 +14,7 @@ from src.consensus.constants import ConsensusConstants
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters, get_next_ips
+from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
@@ -304,7 +305,12 @@ class Blockchain:
                 ips = get_next_ips(
                     self.constants, self.height_to_hash, self.sub_blocks, block.prev_header_hash, new_slot
                 )
-                self.sub_blocks[block.header_hash] = block.get_sub_block_record(ips)
+                difficulty = get_next_difficulty(
+                    self.constants, self.height_to_hash, self.sub_blocks, block.prev_header_hash, new_slot
+                )
+                self.sub_blocks[block.header_hash] = full_block_to_sub_block_record(
+                    self.constants, block, ips, difficulty
+                )
                 await self.coin_store.new_block(block)
             return True
 
@@ -633,6 +639,7 @@ class Blockchain:
         if not block.transactions_info.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
 
+        # noinspection PyTypeChecker
         validates = AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature)
         if not validates:
             return Err.BAD_AGGREGATE_SIGNATURE
