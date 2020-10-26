@@ -18,7 +18,5 @@ class RewardChainEndOfSlot(Streamable):
 @dataclass(frozen=True)
 @streamable
 class EndOfSlotProofs(Streamable):
-    challenge_chain_icp_proof: Optional[VDFProof]
-    challenge_chain_ip_proof: Optional[VDFProof]
     challenge_chain_slot_proof: VDFProof
     reward_chain_slot_proof: VDFProof

@@ -167,9 +167,10 @@ async def validate_unfinished_header_block(
                 ):
                     return Err.INVALID_CC_EOS_VDF
 
-                # 1h. Check that empty slots have nothing in challenge chain
+                # 1h. Check that empty slots have nothing in challenge chain, and no sub-epoch summary
                 if (
-                    challenge_slot.proof_of_space is not None
+                    challenge_slot.subepoch_summary_hash is not None
+                    or challenge_slot.proof_of_space is not None
                     or challenge_slot.icp_vdf is not None
                     or challenge_slot.icp_signature is not None
                     or challenge_slot.ip_vdf is not None
@@ -183,27 +184,31 @@ async def validate_unfinished_header_block(
             # 1j. Check end of reward slot VDF
             if prev_sb is None:
                 ips: uint64 = uint64(constants.IPS_STARTING)
+                iters = calculate_slot_iters(constants, ips)
                 if finished_slot_n == 0:
-                    prior_point: bytes32 = constants.FIRST_RC_CHALLENGE
-                    iters = ips * constants.SLOT_TIME_TARGET
+                    # First block, one empty slot. prior_point is the initial challenge
+                    rc_eos_vdf_start: bytes32 = constants.FIRST_RC_CHALLENGE
                 else:
-                    prior_point: bytes32 = header_block.finished_slots[finished_slot_n - 1][1].get_hash()
-                    iters = calculate_slot_iters(constants, ips)
+                    # First block, but have at least two empty slots
+                    rc_eos_vdf_start: bytes32 = header_block.finished_slots[finished_slot_n - 1][1].get_hash()
             else:
                 if finished_slot_n == 0:
-                    prior_point: bytes32 = prev_sb.reward_infusion_output
+                    # No empty slots, so the starting point of VDF is the last reward block. Uses
+                    # the same IPS as the previous block, since it's the same slot
+                    rc_eos_vdf_start: bytes32 = prev_sb.reward_infusion_output
                     iters = calculate_slot_iters(constants, prev_sb.ips) - calculate_infusion_point_iters(
                         constants, prev_sb.ips, prev_sb.required_iters
                     )
                 else:
+                    # At least one empty slot, so use previous slot hash. IPS might change because it's a new slot
                     ips: uint64 = get_next_ips(
                         constants, height_to_hash, sub_blocks, header_block.prev_header_hash, True
                     )
-                    prior_point: bytes32 = header_block.finished_slots[finished_slot_n - 1][1].get_hash()
+                    rc_eos_vdf_start: bytes32 = header_block.finished_slots[finished_slot_n - 1][1].get_hash()
                     iters = calculate_slot_iters(constants, ips)
 
             target_vdf_info = VDFInfo(
-                prior_point,
+                rc_eos_vdf_start,
                 ClassgroupElement.get_default_element(),
                 iters,
                 reward_slot.end_of_slot_vdf.output,
