@@ -1,4 +1,3 @@
-from typing import Optional
 from dataclasses import dataclass
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint8
