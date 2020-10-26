@@ -216,7 +216,7 @@ async def validate_unfinished_header_block(
             if slot_proofs.reward_chain_slot_proof.is_valid(constants, reward_slot.end_of_slot_vdf, target_vdf_info):
                 return Err.INVALID_RC_EOS_VDF
 
-            # 1k. Check deficit
+            # 1k. Check deficit (0 deficit edge case for genesis block)
             if prev_sb is None:
                 if reward_slot.deficit != 0:
                     return Err.INVALID_DEFICIT
@@ -229,7 +229,7 @@ async def validate_unfinished_header_block(
                 if max(deficit, 0) != reward_slot.deficit:
                     return Err.INVALID_DEFICIT
 
-            # 1l. Check made_non_overflow_infusions
+            # 1l. Check made_non_overflow_infusions (False edge case for genesis block)
             if prev_sb is None:
                 if reward_slot.made_non_overflow_infusions:
                     return Err.INVALID_MADE_NON_OVERFLOW_INFUSIONS
@@ -240,11 +240,14 @@ async def validate_unfinished_header_block(
                 else:
                     curr: SubBlockRecord = prev_sb
                     made_non_overflow_infusion: bool = False
+                    # Go until the previous slot starts
                     while not curr.first_in_slot and curr.height > 0:
-                        if is_overflow_sub_block(constants, curr.ips, curr.required_iters):
+                        if not is_overflow_sub_block(constants, curr.ips, curr.required_iters):
                             made_non_overflow_infusion = True
                         curr = sub_blocks[curr.prev_block_hash]
-                    if is_overflow_sub_block(constants, curr.ips, curr.required_iters):
+
+                    # This is the first sub-block in the previous slot
+                    if not is_overflow_sub_block(constants, curr.ips, curr.required_iters):
                         made_non_overflow_infusion = True
                     if made_non_overflow_infusion != reward_slot.made_non_overflow_infusions:
                         return Err.INVALID_MADE_NON_OVERFLOW_INFUSIONS
