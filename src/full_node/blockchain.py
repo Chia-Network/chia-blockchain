@@ -1,6 +1,7 @@
 import asyncio
 import collections
 import logging
+from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 import multiprocessing
 import concurrent
@@ -12,7 +13,7 @@ from chiabip158 import PyBIP158
 from src.consensus.constants import ConsensusConstants
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters
+from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters, get_next_ips
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
@@ -26,7 +27,7 @@ from src.full_node.sub_block_record import SubBlockRecord
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.full_node.cost_calculator import calculate_cost_of_program
-from src.util.errors import ConsensusError, Err
+from src.util.errors import Err
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64
 from src.full_node.block_root_validation import validate_block_merkle_roots
@@ -57,7 +58,7 @@ class ReceiveBlockResult(Enum):
 class Blockchain:
     constants: ConsensusConstants
     # Tip of the blockchain
-    tip_height: uint32
+    tip_height: Optional[uint32]
     # Defines the path from genesis to the tip, no orphan sub-blocks
     height_to_hash: Dict[uint32, bytes32]
     # All sub blocks in tip path are guaranteed to be included, can include orphan sub-blocks
@@ -69,7 +70,7 @@ class Blockchain:
     # Coinbase freeze period
     coinbase_freeze: int
     # Used to verify blocks in parallel
-    pool: concurrent.futures.ProcessPoolExecutor
+    pool: ProcessPoolExecutor
 
     # Whether blockchain is shut down or not
     _shut_down: bool
@@ -79,7 +80,9 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        coin_store: CoinStore, block_store: BlockStore, consensus_constants: ConsensusConstants,
+        coin_store: CoinStore,
+        block_store: BlockStore,
+        consensus_constants: ConsensusConstants,
     ):
         """
         Initializes a blockchain with the header blocks from disk, assuming they have all been
@@ -95,51 +98,49 @@ class Blockchain:
             max_workers=max(cpu_count - 2, 1)
         )
         self.constants = consensus_constants
-        self.tip_height = 0
-        self.height_to_hash = {}
-        self.sub_blocks = {}
         self.coin_store = coin_store
         self.block_store = block_store
         self._shut_down = False
         self.coinbase_freeze = self.constants.COINBASE_FREEZE_PERIOD
-        await self._load_chain_from_store(FullBlock.from_bytes(self.constants.GENESIS_BLOCK))
+        await self._load_chain_from_store()
         return self
 
     def shut_down(self):
         self._shut_down = True
         self.pool.shutdown(wait=True)
 
-    async def _load_chain_from_store(self, genesis: FullBlock) -> None:
+    async def _load_chain_from_store(self) -> None:
         """
         Initializes the state of the Blockchain class from the database. Sets the LCA, tips,
         headers, height_to_hash, and block_store DiffStores.
         """
-        self.sub_blocks_db: Dict[bytes32, SubBlockRecord] = await self.block_store.get_sub_blocks()
+        self.sub_blocks = await self.block_store.get_sub_blocks()
+        self.height_to_hash = {}
 
-        if len(self.sub_blocks_db) == 0:
-            result, error_code = await self.receive_block(genesis, sync_mode=False)
-            if result != ReceiveBlockResult.NEW_TIP:
-                if error_code is not None:
-                    raise ConsensusError(error_code)
-                else:
-                    raise RuntimeError(f"Invalid genesis block {genesis}")
+        if len(self.sub_blocks) == 0:
+            log.info("Initializing empty blockchain")
+            self.tip_height = None
             return
 
         # Sets the other state variables (tip_height and height_to_hash)
         for hh, sb in self.sub_blocks:
             self.height_to_hash[sb.height] = hh
-            if sb.height > self.tip_height:
+            if self.tip_height is None or sb.height > self.tip_height:
                 self.tip_height = sb.height
 
-        assert len(self.sub_blocks_db) == len(self.height_to_hash) == self.tip_height + 1
+        assert len(self.sub_blocks) == len(self.height_to_hash) == self.tip_height + 1
 
-    def get_tip(self) -> SubBlockRecord:
+    def get_tip(self) -> Optional[SubBlockRecord]:
         """
         Return the tip of the blockchain
         """
+        if self.tip_height is None:
+            return None
         return self.sub_blocks[self.height_to_hash[self.tip_height]]
 
-    async def get_full_tip(self) -> FullBlock:
+    async def get_full_tip(self) -> Optional[FullBlock]:
+        if self.tip_height is None:
+            return None
         """ Return list of FullBlocks that are tips"""
         block = await self.block_store.get_block(self.height_to_hash[self.tip_height])
         assert block is not None
@@ -149,6 +150,8 @@ class Blockchain:
         """
         True iff the block is the direct ancestor of the tip
         """
+        if self.tip_height is None:
+            return False
         return block.prev_header_hash == self.get_tip().header_hash
 
     def contains_block(self, header_hash: bytes32) -> bool:
@@ -177,6 +180,9 @@ class Blockchain:
         Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
         where both blockchains are equal.
         """
+        if self.tip_height is None:
+            raise ValueError("Empty blockchain")
+
         tip: SubBlockRecord = self.get_tip()
 
         if tip.height >= len(alternate_chain) - 1:
@@ -208,8 +214,6 @@ class Blockchain:
         self,
         block: FullBlock,
         pre_validated: bool = False,
-        pos_quality_string: bytes32 = None,
-        sync_mode: bool = False,
     ) -> Tuple[ReceiveBlockResult, Optional[Err]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -217,7 +221,7 @@ class Blockchain:
         Returns a header if block is added to head. Returns an error if the block is
         invalid.
         """
-        genesis: bool = block.height == 0 and len(self.height_to_hash) == 0
+        genesis: bool = block.height == 0
 
         if block.header_hash in self.sub_blocks:
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None
@@ -271,13 +275,14 @@ class Blockchain:
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
         """
         if genesis:
-            assert self.tip_height == 0
             block: Optional[FullBlock] = await self.block_store.get_block(sub_block.header_hash)
             assert block is not None
             await self.coin_store.new_block(block)
             self.height_to_hash[uint32(0)] = block.header_hash
+            self.tip_height = uint32(0)
             return True
 
+        assert self.get_tip() is not None
         if sub_block.weight > self.get_tip().weight:
             # Find the fork. if the block is just being appended, it will return the tip
             fork_h: bytes32 = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_tip())
@@ -295,9 +300,11 @@ class Blockchain:
 
             for block in reversed(blocks_to_add):
                 self.height_to_hash[block.height] = block.header_hash
-                self.sub_blocks[block.header_hash] = SubBlockRecord(
-                    block.header_hash, block.prev_header_hash, block.height, block.weight, block.total_iters
+                new_slot = block.finished_slots is not None
+                ips = get_next_ips(
+                    self.constants, self.height_to_hash, self.sub_blocks, block.prev_header_hash, new_slot
                 )
+                self.sub_blocks[block.header_hash] = block.get_sub_block_record(ips)
                 await self.coin_store.new_block(block)
             return True
 
@@ -337,6 +344,12 @@ class Blockchain:
         return []
 
     async def validate_unfinished_block(self, block: UnfinishedBlock) -> Optional[Err]:
+        if block.header_hash in self.sub_blocks:
+            return None  # Already validated and added
+
+        if block.prev_header_hash not in self.sub_blocks and not block.height == 0:
+            return Err.INVALID_PREV_BLOCK_HASH
+
         unfinished_header_block = UnfinishedHeaderBlock(
             block.subepoch_summary,
             block.finished_slots,
@@ -548,7 +561,11 @@ class Blockchain:
                             return Err.COINBASE_NOT_YET_SPENDABLE
                     new_coin, confirmed_height = additions_since_fork[rem]
                     new_coin_record: CoinRecord = CoinRecord(
-                        new_coin, confirmed_height, uint32(0), False, (rem in coinbases_since_fork),
+                        new_coin,
+                        confirmed_height,
+                        uint32(0),
+                        False,
+                        (rem in coinbases_since_fork),
                     )
                     removal_coin_records[new_coin_record.name] = new_coin_record
 
@@ -599,7 +616,12 @@ class Blockchain:
         pairs_msgs = []
         for npc in npc_list:
             unspent = removal_coin_records[npc.coin_name]
-            error = blockchain_check_conditions_dict(unspent, removal_coin_records, npc.condition_dict, block.header,)
+            error = blockchain_check_conditions_dict(
+                unspent,
+                removal_coin_records,
+                npc.condition_dict,
+                block.header,
+            )
             if error:
                 return error
             for pk, m in pkm_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name):
