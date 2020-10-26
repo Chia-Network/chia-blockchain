@@ -195,7 +195,10 @@ async def validate_unfinished_header_block(
                     iters = calculate_slot_iters(constants, ips)
 
             target_vdf_info = VDFInfo(
-                prior_point, ClassgroupElement.get_default_element(), iters, reward_slot.end_of_slot_vdf.output,
+                prior_point,
+                ClassgroupElement.get_default_element(),
+                iters,
+                reward_slot.end_of_slot_vdf.output,
             )
             if slot_proofs.reward_chain_slot_proof.is_valid(constants, reward_slot.end_of_slot_vdf, target_vdf_info):
                 return Err.INVALID_RC_EOS_VDF
@@ -292,7 +295,9 @@ async def validate_unfinished_header_block(
             difficulty = get_next_difficulty(constants, sub_blocks, height_to_hash, prev_sb.header_hash, new_slot)
             ips: uint64 = get_next_ips(constants, sub_blocks, height_to_hash, prev_sb.header_hash, new_slot)
         required_iters: uint64 = calculate_iterations_quality(
-            q_str, header_block.reward_chain_sub_block.proof_of_space.size, difficulty,
+            q_str,
+            header_block.reward_chain_sub_block.proof_of_space.size,
+            difficulty,
         )
 
         icp_iters: uint64 = calculate_infusion_challenge_point_iters(constants, ips, required_iters)
@@ -300,10 +305,13 @@ async def validate_unfinished_header_block(
         slot_iters: uint64 = calculate_slot_iters(constants, ips)
         overflow = is_overflow_sub_block(constants, ips, required_iters)
 
+        # 4. Check no overflows in new sub-epoch
+        if overflow and header_block.subepoch_summary is not None:
+            return Err.NO_OVERFLOWS_IN_NEW_SUBEPOCH
+
         # If sub_block state is correct, we should always find a challenge here
         # This computes what the challenge should be for this sub-block
         if prev_sb is None:
-            pass
             challenge: bytes32 = constants.FIRST_CC_CHALLENGE
         else:
             if new_slot:
@@ -432,7 +440,10 @@ async def validate_unfinished_header_block(
         if makes_challenge_block:
             # 11a. Check cc icp
             target_vdf_info = VDFInfo(
-                cc_vdf_challenge, cc_vdf_input, icp_vdf_iters, header_block.challenge_chain_icp_vdf.output,
+                cc_vdf_challenge,
+                cc_vdf_input,
+                icp_vdf_iters,
+                header_block.challenge_chain_icp_vdf.output,
             )
             if not header_block.challenge_chain_icp_proof.is_valid(
                 constants, header_block.challenge_chain_icp_vdf, target_vdf_info
@@ -590,7 +601,9 @@ async def validate_finished_header_block(
     )
     # TODO: remove redundant verification of PoSpace
     required_iters: uint64 = calculate_iterations_quality(
-        q_str, header_block.reward_chain_sub_block.proof_of_space.size, difficulty,
+        q_str,
+        header_block.reward_chain_sub_block.proof_of_space.size,
+        difficulty,
     )
     ip_iters: uint64 = calculate_infusion_point_iters(constants, ips, required_iters)
 
@@ -628,7 +641,10 @@ async def validate_finished_header_block(
             cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
     cc_target_vdf_info = VDFInfo(
-        cc_vdf_challenge, cc_vdf_output, ip_vdf_iters, header_block.challenge_chain_ip_vdf.output,
+        cc_vdf_challenge,
+        cc_vdf_output,
+        ip_vdf_iters,
+        header_block.challenge_chain_ip_vdf.output,
     )
     if not header_block.challenge_chain_ip_proof.is_valid(
         constants, header_block.challenge_chain_ip_vdf, cc_target_vdf_info
