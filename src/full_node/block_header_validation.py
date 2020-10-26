@@ -256,29 +256,40 @@ async def validate_unfinished_header_block(
         if not have_ses_hash and header_block.subepoch_summary is not None:
             return Err.NO_SUB_EPOCH_SUMMARY_HASH
 
-        # If have_ses_hash, hash has already been validated (subepoch summary guaranteed to not be None)
         # Note that the subepoch summary is the summary of the previous subepoch (not the one that just finished)
-        if prev_sb is not None and new_slot and finishes_sub_epoch(constants, sub_blocks, prev_sb.header_hash, False):
-            # 2a. If new sub-epoch, sub-epoch summary and hash
-            if header_block.subepoch_summary is None or not have_ses_hash:
+        if header_block.subepoch_summary is not None:
+            # 2a. Check that genesis block does not have sub-epoch summary
+            if prev_sb is None:
                 return Err.INVALID_SUB_EPOCH_SUMMARY
+
+            # 2b. Check that we have a ses hash
+            if not have_ses_hash:
+                return Err.INVALID_SUB_EPOCH_SUMMARY
+
+            finishes = finishes_sub_epoch(constants, sub_blocks, prev_sb.header_hash, False)
+
+            # 2c. Check that we finished a slot and we finished a sub-epoch
+            if not new_slot or not finishes:
+                return Err.INVALID_SUB_EPOCH_SUMMARY
+
             curr = prev_sb
             while curr.sub_epoch_summary_included_hash is None:
                 curr = sub_blocks[curr.prev_hash]
-            # 2b. check prev sub-epoch summary hash
+
+            # 2c. check prev sub-epoch summary hash
             if curr.sub_epoch_summary_included_hash != header_block.subepoch_summary.prev_subepoch_summary_hash:
                 return Err.INVALID_PREV_SUB_EPOCH_SUMMARY_HASH
 
-            # 2c. Check reward chain hash
+            # 2d. Check reward chain hash
             if curr.finished_reward_slot_hashes[-1] != header_block.subepoch_summary.reward_chain_hash:
                 return Err.INVALID_REWARD_CHAIN_HASH
 
-            # 2d. Check sub-epoch overflow
+            # 2e. Check sub-epoch overflow
             if curr.height % constants.SUB_EPOCH_SUB_BLOCKS != header_block.subepoch_summary.num_subblocks_overflow:
                 return Err.INVALID_SUB_EPOCH_OVERFLOW
 
             finishes_epoch: bool = finishes_sub_epoch(constants, sub_blocks, curr.prev_hash, True)
-            # 2e. Check difficulty and new ips on new epoch
+            # 2f. Check difficulty and new ips on new epoch
             if finishes_epoch:
                 next_diff = get_next_difficulty(constants, sub_blocks, height_to_hash, curr.prev_hash, True)
                 next_ips = get_next_ips(constants, sub_blocks, height_to_hash, curr.prev_hash, True)
@@ -287,16 +298,22 @@ async def validate_unfinished_header_block(
                 if next_ips != header_block.subepoch_summary.new_ips:
                     return Err.INVALID_NEW_IPS
 
-            # 2f. Check difficulty and new ips not present if not new epoch
+            # 2g. Check difficulty and new ips not present if not new epoch
             if header_block.subepoch_summary.new_difficulty is not None:
                 return Err.INVALID_NEW_DIFFICULTY
             if header_block.subepoch_summary.new_ips is not None:
                 return Err.INVALID_NEW_IPS
 
         else:
-            # 2a. If not new sub-epoch (or genesis), no sub-epoch summary
-            if have_ses_hash or header_block.subepoch_summary is not None:
+            # 2h. If not new sub-epoch (or genesis), no sub-epoch summary
+            if have_ses_hash:
                 return Err.INVALID_SUB_EPOCH_SUMMARY
+
+            # 2i. Check that we don't have to include a sub-epoch summary
+            if prev_sb is not None and new_slot:
+                finishes = finishes_sub_epoch(constants, sub_blocks, prev_sb.header_hash, False)
+                if finishes:
+                    return Err.INVALID_SUB_EPOCH_SUMMARY
 
         # 3. Check proof of space
         q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
