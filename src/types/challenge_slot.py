@@ -8,6 +8,14 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.vdf import VDFInfo
 
 
+class ChallengeChainInfusionPoint(Streamable):
+    # This is what is infused into the infusion point in the challenge chain
+    # The hash of this object is used as the VDF challenge_hash from this point on
+    proof_of_space: ProofOfSpace
+    icp_vdf: VDFInfo
+    icp_signature: G2Element
+
+
 @dataclass(frozen=True)
 @streamable
 class ChallengeSlot(Streamable):

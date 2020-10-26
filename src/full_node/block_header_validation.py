@@ -20,7 +20,7 @@ from src.consensus.pot_iterations import (
     calculate_slot_iters,
     calculate_iterations_quality,
 )
-from src.consensus.infusion import infuse_signature
+from src.consensus.infusion import infuse_challenge_chain
 from src.full_node.difficulty_adjustment import finishes_sub_epoch
 from src.full_node.challenge_chain_data import ChallengeChainData
 from src.util.hash import std_hash
@@ -122,8 +122,8 @@ async def validate_unfinished_header_block(
                 # 1e. Check challenge chain end of slot VDF
                 ip_iters = calculate_infusion_point_iters(constants, curr.ips, curr.required_iters)
                 eos_iters: uint64 = calculate_slot_iters(constants, curr.ips) - ip_iters
-                infusion_challenge = infuse_signature(
-                    challenge_slot.ip_proof_of_time_output, challenge_slot.icp_signature
+                infusion_challenge = infuse_challenge_chain(
+                    challenge_slot.icp_vdf, challenge_slot.proof_of_space, challenge_slot.icp_signature
                 )
                 target_vdf_info = VDFInfo(
                     infusion_challenge,
