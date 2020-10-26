@@ -20,9 +20,8 @@ from src.consensus.pot_iterations import (
     calculate_slot_iters,
     calculate_iterations_quality,
 )
-from src.consensus.infusion import infuse_challenge_chain
+from src.types.challenge_slot import ChallengeChainInfusionPoint
 from src.full_node.difficulty_adjustment import finishes_sub_epoch
-from src.full_node.challenge_chain_data import ChallengeChainData
 from src.util.hash import std_hash
 from src.types.classgroup import ClassgroupElement
 
@@ -105,25 +104,24 @@ async def validate_unfinished_header_block(
                         return Err.SHOULD_NOT_MAKE_CHALLENGE_BLOCK
                     curr = sub_blocks[curr.prev_hash]
 
-                # 1d. Check challenge chain data hash (proof of space, icp output, icp sig, ip output)
-                challenge_chain_data_hash = std_hash(
-                    bytes(
-                        ChallengeChainData(
-                            challenge_slot.proof_of_space,
-                            challenge_slot.icp_proof_of_time_output,
-                            challenge_slot.icp_signature,
-                            challenge_slot.ip_proof_of_time_output,
-                        )
-                    )
-                )
-                if curr.challenge_chain_data_hash != challenge_chain_data_hash:
+                # 1d. Check challenge chain infusion output (proof of space, icp output, icp sig, ip output)
+                challenge_infusion_point = ChallengeChainInfusionPoint(
+                    challenge_slot.proof_of_space,
+                    challenge_slot.icp_proof_of_time_output,
+                    challenge_slot.icp_signature,
+                    challenge_slot.ip_proof_of_time_output,
+                ).get_hash()
+                if curr.challenge_chain_data_hash != challenge_infusion_point:
                     return Err.INVALID_CHALLENGE_CHAIN_DATA
 
                 # 1e. Check challenge chain end of slot VDF
                 ip_iters = calculate_infusion_point_iters(constants, curr.ips, curr.required_iters)
                 eos_iters: uint64 = calculate_slot_iters(constants, curr.ips) - ip_iters
-                infusion_challenge = infuse_challenge_chain(
-                    challenge_slot.icp_vdf, challenge_slot.proof_of_space, challenge_slot.icp_signature
+                infusion_challenge = ChallengeChainInfusionPoint(
+                    challenge_slot.proof_of_space,
+                    challenge_slot.icp_vdf,
+                    challenge_slot.icp_signature,
+                    challenge_slot.ip_vdf,
                 )
                 target_vdf_info = VDFInfo(
                     infusion_challenge,
