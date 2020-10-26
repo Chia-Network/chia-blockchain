@@ -35,9 +35,10 @@ class VDFProof(Streamable):
             return False
         try:
             disc: int = int(
-                create_discriminant(info.challenge_hash, constants.DISCRIMINANT_SIZE_BITS), 16,
+                create_discriminant(info.challenge_hash, constants.DISCRIMINANT_SIZE_BITS),
+                16,
             )
-            x = ClassGroup.from_ab_discriminant(2, 1, disc)
+            x = ClassGroup.from_ab_discriminant(info.input.a, info.input.b, disc)
             y = ClassGroup.from_ab_discriminant(info.output.a, info.output.b, disc)
         except Exception:
             return False
