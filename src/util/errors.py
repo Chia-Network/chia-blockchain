@@ -115,6 +115,7 @@ class Err(Enum):
     IP_SHOULD_BE_NONE = 90
     INVALID_REWARD_BLOCK_HASH = 91
     INVALID_MADE_NON_OVERFLOW_INFUSIONS = 92
+    NO_OVERFLOWS_IN_NEW_SUBEPOCH = 93
 
 
 class ConsensusError(Exception):
