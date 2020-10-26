@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Tuple, List, Optional
 from blspy import G2Element
+
 from src.types.name_puzzle_condition import NPC
 from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
@@ -15,8 +16,6 @@ from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
 from src.types.program import Program
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
-from src.full_node.sub_block_record import SubBlockRecord
-from src.util.ints import uint64
 from src.types.sub_epoch_summary import SubEpochSummary
 
 
@@ -116,26 +115,6 @@ class FullBlock(Streamable):
             additions.extend(additions_for_npc(npc_list))
 
         return removals, additions
-
-    def get_sub_block_record(self, ips: uint64):
-        prev_block_hash = self.foliage_block.prev_block_hash if self.foliage_block is not None else None
-        timestamp = self.foliage_block.timestamp if self.foliage_block is not None else None
-        makes_challenge_block = (
-            self.finished_reward_slots[-1].deficit == 0 if len(self.finished_reward_slots) > 0 else False
-        )
-        return SubBlockRecord(
-            self.header_hash,
-            self.prev_header_hash,
-            self.height,
-            self.weight,
-            self.total_iters,
-            self.challenge_chain_ip_vdf.output,
-            makes_challenge_block,
-            ips,
-            self.foliage_sub_block.signed_data.pool_target.puzzle_hash,
-            self.foliage_sub_block.signed_data.farmer_reward_puzzle_hash,
-            timestamp,
-        )
 
 
 def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
