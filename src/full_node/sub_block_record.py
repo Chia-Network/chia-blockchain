@@ -26,10 +26,10 @@ class SubBlockRecord(Streamable):
     ips: uint64  # Current network iterations per second parameter
     pool_puzzle_hash: bytes32  # Need to keep track of these because Coins are created in a future block
     farmer_puzzle_hash: bytes32
+    required_iters: Optional[uint64]  # The number of iters required for this proof of space
 
     # Challenge block (present iff makes_challenge_block)
-    challenge_chain_data_hash: Optional[bytes32]  # The hash of ChallengeChain data
-    required_iters: Optional[uint64]  # The number of iters required for this proof of space
+    challenge_infusion_output: Optional[bytes32]  # The hash of data infused into challenge chain
 
     # Block (present iff is_block)
     timestamp: Optional[uint64]
