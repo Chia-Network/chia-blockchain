@@ -126,11 +126,9 @@ class FullBlock(Streamable):
         return SubBlockRecord(
             self.header_hash,
             self.prev_header_hash,
-            prev_block_hash,
             self.height,
             self.weight,
             self.total_iters,
-            self.is_block(),
             makes_challenge_block,
             ips,
             self.foliage_sub_block.signed_data.pool_target.puzzle_hash,
