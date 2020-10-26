@@ -129,6 +129,7 @@ class FullBlock(Streamable):
             self.height,
             self.weight,
             self.total_iters,
+            self.challenge_chain_ip_vdf.output,
             makes_challenge_block,
             ips,
             self.foliage_sub_block.signed_data.pool_target.puzzle_hash,
