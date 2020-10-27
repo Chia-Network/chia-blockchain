@@ -108,12 +108,7 @@ class Harvester:
         async with self._refresh_lock:
             if not locked:
                 # Avoid double refreshing of plots
-                (
-                    changed,
-                    self.provers,
-                    self.failed_to_open_filenames,
-                    self.no_key_filenames,
-                ) = load_plots(
+                (changed, self.provers, self.failed_to_open_filenames, self.no_key_filenames,) = load_plots(
                     self.provers,
                     self.failed_to_open_filenames,
                     self.farmer_public_keys,
@@ -155,9 +150,7 @@ class Harvester:
         self.server = server
 
     @api_request
-    async def harvester_handshake(
-        self, harvester_handshake: harvester_protocol.HarvesterHandshake
-    ):
+    async def harvester_handshake(self, harvester_handshake: harvester_protocol.HarvesterHandshake):
         """
         Handshake between the harvester and farmer. The harvester receives the pool public keys,
         as well as the farmer pks, which must be put into the plots, before the plotting process begins.
@@ -169,9 +162,7 @@ class Harvester:
         await self._refresh_plots()
 
         if len(self.provers) == 0:
-            log.warning(
-                "Not farming any plots on this harvester. Check your configuration."
-            )
+            log.warning("Not farming any plots on this harvester. Check your configuration.")
             return
 
         for new_challenge in self.cached_challenges:
@@ -204,41 +195,29 @@ class Harvester:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a threadpool.
             try:
-                quality_strings = prover.get_qualities_for_challenge(
-                    new_challenge.challenge_hash
-                )
+                quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
             except Exception:
                 log.error("Error using prover object. Reinitializing prover object.")
                 try:
                     self.prover = DiskProver(str(filename))
-                    quality_strings = self.prover.get_qualities_for_challenge(
-                        new_challenge.challenge_hash
-                    )
+                    quality_strings = self.prover.get_qualities_for_challenge(new_challenge.challenge_hash)
                 except Exception:
-                    log.error(
-                        f"Retry-Error using prover object on {filename}. Giving up."
-                    )
+                    log.error(f"Retry-Error using prover object on {filename}. Giving up.")
                     quality_strings = None
             return quality_strings
 
-        async def lookup_challenge(
-            filename: Path, prover: DiskProver
-        ) -> List[harvester_protocol.ChallengeResponse]:
+        async def lookup_challenge(filename: Path, prover: DiskProver) -> List[harvester_protocol.ChallengeResponse]:
             # Exectures a DiskProverLookup in a threadpool, and returns responses
             all_responses: List[harvester_protocol.ChallengeResponse] = []
-            quality_strings = await loop.run_in_executor(
-                self.executor, blocking_lookup, filename, prover
-            )
+            quality_strings = await loop.run_in_executor(self.executor, blocking_lookup, filename, prover)
             if quality_strings is not None:
                 for index, quality_str in enumerate(quality_strings):
-                    response: harvester_protocol.ChallengeResponse = (
-                        harvester_protocol.ChallengeResponse(
-                            new_challenge.challenge_hash,
-                            str(filename),
-                            uint8(index),
-                            quality_str,
-                            prover.get_size(),
-                        )
+                    response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
+                        new_challenge.challenge_hash,
+                        str(filename),
+                        uint8(index),
+                        quality_str,
+                        prover.get_size(),
                     )
                     all_responses.append(response)
             return all_responses
@@ -246,9 +225,9 @@ class Harvester:
         awaitables = []
         for filename, plot_info in self.provers.items():
             if filename.exists() and ProofOfSpace.can_create_proof(
+                self.constants,
                 plot_info.prover.get_id(),
                 new_challenge.challenge_hash,
-                self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
             ):
                 awaitables.append(lookup_challenge(filename, plot_info.prover))
 
@@ -269,9 +248,7 @@ class Harvester:
         )
 
     @api_request
-    async def request_proof_of_space(
-        self, request: harvester_protocol.RequestProofOfSpace
-    ):
+    async def request_proof_of_space(self, request: harvester_protocol.RequestProofOfSpace):
         """
         The farmer requests a proof of space, for one of the plots.
         We look up the correct plot based on the plot id and response number, lookup the proof,
@@ -298,9 +275,7 @@ class Harvester:
                     plot_info.file_size,
                     plot_info.time_modified,
                 )
-                proof_xs = self.provers[filename].prover.get_full_proof(
-                    challenge_hash, index
-                )
+                proof_xs = self.provers[filename].prover.get_full_proof(challenge_hash, index)
         except KeyError:
             log.warning(f"KeyError plot {filename} does not exist.")
 
@@ -343,22 +318,18 @@ class Harvester:
             return
 
         local_sk = plot_info.local_sk
-        agg_pk = ProofOfSpace.generate_plot_public_key(
-            local_sk.get_g1(), plot_info.farmer_public_key
-        )
+        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), plot_info.farmer_public_key)
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
         signature: G2Element = AugSchemeMPL.sign(local_sk, request.message, agg_pk)
 
-        response: harvester_protocol.RespondSignature = (
-            harvester_protocol.RespondSignature(
-                request.plot_id,
-                request.message,
-                local_sk.get_g1(),
-                plot_info.farmer_public_key,
-                signature,
-            )
+        response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
+            request.plot_id,
+            request.message,
+            local_sk.get_g1(),
+            plot_info.farmer_public_key,
+            signature,
         )
 
         yield OutboundMessage(

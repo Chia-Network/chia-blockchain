@@ -14,7 +14,7 @@ class UnfinishedHeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator, used by light clients
     finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
-    challenge_chain_icp_proof: Optional[VDFProof]  # Iff challenge block
+    challenge_chain_icp_proof: VDFProof
     reward_chain_icp_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
