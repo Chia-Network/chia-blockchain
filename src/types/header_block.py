@@ -14,7 +14,7 @@ class HeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator (but with filter), used by light clients
     finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
-    challenge_chain_icp_proof: Optional[VDFProof]  # Iff challenge block
+    challenge_chain_icp_proof: VDFProof
     challenge_chain_ip_proof: VDFProof
     reward_chain_icp_proof: VDFProof
     reward_chain_ip_proof: VDFProof
