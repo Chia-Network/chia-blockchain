@@ -443,19 +443,19 @@ async def validate_unfinished_header_block(
                 cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
             makes_challenge_block = deficit == 0 and (not overflow or not prev_slot_non_overflow_infusions)
 
-        if makes_challenge_block:
-            # 11a. Check cc icp
-            target_vdf_info = VDFInfo(
-                cc_vdf_challenge,
-                cc_vdf_input,
-                icp_vdf_iters,
-                header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output,
-            )
-            if not header_block.challenge_chain_icp_proof.is_valid(
-                constants, header_block.reward_chain_sub_block.challenge_chain_icp_vdf, target_vdf_info
-            ):
-                return Err.INVALID_CC_ICP_VDF
+        # 11a. Check cc icp
+        target_vdf_info = VDFInfo(
+            cc_vdf_challenge,
+            cc_vdf_input,
+            icp_vdf_iters,
+            header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output,
+        )
+        if not header_block.challenge_chain_icp_proof.is_valid(
+            constants, header_block.reward_chain_sub_block.challenge_chain_icp_vdf, target_vdf_info
+        ):
+            return Err.INVALID_CC_ICP_VDF
 
+        if makes_challenge_block:
             # 11b. Check cc icp sig
             if not AugSchemeMPL.verify(
                 header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
@@ -465,11 +465,7 @@ async def validate_unfinished_header_block(
                 return Err.INVALID_CC_SIGNATURE
         else:
             # 12. Else, check that these are empty
-            if (
-                header_block.reward_chain_sub_block.challenge_chain_icp_vdf is not None
-                or header_block.challenge_chain_icp_proof is not None
-                or header_block.reward_chain_sub_block.challenge_chain_icp_sig is not None
-            ):
+            if header_block.reward_chain_sub_block.challenge_chain_icp_sig is not None:
                 return Err.CANNOT_MAKE_CC_BLOCK
 
         # 13. Check is_block
