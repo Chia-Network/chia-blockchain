@@ -215,6 +215,28 @@ class Keychain:
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         return None
 
+    def get_private_key_by_fingerprint(
+        self, fingerprint: int,
+        passphrases: List[str] = [""]
+    ) -> Optional[Tuple[PrivateKey, bytes]]:
+        """
+        Return first private key which have the given public key fingerprint.
+        """
+        index = 0
+        pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+        while index <= MAX_KEYS:
+            if pkent is not None:
+                pk, ent = pkent
+                for pp in passphrases:
+                    mnemonic = bytes_to_mnemonic(ent)
+                    seed = mnemonic_to_seed(mnemonic, pp)
+                    key = AugSchemeMPL.key_gen(seed)
+                    if pk.get_fingerprint() == fingerprint:
+                        return (key, ent)
+            index += 1
+            pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
+        return None
+
     def get_all_private_keys(
         self, passphrases: List[str] = [""]
     ) -> List[Tuple[PrivateKey, bytes]]:
