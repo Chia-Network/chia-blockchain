@@ -403,6 +403,7 @@ class WalletRpcApi:
                     main_wallet,
                     int(request["amount"]),
                     backup_dids,
+                    uint64(request["num_of_backup_ids_needed"]),
                 )
                 my_did = did_wallet.get_my_DID()
                 return {
@@ -433,6 +434,8 @@ class WalletRpcApi:
                     "coin_list": coin_list,
                     "newpuzhash": newpuzhash,
                     "pubkey": pubkey,
+                    "backup_dids": self.did_info.backup_ids,
+                    "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                 }
 
     ##########################################################################################
@@ -617,7 +620,11 @@ class WalletRpcApi:
         recover_hex_list = []
         for _ in recovery_list:
             recover_hex_list.append(_.hex())
-        return {"success": True, "recover_list": recover_hex_list}
+        return {
+            "success": True,
+            "recover_list": recover_hex_list,
+            "num_required": self.did_info.num_of_backup_ids_needed,
+        }
 
     async def did_recovery_spend(self, request):
         wallet_id = int(request["wallet_id"])
@@ -629,18 +636,21 @@ class WalletRpcApi:
         # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
         info_dict = request["info_dict"]
         my_recovery_list: List[bytes] = wallet.did_info.backup_ids
-        if len(info_dict) != len(my_recovery_list):
-            return False
+        if len(info_dict) < self.did_info.num_of_backup_ids_needed:
+            return {"success": False, "reason": "insufficient messages"}
         # convert info dict into recovery list - same order as wallet
         info_list = []
         for entry in my_recovery_list:
-            info_list.append(
-                [
-                    bytes.fromhex(info_dict[entry.hex()][0]),
-                    bytes.fromhex(info_dict[entry.hex()][1]),
-                    info_dict[entry.hex()][2],
-                ]
-            )
+            if entry.hex() in info_dict:
+                info_list.append(
+                    [
+                        bytes.fromhex(info_dict[entry.hex()][0]),
+                        bytes.fromhex(info_dict[entry.hex()][1]),
+                        info_dict[entry.hex()][2],
+                    ]
+                )
+            else:
+                info_list.append([])
         message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
 
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))

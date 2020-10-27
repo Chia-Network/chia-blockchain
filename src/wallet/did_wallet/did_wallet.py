@@ -44,6 +44,7 @@ class DIDWallet:
         wallet: Wallet,
         amount: int,
         backups_ids: List = [],
+        num_of_backup_ids_needed: uint64 = None,
         name: str = None,
     ):
         self = DIDWallet()
@@ -56,7 +57,13 @@ class DIDWallet:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-        self.did_info = DIDInfo(None, backups_ids, [], None, None)
+        if num_of_backup_ids_needed is None:
+            num_of_backup_ids_needed = uint64(len(backups_ids))
+        if num_of_backup_ids_needed > len(backups_ids):
+            raise ValueError("Cannot require more IDs than are known.")
+        self.did_info = DIDInfo(
+            None, backups_ids, num_of_backup_ids_needed, [], None, None
+        )
         info_as_string = bytes(self.did_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
@@ -134,7 +141,7 @@ class DIDWallet:
             self.log = logging.getLogger(__name__)
 
         self.wallet_state_manager = wallet_state_manager
-        self.did_info = DIDInfo(None, [], [], None, None)
+        self.did_info = DIDInfo(None, [], uint64(0), [], None, None)
         info_as_string = bytes(self.did_info).hex()
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DID Wallet", WalletType.DISTRIBUTED_ID.value, info_as_string
@@ -312,6 +319,7 @@ class DIDWallet:
         new_info = DIDInfo(
             self.did_info.my_did,
             self.did_info.backup_ids,
+            self.did_info.num_of_backup_ids_needed,
             self.did_info.parent_info,
             inner_puzzle,
             None,
@@ -333,7 +341,10 @@ class DIDWallet:
             for did in self.did_info.backup_ids:
                 output_str = output_str + did.hex() + ","
             output_str = output_str[:-1]
-            output_str = output_str + f": {bytes(self.did_info.current_inner).hex()}"
+            output_str = (
+                output_str
+                + f":{bytes(self.did_info.current_inner).hex()}:{self.did_info.num_of_backup_ids_needed}"
+            )
             f.write(output_str)
             f.close()
         except Exception as e:
@@ -349,6 +360,9 @@ class DIDWallet:
             backup_ids = []
             for d in details[1].split(","):
                 backup_ids.append(bytes.fromhex(d))
+            num_of_backup_ids_needed = uint64(details[3])
+            if num_of_backup_ids_needed > len(backup_ids):
+                raise Exception
             innerpuz = Program.from_bytes(bytes.fromhex(details[2]))
             full_puz = did_wallet_puzzles.create_fullpuz(innerpuz, genesis_id)
             (
@@ -379,7 +393,9 @@ class DIDWallet:
                 )
             else:
                 raise Exception
-            did_info = DIDInfo(genesis_id, backup_ids, [], innerpuz, None)
+            did_info = DIDInfo(
+                genesis_id, backup_ids, num_of_backup_ids_needed, [], innerpuz, None
+            )
             await self.save_info(did_info)
             await self.wallet_state_manager.update_wallet_puzzle_hashes(
                 self.wallet_info.id
@@ -445,6 +461,7 @@ class DIDWallet:
                     did_info = DIDInfo(
                         self.did_info.my_did,
                         self.did_info.backup_ids,
+                        self.did_info.num_of_backup_ids_needed,
                         self.did_info.parent_info,
                         self.did_info.current_inner,
                         my_coin,
@@ -453,7 +470,9 @@ class DIDWallet:
         await self.wallet_state_manager.set_action_done(action_id)
 
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
-        innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
+        innerpuz = did_wallet_puzzles.create_innerpuz(
+            pubkey, self.did_info.backup_ids, self.did_info.num_of_backup_ids_needed
+        )
         did = self.did_info.my_did
         return did_wallet_puzzles.create_fullpuz(innerpuz, did)
 
@@ -635,6 +654,7 @@ class DIDWallet:
                 parent_innerpuzhash_amounts_for_recovery_ids,
                 bytes(pubkey),
                 self.did_info.backup_ids,
+                self.did_info.num_of_backup_ids_needed,
             ]
         )
         # full solution is (parent_info my_amount solution)
@@ -693,7 +713,11 @@ class DIDWallet:
             self.standard_wallet.id()
         )
         pubkey = bytes(devrec.pubkey)
-        innerpuz = did_wallet_puzzles.create_innerpuz(pubkey, self.did_info.backup_ids)
+        innerpuz = did_wallet_puzzles.create_innerpuz(
+            pubkey,
+            self.did_info.backup_ids,
+            uint64(self.did_info.num_of_backup_ids_needed),
+        )
 
         return innerpuz
 
@@ -710,7 +734,9 @@ class DIDWallet:
             did_hash.hex()
         )
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
-            bytes(record.pubkey), self.did_info.backup_ids
+            bytes(record.pubkey),
+            self.did_info.backup_ids,
+            self.did_info.num_of_backup_ids_needed,
         )
         return inner_puzzle
 
@@ -764,6 +790,7 @@ class DIDWallet:
         did_info: DIDInfo = DIDInfo(
             origin_id,
             self.did_info.backup_ids,
+            self.did_info.num_of_backup_ids_needed,
             self.did_info.parent_info,
             did_inner,
             None,
@@ -806,10 +833,8 @@ class DIDWallet:
         return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
     async def get_spendable_balance(self) -> uint64:
-        spendable_am = (
-            await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-                self.wallet_info.id
-            )
+        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+            self.wallet_info.id
         )
         return spendable_am
 
@@ -820,22 +845,29 @@ class DIDWallet:
         did_info: DIDInfo = DIDInfo(
             self.did_info.my_did,
             self.did_info.backup_ids,
+            self.did_info.num_of_backup_ids_needed,
             current_list,
             self.did_info.current_inner,
             self.did_info.temp_coin,
         )
         await self.save_info(did_info)
 
-    async def update_recovery_list(self, recover_list: List[bytes]):
+    async def update_recovery_list(
+        self, recover_list: List[bytes], num_of_backup_ids_needed: uint64
+    ):
+        if num_of_backup_ids_needed > len(recover_list):
+            return False
         did_info: DIDInfo = DIDInfo(
             self.did_info.my_did,
             recover_list,
+            num_of_backup_ids_needed,
             self.did_info.parent_info,
             self.did_info.current_inner,
             self.did_info.temp_coin,
         )
         await self.save_info(did_info)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id)
+        return True
 
     async def save_info(self, did_info: DIDInfo):
         self.did_info = did_info

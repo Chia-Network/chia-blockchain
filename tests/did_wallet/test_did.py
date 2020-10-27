@@ -348,7 +348,7 @@ class TestDIDWallet:
 
         # Update coin with new ID info
         recovery_list = [bytes.fromhex(did_wallet_2.get_my_DID())]
-        await did_wallet.update_recovery_list(recovery_list)
+        await did_wallet.update_recovery_list(recovery_list, uint64(1))
         assert did_wallet.did_info.backup_ids == recovery_list
         updated_puz = await did_wallet.get_new_puzzle()
         await did_wallet.create_spend(updated_puz.get_tree_hash())

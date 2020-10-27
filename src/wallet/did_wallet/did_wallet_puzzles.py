@@ -15,9 +15,13 @@ DID_RECOVERY_MESSAGE_MOD = load_clvm("did_recovery_message.clvm")
 DID_GROUP_MOD = load_clvm("did_groups.clvm")
 
 
-def create_innerpuz(pubkey: bytes, identities: List[bytes]) -> Program:
+def create_innerpuz(
+    pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64
+) -> Program:
     backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
-    return DID_INNERPUZ_MOD.curry(DID_CORE_MOD.get_tree_hash(), pubkey, backup_ids_hash)
+    return DID_INNERPUZ_MOD.curry(
+        DID_CORE_MOD.get_tree_hash(), pubkey, backup_ids_hash, num_of_backup_ids_needed
+    )
 
 
 def create_fullpuz(innerpuz, genesis_id) -> Program:
@@ -70,7 +74,7 @@ def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
     if not is_did_innerpuz(inner_f):
         return None
 
-    core_mod, pubkey, id_list = list(args.as_iter())
+    core_mod, pubkey, id_list, num_of_backup_ids_needed = list(args.as_iter())
     return pubkey, id_list
 
 
