@@ -9,7 +9,7 @@ dependencies = [
     "chiapos==0.12.33",  # proof of space
     "clvm==0.5.3",
     "clvm_tools==0.1.6",
-    "aiohttp==3.6.3",  # HTTP server for full node rpc
+    "aiohttp==3.7.1",  # HTTP server for full node rpc
     "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@28cb5754deec562ac931da8fca799fb82df97a12#egg=aiosqlite",
     # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
