@@ -59,22 +59,17 @@ def create_plots(
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
 
-    if args.alt_fingerprint is not None:
-        alt_fingerprint = args.alt_fingerprint
-    else:
-        alt_fingerprint = None
-
     farmer_public_key: G1Element
     if args.farmer_public_key is not None:
         farmer_public_key = G1Element.from_bytes(bytes.fromhex(args.farmer_public_key))
     else:
-        farmer_public_key = get_farmer_public_key(alt_fingerprint)
+        farmer_public_key = get_farmer_public_key(args.alt_fingerprint)
 
     pool_public_key: G1Element
     if args.pool_public_key is not None:
         pool_public_key = bytes.fromhex(args.pool_public_key)
     else:
-        pool_public_key = get_pool_public_key(alt_fingerprint)
+        pool_public_key = get_pool_public_key(args.alt_fingerprint)
     if args.num is not None:
         num = args.num
     else:
