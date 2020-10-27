@@ -45,12 +45,12 @@ log = logging.getLogger(__name__)
 class ReceiveBlockResult(Enum):
     """
     When Blockchain.receive_block(b) is called, one of these results is returned,
-    showing whether the block was added to the chain (extending the tip),
+    showing whether the block was added to the chain (extending the peak),
     and if not, why it was not added.
     """
 
-    NEW_TIP = 1  # Added to the tip of the blockchain
-    ADDED_AS_ORPHAN = 2  # Added as an orphan/stale block (not a new tip of the chain)
+    NEW_PEAK = 1  # Added to the peak of the blockchain
+    ADDED_AS_ORPHAN = 2  # Added as an orphan/stale block (not a new peak of the chain)
     INVALID_BLOCK = 3  # Block was not added because it was invalid
     ALREADY_HAVE_BLOCK = 4  # Block is already present in this blockchain
     DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
@@ -58,11 +58,11 @@ class ReceiveBlockResult(Enum):
 
 class Blockchain:
     constants: ConsensusConstants
-    # Tip of the blockchain
-    tip_height: Optional[uint32]
-    # Defines the path from genesis to the tip, no orphan sub-blocks
+    # peak of the blockchain
+    peak_height: Optional[uint32]
+    # Defines the path from genesis to the peak, no orphan sub-blocks
     height_to_hash: Dict[uint32, bytes32]
-    # All sub blocks in tip path are guaranteed to be included, can include orphan sub-blocks
+    # All sub blocks in peak path are guaranteed to be included, can include orphan sub-blocks
     sub_blocks: Dict[bytes32, SubBlockRecord]
     # Unspent Store
     coin_store: CoinStore
@@ -112,7 +112,7 @@ class Blockchain:
 
     async def _load_chain_from_store(self) -> None:
         """
-        Initializes the state of the Blockchain class from the database. Sets the LCA, tips,
+        Initializes the state of the Blockchain class from the database. Sets the LCA, peaks,
         headers, height_to_hash, and block_store DiffStores.
         """
         self.sub_blocks = await self.block_store.get_sub_blocks()
@@ -120,40 +120,40 @@ class Blockchain:
 
         if len(self.sub_blocks) == 0:
             log.info("Initializing empty blockchain")
-            self.tip_height = None
+            self.peak_height = None
             return
 
-        # Sets the other state variables (tip_height and height_to_hash)
+        # Sets the other state variables (peak_height and height_to_hash)
         for hh, sb in self.sub_blocks:
             self.height_to_hash[sb.height] = hh
-            if self.tip_height is None or sb.height > self.tip_height:
-                self.tip_height = sb.height
+            if self.peak_height is None or sb.height > self.peak_height:
+                self.peak_height = sb.height
 
-        assert len(self.sub_blocks) == len(self.height_to_hash) == self.tip_height + 1
+        assert len(self.sub_blocks) == len(self.height_to_hash) == self.peak_height + 1
 
-    def get_tip(self) -> Optional[SubBlockRecord]:
+    def get_peak(self) -> Optional[SubBlockRecord]:
         """
-        Return the tip of the blockchain
+        Return the peak of the blockchain
         """
-        if self.tip_height is None:
+        if self.peak_height is None:
             return None
-        return self.sub_blocks[self.height_to_hash[self.tip_height]]
+        return self.sub_blocks[self.height_to_hash[self.peak_height]]
 
-    async def get_full_tip(self) -> Optional[FullBlock]:
-        if self.tip_height is None:
+    async def get_full_peak(self) -> Optional[FullBlock]:
+        if self.peak_height is None:
             return None
-        """ Return list of FullBlocks that are tips"""
-        block = await self.block_store.get_block(self.height_to_hash[self.tip_height])
+        """ Return list of FullBlocks that are peaks"""
+        block = await self.block_store.get_block(self.height_to_hash[self.peak_height])
         assert block is not None
         return block
 
-    def is_child_of_tip(self, block: FullBlock) -> bool:
+    def is_child_of_peak(self, block: FullBlock) -> bool:
         """
-        True iff the block is the direct ancestor of the tip
+        True iff the block is the direct ancestor of the peak
         """
-        if self.tip_height is None:
+        if self.peak_height is None:
             return False
-        return block.prev_header_hash == self.get_tip().header_hash
+        return block.prev_header_hash == self.get_peak().header_hash
 
     def contains_block(self, header_hash: bytes32) -> bool:
         """
@@ -162,15 +162,15 @@ class Blockchain:
         """
         return header_hash in self.sub_blocks
 
-    def get_header_hashes(self, tip_header_hash: bytes32) -> List[bytes32]:
+    def get_header_hashes(self, peak_header_hash: bytes32) -> List[bytes32]:
         """
-        Returns a list of all header hashes from genesis to the tip, inclusive.
+        Returns a list of all header hashes from genesis to the peak, inclusive.
         """
-        if tip_header_hash not in self.sub_blocks:
-            raise ValueError("Invalid tip requested")
+        if peak_header_hash not in self.sub_blocks:
+            raise ValueError("Invalid peak requested")
 
-        curr = self.sub_blocks[tip_header_hash]
-        ret_hashes = [tip_header_hash]
+        curr = self.sub_blocks[peak_header_hash]
+        ret_hashes = [peak_header_hash]
         while curr.height != 0:
             curr = self.sub_blocks[curr.prev_header_hash]
             ret_hashes.append(curr.header_hash)
@@ -181,15 +181,15 @@ class Blockchain:
         Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
         where both blockchains are equal.
         """
-        if self.tip_height is None:
+        if self.peak_height is None:
             raise ValueError("Empty blockchain")
 
-        tip: SubBlockRecord = self.get_tip()
+        peak: SubBlockRecord = self.get_peak()
 
-        if tip.height >= len(alternate_chain) - 1:
+        if peak.height >= len(alternate_chain) - 1:
             raise ValueError("Alternate chain is shorter")
         low: uint32 = uint32(0)
-        high = tip.height
+        high = peak.height
         while low + 1 < high:
             mid = (low + high) // 2
             if self.height_to_hash[uint32(mid)] != alternate_chain[mid]:
@@ -260,15 +260,15 @@ class Blockchain:
         # Always add the block to the database
         await self.block_store.add_block(block)
 
-        new_tip = await self._reconsider_tip(sub_block, genesis)
-        if new_tip:
-            return ReceiveBlockResult.NEW_TIP, None
+        new_peak = await self._reconsider_peak(sub_block, genesis)
+        if new_peak:
+            return ReceiveBlockResult.NEW_PEAK, None
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None
 
-    async def _reconsider_tip(self, sub_block: SubBlockRecord, genesis: bool) -> bool:
+    async def _reconsider_peak(self, sub_block: SubBlockRecord, genesis: bool) -> bool:
         """
-        When a new block is added, this is called, to check if the new block is the new tip of the chain.
+        When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
         """
         if genesis:
@@ -276,17 +276,17 @@ class Blockchain:
             assert block is not None
             await self.coin_store.new_block(block)
             self.height_to_hash[uint32(0)] = block.header_hash
-            self.tip_height = uint32(0)
+            self.peak_height = uint32(0)
             return True
 
-        assert self.get_tip() is not None
-        if sub_block.weight > self.get_tip().weight:
-            # Find the fork. if the block is just being appended, it will return the tip
-            fork_h: bytes32 = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_tip())
+        assert self.get_peak() is not None
+        if sub_block.weight > self.get_peak().weight:
+            # Find the fork. if the block is just being appended, it will return the peak
+            fork_h: bytes32 = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_peak())
             # Rollback to fork
             await self.coin_store.rollback_to_block(fork_h)
 
-            # Collect all blocks from fork point to new tip
+            # Collect all blocks from fork point to new peak
             blocks_to_add: List[FullBlock] = []
             curr = sub_block.header_hash
             while curr != self.height_to_hash[fork_h]:
@@ -319,7 +319,7 @@ class Blockchain:
     def get_next_slot_iters(self, header_hash: bytes32) -> uint64:
         return get_next_slot_iters(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
 
-    async def pre_validate_blocks_multiprocessing(
+    async def pre_validate_blocks_mulpeakrocessing(
         self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
         # TODO(mariano): review
@@ -507,7 +507,7 @@ class Blockchain:
 
         # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
         new_ips = self.get_next_slot_iters(block.prev_header_hash)
-        fork_h = find_fork_point_in_chain(self.sub_blocks, self.get_tip(), block.get_sub_block_record(new_ips))
+        fork_h = find_fork_point_in_chain(self.sub_blocks, self.get_peak(), block.get_sub_block_record(new_ips))
 
         # Get additions and removals since (after) fork_h but not including this block
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
