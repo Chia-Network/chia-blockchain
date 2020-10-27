@@ -290,7 +290,7 @@ async def validate_unfinished_header_block(
 
         # 3. Check proof of space
         q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
-            constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
+            constants, header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output
         )
         if q_str is None:
             return Err.INVALID_POSPACE
