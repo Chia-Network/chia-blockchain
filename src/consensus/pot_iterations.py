@@ -25,7 +25,7 @@ def calculate_infusion_challenge_point_iters(
     return required_iters - required_iters % checkpoint_size
 
 
-def calculate_infusion_point_iters(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint64:
+def calculate_ip_iters(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint64:
     # Note that the IPS is for the block passed in, which might be in the previous epoch
     slot_iters: uint64 = calculate_slot_iters(constants, ips)
     if required_iters >= slot_iters:

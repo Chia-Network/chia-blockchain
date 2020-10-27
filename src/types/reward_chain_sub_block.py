@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from blspy import G2Element
+from typing import Optional
 
 from src.util.ints import uint32, uint128
 from src.util.streamable import Streamable, streamable
@@ -14,8 +15,10 @@ class RewardChainSubBlockUnfinished(Streamable):
     sub_block_height: uint32
     total_iters: uint128
     proof_of_space: ProofOfSpace
-    infusion_challenge_point_vdf: VDFInfo
-    infusion_challenge_point_sig: G2Element
+    challenge_chain_icp_vdf: Optional[VDFInfo]
+    challenge_chain_icp_sig: Optional[G2Element]
+    reward_chain_icp_vdf: VDFInfo
+    reward_chain_icp_sig: G2Element
 
 
 @dataclass(frozen=True)
@@ -25,9 +28,12 @@ class RewardChainSubBlock(Streamable):
     sub_block_height: uint32
     total_iters: uint128
     proof_of_space: ProofOfSpace
-    infusion_challenge_point_vdf: VDFInfo
-    infusion_challenge_point_sig: G2Element
-    infusion_point_vdf: VDFInfo
+    challenge_chain_icp_vdf: Optional[VDFInfo]
+    challenge_chain_icp_sig: Optional[G2Element]
+    challenge_chain_ip_vdf: VDFInfo
+    reward_chain_icp_vdf: VDFInfo
+    reward_chain_icp_sig: G2Element
+    reward_chain_ip_vdf: VDFInfo
 
     def get_unfinished(self) -> RewardChainSubBlockUnfinished:
         return RewardChainSubBlockUnfinished(
@@ -35,6 +41,8 @@ class RewardChainSubBlock(Streamable):
             self.sub_block_height,
             self.total_iters,
             self.proof_of_space,
-            self.infusion_challenge_point_vdf,
-            self.infusion_challenge_point_sig,
+            self.challenge_chain_icp_vdf,
+            self.challenge_challenge_point_sig,
+            self.reward_chain_icp_vdf,
+            self.reward_chain_icp_sig,
         )
