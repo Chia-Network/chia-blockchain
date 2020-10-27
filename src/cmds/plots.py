@@ -21,9 +21,10 @@ def help_message():
     print(f"command can be any of {command_list}")
     print("")
     print(
-        "chia plots create -k [size] -n [number of plots] -b [memory buffer size MiB] "
-        + "-r [number of threads] -u [number of buckets] -s [stripe size]"
-        + " -f [farmer pk] -p [pool pk] -t [tmp dir] -2 [tmp dir 2] -d [final dir]  (creates plots)"
+        "chia plots create -k [size] -n [number of plots] -b [memory buffer size MiB]"
+        + " -r [number of threads] -u [number of buckets] -s [stripe size]"
+        + " -a [fingerprint] -f [farmer public key] -p [pool public key]"
+        + " -t [tmp dir] -2 [tmp dir 2] -d [final dir] (creates plots)"
     )
     print("-i [plotid] [-m memo] are available for debugging")
     print("chia plots check -n [num checks] -g [string] (checks plots)")
@@ -50,6 +51,13 @@ def make_parser(parser):
     )
     parser.add_argument("-s", "--stripe_size", help="Stripe size", type=int, default=0)
     parser.add_argument(
+        "-a",
+        "--alt_fingerprint",
+        type=int,
+        default=None,
+        help="Enter the alternative fingerprint of the key you want to use",
+    )
+    parser.add_argument(
         "-f",
         "--farmer_public_key",
         help="Hex farmer public key",
@@ -57,14 +65,14 @@ def make_parser(parser):
         default=None,
     )
     parser.add_argument(
+        "-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None
+    )
+    parser.add_argument(
         "-g",
         "--grep_string",
         help="Shows only plots that contain the string in the filename or directory name",
         type=str,
         default=None,
-    )
-    parser.add_argument(
-        "-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None
     )
     parser.add_argument(
         "-t",
