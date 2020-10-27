@@ -208,7 +208,7 @@ class BlockTools:
                 block_list[-1].proof_of_space,
                 curr_difficulty,
                 block_list[-1].proof_of_time.number_of_iterations,
-                test_constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
+                test_constants.NUMBER_ZERO_BITS_PLOT_FILTER,
             )
 
         starting_height = block_list[-1].height + 1
@@ -422,7 +422,7 @@ class BlockTools:
                 ccp = ProofOfSpace.can_create_proof(
                     plot_id,
                     challenge_hash,
-                    test_constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
+                    test_constants.NUMBER_ZERO_BITS_PLOT_FILTER,
                 )
                 if not ccp:
                     continue
@@ -439,7 +439,7 @@ class BlockTools:
                 ccp = ProofOfSpace.can_create_proof(
                     plot_id,
                     challenge_hash,
-                    test_constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
+                    test_constants.NUMBER_ZERO_BITS_PLOT_FILTER,
                 )
                 if not ccp:
                     continue
@@ -475,7 +475,7 @@ class BlockTools:
             proof_of_space,
             difficulty,
             min_iters,
-            test_constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
+            test_constants.NUMBER_ZERO_BITS_PLOT_FILTER,
         )
         if self.real_plots:
             print(f"Performing {number_iters} VDF iterations")
