@@ -1,12 +1,14 @@
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint64
+from src.util.ints import uint64, uint128
 from src.consensus.pos_quality import quality_str_to_quality
 from src.consensus.constants import ConsensusConstants
 
 
 def is_overflow_sub_block(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> bool:
     slot_iters: uint64 = calculate_slot_iters(constants, ips)
+    if required_iters >= slot_iters:
+        raise ValueError(f"Required iters {required_iters} is not below the slot iterations")
     extra_iters: uint64 = uint64(int(float(ips) * constants.EXTRA_ITERS_TIME_TARGET))
     return required_iters + extra_iters >= slot_iters
 
@@ -20,7 +22,13 @@ def calculate_icp_iters(constants: ConsensusConstants, ips: uint64, required_ite
     if required_iters >= slot_iters:
         raise ValueError(f"Required iters {required_iters} is not below the slot iterations")
     checkpoint_size: uint64 = uint64(slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
-    return required_iters - required_iters % checkpoint_size
+    checkpoint_index: int = required_iters // checkpoint_size
+
+    if checkpoint_index >= constants.NUM_CHECKPOINTS_PER_SLOT:
+        # Checkpoints don't divide slot_iters cleanly, so we return the last checkpoint
+        return required_iters - required_iters % checkpoint_size - checkpoint_size
+    else:
+        return required_iters - required_iters % checkpoint_size
 
 
 def calculate_ip_iters(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint64:
@@ -42,9 +50,8 @@ def calculate_iterations_quality(
     between 0 and 1, then divided by expected plot size, and finally multiplied by the
     difficulty.
     """
-    iters = uint64(int(difficulty) << 32) // quality_str_to_quality(quality, size)
-    assert iters >= 1
-    return iters
+    iters = uint64(uint128(int(difficulty) << 32) // quality_str_to_quality(quality, size))
+    return max(iters, uint64(1))
 
 
 def calculate_iterations(

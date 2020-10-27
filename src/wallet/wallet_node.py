@@ -122,9 +122,7 @@ class WalletNode:
     def get_key_for_fingerprint(self, fingerprint):
         private_keys = self.keychain.get_all_private_keys()
         if len(private_keys) == 0:
-            self.log.warning(
-                "No keys present. Create keys with the UI, or with the 'chia keys' program."
-            )
+            self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
 
         private_key: Optional[PrivateKey] = None
@@ -149,21 +147,15 @@ class WalletNode:
             return False
 
         db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
-        path = path_from_root(
-            self.root_path, f"{self.config['database_path']}-{db_path_key_suffix}"
-        )
+        path = path_from_root(self.root_path, f"{self.config['database_path']}-{db_path_key_suffix}")
         mkdir(path.parent)
 
-        self.wallet_state_manager = await WalletStateManager.create(
-            private_key, self.config, path, self.constants
-        )
+        self.wallet_state_manager = await WalletStateManager.create(private_key, self.config, path, self.constants)
 
         self.wsm_close_task = None
         assert self.wallet_state_manager is not None
 
-        backup_settings: BackupInitialized = (
-            self.wallet_state_manager.user_settings.get_backup_settings()
-        )
+        backup_settings: BackupInitialized = self.wallet_state_manager.user_settings.get_backup_settings()
         if backup_settings.user_initialized is False:
             if new_wallet is True:
                 await self.wallet_state_manager.user_settings.user_created_new_wallet()
@@ -180,14 +172,10 @@ class WalletNode:
 
         self.backup_initialized = True
         if backup_file is not None:
-            json_dict = open_backup_file(
-                backup_file, self.wallet_state_manager.private_key
-            )
+            json_dict = open_backup_file(backup_file, self.wallet_state_manager.private_key)
             if "start_height" in json_dict["data"]:
                 start_height = json_dict["data"]["start_height"]
-                self.config["starting_height"] = max(
-                    0, start_height - self.config["start_height_buffer"]
-                )
+                self.config["starting_height"] = max(0, start_height - self.config["start_height_buffer"])
             else:
                 self.config["starting_height"] = 0
         else:
@@ -216,13 +204,9 @@ class WalletNode:
         self._shut_down = True
         if self.wallet_state_manager is None:
             return
-        self.wsm_close_task = asyncio.create_task(
-            self.wallet_state_manager.close_all_stores()
-        )
+        self.wsm_close_task = asyncio.create_task(self.wallet_state_manager.close_all_stores())
         self.global_connections.close_all_connections()
-        self.wallet_peers_task = asyncio.create_task(
-            self.wallet_peers.ensure_is_closed()
-        )
+        self.wallet_peers_task = asyncio.create_task(self.wallet_peers.ensure_is_closed())
 
     async def _await_closed(self):
         if self.sync_generator_task is not None:
@@ -252,9 +236,7 @@ class WalletNode:
     async def _action_messages(self) -> List[OutboundMessage]:
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return []
-        actions: List[
-            WalletAction
-        ] = await self.wallet_state_manager.action_store.get_all_pending_actions()
+        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
         result: List[OutboundMessage] = []
         for action in actions:
             data = json.loads(action.data)
@@ -301,17 +283,11 @@ class WalletNode:
             self.server.push_message(msg)
 
     async def _messages_to_resend(self) -> List[OutboundMessage]:
-        if (
-            self.wallet_state_manager is None
-            or self.backup_initialized is False
-            or self._shut_down
-        ):
+        if self.wallet_state_manager is None or self.backup_initialized is False or self._shut_down:
             return []
         messages: List[OutboundMessage] = []
 
-        records: List[
-            TransactionRecord
-        ] = await self.wallet_state_manager.tx_store.get_not_sent()
+        records: List[TransactionRecord] = await self.wallet_state_manager.tx_store.get_not_sent()
 
         for record in records:
             if record.spend_bundle is None:
@@ -357,25 +333,16 @@ class WalletNode:
                 self.config["full_node_peer"]["host"],
                 self.config["full_node_peer"]["port"],
             )
-            peers = [
-                c.get_peer_info()
-                for c in self.global_connections.get_full_node_connections()
-            ]
-            full_node_resolved = PeerInfo(
-                socket.gethostbyname(full_node_peer.host), full_node_peer.port
-            )
+            peers = [c.get_peer_info() for c in self.global_connections.get_full_node_connections()]
+            full_node_resolved = PeerInfo(socket.gethostbyname(full_node_peer.host), full_node_peer.port)
             if full_node_peer in peers or full_node_resolved in peers:
-                self.log.info(
-                    f"Will not attempt to connect to other nodes, already connected to {full_node_peer}"
-                )
+                self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
                 for connection in self.global_connections.get_full_node_connections():
                     if (
                         connection.get_peer_info() != full_node_peer
                         and connection.get_peer_info() != full_node_resolved
                     ):
-                        self.log.info(
-                            f"Closing unnecessary connection to {connection.get_peer_info()}."
-                        )
+                        self.log.info(f"Closing unnecessary connection to {connection.get_peer_info()}.")
                         self.global_connections.close(connection)
                 return True
         return False
@@ -420,11 +387,12 @@ class WalletNode:
         self.header_hashes_error = False
         self.proof_hashes = []
         self.potential_header_hashes = {}
-        genesis = FullBlock.from_bytes(self.constants.GENESIS_BLOCK)
+        # TODO: fix
+        # genesis = FullBlock.from_bytes(self.constants.GENESIS_BLOCK)
+        quit()
+
         genesis_challenge = genesis.proof_of_space.challenge_hash
-        request_header_hashes = wallet_protocol.RequestAllHeaderHashesAfter(
-            uint32(0), genesis_challenge
-        )
+        request_header_hashes = wallet_protocol.RequestAllHeaderHashesAfter(uint32(0), genesis_challenge)
         yield OutboundMessage(
             NodeType.FULL_NODE,
             Message("request_all_header_hashes_after", request_header_hashes),
@@ -438,9 +406,7 @@ class WalletNode:
             if self._shut_down:
                 return
             if self.header_hashes_error:
-                raise ValueError(
-                    f"Received error from full node while fetching hashes from {request_header_hashes}."
-                )
+                raise ValueError(f"Received error from full node while fetching hashes from {request_header_hashes}.")
             if len(self.header_hashes) > 0:
                 break
             await asyncio.sleep(0.5)
@@ -448,27 +414,15 @@ class WalletNode:
             raise TimeoutError("Took too long to fetch header hashes.")
 
         # 2. Find fork point
-        fork_point_height: uint32 = (
-            self.wallet_state_manager.find_fork_point_alternate_chain(
-                self.header_hashes
-            )
-        )
+        fork_point_height: uint32 = self.wallet_state_manager.find_fork_point_alternate_chain(self.header_hashes)
         fork_point_hash: bytes32 = self.header_hashes[fork_point_height]
         # Sync a little behind, in case there is a short reorg
-        tip_height = (
-            len(self.header_hashes) - 5
-            if len(self.header_hashes) > 5
-            else len(self.header_hashes)
-        )
+        tip_height = len(self.header_hashes) - 5 if len(self.header_hashes) > 5 else len(self.header_hashes)
 
         if self.wallet_state_manager.new_wallet is True and fork_point_height == 0:
-            self.config["starting_height"] = max(
-                0, tip_height - self.config["start_height_buffer"]
-            )
+            self.config["starting_height"] = max(0, tip_height - self.config["start_height_buffer"])
 
-        self.log.info(
-            f"Fork point: {fork_point_hash} at height {fork_point_height}. Will sync up to {tip_height}"
-        )
+        self.log.info(f"Fork point: {fork_point_hash} at height {fork_point_height}. Will sync up to {tip_height}")
         for height in range(0, tip_height + 1):
             self.potential_blocks_received[uint32(height)] = asyncio.Event()
 
@@ -507,15 +461,7 @@ class WalletNode:
                     difficulty_weights.append(difficulty)
 
             # Randomly sample based on difficulty
-            query_heights_odd = sorted(
-                list(
-                    set(
-                        random.choices(
-                            heights, difficulty_weights, k=min(100, len(heights))
-                        )
-                    )
-                )
-            )
+            query_heights_odd = sorted(list(set(random.choices(heights, difficulty_weights, k=min(100, len(heights))))))
             query_heights: List[uint32] = []
 
             for odd_height in query_heights_odd:
@@ -548,22 +494,12 @@ class WalletNode:
                         blocks_missing = not self.potential_blocks_received[
                             uint32(query_heights[batch_start_index])
                         ].is_set()
-                        if (
-                            time.time() - last_request_time > sleep_interval
-                            and blocks_missing
-                        ) or (
+                        if (time.time() - last_request_time > sleep_interval and blocks_missing) or (
                             query_heights[batch_start_index]
                         ) > highest_height_requested:
-                            self.log.info(
-                                f"Requesting sync header {query_heights[batch_start_index]}"
-                            )
-                            if (
-                                query_heights[batch_start_index]
-                                > highest_height_requested
-                            ):
-                                highest_height_requested = uint32(
-                                    query_heights[batch_start_index]
-                                )
+                            self.log.info(f"Requesting sync header {query_heights[batch_start_index]}")
+                            if query_heights[batch_start_index] > highest_height_requested:
+                                highest_height_requested = uint32(query_heights[batch_start_index])
                             request_made = True
                             request_header = wallet_protocol.RequestHeader(
                                 uint32(query_heights[batch_start_index]),
@@ -578,9 +514,7 @@ class WalletNode:
                         last_request_time = time.time()
                         request_made = False
                     try:
-                        aw = self.potential_blocks_received[
-                            uint32(query_heights[height_index])
-                        ].wait()
+                        aw = self.potential_blocks_received[uint32(query_heights[height_index])].wait()
                         await asyncio.wait_for(aw, timeout=sleep_interval)
                         break
                     # https://github.com/python/cpython/pull/13528
@@ -588,9 +522,7 @@ class WalletNode:
                         total_time_slept += sleep_interval
                         self.log.info("Did not receive desired headers")
 
-            self.log.info(
-                f"Finished downloading sample of headers at heights: {query_heights}, validating."
-            )
+            self.log.info(f"Finished downloading sample of headers at heights: {query_heights}, validating.")
             # Validates the downloaded proofs
             assert self.wallet_state_manager.validate_select_proofs(
                 self.proof_hashes,
@@ -610,17 +542,11 @@ class WalletNode:
             if fork_point_height == 0:
                 difficulty = self.constants.DIFFICULTY_STARTING
             else:
-                fork_point_parent_hash = self.wallet_state_manager.block_records[
-                    fork_point_hash
-                ].prev_header_hash
-                fork_point_parent_weight = self.wallet_state_manager.block_records[
-                    fork_point_parent_hash
-                ]
+                fork_point_parent_hash = self.wallet_state_manager.block_records[fork_point_hash].prev_header_hash
+                fork_point_parent_weight = self.wallet_state_manager.block_records[fork_point_parent_hash]
                 difficulty = uint64(weight - fork_point_parent_weight.weight)
 
-            for height in range(
-                fork_point_height + 1, header_validate_start_height + 1
-            ):
+            for height in range(fork_point_height + 1, header_validate_start_height + 1):
                 _, difficulty_change, total_iters = self.proof_hashes[height]
                 if difficulty_change is not None:
                     difficulty = difficulty_change
@@ -637,13 +563,8 @@ class WalletNode:
                     uint64(0),
                 )
                 res = await self.wallet_state_manager.receive_block(block_record, None)
-                assert (
-                    res == ReceiveBlockResult.NEW_TIP
-                    or res == ReceiveBlockResult.ADDED_AS_ORPHAN
-                )
-            self.log.info(
-                f"Fast sync successful up to height {header_validate_start_height}"
-            )
+                assert res == ReceiveBlockResult.NEW_TIP or res == ReceiveBlockResult.ADDED_AS_ORPHAN
+            self.log.info(f"Fast sync successful up to height {header_validate_start_height}")
 
         # Download headers in batches, and verify them as they come in. We download a few batches ahead,
         # in case there are delays. TODO(mariano): optimize sync by pipelining
@@ -651,9 +572,7 @@ class WalletNode:
         highest_height_requested = uint32(0)
         request_made = False
 
-        for height_checkpoint in range(
-            header_validate_start_height + 1, tip_height + 1
-        ):
+        for height_checkpoint in range(header_validate_start_height + 1, tip_height + 1):
             total_time_slept = 0
             while True:
                 # Request batches that we don't have yet
@@ -675,10 +594,9 @@ class WalletNode:
                             for h in range(batch_start, batch_end)
                         ]
                     )
-                    if (
-                        time.time() - last_request_time > sleep_interval
-                        and blocks_missing
-                    ) or (batch_end - 1) > highest_height_requested:
+                    if (time.time() - last_request_time > sleep_interval and blocks_missing) or (
+                        batch_end - 1
+                    ) > highest_height_requested:
                         self.log.info(f"Requesting sync header {batch_start}")
                         if batch_end - 1 > highest_height_requested:
                             highest_height_requested = uint32(batch_end - 1)
@@ -696,9 +614,7 @@ class WalletNode:
                     last_request_time = time.time()
                     request_made = False
 
-                awaitables = [
-                    self.potential_blocks_received[uint32(height_checkpoint)].wait()
-                ]
+                awaitables = [self.potential_blocks_received[uint32(height_checkpoint)].wait()]
                 future = asyncio.gather(*awaitables, return_exceptions=True)
                 try:
                     await asyncio.wait_for(future, timeout=sleep_interval)
@@ -727,16 +643,12 @@ class WalletNode:
                         break
                     else:
                         _, hb, tfilter = self.cached_blocks[hh]
-                        self.log.warning(
-                            f"Received header, but it has not been added to chain. Retrying. {hb.height}"
-                        )
+                        self.log.warning(f"Received header, but it has not been added to chain. Retrying. {hb.height}")
                         respond_header_msg = wallet_protocol.RespondHeader(hb, tfilter)
                         async for msg in self.respond_header(respond_header_msg):
                             yield msg
 
-        self.log.info(
-            f"Finished sync process up to height {max(self.wallet_state_manager.height_to_hash.keys())}"
-        )
+        self.log.info(f"Finished sync process up to height {max(self.wallet_state_manager.height_to_hash.keys())}")
 
     async def _block_finished(
         self,
@@ -764,21 +676,14 @@ class WalletNode:
         elif res == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return None
         elif res == ReceiveBlockResult.ADDED_AS_ORPHAN:
-            self.log.info(
-                f"Added orphan {block_record.header_hash} at height {block_record.height}"
-            )
+            self.log.info(f"Added orphan {block_record.header_hash} at height {block_record.height}")
         elif res == ReceiveBlockResult.NEW_TIP:
-            self.log.info(
-                f"Updated LCA to {block_record.header_hash} at height {block_record.height}"
-            )
+            self.log.info(f"Updated LCA to {block_record.header_hash} at height {block_record.height}")
             # Removes outdated cached blocks if we're not syncing
             if not self.wallet_state_manager.sync_mode:
                 remove_header_hashes = []
                 for header_hash in self.cached_blocks:
-                    if (
-                        block_record.height - self.cached_blocks[header_hash][0].height
-                        > 100
-                    ):
+                    if block_record.height - self.cached_blocks[header_hash][0].height > 100:
                         remove_header_hashes.append(header_hash)
                 for header_hash in remove_header_hashes:
                     del self.cached_blocks[header_hash]
@@ -793,9 +698,7 @@ class WalletNode:
         return None
 
     @api_request
-    async def transaction_ack_with_peer_name(
-        self, ack: wallet_protocol.TransactionAck, name: str
-    ):
+    async def transaction_ack_with_peer_name(self, ack: wallet_protocol.TransactionAck, name: str):
         """
         This is an ack for our previous SendTransaction call. This removes the transaction from
         the send queue if we have sent it to enough nodes.
@@ -803,28 +706,18 @@ class WalletNode:
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         if ack.status == MempoolInclusionStatus.SUCCESS:
-            self.log.info(
-                f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}"
-            )
+            self.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
         elif ack.status == MempoolInclusionStatus.PENDING:
-            self.log.info(
-                f"SpendBundle has been received (and is pending) by the FullNode. {ack}"
-            )
+            self.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
         else:
             self.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
         if ack.error is not None:
-            await self.wallet_state_manager.remove_from_queue(
-                ack.txid, name, ack.status, Err[ack.error]
-            )
+            await self.wallet_state_manager.remove_from_queue(ack.txid, name, ack.status, Err[ack.error])
         else:
-            await self.wallet_state_manager.remove_from_queue(
-                ack.txid, name, ack.status, None
-            )
+            await self.wallet_state_manager.remove_from_queue(ack.txid, name, ack.status, None)
 
     @api_request
-    async def respond_all_proof_hashes(
-        self, response: wallet_protocol.RespondAllProofHashes
-    ):
+    async def respond_all_proof_hashes(self, response: wallet_protocol.RespondAllProofHashes):
         """
         Receipt of proof hashes, used during sync for interactive weight verification protocol.
         """
@@ -836,9 +729,7 @@ class WalletNode:
         self.proof_hashes = response.hashes
 
     @api_request
-    async def respond_all_header_hashes_after(
-        self, response: wallet_protocol.RespondAllHeaderHashesAfter
-    ):
+    async def respond_all_header_hashes_after(self, response: wallet_protocol.RespondAllHeaderHashesAfter):
         """
         Response containing all header hashes after a point. This is used to find the fork
         point between our current blockchain, and the current heaviest tip.
@@ -851,9 +742,7 @@ class WalletNode:
         self.header_hashes = response.hashes
 
     @api_request
-    async def reject_all_header_hashes_after_request(
-        self, response: wallet_protocol.RejectAllHeaderHashesAfterRequest
-    ):
+    async def reject_all_header_hashes_after_request(self, response: wallet_protocol.RejectAllHeaderHashesAfterRequest):
         """
         Error in requesting all header hashes.
         """
@@ -896,9 +785,7 @@ class WalletNode:
                 self.log.error(f"Error with syncing. {type(e)} {tb}")
             self.wallet_state_manager.set_sync_mode(False)
         else:
-            header_request = wallet_protocol.RequestHeader(
-                uint32(request.height), request.lca_hash
-            )
+            header_request = wallet_protocol.RequestHeader(uint32(request.height), request.lca_hash)
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("request_header", header_request),
@@ -960,9 +847,7 @@ class WalletNode:
                 # requested. During normal operation, this might not be the case.
                 self.future_block_hashes[block.prev_header_hash] = block.header_hash
 
-                lca = self.wallet_state_manager.block_records[
-                    self.wallet_state_manager.lca
-                ]
+                lca = self.wallet_state_manager.block_records[self.wallet_state_manager.lca]
                 if (
                     block_record.height - lca.height < self.short_sync_threshold
                     and not self.wallet_state_manager.sync_mode
@@ -981,16 +866,11 @@ class WalletNode:
                 return
 
             # If the block has transactions that we are interested in, fetch adds/deletes
-            (
-                additions,
-                removals,
-            ) = await self.wallet_state_manager.get_filter_additions_removals(
+            (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
                 block_record, response.transactions_filter
             )
             if len(additions) > 0 or len(removals) > 0:
-                request_a = wallet_protocol.RequestAdditions(
-                    block.height, block.header_hash, additions
-                )
+                request_a = wallet_protocol.RequestAdditions(block.height, block.header_hash, additions)
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
                     Message("request_additions", request_a),
@@ -1010,9 +890,7 @@ class WalletNode:
                 block_record.new_challenge_hash,
                 block_record.timestamp,
             )
-            respond_header_msg: Optional[
-                wallet_protocol.RespondHeader
-            ] = await self._block_finished(
+            respond_header_msg: Optional[wallet_protocol.RespondHeader] = await self._block_finished(
                 block_record, block, response.transactions_filter
             )
             if respond_header_msg is None:
@@ -1021,9 +899,7 @@ class WalletNode:
                 response = respond_header_msg
 
     @api_request
-    async def reject_header_request(
-        self, response: wallet_protocol.RejectHeaderRequest
-    ):
+    async def reject_header_request(self, response: wallet_protocol.RejectHeaderRequest):
         """
         The full node has rejected our request for a header.
         """
@@ -1045,9 +921,7 @@ class WalletNode:
         if response.header_hash not in self.cached_blocks:
             self.log.warning("Do not have header for additions")
             return
-        block_record, header_block, transaction_filter = self.cached_blocks[
-            response.header_hash
-        ]
+        block_record, header_block, transaction_filter = self.cached_blocks[response.header_hash]
         assert response.height == block_record.height
 
         additions: List[Coin]
@@ -1057,9 +931,7 @@ class WalletNode:
             all_coins: List[Coin] = []
             for puzzle_hash, coin_list_0 in response.coins:
                 all_coins += coin_list_0
-            additions = await self.wallet_state_manager.get_relevant_additions(
-                all_coins
-            )
+            additions = await self.wallet_state_manager.get_relevant_additions(all_coins)
             # Verify root
             additions_merkle_set = MerkleSet()
 
@@ -1124,33 +996,25 @@ class WalletNode:
         if transaction_filter is None:
             raise RuntimeError("Got additions for block with no transactions.")
 
-        (_, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
-            new_br, transaction_filter
-        )
+        (
+            _,
+            removals,
+        ) = await self.wallet_state_manager.get_filter_additions_removals(new_br, transaction_filter)
         request_all_removals = False
         for coin in additions:
             puzzle_store = self.wallet_state_manager.puzzle_store
-            record_info: Optional[
-                DerivationRecord
-            ] = await puzzle_store.get_derivation_record_for_puzzle_hash(
+            record_info: Optional[DerivationRecord] = await puzzle_store.get_derivation_record_for_puzzle_hash(
                 coin.puzzle_hash.hex()
             )
-            if (
-                record_info is not None
-                and record_info.wallet_type == WalletType.COLOURED_COIN
-            ):
+            if record_info is not None and record_info.wallet_type == WalletType.COLOURED_COIN:
                 request_all_removals = True
                 break
 
         if len(removals) > 0 or request_all_removals:
             if request_all_removals:
-                request_r = wallet_protocol.RequestRemovals(
-                    header_block.height, header_block.header_hash, None
-                )
+                request_r = wallet_protocol.RequestRemovals(header_block.height, header_block.header_hash, None)
             else:
-                request_r = wallet_protocol.RequestRemovals(
-                    header_block.height, header_block.header_hash, removals
-                )
+                request_r = wallet_protocol.RequestRemovals(header_block.height, header_block.header_hash, removals)
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message("request_removals", request_r),
@@ -1170,9 +1034,9 @@ class WalletNode:
                 new_br.new_challenge_hash,
                 new_br.timestamp,
             )
-            respond_header_msg: Optional[
-                wallet_protocol.RespondHeader
-            ] = await self._block_finished(new_br, header_block, transaction_filter)
+            respond_header_msg: Optional[wallet_protocol.RespondHeader] = await self._block_finished(
+                new_br, header_block, transaction_filter
+            )
             if respond_header_msg is not None:
                 async for msg in self.respond_header(respond_header_msg):
                     yield msg
@@ -1191,14 +1055,10 @@ class WalletNode:
             response.header_hash not in self.cached_blocks
             or self.cached_blocks[response.header_hash][0].additions is None
         ):
-            self.log.warning(
-                "Do not have header for removals, or do not have additions"
-            )
+            self.log.warning("Do not have header for removals, or do not have additions")
             return
 
-        block_record, header_block, transaction_filter = self.cached_blocks[
-            response.header_hash
-        ]
+        block_record, header_block, transaction_filter = self.cached_blocks[response.header_hash]
         assert response.height == block_record.height
 
         all_coins: List[Coin] = []
@@ -1261,17 +1121,15 @@ class WalletNode:
         )
 
         # We have collected all three things: header, additions, and removals. Can proceed.
-        respond_header_msg: Optional[
-            wallet_protocol.RespondHeader
-        ] = await self._block_finished(new_br, header_block, transaction_filter)
+        respond_header_msg: Optional[wallet_protocol.RespondHeader] = await self._block_finished(
+            new_br, header_block, transaction_filter
+        )
         if respond_header_msg is not None:
             async for msg in self.respond_header(respond_header_msg):
                 yield msg
 
     @api_request
-    async def reject_removals_request(
-        self, response: wallet_protocol.RejectRemovalsRequest
-    ):
+    async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest):
         """
         The full node has rejected our request for removals.
         """
@@ -1281,9 +1139,7 @@ class WalletNode:
         self.log.error("Removals request rejected")
 
     @api_request
-    async def reject_additions_request(
-        self, response: wallet_protocol.RejectAdditionsRequest
-    ):
+    async def reject_additions_request(self, response: wallet_protocol.RejectAdditionsRequest):
         """
         The full node has rejected our request for additions.
         """
@@ -1304,9 +1160,7 @@ class WalletNode:
             self.log.info(
                 f"generator received {wrapper.header_hash} {wrapper.generator.get_tree_hash()} {wrapper.height}"
             )
-            await self.wallet_state_manager.generator_received(
-                wrapper.height, wrapper.header_hash, wrapper.generator
-            )
+            await self.wallet_state_manager.generator_received(wrapper.height, wrapper.header_hash, wrapper.generator)
 
     @api_request
     async def reject_generator(self, response: wallet_protocol.RejectGeneratorRequest):
