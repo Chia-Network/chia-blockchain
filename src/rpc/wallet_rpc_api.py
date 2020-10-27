@@ -434,7 +434,7 @@ class WalletRpcApi:
                     "coin_list": coin_list,
                     "newpuzhash": newpuzhash,
                     "pubkey": pubkey,
-                    "backup_dids": self.did_info.backup_ids,
+                    "backup_dids": did_wallet.did_info.backup_ids,
                     "num_verifications_required": did_wallet.did_info.num_of_backup_ids_needed,
                 }
 
@@ -623,7 +623,7 @@ class WalletRpcApi:
         return {
             "success": True,
             "recover_list": recover_hex_list,
-            "num_required": self.did_info.num_of_backup_ids_needed,
+            "num_required": wallet.did_info.num_of_backup_ids_needed,
         }
 
     async def did_recovery_spend(self, request):
@@ -636,7 +636,7 @@ class WalletRpcApi:
         # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
         info_dict = request["info_dict"]
         my_recovery_list: List[bytes] = wallet.did_info.backup_ids
-        if len(info_dict) < self.did_info.num_of_backup_ids_needed:
+        if len(info_dict) < wallet.did_info.num_of_backup_ids_needed:
             return {"success": False, "reason": "insufficient messages"}
         # convert info dict into recovery list - same order as wallet
         info_list = []

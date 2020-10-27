@@ -833,8 +833,10 @@ class DIDWallet:
         return await self.wallet_state_manager.get_frozen_balance(self.wallet_info.id)
 
     async def get_spendable_balance(self) -> uint64:
-        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-            self.wallet_info.id
+        spendable_am = (
+            await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
+                self.wallet_info.id
+            )
         )
         return spendable_am
 
