@@ -51,7 +51,7 @@ def full_block_to_sub_block_record(constants: ConsensusConstants, block: FullBlo
         block.foliage_sub_block.signed_data.pool_target.puzzle_hash,
         block.foliage_sub_block.signed_data.farmer_reward_puzzle_hash,
         required_iters,
-        block.challenge_chain_icp_proof is not None,
+        block.reward_chain_sub_block.challenge_chain_icp_sig is not None,
         timestamp,
         prev_block_hash,
         finished_challenge_slot_hashes,

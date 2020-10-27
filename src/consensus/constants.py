@@ -17,6 +17,7 @@ class ConsensusConstants:
     SIGNIFICANT_BITS: int  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     DISCRIMINANT_SIZE_BITS: int  # Max is 1024 (based on ClassGroupElement int size)
     NUMBER_ZERO_BITS_CHALLENGE_SIG: int  # H(plot signature of the challenge) must start with these many zeroes
+    NUMBER_ZERO_BITS_ICP_SIG: int  # H(plot signature of the icp) must start with these many zeroes
     SLOT_TIME_TARGET: int  # The target number of seconds per block
     EXTRA_ITERS_TIME_TARGET: float
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
@@ -75,7 +76,8 @@ testnet_kwargs = {
     "EPOCH_SUB_BLOCKS": 4096,  # The number of sub-blocks per epoch, mainnet 32256
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
-    "NUMBER_ZERO_BITS_CHALLENGE_SIG": 8,  # H(plot signature of the challenge) must start with these many zeroes
+    "NUMBER_ZERO_BITS_CHALLENGE_SIG": 3,  # H(plot signature of the challenge) must start with these many zeroes
+    "NUMBER_ZERO_BITS_ICP_SIG": 4,  # H(plot signature of the challenge) must start with these many zeroes
     "SLOT_TIME_TARGET": 300,  # The target number of seconds per slot
     "EXTRA_ITERS_TIME_TARGET": 37.5,
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more
