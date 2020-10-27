@@ -25,11 +25,13 @@ class ProofOfSpace(Streamable):
     def get_plot_id(self) -> bytes32:
         return self.calculate_plot_id(self.pool_public_key, self.plot_public_key)
 
-    def verify_and_get_quality_string(self, num_zero_bits: int) -> Optional[bytes32]:
+    def verify_and_get_quality_string(
+        self, constants: ConsensusConstants, icp_output: Optional[ClassgroupElement] = None
+    ) -> Optional[bytes32]:
         v: Verifier = Verifier()
         plot_id: bytes32 = self.get_plot_id()
 
-        if not self.can_create_proof(plot_id, self.challenge_hash, num_zero_bits):
+        if not self.can_create_proof(constants, plot_id, self.challenge_hash, icp_output):
             return None
 
         quality_str = v.validate_proof(plot_id, self.size, self.challenge_hash, bytes(self.proof))
