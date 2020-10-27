@@ -34,6 +34,7 @@ import { service_plotter } from '../../util/service_names';
 import DashboardTitle from '../dashboard/DashboardTitle';
 import Flex from '../flex/Flex';
 import Log from '../log/Log';
+import LayoutMain from '../layout/LayoutMain';
 
 const StyledContainer = styled(Container)`
   margin-top: ${({ theme }) => `${theme.spacing(2)}px`};
@@ -650,28 +651,15 @@ function Proggress() {
 
 export default function Plotter() {
   return (
-    <>
-      <DashboardTitle>
-        <Trans id="Plotter.title">Plot</Trans>
-      </DashboardTitle>
-      <Flex
-        flexDirection="column"
-        flexGrow={1}
-        height="100%"
-        overflow="auto"
-        alignItems="center"
-      >
-        <StyledContainer maxWidth="lg">
-          <Grid container spacing={3}>
-            <Grid xs={12} item>
-              <CreatePlot />
-            </Grid>
-            <Grid xs={12} item>
-              <Proggress />
-            </Grid>
-          </Grid>
-        </StyledContainer>
-      </Flex>
-    </>
+    <LayoutMain title={<Trans id="Plotter.title">Plot</Trans>}>
+      <Grid container spacing={3}>
+        <Grid xs={12} item>
+          <CreatePlot />
+        </Grid>
+        <Grid xs={12} item>
+          <Proggress />
+        </Grid>
+      </Grid>
+    </LayoutMain>
   );
 }

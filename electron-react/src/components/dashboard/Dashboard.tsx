@@ -5,7 +5,7 @@ import { AppBar, Toolbar, Drawer, Divider } from '@material-ui/core';
 import Wallets from '../wallet/Wallets';
 import FullNode from '../fullNode/FullNode';
 import Plotter from '../plotter/Plotter';
-import Farmer from '../farmer/Farmer';
+import Farm from '../farm/Farm';
 import Brand from '../brand/Brand';
 import Flex from '../flex/Flex';
 import DashboardSideBar from './DashboardSideBar';
@@ -89,7 +89,7 @@ export default function Dashboard() {
                 <Plotter />
               </Route>
               <Route path={`${path}/farm`}>
-                <Farmer />
+                <Farm />
               </Route>
               <Route path={`${path}/trade`}>
                 <TradeManager />

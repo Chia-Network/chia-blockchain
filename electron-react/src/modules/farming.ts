@@ -1,13 +1,18 @@
 import { service_farmer, service_harvester } from '../util/service_names';
+import type Plot from '../types/Plot';
 
 type FarmingState = {
   farmer: {
-    latest_challenges: string[];
+    latest_challenges: {
+      challenge: string,
+      height: number,
+      estimates: number[],
+    }[];
     connections: string[];
     open_connection_error?: string;
   };
   harvester: {
-    plots: string[];
+    plots: Plot[];
     not_found_filenames: string[];
     failed_to_open_filenames: string[];
     plot_directories: string[];

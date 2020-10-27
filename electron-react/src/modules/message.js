@@ -25,6 +25,7 @@ const config = require('../config/config');
 
 const { backup_host } = config;
 
+// TODO this is not doing anything because wallet id is missing
 export const clearSend = () => {
   const action = {
     type: 'CLEAR_SEND',

@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
+import { useAsync } from 'react-use';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
-import Container from '@material-ui/core/Container';
 import { useSelector, useDispatch } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
@@ -13,6 +13,8 @@ import {
   ListItem,
   ListItemText,
   Tooltip,
+  Theme,
+  Container,
 } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
 import Table from '@material-ui/core/Table';
@@ -32,6 +34,7 @@ import TablePagination from '@material-ui/core/TablePagination';
 import RefreshIcon from '@material-ui/icons/Refresh';
 import HelpIcon from '@material-ui/icons/Help';
 import Flex from '../flex/Flex';
+import LayoutMain from '../layout/LayoutMain';
 
 import { closeConnection, openConnection } from '../../modules/farmerMessages';
 import {
@@ -44,15 +47,19 @@ import Connections from '../connections/Connections';
 
 import { big_int_to_array, arr_to_hex, sha256 } from '../../util/utils';
 import { mojo_to_chia_string } from '../../util/chia';
+import type Wallet from '../../types/Wallet';
 import { clearSend } from '../../modules/message';
 import AddPlotDialog from './AddPlotDialog';
 import DashboardTitle from '../dashboard/DashboardTitle';
+import { RootState } from '../../modules/rootReducer';
+import Plot from '../../types/Plot';
+import FarmOverview from './overview/FarmOverview';
 
 /* global BigInt */
 
 const drawerWidth = 180;
 
-const styles = (theme) => ({
+const styles = (theme: Theme) => ({
   tabs: {
     flexGrow: 1,
     marginTop: 40,
@@ -89,15 +96,6 @@ const styles = (theme) => ({
   table: {
     minWidth: 650,
   },
-  drawerPaper: {
-    position: 'relative',
-    whiteSpace: 'nowrap',
-    width: drawerWidth,
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  },
   addPlotButton: {
     marginLeft: theme.spacing(2),
   },
@@ -106,11 +104,11 @@ const styles = (theme) => ({
 const useStyles = makeStyles(styles);
 
 const getStatusItems = (
-  connected,
-  farmerSpace,
-  totalChia,
-  biggestHeight,
-  totalNetworkSpace,
+  connected: boolean,
+  farmerSpace: number,
+  totalChia: BigInt,
+  biggestHeight: number,
+  totalNetworkSpace: number,
 ) => {
   const status_items = [];
 
@@ -133,8 +131,7 @@ const getStatusItems = (
     };
     status_items.push(item);
   }
-  const proportion =
-    Number.parseFloat(farmerSpace) / Number.parseFloat(totalNetworkSpace);
+  const proportion = farmerSpace / totalNetworkSpace;
   const totalHours = 5 / proportion / 60;
 
   status_items.push({
@@ -176,7 +173,16 @@ const getStatusItems = (
   return status_items;
 };
 
-const StatusCell = (props) => {
+type StatusCellProps = {
+  item: {
+    label: ReactNode,
+    value: ReactNode,
+    colour?: string,
+    tooltip?: ReactNode,
+  },
+};
+
+const StatusCell = (props: StatusCellProps) => {
   const classes = useStyles();
   const { item } = props;
   const { label } = item;
@@ -208,18 +214,23 @@ const StatusCell = (props) => {
   );
 };
 
-const FarmerStatus = (props) => {
-  const plots = useSelector((state) => state.farming_state.harvester.plots);
+type FarmerStatusProps = {
+  totalChiaFarmed: BigInt,
+  biggestHeight: number,
+};
+
+const FarmerStatus = (props: FarmerStatusProps) => {
+  const plots = useSelector((state: RootState) => state.farming_state.harvester.plots);
   const totalNetworkSpace = useSelector(
-    (state) => state.full_node_state.blockchain_state.space,
+    (state: RootState) => state.full_node_state.blockchain_state.space,
   );
 
   let farmerSpace = 0;
   if (plots !== undefined) {
-    farmerSpace = plots.map((p) => p.file_size).reduce((a, b) => a + b, 0);
+    farmerSpace = plots.map((p: Plot) => p.file_size).reduce((a, b) => a + b, 0);
   }
 
-  const connected = useSelector((state) => state.daemon_state.farmer_connected);
+  const connected = useSelector((state: RootState) => state.daemon_state.farmer_connected);
   const statusItems = getStatusItems(
     connected,
     farmerSpace,
@@ -239,18 +250,18 @@ const FarmerStatus = (props) => {
             </Typography>
           </div>
         </Grid>
-        {statusItems.map((item) => (
-          <StatusCell item={item} key={item.label} />
+        {statusItems.map((item, index) => (
+          <StatusCell item={item} key={index} />
         ))}
       </Grid>
     </Paper>
   );
 };
 
-const Challenges = (props) => {
+const Challenges = () => {
   const classes = useStyles();
   let latest_challenges = useSelector(
-    (state) => state.farming_state.farmer.latest_challenges,
+    (state: RootState) => state.farming_state.farmer.latest_challenges,
   );
 
   if (!latest_challenges) {
@@ -315,15 +326,15 @@ const Challenges = (props) => {
   );
 };
 
-const Plots = (props) => {
+const Plots = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const plots = useSelector((state) => state.farming_state.harvester.plots);
+  const plots = useSelector((state: RootState) => state.farming_state.harvester.plots);
   const not_found_filenames = useSelector(
-    (state) => state.farming_state.harvester.not_found_filenames,
+    (state: RootState) => state.farming_state.harvester.not_found_filenames,
   );
   const failed_to_open_filenames = useSelector(
-    (state) => state.farming_state.harvester.failed_to_open_filenames,
+    (state: RootState) => state.farming_state.harvester.failed_to_open_filenames,
   );
   plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
@@ -332,11 +343,11 @@ const Plots = (props) => {
   const [deletePlotName, deletePlotSetName] = React.useState('');
   const [deletePlotOpen, deletePlotSetOpen] = React.useState(false);
 
-  const handleChangePage = (event, newPage) => {
+  const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event) => {
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
@@ -387,9 +398,6 @@ const Plots = (props) => {
                 </Trans>
               </Button>
               <AddPlotDialog
-                classes={{
-                  paper: classes.paper,
-                }}
                 id="ringtone-menu"
                 keepMounted
                 open={addDirectoryOpen}
@@ -496,7 +504,7 @@ const Plots = (props) => {
                   that the storage devices are properly connected.
                 </Trans>
               </p>
-              <List dense={classes.dense}>
+              <List>
                 {not_found_filenames.map((filename) => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
@@ -534,7 +542,7 @@ const Plots = (props) => {
                   forever.
                 </Trans>
               </p>
-              <List dense={classes.dense}>
+              <List>
                 {failed_to_open_filenames.map((filename) => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
@@ -593,21 +601,26 @@ const Plots = (props) => {
   );
 };
 
-const FarmerContent = (props) => {
+type FarmerContentProps = {
+  totalChiaFarmed: BigInt,
+  biggestHeight: number,
+};
+
+const FarmerContent = (props: FarmerContentProps) => {
   const dispatch = useDispatch();
 
   const connections = useSelector(
-    (state) => state.farming_state.farmer.connections,
+    (state: RootState) => state.farming_state.farmer.connections,
   );
 
   const connectionError = useSelector(
-    (state) => state.farming_state.farmer.open_connection_error,
+    (state: RootState) => state.farming_state.farmer.open_connection_error,
   );
 
-  const openConnectionCallback = (host, port) => {
+  const openConnectionCallback = (host: string, port: number) => {
     dispatch(openConnection(host, port));
   };
-  const closeConnectionCallback = (node_id) => {
+  const closeConnectionCallback = (node_id: string) => {
     dispatch(closeConnection(node_id));
   };
   return (
@@ -638,15 +651,90 @@ const FarmerContent = (props) => {
     </>
   );
 };
+/*
+async function getStatistics(wallets: Wallet[]): Promise<{
+  totalChia: BigInt,
+  biggestHeight: number,
+}> {
+  let totalChia = BigInt(0);
+  let biggestHeight = 0;
 
-export default function Farmer(props) {
+  const connected = useSelector((state: RootState) => state.daemon_state.farmer_connected);
+  const totalNetworkSpace = useSelector(
+    (state: RootState) => state.full_node_state.blockchain_state.space,
+  );
+
+  for (const wallet of wallets) {
+    if (!wallet) {
+      continue;
+    }
+
+    for (const tx of wallet.transactions) {
+      if (tx.additions.length === 0) {
+        continue;
+      }
+
+      console.log('Checking tx', tx);
+      // Height here is filled into the whole 256 bits (32 bytes) of the parent
+      const hexHeight = arr_to_hex(
+        big_int_to_array(BigInt(tx.confirmed_at_index), 32),
+      );
+      // Height is a 32 bit int so hashing it requires serializing it to 4 bytes
+      const hexHeightHashBytes = await sha256(
+        big_int_to_array(BigInt(tx.confirmed_at_index), 4),
+      );
+      const hexHeightDoubleHashBytes = await sha256(hexHeightHashBytes);
+      const hexHeightDoubleHash = arr_to_hex(hexHeightDoubleHashBytes);
+
+      if (
+        hexHeight === tx.additions[0].parent_coin_info ||
+        hexHeight === tx.additions[0].parent_coin_info.slice(2) ||
+        hexHeightDoubleHash === tx.additions[0].parent_coin_info ||
+        hexHeightDoubleHash === tx.additions[0].parent_coin_info.slice(2)
+      ) {
+        totalChia += BigInt(tx.amount);
+        if (tx.confirmed_at_index > biggestHeight) {
+          biggestHeight = tx.confirmed_at_index;
+        }
+      }
+    }
+  }
+
+  return {
+    totalChia,
+    biggestHeight,
+  };
+}*/
+
+export default function Farm(): JSX.Element {
+  const dispatch = useDispatch();
+  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
+  // const statistics = useAsync(() => getStatistics(wallets), [wallets]);
+
+  return (
+    <LayoutMain title={<Trans id="Farmer.title">Farming</Trans>}>
+      <Flex flexDirection="column" gap={2}>
+        <FarmOverview />
+
+        <FarmerContent
+            totalChiaFarmed={BigInt(23)}
+            biggestHeight={120}
+          />
+      </Flex>
+    </LayoutMain>
+  );
+}
+
+type FarmerProps = {};
+
+function Farmer(props: FarmerProps) {
   const dispatch = useDispatch();
 
   const [totalChiaFarmed, setTotalChiaFarmed] = useState(BigInt(0));
   const [biggestHeight, setBiggestHeight] = useState(0);
   const [didMount, setDidMount] = useState(false);
 
-  const wallets = useSelector((state) => state.wallet_state.wallets);
+  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
 
   const checkRewards = useCallback(async () => {
     let totalChia = BigInt(0);
