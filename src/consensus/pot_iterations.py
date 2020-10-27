@@ -48,14 +48,14 @@ def calculate_iterations_quality(
 
 
 def calculate_iterations(
+    constants: ConsensusConstants,
     proof_of_space: ProofOfSpace,
     difficulty: int,
-    num_zero_bits: int,
 ) -> uint64:
     """
     Convenience function to calculate the number of iterations using the proof instead
     of the quality. The quality must be retrieved from the proof.
     """
-    quality: bytes32 = proof_of_space.verify_and_get_quality_string(num_zero_bits)
+    quality: bytes32 = proof_of_space.verify_and_get_quality_string(constants)
     assert quality is not None
     return calculate_iterations_quality(quality, proof_of_space.size, difficulty)

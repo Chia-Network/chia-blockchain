@@ -19,13 +19,13 @@ from src.timelord import Timelord
 from src.server.connection import PeerInfo
 from src.util.ints import uint16, uint32
 from src.server.start_service import Service
-from src.util.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert
 from src.util.chech32 import encode_puzzle_hash
+from src.consensus.constants import constants
 
 
-test_constants, bt = make_test_constants_with_genesis(
-    {
+test_constants = constants.replace(
+    **{
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,
         "BLOCK_TIME_TARGET": 10,
@@ -36,10 +36,12 @@ test_constants, bt = make_test_constants_with_genesis(
         "TX_PER_SEC": 1,
         "MEMPOOL_BLOCK_BUFFER": 10,
         "MIN_ITERS_STARTING": 50 * 1,
-        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
+        "NUMBER_ZERO_BITS_PLOT_FILTER": 1,
+        "NUMBER_ZERO_BITS_ICP_FILTER": 1,
         "CLVM_COST_RATIO_CONSTANT": 108,
     }
 )
+bt = None  # TODO: almog
 
 global_config = load_config(bt.root_path, "config.yaml")
 self_hostname = global_config["self_hostname"]
@@ -357,9 +359,7 @@ async def setup_vdf_clients(port):
     await kill_processes()
 
 
-async def setup_timelord(
-    port, full_node_port, sanitizer, consensus_constants: ConsensusConstants
-):
+async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: ConsensusConstants):
     config = load_config(bt.root_path, "config.yaml", "timelord")
     config["sanitizer_mode"] = sanitizer
     if sanitizer:
@@ -410,12 +410,8 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
     node_iters = [
-        setup_full_node(
-            consensus_constants, "blockchain_test.db", 21234, simulator=False
-        ),
-        setup_full_node(
-            consensus_constants, "blockchain_test_2.db", 21235, simulator=False
-        ),
+        setup_full_node(consensus_constants, "blockchain_test.db", 21234, simulator=False),
+        setup_full_node(consensus_constants, "blockchain_test_2.db", 21235, simulator=False),
     ]
 
     fn1, s1 = await node_iters[0].__anext__()
@@ -426,16 +422,10 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
     await _teardown_nodes(node_iters)
 
 
-async def setup_node_and_wallet(
-    consensus_constants: ConsensusConstants, starting_height=None
-):
+async def setup_node_and_wallet(consensus_constants: ConsensusConstants, starting_height=None):
     node_iters = [
-        setup_full_node(
-            consensus_constants, "blockchain_test.db", 21234, simulator=False
-        ),
-        setup_wallet_node(
-            21235, consensus_constants, None, starting_height=starting_height
-        ),
+        setup_full_node(consensus_constants, "blockchain_test.db", 21234, simulator=False),
+        setup_wallet_node(21235, consensus_constants, None, starting_height=starting_height),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()
@@ -503,12 +493,8 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         setup_farmer(21235, consensus_constants, uint16(21237)),
         setup_vdf_clients(8000),
         setup_timelord(21236, 21237, False, consensus_constants),
-        setup_full_node(
-            consensus_constants, "blockchain_test.db", 21237, 21232, False, 10
-        ),
-        setup_full_node(
-            consensus_constants, "blockchain_test_2.db", 21238, 21232, False, 10
-        ),
+        setup_full_node(consensus_constants, "blockchain_test.db", 21237, 21232, False, 10),
+        setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, 21232, False, 10),
         setup_vdf_clients(7999),
         setup_timelord(21239, 21238, True, consensus_constants),
     ]

@@ -1206,7 +1206,7 @@ class FullNode:
             request.proof_of_space,
             difficulty,
             vdf_min_iters,
-            self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
+            self.constants.NUMBER_ZERO_BITS_PLOT_FILTER,
         )
 
         removal_merkle_set = MerkleSet()
