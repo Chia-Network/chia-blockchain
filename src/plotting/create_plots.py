@@ -25,22 +25,28 @@ from src.wallet.derive_keys import (
 log = logging.getLogger(__name__)
 
 
-def get_default_farmer_public_key() -> G1Element:
+def get_farmer_public_key(alt_fingerprint=None) -> G1Element:
     keychain: Keychain = Keychain()
-    sk_ent = keychain.get_first_private_key()
+    if alt_fingerprint is not None:
+        sk_ent = keychain.get_private_key_by_fingerprint(alt_fingerprint)
+    else:
+        sk_ent = keychain.get_first_private_key()
     if sk_ent is None:
         raise RuntimeError(
-            "No keys, please run 'chia keys generate' or provide a public key with -f"
+            "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -f"
         )
     return master_sk_to_farmer_sk(sk_ent[0]).get_g1()
 
 
-def get_default_pool_public_key() -> G1Element:
+def get_pool_public_key(alt_fingerprint=None) -> G1Element:
     keychain: Keychain = Keychain()
-    sk_ent = keychain.get_first_private_key()
+    if alt_fingerprint is not None:
+        sk_ent = keychain.get_private_key_by_fingerprint(alt_fingerprint)
+    else:
+        sk_ent = keychain.get_first_private_key()
     if sk_ent is None:
         raise RuntimeError(
-            "No keys, please run 'chia keys generate' or provide a public key with -f"
+            "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -p"
         )
     return master_sk_to_pool_sk(sk_ent[0]).get_g1()
 
@@ -53,17 +59,22 @@ def create_plots(
     if args.tmp2_dir is None:
         args.tmp2_dir = args.tmp_dir
 
+    if args.alt_fingerprint is not None:
+        alt_fingerprint = args.alt_fingerprint
+    else:
+        alt_fingerprint = None
+
     farmer_public_key: G1Element
     if args.farmer_public_key is not None:
         farmer_public_key = G1Element.from_bytes(bytes.fromhex(args.farmer_public_key))
     else:
-        farmer_public_key = get_default_farmer_public_key()
+        farmer_public_key = get_farmer_public_key(alt_fingerprint)
 
     pool_public_key: G1Element
     if args.pool_public_key is not None:
         pool_public_key = bytes.fromhex(args.pool_public_key)
     else:
-        pool_public_key = get_default_pool_public_key()
+        pool_public_key = get_pool_public_key(alt_fingerprint)
     if args.num is not None:
         num = args.num
     else:
