@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import Tuple, List, Optional
-from blspy import G2Element
 
 from src.types.name_puzzle_condition import NPC
 from src.types.coin import Coin
@@ -8,7 +7,7 @@ from src.types.sized_bytes import bytes32
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.condition_tools import created_outputs_for_conditions_dict
 from src.util.streamable import Streamable, streamable
-from src.types.vdf import VDFProof, VDFInfo
+from src.types.vdf import VDFProof
 from src.types.challenge_slot import ChallengeSlot
 from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot, EndOfSlotProofs
 from src.types.reward_chain_sub_block import RewardChainSubBlock
@@ -16,21 +15,16 @@ from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
 from src.types.program import Program
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
-from src.types.sub_epoch_summary import SubEpochSummary
 
 
 @dataclass(frozen=True)
 @streamable
 class FullBlock(Streamable):
     # All the information required to validate a block
-    subepoch_summary: Optional[SubEpochSummary]  # If end of a sub-epoch
     finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
-    challenge_chain_icp_vdf: Optional[VDFInfo]  # If included in challenge chain
-    challenge_chain_icp_proof: Optional[VDFProof]  # If included in challenge chain
-    challenge_chain_icp_signature: Optional[G2Element]  # If included in challenge chain
-    challenge_chain_ip_vdf: VDFInfo  # From the previous icp iters (but without infusion)
-    challenge_chain_ip_proof: VDFProof  # From the previous icp iters (but without infusion)
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
+    challenge_chain_icp_proof: Optional[VDFProof]  # Iff challenge block
+    challenge_chain_ip_proof: VDFProof
     reward_chain_icp_proof: VDFProof
     reward_chain_ip_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data

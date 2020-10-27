@@ -231,14 +231,10 @@ class Blockchain:
             return ReceiveBlockResult.DISCONNECTED_BLOCK, None
 
         curr_header_block = HeaderBlock(
-            block.subepoch_summary,
             block.finished_slots,
-            block.challenge_chain_icp_vdf,
-            block.challenge_chain_icp_proof,
-            block.challenge_chain_icp_signature,
-            block.challenge_chain_ip_vdf,
-            block.challenge_chain_ip_proof,
             block.reward_chain_sub_block,
+            block.challenge_chain_icp_proof,
+            block.challenge_chain_ip_proof,
             block.reward_chain_icp_proof,
             block.reward_chain_ip_proof,
             block.foliage_sub_block,
@@ -357,12 +353,9 @@ class Blockchain:
             return Err.INVALID_PREV_BLOCK_HASH
 
         unfinished_header_block = UnfinishedHeaderBlock(
-            block.subepoch_summary,
             block.finished_slots,
-            block.challenge_chain_icp_vdf,
-            block.challenge_chain_icp_proof,
-            block.challenge_chain_icp_signature,
             block.reward_chain_sub_block,
+            block.challenge_chain_icp_proof,
             block.reward_chain_icp_proof,
             block.foliage_sub_block,
             block.foliage_block,
