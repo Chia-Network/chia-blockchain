@@ -101,17 +101,12 @@ async def validate_unfinished_header_block(
                 assert challenge_slot.icp_vdf is not None
                 assert challenge_slot.ip_vdf is not None
 
-                # 1e. Check challenge chain infusion output (proof of space, icp output, icp sig, ip output)
-                # using the sub-blocks that we have already verified before
                 challenge_infusion_point = ChallengeChainInfusionPoint(
                     challenge_slot.proof_of_space,
                     challenge_slot.icp_vdf,
                     challenge_slot.icp_signature,
                     challenge_slot.ip_vdf,
                 ).get_hash()
-
-                if curr.challenge_chain_data_hash != challenge_infusion_point:
-                    return Err.INVALID_CHALLENGE_CHAIN_DATA
 
                 # 1f. Check challenge chain end of slot VDF
                 ip_iters = calculate_ip_iters(constants, curr.ips, curr.required_iters)
@@ -384,7 +379,7 @@ async def validate_unfinished_header_block(
         # 8. Check icp challenge (this is checked along with 11 in is_valid method)
         if new_slot and not overflow:
             # Start from start of this slot. Case of no overflow slots. Also includes genesis block after empty slot(s),
-            # but overflowing
+            # but not overflowing
             prior_point = header_block.finished_slots[-1][1].get_hash()
             icp_vdf_iters = icp_iters
             cc_vdf_input = ClassgroupElement.get_default_element()
@@ -410,18 +405,18 @@ async def validate_unfinished_header_block(
             prior_point,
             ClassgroupElement.get_default_element(),
             icp_vdf_iters,
-            header_block.reward_chain_sub_block.infusion_challenge_point_vdf.output,
+            header_block.reward_chain_sub_block.reward_chain_icp_vdf.output,
         )
         if not header_block.reward_chain_icp_proof.is_valid(
-            constants, header_block.reward_chain_sub_block.infusion_challenge_point_vdf, target_vdf_info
+            constants, header_block.reward_chain_sub_block.reward_chain_icp_vdf, target_vdf_info
         ):
             return Err.INVALID_RC_ICP_VDF
 
         # 10. Check icp signature
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
-            bytes(header_block.reward_chain_sub_block.infusion_challenge_point),
-            header_block.reward_chain_sub_block.infusion_challenge_point_sig,
+            bytes(header_block.reward_chain_sub_block.reward_chain_icp_vdf),
+            header_block.reward_chain_sub_block.reward_chain_icp_sig,
         ):
             return Err.INVALID_RC_SIGNATURE
 
@@ -596,7 +591,7 @@ async def validate_finished_header_block(
             constants, sub_blocks, height_to_hash, header_block.prev_header_hash, new_slot
         )
     q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
-        constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
+        constants, header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output
     )
     # TODO: remove redundant verification of PoSpace
     required_iters: uint64 = calculate_iterations_quality(
@@ -655,7 +650,7 @@ async def validate_finished_header_block(
         rc_vdf_challenge,
         ClassgroupElement.get_default_element(),
         ip_vdf_iters,
-        header_block.reward_chain_sub_block.infusion_challenge_point_vdf.output,
+        header_block.reward_chain_sub_block.reward_chain_ip_vdf.output,
     )
     if not header_block.reward_chain_ip_proof.is_valid(
         constants, header_block.reward_chain_sub_block.reward_chain_ip_vdf, rc_target_vdf_info
