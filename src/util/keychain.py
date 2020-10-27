@@ -216,8 +216,7 @@ class Keychain:
         return None
 
     def get_private_key_by_fingerprint(
-        self, fingerprint: int,
-        passphrases: List[str] = [""]
+        self, fingerprint: int, passphrases: List[str] = [""]
     ) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Return first private key which have the given public key fingerprint.
