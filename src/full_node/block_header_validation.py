@@ -16,7 +16,7 @@ from src.types.vdf import VDFInfo
 from src.consensus.pot_iterations import (
     is_overflow_sub_block,
     calculate_ip_iters,
-    calculate_infusion_challenge_point_iters,
+    calculate_icp_iters,
     calculate_slot_iters,
     calculate_iterations_quality,
 )
@@ -306,7 +306,7 @@ async def validate_unfinished_header_block(
             difficulty,
         )
 
-        icp_iters: uint64 = calculate_infusion_challenge_point_iters(constants, ips, required_iters)
+        icp_iters: uint64 = calculate_icp_iters(constants, ips, required_iters)
         ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
         slot_iters: uint64 = calculate_slot_iters(constants, ips)
         overflow = is_overflow_sub_block(constants, ips, required_iters)
