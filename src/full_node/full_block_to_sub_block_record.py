@@ -5,7 +5,6 @@ from src.types.full_block import FullBlock
 from src.full_node.sub_block_record import SubBlockRecord
 from src.consensus.constants import ConsensusConstants
 from src.types.sized_bytes import bytes32
-from src.types.challenge_slot import ChallengeChainInfusionPoint
 from src.util.ints import uint64
 
 
@@ -23,15 +22,6 @@ def full_block_to_sub_block_record(constants: ConsensusConstants, block: FullBlo
         difficulty,
     )
 
-    if block.challenge_chain_icp_vdf is None:
-        challenge_data = None
-    else:
-        challenge_data = ChallengeChainInfusionPoint(
-            block.reward_chain_sub_block.proof_of_space,
-            block.challenge_chain_icp_vdf,
-            block.challenge_chain_icp_signature,
-            block.challenge_chain_ip_vdf,
-        ).get_hash()
     if block.finished_slots is not None:
         finished_challenge_slot_hashes = [cs.get_hash() for cs, _, _ in block.finished_slots]
         finished_reward_slot_hashes = [rs.get_hash() for _, rs, _ in block.finished_slots]
@@ -42,23 +32,26 @@ def full_block_to_sub_block_record(constants: ConsensusConstants, block: FullBlo
         finished_reward_slot_hashes = None
         deficit = None
         previous_slot_non_overflow_infusions = None
-    if block.subepoch_summary is not None:
-        sub_epoch_summary_included_hash = block.subepoch_summary.get_hash()
-    else:
-        sub_epoch_summary_included_hash = None
+
+    sub_epoch_summary_included_hash = None
+    if block.finished_slots is not None:
+        for cs, _, _ in block.finished_slots:
+            if cs.subepoch_summary_hash is not None:
+                sub_epoch_summary_included_hash = cs.subepoch_summary_hash
+
     return SubBlockRecord(
         block.header_hash,
         block.prev_header_hash,
         block.height,
         block.weight,
         block.total_iters,
-        block.challenge_chain_ip_vdf.output,
+        block.reward_chain_sub_block.challenge_chain_ip_vdf.output,
         block.reward_chain_sub_block.get_hash(),
         ips,
         block.foliage_sub_block.signed_data.pool_target.puzzle_hash,
         block.foliage_sub_block.signed_data.farmer_reward_puzzle_hash,
         required_iters,
-        challenge_data,
+        block.challenge_chain_icp_proof is not None,
         timestamp,
         prev_block_hash,
         finished_challenge_slot_hashes,
