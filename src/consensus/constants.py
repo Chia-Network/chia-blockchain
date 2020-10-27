@@ -32,8 +32,6 @@ class ConsensusConstants:
     # Replace this any time the constants change.
     FIRST_CC_CHALLENGE: bytes
     FIRST_RC_CHALLENGE: bytes
-    GENESIS_BLOCK: bytes
-    FIRST_CHALLENGE: bytes
     GENESIS_PRE_FARM_PUZZLE_HASH: bytes
     MAX_VDF_WITNESS_SIZE: int
     # Target tx count per sec
