@@ -69,9 +69,7 @@ class FullNodeRpcApi:
             raise ValueError("No LCA block is set")
         min_iters: uint64 = self.service.blockchain.get_next_min_iters(lca_block)
         ips: uint64 = uint64(
-            min_iters
-            * self.service.constants.MIN_ITERS_PROPORTION
-            // self.service.constants.BLOCK_TIME_TARGET
+            min_iters * self.service.constants.MIN_ITERS_PROPORTION // self.service.constants.BLOCK_TIME_TARGET
         )
 
         tip_hashes = []
@@ -86,9 +84,7 @@ class FullNodeRpcApi:
 
         if lca.height > 1:
             newer_block_hex = lca.header_hash.hex()
-            older_block_hex = self.service.blockchain.height_to_hash[
-                max(1, lca.height - 100)
-            ].hex()
+            older_block_hex = self.service.blockchain.height_to_hash[max(1, lca.height - 100)].hex()
             space = await self.get_network_space(
                 {
                     "newer_block_header_hash": newer_block_hex,
@@ -122,9 +118,7 @@ class FullNodeRpcApi:
             raise ValueError("No header_hash in request")
         header_hash = hexstr_to_bytes(request["header_hash"])
 
-        block: Optional[FullBlock] = await self.service.block_store.get_block(
-            header_hash
-        )
+        block: Optional[FullBlock] = await self.service.block_store.get_block(header_hash)
         if block is None:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
@@ -135,9 +129,7 @@ class FullNodeRpcApi:
             raise ValueError("No height in request")
         height = request["height"]
         header_height = uint32(int(height))
-        header_hash: Optional[bytes32] = self.service.blockchain.height_to_hash.get(
-            header_height, None
-        )
+        header_hash: Optional[bytes32] = self.service.blockchain.height_to_hash.get(header_height, None)
         if header_hash is None:
             raise ValueError(f"Height {height} not found in chain")
         header: Header = self.service.blockchain.headers[header_hash]
@@ -148,9 +140,7 @@ class FullNodeRpcApi:
             raise ValueError("header_hash not in request")
         header_hash_str = request["header_hash"]
         header_hash = hexstr_to_bytes(header_hash_str)
-        header: Optional[Header] = self.service.blockchain.headers.get(
-            header_hash, None
-        )
+        header: Optional[Header] = self.service.blockchain.headers.get(header_hash, None)
         return {"header": header}
 
     async def get_unfinished_block_headers(self, request: Dict) -> Optional[Dict]:
@@ -158,9 +148,7 @@ class FullNodeRpcApi:
             raise ValueError("height not in request")
         height = request["height"]
         response_headers: List[Header] = []
-        for block in (
-            await self.service.full_node_store.get_unfinished_blocks()
-        ).values():
+        for block in (await self.service.full_node_store.get_unfinished_blocks()).values():
             if block.height == height:
                 response_headers.append(block.header)
         return {"headers": response_headers}
@@ -184,9 +172,7 @@ class FullNodeRpcApi:
                     break
                 if current.height == 0:
                     break
-                header: Optional[Header] = self.service.blockchain.headers.get(
-                    current.prev_header_hash, None
-                )
+                header: Optional[Header] = self.service.blockchain.headers.get(current.prev_header_hash, None)
                 assert header is not None
                 headers[header.header_hash] = header
                 current = header
@@ -200,18 +186,8 @@ class FullNodeRpcApi:
                 assert header is not None
                 all_unfinished[header.header_hash] = header
 
-        sorted_headers = [
-            v
-            for v in sorted(
-                headers.values(), key=lambda item: item.height, reverse=True
-            )
-        ]
-        sorted_unfinished = [
-            v
-            for v in sorted(
-                all_unfinished.values(), key=lambda item: item.height, reverse=True
-            )
-        ]
+        sorted_headers = [v for v in sorted(headers.values(), key=lambda item: item.height, reverse=True)]
+        sorted_unfinished = [v for v in sorted(all_unfinished.values(), key=lambda item: item.height, reverse=True)]
 
         finished_with_meta = []
         finished_header_hashes = set()
@@ -252,9 +228,7 @@ class FullNodeRpcApi:
         Calculates the sum of min_iters from all blocks starting from
         old and up to and including new_block, but not including old_block.
         """
-        older_block_parent = await self.service.block_store.get_block(
-            older_block.prev_header_hash
-        )
+        older_block_parent = await self.service.block_store.get_block(older_block.prev_header_hash)
         if older_block_parent is None:
             raise ValueError("Older block not found")
         older_diff = older_block.weight - older_block_parent.weight
@@ -262,27 +236,19 @@ class FullNodeRpcApi:
             older_block.proof_of_space,
             older_diff,
             older_block.proof_of_time.number_of_iterations,
-            self.service.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
+            self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER,
         )
         # We do not count the min iters in the old block, since it's not included in the range
         total_mi: uint64 = uint64(0)
         for curr_h in range(older_block.height + 1, newer_block.height + 1):
-            if (
-                curr_h % self.service.constants.DIFFICULTY_EPOCH
-            ) == self.service.constants.DIFFICULTY_DELAY:
-                curr_b_header_hash = self.service.blockchain.height_to_hash.get(
-                    uint32(int(curr_h))
-                )
+            if (curr_h % self.service.constants.DIFFICULTY_EPOCH) == self.service.constants.DIFFICULTY_DELAY:
+                curr_b_header_hash = self.service.blockchain.height_to_hash.get(uint32(int(curr_h)))
                 if curr_b_header_hash is None:
                     raise ValueError(f"Curr header hash {curr_h} not found")
-                curr_b_block = await self.service.block_store.get_block(
-                    curr_b_header_hash
-                )
+                curr_b_block = await self.service.block_store.get_block(curr_b_header_hash)
                 if curr_b_block is None or curr_b_block.proof_of_time is None:
                     raise ValueError("Block invalid")
-                curr_parent = await self.service.block_store.get_block(
-                    curr_b_block.prev_header_hash
-                )
+                curr_parent = await self.service.block_store.get_block(curr_b_block.prev_header_hash)
                 if curr_parent is None:
                     raise ValueError("Curr parent block invalid")
                 curr_diff = curr_b_block.weight - curr_parent.weight
@@ -290,7 +256,7 @@ class FullNodeRpcApi:
                     curr_b_block.proof_of_space,
                     uint64(curr_diff),
                     curr_b_block.proof_of_time.number_of_iterations,
-                    self.service.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
+                    self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER,
                 )
                 if curr_mi is None:
                     raise ValueError("Curr_mi invalid")
@@ -303,13 +269,8 @@ class FullNodeRpcApi:
         Retrieves an estimate of total space validating the chain
         between two block header hashes.
         """
-        if (
-            "newer_block_header_hash" not in request
-            or "older_block_header_hash" not in request
-        ):
-            raise ValueError(
-                "Invalid request. newer_block_header_hash and older_block_header_hash required"
-            )
+        if "newer_block_header_hash" not in request or "older_block_header_hash" not in request:
+            raise ValueError("Invalid request. newer_block_header_hash and older_block_header_hash required")
         newer_block_hex = request["newer_block_header_hash"]
         older_block_hex = request["older_block_header_hash"]
 
@@ -326,9 +287,7 @@ class FullNodeRpcApi:
         if older_block is None:
             raise ValueError("Newer block not found")
         delta_weight = newer_block.header.data.weight - older_block.header.data.weight
-        delta_iters = (
-            newer_block.header.data.total_iters - older_block.header.data.total_iters
-        )
+        delta_iters = newer_block.header.data.total_iters - older_block.header.data.total_iters
         total_min_inters = await self.get_total_miniters(newer_block, older_block)
         if total_min_inters is None:
             raise ValueError("Min iters invalid")
@@ -336,14 +295,9 @@ class FullNodeRpcApi:
         weight_div_iters = delta_weight / delta_iters
         tips_adjustment_constant = 0.65
         network_space_constant = 2 ** 32  # 2^32
-        eligible_plots_filter_mult = (
-            2 ** self.service.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
-        )
+        eligible_plots_filter_mult = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
         network_space_bytes_estimate = (
-            weight_div_iters
-            * network_space_constant
-            * tips_adjustment_constant
-            * eligible_plots_filter_mult
+            weight_div_iters * network_space_constant * tips_adjustment_constant * eligible_plots_filter_mult
         )
         return {"space": uint128(int(network_space_bytes_estimate))}
 
@@ -362,11 +316,7 @@ class FullNodeRpcApi:
         else:
             header = None
 
-        coin_records = (
-            await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(
-                puzzle_hash, header
-            )
-        )
+        coin_records = await self.service.blockchain.coin_store.get_coin_records_by_puzzle_hash(puzzle_hash, header)
 
         return {"coin_records": coin_records}
 

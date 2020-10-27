@@ -50,12 +50,12 @@ class ProofOfSpace(Streamable):
         # If icp_output is provided, both plot filters are checked. Otherwise only the first one is checked
         plot_filter_1 = BitArray(std_hash(bytes(plot_id) + bytes(challenge_hash)))
         if icp_output is None:
-            return plot_filter_1[: constants.NUMBER_ZERO_BITS_CHALLENGE_SIG].uint == 0
+            return plot_filter_1[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
         else:
             plot_filter_2 = BitArray(std_hash(bytes(plot_id) + bytes(icp_output)))
             return (
-                plot_filter_1[: constants.NUMBER_ZERO_BITS_CHALLENGE_SIG].uint == 0
-                and plot_filter_2[: constants.NUMBER_ZERO_BITS_ICP_SIG].uint == 0
+                plot_filter_1[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
+                and plot_filter_2[: constants.NUMBER_ZERO_BITS_ICP_FILTER].uint == 0
             )
 
     @staticmethod

@@ -9,7 +9,6 @@ from blspy import AugSchemeMPL
 
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.types.full_block import FullBlock
-from src.types.header import Header, HeaderData
 from src.types.proof_of_space import ProofOfSpace
 from src.util.ints import uint8, uint64, uint32
 from src.util.errors import Err
@@ -18,11 +17,11 @@ from src.types.pool_target import PoolTarget
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.util.make_test_constants import make_test_constants_with_genesis
+from src.consensus.constants import constants
 
 
-test_constants, bt = make_test_constants_with_genesis(
-    {
+test_constants = constants.replace(
+    **{
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,
         "BLOCK_TIME_TARGET": 10,
@@ -30,9 +29,11 @@ test_constants, bt = make_test_constants_with_genesis(
         "DIFFICULTY_WARP_FACTOR": 3,
         "DIFFICULTY_DELAY": 2,  # EPOCH / WARP_FACTOR
         "MIN_ITERS_STARTING": 50 * 1,
-        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
+        "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
+        "NUMBER_ZERO_BITS_ICP_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
     }
 )
+bt = None  # TODO: almog
 
 
 @pytest.fixture(scope="module")
@@ -152,9 +153,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_plot_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_public_key
-                ),
+                bt.get_plot_signature(new_header_data, blocks[9].proof_of_space.plot_public_key),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -187,9 +186,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_plot_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_public_key
-                ),
+                bt.get_plot_signature(new_header_data, blocks[9].proof_of_space.plot_public_key),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -225,9 +222,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_plot_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_public_key
-                ),
+                bt.get_plot_signature(new_header_data, blocks[9].proof_of_space.plot_public_key),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -245,9 +240,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 blocks[9].header.data,
-                AugSchemeMPL.sign(
-                    AugSchemeMPL.key_gen(bytes([5] * 32)), token_bytes(32)
-                ),
+                AugSchemeMPL.sign(AugSchemeMPL.key_gen(bytes([5] * 32)), token_bytes(32)),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -294,9 +287,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_plot_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_public_key
-                ),
+                bt.get_plot_signature(new_header_data, blocks[9].proof_of_space.plot_public_key),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -343,9 +334,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_plot_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_public_key
-                ),
+                bt.get_plot_signature(new_header_data, blocks[9].proof_of_space.plot_public_key),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -382,9 +371,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_plot_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_public_key
-                ),
+                bt.get_plot_signature(new_header_data, blocks[9].proof_of_space.plot_public_key),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -397,12 +384,8 @@ class TestBlockValidation:
     async def test_invalid_max_height(self, initial_blockchain):
         blocks, b = initial_blockchain
         print(blocks[9].header)
-        pool_target = PoolTarget(
-            blocks[9].header.data.pool_target.puzzle_hash, uint32(8)
-        )
-        agg_sig = bt.get_pool_key_signature(
-            pool_target, blocks[9].proof_of_space.pool_public_key
-        )
+        pool_target = PoolTarget(blocks[9].header.data.pool_target.puzzle_hash, uint32(8))
+        agg_sig = bt.get_pool_key_signature(pool_target, blocks[9].proof_of_space.pool_public_key)
         assert agg_sig is not None
 
         new_header_data = HeaderData(
@@ -429,9 +412,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_plot_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_public_key
-                ),
+                bt.get_plot_signature(new_header_data, blocks[9].proof_of_space.plot_public_key),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -443,12 +424,8 @@ class TestBlockValidation:
     @pytest.mark.asyncio
     async def test_invalid_pool_sig(self, initial_blockchain):
         blocks, b = initial_blockchain
-        pool_target = PoolTarget(
-            blocks[9].header.data.pool_target.puzzle_hash, uint32(10)
-        )
-        agg_sig = bt.get_pool_key_signature(
-            pool_target, blocks[9].proof_of_space.pool_public_key
-        )
+        pool_target = PoolTarget(blocks[9].header.data.pool_target.puzzle_hash, uint32(10))
+        agg_sig = bt.get_pool_key_signature(pool_target, blocks[9].proof_of_space.pool_public_key)
         assert agg_sig is not None
 
         new_header_data = HeaderData(
@@ -475,9 +452,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_plot_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_public_key
-                ),
+                bt.get_plot_signature(new_header_data, blocks[9].proof_of_space.plot_public_key),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -515,9 +490,7 @@ class TestBlockValidation:
             blocks[9].proof_of_time,
             Header(
                 new_header_data,
-                bt.get_plot_signature(
-                    new_header_data, blocks[9].proof_of_space.plot_public_key
-                ),
+                bt.get_plot_signature(new_header_data, blocks[9].proof_of_space.plot_public_key),
             ),
             blocks[9].transactions_generator,
             blocks[9].transactions_filter,
@@ -576,9 +549,7 @@ class TestReorgs:
             await b.receive_block(blocks[i])
         assert b.get_current_tips()[0].height == 15
 
-        blocks_reorg_chain = bt.get_consecutive_blocks(
-            test_constants, 7, blocks[:10], 9, b"2"
-        )
+        blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 7, blocks[:10], 9, b"2")
         for i in range(1, len(blocks_reorg_chain)):
             reorg_block = blocks_reorg_chain[i]
             result, removed, error_code = await b.receive_block(reorg_block)
@@ -609,9 +580,7 @@ class TestReorgs:
         assert b.get_current_tips()[0].height == 20
 
         # Reorg from genesis
-        blocks_reorg_chain = bt.get_consecutive_blocks(
-            test_constants, 21, [blocks[0]], 9, b"3"
-        )
+        blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 21, [blocks[0]], 9, b"3")
         for i in range(1, len(blocks_reorg_chain)):
             reorg_block = blocks_reorg_chain[i]
             result, removed, error_code = await b.receive_block(reorg_block)
@@ -624,9 +593,7 @@ class TestReorgs:
         assert b.get_current_tips()[0].height == 21
 
         # Reorg back to original branch
-        blocks_reorg_chain_2 = bt.get_consecutive_blocks(
-            test_constants, 3, blocks[:-1], 9, b"4"
-        )
+        blocks_reorg_chain_2 = bt.get_consecutive_blocks(test_constants, 3, blocks[:-1], 9, b"4")
         result, _, error_code = await b.receive_block(blocks_reorg_chain_2[20])
         assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
 
@@ -690,36 +657,20 @@ class TestReorgs:
         for i in range(1, len(blocks_2)):
             await b.receive_block(blocks_2[i])
 
-        assert (
-            find_fork_point_in_chain(b.headers, blocks[10].header, blocks_2[10].header)
-            == 4
-        )
+        assert find_fork_point_in_chain(b.headers, blocks[10].header, blocks_2[10].header) == 4
 
         for i in range(1, len(blocks_3)):
             await b.receive_block(blocks_3[i])
 
-        assert (
-            find_fork_point_in_chain(b.headers, blocks[10].header, blocks_3[10].header)
-            == 2
-        )
+        assert find_fork_point_in_chain(b.headers, blocks[10].header, blocks_3[10].header) == 2
 
         assert b.lca_block.data == blocks[2].header.data
 
         for i in range(1, len(blocks_reorg)):
             await b.receive_block(blocks_reorg[i])
 
-        assert (
-            find_fork_point_in_chain(
-                b.headers, blocks[10].header, blocks_reorg[10].header
-            )
-            == 8
-        )
-        assert (
-            find_fork_point_in_chain(
-                b.headers, blocks_2[10].header, blocks_reorg[10].header
-            )
-            == 4
-        )
+        assert find_fork_point_in_chain(b.headers, blocks[10].header, blocks_reorg[10].header) == 8
+        assert find_fork_point_in_chain(b.headers, blocks_2[10].header, blocks_reorg[10].header) == 4
         assert b.lca_block.data == blocks[4].header.data
         await connection.close()
         b.shut_down()

@@ -13,7 +13,7 @@ def full_block_to_sub_block_record(constants: ConsensusConstants, block: FullBlo
     timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
 
     q_str: Optional[bytes32] = block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
-        constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
+        constants.NUMBER_ZERO_BITS_PLOT_FILTER
     )
     # TODO: remove redundant verification of PoSpace
     required_iters: uint64 = calculate_iterations_quality(
