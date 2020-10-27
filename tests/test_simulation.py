@@ -4,17 +4,20 @@ from typing import List
 from tests.setup_nodes import setup_full_system
 from src.util.ints import uint16, uint32
 from src.types.full_block import FullBlock
-from src.util.make_test_constants import make_test_constants_with_genesis
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from src.types.peer_info import PeerInfo
+from src.consensus.constants import constants
 
-test_constants, bt = make_test_constants_with_genesis(
-    {
+test_constants = constants.replace(
+    **{
         "DIFFICULTY_STARTING": 1000,
         "MIN_ITERS_STARTING": 100000,
-        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
+        "NUMBER_ZERO_BITS_PLOT_FILTER": 1,
+        "NUMBER_ZERO_BITS_ICP_FILTER": 1,
     }
 )
+
+bt = None  # TODO: almog
 
 
 def node_height_at_least(node, h):
@@ -42,12 +45,8 @@ class TestSimulation:
 
         async def has_compact(node1, node2, max_height):
             for h in range(1, max_height):
-                blocks_1: List[FullBlock] = await node1.block_store.get_blocks_at(
-                    [uint32(h)]
-                )
-                blocks_2: List[FullBlock] = await node2.block_store.get_blocks_at(
-                    [uint32(h)]
-                )
+                blocks_1: List[FullBlock] = await node1.block_store.get_blocks_at([uint32(h)])
+                blocks_2: List[FullBlock] = await node2.block_store.get_blocks_at([uint32(h)])
                 has_compact_1 = False
                 has_compact_2 = False
                 for block in blocks_1:
@@ -64,6 +63,4 @@ class TestSimulation:
                     return True
             return True
 
-        await time_out_assert_custom_interval(
-            120, 2, has_compact, True, node1, node2, max_height
-        )
+        await time_out_assert_custom_interval(120, 2, has_compact, True, node1, node2, max_height)

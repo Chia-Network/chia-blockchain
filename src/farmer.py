@@ -59,10 +59,7 @@ class Farmer:
 
         # This is the farmer configuration
         self.wallet_target = decode_puzzle_hash(self.config["xch_target_address"])
-        self.pool_public_keys = [
-            G1Element.from_bytes(bytes.fromhex(pk))
-            for pk in self.config["pool_public_keys"]
-        ]
+        self.pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in self.config["pool_public_keys"]]
 
         # This is the pool configuration, which should be moved out to the pool once it exists
         self.pool_target = decode_puzzle_hash(pool_config["xch_target_address"])
@@ -87,12 +84,8 @@ class Farmer:
 
     async def _on_connect(self):
         # Sends a handshake to the harvester
-        msg = harvester_protocol.HarvesterHandshake(
-            self._get_public_keys(), self.pool_public_keys
-        )
-        yield OutboundMessage(
-            NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND
-        )
+        msg = harvester_protocol.HarvesterHandshake(self._get_public_keys(), self.pool_public_keys)
+        yield OutboundMessage(NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND)
         if self.current_weight in self.challenges:
             for posf in self.challenges[self.current_weight]:
                 message = harvester_protocol.NewChallenge(posf.challenge_hash)
@@ -122,13 +115,9 @@ class Farmer:
 
     def _get_private_keys(self):
         all_sks = self.keychain.get_all_private_keys()
-        return [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [
-            master_sk_to_pool_sk(sk) for sk, _ in all_sks
-        ]
+        return [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [master_sk_to_pool_sk(sk) for sk, _ in all_sks]
 
-    async def _get_required_iters(
-        self, challenge_hash: bytes32, quality_string: bytes32, plot_size: uint8
-    ):
+    async def _get_required_iters(self, challenge_hash: bytes32, quality_string: bytes32, plot_size: uint8):
         weight: uint128 = self.challenge_to_weight[challenge_hash]
         difficulty: uint64 = uint64(0)
         for posf in self.challenges[weight]:
@@ -138,9 +127,7 @@ class Farmer:
             raise RuntimeError("Did not find challenge")
 
         estimate_min = (
-            self.proof_of_time_estimate_ips
-            * self.constants.BLOCK_TIME_TARGET
-            / self.constants.MIN_ITERS_PROPORTION
+            self.proof_of_time_estimate_ips * self.constants.BLOCK_TIME_TARGET / self.constants.MIN_ITERS_PROPORTION
         )
         estimate_min = uint64(int(estimate_min))
         number_iters: uint64 = calculate_iterations_quality(
@@ -152,9 +139,7 @@ class Farmer:
         return number_iters
 
     @api_request
-    async def challenge_response(
-        self, challenge_response: harvester_protocol.ChallengeResponse
-    ):
+    async def challenge_response(self, challenge_response: harvester_protocol.ChallengeResponse):
         """
         This is a response from the harvester, for a NewChallenge. Here we check if the proof
         of space is sufficiently good, and if so, we ask for the whole proof.
@@ -167,31 +152,19 @@ class Farmer:
         )
         if height < 1000:  # As the difficulty adjusts, don't fetch all qualities
             if challenge_response.challenge_hash not in self.challenge_to_best_iters:
-                self.challenge_to_best_iters[
-                    challenge_response.challenge_hash
-                ] = number_iters
-            elif (
-                number_iters
-                < self.challenge_to_best_iters[challenge_response.challenge_hash]
-            ):
-                self.challenge_to_best_iters[
-                    challenge_response.challenge_hash
-                ] = number_iters
+                self.challenge_to_best_iters[challenge_response.challenge_hash] = number_iters
+            elif number_iters < self.challenge_to_best_iters[challenge_response.challenge_hash]:
+                self.challenge_to_best_iters[challenge_response.challenge_hash] = number_iters
             else:
                 return
 
         estimate_secs: float = number_iters / self.proof_of_time_estimate_ips
         if challenge_response.challenge_hash not in self.challenge_to_estimates:
             self.challenge_to_estimates[challenge_response.challenge_hash] = []
-        self.challenge_to_estimates[challenge_response.challenge_hash].append(
-            estimate_secs
-        )
+        self.challenge_to_estimates[challenge_response.challenge_hash].append(estimate_secs)
 
         log.info(f"Estimate: {estimate_secs}, rate: {self.proof_of_time_estimate_ips}")
-        if (
-            estimate_secs < self.config["pool_share_threshold"]
-            or estimate_secs < self.config["propagate_threshold"]
-        ):
+        if estimate_secs < self.config["pool_share_threshold"] or estimate_secs < self.config["propagate_threshold"]:
 
             request = harvester_protocol.RequestProofOfSpace(
                 challenge_response.challenge_hash,
@@ -208,9 +181,7 @@ class Farmer:
             self._state_changed("challenge")
 
     @api_request
-    async def respond_proof_of_space(
-        self, response: harvester_protocol.RespondProofOfSpace
-    ):
+    async def respond_proof_of_space(self, response: harvester_protocol.RespondProofOfSpace):
         """
         This is a response from the harvester with a proof of space. We check it's validity,
         and request a pool partial, a header signature, or both, if the proof is good enough.
@@ -226,7 +197,7 @@ class Farmer:
             raise RuntimeError("Did not find challenge")
 
         computed_quality_string = response.proof.verify_and_get_quality_string(
-            self.constants.NUMBER_ZERO_BITS_CHALLENGE_SIG
+            self.constants.NUMBER_ZERO_BITS_PLOT_FILTER
         )
         if computed_quality_string is None:
             raise RuntimeError("Invalid proof of space")
@@ -241,9 +212,7 @@ class Farmer:
         )
 
         estimate_min = (
-            self.proof_of_time_estimate_ips
-            * self.constants.BLOCK_TIME_TARGET
-            / self.constants.MIN_ITERS_PROPORTION
+            self.proof_of_time_estimate_ips * self.constants.BLOCK_TIME_TARGET / self.constants.MIN_ITERS_PROPORTION
         )
         estimate_min = uint64(int(estimate_min))
         number_iters: uint64 = calculate_iterations_quality(
@@ -260,14 +229,10 @@ class Farmer:
         if estimate_secs < self.config["propagate_threshold"]:
             pool_pk = bytes(response.proof.pool_public_key)
             if pool_pk not in self.pool_sks_map:
-                log.error(
-                    f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}"
-                )
+                log.error(f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}")
                 return
             pool_target: PoolTarget = PoolTarget(self.pool_target, uint32(0))
-            pool_target_signature: G2Element = AugSchemeMPL.sign(
-                self.pool_sks_map[pool_pk], bytes(pool_target)
-            )
+            pool_target_signature: G2Element = AugSchemeMPL.sign(self.pool_sks_map[pool_pk], bytes(pool_target))
 
             request2 = farmer_protocol.RequestHeaderHash(
                 challenge_hash,
@@ -298,9 +263,7 @@ class Farmer:
                 agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
                 assert agg_pk == proof_of_space.plot_public_key
                 farmer_share = AugSchemeMPL.sign(sk, header_hash, agg_pk)
-                agg_sig = AugSchemeMPL.aggregate(
-                    [response.message_signature, farmer_share]
-                )
+                agg_sig = AugSchemeMPL.aggregate([response.message_signature, farmer_share])
                 validates = AugSchemeMPL.verify(agg_pk, header_hash, agg_sig)
 
                 if validates:
@@ -310,9 +273,7 @@ class Farmer:
         pos_hash: bytes32 = proof_of_space.get_hash()
 
         request = farmer_protocol.HeaderSignature(pos_hash, header_hash, agg_sig)
-        yield OutboundMessage(
-            NodeType.FULL_NODE, Message("header_signature", request), Delivery.BROADCAST
-        )
+        yield OutboundMessage(NodeType.FULL_NODE, Message("header_signature", request), Delivery.BROADCAST)
 
     """
     FARMER PROTOCOL (FARMER <-> FULL NODE)
@@ -342,9 +303,7 @@ class Farmer:
         )
 
     @api_request
-    async def proof_of_space_finalized(
-        self, proof_of_space_finalized: farmer_protocol.ProofOfSpaceFinalized
-    ):
+    async def proof_of_space_finalized(self, proof_of_space_finalized: farmer_protocol.ProofOfSpaceFinalized):
         """
         Full node notifies farmer that a proof of space has been completed. It gets added to the
         challenges list at that weight, and weight is updated if necessary
@@ -362,24 +321,14 @@ class Farmer:
             log.info(f"\tCurrent weight set to {self.current_weight}")
         self.seen_challenges.add(proof_of_space_finalized.challenge_hash)
         if proof_of_space_finalized.weight not in self.challenges:
-            self.challenges[proof_of_space_finalized.weight] = [
-                proof_of_space_finalized
-            ]
+            self.challenges[proof_of_space_finalized.weight] = [proof_of_space_finalized]
         else:
-            self.challenges[proof_of_space_finalized.weight].append(
-                proof_of_space_finalized
-            )
-        self.challenge_to_weight[
-            proof_of_space_finalized.challenge_hash
-        ] = proof_of_space_finalized.weight
-        self.challenge_to_height[
-            proof_of_space_finalized.challenge_hash
-        ] = proof_of_space_finalized.height
+            self.challenges[proof_of_space_finalized.weight].append(proof_of_space_finalized)
+        self.challenge_to_weight[proof_of_space_finalized.challenge_hash] = proof_of_space_finalized.weight
+        self.challenge_to_height[proof_of_space_finalized.challenge_hash] = proof_of_space_finalized.height
 
         if get_proofs:
-            message = harvester_protocol.NewChallenge(
-                proof_of_space_finalized.challenge_hash
-            )
+            message = harvester_protocol.NewChallenge(proof_of_space_finalized.challenge_hash)
             yield OutboundMessage(
                 NodeType.HARVESTER,
                 Message("new_challenge", message),
@@ -394,9 +343,7 @@ class Farmer:
             self._state_changed("challenge")
 
     @api_request
-    async def proof_of_space_arrived(
-        self, proof_of_space_arrived: farmer_protocol.ProofOfSpaceArrived
-    ):
+    async def proof_of_space_arrived(self, proof_of_space_arrived: farmer_protocol.ProofOfSpaceArrived):
         """
         Full node notifies the farmer that a new proof of space was created. The farmer can use this
         information to decide whether to propagate a proof.
@@ -404,14 +351,10 @@ class Farmer:
         if proof_of_space_arrived.weight not in self.unfinished_challenges:
             self.unfinished_challenges[proof_of_space_arrived.weight] = []
         else:
-            self.unfinished_challenges[proof_of_space_arrived.weight].append(
-                proof_of_space_arrived.quality_string
-            )
+            self.unfinished_challenges[proof_of_space_arrived.weight].append(proof_of_space_arrived.quality_string)
 
     @api_request
-    async def proof_of_time_rate(
-        self, proof_of_time_rate: farmer_protocol.ProofOfTimeRate
-    ):
+    async def proof_of_time_rate(self, proof_of_time_rate: farmer_protocol.ProofOfTimeRate):
         """
         Updates our internal estimate of the iterations per second for the fastest proof of time
         in the network.
