@@ -15,9 +15,7 @@ def calculate_slot_iters(constants: ConsensusConstants, ips: uint64) -> uint64:
     return ips * constants.SLOT_TIME_TARGET
 
 
-def calculate_infusion_challenge_point_iters(
-    constants: ConsensusConstants, ips: uint64, required_iters: uint64
-) -> uint64:
+def calculate_icp_iters(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint64:
     slot_iters: uint64 = calculate_slot_iters(constants, ips)
     if required_iters >= slot_iters:
         raise ValueError(f"Required iters {required_iters} is not below the slot iterations")

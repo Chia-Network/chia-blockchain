@@ -1,6 +1,7 @@
 from typing import Dict
 
 from src.consensus.constants import ConsensusConstants
+from src.consensus.pot_iterations import calculate_icp_iters, calculate_ip_iters
 from src.types.sized_bytes import bytes32
 from src.full_node.sub_block_record import SubBlockRecord
 from src.util.ints import uint32, uint64, uint128
@@ -92,24 +93,40 @@ def get_next_ips(
             last_sb_in_prev_epoch = curr
             curr = sub_blocks[height_to_hash[curr.height + 1]]
 
-        prev_slot_start_iters = last_sb_in_prev_epoch.total_iters
-        prev_slot_time_start = last_sb_in_prev_epoch.timestamp
+        # Ensure that we get a block (which has a timestamp)
+        curr = last_sb_in_prev_epoch
+        while not curr.is_block:
+            curr = sub_blocks[curr.prev_hash]
+
+        prev_slot_start_iters = curr.total_iters
+        prev_slot_time_start = curr.timestamp
+
+    # Ensure we get a block for the last block as well
+    last_block_curr = sub_block
+    while not last_block_curr.is_block:
+        last_block_curr = sub_blocks[last_block_curr.prev_hash]
 
     # This is computed as the iterations per second in last epoch, times the target number of seconds per slot
     new_ips_precise: uint64 = uint64(
-        (sub_block.total_iters - prev_slot_start_iters) // (sub_block.timestamp - prev_slot_time_start)
+        (last_block_curr.total_iters - prev_slot_start_iters) // (last_block_curr.timestamp - prev_slot_time_start)
     )
     new_ips = uint64(truncate_to_significant_bits(new_ips_precise, constants.SIGNIFICANT_BITS))
     assert count_significant_bits(new_ips) <= constants.SIGNIFICANT_BITS
 
     # Only change by a max factor as a sanity check
     max_ips = uint64(
-        truncate_to_significant_bits(constants.DIFFICULTY_FACTOR * sub_block.ips, constants.SIGNIFICANT_BITS,)
+        truncate_to_significant_bits(
+            constants.DIFFICULTY_FACTOR * last_block_curr.ips,
+            constants.SIGNIFICANT_BITS,
+        )
     )
     min_ips = uint64(
-        truncate_to_significant_bits(sub_block.ips // constants.DIFFICULTY_FACTOR, constants.SIGNIFICANT_BITS,)
+        truncate_to_significant_bits(
+            last_block_curr.ips // constants.DIFFICULTY_FACTOR,
+            constants.SIGNIFICANT_BITS,
+        )
     )
-    if new_ips >= sub_block.ips:
+    if new_ips >= last_block_curr.ips:
         return min(new_ips, max_ips)
     else:
         return max([uint64(1), new_ips, min_ips])
@@ -184,15 +201,33 @@ def get_next_difficulty(
             last_sb_in_prev_epoch = curr
             curr = sub_blocks[height_to_hash[curr.height + 1]]
 
-        prev_slot_start_timestamp = last_sb_in_prev_epoch.timestamp
-        prev_slot_start_weight = last_sb_in_prev_epoch.weight
+        last_sb_icp_iters = calculate_icp_iters(
+            constants, last_sb_in_prev_epoch.ips, last_sb_in_prev_epoch.required_iters
+        )
+        last_sb_ip_iters = calculate_ip_iters(
+            constants, last_sb_in_prev_epoch.ips, last_sb_in_prev_epoch.required_iters
+        )
+        last_sb_icp_total_iters = last_sb_in_prev_epoch.total_iters - last_sb_ip_iters + last_sb_icp_iters
 
-    actual_epoch_time = sub_block.timestamp - prev_slot_start_timestamp
-    old_difficulty = get_difficulty(constants, sub_blocks, sub_block)
+        # This fetches the last transaction block before the icp of the last sub-block
+        # TODO: check equality
+        while curr.total_iters > last_sb_icp_total_iters or not curr.is_block:
+            curr = sub_blocks[curr.prev_hash]
+
+        prev_slot_start_timestamp = curr.timestamp
+        prev_slot_start_weight = curr.weight
+
+    # Ensure we get a block for the last block as well
+    last_block_curr = sub_block
+    while not last_block_curr.is_block:
+        last_block_curr = sub_blocks[last_block_curr.prev_hash]
+
+    actual_epoch_time = last_block_curr.timestamp - prev_slot_start_timestamp
+    old_difficulty = get_difficulty(constants, sub_blocks, last_block_curr)
 
     # Terms are rearranged so there is only one division.
     new_difficulty_precise = (
-        (sub_block.weight - prev_slot_start_weight)
+        (last_block_curr.weight - prev_slot_start_weight)
         * constants.SLOT_TIME_TARGET
         // (constants.SLOT_SUB_BLOCKS_TARGET * actual_epoch_time)
     )
@@ -202,10 +237,16 @@ def get_next_difficulty(
 
     # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
     max_diff = uint64(
-        truncate_to_significant_bits(constants.DIFFICULTY_FACTOR * old_difficulty, constants.SIGNIFICANT_BITS,)
+        truncate_to_significant_bits(
+            constants.DIFFICULTY_FACTOR * old_difficulty,
+            constants.SIGNIFICANT_BITS,
+        )
     )
     min_diff = uint64(
-        truncate_to_significant_bits(old_difficulty // constants.DIFFICULTY_FACTOR, constants.SIGNIFICANT_BITS,)
+        truncate_to_significant_bits(
+            old_difficulty // constants.DIFFICULTY_FACTOR,
+            constants.SIGNIFICANT_BITS,
+        )
     )
     if new_difficulty >= old_difficulty:
         return min(new_difficulty, max_diff)
