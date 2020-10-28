@@ -37,17 +37,13 @@ class FullNodeSimulator(FullNode):
             yield msg
 
     @api_request
-    async def respond_block(
-        self, respond_block: full_node_protocol.RespondBlock
-    ) -> OutboundMessageGenerator:
+    async def respond_block(self, respond_block: full_node_protocol.RespondBlock) -> OutboundMessageGenerator:
         async for msg in super().respond_block(respond_block):
             yield msg
 
     # WALLET PROTOCOL
     @api_request
-    async def send_transaction(
-        self, tx: wallet_protocol.SendTransaction
-    ) -> OutboundMessageGenerator:
+    async def send_transaction(self, tx: wallet_protocol.SendTransaction) -> OutboundMessageGenerator:
         async for msg in super().send_transaction(tx):
             yield msg
 
@@ -66,23 +62,17 @@ class FullNodeSimulator(FullNode):
             yield msg
 
     @api_request
-    async def request_header(
-        self, request: wallet_protocol.RequestHeader
-    ) -> OutboundMessageGenerator:
+    async def request_header(self, request: wallet_protocol.RequestHeader) -> OutboundMessageGenerator:
         async for msg in super().request_header(request):
             yield msg
 
     @api_request
-    async def request_removals(
-        self, request: wallet_protocol.RequestRemovals
-    ) -> OutboundMessageGenerator:
+    async def request_removals(self, request: wallet_protocol.RequestRemovals) -> OutboundMessageGenerator:
         async for msg in super().request_removals(request):
             yield msg
 
     @api_request
-    async def request_additions(
-        self, request: wallet_protocol.RequestAdditions
-    ) -> OutboundMessageGenerator:
+    async def request_additions(self, request: wallet_protocol.RequestAdditions) -> OutboundMessageGenerator:
         async for msg in super().request_additions(request):
             yield msg
 
@@ -123,9 +113,7 @@ class FullNodeSimulator(FullNode):
             return
 
         current_block = await self.get_current_blocks(top_tip)
-        bundle: Optional[
-            SpendBundle
-        ] = await self.mempool_manager.create_bundle_for_tip(top_tip)
+        bundle: Optional[SpendBundle] = await self.mempool_manager.create_bundle_from_mempool(top_tip)
 
         dict_h = {}
         fees = 0
