@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict, List, Set, Optional, Callable
+from typing import Dict, List, Optional, Callable
 
 from blspy import G1Element, G2Element, AugSchemeMPL
 from src.util.keychain import Keychain
@@ -14,7 +14,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
 from src.util.api_decorators import api_request
-from src.util.ints import uint32, uint64, uint128
+from src.util.ints import uint32, uint64
 from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from src.util.chech32 import decode_puzzle_hash
 
@@ -35,28 +35,21 @@ class Farmer:
         consensus_constants: ConsensusConstants,
     ):
         self.config = farmer_config
-        # self.harvester_responses_proofs: Dict[Tuple, ProofOfSpace] = {}
-        # self.harvester_responses_proof_hash_to_info: Dict[bytes32, Tuple] = {}
-        # self.header_hash_to_pos: Dict[bytes32, ProofOfSpace] = {}
-        # self.challenges: Dict[uint128, List[farmer_protocol.ProofOfSpaceFinalized]] = {}
-        # self.challenge_to_weight: Dict[bytes32, uint128] = {}
-        # self.challenge_to_height: Dict[bytes32, uint32] = {}
-
         # To send to harvester on connect
         self.latest_challenge: bytes32 = None
+
+        # Keep track of all icps for each challenge
         self.icps: Dict[bytes32, List[farmer_protocol.InfusionChallengePoint]] = {}
+
+        # Keep track of proofs of space for each challenge
         self.proofs_of_space: Dict[bytes32, List[ProofOfSpace]] = {}
+
+        # Quality string to pos, for use with harvester.RequestSignatures
         self.quality_str_to_pos: Dict[bytes32, ProofOfSpace] = {}
 
         # number of responses to each challenge
         self.number_of_responses: Dict[bytes32, int] = {}
 
-        self.challenge_to_best_iters: Dict[bytes32, uint64] = {}
-        self.challenge_to_estimates: Dict[bytes32, List[float]] = {}
-        self.seen_challenges: Set[bytes32] = set()
-        self.unfinished_challenges: Dict[uint128, List[bytes32]] = {}
-        self.current_weight: uint128 = uint128(0)
-        self.proof_of_time_estimate_ips: uint64 = uint64(100000)
         self.constants = consensus_constants
         self._shut_down = False
         self.server = None
@@ -132,6 +125,9 @@ class Farmer:
         This is a response from the harvester, for a NewChallenge. Here we check if the proof
         of space is sufficiently good, and if so, we ask for the whole proof.
         """
+        if challenge_response.challenge_hash not in self.number_of_responses:
+            self.number_of_responses[challenge_response.challenge_hash] = 0
+
         if self.number_of_responses[challenge_response.challenge_hash] >= 32:
             log.warning(
                 f"Surpassed 32 PoSpace for one challenge, no longer submitting PoSpace for challenge "
@@ -162,6 +158,7 @@ class Farmer:
         slot_iters = self.icps[challenge_response.challenge_hash][0].slot_iterations
 
         if required_iters < slot_iters or required_iters < self.config["pool_share_threshold"]:
+            self.number_of_responses[challenge_response.challenge_hash] += 1
             log.info(f"Required_iters: {required_iters}, PoSpace potentially eligible")
             request = harvester_protocol.RequestProofOfSpace(
                 challenge_response.challenge_hash,
