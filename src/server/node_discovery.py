@@ -6,9 +6,9 @@ from pathlib import Path
 import aiosqlite
 import traceback
 from random import Random
+import src.server.ws_connection as ws
 
 from src.server.server import ChiaServer
-from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.util.path import path_from_root, mkdir
 from src.server.outbound_message import (
@@ -143,7 +143,7 @@ class FullNodeDiscovery:
         if self.introducer_info is None:
             return
 
-        async def on_connect(peer: WSChiaConnection):
+        async def on_connect(peer: ws.WSChiaConnection):
             msg = Message("request_peers", introducer_protocol.RequestPeers())
             await peer.send_message(msg)
 
@@ -152,7 +152,7 @@ class FullNodeDiscovery:
 
         async def disconnect_after_sleep():
             await asyncio.sleep(10)
-            for id, connection in self.server.global_connections.items():
+            for id, connection in self.server.all_connections.items():
                 if connection.connection_type == NodeType.INTRODUCER:
                     await connection.close()
 
@@ -436,7 +436,7 @@ class FullNodePeers(FullNodeDiscovery):
                 if not relay_peer_info.is_valid():
                     continue
                 # https://en.bitcoin.it/wiki/Satoshi_Client_Node_Discovery#Address_Relay
-                connections = self.server.global_connections.items()
+                connections = self.server.all_connections.items()
                 hashes = []
                 cur_day = int(time.time()) // (24 * 60 * 60)
                 for id, connection in connections:
