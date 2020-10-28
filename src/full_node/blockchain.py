@@ -11,10 +11,12 @@ from blspy import AugSchemeMPL
 from chiabip158 import PyBIP158
 
 from src.consensus.constants import ConsensusConstants
+from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters, get_next_ips
 from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
+from src.full_node.makes_challenge_block import sub_block_makes_challenge_block
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
@@ -115,19 +117,21 @@ class Blockchain:
         Initializes the state of the Blockchain class from the database. Sets the LCA, peaks,
         headers, height_to_hash, and block_store DiffStores.
         """
-        self.sub_blocks = await self.block_store.get_sub_blocks()
+        self.sub_blocks, peak = await self.block_store.get_sub_blocks()
         self.height_to_hash = {}
 
         if len(self.sub_blocks) == 0:
+            assert peak is None
             log.info("Initializing empty blockchain")
             self.peak_height = None
             return
 
+        assert peak is not None
+        self.peak_height = self.sub_blocks[peak].height
+
         # Sets the other state variables (peak_height and height_to_hash)
         for hh, sb in self.sub_blocks:
             self.height_to_hash[sb.height] = hh
-            if self.peak_height is None or sb.height > self.peak_height:
-                self.peak_height = sb.height
 
         assert len(self.sub_blocks) == len(self.height_to_hash) == self.peak_height + 1
 
@@ -242,7 +246,7 @@ class Blockchain:
             b"",  # No filter
         )
 
-        error_code: Optional[Err] = await validate_finished_header_block(
+        required_iters, error_code = await validate_finished_header_block(
             self.constants, self.sub_blocks, self.height_to_hash, curr_header_block, False
         )
 
@@ -254,11 +258,28 @@ class Blockchain:
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code
 
-        # TODO: fill
-        sub_block = block.get_sub_block_record(uint64(0))
+        ips = get_next_ips(
+            self.constants,
+            self.height_to_hash,
+            self.sub_blocks,
+            block.prev_header_hash,
+            block.finished_slots is not None,
+        )
+        difficulty = get_next_difficulty(
+            self.constants,
+            self.height_to_hash,
+            self.sub_blocks,
+            block.prev_header_hash,
+            block.finished_slots is not None,
+        )
+        overflow = is_overflow_sub_block(self.constants, ips, required_iters)
+        makes_challenge_block = sub_block_makes_challenge_block(self.sub_blocks, curr_header_block, overflow)
+        sub_block = full_block_to_sub_block_record(
+            self.constants, block, ips, difficulty, required_iters, makes_challenge_block
+        )
 
         # Always add the block to the database
-        await self.block_store.add_block(block)
+        await self.block_store.add_block(block, sub_block)
 
         new_peak = await self._reconsider_peak(sub_block, genesis)
         if new_peak:
@@ -287,37 +308,33 @@ class Blockchain:
             await self.coin_store.rollback_to_block(fork_h)
 
             # Collect all blocks from fork point to new peak
-            blocks_to_add: List[FullBlock] = []
+            blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
             curr = sub_block.header_hash
             while curr != self.height_to_hash[fork_h]:
-                block: Optional[FullBlock] = await self.block_store.get_block(curr)
-                assert block is not None
-                blocks_to_add.append(block)
-                curr = block.prev_header_hash
+                fetched_block: Optional[FullBlock] = await self.block_store.get_block(curr)
+                fetched_sub_block: Optional[SubBlockRecord] = await self.block_store.get_sub_block(curr)
+                assert fetched_block is not None
+                assert fetched_sub_block is not None
+                blocks_to_add.append((fetched_block, fetched_sub_block))
+                curr = fetched_sub_block.prev_hash
 
-            for block in reversed(blocks_to_add):
-                self.height_to_hash[block.height] = block.header_hash
-                new_slot = block.finished_slots is not None
-                ips = get_next_ips(
-                    self.constants, self.height_to_hash, self.sub_blocks, block.prev_header_hash, new_slot
-                )
-                difficulty = get_next_difficulty(
-                    self.constants, self.height_to_hash, self.sub_blocks, block.prev_header_hash, new_slot
-                )
-                self.sub_blocks[block.header_hash] = full_block_to_sub_block_record(
-                    self.constants, block, ips, difficulty
-                )
-                await self.coin_store.new_block(block)
+            for fetched_block, fetched_sub_block in reversed(blocks_to_add):
+                self.height_to_hash[fetched_sub_block.height] = fetched_sub_block.header_hash
+                self.sub_blocks[fetched_sub_block.header_hash] = fetched_sub_block
+                await self.coin_store.new_block(fetched_block)
+
+            # Changes the peak to be the new peak
+            await self.block_store.set_peak(sub_block.header_hash)
             return True
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
         return False
 
-    def get_next_difficulty(self, header_hash: bytes32) -> uint64:
-        return get_next_difficulty(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
+    def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
+        return get_next_difficulty(self.constants, self.sub_blocks, self.height_to_hash, header_hash, new_slot)
 
-    def get_next_slot_iters(self, header_hash: bytes32) -> uint64:
-        return get_next_slot_iters(self.constants, self.sub_blocks, self.height_to_hash, header_hash)
+    def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
+        return get_next_slot_iters(self.constants, self.sub_blocks, self.height_to_hash, header_hash, new_slot)
 
     async def pre_validate_blocks_mulpeakrocessing(
         self, blocks: List[FullBlock]
@@ -362,7 +379,7 @@ class Blockchain:
             b"",
         )
 
-        error_code: Optional[Err] = await validate_unfinished_header_block(
+        _, error_code = await validate_unfinished_header_block(
             self.constants, self.sub_blocks, self.height_to_hash, unfinished_header_block, False
         )
 
@@ -506,7 +523,7 @@ class Blockchain:
                 return Err.DOUBLE_SPEND
 
         # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
-        new_ips = self.get_next_slot_iters(block.prev_header_hash)
+        new_ips = self.get_next_slot_iters(block.prev_header_hash, block.finished_slots is not None)
         fork_h = find_fork_point_in_chain(self.sub_blocks, self.get_peak(), block.get_sub_block_record(new_ips))
 
         # Get additions and removals since (after) fork_h but not including this block

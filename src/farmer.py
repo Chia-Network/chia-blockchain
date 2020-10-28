@@ -117,27 +117,6 @@ class Farmer:
         all_sks = self.keychain.get_all_private_keys()
         return [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [master_sk_to_pool_sk(sk) for sk, _ in all_sks]
 
-    async def _get_required_iters(self, challenge_hash: bytes32, quality_string: bytes32, plot_size: uint8):
-        weight: uint128 = self.challenge_to_weight[challenge_hash]
-        difficulty: uint64 = uint64(0)
-        for posf in self.challenges[weight]:
-            if posf.challenge_hash == challenge_hash:
-                difficulty = posf.difficulty
-        if difficulty == 0:
-            raise RuntimeError("Did not find challenge")
-
-        estimate_min = (
-            self.proof_of_time_estimate_ips * self.constants.BLOCK_TIME_TARGET / self.constants.MIN_ITERS_PROPORTION
-        )
-        estimate_min = uint64(int(estimate_min))
-        number_iters: uint64 = calculate_iterations_quality(
-            quality_string,
-            plot_size,
-            difficulty,
-            estimate_min,
-        )
-        return number_iters
-
     @api_request
     async def challenge_response(self, challenge_response: harvester_protocol.ChallengeResponse):
         """
@@ -278,6 +257,10 @@ class Farmer:
     """
     FARMER PROTOCOL (FARMER <-> FULL NODE)
     """
+
+    @api_request
+    async def infusion_challenge_point(self, infusion_challenge_point: farmer_protocol.InfusionChallengePoint):
+        pass
 
     @api_request
     async def header_hash(self, response: farmer_protocol.HeaderHash):
