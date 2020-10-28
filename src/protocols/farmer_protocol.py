@@ -14,47 +14,39 @@ Protocol between farmer and full node.
 
 @dataclass(frozen=True)
 @cbor_message
-class ProofOfSpaceFinalized:
+class InfusionChallengePoint:
     challenge_hash: bytes32
-    height: uint32
-    weight: uint128
+    challenge_chain_icp: bytes32
+    reward_chain_icp: bytes32  # TODO(mariano): update bram
     difficulty: uint64
+    index: uint64  # TODO(mariano): what is this for?
+    ips: uint64
 
 
 @dataclass(frozen=True)
 @cbor_message
-class ProofOfSpaceArrived:
-    previous_challenge_hash: bytes32
-    weight: uint128
+class DeclareProofOfSpace:
+    challenge_point_hash: bytes32
     quality_string: bytes32
+    challenge_chain_icp_sig: G2Element
+    reward_chain_icp_sig: G2Element
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestHeaderHash:
-    challenge_hash: bytes32
+class RequestSignedValues:
+    quality_string: bytes32
+    reward_block_hash: bytes32
+    transaction_block_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class SignedValues:
+    quality_string: bytes32
     proof_of_space: ProofOfSpace
+    farmer_puzzle_hash: bytes32
     pool_target: PoolTarget
-    pool_target_signature: G2Element
-    farmer_rewards_puzzle_hash: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class HeaderHash:
-    pos_hash: bytes32
-    header_hash: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class HeaderSignature:
-    pos_hash: bytes32
-    header_hash: bytes32
-    header_signature: G2Element
-
-
-@dataclass(frozen=True)
-@cbor_message
-class ProofOfTimeRate:
-    pot_estimate_ips: uint64
+    pool_signature: G2Element
+    foliage_signature: G2Element
+    transaction_block_signature: G2Element
