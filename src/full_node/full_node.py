@@ -111,7 +111,12 @@ class FullNode:
         self.coin_store = await CoinStore.create(self.connection)
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
-        self.log.info(f"Blockchain initialized to tips at {[t.height for t in self.blockchain.get_current_tips()]}")
+        if self.blockchain.get_peak() is None:
+            self.log.info("Initialized with empty blockchain")
+        else:
+            self.log.info(
+                f"Blockchain initialized to peak {self.blockchain.get_peak().header_hash} height {self.blockchain.get_peak().height}"
+            )
 
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
@@ -1155,7 +1160,7 @@ class FullNode:
         assert target_tip is not None
         # Grab best transactions from Mempool for given tip target
         async with self.blockchain.lock:
-            spend_bundle: Optional[SpendBundle] = await self.mempool_manager.create_bundle_for_tip(target_tip)
+            spend_bundle: Optional[SpendBundle] = await self.mempool_manager.create_bundle_from_mempool(peak_hash)
         spend_bundle_fees = 0
         aggregate_sig: G2Element = request.pool_target_signature
         solution_program: Optional[Program] = None

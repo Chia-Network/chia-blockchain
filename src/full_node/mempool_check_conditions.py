@@ -12,12 +12,10 @@ from src.util.condition_tools import ConditionOpcode, conditions_dict_for_soluti
 from src.util.errors import Err
 import time
 
-from src.util.ints import uint64
+from src.util.ints import uint64, uint32
 
 
-def mempool_assert_coin_consumed(
-    condition: ConditionVarPair, spend_bundle: SpendBundle, mempool: Mempool
-) -> Optional[Err]:
+def mempool_assert_coin_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
     """
     Checks coin consumed conditions
     Returns None if conditions are met, if not returns the reason why it failed
@@ -29,9 +27,7 @@ def mempool_assert_coin_consumed(
     return None
 
 
-def mempool_assert_my_coin_id(
-    condition: ConditionVarPair, unspent: CoinRecord
-) -> Optional[Err]:
+def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
     """
@@ -40,9 +36,7 @@ def mempool_assert_my_coin_id(
     return None
 
 
-def mempool_assert_block_index_exceeds(
-    condition: ConditionVarPair, unspent: CoinRecord, mempool: Mempool
-) -> Optional[Err]:
+def mempool_assert_block_index_exceeds(condition: ConditionVarPair, peak_height: uint32) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
     """
@@ -51,13 +45,13 @@ def mempool_assert_block_index_exceeds(
     except ValueError:
         return Err.INVALID_CONDITION
     # + 1 because min block it can be included is +1 from current
-    if mempool.header.height + 1 <= expected_block_index:
+    if peak_height + 1 <= expected_block_index:
         return Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
     return None
 
 
 def mempool_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: CoinRecord, mempool: Mempool
+    condition: ConditionVarPair, unspent: CoinRecord, peak_height: uint32
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
@@ -67,7 +61,7 @@ def mempool_assert_block_age_exceeds(
         expected_block_index = expected_block_age + unspent.confirmed_block_index
     except ValueError:
         return Err.INVALID_CONDITION
-    if mempool.header.height + 1 <= expected_block_index:
+    if peak_height + 1 <= expected_block_index:
         return Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
     return None
 
@@ -115,9 +109,7 @@ def get_name_puzzle_conditions(
         puzzle_program = puzzle_solution_program.first()
         puzzle_hash = Program(puzzle_program).get_tree_hash()
         try:
-            error, conditions_dict, cost_run = conditions_dict_for_solution(
-                puzzle_solution_program
-            )
+            error, conditions_dict, cost_run = conditions_dict_for_solution(puzzle_solution_program)
             cost_sum += cost_run
             if error:
                 return error, [], uint64(cost_sum)
@@ -135,7 +127,7 @@ def mempool_check_conditions_dict(
     unspent: CoinRecord,
     spend_bundle: SpendBundle,
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
-    mempool: Mempool,
+    peak_height: uint32,
 ) -> Optional[Err]:
     """
     Check all conditions against current state.
@@ -145,13 +137,13 @@ def mempool_check_conditions_dict(
         for cvp in con_list:
             error = None
             if cvp.opcode is ConditionOpcode.ASSERT_COIN_CONSUMED:
-                error = mempool_assert_coin_consumed(cvp, spend_bundle, mempool)
+                error = mempool_assert_coin_consumed(cvp, spend_bundle)
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = mempool_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                error = mempool_assert_block_index_exceeds(cvp, unspent, mempool)
+                error = mempool_assert_block_index_exceeds(cvp, peak_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                error = mempool_assert_block_age_exceeds(cvp, unspent, mempool)
+                error = mempool_assert_block_age_exceeds(cvp, unspent, peak_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_TIME_EXCEEDS:
                 error = mempool_assert_time_exceeds(cvp)
 
