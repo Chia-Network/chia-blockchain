@@ -33,6 +33,7 @@
     "about-window": "^1.13.4",
     "byte-size": "^7.0.0",
     "connected-react-router": "^6.8.0",
+    "framer-motion": "^2.9.4",
     "is-electron": "^2.2.0",
     "moment": "^2.29.1",
     "npm-audit-resolver": "^2.2.1",

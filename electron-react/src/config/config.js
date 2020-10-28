@@ -1,6 +1,6 @@
 console.log('*DEV', process.env.NODE_ENV === 'development');
 
 module.exports = {
-  local_test: process.env.NODE_ENV === 'development' && process.env.TESTNET !== 'true',
+  local_test: false,
   backup_host: 'https://backup.chia.net',
 };

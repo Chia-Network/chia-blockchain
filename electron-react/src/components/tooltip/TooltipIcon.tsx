@@ -4,20 +4,21 @@ import { Help as HelpIcon } from '@material-ui/icons';
 import { Tooltip } from '@material-ui/core';
 
 const StyledHelpIcon = styled(HelpIcon)`
-  color: rgba(0, 0, 0, 0.54);
+  color: ${({ theme }) => theme.palette.type === 'dark' ? 'white' : '#757575'};
   font-size: 1rem;
 `;
 
 type Props = {
-  value: ReactElement<any>,
+  children: ReactElement<any>,
+  interactive?: boolean
 };
 
 export default function TooltipIcon(props: Props) {
-  const { value } = props;
+  const { children, interactive } = props;
 
   return (
-    <Tooltip title={value}>
-      <StyledHelpIcon />
+    <Tooltip title={children} interactive={interactive} arrow>
+      <StyledHelpIcon color="disabled" />
     </Tooltip>
   );
 }

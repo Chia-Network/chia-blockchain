@@ -44,6 +44,27 @@ export default async function computeStatistics(wallets: Wallet[]): Promise<{
         if (tx.confirmed_at_index > biggestHeight) {
           biggestHeight = tx.confirmed_at_index;
         }
+
+        /*
+        const chia_cb = chia_formatter(
+          Number.parseFloat(calculate_block_reward(block.header.data.height)),
+          'mojo',
+        )
+          .to('chia')
+          .toString();
+        const chia_fees = chia_formatter(
+          Number.parseFloat(BigInt(block.header.data.total_transaction_fees)),
+          'mojo',
+        )
+          .to('chia')
+          .toString();
+
+        /*
+        if (tx.coinbase) {
+          farmingRewards += BigInt(tx.fee_amount);
+          feesCollected += BigInt(tx.fee_amount);
+        }
+        */
       }
     }
   }

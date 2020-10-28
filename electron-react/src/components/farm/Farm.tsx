@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
-import { useAsync } from 'react-use';
+import { useAsync, useToggle } from 'react-use';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import { useSelector, useDispatch } from 'react-redux';
@@ -16,6 +16,7 @@ import {
   Theme,
   Container,
 } from '@material-ui/core';
+import Accordion from '../accordion/Accordion';
 import Button from '@material-ui/core/Button';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -23,6 +24,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableContainer from '@material-ui/core/TableContainer';
 import TableHead from '@material-ui/core/TableHead';
 import DeleteForeverIcon from '@material-ui/icons/DeleteForever';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import IconButton from '@material-ui/core/IconButton';
 import Dialog from '@material-ui/core/Dialog';
@@ -54,6 +56,19 @@ import DashboardTitle from '../dashboard/DashboardTitle';
 import { RootState } from '../../modules/rootReducer';
 import Plot from '../../types/Plot';
 import FarmOverview from './overview/FarmOverview';
+import FarmLatestBlockChallenges from './FarmLatestBlockChallenges';
+import FarmFullNodeConnections from './FarmFullNodeConnections';
+import FarmYourHarvesterNetwork from './FarmYourHarvesterNetwork';
+import FarmLastAttemptedProof from './FarmLastAttemptedProof';
+import styled from 'styled-components';
+import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
+
+
+const StyledToggleAdvancedOptions = styled(({ expanded, ...rest }) => <Box {...rest }/>)`
+  color: ${({ expanded, theme }) => expanded ? '#AA271E' : theme.palette.primary.main};
+  cursor: pointer;
+`;
 
 /* global BigInt */
 
@@ -623,6 +638,7 @@ const FarmerContent = (props: FarmerContentProps) => {
   const closeConnectionCallback = (node_id: string) => {
     dispatch(closeConnection(node_id));
   };
+
   return (
     <>
       <Grid container spacing={3}>
@@ -707,19 +723,48 @@ async function getStatistics(wallets: Wallet[]): Promise<{
 }*/
 
 export default function Farm(): JSX.Element {
-  const dispatch = useDispatch();
-  const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
-  // const statistics = useAsync(() => getStatistics(wallets), [wallets]);
+  const [showAdvancedOptions, toggleShowAdvancedOptions] = useToggle(false);
+  const plots = useSelector((state: RootState) => state.farming_state.harvester.plots);
+  const hasPlots = plots.length > 0;
 
   return (
     <LayoutMain title={<Trans id="Farmer.title">Farming</Trans>}>
-      <Flex flexDirection="column" gap={2}>
+      <Flex flexDirection="column" gap={4}>
         <FarmOverview />
 
-        <FarmerContent
-            totalChiaFarmed={BigInt(23)}
-            biggestHeight={120}
-          />
+        <FarmLatestBlockChallenges />
+
+        {hasPlots && (
+          <>
+            <FarmLastAttemptedProof />
+
+            <StyledToggleAdvancedOptions expanded={showAdvancedOptions} onClick={toggleShowAdvancedOptions}>
+              {showAdvancedOptions ? (
+                <Flex alignItems="center">
+                  <KeyboardArrowUpIcon />
+                  <Trans id="Farm.hideAdvancedOptions">
+                    Hide Advanced Options
+                  </Trans>
+                </Flex>
+              ): (
+                <Flex alignItems="center">
+                  <KeyboardArrowDownIcon />
+                  <Trans id="Farm.hideAdvancedOptions">
+                    Show Advanced Options
+                  </Trans>
+                </Flex>
+              )}
+            </StyledToggleAdvancedOptions>
+
+            <Accordion expanded={showAdvancedOptions}>
+              <Flex flexDirection="column" gap={4}>
+                <FarmFullNodeConnections />
+
+                <FarmYourHarvesterNetwork />
+              </Flex>
+            </Accordion>
+          </>
+        )}
       </Flex>
     </LayoutMain>
   );

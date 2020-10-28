@@ -28,7 +28,9 @@ export default function FarmCard(props: Props) {
             {title}
           </Typography>
           {tooltip && (
-            <TooltipIcon value={tooltip} />
+            <TooltipIcon>
+              {tooltip}
+            </TooltipIcon>
           )}
         </Flex>
         {loading ? (

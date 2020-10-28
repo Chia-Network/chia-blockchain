@@ -24,12 +24,14 @@ function getGap(gap: GAP_SIZE, theme: any): string {
 const StyledGapBox = styled(({ rowGap, columnGap, ...rest }) => (
   <Box {...rest} />
 ))`
-  margin: ${({ rowGap, columnGap }) =>
-    `calc(${rowGap} / -2) calc(${columnGap} / -2)`};
-
   > * {
-    margin: ${({ rowGap, columnGap }) =>
-      `calc(${rowGap} / 2) calc(${columnGap} / 2)`};
+    margin-bottom: ${({ rowGap }) => rowGap};
+    ${({ columnGap }) => columnGap && `margin-right: ${columnGap}`};
+
+    &:last-child {
+      margin-bottom: 0;
+      ${({ columnGap }) => columnGap && `margin-right: 0`};
+    }
   }
 `;
 
@@ -51,10 +53,10 @@ export default function Flex(props: Props) {
   const theme = useTheme();
 
   const rowGapValue =
-    flexDirection === 'column' ? getGap(rowGap, theme) : '0px';
+    flexDirection === 'column' ? getGap(rowGap, theme) : 0;
 
   const columnGapValue =
-    flexDirection !== 'column' ? getGap(columnGap, theme) : '0px';
+    flexDirection !== 'column' ? getGap(columnGap, theme) : 0;
 
   return (
     <StyledGapBox

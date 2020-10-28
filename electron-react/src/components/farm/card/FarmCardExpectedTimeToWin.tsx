@@ -30,17 +30,17 @@ export default function FarmCardExpectedTimeToWin() {
     ? 5 / proportion
     : 0;
 
-  const totalHours = moment.duration({ minutes }).asHours();
+  const totalHours = moment.duration({ minutes }).humanize();
 
   return (
     <FarmCard
       title={<Trans id="FarmCardExpectedTimeToWin.title">Expected Time to Win</Trans>}
-      value={`${totalHours.toFixed(1)} hours`}
+      value={`${totalHours}`}
       tooltip={(
         <Trans id="FarmCardExpectedTimeToWin.tooltip">
           You have {(proportion * 100).toFixed(4)}%
           of the space on the network, so farming a block will take
-          {totalHours.toFixed(1)} hours in expectation
+          {totalHours} in expectation
         </Trans>
       )}
     />
