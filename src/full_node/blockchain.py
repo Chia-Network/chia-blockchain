@@ -148,7 +148,7 @@ class Blockchain:
         assert block is not None
         return block
 
-    def is_child_of_peak(self, block: FullBlock) -> bool:
+    def is_child_of_peak(self, block: UnfinishedBlock) -> bool:
         """
         True iff the block is the direct ancestor of the peak
         """

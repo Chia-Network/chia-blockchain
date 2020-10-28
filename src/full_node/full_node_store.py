@@ -1,60 +1,52 @@
 import logging
-import aiosqlite
 from typing import Dict, List, Optional, Tuple
 
-from src.types.program import Program
+from src.consensus.constants import ConsensusConstants
+from src.types.challenge_slot import ChallengeSlot
 from src.types.full_block import FullBlock
-from src.types.header import HeaderData
-from src.types.proof_of_space import ProofOfSpace
+from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot, EndOfSlotProofs
 from src.types.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
-from src.util.ints import uint32, uint64
+from src.types.vdf import VDFProof, VDFInfo
+from src.util.ints import uint32, uint64, uint8
 
 log = logging.getLogger(__name__)
 
 
 class FullNodeStore:
-    db: aiosqlite.Connection
-    # Current estimate of the speed of the network timelords
-    proof_of_time_estimate_ips: int
+    # TODO(mariano): replace
     # Proof of time heights
-    proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
+    # proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
+    constants: ConsensusConstants
     # Our best unfinished block
     unfinished_blocks_leader: Tuple[uint32, uint64]
-    # Blocks which we have created, but don't have proof of space yet, old ones are cleared
+    # Blocks which we have created, but don't have plot signatures yet
     candidate_blocks: Dict[bytes32, UnfinishedBlock]
     # Header hashes of unfinished blocks that we have seen recently
     seen_unfinished_blocks: set
     # Blocks which we have received but our blockchain does not reach, old ones are cleared
     disconnected_blocks: Dict[bytes32, FullBlock]
+    # Unfinished blocks, keyed from reward hash
+    unfinished_blocks: Dict[bytes32, UnfinishedBlock]
+
+    # Finished slots from the peak onwards
+    finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]
+
+    # ICPs from the last finished slot onwards
+    latest_icps: List[Optional[Tuple[VDFInfo, VDFProof]]]
 
     @classmethod
-    async def create(cls, connection):
+    async def create(cls, constants: ConsensusConstants):
         self = cls()
-
-        self.db = connection
-
-        await self.db.commit()
-
-        self.proof_of_time_estimate_ips = 100000
+        # TODO(mariano): replace
         self.proof_of_time_heights = {}
-        self.unfinished_blocks_leader = (
-            uint32(0),
-            uint64((1 << 64) - 1),
-        )
+
+        self.constants = constants
+        self.clear_slots_and_icps()
+        self.unfinished_blocks = {}
         self.candidate_blocks = {}
         self.seen_unfinished_blocks = set()
         self.disconnected_blocks = {}
-
-        await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS unfinished_blocks("
-            "challenge_hash text,"
-            "iterations bigint,"
-            "block blob,"
-            "height int,"
-            "PRIMARY KEY (challenge_hash, iterations))"
-        )
-        await self.db.commit()
         return self
 
     def add_disconnected_block(self, block: FullBlock) -> None:
@@ -95,24 +87,11 @@ class FullNodeStore:
             except KeyError:
                 pass
 
-    async def add_unfinished_block(self, key: Tuple[bytes32, uint64], block: FullBlock) -> None:
-        cursor_1 = await self.db.execute(
-            "INSERT OR REPLACE INTO unfinished_blocks VALUES(?, ?, ?, ?)",
-            (key[0].hex(), key[1], bytes(block), block.height),
-        )
-        await cursor_1.close()
-        await self.db.commit()
+    def add_unfinished_block(self, unfinished_block: UnfinishedBlock) -> None:
+        self.unfinished_blocks[unfinished_block.reward_chain_sub_block.get_hash()] = unfinished_block
 
-    async def get_unfinished_block(self, key: Tuple[bytes32, uint64]) -> Optional[FullBlock]:
-        cursor = await self.db.execute(
-            "SELECT block from unfinished_blocks WHERE challenge_hash=? AND iterations=?",
-            (key[0].hex(), key[1]),
-        )
-        row = await cursor.fetchone()
-        await cursor.close()
-        if row is not None:
-            return FullBlock.from_bytes(row[0])
-        return None
+    def get_unfinished_block(self, partial_reward_hash: bytes32) -> Optional[FullBlock]:
+        return self.unfinished_blocks.get(partial_reward_hash, None)
 
     def seen_unfinished_block(self, header_hash: bytes32) -> bool:
         if header_hash in self.seen_unfinished_blocks:
@@ -120,45 +99,56 @@ class FullNodeStore:
         self.seen_unfinished_blocks.add(header_hash)
         return False
 
-    async def clear_seen_unfinished_blocks(self) -> None:
+    def clear_seen_unfinished_blocks(self) -> None:
         self.seen_unfinished_blocks.clear()
 
-    async def get_unfinished_blocks(self) -> Dict[Tuple[bytes32, uint64], FullBlock]:
-        cursor = await self.db.execute("SELECT challenge_hash, iterations, block from unfinished_blocks")
-        rows = await cursor.fetchall()
-        await cursor.close()
-        return {(bytes.fromhex(a), b): FullBlock.from_bytes(c) for a, b, c in rows}
+    def get_unfinished_blocks(self) -> Dict[bytes32, UnfinishedBlock]:
+        return self.unfinished_blocks
 
-    async def clear_unfinished_blocks_below(self, height: uint32) -> None:
-        cursor = await self.db.execute("DELETE from unfinished_blocks WHERE height<? ", (height,))
-        await cursor.close()
-        await self.db.commit()
+    def clear_unfinished_blocks_below(self, height: uint32) -> None:
+        for partial_reward_hash, unfinished_block in self.unfinished_blocks.items():
+            if unfinished_block.height < height:
+                del self.unfinished_blocks[partial_reward_hash]
 
-    def set_unfinished_block_leader(self, key: Tuple[uint32, uint64]) -> None:
-        self.unfinished_blocks_leader = key
+    def remove_unfinished_block(self, partial_reward_hash: bytes32):
+        if partial_reward_hash in self.unfinished_blocks:
+            del self.unfinished_blocks[partial_reward_hash]
 
-    def get_unfinished_block_leader(self) -> Tuple[uint32, uint64]:
-        return self.unfinished_blocks_leader
+    def clear_slots_and_icps(self):
+        self.finished_slots.clear()
+        self.clear_icps()
 
-    def set_proof_of_time_estimate_ips(self, estimate: int):
-        self.proof_of_time_estimate_ips = estimate
+    def new_finished_slot(self, finished_slot: Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]):
+        if len(self.finished_slots) == 0:
+            self.finished_slots.append(finished_slot)
+            return
+        if finished_slot[0].proof_of_space.challenge_hash != self.finished_slots[-1][0].get_hash():
+            return
+        self.finished_slots.append(finished_slot)
 
-    def get_proof_of_time_estimate_ips(self) -> int:
-        return self.proof_of_time_estimate_ips
+    def new_icp(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof):
+        if len(self.finished_slots) != 0:
+            assert challenge_hash == self.finished_slots[-1][0].get_hash()
+        assert index
+        self.latest_icps[index] = (vdf_info, proof)
 
-    def add_proof_of_time_heights(self, challenge_iters: Tuple[bytes32, uint64], height: uint32) -> None:
-        self.proof_of_time_heights[challenge_iters] = height
+    def clear_icps(self):
+        self.latest_icps = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
 
-    def get_proof_of_time_heights(self, challenge_iters: Tuple[bytes32, uint64]) -> Optional[uint32]:
-        return self.proof_of_time_heights.get(challenge_iters, None)
-
-    def clear_proof_of_time_heights_below(self, height: uint32) -> None:
-        del_keys: List = []
-        for key, value in self.proof_of_time_heights.items():
-            if value < height:
-                del_keys.append(key)
-        for key in del_keys:
-            try:
-                del self.proof_of_time_heights[key]
-            except KeyError:
-                pass
+    # TODO(mariano)
+    # def add_proof_of_time_heights(self, challenge_iters: Tuple[bytes32, uint64], height: uint32) -> None:
+    #     self.proof_of_time_heights[challenge_iters] = height
+    #
+    # def get_proof_of_time_heights(self, challenge_iters: Tuple[bytes32, uint64]) -> Optional[uint32]:
+    #     return self.proof_of_time_heights.get(challenge_iters, None)
+    #
+    # def clear_proof_of_time_heights_below(self, height: uint32) -> None:
+    #     del_keys: List = []
+    #     for key, value in self.proof_of_time_heights.items():
+    #         if value < height:
+    #             del_keys.append(key)
+    #     for key in del_keys:
+    #         try:
+    #             del self.proof_of_time_heights[key]
+    #         except KeyError:
+    #             pass

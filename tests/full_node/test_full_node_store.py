@@ -81,11 +81,6 @@ class TestFullNodeStore:
             await db.clear_unfinished_blocks_below(uint32(5))
             assert len(await db.get_unfinished_blocks()) == 5
 
-            # Set/get unf block leader
-            assert db.get_unfinished_block_leader() == (0, (1 << 64) - 1)
-            db.set_unfinished_block_leader(key)
-            assert db.get_unfinished_block_leader() == key
-
             assert db.get_disconnected_block(blocks[0].prev_header_hash) is None
             # Disconnected blocks
             for block in blocks:
@@ -111,7 +106,6 @@ class TestFullNodeStore:
 
         # Different database should have different data
         db_3 = await FullNodeStore.create(connection_3)
-        assert db_3.get_unfinished_block_leader() == (0, (1 << 64) - 1)
 
         await connection.close()
         await connection_2.close()
