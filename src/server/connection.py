@@ -206,14 +206,20 @@ class PeerConnections:
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get("http://checkip.amazonaws.com/") as resp:
-                    ip = str(await resp.text())
-                    ip = ip.rstrip()
+                async with session.get("https://checkip.amazonaws.com/") as resp:
+                    if resp.status == 200:
+                        ip = str(await resp.text())
+                        ip = ip.rstrip()
+                    else:
+                        ip = None
         except Exception:
             ip = None
         if ip is None:
             return None
-        return PeerInfo(ip, uint16(port))
+        peer = PeerInfo(ip, uint16(port))
+        if not peer.is_valid():
+            return None
+        return peer
 
     def get_connections(self):
         return self._all_connections

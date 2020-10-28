@@ -261,7 +261,7 @@ def chia_init(root_path: Path):
     # These are the files that will be migrated
     MANIFEST: List[str] = [
         "config",
-        "db",
+        "db/blockchain_v20.db",
         # "wallet",
     ]
 

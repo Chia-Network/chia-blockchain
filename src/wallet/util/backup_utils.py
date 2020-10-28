@@ -90,27 +90,33 @@ async def upload_backup(host: str, backup_text: str):
 
 async def download_backup(host: str, private_key: PrivateKey):
     session = aiohttp.ClientSession()
-    backup_privkey = master_sk_to_backup_sk(private_key)
-    backup_pubkey = bytes(backup_privkey.get_g1()).hex()
+    try:
+        backup_privkey = master_sk_to_backup_sk(private_key)
+        backup_pubkey = bytes(backup_privkey.get_g1()).hex()
+        # Get nonce
+        nonce_request = {"pubkey": backup_pubkey}
+        nonce_url = f"{host}/get_download_nonce"
+        nonce_response = await post(session, nonce_url, nonce_request)
+        nonce = nonce_response["nonce"]
 
-    # Get nonce
-    nonce_request = {"pubkey": backup_pubkey}
-    nonce_url = f"{host}/get_download_nonce"
-    nonce_response = await post(session, nonce_url, nonce_request)
-    nonce = nonce_response["nonce"]
+        # Sign nonce
+        signature = bytes(
+            AugSchemeMPL.sign(backup_privkey, std_hash(hexstr_to_bytes(nonce)))
+        ).hex()
+        # Request backup url
+        get_backup_url = f"{host}/download_backup"
+        backup_request = {"pubkey": backup_pubkey, "signature": signature}
+        backup_response = await post(session, get_backup_url, backup_request)
 
-    # Sign nonce
-    signature = bytes(
-        AugSchemeMPL.sign(backup_privkey, std_hash(hexstr_to_bytes(nonce)))
-    ).hex()
-    # Request backup url
-    get_backup_url = f"{host}/download_backup"
-    backup_request = {"pubkey": backup_pubkey, "signature": signature}
-    backup_response = await post(session, get_backup_url, backup_request)
+        if backup_response["success"] is False:
+            raise ValueError("No backup on backup service")
 
-    # Download from s3
-    assert backup_response["success"] is True
-    backup_url = backup_response["url"]
-    backup_text = await get(session, backup_url)
-    await session.close()
-    return backup_text
+        # Download from s3
+        backup_url = backup_response["url"]
+        backup_text = await get(session, backup_url)
+        await session.close()
+        return backup_text
+    except Exception as e:
+        await session.close()
+        # Pass exception
+        raise e

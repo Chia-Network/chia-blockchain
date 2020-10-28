@@ -111,6 +111,7 @@ def load_plots(
     failed_to_open_filenames: Dict[Path, int],
     farmer_public_keys: Optional[List[G1Element]],
     pool_public_keys: Optional[List[G1Element]],
+    match_str: Optional[str],
     root_path: Path,
     open_no_key_filenames=False,
 ) -> Tuple[bool, Dict[Path, PlotInfo], Dict[Path, int], Set[Path]]:
@@ -126,7 +127,15 @@ def load_plots(
     total_size = 0
     new_provers: Dict[Path, PlotInfo] = {}
 
+    if match_str is not None:
+        log.info(
+            f'Only loading plots that contain "{match_str}" in the file or directory name'
+        )
+
     for filename in all_filenames:
+        filename_str = str(filename)
+        if match_str is not None and match_str not in filename_str:
+            continue
         if filename.exists():
             if (
                 filename in failed_to_open_filenames

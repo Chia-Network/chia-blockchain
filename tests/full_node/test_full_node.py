@@ -5,7 +5,6 @@ import time
 from typing import Dict
 from secrets import token_bytes
 
-from src.consensus.constants import constants
 from src.protocols import (
     full_node_protocol as fnp,
     timelord_protocol,
@@ -28,7 +27,6 @@ from src.util.wallet_tools import WalletTool
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.coin import hash_coin_list
 from src.util.clvm import int_to_bytes
-from src.util.config import load_config
 from src.util.merkle_set import (
     MerkleSet,
     confirm_included_already_hashed,
@@ -55,8 +53,8 @@ def event_loop():
 
 @pytest.fixture(scope="module")
 async def two_nodes():
-    constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
-    async for _ in setup_two_nodes(constants):
+    zero_free_constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+    async for _ in setup_two_nodes(zero_free_constants):
         yield _
 
 
@@ -118,7 +116,7 @@ class TestFullNodeProtocol:
     async def test_new_tip(self, two_nodes, wallet_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         _, _, blocks = wallet_blocks
-        config = load_config(bt.root_path, "config.yaml")
+        config = bt.config
         hostname = config["self_hostname"]
 
         await server_2.start_client(PeerInfo(hostname, uint16(server_1._port)), None)
@@ -847,7 +845,7 @@ class TestWalletProtocol:
             blocks_new[-1].get_coinbase(),
         )
         spend_bundle_bad = wallet_a.generate_signed_transaction(
-            constants.MAX_COIN_AMOUNT,
+            test_constants.MAX_COIN_AMOUNT,
             wallet_a.get_new_puzzlehash(),
             blocks_new[-1].get_coinbase(),
         )

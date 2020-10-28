@@ -4,7 +4,6 @@ import logging
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 import multiprocessing
-import concurrent
 from typing import Dict, List, Optional, Set, Tuple, Union
 from blspy import AugSchemeMPL
 
@@ -23,10 +22,10 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.full_block import FullBlock, additions_for_npc
 from src.types.header_block import HeaderBlock
-from src.types.unfinished_block import UnfinishedBlock
 from src.types.sized_bytes import bytes32
 from src.full_node.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.full_node.sub_block_record import SubBlockRecord
+from src.types.unfinished_block import UnfinishedBlock
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.full_node.cost_calculator import calculate_cost_of_program
@@ -95,7 +94,9 @@ class Blockchain:
         self = Blockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
         cpu_count = multiprocessing.cpu_count()
-        self.pool = concurrent.futures.ProcessPoolExecutor(max_workers=max(cpu_count - 1, 1))
+        if cpu_count > 61:
+            cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
+        self.pool = ProcessPoolExecutor(max_workers=max(cpu_count - 2, 1))
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store

@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
@@ -7,15 +5,8 @@ from src.rpc.rpc_server import start_rpc_server
 from src.protocols import full_node_protocol
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.ints import uint16
-from src.util.config import load_config
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.time_out_assert import time_out_assert
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 class TestRpc:
@@ -47,7 +38,7 @@ class TestRpc:
 
         full_node_rpc_api = FullNodeRpcApi(full_node_1)
 
-        config = load_config(bt.root_path, "config.yaml")
+        config = bt.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 
@@ -106,13 +97,8 @@ class TestRpc:
 
             await client.close_connection(connections[0]["node_id"])
             await time_out_assert(10, num_connections, 0)
-        except AssertionError:
+        finally:
             # Checks that the RPC manages to stop the node
             client.close()
             await client.await_closed()
             await rpc_cleanup()
-            raise
-
-        client.close()
-        await client.await_closed()
-        await rpc_cleanup()

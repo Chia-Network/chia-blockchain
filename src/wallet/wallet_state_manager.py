@@ -1230,7 +1230,7 @@ class WalletStateManager:
             return
 
         for record in records:
-            await self.tx_store.set_not_sent(record.name())
+            await self.tx_store.tx_reorged(record.name())
 
         self.tx_pending_changed()
 

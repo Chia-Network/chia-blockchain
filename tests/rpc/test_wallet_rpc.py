@@ -11,14 +11,7 @@ from tests.time_out_assert import time_out_assert
 from src.util.chech32 import encode_puzzle_hash
 from src.rpc.wallet_rpc_client import WalletRpcClient
 from src.rpc.wallet_rpc_api import WalletRpcApi
-from src.util.config import load_config
 from src.rpc.rpc_server import start_rpc_server
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 class TestWalletRpc:
@@ -62,7 +55,7 @@ class TestWalletRpc:
 
         wallet_rpc_api = WalletRpcApi(wallet_node)
 
-        config = load_config(bt.root_path, "config.yaml")
+        config = bt.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 
@@ -178,13 +171,8 @@ class TestWalletRpc:
             await client.delete_all_keys()
 
             assert len(await client.get_public_keys()) == 0
-        except Exception:
+        finally:
             # Checks that the RPC manages to stop the node
             client.close()
             await client.await_closed()
             await rpc_cleanup()
-            raise
-
-        client.close()
-        await client.await_closed()
-        await rpc_cleanup()

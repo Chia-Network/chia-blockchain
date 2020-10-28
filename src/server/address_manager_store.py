@@ -124,10 +124,7 @@ class AddressManagerStore:
         metadata = []
         nodes = []
         new_table_entries = []
-
         metadata.append(("key", str(address_manager.key)))
-        metadata.append(("new_count", str(address_manager.new_count)))
-        metadata.append(("tried_count", str(address_manager.tried_count)))
 
         unique_ids = {}
         count_ids = 0
@@ -138,6 +135,7 @@ class AddressManagerStore:
                 assert count_ids != address_manager.new_count
                 nodes.append((count_ids, info))
                 count_ids += 1
+        metadata.append(("new_count", str(count_ids)))
 
         tried_ids = 0
         for node_id, info in address_manager.map_info.items():
@@ -147,6 +145,7 @@ class AddressManagerStore:
                 nodes.append((count_ids, info))
                 count_ids += 1
                 tried_ids += 1
+        metadata.append(("tried_count", str(tried_ids)))
 
         for bucket in range(NEW_BUCKET_COUNT):
             for i in range(BUCKET_SIZE):
@@ -180,7 +179,7 @@ class AddressManagerStore:
             address_manager.map_info[n] = info
             info.random_pos = len(address_manager.random_pos)
             address_manager.random_pos.append(n)
-
+        address_manager.id_count = len(new_table_nodes)
         tried_table_nodes = [
             (node_id, info)
             for node_id, info in nodes
@@ -195,10 +194,12 @@ class AddressManagerStore:
             if address_manager.tried_matrix[tried_bucket][tried_bucket_pos] == -1:
                 info.random_pos = len(address_manager.random_pos)
                 info.is_tried = True
-                address_manager.random_pos.append(node_id)
-                address_manager.map_info[node_id] = info
-                address_manager.map_addr[info.peer_info.host] = node_id
-                address_manager.tried_matrix[tried_bucket][tried_bucket_pos] = node_id
+                id_count = address_manager.id_count
+                address_manager.random_pos.append(id_count)
+                address_manager.map_info[id_count] = info
+                address_manager.map_addr[info.peer_info.host] = id_count
+                address_manager.tried_matrix[tried_bucket][tried_bucket_pos] = id_count
+                address_manager.id_count += 1
             else:
                 lost_count += 1
 

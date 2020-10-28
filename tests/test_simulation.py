@@ -6,9 +6,9 @@ from src.util.ints import uint16, uint32
 from src.types.full_block import FullBlock
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from src.types.peer_info import PeerInfo
-from src.consensus.constants import constants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 
-test_constants = constants.replace(
+test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "DIFFICULTY_STARTING": 1000,
         "MIN_ITERS_STARTING": 100000,
@@ -24,12 +24,6 @@ def node_height_at_least(node, h):
     if (max([h.height for h in node.blockchain.get_current_tips()])) >= h:
         return True
     return False
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 class TestSimulation:

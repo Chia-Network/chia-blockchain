@@ -1,7 +1,7 @@
 from secrets import token_bytes
 from blspy import AugSchemeMPL
 from src.types.proof_of_space import ProofOfSpace  # pylint: disable=E0401
-from src.consensus.constants import constants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.types.classgroup import ClassgroupElement
 
 

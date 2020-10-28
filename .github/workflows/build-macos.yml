@@ -17,7 +17,7 @@ jobs:
 
     steps:
     - name: Cancel previous runs on the same branch
-      uses: styfle/cancel-workflow-action@0.5.0
+      uses: styfle/cancel-workflow-action@0.6.0
       with:
         access_token: ${{ github.token }}
 
@@ -94,7 +94,7 @@ jobs:
         venv/bin/python -m pip install -r requirements-dev.txt
 
     - name: Setup Node 12.x
-      uses: actions/setup-node@v2.1.1
+      uses: actions/setup-node@v2.1.2
       with:
         node-version: '12.x'
 
@@ -114,7 +114,7 @@ jobs:
         ./venv/bin/py.test tests -s -v --durations 0
 
     - name: Upload MacOS artifacts
-      uses: actions/upload-artifact@v2.1.4
+      uses: actions/upload-artifact@v2.2.0
       with:
         name: Chia-Installer-on-MacOS-10.15-dmg
         path: ${{ github.workspace }}/build_scripts/final_installer/

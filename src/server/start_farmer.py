@@ -1,4 +1,9 @@
-from src.consensus.constants import constants
+import pathlib
+
+from typing import Dict
+
+from src.consensus.constants import ConsensusConstants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.farmer import Farmer
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
@@ -12,26 +17,31 @@ from src.server.start_service import run_service
 # See: https://bugs.python.org/issue29288
 u"".encode("idna")
 
+SERVICE_NAME = "farmer"
 
-def service_kwargs_for_farmer(root_path):
-    service_name = "farmer"
-    config = load_config_cli(root_path, "config.yaml", service_name)
-    keychain = Keychain()
 
-    connect_peers = [
-        PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
-    ]
+def service_kwargs_for_farmer(
+    root_path: pathlib.Path,
+    config: Dict,
+    config_pool: Dict,
+    keychain: Keychain,
+    consensus_constants: ConsensusConstants,
+) -> Dict:
+
+    connect_peers = []
+    fnp = config.get("full_node_peer")
+    if fnp is not None:
+        connect_peers.append(PeerInfo(fnp["host"], fnp["port"]))
 
     # TOD: Remove once we have pool server
-    config_pool = load_config_cli(root_path, "config.yaml", "pool")
-    api = Farmer(config, config_pool, keychain, constants)
+    api = Farmer(config, config_pool, keychain, consensus_constants)
 
     kwargs = dict(
         root_path=root_path,
         api=api,
         node_type=NodeType.FARMER,
         advertised_port=config["port"],
-        service_name=service_name,
+        service_name=SERVICE_NAME,
         server_listen_ports=[config["port"]],
         connect_peers=connect_peers,
         auth_connect_peers=False,
@@ -43,7 +53,12 @@ def service_kwargs_for_farmer(root_path):
 
 
 def main():
-    kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH)
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
+    keychain = Keychain()
+    kwargs = service_kwargs_for_farmer(
+        DEFAULT_ROOT_PATH, config, config_pool, keychain, DEFAULT_CONSTANTS
+    )
     return run_service(**kwargs)
 
 

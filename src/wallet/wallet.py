@@ -303,7 +303,7 @@ class Wallet:
         assert len(transaction) > 0
 
         self.log.info("About to sign a transaction")
-        self.hack_populate_secret_keys_for_coin_solutions(transaction)
+        await self.hack_populate_secret_keys_for_coin_solutions(transaction)
         spend_bundle: SpendBundle = await sign_coin_solutions(
             transaction, self.secret_key_store.secret_key_for_public_key
         )
@@ -366,7 +366,7 @@ class Wallet:
                 solution = self.make_solution(consumed=[output_created.name()])
             list_of_solutions.append(CoinSolution(coin, Program.to([puzzle, solution])))
 
-        self.hack_populate_secret_keys_for_coin_solutions(list_of_solutions)
+        await self.hack_populate_secret_keys_for_coin_solutions(list_of_solutions)
         spend_bundle = await sign_coin_solutions(
             list_of_solutions, self.secret_key_store.secret_key_for_public_key
         )

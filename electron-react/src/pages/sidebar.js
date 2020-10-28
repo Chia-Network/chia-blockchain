@@ -1,79 +1,78 @@
-import React from "react";
+import React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import List from '@material-ui/core/List';
+import Divider from '@material-ui/core/Divider';
+import { makeStyles } from '@material-ui/core/styles';
 import {
   presentWallet,
   presentNode,
   presentFarmer,
   changeMainMenu,
   presentTrading,
-  presentPlotter
-} from "../modules/mainMenu";
-import { useSelector } from "react-redux";
-import { logOut } from "../modules/message";
-import { useDispatch } from "react-redux";
-import List from "@material-ui/core/List";
-import Divider from "@material-ui/core/Divider";
+  presentPlotter,
+} from '../modules/mainMenu';
+import { logOut } from '../modules/message';
 
-import { changeEntranceMenu, presentSelectKeys } from "../modules/entranceMenu";
-import walletSidebarLogo from "../assets/img/wallet_sidebar.svg"; // Tell webpack this JS file uses this image
-import farmSidebarLogo from "../assets/img/farm_sidebar.svg";
-import helpSidebarLogo from "../assets/img/help_sidebar.svg";
-import homeSidebarLogo from "../assets/img/home_sidebar.svg";
-import plotSidebarLogo from "../assets/img/plot_sidebar.svg";
-import poolSidebarLogo from "../assets/img/pool_sidebar.svg";
-import { makeStyles } from "@material-ui/core/styles";
+import { changeEntranceMenu, presentSelectKeys } from '../modules/entranceMenu';
+import walletSidebarLogo from '../assets/img/wallet_sidebar.svg'; // Tell webpack this JS file uses this image
+import farmSidebarLogo from '../assets/img/farm_sidebar.svg';
+import helpSidebarLogo from '../assets/img/help_sidebar.svg';
+import homeSidebarLogo from '../assets/img/home_sidebar.svg';
+import plotSidebarLogo from '../assets/img/plot_sidebar.svg';
+import poolSidebarLogo from '../assets/img/pool_sidebar.svg';
 
-const useStyles = makeStyles(theme => ({
+const useStyles = makeStyles((theme) => ({
   div: {
-    textAlign: "center",
-    cursor: "pointer"
+    textAlign: 'center',
+    cursor: 'pointer',
   },
   label: {
-    fontFamily: "Roboto",
-    fontWeight: "300",
-    fontSize: "16px",
-    fontStyle: "normal",
-    marginTop: "5px"
+    fontFamily: 'Roboto',
+    fontWeight: '300',
+    fontSize: '16px',
+    fontStyle: 'normal',
+    marginTop: '5px',
   },
   labelChosen: {
-    fontFamily: "Roboto",
-    fontWeight: "500",
-    fontSize: "16px",
-    fontStyle: "normal",
-    marginTop: "5px"
-  }
+    fontFamily: 'Roboto',
+    fontWeight: '500',
+    fontSize: '16px',
+    fontStyle: 'normal',
+    marginTop: '5px',
+  },
 }));
 
 const menuItems = [
   {
-    label: "Full Node",
+    label: 'Full Node',
     present: presentNode,
-    icon: <img src={homeSidebarLogo} alt="Logo" />
+    icon: <img src={homeSidebarLogo} alt="Logo" />,
   },
   {
-    label: "Wallets",
+    label: 'Wallets',
     present: presentWallet,
-    icon: <img src={walletSidebarLogo} alt="Logo" />
+    icon: <img src={walletSidebarLogo} alt="Logo" />,
   },
   {
-    label: "Plot",
+    label: 'Plot',
     present: presentPlotter,
-    icon: <img src={plotSidebarLogo} alt="Logo" />
+    icon: <img src={plotSidebarLogo} alt="Logo" />,
   },
   {
-    label: "Farm",
+    label: 'Farm',
     present: presentFarmer,
-    icon: <img src={farmSidebarLogo} alt="Logo" />
+    icon: <img src={farmSidebarLogo} alt="Logo" />,
   },
   {
-    label: "Trade",
+    label: 'Trade',
     present: presentTrading,
-    icon: <img src={poolSidebarLogo} alt="Logo" />
+    icon: <img src={poolSidebarLogo} alt="Logo" />,
   },
   {
-    label: "Keys",
+    label: 'Keys',
     changeKeys: true,
-    icon: <img src={helpSidebarLogo} alt="Logo" />
-  }
+    icon: <img src={helpSidebarLogo} alt="Logo" />,
+  },
 ];
 
 const MenuItem = (menuItem, currentView) => {
@@ -83,7 +82,7 @@ const MenuItem = (menuItem, currentView) => {
 
   function presentMe() {
     if (item.changeKeys) {
-      dispatch(logOut("log_out", {}));
+      dispatch(logOut('log_out', {}));
       dispatch(changeEntranceMenu(presentSelectKeys));
     } else {
       dispatch(changeMainMenu(item.present));
@@ -101,10 +100,10 @@ const MenuItem = (menuItem, currentView) => {
 };
 
 export const SideBar = () => {
-  const currentView = useSelector(state => state.main_menu.view);
+  const currentView = useSelector((state) => state.main_menu.view);
   return (
     <div>
-      <List>{menuItems.map(item => MenuItem(item, currentView))}</List>
+      <List>{menuItems.map((item) => MenuItem(item, currentView))}</List>
       <Divider />
     </div>
   );

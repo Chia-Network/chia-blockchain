@@ -17,10 +17,10 @@ from src.types.pool_target import PoolTarget
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.consensus.constants import constants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 
 
-test_constants = constants.replace(
+test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,

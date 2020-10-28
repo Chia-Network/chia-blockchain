@@ -246,7 +246,7 @@ async def perform_handshake(
         async for conn in global_connections.successful_handshake(connection):
             yield conn, global_connections
     except Exception as e:
-        connection.log.warning(f"{e}, handshake not completed. Connection not created.")
+        connection.log.info(f"{e}, handshake not completed. Connection not created.")
         global_connections.failed_handshake(connection, e)
         # Make sure to close the connection even if it's not in global connections
         connection.close()

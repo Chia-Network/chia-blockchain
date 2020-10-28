@@ -1,6 +1,6 @@
-from src.consensus.constants import constants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 
-test_constants = constants.replace(
+test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,

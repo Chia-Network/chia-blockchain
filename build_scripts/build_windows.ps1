@@ -1,5 +1,7 @@
 # $env:path should contain a path to editbin.exe and signtool.exe
 
+$ErrorActionPreference = "Stop"
+
 mkdir build_scripts\win_build
 Set-Location -Path ".\build_scripts\win_build" -PassThru
 
@@ -73,6 +75,9 @@ Write-Output "   ---"
 Write-Output "Electron package Windows Installer"
 Write-Output "   ---"
 npm run build
+If ($LastExitCode -gt 0){
+    Throw "npm run build failed!"
+}
 
 Write-Output "   ---"
 Write-Output "Increase the stack for chia command for (chia plots create) chiapos limitations"

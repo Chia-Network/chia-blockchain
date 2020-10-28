@@ -1,8 +1,10 @@
 import asyncio
 import logging
+import ssl
+
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, List, Tuple, Dict
+from typing import Any, List, Optional, Tuple
 
 from aiter import iter_to_aiter, map_aiter, push_aiter
 from aiter.server import start_server_aiter
@@ -15,7 +17,29 @@ from src.types.sized_bytes import bytes32
 from src.util.network import create_node_id
 
 from .pipeline import initialize_pipeline
-from .ssl_context import ssl_context_for_client, ssl_context_for_server
+
+
+def ssl_context_for_server(
+    private_cert_path: Path, private_key_path: Path, require_cert: bool = False
+) -> Optional[ssl.SSLContext]:
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
+    ssl_context.load_cert_chain(certfile=private_cert_path, keyfile=private_key_path)
+    ssl_context.load_verify_locations(str(private_cert_path))
+    ssl_context.verify_mode = ssl.CERT_REQUIRED if require_cert else ssl.CERT_NONE
+    return ssl_context
+
+
+def ssl_context_for_client(
+    private_cert_path: Path, private_key_path: Path, auth: bool
+) -> Optional[ssl.SSLContext]:
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
+    ssl_context.load_cert_chain(certfile=private_cert_path, keyfile=private_key_path)
+    if auth:
+        ssl_context.verify_mode = ssl.CERT_REQUIRED
+        ssl_context.load_verify_locations(str(private_cert_path))
+    else:
+        ssl_context.verify_mode = ssl.CERT_NONE
+    return ssl_context
 
 
 async def start_server(
@@ -28,7 +52,7 @@ async def start_server(
     """
     require_cert = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
     ssl_context = ssl_context_for_server(
-        self.root_path, self.config, require_cert=require_cert
+        self._private_cert_path, self._private_key_path, require_cert
     )
 
     server, aiter = await start_server_aiter(
@@ -62,8 +86,8 @@ class ChiaServer:
         local_type: NodeType,
         ping_interval: int,
         network_id: str,
-        root_path: Path,
-        config: Dict,
+        private_cert_path: Path,
+        private_key_path: Path,
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
@@ -115,8 +139,9 @@ class ChiaServer:
             )
         )
 
-        self.root_path = root_path
-        self.config = config
+        self._private_cert_path = private_cert_path
+        self._private_key_path = private_key_path
+
         self._pending_connections: List = []
 
     async def start_client(
@@ -135,7 +160,9 @@ class ChiaServer:
             self.log.error("Starting client after server closed")
             return False
 
-        ssl_context = ssl_context_for_client(self.root_path, self.config, auth=auth)
+        ssl_context = ssl_context_for_client(
+            self._private_cert_path, self._private_key_path, auth
+        )
         try:
             # Sometimes open_connection takes a long time, so we add it as a task, and cancel
             # the task in the event of closing the node.

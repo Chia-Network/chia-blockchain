@@ -18,6 +18,10 @@ def check_plots(args, root_path):
         num = args.num
     else:
         num = 20
+    if args.grep_string is not None:
+        match_str = args.grep_string
+    else:
+        match_str = None
 
     v = Verifier()
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
@@ -32,6 +36,7 @@ def check_plots(args, root_path):
         {},
         pks,
         pool_public_keys,
+        match_str,
         root_path,
         open_no_key_filenames=True,
     )

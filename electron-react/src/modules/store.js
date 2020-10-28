@@ -1,22 +1,29 @@
-import reduxThunk from "redux-thunk";
-import { createStore, applyMiddleware, compose } from "redux";
-import rootReducer from "./reducers";
-import wsMiddleware from "../middleware/middleware";
-import isElectron from "is-electron";
-import dev_config from "../dev_config";
+import reduxThunk from 'redux-thunk';
+import { createBrowserHistory } from 'history';
+import { createStore, applyMiddleware, compose } from 'redux';
+import { routerMiddleware } from 'connected-react-router';
+import isElectron from 'is-electron';
+import { createRootReducer } from './rootReducer';
+import wsMiddleware from '../middleware/middleware';
+import dev_config from '../dev_config';
 
-const middleware = [reduxThunk, wsMiddleware];
+export const history = createBrowserHistory();
+
+const middlewares = [reduxThunk, wsMiddleware, routerMiddleware(history)];
+
+const rootReducer = createRootReducer(history);
 
 const store =
   isElectron() && !dev_config.redux_tool
-    ? createStore(rootReducer, compose(applyMiddleware(...middleware)))
+    ? createStore(rootReducer, compose(applyMiddleware(...middlewares)))
     : createStore(
         rootReducer,
         compose(
-          applyMiddleware(...middleware),
-          window.__REDUX_DEVTOOLS_EXTENSION__ &&
-            window.__REDUX_DEVTOOLS_EXTENSION__()
-        )
+          applyMiddleware(...middlewares) /* preloadedState, */,
+          (window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ &&
+            window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__()) ||
+            compose,
+        ),
       );
 
 export default store;

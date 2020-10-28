@@ -10,7 +10,7 @@ jobs:
 
     steps:
     - name: Cancel previous runs on the same branch
-      uses: styfle/cancel-workflow-action@0.5.0
+      uses: styfle/cancel-workflow-action@0.6.0
       with:
         access_token: ${{ github.token }}
 
@@ -50,11 +50,11 @@ jobs:
 
     - name: Build source distribution
       run: |
-        pip install pep517
-        python -m pep517.build --source --out-dir dist .
+        pip install build
+        python -m build --sdist --outdir dist .
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v2.1.4
+      uses: actions/upload-artifact@v2.2.0
       with:
         name: dist
         path: ./dist
