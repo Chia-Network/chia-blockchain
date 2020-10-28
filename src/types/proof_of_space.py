@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from bitstring import BitArray
-from blspy import G1Element
+from blspy import G1Element, G2Element, AugSchemeMPL
 
 from chiapos import Verifier
 from src.types.sized_bytes import bytes32
@@ -21,22 +21,28 @@ class ProofOfSpace(Streamable):
     plot_public_key: G1Element
     size: uint8
     proof: bytes
+    challenge_plot_key_signature: G2Element
 
     def get_plot_id(self) -> bytes32:
         return self.calculate_plot_id(self.pool_public_key, self.plot_public_key)
 
     def verify_and_get_quality_string(
-        self, constants: ConsensusConstants, icp_output: Optional[ClassgroupElement] = None
+        self, constants: ConsensusConstants, icp_output: ClassgroupElement, icp_signature: G2Element
     ) -> Optional[bytes32]:
         v: Verifier = Verifier()
         plot_id: bytes32 = self.get_plot_id()
 
-        if not self.can_create_proof(constants, plot_id, self.challenge_hash, icp_output):
+        if not self.can_create_proof(
+            constants, plot_id, self.challenge_hash, self.challenge_plot_key_signature, icp_output, icp_signature
+        ):
             return None
 
         quality_str = v.validate_proof(plot_id, self.size, self.challenge_hash, bytes(self.proof))
 
         if not quality_str:
+            return None
+
+        if not AugSchemeMPL.verify(self.plot_public_key, self.challenge_hash, self.challenge_plot_key_signature):
             return None
         return quality_str
 
@@ -45,17 +51,19 @@ class ProofOfSpace(Streamable):
         constants: ConsensusConstants,
         plot_id: bytes32,
         challenge_hash: bytes32,
+        challenge_signature: G2Element,
         icp_output: Optional[ClassgroupElement] = None,
+        icp_signature: Optional[G2Element] = None,
     ) -> bool:
         # If icp_output is provided, both plot filters are checked. Otherwise only the first one is checked
-        plot_filter_1 = BitArray(std_hash(bytes(plot_id) + bytes(challenge_hash)))
+        plot_filter = BitArray(std_hash(plot_id + challenge_hash + bytes(challenge_signature)))
         if icp_output is None:
-            return plot_filter_1[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
+            return plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
         else:
-            plot_filter_2 = BitArray(std_hash(bytes(plot_id) + bytes(icp_output)))
+            icp_filter = BitArray(std_hash(plot_id + bytes(icp_output) + bytes(icp_signature)))
             return (
-                plot_filter_1[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
-                and plot_filter_2[: constants.NUMBER_ZERO_BITS_ICP_FILTER].uint == 0
+                plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
+                and icp_filter[: constants.NUMBER_ZERO_BITS_ICP_FILTER].uint == 0
             )
 
     @staticmethod
