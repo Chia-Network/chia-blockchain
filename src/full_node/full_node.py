@@ -9,17 +9,17 @@ from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
 import aiosqlite
 from chiabip158 import PyBIP158
 from chiapos import Verifier
+import dataclasses
 from blspy import G2Element, AugSchemeMPL
 
-from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations
-from src.consensus.coinbase import create_coinbase_coin, create_fees_coin
 from src.full_node.block_store import BlockStore
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.full_node.full_node_store import FullNodeStore
 from src.full_node.mempool_manager import MempoolManager
+from src.full_node.sub_block_record import SubBlockRecord
 from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
@@ -34,18 +34,16 @@ from src.protocols.wallet_protocol import GeneratorResponse
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
-from src.types.challenge import Challenge
 from src.types.coin import Coin, hash_coin_list
 from src.types.full_block import FullBlock
-from src.types.header import Header, HeaderData
 from src.types.header_block import HeaderBlock
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
 from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
-from src.types.vdf import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
+from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request
 from src.full_node.bundle_tools import best_solution_program
 from src.full_node.cost_calculator import calculate_cost_of_program
@@ -111,15 +109,15 @@ class FullNode:
         self.coin_store = await CoinStore.create(self.connection)
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
+        self.mempool_manager = MempoolManager(self.coin_store, self.constants)
         if self.blockchain.get_peak() is None:
             self.log.info("Initialized with empty blockchain")
         else:
             self.log.info(
                 f"Blockchain initialized to peak {self.blockchain.get_peak().header_hash} height {self.blockchain.get_peak().height}"
             )
+            await self.mempool_manager.new_peak(self.blockchain.get_peak())
 
-        self.mempool_manager = MempoolManager(self.coin_store, self.constants)
-        await self.mempool_manager.new_tips(await self.blockchain.get_full_tips())
         self.state_changed_callback = None
         try:
             self.full_node_peers = FullNodePeers(
@@ -136,13 +134,15 @@ class FullNode:
             await self.full_node_peers.start()
         except Exception as e:
             self.log.error(f"Exception in peer discovery: {e}")
-        uncompact_interval = self.config["send_uncompact_interval"]
-        if uncompact_interval > 0:
-            self.broadcast_uncompact_task = asyncio.create_task(self.broadcast_uncompact_blocks(uncompact_interval))
 
-        for ((_, _), block) in (await self.full_node_store.get_unfinished_blocks()).items():
-            if block.height > self.full_node_store.get_unfinished_block_leader()[0]:
-                self.full_node_store.set_unfinished_block_leader((block.height, 999999999999))
+        # TODO(mariano)
+        # uncompact_interval = self.config["send_uncompact_interval"]
+        # if uncompact_interval > 0:
+        #     self.broadcast_uncompact_task = asyncio.create_task(self.broadcast_uncompact_blocks(uncompact_interval))
+        #
+        # for ((_, _), block) in (await self.full_node_store.get_unfinished_blocks()).items():
+        #     if block.height > self.full_node_store.get_unfinished_block_leader()[0]:
+        #         self.full_node_store.set_unfinished_block_leader((block.height, 999999999999))
 
     def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections = global_connections
@@ -158,40 +158,6 @@ class FullNode:
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
-
-    async def _send_tips_to_farmers(self, delivery: Delivery = Delivery.BROADCAST) -> OutboundMessageGenerator:
-        """
-        Sends all of the current heads to all farmer peers. Also sends the latest
-        estimated proof of time rate, so farmer can calulate which proofs are good.
-        """
-        requests: List[farmer_protocol.ProofOfSpaceFinalized] = []
-        async with self.blockchain.lock:
-            tips: List[Header] = self.blockchain.get_current_tips()
-            for tip in tips:
-                full_tip: Optional[FullBlock] = await self.block_store.get_block(tip.header_hash)
-                assert full_tip is not None
-                challenge: Optional[Challenge] = self.blockchain.get_challenge(full_tip)
-                assert challenge is not None
-                challenge_hash = challenge.get_hash()
-                if tip.height > 0:
-                    difficulty: uint64 = self.blockchain.get_next_difficulty(
-                        self.blockchain.headers[tip.prev_header_hash]
-                    )
-                else:
-                    difficulty = uint64(tip.weight)
-                requests.append(
-                    farmer_protocol.ProofOfSpaceFinalized(challenge_hash, tip.height, tip.weight, difficulty)
-                )
-            full_block: Optional[FullBlock] = await self.block_store.get_block(tips[0].header_hash)
-            assert full_block is not None
-            proof_of_time_min_iters: uint64 = self.blockchain.get_next_min_iters(full_block)
-            proof_of_time_rate: uint64 = uint64(
-                proof_of_time_min_iters * self.constants.MIN_ITERS_PROPORTION // (self.constants.BLOCK_TIME_TARGET)
-            )
-        rate_update = farmer_protocol.ProofOfTimeRate(proof_of_time_rate)
-        yield OutboundMessage(NodeType.FARMER, Message("proof_of_time_rate", rate_update), delivery)
-        for request in requests:
-            yield OutboundMessage(NodeType.FARMER, Message("proof_of_space_finalized", request), delivery)
 
     async def _send_challenges_to_timelords(self, delivery: Delivery = Delivery.BROADCAST) -> OutboundMessageGenerator:
         """
@@ -262,10 +228,8 @@ class FullNode:
             Delivery.RESPOND,
         )
 
-        # Update farmers and timelord with most recent information
+        # Update timelord with most recent information
         async for msg in self._send_challenges_to_timelords(Delivery.RESPOND):
-            yield msg
-        async for msg in self._send_tips_to_farmers(Delivery.RESPOND):
             yield msg
 
     @api_request
@@ -483,7 +447,6 @@ class FullNode:
 
         async with self.blockchain.lock:
             await self.sync_store.clear_sync_info()
-            await self.blockchain.recreate_diff_stores()
 
         for block in potential_fut_blocks:
             if self._shut_down:
@@ -491,10 +454,8 @@ class FullNode:
             async for msg in self.respond_block(full_node_protocol.RespondBlock(block)):
                 yield msg
 
-        # Update farmers and timelord with most recent information
+        # Update timelords with most recent information
         async for msg in self._send_challenges_to_timelords():
-            yield msg
-        async for msg in self._send_tips_to_farmers():
             yield msg
 
         lca = self.blockchain.lca_block
@@ -1124,8 +1085,9 @@ class FullNode:
         if self.sync_store.get_sync_mode():
             yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
 
+    # FARMER PROTOCOL
     @api_request
-    async def request_header_hash(self, request: farmer_protocol.RequestHeaderHash) -> OutboundMessageGenerator:
+    async def declare_proof_of_space(self, request: farmer_protocol.DeclareProofOfSpace) -> OutboundMessageGenerator:
         """
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
         by the farmer, and sends the hash of the header data back to the farmer.
@@ -1141,176 +1103,46 @@ class FullNode:
         )
         assert len(quality_string) == 32
 
-        # Retrieves the correct tip for the challenge
-        tips: List[Header] = self.blockchain.get_current_tips()
-        tips_blocks: List[Optional[FullBlock]] = [await self.block_store.get_block(tip.header_hash) for tip in tips]
-        target_tip_block: Optional[FullBlock] = None
-        target_tip: Optional[Header] = None
-        for tip in tips_blocks:
-            assert tip is not None
-            tip_challenge: Optional[Challenge] = self.blockchain.get_challenge(tip)
-            assert tip_challenge is not None
-            if tip_challenge.get_hash() == request.challenge_hash:
-                target_tip_block = tip
-                target_tip = tip.header
-        if target_tip is None:
-            self.log.warning(f"Challenge hash: {request.challenge_hash} not in one of three tips")
-            return
-
-        assert target_tip is not None
         # Grab best transactions from Mempool for given tip target
         async with self.blockchain.lock:
-            spend_bundle: Optional[SpendBundle] = await self.mempool_manager.create_bundle_from_mempool(peak_hash)
-        spend_bundle_fees = 0
-        aggregate_sig: G2Element = request.pool_target_signature
-        solution_program: Optional[Program] = None
-
-        if spend_bundle:
-            solution_program = best_solution_program(spend_bundle)
-            spend_bundle_fees = spend_bundle.fees()
-            aggregate_sig = AugSchemeMPL.aggregate([spend_bundle.aggregated_signature, aggregate_sig])
-
-        base_fee_reward = calculate_base_fee(target_tip.height + 1)
-        full_fee_reward = uint64(int(base_fee_reward + spend_bundle_fees))
-
-        # Calculate the cost of transactions
-        cost = uint64(0)
-        if solution_program:
-            _, _, cost = calculate_cost_of_program(solution_program, self.constants.CLVM_COST_RATIO_CONSTANT)
-
-        extension_data: bytes32 = bytes32([0] * 32)
-
-        # Creates a block with transactions, coinbase, and fees
-        # Creates the block header
-        prev_header_hash: bytes32 = target_tip.get_hash()
-        timestamp: uint64 = uint64(int(time.time()))
-
-        # Create filter
-        byte_array_tx: List[bytes32] = []
-        if spend_bundle:
-            additions: List[Coin] = spend_bundle.additions()
-            removals: List[Coin] = spend_bundle.removals()
-            for coin in additions:
-                byte_array_tx.append(bytearray(coin.puzzle_hash))
-            for coin in removals:
-                byte_array_tx.append(bytearray(coin.name()))
-
-        byte_array_tx.append(bytearray(request.farmer_rewards_puzzle_hash))
-        byte_array_tx.append(bytearray(request.pool_target.puzzle_hash))
-
-        bip158: PyBIP158 = PyBIP158(byte_array_tx)
-        encoded_filter: bytes = bytes(bip158.GetEncoded())
-
-        proof_of_space_hash: bytes32 = request.proof_of_space.get_hash()
-        difficulty = self.blockchain.get_next_difficulty(target_tip)
-
-        assert target_tip_block is not None
-        vdf_min_iters: uint64 = self.blockchain.get_next_min_iters(target_tip_block)
-
-        iterations_needed: uint64 = calculate_iterations(
-            request.proof_of_space,
-            difficulty,
-            vdf_min_iters,
-            self.constants.NUMBER_ZERO_BITS_PLOT_FILTER,
-        )
-
-        removal_merkle_set = MerkleSet()
-        addition_merkle_set = MerkleSet()
-
-        additions = []
-        removals = []
-
-        if spend_bundle:
-            additions = spend_bundle.additions()
-            removals = spend_bundle.removals()
-
-        # Create removal Merkle set
-        for coin in removals:
-            removal_merkle_set.add_already_hashed(coin.name())
-        cb_reward = calculate_block_reward(target_tip.height + 1)
-        cb_coin = create_coinbase_coin(target_tip.height + 1, request.pool_target.puzzle_hash, cb_reward)
-        fees_coin = create_fees_coin(
-            target_tip.height + 1,
-            request.farmer_rewards_puzzle_hash,
-            full_fee_reward,
-        )
-
-        # Create addition Merkle set
-        puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
-        for coin in additions + [cb_coin, fees_coin]:
-            if coin.puzzle_hash in puzzlehash_coins_map:
-                puzzlehash_coins_map[coin.puzzle_hash].append(coin)
+            peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
+            if peak is None:
+                spend_bundle: Optional[SpendBundle] = None
             else:
-                puzzlehash_coins_map[coin.puzzle_hash] = [coin]
-
-        # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-        for puzzle, coins in puzzlehash_coins_map.items():
-            addition_merkle_set.add_already_hashed(puzzle)
-            addition_merkle_set.add_already_hashed(hash_coin_list(coins))
-
-        additions_root = addition_merkle_set.get_root()
-        removal_root = removal_merkle_set.get_root()
-
-        generator_hash = solution_program.get_tree_hash() if solution_program is not None else bytes32([0] * 32)
-        filter_hash = std_hash(encoded_filter)
-
-        block_header_data: HeaderData = HeaderData(
-            uint32(target_tip.height + 1),
-            prev_header_hash,
-            timestamp,
-            filter_hash,
-            proof_of_space_hash,
-            uint128(target_tip.weight + difficulty),
-            uint64(target_tip.data.total_iters + iterations_needed),
-            additions_root,
-            removal_root,
-            request.farmer_rewards_puzzle_hash,
-            full_fee_reward,
-            request.pool_target,
-            aggregate_sig,
-            cost,
-            extension_data,
-            generator_hash,
+                spend_bundle: Optional[SpendBundle] = await self.mempool_manager.create_bundle_from_mempool(
+                    peak.header_hash
+                )
+        # TODO(mariano): make block
+        foliage_sub_block_hash = bytes32(bytes([0] * 32))
+        foliage_block_hash = bytes32(bytes([0] * 32))
+        message = farmer_protocol.RequestSignedValues(
+            quality_string,
+            foliage_sub_block_hash,
+            foliage_block_hash,
         )
-
-        block_header_data_hash: bytes32 = block_header_data.get_hash()
-
-        # Stores this block so we can submit it to the blockchain after it's signed by harvester
-        self.full_node_store.add_candidate_block(
-            proof_of_space_hash,
-            solution_program,
-            encoded_filter,
-            block_header_data,
-            request.proof_of_space,
-            target_tip.height + 1,
-        )
-
-        message = farmer_protocol.HeaderHash(proof_of_space_hash, block_header_data_hash)
-        yield OutboundMessage(NodeType.FARMER, Message("header_hash", message), Delivery.RESPOND)
+        yield OutboundMessage(NodeType.FARMER, Message("request_signed_values", message), Delivery.RESPOND)
 
     @api_request
-    async def header_signature(self, header_signature: farmer_protocol.HeaderSignature) -> OutboundMessageGenerator:
+    async def signed_values(self, farmer_request: farmer_protocol.SignedValues) -> OutboundMessageGenerator:
         """
         Signature of header hash, by the harvester. This is enough to create an unfinished
         block, which only needs a Proof of Time to be finished. If the signature is valid,
         we call the unfinished_block routine.
         """
-        candidate: Optional[
-            Tuple[Optional[Program], bytes, HeaderData, ProofOfSpace]
-        ] = self.full_node_store.get_candidate_block(header_signature.pos_hash)
+        candidate: Optional[UnfinishedBlock] = self.full_node_store.get_candidate_block(farmer_request.quality_string)
         if candidate is None:
-            self.log.warning(f"PoS hash {header_signature.pos_hash} not found in database")
+            self.log.warning(f"Quality string {farmer_request.quality_string} not found in database")
             return
-        # Verifies that we have the correct header and body stored
-        generator, filt, block_header_data, pos = candidate
 
-        assert block_header_data.get_hash() == header_signature.header_hash
-
-        block_header: Header = Header(block_header_data, header_signature.header_signature)
-        unfinished_block_obj: FullBlock = FullBlock(pos, None, block_header, generator, filt)
+        fsb2 = dataclasses.replace(
+            candidate.foliage_sub_block, foliage_sub_block_signature=farmer_request.foliage_sub_block_signature
+        )
+        fsb3 = dataclasses.replace(fsb2, foliage_block_signature=farmer_request.foliage_block_signature)
+        new_candidate = dataclasses.replace(candidate, foliage_sub_block=fsb3)
 
         # Propagate to ourselves (which validates and does further propagations)
-        request = full_node_protocol.RespondUnfinishedBlock(unfinished_block_obj)
+        request = full_node_protocol.RespondUnfinishedBlock(new_candidate)
+
         async for m in self.respond_unfinished_block(request):
             # Yield all new messages (propagation to peers)
             yield m
