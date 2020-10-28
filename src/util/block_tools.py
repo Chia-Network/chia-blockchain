@@ -321,7 +321,7 @@ class BlockTools:
             # update values
             prev_block = block_list[-1]
             self.sub_blocks[prev_block.get_hash()] = prev_block.get_sub_block_record()
-            self.height_to_hash[prev_block.height] = (prev_block.get_hash(),)
+            self.height_to_hash[prev_block.height] = prev_block.get_hash()
             self.slot_iters = get_next_slot_iters(
                 test_constants,
                 self.height_to_hash,
@@ -341,9 +341,26 @@ class BlockTools:
                     self.ips,
                 )
 
-                end_of_slot_vdf = None  # todo
-                challenge_chain_slot_proof = None  # todo
-                reward_chain_slot_proof = None  # todo
+                challnge = self.challenge_chain_head.finished_slots[-1][0].get_hash()
+                output = get_vdf_output(
+                    challnge,
+                    ClassgroupElement.get_default_element(),
+                    test_constants.DISCRIMINANT_SIZE_BITS,
+                    self.slot_iters,
+                )
+                end_of_slot_vdf = VDFInfo(
+                    challnge,
+                    ClassgroupElement.get_default_element(),
+                    self.slot_iters,
+                    output,
+                )
+
+                challenge_chain_slot_proof = get_vdf_proof(
+                    challnge, str(1), str(2), self.slot_iters, test_constants.DISCRIMINANT_SIZE_BITS
+                )
+                reward_chain_slot_proof = get_vdf_proof(
+                    challnge, str(1), str(2), self.slot_iters, test_constants.DISCRIMINANT_SIZE_BITS
+                )
 
                 # restart overflow count
                 self.num_sub_blocks_overflow: uint8 = 0
@@ -413,7 +430,6 @@ class BlockTools:
                     transactions,
                     aggsig,
                     timestamp,
-                    self.proof_of_space,
                     reward_puzzlehash,
                     end_of_slot,
                     overflow,
@@ -482,7 +498,7 @@ class BlockTools:
 
         cc_icp_vdf = VDFInfo(
             test_constants.FIRST_CC_CHALLENGE,
-            input,
+            ClassgroupElement.get_default_element(),
             ip_iters,
             cc_icp_output,
         )
@@ -572,7 +588,6 @@ class BlockTools:
         transactions: Optional[Program],
         aggsig: Optional[G2Element],
         timestamp: uint64,
-        proof_of_space: ProofOfSpace,
         reward_puzzlehash: bytes32,
         end_of_slot: RewardChainEndOfSlot,
         overflow: bool,
@@ -603,7 +618,7 @@ class BlockTools:
         reward_chain_sub_block = RewardChainSubBlock(
             previous_weight + difficulty,
             self.number_iters,
-            proof_of_space,
+            self.proof_of_space,
             cc_ip_vdf,
             cc_icp_vdf,
             cc_icp_signature,
@@ -617,7 +632,7 @@ class BlockTools:
             fees,
             aggsig,
             transactions,
-            block_rewards,
+            block_rewards,  # todo
             self.plot_pk,
             self.prev_foliage_block,
             head.get_hash(),
@@ -640,7 +655,7 @@ class BlockTools:
 
         full_block: FullBlock = FullBlock(
             finished_slots=self.finished_slots,
-            challenge_chain_ip_proof=challenge_chain_ip_proof,
+            challenge_chain_ip_proof=VDFProof(witness=cc_ip_output.get_hash(), witness_type=uint16(1)),
             challenge_chain_icp_proof=VDFProof(witness=cc_icp_output.get_hash(), witness_type=uint16(1)),
             reward_chain_icp_proof=VDFProof(witness=rc_icp_output.get_hash(), witness_type=uint16(1)),
             reward_chain_ip_proof=VDFProof(witness=rc_ip_output.get_hash(), witness_type=uint16(1)),
