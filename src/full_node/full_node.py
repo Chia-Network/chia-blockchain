@@ -139,10 +139,6 @@ class FullNode:
         # uncompact_interval = self.config["send_uncompact_interval"]
         # if uncompact_interval > 0:
         #     self.broadcast_uncompact_task = asyncio.create_task(self.broadcast_uncompact_blocks(uncompact_interval))
-        #
-        # for ((_, _), block) in (await self.full_node_store.get_unfinished_blocks()).items():
-        #     if block.height > self.full_node_store.get_unfinished_block_leader()[0]:
-        #         self.full_node_store.set_unfinished_block_leader((block.height, 999999999999))
 
     def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections = global_connections
@@ -183,6 +179,7 @@ class FullNode:
             pos_info_requests.append(timelord_protocol.ProofOfSpaceInfo(chall, iters))
 
         # Sends our best unfinished block (proof of space) to peer
+        # TODO(mariano) send all unf blocks
         for ((_, iters), block) in sorted(tip_infos, key=lambda t: t[0][1]):
             if block.height < self.full_node_store.get_unfinished_block_leader()[0]:
                 continue
@@ -864,10 +861,10 @@ class FullNode:
             await asyncio.sleep(uncompact_interval)
 
     @api_request
-    async def new_unfinished_block(
-        self, new_unfinished_block: full_node_protocol.NewUnfinishedBlock
+    async def new_unfinished_sub_block(
+        self, new_unfinished_sub_block: full_node_protocol.NewUnfinishedSubBlock
     ) -> OutboundMessageGenerator:
-        if self.blockchain.contains_block(new_unfinished_block.new_header_hash):
+        if self.blockchain.contains_block(new_unfinished_sub_block.unfinished_reward_hash):
             return
         if not self.blockchain.contains_block(new_unfinished_block.previous_header_hash):
             return
@@ -931,21 +928,21 @@ class FullNode:
         yield OutboundMessage(NodeType.FULL_NODE, reject, Delivery.RESPOND)
 
     @api_request
-    async def respond_unfinished_block(
-        self, respond_unfinished_block: full_node_protocol.RespondUnfinishedBlock
+    async def respond_unfinished_sub_block(
+        self, respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedSubBlock
     ) -> OutboundMessageGenerator:
         """
         We have received an unfinished block, either created by us, or from another peer.
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
-        block = respond_unfinished_block.block
+        block = respond_unfinished_sub_block.unfinished_sub_block
         # Adds the unfinished block to seen, and check if it's seen before, to prevent
         # processing it twice
         if self.full_node_store.seen_unfinished_block(block.header_hash):
             return
 
-        if not self.blockchain.is_child_of_head(block):
+        if not self.blockchain.is_child_of_peak(block):
             return
 
         prev_full_block: Optional[FullBlock] = await self.block_store.get_block(block.prev_header_hash)
