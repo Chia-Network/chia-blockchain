@@ -816,11 +816,7 @@ def get_prams_from_plots(
         seeded_pn = random.randint(0, len(plots) - 1)
         plot_info = plots[seeded_pn]
         plot_id = plot_info.prover.get_id()
-        ccp = ProofOfSpace.can_create_proof(
-            plot_id,
-            challenge_hash,
-            test_constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
-        )
+        ccp = ProofOfSpace.can_create_proof(test_constants, plot_id, challenge_hash, None, None)
         if not ccp:
             continue
         qualities = plot_info.prover.get_qualities_for_challenge(challenge_hash)
