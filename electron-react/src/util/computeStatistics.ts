@@ -1,11 +1,13 @@
 import type Wallet from '../types/Wallet';
 import { big_int_to_array, arr_to_hex, sha256 } from './utils';
 
-export default async function computeStatistics(wallets: Wallet[]): Promise<{
-  totalChia: BigInt,
-  biggestHeight: number,
-  farmingRewards: BigInt,
-  feesCollected: BigInt,
+export default async function computeStatistics(
+  wallets: Wallet[],
+): Promise<{
+  totalChia: BigInt;
+  biggestHeight: number;
+  farmingRewards: BigInt;
+  feesCollected: BigInt;
 }> {
   let totalChia = BigInt(0);
   let biggestHeight = 0;

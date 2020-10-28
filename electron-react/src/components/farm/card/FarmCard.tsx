@@ -1,7 +1,13 @@
 import React, { ReactNode, ReactElement } from 'react';
 import styled from 'styled-components';
 import Flex from '../../flex/Flex';
-import { Card, CardContent, Typography, TypographyProps, CircularProgress } from '@material-ui/core';
+import {
+  Card,
+  CardContent,
+  Typography,
+  TypographyProps,
+  CircularProgress,
+} from '@material-ui/core';
 import TooltipIcon from '../../tooltip/TooltipIcon';
 
 const StyledCard = styled(Card)`
@@ -27,11 +33,7 @@ export default function FarmCard(props: Props) {
           <Typography color="textSecondary" gutterBottom>
             {title}
           </Typography>
-          {tooltip && (
-            <TooltipIcon>
-              {tooltip}
-            </TooltipIcon>
-          )}
+          {tooltip && <TooltipIcon>{tooltip}</TooltipIcon>}
         </Flex>
         {loading ? (
           <CircularProgress color="primary" size={25} />

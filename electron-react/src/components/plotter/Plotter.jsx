@@ -241,18 +241,14 @@ const WorkLocation = () => {
             readOnly: true,
           }}
           value={work_location}
-          label={(
+          label={
             <Trans id="PlotterWorkLocation.temporaryFolderLocation">
               Temporary folder location
             </Trans>
-          )}
+          }
         />
       </Box>
-      <Button
-        onClick={select}
-        variant="contained"
-        size="large"
-      >
+      <Button onClick={select} variant="contained" size="large">
         <Trans id="PlotterWorkLocation.select">Select</Trans>
       </Button>
     </Box>
@@ -292,11 +288,11 @@ const FinalLocation = () => {
         <TextField
           onClick={select}
           fullWidth
-          label={(
+          label={
             <Trans id="PlotterFinalLocation.finalFolderLocation">
               Final folder location
             </Trans>
-          )}
+          }
           value={final_location}
           inputProps={{
             readOnly: true,
@@ -304,11 +300,7 @@ const FinalLocation = () => {
           variant="outlined"
         />
       </Box>
-      <Button
-        onClick={select}
-        size="large"
-        variant="contained"
-      >
+      <Button onClick={select} size="large" variant="contained">
         <Trans id="PlotterFinalLocation.select">Select</Trans>
       </Button>
     </Box>
@@ -407,9 +399,10 @@ function CreatePlot() {
                 Using this tool, you can create plots, which are allocated space
                 on your hard drive used to farm and earn Chia. Also, temporary
                 files are created during the plotting process, which exceed the
-                size of the final plot files, so make sure you have enough space.
-                Try to use a fast drive like an SSD for the temporary folder, and
-                a large slow hard drive (like external HDD) for the final folder.
+                size of the final plot files, so make sure you have enough
+                space. Try to use a fast drive like an SSD for the temporary
+                folder, and a large slow hard drive (like external HDD) for the
+                final folder.
               </Trans>
             </Typography>
           </Grid>
@@ -447,7 +440,9 @@ function CreatePlot() {
                   variant="outlined"
                   className={classes.formControl}
                 >
-                  <InputLabel><Trans id="CreatePlot.plotCount">Plot Count</Trans></InputLabel>
+                  <InputLabel>
+                    <Trans id="CreatePlot.plotCount">Plot Count</Trans>
+                  </InputLabel>
                   <Select
                     value={plotCount}
                     onChange={changePlotCount}
@@ -608,9 +603,7 @@ function Proggress() {
             </Typography>
           </Grid>
           <Grid xs={12} item>
-            <Log>
-              {progress.trim()}
-            </Log>
+            <Log>{progress.trim()}</Log>
           </Grid>
           {plottingStopped && (
             <Grid xs={12} item>
@@ -625,19 +618,13 @@ function Proggress() {
             <Grid justify="flex-end" spacing={2} container>
               {!plottingStopped && (
                 <Grid item>
-                  <Button
-                    onClick={cancel}
-                    variant="contained"
-                  >
+                  <Button onClick={cancel} variant="contained">
                     <Trans id="PlotterProgress.cancel">Cancel</Trans>
                   </Button>
                 </Grid>
               )}
               <Grid item>
-                <Button
-                  onClick={clearLog}
-                  variant="contained"
-                >
+                <Button onClick={clearLog} variant="contained">
                   <Trans id="PlotterProgress.clearLog">Clear Log</Trans>
                 </Button>
               </Grid>

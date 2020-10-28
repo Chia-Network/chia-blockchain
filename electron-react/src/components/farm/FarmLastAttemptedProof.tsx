@@ -6,16 +6,20 @@ import Table from '../table/Table';
 import TooltipIcon from '../tooltip/TooltipIcon';
 import BlockContainer from '../block/BlockContainer';
 
-const cols = [{
-  field: 'height',
-  title: <Trans id="FarmFullNodeConnections.height">Height</Trans>,
-}, {
-  field: 'date',
-  title: <Trans id="FarmFullNodeConnections.date">Date</Trans>,
-}, {
-  field: 'time',
-  title: <Trans id="FarmFullNodeConnections.time">Time</Trans>,
-}];
+const cols = [
+  {
+    field: 'height',
+    title: <Trans id="FarmFullNodeConnections.height">Height</Trans>,
+  },
+  {
+    field: 'date',
+    title: <Trans id="FarmFullNodeConnections.date">Date</Trans>,
+  },
+  {
+    field: 'time',
+    title: <Trans id="FarmFullNodeConnections.time">Time</Trans>,
+  },
+];
 
 export default function FarmLastAttemptedProof() {
   return (
@@ -29,15 +33,13 @@ export default function FarmLastAttemptedProof() {
           </Typography>
           <TooltipIcon>
             <Trans id="FarmLastAttemptedProof.tooltip">
-              This table shows you the last time your farm attempted to win a block a block challenge.
+              This table shows you the last time your farm attempted to win a
+              block a block challenge.
             </Trans>
           </TooltipIcon>
         </Flex>
 
-        <Table
-          cols={cols}
-          rows={[]}
-        />
+        <Table cols={cols} rows={[]} />
       </Flex>
     </BlockContainer>
   );

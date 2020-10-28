@@ -3,5 +3,5 @@ import styled from 'styled-components';
 
 export default styled(CircularProgress)`
   color: ${({ theme }) =>
-    theme.palette.type === 'dark' ? 'white' : 'inherit'};;
+    theme.palette.type === 'dark' ? 'white' : 'inherit'}; ;
 `;

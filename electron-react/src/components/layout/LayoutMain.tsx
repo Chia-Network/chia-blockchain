@@ -1,7 +1,5 @@
 import React, { ReactElement, ReactNode } from 'react';
-import {
-  Container,
-} from '@material-ui/core';
+import { Container } from '@material-ui/core';
 import styled from 'styled-components';
 import DashboardTitle from '../dashboard/DashboardTitle';
 import Flex from '../flex/Flex';
@@ -9,11 +7,11 @@ import Flex from '../flex/Flex';
 const StyledContainer = styled(Container)`
   padding-top: ${({ theme }) => `${theme.spacing(4)}px`};
   padding-bottom: ${({ theme }) => `${theme.spacing(4)}px`};
-`
+`;
 
 type Props = {
-  children: ReactElement<any>,
-  title?: ReactNode,
+  children: ReactElement<any>;
+  title?: ReactNode;
 };
 
 export default function LayoutMain(props: Props): JSX.Element {
@@ -21,9 +19,7 @@ export default function LayoutMain(props: Props): JSX.Element {
 
   return (
     <>
-      <DashboardTitle>
-        {title}
-      </DashboardTitle>
+      <DashboardTitle>{title}</DashboardTitle>
       <Flex
         flexDirection="column"
         flexGrow={1}
@@ -31,9 +27,7 @@ export default function LayoutMain(props: Props): JSX.Element {
         overflow="auto"
         alignItems="center"
       >
-        <StyledContainer maxWidth="lg">
-          {children}
-        </StyledContainer>
+        <StyledContainer maxWidth="lg">{children}</StyledContainer>
       </Flex>
     </>
   );

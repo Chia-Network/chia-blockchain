@@ -52,8 +52,7 @@ export default function Flex(props: Props) {
 
   const theme = useTheme();
 
-  const rowGapValue =
-    flexDirection === 'column' ? getGap(rowGap, theme) : 0;
+  const rowGapValue = flexDirection === 'column' ? getGap(rowGap, theme) : 0;
 
   const columnGapValue =
     flexDirection !== 'column' ? getGap(columnGap, theme) : 0;

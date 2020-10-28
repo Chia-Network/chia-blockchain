@@ -64,9 +64,11 @@ import styled from 'styled-components';
 import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
 
-
-const StyledToggleAdvancedOptions = styled(({ expanded, ...rest }) => <Box {...rest }/>)`
-  color: ${({ expanded, theme }) => expanded ? '#AA271E' : theme.palette.primary.main};
+const StyledToggleAdvancedOptions = styled(({ expanded, ...rest }) => (
+  <Box {...rest} />
+))`
+  color: ${({ expanded, theme }) =>
+    expanded ? '#AA271E' : theme.palette.primary.main};
   cursor: pointer;
 `;
 
@@ -190,11 +192,11 @@ const getStatusItems = (
 
 type StatusCellProps = {
   item: {
-    label: ReactNode,
-    value: ReactNode,
-    colour?: string,
-    tooltip?: ReactNode,
-  },
+    label: ReactNode;
+    value: ReactNode;
+    colour?: string;
+    tooltip?: ReactNode;
+  };
 };
 
 const StatusCell = (props: StatusCellProps) => {
@@ -230,22 +232,28 @@ const StatusCell = (props: StatusCellProps) => {
 };
 
 type FarmerStatusProps = {
-  totalChiaFarmed: BigInt,
-  biggestHeight: number,
+  totalChiaFarmed: BigInt;
+  biggestHeight: number;
 };
 
 const FarmerStatus = (props: FarmerStatusProps) => {
-  const plots = useSelector((state: RootState) => state.farming_state.harvester.plots);
+  const plots = useSelector(
+    (state: RootState) => state.farming_state.harvester.plots,
+  );
   const totalNetworkSpace = useSelector(
     (state: RootState) => state.full_node_state.blockchain_state.space,
   );
 
   let farmerSpace = 0;
   if (plots !== undefined) {
-    farmerSpace = plots.map((p: Plot) => p.file_size).reduce((a, b) => a + b, 0);
+    farmerSpace = plots
+      .map((p: Plot) => p.file_size)
+      .reduce((a, b) => a + b, 0);
   }
 
-  const connected = useSelector((state: RootState) => state.daemon_state.farmer_connected);
+  const connected = useSelector(
+    (state: RootState) => state.daemon_state.farmer_connected,
+  );
   const statusItems = getStatusItems(
     connected,
     farmerSpace,
@@ -344,12 +352,15 @@ const Challenges = () => {
 const Plots = () => {
   const classes = useStyles();
   const dispatch = useDispatch();
-  const plots = useSelector((state: RootState) => state.farming_state.harvester.plots);
+  const plots = useSelector(
+    (state: RootState) => state.farming_state.harvester.plots,
+  );
   const not_found_filenames = useSelector(
     (state: RootState) => state.farming_state.harvester.not_found_filenames,
   );
   const failed_to_open_filenames = useSelector(
-    (state: RootState) => state.farming_state.harvester.failed_to_open_filenames,
+    (state: RootState) =>
+      state.farming_state.harvester.failed_to_open_filenames,
   );
   plots.sort((a, b) => b.size - a.size);
   const [page, setPage] = React.useState(0);
@@ -358,11 +369,16 @@ const Plots = () => {
   const [deletePlotName, deletePlotSetName] = React.useState('');
   const [deletePlotOpen, deletePlotSetOpen] = React.useState(false);
 
-  const handleChangePage = (event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null, newPage: number) => {
+  const handleChangePage = (
+    event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null,
+    newPage: number,
+  ) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
@@ -617,8 +633,8 @@ const Plots = () => {
 };
 
 type FarmerContentProps = {
-  totalChiaFarmed: BigInt,
-  biggestHeight: number,
+  totalChiaFarmed: BigInt;
+  biggestHeight: number;
 };
 
 const FarmerContent = (props: FarmerContentProps) => {
@@ -724,7 +740,9 @@ async function getStatistics(wallets: Wallet[]): Promise<{
 
 export default function Farm(): JSX.Element {
   const [showAdvancedOptions, toggleShowAdvancedOptions] = useToggle(false);
-  const plots = useSelector((state: RootState) => state.farming_state.harvester.plots);
+  const plots = useSelector(
+    (state: RootState) => state.farming_state.harvester.plots,
+  );
   const hasPlots = plots.length > 0;
 
   return (
@@ -738,7 +756,10 @@ export default function Farm(): JSX.Element {
           <>
             <FarmLastAttemptedProof />
 
-            <StyledToggleAdvancedOptions expanded={showAdvancedOptions} onClick={toggleShowAdvancedOptions}>
+            <StyledToggleAdvancedOptions
+              expanded={showAdvancedOptions}
+              onClick={toggleShowAdvancedOptions}
+            >
               {showAdvancedOptions ? (
                 <Flex alignItems="center">
                   <KeyboardArrowUpIcon />
@@ -746,7 +767,7 @@ export default function Farm(): JSX.Element {
                     Hide Advanced Options
                   </Trans>
                 </Flex>
-              ): (
+              ) : (
                 <Flex alignItems="center">
                   <KeyboardArrowDownIcon />
                   <Trans id="Farm.hideAdvancedOptions">

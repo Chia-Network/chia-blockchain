@@ -7,7 +7,7 @@ type Coin = {
   coinbase: boolean;
   wallet_type: WalletType;
   wallet_id: number;
-  parent_coin_info: string,
+  parent_coin_info: string;
 };
 
 export default Coin;

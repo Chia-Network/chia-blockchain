@@ -336,9 +336,9 @@ const CreatePlot = () => {
   const changePlotSize = (event) => {
     setPlotSize(event.target.value);
     for (let pso of plot_size_options) {
-        if (pso.value === event.target.value) {
-            setMaxRam(pso.default_ram);
-        }
+      if (pso.value === event.target.value) {
+        setMaxRam(pso.default_ram);
+      }
     }
   };
   const changePlotCount = (event) => {
@@ -355,7 +355,7 @@ const CreatePlot = () => {
     }
     const N = plotCount;
     const K = plotSize;
-    if (!t2 || t2 === "") {
+    if (!t2 || t2 === '') {
       t2 = work_location;
     }
     dispatch(startPlotting(K, N, work_location, t2, final_location, maxRam));

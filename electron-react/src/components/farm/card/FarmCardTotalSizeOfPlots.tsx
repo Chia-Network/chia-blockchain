@@ -7,21 +7,23 @@ import type Plot from '../../../types/Plot';
 import FormatBytes from '../../format/FormatBytes';
 
 export default function FarmCardTotalSizeOfPlots() {
-  const plots = useSelector((state: RootState) => state.farming_state.harvester.plots);
+  const plots = useSelector(
+    (state: RootState) => state.farming_state.harvester.plots,
+  );
 
   const farmerSpace = useMemo(() => {
     if (!plots) {
       return 0;
     }
 
-    return plots
-      .map((p: Plot) => p.file_size)
-      .reduce((a, b) => a + b, 0);
+    return plots.map((p: Plot) => p.file_size).reduce((a, b) => a + b, 0);
   }, [plots]);
 
   return (
     <FarmCard
-      title={<Trans id="FarmCardTotalSizeOfPlots.title">Total Size of Plots</Trans>}
+      title={
+        <Trans id="FarmCardTotalSizeOfPlots.title">Total Size of Plots</Trans>
+      }
       value={<FormatBytes value={farmerSpace} />}
     />
   );

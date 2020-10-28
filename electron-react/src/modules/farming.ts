@@ -4,22 +4,22 @@ import type Plot from '../types/Plot';
 type FarmingState = {
   farmer: {
     latest_challenges: {
-      challenge: string,
-      height: number,
-      estimates: number[],
+      challenge: string;
+      height: number;
+      estimates: number[];
     }[];
     connections: {
-      bytes_read: number,
-      bytes_written: number
-      creation_time: number,
-      last_message_time: number,
-      local_host: string,
-      local_port: number,
-      node_id: string,
-      peer_host: string,
-      peer_port: number,
-      peer_server_port: number,
-      type: number,
+      bytes_read: number;
+      bytes_written: number;
+      creation_time: number;
+      last_message_time: number;
+      local_host: string;
+      local_port: number;
+      node_id: string;
+      peer_host: string;
+      peer_port: number;
+      peer_server_port: number;
+      type: number;
     }[];
     open_connection_error?: string;
   };

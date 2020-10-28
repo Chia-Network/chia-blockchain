@@ -1,10 +1,10 @@
 type Plot = {
-  filename: string,
+  filename: string;
   file_size: number;
-  size: number,
-  "plot-seed": string,
-  plot_public_key: string,
-  pool_public_key: string,
+  size: number;
+  'plot-seed': string;
+  plot_public_key: string;
+  pool_public_key: string;
 };
 
 export default Plot;

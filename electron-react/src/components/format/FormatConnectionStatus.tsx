@@ -18,29 +18,34 @@ function getIconSize(size: string): string {
   }
 }
 
-const StyledFiberManualRecordIcon = styled(({ iconSize, ...rest }) => <FiberManualRecordIcon {...rest} />)`
+const StyledFiberManualRecordIcon = styled(({ iconSize, ...rest }) => (
+  <FiberManualRecordIcon {...rest} />
+))`
   font-size: ${({ iconSize }) => getIconSize(iconSize)};
 `;
 
 type Props = {
-  connected: boolean,
-  connectedTitle?: ReactNode,
-  notConnectedTitle?: ReactNode,
-  variant?: TypographyProps['variant'],
-  iconSize?: 'lg' | 'normal' | 'sm' | 'xs'
+  connected: boolean;
+  connectedTitle?: ReactNode;
+  notConnectedTitle?: ReactNode;
+  variant?: TypographyProps['variant'];
+  iconSize?: 'lg' | 'normal' | 'sm' | 'xs';
 };
 
 export default function FormatConnectionStatus(props: Props) {
-  const { connected, connectedTitle, notConnectedTitle, variant, iconSize } = props;
+  const {
+    connected,
+    connectedTitle,
+    notConnectedTitle,
+    variant,
+    iconSize,
+  } = props;
   const color = connected ? 'primary' : 'secondary';
 
   return (
     <Flex alignItems="center" gap={1}>
       <Typography variant={variant} color={color}>
-        {connected
-          ? connectedTitle
-          : notConnectedTitle
-        }
+        {connected ? connectedTitle : notConnectedTitle}
       </Typography>
       <StyledFiberManualRecordIcon color={color} iconSize={iconSize} />
     </Flex>
@@ -48,8 +53,12 @@ export default function FormatConnectionStatus(props: Props) {
 }
 
 FormatConnectionStatus.defaultProps = {
-  connectedTitle: <Trans id="FormatConnectionStatus.connected">Connected</Trans>,
-  notConnectedTitle: <Trans id="FormatConnectionStatus.notConnected">Not connected</Trans>,
+  connectedTitle: (
+    <Trans id="FormatConnectionStatus.connected">Connected</Trans>
+  ),
+  notConnectedTitle: (
+    <Trans id="FormatConnectionStatus.notConnected">Not connected</Trans>
+  ),
   variant: 'caption',
   iconSize: 'sm',
 };

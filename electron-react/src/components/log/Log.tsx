@@ -1,7 +1,5 @@
 import React, { ReactNode } from 'react';
-import {
-  Paper,
-} from '@material-ui/core';
+import { Paper } from '@material-ui/core';
 import styled from 'styled-components';
 
 const StyledPaper = styled(Paper)`
@@ -20,7 +18,7 @@ const StyledPaper = styled(Paper)`
 `;
 
 type Props = {
-  children: ReactNode,
+  children: ReactNode;
 };
 
 export default function Log(props: Props) {
@@ -28,9 +26,7 @@ export default function Log(props: Props) {
 
   return (
     <StyledPaper>
-      <pre>
-        {children}
-      </pre>
+      <pre>{children}</pre>
     </StyledPaper>
   );
 }

@@ -27,13 +27,18 @@ export default function FarmOverviewHero() {
               <StyledImage src={heroSrc} />
               <Typography variant="body1">
                 <Trans id="FarmOverviewHero.description">
-                  Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <Link to="/dashboard/plot">Learn more</Link>
+                  Farmers earn block rewards and transaction fees by committing
+                  spare space to the network to help secure transactions. This
+                  is where your farm will be once you add a plot.{' '}
+                  <Link to="/dashboard/plot">Learn more</Link>
                 </Trans>
               </Typography>
-              <Button onClick={handleAddPlot} variant="contained" color="primary">
-                <Trans id="FarmOverviewHero.addAPlot">
-                  Add a Plot
-                </Trans>
+              <Button
+                onClick={handleAddPlot}
+                variant="contained"
+                color="primary"
+              >
+                <Trans id="FarmOverviewHero.addAPlot">Add a Plot</Trans>
               </Button>
             </Flex>
           </CardContent>

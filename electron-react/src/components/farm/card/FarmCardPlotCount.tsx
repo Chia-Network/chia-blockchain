@@ -5,7 +5,9 @@ import type { RootState } from '../../../modules/rootReducer';
 import FarmCard from './FarmCard';
 
 export default function FarmCardPlotCount() {
-  const plots = useSelector((state: RootState) => state.farming_state.harvester.plots);
+  const plots = useSelector(
+    (state: RootState) => state.farming_state.harvester.plots,
+  );
 
   return (
     <FarmCard

@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 import { Card, CardContent } from '@material-ui/core';
 
 type Props = {
-  children: ReactNode,
+  children: ReactNode;
 };
 
 export default function BlockContainer(props: Props): JSX.Element {
@@ -11,9 +11,7 @@ export default function BlockContainer(props: Props): JSX.Element {
   return (
     <Card>
       <CardContent>
-        <div>
-          {children}
-        </div>
+        <div>{children}</div>
       </CardContent>
     </Card>
   );

@@ -12,23 +12,26 @@ const StyledFiberManualRecordIcon = styled(FiberManualRecordIcon)`
 `;
 
 export default function FarmCardStatus() {
-  const connected = useSelector((state: RootState) => state.daemon_state.farmer_connected);
+  const connected = useSelector(
+    (state: RootState) => state.daemon_state.farmer_connected,
+  );
   const color = connected ? 'primary' : 'secondary';
 
   return (
     <FarmCard
       title={<Trans id="FarmCardStatus.title">Farming Status</Trans>}
-      value={(
+      value={
         <Flex alignItems="center" gap={1}>
           <span>
-            {connected
-              ? <Trans id="FarmCardStatus.farming">Farming</Trans>
-              : <Trans id="FarmCardStatus.notConnected">Not connected</Trans>
-            }
+            {connected ? (
+              <Trans id="FarmCardStatus.farming">Farming</Trans>
+            ) : (
+              <Trans id="FarmCardStatus.notConnected">Not connected</Trans>
+            )}
           </span>
           <StyledFiberManualRecordIcon color={color} />
         </Flex>
-      )}
+      }
       valueColor={color}
     />
   );

@@ -1,9 +1,9 @@
-import { useDispatch} from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { closeConnection } from '../../modules/farmerMessages';
 
 type Props = {
-  nodeId: string,
-  children: (props: { onClose: () => void }) => JSX.Element,
+  nodeId: string;
+  children: (props: { onClose: () => void }) => JSX.Element;
 };
 
 export default function FarmCloseConnection(props: Props): JSX.Element {
