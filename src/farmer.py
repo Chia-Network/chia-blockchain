@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List, Optional, Callable, Set
 
 from blspy import G1Element, G2Element, AugSchemeMPL
 from src.util.keychain import Keychain
@@ -49,6 +49,7 @@ class Farmer:
 
         # number of responses to each challenge
         self.number_of_responses: Dict[bytes32, int] = {}
+        self.seen_challenges: Set[bytes32] = set()
 
         self.constants = consensus_constants
         self._shut_down = False
@@ -248,9 +249,25 @@ class Farmer:
                         farmer_share_rc_icp = AugSchemeMPL.sign(sk, reward_chain_icp, agg_pk)
                         agg_sig_rc_icp = AugSchemeMPL.aggregate([reward_chain_icp_harv_sig, farmer_share_rc_icp])
                         assert AugSchemeMPL.verify(agg_pk, reward_chain_icp, agg_sig_rc_icp)
-                        request = farmer_protocol.DeclareProofOfSpace(
-                            challenge_chain_icp, pospace, computed_quality_string, agg_sig_cc_icp, agg_sig_rc_icp
+
+                        pool_pk = bytes(pospace.pool_public_key)
+                        if pool_pk not in self.pool_sks_map:
+                            log.error(f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}")
+                            return
+                        pool_target: PoolTarget = PoolTarget(self.pool_target, uint32(0))
+                        pool_target_signature: G2Element = AugSchemeMPL.sign(
+                            self.pool_sks_map[pool_pk], bytes(pool_target)
                         )
+                        request = farmer_protocol.DeclareProofOfSpace(
+                            challenge_chain_icp,
+                            pospace,
+                            agg_sig_cc_icp,
+                            agg_sig_rc_icp,
+                            self.wallet_target,
+                            pool_target,
+                            pool_target_signature,
+                        )
+
                         yield OutboundMessage(
                             NodeType.FULL_NODE,
                             Message("declare_proof_of_space", request),
@@ -261,38 +278,28 @@ class Farmer:
         else:
             # This is a response with block signatures
             for sk in self._get_private_keys():
-                reward_sub_block_hash, reward_sub_block_sig_harvester = response.message_signatures[0]
+                foliage_sub_block_hash, foliage_sub_block_sig_harvester = response.message_signatures[0]
                 foliage_block_hash, foliage_block_sig_harvester = response.message_signatures[1]
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
                     computed_quality_string = pospace.verify_and_get_quality_string(self.constants, None, None)
-                    pool_pk = bytes(pospace.pool_public_key)
-                    if pool_pk not in self.pool_sks_map:
-                        log.error(f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}")
-                        return
-                    pool_target: PoolTarget = PoolTarget(self.pool_target, uint32(0))
-                    pool_target_signature: G2Element = AugSchemeMPL.sign(self.pool_sks_map[pool_pk], bytes(pool_target))
 
                     agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
                     assert agg_pk == pospace.plot_public_key
-                    reward_sub_block_sig_farmer = AugSchemeMPL.sign(sk, reward_sub_block_hash, agg_pk)
+                    foliage_sub_block_sig_farmer = AugSchemeMPL.sign(sk, foliage_sub_block_hash, agg_pk)
                     foliage_block_sig_farmer = AugSchemeMPL.sign(sk, foliage_block_hash, agg_pk)
-                    reward_sub_block_agg_sig = AugSchemeMPL.aggregate(
-                        [reward_sub_block_sig_harvester, reward_sub_block_sig_farmer]
+                    foliage_sub_block_agg_sig = AugSchemeMPL.aggregate(
+                        [foliage_sub_block_sig_harvester, foliage_sub_block_sig_farmer]
                     )
                     foliage_block_agg_sig = AugSchemeMPL.aggregate(
                         [foliage_block_sig_harvester, foliage_block_sig_farmer]
                     )
-                    assert AugSchemeMPL.verify(agg_pk, reward_sub_block_hash, reward_sub_block_agg_sig)
+                    assert AugSchemeMPL.verify(agg_pk, foliage_sub_block_hash, foliage_sub_block_agg_sig)
                     assert AugSchemeMPL.verify(agg_pk, foliage_block_hash, foliage_block_agg_sig)
 
                     request = farmer_protocol.SignedValues(
                         computed_quality_string,
-                        pospace,
-                        self.wallet_target,
-                        pool_target,
-                        pool_target_signature,
-                        reward_sub_block_agg_sig,
+                        foliage_sub_block_agg_sig,
                         foliage_block_agg_sig,
                     )
 
@@ -357,7 +364,7 @@ class Farmer:
         request = harvester_protocol.RequestSignatures(
             pospace.get_plot_id(),
             pospace.challenge_hash,
-            [full_node_request.reward_block_hash, full_node_request.transaction_block_hash],
+            [full_node_request.foliage_sub_block_hash, full_node_request.foliage_block_hash],
         )
 
         yield OutboundMessage(
