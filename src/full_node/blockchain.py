@@ -402,7 +402,7 @@ class Blockchain:
 
         # 1. For non block sub-blocks, foliage block, transaction filter, transactions info, and generator must be empty
         # If it is a sub block but not a block, there is no body to validate. Check that all fields are None
-        if not block.foliage_sub_block.is_block:
+        if block.foliage_sub_block.foliage_block_hash is None:
             if (
                 block.foliage_block is not None
                 or block.transactions_filter is not None
@@ -424,7 +424,7 @@ class Blockchain:
             return Err.INVALID_TRANSACTIONS_INFO_HASH
 
         # 4. The foliage block hash in the foliage sub block must match the foliage block
-        if block.foliage_sub_block.signed_data.foliage_block_hash != std_hash(block.foliage_block):
+        if block.foliage_sub_block.foliage_sub_block_data.foliage_block_hash != std_hash(block.foliage_block):
             return Err.INVALID_FOLIAGE_BLOCK_HASH
 
         # 5. The prev generators root must be valid
@@ -441,12 +441,12 @@ class Blockchain:
         # 7. The reward claims must be valid for the previous sub-blocks, and current block fees
         pool_coin = create_pool_coin(
             block.height,
-            block.foliage_sub_block.signed_data.pool_target.puzzle_hash,
+            block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
             calculate_pool_reward(block.height),
         )
         farmer_coin = create_farmer_coin(
             block.height,
-            block.foliage_sub_block.signed_data.farmer_reward_puzzle_hash,
+            block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
             calculate_base_farmer_reward(block.height) + block.transactions_info.fees,
         )
         expected_reward_coins.add(pool_coin)
