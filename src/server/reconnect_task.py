@@ -16,7 +16,7 @@ def start_reconnect_task(server, peer_info_arg, log, auth):
     async def connection_check():
         while True:
             peer_retry = True
-            for id, connection in server.global_connections.items():
+            for id, connection in server.all_connections.items():
                 if (
                     connection.get_peer_info() == peer_info
                     or connection.get_peer_info() == peer_info_arg

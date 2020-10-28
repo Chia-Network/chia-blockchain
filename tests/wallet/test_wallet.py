@@ -67,7 +67,7 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         for i in range(1, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
@@ -91,7 +91,7 @@ class TestWalletSimulator:
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
@@ -114,7 +114,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds - 10)
 
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         new_funds = sum(
             [
@@ -139,7 +139,7 @@ class TestWalletSimulator:
             PeerInfo("localhost", uint16(fn_server._port)), None
         )
         for i in range(1, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
@@ -189,7 +189,7 @@ class TestWalletSimulator:
         )
 
         for i in range(1, num_blocks):
-            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
 
         all_blocks = await full_node_api_0.get_current_blocks(full_node_api_0.get_tip())
 
@@ -260,7 +260,7 @@ class TestWalletSimulator:
         )
 
         for i in range(0, num_blocks):
-            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
@@ -289,7 +289,7 @@ class TestWalletSimulator:
 
         for i in range(0, 4):
             await full_node_api_0.farm_new_block(
-                FarmNewBlockProtocol(token_bytes()), None
+                FarmNewBlockProtocol(token_bytes())
             )
 
         new_funds = sum(
@@ -311,7 +311,7 @@ class TestWalletSimulator:
 
         for i in range(0, 4):
             await full_node_api_0.farm_new_block(
-                FarmNewBlockProtocol(token_bytes()), None
+                FarmNewBlockProtocol(token_bytes())
             )
 
         await wallet_0.get_confirmed_balance()

@@ -1,13 +1,12 @@
 import asyncio
 import time
-from pathlib import Path
+import src.server.ws_connection as ws
 from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
 from chiabip158 import PyBIP158
 from chiapos import Verifier
 from blspy import G2Element, AugSchemeMPL
 
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
-from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations
 from src.consensus.coinbase import create_coinbase_coin, create_fees_coin
 
@@ -21,8 +20,7 @@ from src.protocols import (
     wallet_protocol,
 )
 from src.protocols.wallet_protocol import GeneratorResponse
-from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
-from src.server.ws_connection import WSChiaConnection
+from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.challenge import Challenge
 from src.types.coin import Coin, hash_coin_list
 from src.types.full_block import FullBlock
@@ -63,7 +61,7 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def request_peers(
-        self, request: full_node_protocol.RequestPeers, peer: WSChiaConnection
+        self, request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection
     ):
         peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
         msg = await self.full_node.full_node_peers.request_peers(peer_info)
@@ -74,7 +72,7 @@ class FullNodeAPI:
     async def respond_peers(
         self,
         request: introducer_protocol.RespondPeers,
-        peer: WSChiaConnection,
+        peer: ws.WSChiaConnection,
     ):
         await self.full_node.full_node_peers.respond_peers(
             request, peer.get_peer_info(), True
@@ -846,7 +844,7 @@ class FullNodeAPI:
     async def reject_header_block_request(
         self,
         request: full_node_protocol.RejectHeaderBlockRequest,
-        peer: WSChiaConnection,
+        peer: ws.WSChiaConnection,
     ) -> Optional[Message]:
         self.full_node.log.warning(f"Reject header block request, {request}")
         if self.full_node.sync_store.get_sync_mode():
@@ -1172,7 +1170,7 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def reject_block_request(
-        self, reject: full_node_protocol.RejectBlockRequest, peer: WSChiaConnection
+        self, reject: full_node_protocol.RejectBlockRequest, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
         self.full_node.log.warning(f"Rejected block request {reject}")
         if self.full_node.sync_store.get_sync_mode():
@@ -1184,7 +1182,7 @@ class FullNodeAPI:
     async def request_mempool_transactions(
         self,
         request: full_node_protocol.RequestMempoolTransactions,
-        peer: WSChiaConnection,
+        peer: ws.WSChiaConnection,
     ) -> Optional[Message]:
         received_filter = PyBIP158(bytearray(request.filter))
 
