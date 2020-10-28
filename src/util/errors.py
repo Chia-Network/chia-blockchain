@@ -117,6 +117,8 @@ class Err(Enum):
     INVALID_MADE_NON_OVERFLOW_INFUSIONS = 92
     NO_OVERFLOWS_IN_NEW_SUBEPOCH = 93
 
+    MEMPOOL_NOT_INITIALIZED = 94
+
 
 class ConsensusError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):

@@ -6,11 +6,10 @@ from src.types.coin import Coin
 from src.types.mempool_item import MempoolItem
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
-from src.types.header import Header
+from src.full_node.sub_block_record import SubBlockRecord
 
 
 class Mempool:
-    header: Header
     spends: Dict[bytes32, MempoolItem]
     sorted_spends: SortedDict
     additions: Dict[bytes32, MempoolItem]
@@ -20,9 +19,8 @@ class Mempool:
 
     # if new min fee is added
     @staticmethod
-    def create(tip: Header, size: int):
+    def create(size: int):
         self = Mempool()
-        self.header = tip
         self.spends = {}
         self.additions = {}
         self.removals = {}
