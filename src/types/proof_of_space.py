@@ -9,7 +9,6 @@ from src.types.sized_bytes import bytes32
 from src.util.ints import uint8
 from src.util.streamable import Streamable, streamable
 from src.util.hash import std_hash
-from src.types.classgroup import ClassgroupElement
 from src.consensus.constants import ConsensusConstants
 
 
@@ -21,20 +20,17 @@ class ProofOfSpace(Streamable):
     plot_public_key: G1Element
     size: uint8
     proof: bytes
-    challenge_plot_key_signature: G2Element
 
     def get_plot_id(self) -> bytes32:
         return self.calculate_plot_id(self.pool_public_key, self.plot_public_key)
 
     def verify_and_get_quality_string(
-        self, constants: ConsensusConstants, icp_output: ClassgroupElement, icp_signature: G2Element
+        self, constants: ConsensusConstants, icp_output_hash: Optional[bytes32], icp_signature: Optional[G2Element]
     ) -> Optional[bytes32]:
         v: Verifier = Verifier()
         plot_id: bytes32 = self.get_plot_id()
 
-        if not self.can_create_proof(
-            constants, plot_id, self.challenge_hash, self.challenge_plot_key_signature, icp_output, icp_signature
-        ):
+        if not self.can_create_proof(constants, plot_id, self.challenge_hash, icp_output_hash, icp_signature):
             return None
 
         quality_str = v.validate_proof(plot_id, self.size, self.challenge_hash, bytes(self.proof))
@@ -42,8 +38,6 @@ class ProofOfSpace(Streamable):
         if not quality_str:
             return None
 
-        if not AugSchemeMPL.verify(self.plot_public_key, self.challenge_hash, self.challenge_plot_key_signature):
-            return None
         return quality_str
 
     @staticmethod
@@ -51,16 +45,15 @@ class ProofOfSpace(Streamable):
         constants: ConsensusConstants,
         plot_id: bytes32,
         challenge_hash: bytes32,
-        challenge_signature: G2Element,
-        icp_output: Optional[ClassgroupElement] = None,
+        icp_output_hash: Optional[bytes32] = None,
         icp_signature: Optional[G2Element] = None,
     ) -> bool:
         # If icp_output is provided, both plot filters are checked. Otherwise only the first one is checked
-        plot_filter = BitArray(std_hash(plot_id + challenge_hash + bytes(challenge_signature)))
-        if icp_output is None:
+        plot_filter = BitArray(std_hash(plot_id + challenge_hash))
+        if icp_output_hash is None:
             return plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
         else:
-            icp_filter = BitArray(std_hash(plot_id + bytes(icp_output) + bytes(icp_signature)))
+            icp_filter = BitArray(std_hash(plot_id + icp_output_hash + bytes(icp_signature)))
             return (
                 plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
                 and icp_filter[: constants.NUMBER_ZERO_BITS_ICP_FILTER].uint == 0

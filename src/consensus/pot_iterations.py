@@ -63,6 +63,6 @@ def calculate_iterations(
     Convenience function to calculate the number of iterations using the proof instead
     of the quality. The quality must be retrieved from the proof.
     """
-    quality: bytes32 = proof_of_space.verify_and_get_quality_string(constants)
+    quality: bytes32 = proof_of_space.verify_and_get_quality_string(constants, None, None)
     assert quality is not None
     return calculate_iterations_quality(quality, proof_of_space.size, difficulty)

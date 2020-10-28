@@ -56,11 +56,8 @@ farmer:
   start_rpc_server: True
   rpc_port: 8559
 
-  # To send a share to a pool, a block must be faster than this, in seconds
-  pool_share_threshold: 50000
-  # To send to the full node, a block must be faster than this, in seconds
-
-  propagate_threshold: 50000
+  # To send a share to a pool, a proof of space must have required_iters less than this number
+  pool_share_threshold: 1000
   logging: *logging
 
   ssl:
