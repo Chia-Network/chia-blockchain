@@ -1,11 +1,11 @@
 import logging
 import aiosqlite
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.hash import std_hash
-from src.util.ints import uint32, uint128
+from src.util.ints import uint32
 from src.full_node.sub_block_record import SubBlockRecord
 
 log = logging.getLogger(__name__)
@@ -28,49 +28,44 @@ class BlockStore:
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS sub_blocks(header_hash "
             "text PRIMARY KEY, prev_hash text, height bigint, weight bigint, total_iters text"
-            "blob, is_lca tinyint, is_tip tinyint)"
+            "sub_block blob, is_peak tinyint)"
         )
 
         # Height index so we can look up in order of height for sync purposes
-        await self.db.execute(
-            "CREATE INDEX IF NOT EXISTS full_block_height on blocks(height)"
-        )
-        await self.db.execute(
-            "CREATE INDEX IF NOT EXISTS sub_block_height on sub_blocks(height)"
-        )
+        await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_height on blocks(height)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS sub_block_height on sub_blocks(height)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS hh on sub_blocks(header_hash)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS peak on sub_blocks(is_peak)")
         await self.db.commit()
 
         return self
 
-    async def add_block(self, block: FullBlock) -> None:
+    async def add_block(self, block: FullBlock, sub_block: SubBlockRecord) -> None:
         assert block.proof_of_time is not None
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
             (block.height, block.header_hash.hex(), bytes(block)),
         )
         await cursor_1.close()
-        proof_hash = std_hash(
-            block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()
-        )
+        proof_hash = std_hash(block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash())
         cursor_2 = await self.db.execute(
-            "INSERT OR REPLACE INTO sub_blocks VALUES(?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO sub_blocks VALUES(?, ?, ?, ?, ?, ?, ?)",
             (
                 block.header_hash.hex(),
                 block.prev_header_hash.hex(),
                 block.height,
-                block.weight.to_bytes(128/8, "big", signed=False).hex(),
-                block.total_iters.to_bytes(128/8, "big", signed=False).hex(),
+                block.weight.to_bytes(128 / 8, "big", signed=False).hex(),
+                block.total_iters.to_bytes(128 / 8, "big", signed=False).hex(),
+                bytes(sub_block),
+                False,
             ),
         )
         await cursor_2.close()
         await self.db.commit()
 
     async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        cursor = await self.db.execute(
-            "SELECT block from blocks WHERE header_hash=?", (header_hash.hex(),)
-        )
+        cursor = await self.db.execute("SELECT block from blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
@@ -88,15 +83,35 @@ class BlockStore:
         await cursor.close()
         return [FullBlock.from_bytes(row[0]) for row in rows]
 
-    async def get_sub_blocks(self) -> Dict[bytes32, SubBlockRecord]:
+    async def get_sub_block(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
+        cursor = await self.db.execute("SELECT sub_block from sub_blocks WHERE header_hash=?", (header_hash.hex(),))
+        row = await cursor.fetchone()
+        await cursor.close()
+        if row is not None:
+            return SubBlockRecord.from_bytes(row[0])
+        return None
+
+    async def get_sub_blocks(self) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
+        """
+        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        if present.
+        """
         cursor = await self.db.execute("SELECT * from sub_blocks")
         rows = await cursor.fetchall()
         await cursor.close()
         ret: Dict[bytes32, SubBlockRecord] = {}
+        peak: Optional[bytes32] = None
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            prev_hash = bytes.fromhex(row[1])
-            weight = uint128(int.from_bytes(bytes.fromhex(row[3]), "big", signed=False))
-            total_iters = uint128(int.from_bytes(bytes.fromhex(row[4]), "big", signed=False))
-            ret[header_hash] = SubBlockRecord(header_hash, prev_hash, row[2], weight, total_iters)
-        return ret
+            ret[header_hash] = SubBlockRecord.from_bytes(row[5])
+            if row[6]:
+                assert peak is None  # Sanity check, only one peak
+                peak = header_hash
+        return ret, peak
+
+    async def set_peak(self, header_hash: bytes32) -> None:
+        cursor_1 = await self.db.execute("UPDATE sub_blocks SET is_peak=0 WHERE is_peak=1")
+        await cursor_1.close()
+        cursor_2 = await self.db.execute("UPDATE sub_blocks SET is_peak=1 WHERE header_hash=?", (header_hash.hex()))
+        await cursor_2.close()
+        await self.db.commit()

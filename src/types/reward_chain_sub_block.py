@@ -16,7 +16,7 @@ class RewardChainSubBlockUnfinished(Streamable):
     total_iters: uint128
     proof_of_space: ProofOfSpace
     challenge_chain_icp_vdf: VDFInfo
-    challenge_chain_icp_sig: Optional[G2Element]  # Iff is challenge block
+    challenge_chain_icp_sig: G2Element
     reward_chain_icp_vdf: VDFInfo
     reward_chain_icp_sig: G2Element
 
@@ -29,7 +29,7 @@ class RewardChainSubBlock(Streamable):
     total_iters: uint128
     proof_of_space: ProofOfSpace
     challenge_chain_icp_vdf: VDFInfo
-    challenge_chain_icp_sig: Optional[G2Element]  # Iff is challenge block
+    challenge_chain_icp_sig: G2Element
     challenge_chain_ip_vdf: VDFInfo
     reward_chain_icp_vdf: VDFInfo
     reward_chain_icp_sig: G2Element
