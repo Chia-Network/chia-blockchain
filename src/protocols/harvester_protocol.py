@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 from blspy import G1Element, G2Element
 
@@ -55,16 +55,17 @@ class RespondProofOfSpace:
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestSignature:
+class RequestSignatures:
     plot_id: str
-    message: bytes32
+    challenge_hash: bytes32
+    messages: List[bytes32]
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RespondSignature:
+class RespondSignatures:
     plot_id: str
-    message: bytes32
+    challenge_hash: bytes32
     local_pk: G1Element
     farmer_pk: G1Element
-    message_signature: G2Element
+    message_signatures: List[Tuple[bytes32, G2Element]]

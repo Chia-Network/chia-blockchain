@@ -1,5 +1,6 @@
 import logging
 import asyncio
+from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List, Callable, Set
 import time
@@ -13,6 +14,7 @@ from src.protocols import harvester_protocol
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace
+from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
 from src.util.ints import uint8
 from src.plotting.plot_tools import (
@@ -35,7 +37,7 @@ class Harvester:
     cached_challenges: List[harvester_protocol.NewChallenge]
     root_path: Path
     _is_shutdown: bool
-    executor: concurrent.futures.ThreadPoolExecutor
+    executor: ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
@@ -193,7 +195,7 @@ class Harvester:
 
         def blocking_lookup(filename: Path, prover: DiskProver) -> Optional[List]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
-            # so it should be run in a threadpool.
+            # so it should be run in a thread pool.
             try:
                 quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
             except Exception:
@@ -207,29 +209,31 @@ class Harvester:
             return quality_strings
 
         async def lookup_challenge(filename: Path, prover: DiskProver) -> List[harvester_protocol.ChallengeResponse]:
-            # Exectures a DiskProverLookup in a threadpool, and returns responses
+            # Executes a DiskProverLookup in a thread pool, and returns responses
             all_responses: List[harvester_protocol.ChallengeResponse] = []
             quality_strings = await loop.run_in_executor(self.executor, blocking_lookup, filename, prover)
             if quality_strings is not None:
                 for index, quality_str in enumerate(quality_strings):
-                    response: harvester_protocol.ChallengeResponse = harvester_protocol.ChallengeResponse(
-                        new_challenge.challenge_hash,
-                        str(filename),
-                        uint8(index),
-                        quality_str,
-                        prover.get_size(),
+                    all_responses.append(
+                        harvester_protocol.ChallengeResponse(
+                            new_challenge.challenge_hash,
+                            str(filename),
+                            uint8(index),
+                            quality_str,
+                            prover.get_size(),
+                        )
                     )
-                    all_responses.append(response)
             return all_responses
 
         awaitables = []
         for filename, plot_info in self.provers.items():
-            if filename.exists() and ProofOfSpace.can_create_proof(
-                self.constants,
-                plot_info.prover.get_id(),
-                new_challenge.challenge_hash,
-            ):
-                awaitables.append(lookup_challenge(filename, plot_info.prover))
+            if filename.exists():
+                # Passes the plot filter (does not check icp filter yet though, since we have not reached icp)
+                # This is being executed at the beginning of the slot
+                if ProofOfSpace.can_create_proof(
+                    self.constants, plot_info.prover.get_id(), new_challenge.challenge_hash
+                ):
+                    awaitables.append(lookup_challenge(filename, plot_info.prover))
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0
@@ -254,7 +258,6 @@ class Harvester:
         We look up the correct plot based on the plot id and response number, lookup the proof,
         and return it.
         """
-        response: Optional[harvester_protocol.RespondProofOfSpace] = None
         challenge_hash = request.challenge_hash
         filename = Path(request.plot_id).resolve()
         index = request.response_number
@@ -278,6 +281,7 @@ class Harvester:
                 proof_xs = self.provers[filename].prover.get_full_proof(challenge_hash, index)
         except KeyError:
             log.warning(f"KeyError plot {filename} does not exist.")
+            return
 
         plot_info = self.provers[filename]
         plot_public_key = ProofOfSpace.generate_plot_public_key(
@@ -304,13 +308,12 @@ class Harvester:
             )
 
     @api_request
-    async def request_signature(self, request: harvester_protocol.RequestSignature):
+    async def request_signatures(self, request: harvester_protocol.RequestSignatures):
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
         A signature is created on the header hash using the harvester private key. This can also
         be used for pooling.
         """
-        plot_info = None
         try:
             plot_info = self.provers[Path(request.plot_id).resolve()]
         except KeyError:
@@ -322,18 +325,21 @@ class Harvester:
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
-        signature: G2Element = AugSchemeMPL.sign(local_sk, request.message, agg_pk)
+        message_signatures: List[Tuple[bytes32, G2Element]] = []
+        for message in request.messages:
+            signature: G2Element = AugSchemeMPL.sign(local_sk, message, agg_pk)
+            message_signatures.append((message, signature))
 
-        response: harvester_protocol.RespondSignature = harvester_protocol.RespondSignature(
+        response: harvester_protocol.RespondSignatures = harvester_protocol.RespondSignatures(
             request.plot_id,
-            request.message,
+            request.challenge_hash,
             local_sk.get_g1(),
             plot_info.farmer_public_key,
-            signature,
+            message_signatures,
         )
 
         yield OutboundMessage(
             NodeType.FARMER,
-            Message("respond_signature", response),
+            Message("respond_signatures", response),
             Delivery.RESPOND,
         )
