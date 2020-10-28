@@ -27,16 +27,19 @@ class InfusionChallengePoint:
 @cbor_message
 class DeclareProofOfSpace:
     challenge_chain_icp: bytes32
-    quality_string: bytes32
+    ProofOfSpace: bytes32
     challenge_chain_icp_sig: G2Element
     reward_chain_icp_sig: G2Element
+    farmer_puzzle_hash: bytes32
+    pool_target: PoolTarget
+    pool_signature: G2Element
 
 
 @dataclass(frozen=True)
 @cbor_message
 class RequestSignedValues:
     quality_string: bytes32
-    reward_sub_block_hash: bytes32
+    foliage_sub_block_hash: bytes32
     foliage_block_hash: bytes32
 
 
@@ -44,9 +47,5 @@ class RequestSignedValues:
 @cbor_message
 class SignedValues:
     quality_string: bytes32
-    proof_of_space: ProofOfSpace
-    farmer_puzzle_hash: bytes32
-    pool_target: PoolTarget
-    pool_signature: G2Element
-    reward_sub_block_signature: G2Element
+    foliage_sub_block_signature: G2Element
     foliage_block_signature: G2Element

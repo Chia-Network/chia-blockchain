@@ -53,7 +53,7 @@ class FullBlock(Streamable):
         return self.foliage_sub_block.get_hash()
 
     def is_block(self):
-        return self.foliage_sub_block.is_block
+        return self.foliage_sub_block.foliage_block_hash is not None
 
     def get_future_reward_coins(self) -> Tuple[Coin, Coin]:
         pool_amount = calculate_pool_reward(self.height)
@@ -62,10 +62,10 @@ class FullBlock(Streamable):
             assert self.transactions_info is not None
             farmer_amount += self.transactions_info.fees
         pool_coin: Coin = create_pool_coin(
-            self.height, self.foliage_sub_block.signed_data.pool_target.puzzle_hash, pool_amount
+            self.height, self.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash, pool_amount
         )
         farmer_coin: Coin = create_farmer_coin(
-            self.height, self.foliage_sub_block.signed_data.farmer_reward_puzzle_hash, farmer_amount
+            self.height, self.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash, farmer_amount
         )
         return pool_coin, farmer_coin
 

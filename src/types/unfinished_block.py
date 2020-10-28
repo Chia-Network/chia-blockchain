@@ -43,4 +43,4 @@ class UnfinishedBlock(Streamable):
         return self.foliage_sub_block.get_hash()
 
     def is_block(self):
-        return self.foliage_sub_block.is_block
+        return self.foliage_sub_block.foliage_block_hash is not None
