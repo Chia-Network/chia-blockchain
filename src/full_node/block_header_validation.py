@@ -458,7 +458,7 @@ async def validate_unfinished_header_block(
 
         # 15. Check is_block
         if prev_sb is None:
-            if not header_block.foliage_sub_block.is_block:
+            if header_block.foliage_sub_block.foliage_block_hash is None:
                 return None, Err.INVALID_IS_BLOCK
         else:
             # Finds the previous block
@@ -471,47 +471,69 @@ async def validate_unfinished_header_block(
                 our_icp_total_iters: uint128 = uint128(total_iters - ip_iters + icp_iters - slot_iters)
             else:
                 our_icp_total_iters: uint128 = uint128(total_iters - ip_iters + icp_iters)
-            if (our_icp_total_iters > curr.total_iters) != header_block.foliage_sub_block.is_block:
+            if (
+                (our_icp_total_iters > curr.total_iters)
+                != header_block.foliage_sub_block.foliage_block_hash
+                is not None
+            ):
                 return None, Err.INVALID_IS_BLOCK
 
-        # 16. Check foliage signature by plot key
+        # 16. Check foliage sub block signature by plot key
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
-            bytes(header_block.foliage_sub_block.signed_data),
-            header_block.foliage_sub_block.plot_key_signature,
+            bytes(header_block.foliage_sub_block.foliage_sub_block_data),
+            header_block.foliage_sub_block.foliage_sub_block_signature,
         ):
             return None, Err.INVALID_PLOT_SIGNATURE
+
+        # 16. Check foliage block signature by plot key
+        if header_block.foliage_sub_block.foliage_block_hash is not None:
+            if not AugSchemeMPL.verify(
+                header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
+                header_block.foliage_sub_block.foliage_block_hash,
+                header_block.foliage_sub_block.foliage_sub_block_signature,
+            ):
+                return None, Err.INVALID_PLOT_SIGNATURE
 
         # 17. Check unfinished reward chain sub block hash
         if (
             header_block.reward_chain_sub_block.get_hash()
-            != header_block.foliage_sub_block.signed_data.unfinished_reward_block_hash
+            != header_block.foliage_sub_block.foliage_sub_block_data.unfinished_reward_block_hash
         ):
             return None, Err.INVALID_URSB_HASH
 
         # 18. Check pool target max height
         if (
-            header_block.foliage_sub_block.signed_data.pool_target.max_height != 0
-            and header_block.foliage_sub_block.signed_data.pool_target.max_height < header_block.height
+            header_block.foliage_sub_block.foliage_sub_block_data.pool_target.max_height != 0
+            and header_block.foliage_sub_block.foliage_sub_block_data.pool_target.max_height < header_block.height
         ):
             return None, Err.OLD_POOL_TARGET
 
         # 19. Check pool target signature
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.pool_public_key,
-            bytes(header_block.foliage_sub_block.signed_data.pool_target),
-            header_block.foliage_sub_block.signed_data.pool_signature,
+            bytes(header_block.foliage_sub_block.foliage_sub_block_data.pool_target),
+            header_block.foliage_sub_block.foliage_sub_block_data.pool_signature,
         ):
             return None, Err.INVALID_POOL_SIGNATURE
 
         # 20. Check extension data if applicable. None for mainnet.
         # 21. Check if foliage block is present
-        if header_block.foliage_sub_block.is_block != (header_block.foliage_block is not None):
+        if header_block.foliage_sub_block.foliage_block_hash is not None != (header_block.foliage_block is not None):
+            return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
+        if (
+            header_block.foliage_sub_block.foliage_sub_block_signature
+            is not None
+            != (header_block.foliage_block is not None)
+        ):
             return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
         if header_block.foliage_block is not None:
             # 22. Check foliage block hash
-            if header_block.foliage_block.get_hash() != header_block.foliage_sub_block.signed_data.foliage_block_hash:
+            if (
+                header_block.foliage_block.get_hash()
+                != header_block.foliage_sub_block.foliage_sub_block_data.foliage_block_hash
+            ):
                 return None, Err.INVALID_FOLIAGE_BLOCK_HASH
 
             # 23. Check prev block hash

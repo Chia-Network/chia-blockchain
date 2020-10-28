@@ -4,6 +4,7 @@ from typing import List
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
+from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
@@ -103,7 +104,7 @@ class RequestUnfinishedBlock:
 @dataclass(frozen=True)
 @cbor_message
 class RespondUnfinishedBlock:
-    block: FullBlock
+    block: UnfinishedBlock
 
 
 @dataclass(frozen=True)

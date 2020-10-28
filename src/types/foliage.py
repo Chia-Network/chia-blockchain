@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 from blspy import G2Element
 
 from src.types.sized_bytes import bytes32
@@ -42,7 +42,6 @@ class FoliageSubBlockData(Streamable):
     pool_signature: G2Element
     farmer_reward_puzzle_hash: bytes32
     extension_data: bytes32
-    foliage_block_hash: bytes32
 
 
 @dataclass(frozen=True)
@@ -52,6 +51,7 @@ class FoliageSubBlock(Streamable):
     # The hash of this is the "block hash"
     prev_sub_block_hash: bytes32
     reward_block_hash: bytes32
-    is_block: bool
-    signed_data: FoliageSubBlockData
-    plot_key_signature: G2Element
+    foliage_sub_block_data: FoliageSubBlockData
+    foliage_sub_block_signature: G2Element
+    foliage_block_hash: Optional[bytes32]
+    foliage_block_signature: Optional[G2Element]
