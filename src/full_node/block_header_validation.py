@@ -287,7 +287,7 @@ async def validate_unfinished_header_block(
         # 4. Check proof of space
         q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
             constants,
-            header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output,
+            header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output.get_hash(),
             header_block.reward_chain_sub_block.challenge_chain_icp_sig,
         )
         if q_str is None:
