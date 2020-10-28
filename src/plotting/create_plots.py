@@ -1,6 +1,6 @@
 from pathlib import Path
 from secrets import token_bytes
-from typing import Optional, List
+from typing import Optional, List, Tuple
 import logging
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 from chiapos import DiskPlotter
@@ -25,7 +25,8 @@ from src.wallet.derive_keys import (
 log = logging.getLogger(__name__)
 
 
-def get_farmer_public_key(alt_fingerprint=None) -> G1Element:
+def get_farmer_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
+    sk_ent: Optional[Tuple[PrivateKey, bytes]]
     keychain: Keychain = Keychain()
     if alt_fingerprint is not None:
         sk_ent = keychain.get_private_key_by_fingerprint(alt_fingerprint)
@@ -38,7 +39,8 @@ def get_farmer_public_key(alt_fingerprint=None) -> G1Element:
     return master_sk_to_farmer_sk(sk_ent[0]).get_g1()
 
 
-def get_pool_public_key(alt_fingerprint=None) -> G1Element:
+def get_pool_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
+    sk_ent: Optional[Tuple[PrivateKey, bytes]]
     keychain: Keychain = Keychain()
     if alt_fingerprint is not None:
         sk_ent = keychain.get_private_key_by_fingerprint(alt_fingerprint)
