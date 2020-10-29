@@ -288,13 +288,6 @@ class WalletNode:
         asyncio.create_task(self.wallet_peers.start())
 
     async def _on_connect(self, peer: WSChiaConnection):
-        if peer.connection_type is NodeType.FULL_NODE:
-            self.log.info(f"before proxy call")
-            breakpoint()
-            peers = await peer.request_peers(introducer_protocol.RequestPeers())
-            breakpoint()
-            self.log.info(f"after proxy call")
-
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         messages = await self._messages_to_resend()
