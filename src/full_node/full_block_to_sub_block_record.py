@@ -1,20 +1,12 @@
-from typing import Optional
-
-from src.consensus.pot_iterations import calculate_iterations_quality
 from src.types.full_block import FullBlock
 from src.full_node.sub_block_record import SubBlockRecord
-from src.consensus.constants import ConsensusConstants
-from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 
 
 def full_block_to_sub_block_record(
-    constants: ConsensusConstants,
     block: FullBlock,
     ips: uint64,
-    difficulty: uint64,
     required_iters: uint64,
-    makes_challenge_block: bool,
 ):
     prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
     timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
@@ -22,12 +14,10 @@ def full_block_to_sub_block_record(
         finished_challenge_slot_hashes = [cs.get_hash() for cs, _, _ in block.finished_slots]
         finished_reward_slot_hashes = [rs.get_hash() for _, rs, _ in block.finished_slots]
         deficit = block.finished_slots[-1][1].deficit
-        previous_slot_non_overflow_infusions = block.finished_slots[-1][1].made_non_overflow_infusions
     else:
         finished_challenge_slot_hashes = None
         finished_reward_slot_hashes = None
         deficit = None
-        previous_slot_non_overflow_infusions = None
 
     sub_epoch_summary_included_hash = None
     if block.finished_slots is not None:
@@ -47,12 +37,10 @@ def full_block_to_sub_block_record(
         block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
         block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
         required_iters,
-        makes_challenge_block,
         timestamp,
         prev_block_hash,
         finished_challenge_slot_hashes,
         finished_reward_slot_hashes,
         deficit,
-        previous_slot_non_overflow_infusions,
         sub_epoch_summary_included_hash,
     )

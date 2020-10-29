@@ -11,12 +11,10 @@ from blspy import AugSchemeMPL
 from chiabip158 import PyBIP158
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters, get_next_ips
 from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
-from src.full_node.makes_challenge_block import sub_block_makes_challenge_block
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode
@@ -265,18 +263,7 @@ class Blockchain:
             block.prev_header_hash,
             block.finished_slots is not None,
         )
-        difficulty = get_next_difficulty(
-            self.constants,
-            self.height_to_hash,
-            self.sub_blocks,
-            block.prev_header_hash,
-            block.finished_slots is not None,
-        )
-        overflow = is_overflow_sub_block(self.constants, ips, required_iters)
-        makes_challenge_block = sub_block_makes_challenge_block(self.sub_blocks, curr_header_block, overflow)
-        sub_block = full_block_to_sub_block_record(
-            self.constants, block, ips, difficulty, required_iters, makes_challenge_block
-        )
+        sub_block = full_block_to_sub_block_record(block, ips, required_iters)
 
         # Always add the block to the database
         await self.block_store.add_block(block, sub_block)

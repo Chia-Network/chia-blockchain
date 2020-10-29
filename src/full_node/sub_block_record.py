@@ -23,11 +23,12 @@ class SubBlockRecord(Streamable):
     total_iters: uint128  # Total number of VDF iterations since genesis, including this sub-block
     challenge_vdf_output: ClassgroupElement  # This is the intermediary VDF output at ip_iters in challenge chain
     reward_infusion_output: bytes32  # The reward chain infusion output, input to next VDF
+    challenge_block_info_hash: bytes32  # Hash of challenge chain data, used to validate end of slots in the future
     ips: uint64  # Current network iterations per second parameter
     pool_puzzle_hash: bytes32  # Need to keep track of these because Coins are created in a future block
     farmer_puzzle_hash: bytes32
     required_iters: uint64  # The number of iters required for this proof of space
-    makes_challenge_block: bool
+    deficit: uint8  # A deficit of 5 is an overflow block after an infusion. Deficit of 4 is a challenge block
 
     # Block (present iff is_block)
     timestamp: Optional[uint64]
@@ -36,8 +37,6 @@ class SubBlockRecord(Streamable):
     # Slot (present iff this is the first SB in slot)
     finished_challenge_slot_hashes: Optional[List[bytes32]]
     finished_reward_slot_hashes: Optional[List[bytes32]]
-    deficit: Optional[uint8]  # Deficit at the START of the slot, before this block is included
-    previous_slot_non_overflow_infusions: Optional[bool]
 
     # Sub-epoch (present iff this is the first SB after sub-epoch)
     sub_epoch_summary_included_hash: Optional[bytes32]
