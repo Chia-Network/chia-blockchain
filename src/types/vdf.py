@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple, List
 
 from chiavdf import create_discriminant
 from src.types.classgroup import ClassgroupElement
@@ -22,8 +22,7 @@ class VDFInfo(Streamable):
 @dataclass(frozen=True)
 @streamable
 class VDFProof(Streamable):
-    witness_type: uint16
-    witness: bytes
+    sections: List[Tuple[uint64, ClassgroupElement]]
 
     def is_valid(self, constants: ConsensusConstants, info: VDFInfo, target_vdf_info: Optional[VDFInfo] = None):
         """
@@ -31,7 +30,7 @@ class VDFProof(Streamable):
         """
         if target_vdf_info is not None and info != target_vdf_info:
             return False
-        if self.witness_type > constants.MAX_VDF_WITNESS_SIZE:
+        if len(self.sections) > constants.MAX_VDF_WITNESS_SIZE:
             return False
         try:
             disc: int = int(
@@ -47,7 +46,8 @@ class VDFProof(Streamable):
         return check_proof_of_time_nwesolowski(
             disc,
             x,
-            y.serialize() + bytes(self.witness),
+            y,
+            self.sections,
             info.number_of_iterations,
             constants.DISCRIMINANT_SIZE_BITS,
             self.witness_type,

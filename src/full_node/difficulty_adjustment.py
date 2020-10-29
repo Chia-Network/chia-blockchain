@@ -23,13 +23,9 @@ def finishes_sub_epoch(
     sub_block: SubBlockRecord = sub_blocks[header_hash]
     next_height: uint32 = uint32(sub_block.height + 1)
     cur: SubBlockRecord = sub_block
-    deficit: int = constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
-    while not cur.makes_challenge_block and cur.height > 0:
-        cur = sub_blocks[cur.prev_hash]
-        deficit -= 1
 
-    # If last slot does not have enough blocks for a new challenge block to be infused, return same difficulty
-    if deficit > 0:
+    # If last slot does not have enough blocks for a new challenge chain infusion, return same difficulty
+    if sub_block.deficit > 0:
         return False
 
     # If we have not crossed the (sub)epoch barrier in this slot, cannot start new (sub)epoch
@@ -89,7 +85,8 @@ def get_next_ips(
         last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
 
         curr: SubBlockRecord = sub_blocks[height_to_hash[last_sb_in_prev_epoch.height + 1]]
-        while not curr.makes_challenge_block:
+        # Wait until the slot finishes with a challenge chain infusion at start of slot
+        while not curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
             last_sb_in_prev_epoch = curr
             curr = sub_blocks[height_to_hash[curr.height + 1]]
 
@@ -197,7 +194,7 @@ def get_next_difficulty(
         last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
 
         curr: SubBlockRecord = sub_blocks[height_to_hash[last_sb_in_prev_epoch.height + 1]]
-        while not curr.makes_challenge_block:
+        while not curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
             last_sb_in_prev_epoch = curr
             curr = sub_blocks[height_to_hash[curr.height + 1]]
 
