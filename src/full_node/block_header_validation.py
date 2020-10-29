@@ -5,6 +5,7 @@ import time
 from blspy import AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
+from src.types.challenge_slot import ChallengeBlockInfo
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
 from src.util.ints import uint32, uint64, uint128
@@ -20,7 +21,6 @@ from src.consensus.pot_iterations import (
     calculate_slot_iters,
     calculate_iterations_quality,
 )
-from src.types.challenge_slot import ChallengeChainInfusionPoint
 from src.full_node.difficulty_adjustment import finishes_sub_epoch
 from src.util.hash import std_hash
 from src.types.classgroup import ClassgroupElement
@@ -88,32 +88,39 @@ async def validate_unfinished_header_block(
                     return None, Err.INVALID_SUB_EPOCH_SUMMARY_HASH
 
             if challenge_slot.proof_of_space is not None:
-                # There is a challenge block in this finished slot
-                # 2c. Check that there was a challenge block made in the target slot, and find it
+                # There is an infusion in this end of slot
+
+                # 2c. Find the challenge block
                 if finished_slot_n != 0:
                     return None, Err.SHOULD_NOT_MAKE_CHALLENGE_BLOCK
-                curr: SubBlockRecord = prev_sb  # prev_sb is guaranteed to be in challenge slot
-                while not curr.makes_challenge_block:
-                    if curr.finished_challenge_slot_hashes is not None:
-                        return None, Err.SHOULD_NOT_MAKE_CHALLENGE_BLOCK
+                if prev_sb.deficit != 0:
+                    return None, Err.SHOULD_NOT_MAKE_CHALLENGE_BLOCK
+                curr: SubBlockRecord = prev_sb
+                while not curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                     curr = sub_blocks[curr.prev_hash]
 
                 assert challenge_slot.icp_signature is not None
                 assert challenge_slot.icp_vdf is not None
                 assert challenge_slot.ip_vdf is not None
 
-                challenge_infusion_point = ChallengeChainInfusionPoint(
+                challenge_block_info_hash = ChallengeBlockInfo(
                     challenge_slot.proof_of_space,
                     challenge_slot.icp_vdf,
                     challenge_slot.icp_signature,
                     challenge_slot.ip_vdf,
                 ).get_hash()
+                if curr.challenge_block_info_hash != challenge_block_info_hash:
+                    return None, Err.INVALID_CHALLENGE_CHAIN_DATA
+
+                # Go back to the slot start to get the challenge hash
+                while curr.finished_challenge_slot_hashes is None:
+                    curr = sub_blocks[curr.prev_hash]
 
                 # 2d. Check challenge chain end of slot VDF
                 ip_iters = calculate_ip_iters(constants, curr.ips, curr.required_iters)
                 eos_iters: uint64 = calculate_slot_iters(constants, curr.ips) - ip_iters
                 target_vdf_info = VDFInfo(
-                    challenge_infusion_point,
+                    curr.finished_challenge_slot_hashes[-1],
                     ClassgroupElement.get_default_element(),
                     eos_iters,
                     challenge_slot.end_of_slot_vdf.output,
@@ -124,17 +131,13 @@ async def validate_unfinished_header_block(
                     return None, Err.INVALID_CC_EOS_VDF
 
             else:
-                # There are no challenge blocks in this finished_slot tuple (empty slot)
-                # 2f. Check that we are not allowed to make a challenge block
+                # There is no challenge infusion in this finished_slot tuple (empty slot)
+                # 2f. Check that there should be no challenge infusion
                 if finished_slot_n == 0:
-                    # If finished_slot_n > 0, guaranteed that we cannot make challenge block, so only checks 0
+                    # If finished_slot_n > 0, guaranteed that deficit did not go down to zero
                     if prev_sb is not None:
-                        curr: SubBlockRecord = prev_sb
-                        while curr.finished_challenge_slot_hashes is None:
-                            if curr.makes_challenge_block:
-                                return None, Err.SHOULD_MAKE_CHALLENGE_BLOCK
-                            curr = sub_blocks[curr.prev_hash]
-                        if curr.makes_challenge_block:
+                        # Prev deficit of zero means the next finished slot should infuse into challenge chain
+                        if prev_sb.deficit == 0:
                             return None, Err.SHOULD_MAKE_CHALLENGE_BLOCK
 
                 if prev_sb is None:
@@ -204,41 +207,19 @@ async def validate_unfinished_header_block(
             if slot_proofs.reward_chain_slot_proof.is_valid(constants, reward_slot.end_of_slot_vdf, target_vdf_info):
                 return None, Err.INVALID_RC_EOS_VDF
 
-            # 2j. Check deficit (0 deficit edge case for genesis block)
+            # 2j. Check deficit (5 deficit edge case for genesis block)
             if prev_sb is None:
-                if reward_slot.deficit != 0:
+                if reward_slot.deficit != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                     return None, Err.INVALID_DEFICIT
             else:
-                curr: SubBlockRecord = prev_sb
-                deficit: int = constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
-                while not curr.makes_challenge_block and curr.height > 0:
-                    deficit -= 1
-                    curr = sub_blocks[curr.prev_block_hash]
-                if max(deficit, 0) != reward_slot.deficit:
-                    return None, Err.INVALID_DEFICIT
-
-            # 2k. Check made_non_overflow_infusions (False edge case for genesis block)
-            if prev_sb is None:
-                if reward_slot.made_non_overflow_infusions:
-                    return None, Err.INVALID_MADE_NON_OVERFLOW_INFUSIONS
-            else:
-                if finished_slot_n > 0:
-                    if reward_slot.made_non_overflow_infusions:
-                        return None, Err.INVALID_MADE_NON_OVERFLOW_INFUSIONS
+                if prev_sb.deficit == 0:
+                    # If there is a challenge chain infusion, resets deficit to 5
+                    if reward_slot.deficit != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                        return None, Err.INVALID_DEFICIT
                 else:
-                    curr: SubBlockRecord = prev_sb
-                    made_non_overflow_infusion: bool = False
-                    # Go until the previous slot starts
-                    while not curr.first_in_slot and curr.height > 0:
-                        if not is_overflow_sub_block(constants, curr.ips, curr.required_iters):
-                            made_non_overflow_infusion = True
-                        curr = sub_blocks[curr.prev_block_hash]
-
-                    # This is the first sub-block in the previous slot
-                    if not is_overflow_sub_block(constants, curr.ips, curr.required_iters):
-                        made_non_overflow_infusion = True
-                    if made_non_overflow_infusion != reward_slot.made_non_overflow_infusions:
-                        return None, Err.INVALID_MADE_NON_OVERFLOW_INFUSIONS
+                    # Otherwise, deficit stays the same at the slot ends, cannot reset until 0
+                    if reward_slot.deficit != prev_sb.deficit:
+                        return None, Err.INVALID_DEFICIT
 
         # 3. Check sub-epoch summary
         # Note that the subepoch summary is the summary of the previous subepoch (not the one that just finished)
@@ -645,7 +626,7 @@ async def validate_finished_header_block(
         else:
             # Not genesis block, go back to first sub-block in slot
             curr = prev_sb
-            while not curr.makes_challenge_block:
+            while curr.finished_challenge_slot_hashes is None:
                 curr = sub_blocks[curr.prev_hash]
             cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
