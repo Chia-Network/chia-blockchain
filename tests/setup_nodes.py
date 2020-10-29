@@ -356,7 +356,7 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
     farmer, farmer_server = await node_iters[2].__anext__()
 
     async def num_connections():
-        count = len(harvester.server.global_connections.items())
+        count = len(harvester.server.all_connections.items())
         return count
 
     await time_out_assert_custom_interval(10, 3, num_connections, 1)
