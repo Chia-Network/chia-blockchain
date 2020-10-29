@@ -10,8 +10,7 @@ from src.types.vdf import VDFInfo, VDFProof
 class RewardChainEndOfSlot(Streamable):
     end_of_slot_vdf: VDFInfo
     challenge_slot_hash: bytes32
-    made_non_overflow_infusions: bool  # Whether the slot had non-overflow sub-blocks infused
-    deficit: uint8  # 4 or less. usually zero
+    deficit: uint8  # 5 or less. usually zero
 
 
 @dataclass(frozen=True)
