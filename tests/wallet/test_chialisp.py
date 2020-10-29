@@ -1,3 +1,5 @@
+import pytest
+
 from src.wallet.chialisp import (
     sexp,
     cons,
@@ -38,6 +40,8 @@ class TestChialisp:
         assert nth("val", 2, 0) == "(f (f (r (r val))))"
         assert nth("val", 2, 1) == "(f (r (f (r (r val)))))"
         assert nth("val", 2, 2) == "(f (r (r (f (r (r val))))))"
+        with pytest.raises(ValueError):
+            nth("val", -1)
 
     def test_args(self):
         assert args() == "1"
@@ -47,6 +51,8 @@ class TestChialisp:
         assert args(2, 0) == "22"
         assert args(2, 1) == "45"
         assert args(2, 2) == "91"
+        with pytest.raises(ValueError):
+            args(-1)
 
     def test_eval(self):
         assert eval("code") == "((c code 1))"

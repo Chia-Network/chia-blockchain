@@ -17,6 +17,8 @@ def rest(obj):
 def nth(obj, *path):
     if not path:
         return obj
+    if path[0] < 0:
+        raise ValueError
     if path[0] == 0:
         return nth(first(obj), *path[1:])
     else:
@@ -26,6 +28,8 @@ def nth(obj, *path):
 def args(*path, p=1):
     if len(path) == 0:
         return str(p)
+    if path[0] < 0:
+        raise ValueError
     return args(*path[1:], p=(2 * p << path[0]) | (2 ** path[0] - 1))
 
 
