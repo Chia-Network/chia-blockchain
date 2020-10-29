@@ -11,6 +11,7 @@ from blspy import AugSchemeMPL
 from chiabip158 import PyBIP158
 
 from src.consensus.constants import ConsensusConstants
+from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters, get_next_ips
@@ -30,7 +31,7 @@ from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.full_node.cost_calculator import calculate_cost_of_program
 from src.util.errors import Err
 from src.util.hash import std_hash
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint8
 from src.full_node.block_root_validation import validate_block_merkle_roots
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
@@ -263,7 +264,25 @@ class Blockchain:
             block.prev_header_hash,
             block.finished_slots is not None,
         )
-        sub_block = full_block_to_sub_block_record(block, ips, required_iters)
+        overflow = is_overflow_sub_block(self.constants, ips, required_iters)
+        prev_sb = self.sub_blocks[block.prev_header_hash]
+        if prev_sb.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+            # Prev sb must be an overflow sb
+            if overflow and block.finished_slots is None:
+                # Still overflowed, so we cannot decrease the deficit
+                deficit: uint8 = prev_sb.deficit
+            else:
+                # We have passed the first overflow, can decrease
+                deficit: uint8 = prev_sb.deficit - 1
+        elif prev_sb.deficit == 0:
+            if block.finished_slots is not None:
+                deficit = uint8(self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK)
+            else:
+                deficit = uint8(0)
+        else:
+            deficit = prev_sb.deficit - 1
+
+        sub_block = full_block_to_sub_block_record(block, ips, required_iters, deficit)
 
         # Always add the block to the database
         await self.block_store.add_block(block, sub_block)
