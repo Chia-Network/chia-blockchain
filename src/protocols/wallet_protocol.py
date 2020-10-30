@@ -40,56 +40,24 @@ class TransactionAck:
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestAllProofHashes:
-    pass
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RespondAllProofHashes:
-    hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]]
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RequestAllHeaderHashesAfter:
-    starting_height: uint32
-    previous_challenge_hash: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RespondAllHeaderHashesAfter:
-    starting_height: uint32
-    previous_challenge_hash: bytes32
-    hashes: List[bytes32]
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RejectAllHeaderHashesAfterRequest:
-    starting_height: uint32
-    previous_challenge_hash: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class NewLCA:
-    lca_hash: bytes32
-    height: uint32
-    weight: uint128
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RequestHeader:
-    height: uint32
+class NewPeak:
     header_hash: bytes32
+    sub_block_height: uint32
+    weight: uint128
+    fork_point_with_previous_peak: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RespondHeader:
+class RequestSubBlockHeader:
+    height: uint32
+    include_transaction_block: bool
+    transaction_block_height: uint32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondSubBlockHeader:
     header_block: HeaderBlock
     transactions_filter: bytes
 
