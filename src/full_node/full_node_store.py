@@ -12,14 +12,14 @@ from src.util.ints import uint32, uint64, uint8
 
 log = logging.getLogger(__name__)
 
+ICPs = List[Optional[Tuple[VDFInfo, VDFProof]]]
+
 
 class FullNodeStore:
     # TODO(mariano): replace
     # Proof of time heights
     # proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
     constants: ConsensusConstants
-    # Our best unfinished block
-    unfinished_blocks_leader: Tuple[uint32, uint64]
     # Blocks which we have created, but don't have plot signatures yet
     candidate_blocks: Dict[bytes32, UnfinishedBlock]
     # Header hashes of unfinished blocks that we have seen recently
@@ -29,20 +29,18 @@ class FullNodeStore:
     # Unfinished blocks, keyed from reward hash
     unfinished_blocks: Dict[bytes32, UnfinishedBlock]
 
-    # Finished slots from the peak onwards
-    finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]
-
-    # ICPs from the last finished slot onwards
-    latest_icps: List[Optional[Tuple[VDFInfo, VDFProof]]]
+    # Finished slots and icps from the peak's slot onwards
+    # We store all 32 ICPs for each slot, starting as 32 Nones and filling them as we go
+    finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs, ICPs]]
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):
         self = cls()
         # TODO(mariano): replace
-        self.proof_of_time_heights = {}
+        # self.proof_of_time_heights = {}
 
         self.constants = constants
-        self.clear_slots_and_icps()
+        self.clear_slots()
         self.unfinished_blocks = {}
         self.candidate_blocks = {}
         self.seen_unfinished_blocks = set()
@@ -114,26 +112,32 @@ class FullNodeStore:
         if partial_reward_hash in self.unfinished_blocks:
             del self.unfinished_blocks[partial_reward_hash]
 
-    def clear_slots_and_icps(self):
+    def clear_slots(self):
         self.finished_slots.clear()
-        self.clear_icps()
 
-    def new_finished_slot(self, finished_slot: Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]):
+    def new_finished_slot(self, cs: ChallengeSlot, reward: RewardChainEndOfSlot, proofs: EndOfSlotProofs):
+        """
+        Returns true if finished slot successfully added
+        """
+        icps = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
         if len(self.finished_slots) == 0:
-            self.finished_slots.append(finished_slot)
-            return
-        if finished_slot[0].proof_of_space.challenge_hash != self.finished_slots[-1][0].get_hash():
-            return
-        self.finished_slots.append(finished_slot)
+            self.finished_slots.append((cs, reward, proofs, icps))
+            return True
+        if cs.proof_of_space.challenge_hash != self.finished_slots[-1][0].get_hash():
+            # This slot does not append to our next slot
+            return False
+        self.finished_slots.append((cs, reward, proofs, icps))
+        return True
 
-    def new_icp(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof):
-        if len(self.finished_slots) != 0:
-            assert challenge_hash == self.finished_slots[-1][0].get_hash()
-        assert index
-        self.latest_icps[index] = (vdf_info, proof)
-
-    def clear_icps(self):
-        self.latest_icps = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
+    def new_icp(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof) -> bool:
+        """
+        Returns true if icp successfully added
+        """
+        for cs, reward, proofs, icps in self.finished_slots:
+            if cs.get_hash() == challenge_hash:
+                icps[index] = (vdf_info, proof)
+                return True
+        return False
 
     # TODO(mariano)
     # def add_proof_of_time_heights(self, challenge_iters: Tuple[bytes32, uint64], height: uint32) -> None:
