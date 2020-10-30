@@ -789,6 +789,7 @@ class WalletStateManager:
             # Not genesis, updated LCA
             if block.weight > self.block_records[self.lca].weight:
 
+                # TODO: handle returning of -1
                 fork_h = find_fork_point_in_chain(self.block_records, self.block_records[self.lca], block)
                 await self.reorg_rollback(fork_h)
 
@@ -1115,6 +1116,7 @@ class WalletStateManager:
         tx_filter = PyBIP158([b for b in transactions_filter])
 
         # Find fork point
+        # TODO: handle returning of -1
         fork_h: uint32 = find_fork_point_in_chain(self.block_records, self.block_records[self.lca], new_block)
 
         # Get all unspent coins

@@ -1138,9 +1138,9 @@ class FullNode:
         new_candidate = dataclasses.replace(candidate, foliage_sub_block=fsb3)
 
         # Propagate to ourselves (which validates and does further propagations)
-        request = full_node_protocol.RespondUnfinishedBlock(new_candidate)
+        request = full_node_protocol.RespondUnfinishedSubBlock(new_candidate)
 
-        async for m in self.respond_unfinished_block(request):
+        async for m in self.respond_unfinished_sub_block(request):
             # Yield all new messages (propagation to peers)
             yield m
 
@@ -1444,82 +1444,6 @@ class FullNode:
             else:
                 response = wallet_protocol.TransactionAck(tx.transaction.name(), status, error_name)
         yield OutboundMessage(NodeType.WALLET, Message("transaction_ack", response), Delivery.RESPOND)
-
-    @api_request
-    async def request_all_proof_hashes(
-        self, request: wallet_protocol.RequestAllProofHashes
-    ) -> OutboundMessageGenerator:
-        proof_hashes_map = await self.block_store.get_proof_hashes()
-        curr = self.blockchain.lca_block
-
-        hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]] = []
-        while curr.height > 0:
-            difficulty_update: Optional[uint64] = None
-            iters_update: Optional[uint64] = None
-            if curr.height % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
-                difficulty_update = self.blockchain.get_next_difficulty(self.blockchain.headers[curr.prev_header_hash])
-            if (curr.height + 1) % self.constants.DIFFICULTY_EPOCH == 0:
-                iters_update = curr.data.total_iters
-            hashes.append((proof_hashes_map[curr.header_hash], difficulty_update, iters_update))
-            curr = self.blockchain.headers[curr.prev_header_hash]
-
-        hashes.append(
-            (
-                proof_hashes_map[self.blockchain.genesis.header_hash],
-                uint64(self.blockchain.genesis.weight),
-                None,
-            )
-        )
-        response = wallet_protocol.RespondAllProofHashes(list(reversed(hashes)))
-        yield OutboundMessage(
-            NodeType.WALLET,
-            Message("respond_all_proof_hashes", response),
-            Delivery.RESPOND,
-        )
-
-    @api_request
-    async def request_all_header_hashes_after(
-        self, request: wallet_protocol.RequestAllHeaderHashesAfter
-    ) -> OutboundMessageGenerator:
-        header_hash: Optional[bytes32] = self.blockchain.height_to_hash.get(request.starting_height, None)
-        if header_hash is None:
-            reject = wallet_protocol.RejectAllHeaderHashesAfterRequest(
-                request.starting_height, request.previous_challenge_hash
-            )
-            yield OutboundMessage(
-                NodeType.WALLET,
-                Message("reject_all_header_hashes_after_request", reject),
-                Delivery.RESPOND,
-            )
-            return
-        block: Optional[FullBlock] = await self.block_store.get_block(header_hash)
-        header_hash_again: Optional[bytes32] = self.blockchain.height_to_hash.get(request.starting_height, None)
-
-        if (
-            block is None
-            or block.proof_of_space.challenge_hash != request.previous_challenge_hash
-            or header_hash_again != header_hash
-        ):
-            reject = wallet_protocol.RejectAllHeaderHashesAfterRequest(
-                request.starting_height, request.previous_challenge_hash
-            )
-            yield OutboundMessage(
-                NodeType.WALLET,
-                Message("reject_all_header_hashes_after_request", reject),
-                Delivery.RESPOND,
-            )
-            return
-        header_hashes: List[bytes32] = []
-        for height in range(request.starting_height, self.blockchain.lca_block.height + 1):
-            header_hashes.append(self.blockchain.height_to_hash[uint32(height)])
-        response = wallet_protocol.RespondAllHeaderHashesAfter(
-            request.starting_height, request.previous_challenge_hash, header_hashes
-        )
-        yield OutboundMessage(
-            NodeType.WALLET,
-            Message("respond_all_header_hashes_after", response),
-            Delivery.RESPOND,
-        )
 
     @api_request
     async def request_header(self, request: wallet_protocol.RequestHeader) -> OutboundMessageGenerator:
