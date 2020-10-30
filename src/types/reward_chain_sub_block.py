@@ -15,9 +15,9 @@ class RewardChainSubBlockUnfinished(Streamable):
     sub_block_height: uint32
     total_iters: uint128
     proof_of_space: ProofOfSpace
-    challenge_chain_icp_vdf: VDFInfo
+    challenge_chain_icp_vdf: Optional[VDFInfo]  # Not present for first icp in slot
     challenge_chain_icp_sig: G2Element
-    reward_chain_icp_vdf: VDFInfo
+    reward_chain_icp_vdf: Optional[VDFInfo]  # Not present for first icp in slot
     reward_chain_icp_sig: G2Element
 
 
@@ -28,10 +28,10 @@ class RewardChainSubBlock(Streamable):
     sub_block_height: uint32
     total_iters: uint128
     proof_of_space: ProofOfSpace
-    challenge_chain_icp_vdf: VDFInfo
+    challenge_chain_icp_vdf: Optional[VDFInfo]  # Not present for first icp in slot
     challenge_chain_icp_sig: G2Element
     challenge_chain_ip_vdf: VDFInfo
-    reward_chain_icp_vdf: VDFInfo
+    reward_chain_icp_vdf: Optional[VDFInfo]  # Not present for first icp in slot
     reward_chain_icp_sig: G2Element
     reward_chain_ip_vdf: VDFInfo
 

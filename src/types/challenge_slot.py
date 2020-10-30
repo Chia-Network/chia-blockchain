@@ -12,9 +12,9 @@ from src.types.vdf import VDFInfo
 @streamable
 class ChallengeBlockInfo(Streamable):
     proof_of_space: ProofOfSpace
-    icp_vdf: VDFInfo
+    icp_vdf: Optional[VDFInfo]  # Only present if not the first icp
     icp_signature: G2Element
-    ip_vdf: VDFInfo
+    ip_vdf: Optional[VDFInfo]
 
 
 @dataclass(frozen=True)
