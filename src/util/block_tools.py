@@ -884,7 +884,7 @@ def get_prams_from_plots(
 
 def get_vdf_proof(challenge_hash: bytes32, a: str, b: str, number_iters, discriminant_size_bits: int) -> VDFProof:
     output = get_vdf_output(a, b, challenge_hash, discriminant_size_bits, number_iters)
-    return VDFProof(witness=output.get_hash(), witness_type=1)
+    return VDFProof(witness=output.get_hash(), witness_type=uint8(0))
 
 
 def get_vdf_output(

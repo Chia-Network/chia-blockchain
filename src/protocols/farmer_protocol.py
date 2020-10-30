@@ -4,8 +4,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint64
-
+from src.util.ints import uint64, uint8
 
 """
 Protocol between farmer and full node.
@@ -17,9 +16,9 @@ Protocol between farmer and full node.
 class InfusionChallengePoint:
     challenge_hash: bytes32
     challenge_chain_icp: bytes32
-    reward_chain_icp: bytes32  # TODO(mariano): update bram
+    reward_chain_icp: bytes32
     difficulty: uint64
-    index: uint64  # TODO(mariano): what is this for?
+    index: uint8
     slot_iterations: uint64
 
 
@@ -27,7 +26,7 @@ class InfusionChallengePoint:
 @cbor_message
 class DeclareProofOfSpace:
     challenge_chain_icp: bytes32
-    ProofOfSpace: bytes32
+    proof_of_space: ProofOfSpace
     challenge_chain_icp_sig: G2Element
     reward_chain_icp_sig: G2Element
     farmer_puzzle_hash: bytes32
