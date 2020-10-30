@@ -6,7 +6,7 @@ from blspy import G1Element, G2Element
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
-
+from src.util.ints import uint64
 
 """
 Protocol between harvester and farmer.
@@ -18,26 +18,28 @@ Protocol between harvester and farmer.
 class HarvesterHandshake:
     farmer_public_keys: List[G1Element]
     pool_public_keys: List[G1Element]
+    pool_share_threshold: uint64
 
 
 @dataclass(frozen=True)
 @cbor_message
 class NewChallenge:
     challenge_hash: bytes32
+    difficulty: uint64
+    slot_iterations: uint64
 
 
 @dataclass(frozen=True)
 @cbor_message
 class ChallengeResponse:
-    challenge_hash: bytes32
-    plot_id: str
+    plot_identifier: str
     proof: ProofOfSpace
 
 
 @dataclass(frozen=True)
 @cbor_message
 class RequestSignatures:
-    plot_id: str
+    plot_identifier: str
     challenge_hash: bytes32
     messages: List[bytes32]
 
@@ -45,7 +47,7 @@ class RequestSignatures:
 @dataclass(frozen=True)
 @cbor_message
 class RespondSignatures:
-    plot_id: str
+    plot_identifier: str
     challenge_hash: bytes32
     local_pk: G1Element
     farmer_pk: G1Element
