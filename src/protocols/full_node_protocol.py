@@ -28,6 +28,26 @@ class NewPeak:
 
 @dataclass(frozen=True)
 @cbor_message
+class NewTransaction:
+    transaction_id: bytes32
+    cost: uint64
+    fees: uint64
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestTransaction:
+    transaction_id: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondTransaction:
+    transaction: SpendBundle
+
+
+@dataclass(frozen=True)
+@cbor_message
 class RequestProofOfWeight:
     pass
 
@@ -53,20 +73,20 @@ class RespondSubBlock:
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestCompactVDFs:
-    height: uint32
+class NewUnfinishedSubBlock:
+    unfinished_reward_hash: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RespondCompactVDFs:
-    height: uint32
-    header_hash: bytes32
-    end_of_slot_proofs: List[EndOfSlotProofs]  # List of challenge eos vdf and reward eos vdf
-    cc_icp_proof: Optional[VDFProof]  # If not first icp
-    rc_icp_proof: Optional[VDFProof]  # If not first icp
-    cc_ip_proof: VDFProof
-    rc_ip_proof: VDFProof
+class RequestUnfinishedSubBlock:
+    unfinished_reward_hash: bytes32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondUnfinishedSubBlock:
+    unfinished_sub_block: UnfinishedBlock
 
 
 @dataclass(frozen=True)
@@ -104,46 +124,26 @@ class RespondEndOfSlot:
 
 @dataclass(frozen=True)
 @cbor_message
-class NewUnfinishedSubBlock:
-    unfinished_reward_hash: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RequestUnfinishedSubBlock:
-    unfinished_reward_hash: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RespondUnfinishedSubBlock:
-    unfinished_sub_block: UnfinishedBlock
-
-
-@dataclass(frozen=True)
-@cbor_message
-class NewTransaction:
-    transaction_id: bytes32
-    cost: uint64
-    fees: uint64
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RequestTransaction:
-    transaction_id: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RespondTransaction:
-    transaction: SpendBundle
-
-
-@dataclass(frozen=True)
-@cbor_message
 class RequestMempoolTransactions:
     filter: bytes
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestCompactVDFs:
+    height: uint32
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondCompactVDFs:
+    height: uint32
+    header_hash: bytes32
+    end_of_slot_proofs: List[EndOfSlotProofs]  # List of challenge eos vdf and reward eos vdf
+    cc_icp_proof: Optional[VDFProof]  # If not first icp
+    rc_icp_proof: Optional[VDFProof]  # If not first icp
+    cc_ip_proof: VDFProof
+    rc_ip_proof: VDFProof
 
 
 @dataclass(frozen=True)
