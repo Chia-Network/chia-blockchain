@@ -747,68 +747,33 @@ class FullNode:
     async def new_unfinished_sub_block(
         self, new_unfinished_sub_block: full_node_protocol.NewUnfinishedSubBlock
     ) -> OutboundMessageGenerator:
-        if self.blockchain.contains_block(new_unfinished_sub_block.unfinished_reward_hash):
+        if self.full_node_store.get_unfinished_block(new_unfinished_sub_block.unfinished_reward_hash) is not None:
             return
-        if not self.blockchain.contains_block(new_unfinished_block.previous_header_hash):
-            return
-        prev_block: Optional[FullBlock] = await self.block_store.get_block(new_unfinished_block.previous_header_hash)
-        if prev_block is not None:
-            challenge = self.blockchain.get_challenge(prev_block)
-            if challenge is not None:
-                if (
-                    await (
-                        self.full_node_store.get_unfinished_block(
-                            (
-                                challenge.get_hash(),
-                                new_unfinished_block.number_of_iterations,
-                            )
-                        )
-                    )
-                    is not None
-                ):
-                    return
-            assert challenge is not None
-            yield OutboundMessage(
-                NodeType.FULL_NODE,
-                Message(
-                    "request_unfinished_block",
-                    full_node_protocol.RequestUnfinishedBlock(new_unfinished_block.new_header_hash),
-                ),
-                Delivery.RESPOND,
-            )
+        yield OutboundMessage(
+            NodeType.FULL_NODE,
+            Message(
+                "request_unfinished_sub_block",
+                full_node_protocol.RequestUnfinishedSubBlock(new_unfinished_sub_block.unfinished_reward_hash),
+            ),
+            Delivery.RESPOND,
+        )
 
     @api_request
-    async def request_unfinished_block(
-        self, request_unfinished_block: full_node_protocol.RequestUnfinishedBlock
+    async def request_unfinished_sub_block(
+        self, request_unfinished_sub_block: full_node_protocol.RequestUnfinishedSubBlock
     ) -> OutboundMessageGenerator:
-        for _, block in (await self.full_node_store.get_unfinished_blocks()).items():
-            if block.header_hash == request_unfinished_block.header_hash:
-                yield OutboundMessage(
-                    NodeType.FULL_NODE,
-                    Message(
-                        "respond_unfinished_block",
-                        full_node_protocol.RespondUnfinishedBlock(block),
-                    ),
-                    Delivery.RESPOND,
-                )
-                return
-        fetched: Optional[FullBlock] = await self.block_store.get_block(request_unfinished_block.header_hash)
-        if fetched is not None:
+        unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(
+            request_unfinished_sub_block.unfinished_reward_hash
+        )
+        if unfinished_block is not None:
             yield OutboundMessage(
                 NodeType.FULL_NODE,
                 Message(
                     "respond_unfinished_block",
-                    full_node_protocol.RespondUnfinishedBlock(fetched),
+                    full_node_protocol.RespondUnfinishedSubBlock(unfinished_block),
                 ),
                 Delivery.RESPOND,
             )
-            return
-
-        reject = Message(
-            "reject_unfinished_block_request",
-            full_node_protocol.RejectUnfinishedBlockRequest(request_unfinished_block.header_hash),
-        )
-        yield OutboundMessage(NodeType.FULL_NODE, reject, Delivery.RESPOND)
 
     @api_request
     async def respond_unfinished_sub_block(
@@ -825,20 +790,17 @@ class FullNode:
         if self.full_node_store.seen_unfinished_block(block.header_hash):
             return
 
-        if not self.blockchain.is_child_of_peak(block):
+        if block.height > 0 and not self.blockchain.contains_block(block.prev_header_hash):
+            # No need to request the parent, since the peer will send it to us anyway, via NewPeak
+            self.log.info(f"Received a disconnected unfinished block at height {block.height}")
             return
 
-        prev_full_block: Optional[FullBlock] = await self.block_store.get_block(block.prev_header_hash)
-
-        assert prev_full_block is not None
         async with self.blockchain.lock:
-            (
-                error_code,
-                iterations_needed,
-            ) = await self.blockchain.validate_unfinished_block(block, prev_full_block)
+            # TODO: pre-validate VDFs outside of lock
+            error_code: Optional[Err] = await self.blockchain.validate_unfinished_block(block)
+            if error_code is not None:
+                raise ConsensusError(error_code)
 
-        if error_code is not None:
-            raise ConsensusError(error_code)
         assert iterations_needed is not None
 
         challenge = self.blockchain.get_challenge(prev_full_block)

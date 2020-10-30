@@ -378,12 +378,12 @@ class Blockchain:
         # return results
         return []
 
-    async def validate_unfinished_block(self, block: UnfinishedBlock) -> Optional[Err]:
+    async def validate_unfinished_block(self, block: UnfinishedBlock) -> Tuple[Optional[uint64], Optional[Err]]:
         if block.header_hash in self.sub_blocks:
-            return None  # Already validated and added
+            return self.sub_blocks[block.header_hash].required_iters, None  # Already validated and added
 
         if block.prev_header_hash not in self.sub_blocks and not block.height == 0:
-            return Err.INVALID_PREV_BLOCK_HASH
+            return None, Err.INVALID_PREV_BLOCK_HASH
 
         unfinished_header_block = UnfinishedHeaderBlock(
             block.finished_slots,
@@ -395,19 +395,19 @@ class Blockchain:
             b"",
         )
 
-        _, error_code = await validate_unfinished_header_block(
+        required_iters, error_code = await validate_unfinished_header_block(
             self.constants, self.sub_blocks, self.height_to_hash, unfinished_header_block, False
         )
 
         if error_code is not None:
-            return error_code
+            return None, error_code
 
         error_code = await self.validate_block_body(block)
 
         if error_code is not None:
-            return error_code
+            return None, error_code
 
-        return await self.validate_block_body(block)
+        return required_iters, None
 
     async def validate_block_body(self, block: Union[FullBlock, UnfinishedBlock]) -> Optional[Err]:
         """
