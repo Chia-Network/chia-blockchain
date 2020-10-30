@@ -1,11 +1,9 @@
-import asyncio
 import concurrent
-import functools
-import logging
-import traceback
 import time
 from pathlib import Path
 from typing import AsyncGenerator, Dict, Optional, Callable, Tuple, List
+import random
+from typing import AsyncGenerator
 import aiosqlite
 from blspy import G2Element
 from chiabip158 import PyBIP158
@@ -36,6 +34,8 @@ from src.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
+from src.protocols.full_node_protocol import AllHeaderHashes
+from src.server.connection_utils import send_all_first_reply
 from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -328,7 +328,9 @@ class FullNode:
         self.log.info("Waiting to receive peaks from peers.")
         self.sync_peers_handler = None
         self.sync_store.waiting_for_peaks = True
-        # TODO: better way to tell that we have finished receiving peaks
+        nodes = list(self.server.full_nodes.values())
+
+        # TODO: better way to tell that we have finished receiving tips
         # TODO: fix DOS issue. Attacker can request syncing to an invalid blockchain
         await asyncio.sleep(2)
         highest_weight: uint128 = uint128(0)
@@ -365,14 +367,7 @@ class FullNode:
         fork_point_height: uint32 = uint32(0)
         self.log.info(f"Fork point at height {fork_point_height}")
 
-        peers = [
-            con.peer_node_id
-            for id, con in self.server.all_connections.items()
-            if (
-                con.peer_node_id is not None
-                and con.connection_type == NodeType.FULL_NODE
-            )
-        ]
+        peers: List[WSChiaConnection] = list(self.server.full_nodes.values())
 
         self.sync_peers_handler = SyncPeersHandler(
             self.sync_store, peers, fork_point_height, self.blockchain, peak_height
@@ -396,8 +391,8 @@ class FullNode:
             if block_processor_task.done():
                 break
 
-            cur_peers = [
-                con.peer_node_id
+            cur_peers: List[WSChiaConnection] = [
+                con
                 for id, con in self.server.all_connections.items()
                 if (
                     con.peer_node_id is not None
