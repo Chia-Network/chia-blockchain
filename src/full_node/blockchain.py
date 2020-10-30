@@ -218,20 +218,20 @@ class Blockchain:
         self,
         block: FullBlock,
         pre_validated: bool = False,
-    ) -> Tuple[ReceiveBlockResult, Optional[Err]]:
+    ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
         blockchain, regardless of whether it is the child of a head, or another block.
         Returns a header if block is added to head. Returns an error if the block is
-        invalid.
+        invalid. Also returns the fork height, in the case of a new peak.
         """
         genesis: bool = block.height == 0
 
         if block.header_hash in self.sub_blocks:
-            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None
+            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if block.prev_header_hash not in self.sub_blocks and not genesis:
-            return ReceiveBlockResult.DISCONNECTED_BLOCK, None
+            return ReceiveBlockResult.DISCONNECTED_BLOCK, None, None
 
         curr_header_block = HeaderBlock(
             block.finished_slots,
@@ -250,12 +250,12 @@ class Blockchain:
         )
 
         if error_code is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, error_code
+            return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
         error_code = await self.validate_block_body(block)
 
         if error_code is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, error_code
+            return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
         ips = get_next_ips(
             self.constants,
@@ -290,16 +290,18 @@ class Blockchain:
         # Always add the block to the database
         await self.block_store.add_block(block, sub_block)
 
-        new_peak = await self._reconsider_peak(sub_block, genesis)
-        if new_peak:
-            return ReceiveBlockResult.NEW_PEAK, None
+        fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
+        if fork_height is not None:
+            return ReceiveBlockResult.NEW_PEAK, None, fork_height
         else:
-            return ReceiveBlockResult.ADDED_AS_ORPHAN, None
+            return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
-    async def _reconsider_peak(self, sub_block: SubBlockRecord, genesis: bool) -> bool:
+    async def _reconsider_peak(self, sub_block: SubBlockRecord, genesis: bool) -> Optional[uint32]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
+        It returns the height of the fork between the previous chain and the new chain, or returns
+        None if there was no update to the heaviest chain.
         """
         if genesis:
             block: Optional[FullBlock] = await self.block_store.get_block(sub_block.header_hash)
@@ -307,7 +309,7 @@ class Blockchain:
             await self.coin_store.new_block(block)
             self.height_to_hash[uint32(0)] = block.header_hash
             self.peak_height = uint32(0)
-            return True
+            return uint32(0)
 
         assert self.get_peak() is not None
         if sub_block.weight > self.get_peak().weight:
@@ -339,10 +341,10 @@ class Blockchain:
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(sub_block.header_hash)
-            return True
+            return uint32(min(fork_h, 0))
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
-        return False
+        return None
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
         return get_next_difficulty(self.constants, self.sub_blocks, self.height_to_hash, header_hash, new_slot)
