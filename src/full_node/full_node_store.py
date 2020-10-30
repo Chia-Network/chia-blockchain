@@ -88,13 +88,13 @@ class FullNodeStore:
     def add_unfinished_block(self, unfinished_block: UnfinishedBlock) -> None:
         self.unfinished_blocks[unfinished_block.reward_chain_sub_block.get_hash()] = unfinished_block
 
-    def get_unfinished_block(self, partial_reward_hash: bytes32) -> Optional[FullBlock]:
-        return self.unfinished_blocks.get(partial_reward_hash, None)
+    def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
+        return self.unfinished_blocks.get(unfinished_reward_hash, None)
 
-    def seen_unfinished_block(self, header_hash: bytes32) -> bool:
-        if header_hash in self.seen_unfinished_blocks:
+    def seen_unfinished_block(self, temp_header_hash: bytes32) -> bool:
+        if temp_header_hash in self.seen_unfinished_blocks:
             return True
-        self.seen_unfinished_blocks.add(header_hash)
+        self.seen_unfinished_blocks.add(temp_header_hash)
         return False
 
     def clear_seen_unfinished_blocks(self) -> None:
