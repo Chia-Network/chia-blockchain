@@ -7,6 +7,26 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
+from src.wallet.chialisp import (
+    eval,
+    sexp,
+    sha256,
+    args,
+    make_if,
+    iff,
+    equal,
+    quote,
+    hexstr,
+    fail,
+    multiply,
+    greater,
+    make_list,
+    subtract,
+    add,
+    sha256tree,
+    cons,
+    rest,
+)
 
 
 def rl_puzzle_for_pk(
@@ -38,44 +58,113 @@ def rl_puzzle_for_pk(
     opcode_create = ConditionOpcode.CREATE_COIN.hex()
     opcode_myid = ConditionOpcode.ASSERT_MY_COIN_ID.hex()
 
-    TEMPLATE_MY_PARENT_ID = "(sha256 (f (r (r (r (r (r (r 1))))))) (f (r 1)) (f (r (r (r (r (r (r (r 1)))))))))"
-    TEMPLATE_SINGLETON_RL = f'((c (i (i (= {TEMPLATE_MY_PARENT_ID} (f 1)) (q 1) (= (f 1) (q 0x{origin_id}))) (q ()) (q (x (q "Parent doesnt satisfy RL conditions")))) 1))'  # noqa: E501
-    TEMPLATE_BLOCK_AGE = f'((c (i (i (= (* (f (r (r (r (r (r 1)))))) (q {rate_amount})) (* (f (r (r (r (r 1))))) (q {interval_time}))) (q 1) (q (> (* (f (r (r (r (r (r 1)))))) (q {rate_amount})) (* (f (r (r (r (r 1)))))) (q {interval_time})))) (q (c (q 0x{opcode_coin_block_age}) (c (f (r (r (r (r (r 1)))))) (q ())))) (q (x (q "wrong min block time")))) 1 ))'  # noqa: E501
-    TEMPLATE_MY_ID = f"(c (q 0x{opcode_myid}) (c (sha256 (f 1) (f (r 1)) (f (r (r 1)))) (q ())))"  # noqa: E501
-    CREATE_CHANGE = f"(c (q 0x{opcode_create}) (c (f (r 1)) (c (- (f (r (r 1))) (+ (f (r (r (r (r 1))))) (f (r (r (r (r (r (r (r (r 1))))))))))) (q ()))))"  # noqa: E501
-    CREATE_NEW_COIN = f"(c (q 0x{opcode_create}) (c (f (r (r (r 1)))) (c (f (r (r (r (r 1))))) (q ()))))"  # noqa: E501
-    RATE_LIMIT_PUZZLE = f"(c {TEMPLATE_SINGLETON_RL} (c {TEMPLATE_BLOCK_AGE} (c {CREATE_CHANGE} (c {TEMPLATE_MY_ID} (c {CREATE_NEW_COIN} (q ()))))))"  # noqa: E501
-
-    TEMPLATE_MY_PARENT_ID_2 = "(sha256 (f (r (r (r (r (r (r (r (r 1))))))))) (f (r 1)) (f (r (r (r (r (r (r (r 1)))))))))"  # noqa: E501
-    TEMPLATE_SINGLETON_RL_2 = f'((c (i (i (= {TEMPLATE_MY_PARENT_ID_2} (f (r (r (r (r (r 1))))))) (q 1) (= (f (r (r (r (r (r 1)))))) (q 0x{origin_id}))) (q ()) (q (x (q "Parent doesnt satisfy RL conditions")))) 1))'  # noqa: E501
-    CREATE_CONSOLIDATED = f"(c (q 0x{opcode_create}) (c (f (r 1)) (c (+ (f (r (r (r (r 1))))) (f (r (r (r (r (r (r 1)))))))) (q ()))))"  # noqa: E501
-    MODE_TWO_ME_STRING = f"(c (q 0x{opcode_myid}) (c (sha256 (f (r (r (r (r (r 1)))))) (f (r 1)) (f (r (r (r (r (r (r 1)))))))) (q ())))"  # noqa: E501
-    CREATE_LOCK = f"(c (q 0x{opcode_create}) (c (sha256tree (c (q 7) (c (c (q 5) (c (c (q 1) (c (sha256 (f (r (r 1))) (f (r (r (r 1)))) (f (r (r (r (r 1)))))) (q ()))) (c (q (q ())) (q ())))) (q ())))) (c (q 0) (q ()))))"  # noqa: E501
-
-    MODE_TWO = f"(c {TEMPLATE_SINGLETON_RL_2} (c {MODE_TWO_ME_STRING} (c {CREATE_LOCK} (c {CREATE_CONSOLIDATED} (q ())))))"  # noqa: E501
-
-    AGGSIG_ENTIRE_SOLUTION = (
-        f"(c (q 0x{opcode_aggsig}) (c (q 0x{hex_pk}) (c (sha256tree 1) (q ()))))"
+    TEMPLATE_MY_PARENT_ID = sha256(args(6), args(1), args(7))
+    TEMPLATE_SINGLETON_RL = make_if(
+        iff(
+            equal(TEMPLATE_MY_PARENT_ID, args(0)),
+            quote(1),
+            equal(args(0), hexstr(origin_id)),
+        ),
+        sexp(),
+        fail(quote("Parent doesnt satisfy RL conditions")),
+    )
+    TEMPLATE_BLOCK_AGE = make_if(
+        iff(
+            equal(
+                multiply(args(5), quote(rate_amount)),
+                multiply(args(4), quote(interval_time)),
+            ),
+            quote(1),
+            quote(
+                greater(
+                    multiply(args(5), quote(rate_amount)),
+                    multiply(args(4)),  # multiply looks wrong
+                    quote(interval_time),
+                )
+            ),
+        ),
+        make_list(hexstr(opcode_coin_block_age), args(5)),
+        fail("wrong min block time"),
+    )
+    TEMPLATE_MY_ID = make_list(hexstr(opcode_myid), sha256(args(0), args(1), args(2)))
+    CREATE_CHANGE = make_list(
+        hexstr(opcode_create), args(1), subtract(args(2), add(args(4), args(8)))
+    )
+    CREATE_NEW_COIN = make_list(hexstr(opcode_create), args(3), args(4))
+    RATE_LIMIT_PUZZLE = make_list(
+        TEMPLATE_SINGLETON_RL,
+        TEMPLATE_BLOCK_AGE,
+        CREATE_CHANGE,
+        TEMPLATE_MY_ID,
+        CREATE_NEW_COIN,
     )
 
-    WHOLE_PUZZLE = f"(c {AGGSIG_ENTIRE_SOLUTION} ((c (i (= (f 1) (q 1)) (q ((c (q {RATE_LIMIT_PUZZLE}) (r 1)))) (q {MODE_TWO})) 1)) (q ()))"  # noqa: E501
-    CLAWBACK = f"(c (c (q 0x{opcode_aggsig}) (c (q 0x{clawback_pk_str}) (c (sha256tree 1) (q ())))) (r 1))"
-    WHOLE_PUZZLE_WITH_CLAWBACK = (
-        f"((c (i (= (f 1) (q 3)) (q {CLAWBACK}) (q {WHOLE_PUZZLE})) 1))"
+    TEMPLATE_MY_PARENT_ID_2 = sha256(args(8), args(1), args(7))
+    TEMPLATE_SINGLETON_RL_2 = make_if(
+        iff(
+            equal(TEMPLATE_MY_PARENT_ID_2, args(5)),
+            quote(1),
+            equal(hexstr(origin_id), args(5)),
+        ),
+        sexp(),
+        fail(quote("Parent doesnt satisfy RL conditions")),
     )
+    CREATE_CONSOLIDATED = make_list(
+        hexstr(opcode_create), args(1), (add(args(4), args(6)))
+    )
+    MODE_TWO_ME_STRING = make_list(
+        hexstr(opcode_myid), sha256(args(5), args(1), args(6))
+    )
+    CREATE_LOCK = make_list(
+        hexstr(opcode_create),
+        sha256tree(
+            make_list(
+                quote(7),
+                make_list(
+                    quote(5),
+                    make_list(quote(1), sha256(args(2), args(3), args(4))),
+                    quote(make_list()),
+                ),
+            )
+        ),  # why?
+        quote(0),
+    )
+    MODE_TWO = make_list(
+        TEMPLATE_SINGLETON_RL_2, MODE_TWO_ME_STRING, CREATE_LOCK, CREATE_CONSOLIDATED
+    )
+    AGGSIG_ENTIRE_SOLUTION = make_list(
+        hexstr(opcode_aggsig), hexstr(hex_pk), sha256tree(args())
+    )
+    WHOLE_PUZZLE = cons(
+        AGGSIG_ENTIRE_SOLUTION,
+        make_if(
+            equal(args(0), quote(1)),
+            eval(quote(RATE_LIMIT_PUZZLE), rest(args())),
+            MODE_TWO,
+        ),
+    )
+    CLAWBACK = cons(
+        make_list(hexstr(opcode_aggsig), hexstr(clawback_pk_str), sha256tree(args())),
+        rest(args()),
+    )
+
+    WHOLE_PUZZLE_WITH_CLAWBACK = make_if(
+        equal(args(0), quote(3)), CLAWBACK, WHOLE_PUZZLE
+    )
+
     return Program(binutils.assemble(WHOLE_PUZZLE_WITH_CLAWBACK))
 
 
 def rl_make_aggregation_solution(myid, wallet_coin_primary_input, wallet_coin_amount):
-    opcode_myid = hexlify(myid).decode("ascii")
-    primary_input = hexlify(wallet_coin_primary_input).decode("ascii")
-    sol = f"(0x{opcode_myid} 0x{primary_input} {wallet_coin_amount})"
+    opcode_myid = "0x" + hexlify(myid).decode("ascii")
+    primary_input = "0x" + hexlify(wallet_coin_primary_input).decode("ascii")
+    sol = sexp(opcode_myid, primary_input, wallet_coin_amount)
     return Program(binutils.assemble(sol))
 
 
 def make_clawback_solution(puzzlehash, amount, fee):
     opcode_create = hexlify(ConditionOpcode.CREATE_COIN).decode("ascii")
-    solution = f"(3 (0x{opcode_create} 0x{puzzlehash} {amount - fee}))"
+    solution = sexp(3, sexp("0x" + opcode_create, "0x" + str(puzzlehash), amount - fee))
     return Program(binutils.assemble(solution))
 
 
@@ -95,7 +184,17 @@ def rl_make_solution_mode_2(
         "ascii"
     )
     primary_input = hexlify(my_primary_input).decode("ascii")
-    sol = f"(2 0x{my_puzzle_hash} 0x{consolidating_primary_input} 0x{consolidating_coin_puzzle_hash} {outgoing_amount} 0x{primary_input} {incoming_amount} {parent_amount} 0x{my_parent_parent_id})"  # noqa: E501
+    sol = sexp(
+        2,
+        "0x" + my_puzzle_hash,
+        "0x" + consolidating_primary_input,
+        "0x" + consolidating_coin_puzzle_hash,
+        outgoing_amount,
+        "0x" + primary_input,
+        incoming_amount,
+        parent_amount,
+        "0x" + str(my_parent_parent_id),
+    )
     return Program(binutils.assemble(sol))
 
 
@@ -118,9 +217,17 @@ def solution_for_rl(
     """
 
     min_block_count = math.ceil((out_amount * interval) / limit)
-    solution = (
-        f"(1 0x{my_parent_id.hex()} 0x{my_puzzlehash.hex()} {my_amount} 0x{out_puzzlehash.hex()} {out_amount}"
-        f" {min_block_count} 0x{my_parent_parent_id.hex()} {parent_amount} {fee})"
+    solution = sexp(
+        1,
+        "0x" + my_parent_id.hex(),
+        "0x" + my_puzzlehash.hex(),
+        my_amount,
+        "0x" + out_puzzlehash.hex(),
+        out_amount,
+        min_block_count,
+        "0x" + my_parent_parent_id.hex(),
+        parent_amount,
+        fee,
     )
     return Program(binutils.assemble(solution))
 
@@ -132,12 +239,19 @@ def rl_make_aggregation_puzzle(wallet_puzzle):
     """
     opcode_myid = hexlify(ConditionOpcode.ASSERT_MY_COIN_ID).decode("ascii")
     opcode_consumed = hexlify(ConditionOpcode.ASSERT_COIN_CONSUMED).decode("ascii")
-    me_is_my_id = f"(c (q 0x{opcode_myid}) (c (f 1) (q ())))"
+    me_is_my_id = make_list(hexstr(opcode_myid), args(0))
 
     # lock_puzzle is the hash of '(r (c (q "merge in ID") (q ())))'
-    lock_puzzle = "(sha256tree (c (q 7) (c (c (q 5) (c (c (q 1) (c (f 1) (q ()))) (c (q (q ())) (q ())))) (q ()))))"
-    parent_coin_id = f"(sha256 (f (r 1)) (q 0x{wallet_puzzle}) (f (r (r 1))))"
-    input_of_lock = f"(c (q 0x{opcode_consumed}) (c (sha256 {parent_coin_id} {lock_puzzle} (q 0)) (q ())))"
-    puz = f"(c {me_is_my_id} (c {input_of_lock} (q ())))"
+    lock_puzzle = sha256tree(
+        make_list(
+            quote(7),
+            make_list(quote(5), make_list(quote(1), args(0)), quote(quote(sexp()))),
+        )
+    )
+    parent_coin_id = sha256(args(1), hexstr(wallet_puzzle), args(2))
+    input_of_lock = make_list(
+        hexstr(opcode_consumed), sha256(parent_coin_id, lock_puzzle, quote(0))
+    )
+    puz = make_list(me_is_my_id, input_of_lock)
 
     return Program(binutils.assemble(puz))
