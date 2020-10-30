@@ -5,7 +5,7 @@ from chiavdf import create_discriminant
 from src.types.classgroup import ClassgroupElement
 from src.types.sized_bytes import bytes32
 from src.util.classgroup_utils import ClassGroup, check_proof_of_time_nwesolowski
-from src.util.ints import uint16, uint64
+from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
 from src.consensus.constants import ConsensusConstants
 
@@ -22,7 +22,8 @@ class VDFInfo(Streamable):
 @dataclass(frozen=True)
 @streamable
 class VDFProof(Streamable):
-    sections: List[Tuple[uint64, ClassgroupElement]]
+    witness_type: uint8
+    witness: bytes
 
     def is_valid(self, constants: ConsensusConstants, info: VDFInfo, target_vdf_info: Optional[VDFInfo] = None):
         """
