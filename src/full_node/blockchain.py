@@ -265,22 +265,25 @@ class Blockchain:
             block.finished_slots is not None,
         )
         overflow = is_overflow_sub_block(self.constants, ips, required_iters)
-        prev_sb = self.sub_blocks[block.prev_header_hash]
-        if prev_sb.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-            # Prev sb must be an overflow sb
-            if overflow and block.finished_slots is None:
-                # Still overflowed, so we cannot decrease the deficit
-                deficit: uint8 = prev_sb.deficit
-            else:
-                # We have passed the first overflow, can decrease
-                deficit: uint8 = prev_sb.deficit - 1
-        elif prev_sb.deficit == 0:
-            if block.finished_slots is not None:
-                deficit = uint8(self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK)
-            else:
-                deficit = uint8(0)
+        if block.height == 0:
+            deficit = uint8(self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK) - 1
         else:
-            deficit = prev_sb.deficit - 1
+            prev_sb = self.sub_blocks[block.prev_header_hash]
+            if prev_sb.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                # Prev sb must be an overflow sb
+                if overflow and block.finished_slots is None:
+                    # Still overflowed, so we cannot decrease the deficit
+                    deficit: uint8 = prev_sb.deficit
+                else:
+                    # We have passed the first overflow, can decrease
+                    deficit: uint8 = prev_sb.deficit - 1
+            elif prev_sb.deficit == 0:
+                if block.finished_slots is not None:
+                    deficit = uint8(self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK)
+                else:
+                    deficit = uint8(0)
+            else:
+                deficit = prev_sb.deficit - 1
 
         sub_block = full_block_to_sub_block_record(block, ips, required_iters, deficit)
 
@@ -309,19 +312,24 @@ class Blockchain:
         assert self.get_peak() is not None
         if sub_block.weight > self.get_peak().weight:
             # Find the fork. if the block is just being appended, it will return the peak
-            fork_h: bytes32 = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_peak())
+            # If no blocks in common, returns -1, and reverts all blocks
+            fork_h: int = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_peak())
+
             # Rollback to fork
             await self.coin_store.rollback_to_block(fork_h)
 
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
             curr = sub_block.header_hash
-            while curr != self.height_to_hash[fork_h]:
+            while fork_h < 0 or curr != self.height_to_hash[uint32(fork_h)]:
                 fetched_block: Optional[FullBlock] = await self.block_store.get_block(curr)
                 fetched_sub_block: Optional[SubBlockRecord] = await self.block_store.get_sub_block(curr)
                 assert fetched_block is not None
                 assert fetched_sub_block is not None
                 blocks_to_add.append((fetched_block, fetched_sub_block))
+                if fetched_block.height == 0:
+                    # Doing a full reorg, starting at height 0
+                    break
                 curr = fetched_sub_block.prev_hash
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
