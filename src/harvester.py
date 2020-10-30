@@ -5,18 +5,20 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple, List, Callable, Set
 import time
 import concurrent
+import dataclasses
 
 from blspy import G1Element, G2Element, AugSchemeMPL
 
 from chiapos import DiskProver
 from src.consensus.constants import ConsensusConstants
+from src.consensus.pot_iterations import calculate_iterations_quality
 from src.protocols import harvester_protocol
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-from src.util.ints import uint8
+from src.util.ints import uint8, uint64
 from src.plotting.plot_tools import (
     load_plots,
     PlotInfo,
@@ -60,6 +62,7 @@ class Harvester:
         self.server = None
         self.constants = constants
         self.cached_challenges = []
+        self.pool_share_threshold = uint64(0)
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -160,6 +163,7 @@ class Harvester:
         """
         self.farmer_public_keys = harvester_handshake.farmer_public_keys
         self.pool_public_keys = harvester_handshake.pool_public_keys
+        self.pool_share_threshold = harvester_handshake.pool_share_threshold
 
         await self._refresh_plots()
 
@@ -176,9 +180,14 @@ class Harvester:
     @api_request
     async def new_challenge(self, new_challenge: harvester_protocol.NewChallenge):
         """
-        The harvester receives a new challenge from the farmer, and looks up the quality string
-        for any proofs of space that are are found in the plots. If proofs are found, a
-        ChallengeResponse message is sent for each of the proofs found.
+        The harvester receives a new challenge from the farmer, this happens at the start of each slot.
+        The harvester does a few things:
+        1. Checks the plot filter to see which plots can qualify for this slot (1/16 on average)
+        2. Looks up the quality for these plots, approximately 7 reads per plot which qualifies. Note that each plot
+        may have 0, 1, 2, etc qualities for that challenge: but on average it will have 1.
+        3. Checks the required_iters for each quality to see which are eligible for inclusion (< slot_iters)
+        4. Looks up the full proof of space in the plot for each quality, approximately 64 reads per quality
+        5. Returns the proof of space to the farmer
         """
         if len(self.pool_public_keys) == 0 or len(self.farmer_public_keys) == 0:
             self.cached_challenges = self.cached_challenges[:5]
@@ -192,37 +201,59 @@ class Harvester:
         await self._refresh_plots()
 
         loop = asyncio.get_running_loop()
+        pool_share_threshold: uint64 = self.pool_share_threshold
 
-        def blocking_lookup(filename: Path, prover: DiskProver) -> Optional[List]:
+        def blocking_lookup(filename: Path, plot_info: PlotInfo, prover: DiskProver) -> List[ProofOfSpace]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
                 quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
             except Exception:
                 log.error("Error using prover object. Reinitializing prover object.")
-                try:
-                    self.prover = DiskProver(str(filename))
-                    quality_strings = self.prover.get_qualities_for_challenge(new_challenge.challenge_hash)
-                except Exception:
-                    log.error(f"Retry-Error using prover object on {filename}. Giving up.")
-                    quality_strings = None
-            return quality_strings
+                self.provers[filename] = dataclasses.replace(plot_info, prover=DiskProver(str(filename)))
+                return []
+
+            responses: List[ProofOfSpace] = []
+            if quality_strings is not None:
+                # Found proofs of space (on average 1 is expected per plot)
+                for index, quality_str in enumerate(quality_strings):
+                    required_iters: uint64 = calculate_iterations_quality(
+                        quality_str,
+                        prover.get_size(),
+                        new_challenge.difficulty,
+                    )
+                    if required_iters < new_challenge.slot_iterations or required_iters < pool_share_threshold:
+                        # Found a very good proof of space! will fetch the whole proof from disk, then send to farmer
+                        try:
+                            proof_xs = prover.get_full_proof(new_challenge.challenge_hash, index)
+                        except RuntimeError:
+                            log.error(f"Exception fetching full proof for {filename}")
+                            continue
+
+                        plot_public_key = ProofOfSpace.generate_plot_public_key(
+                            plot_info.local_sk.get_g1(), plot_info.farmer_public_key
+                        )
+                        responses.append(
+                            ProofOfSpace(
+                                new_challenge.challenge_hash,
+                                plot_info.pool_public_key,
+                                plot_public_key,
+                                uint8(prover.get_size()),
+                                proof_xs,
+                            )
+                        )
+            return responses
 
         async def lookup_challenge(filename: Path, prover: DiskProver) -> List[harvester_protocol.ChallengeResponse]:
             # Executes a DiskProverLookup in a thread pool, and returns responses
             all_responses: List[harvester_protocol.ChallengeResponse] = []
-            quality_strings = await loop.run_in_executor(self.executor, blocking_lookup, filename, prover)
-            if quality_strings is not None:
-                for index, quality_str in enumerate(quality_strings):
-                    all_responses.append(
-                        harvester_protocol.ChallengeResponse(
-                            new_challenge.challenge_hash,
-                            str(filename),
-                            uint8(index),
-                            quality_str,
-                            prover.get_size(),
-                        )
-                    )
+            proofs_of_space: List[ProofOfSpace] = await loop.run_in_executor(
+                self.executor, blocking_lookup, filename, prover
+            )
+            for proof_of_space in proofs_of_space:
+                all_responses.append(
+                    harvester_protocol.ChallengeResponse(prover.get_id(), new_challenge.challenge_hash, proof_of_space)
+                )
             return all_responses
 
         awaitables = []
@@ -252,62 +283,6 @@ class Harvester:
         )
 
     @api_request
-    async def request_proof_of_space(self, request: harvester_protocol.RequestProofOfSpace):
-        """
-        The farmer requests a proof of space, for one of the plots.
-        We look up the correct plot based on the plot id and response number, lookup the proof,
-        and return it.
-        """
-        challenge_hash = request.challenge_hash
-        filename = Path(request.plot_id).resolve()
-        index = request.response_number
-        proof_xs: bytes
-        plot_info = self.provers[filename]
-
-        try:
-            try:
-                proof_xs = plot_info.prover.get_full_proof(challenge_hash, index)
-            except RuntimeError:
-                prover = DiskProver(str(filename))
-                self.provers[filename] = PlotInfo(
-                    prover,
-                    plot_info.pool_public_key,
-                    plot_info.farmer_public_key,
-                    plot_info.plot_public_key,
-                    plot_info.local_sk,
-                    plot_info.file_size,
-                    plot_info.time_modified,
-                )
-                proof_xs = self.provers[filename].prover.get_full_proof(challenge_hash, index)
-        except KeyError:
-            log.warning(f"KeyError plot {filename} does not exist.")
-            return
-
-        plot_info = self.provers[filename]
-        plot_public_key = ProofOfSpace.generate_plot_public_key(
-            plot_info.local_sk.get_g1(), plot_info.farmer_public_key
-        )
-
-        proof_of_space: ProofOfSpace = ProofOfSpace(
-            challenge_hash,
-            plot_info.pool_public_key,
-            plot_public_key,
-            uint8(self.provers[filename].prover.get_size()),
-            proof_xs,
-        )
-        response = harvester_protocol.RespondProofOfSpace(
-            request.plot_id,
-            request.response_number,
-            proof_of_space,
-        )
-        if response:
-            yield OutboundMessage(
-                NodeType.FARMER,
-                Message("respond_proof_of_space", response),
-                Delivery.RESPOND,
-            )
-
-    @api_request
     async def request_signatures(self, request: harvester_protocol.RequestSignatures):
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
@@ -315,9 +290,9 @@ class Harvester:
         be used for pooling.
         """
         try:
-            plot_info = self.provers[Path(request.plot_id).resolve()]
+            plot_info = self.provers[Path(request.plot_identifier).resolve()]
         except KeyError:
-            log.warning(f"KeyError plot {request.plot_id} does not exist.")
+            log.warning(f"KeyError plot {request.plot_identifier} does not exist.")
             return
 
         local_sk = plot_info.local_sk
@@ -331,7 +306,7 @@ class Harvester:
             message_signatures.append((message, signature))
 
         response: harvester_protocol.RespondSignatures = harvester_protocol.RespondSignatures(
-            request.plot_id,
+            request.plot_identifier,
             request.challenge_hash,
             local_sk.get_g1(),
             plot_info.farmer_public_key,

@@ -1,6 +1,6 @@
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint64, uint128
+from src.util.ints import uint64, uint128, uint8
 from src.consensus.pos_quality import quality_str_to_quality
 from src.consensus.constants import ConsensusConstants
 
@@ -29,6 +29,15 @@ def calculate_icp_iters(constants: ConsensusConstants, ips: uint64, required_ite
         return required_iters - required_iters % checkpoint_size - checkpoint_size
     else:
         return required_iters - required_iters % checkpoint_size
+
+
+def calculate_icp_index(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint8:
+    icp_iters = calculate_icp_iters(constants, ips, required_iters)
+    slot_iters: uint64 = calculate_slot_iters(constants, ips)
+    checkpoint_size: uint64 = uint64(slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
+    assert icp_iters % checkpoint_size == 0
+    target_index = icp_iters // checkpoint_size
+    return uint8(target_index)
 
 
 def calculate_ip_iters(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint64:
