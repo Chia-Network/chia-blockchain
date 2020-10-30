@@ -89,6 +89,7 @@ class WSChiaConnection:
 
         self.pending_requests: Dict[bytes32, asyncio.Event] = {}
         self.request_results: Dict[bytes32, Payload] = {}
+        self.closed = False
 
     async def perform_handshake(
         self, network_id, protocol_version, node_id, server_port, local_type
@@ -152,6 +153,7 @@ class WSChiaConnection:
 
     async def close(self):
         # Closes the connection. This should only be called by PeerConnections class.
+        self.closed = True
         if self.ws is not None:
             await self.ws.close()
         if self.inbound_task is not None:
@@ -196,6 +198,8 @@ class WSChiaConnection:
 
     async def send_message(self, message: Message):
         """ Send message sends a message with no tracking / callback. """
+        if self.closed:
+            return
         payload = Payload(message, None)
         await self.outgoing_queue.put(payload)
 
@@ -206,14 +210,21 @@ class WSChiaConnection:
             if attribute is None:
                 raise AttributeError(f"bad attribute {attr_name}")
 
-            msg = Message(attr_name, args)
+            msg = Message(attr_name, args[0])
             result = await self.create_request(msg)
             if result is not None:
                 ret_attr = getattr(
                     class_for_type(self.local_type), result.function, None
                 )
-                req_annotation = ret_attr.__annotations__
-                req = req_annotation["request"]
+
+                req_annotations = ret_attr.__annotations__
+                req = None
+                for key in req_annotations:
+                    if key == "return":
+                        continue
+                    else:
+                        req = req_annotations[key]
+                assert req is not None
                 result = req(**result.data)
             return result
 
@@ -221,6 +232,9 @@ class WSChiaConnection:
 
     async def create_request(self, message: Message, timeout: int = 15):
         """ Sends a message and waits for a response. """
+        if self.closed:
+            return None
+
         event = asyncio.Event()
         id = token_bytes(8)
         payload = Payload(message, id)
@@ -247,9 +261,13 @@ class WSChiaConnection:
         return result
 
     async def reply_to_request(self, response: Payload):
+        if self.closed:
+            return
         await self.outgoing_queue.put(response)
 
     async def send_messages(self, messages: List[Message]):
+        if self.closed:
+            return
         for message in messages:
             payload = Payload(message, None)
             await self.outgoing_queue.put(payload)
