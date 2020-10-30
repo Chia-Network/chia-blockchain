@@ -100,8 +100,6 @@ async def validate_unfinished_header_block(
                     curr = sub_blocks[curr.prev_hash]
 
                 assert challenge_slot.icp_signature is not None
-                assert challenge_slot.icp_vdf is not None
-                assert challenge_slot.ip_vdf is not None
 
                 challenge_block_info_hash = ChallengeBlockInfo(
                     challenge_slot.proof_of_space,
@@ -266,9 +264,15 @@ async def validate_unfinished_header_block(
                     return None, Err.INVALID_SUB_EPOCH_SUMMARY
 
         # 4. Check proof of space
+        if header_block.reward_chain_sub_block.challenge_chain_icp_vdf is None:
+            # Edge case of first icp (start of slot), where icp_iters == 0
+            cc_icp_hash: bytes32 = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
+        else:
+            cc_icp_hash = header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output.get_hash()
+
         q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
             constants,
-            header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output.get_hash(),
+            cc_icp_hash,
             header_block.reward_chain_sub_block.challenge_chain_icp_sig,
         )
         if q_str is None:
@@ -279,6 +283,8 @@ async def validate_unfinished_header_block(
         else:
             difficulty = get_next_difficulty(constants, sub_blocks, height_to_hash, prev_sb.header_hash, new_slot)
             ips: uint64 = get_next_ips(constants, sub_blocks, height_to_hash, prev_sb.header_hash, new_slot)
+
+        # Note that required iters might be from the previous slot (if we are in an overflow sub-block)
         required_iters: uint64 = calculate_iterations_quality(
             q_str,
             header_block.reward_chain_sub_block.proof_of_space.size,
@@ -289,6 +295,10 @@ async def validate_unfinished_header_block(
         ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
         slot_iters: uint64 = calculate_slot_iters(constants, ips)
         overflow = is_overflow_sub_block(constants, ips, required_iters)
+
+        if header_block.reward_chain_sub_block.challenge_chain_icp_vdf is None:
+            # Blocks with very low required iters are not overflow blocks
+            assert not overflow
 
         # 5. Check no overflows in new sub-epoch
         if overflow and ses_hash is not None:
@@ -387,21 +397,29 @@ async def validate_unfinished_header_block(
             cc_vdf_input = prev_sb.challenge_vdf_output
 
         # 10. Check reward chain icp proof
-        target_vdf_info = VDFInfo(
-            rc_vdf_challenge,
-            ClassgroupElement.get_default_element(),
-            icp_vdf_iters,
-            header_block.reward_chain_sub_block.reward_chain_icp_vdf.output,
-        )
-        if not header_block.reward_chain_icp_proof.is_valid(
-            constants, header_block.reward_chain_sub_block.reward_chain_icp_vdf, target_vdf_info
-        ):
-            return None, Err.INVALID_RC_ICP_VDF
+        if icp_iters != 0:
+            target_vdf_info = VDFInfo(
+                rc_vdf_challenge,
+                ClassgroupElement.get_default_element(),
+                icp_vdf_iters,
+                header_block.reward_chain_sub_block.reward_chain_icp_vdf.output,
+            )
+            if not header_block.reward_chain_icp_proof.is_valid(
+                constants, header_block.reward_chain_sub_block.reward_chain_icp_vdf, target_vdf_info
+            ):
+                return None, Err.INVALID_RC_ICP_VDF
+            rc_icp_hash = header_block.reward_chain_sub_block.reward_chain_icp_vdf.get_hash()
+        else:
+            # Edge case of first icp (start of slot), where icp_iters == 0
+            assert overflow is not None
+            if header_block.reward_chain_sub_block.reward_chain_icp_vdf is not None:
+                return None, Err.INVALID_RC_ICP_VDF
+            rc_icp_hash = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
 
         # 11. Check reward chain icp signature
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
-            bytes(header_block.reward_chain_sub_block.reward_chain_icp_vdf),
+            rc_icp_hash,
             header_block.reward_chain_sub_block.reward_chain_icp_sig,
         ):
             return None, Err.INVALID_RC_SIGNATURE
@@ -418,21 +436,26 @@ async def validate_unfinished_header_block(
                 cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
         # 12. Check cc icp
-        target_vdf_info = VDFInfo(
-            cc_vdf_challenge,
-            cc_vdf_input,
-            icp_vdf_iters,
-            header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output,
-        )
-        if not header_block.challenge_chain_icp_proof.is_valid(
-            constants, header_block.reward_chain_sub_block.challenge_chain_icp_vdf, target_vdf_info
-        ):
-            return None, Err.INVALID_CC_ICP_VDF
+        if icp_iters != 0:
+            target_vdf_info = VDFInfo(
+                cc_vdf_challenge,
+                cc_vdf_input,
+                icp_vdf_iters,
+                header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output,
+            )
+            if not header_block.challenge_chain_icp_proof.is_valid(
+                constants, header_block.reward_chain_sub_block.challenge_chain_icp_vdf, target_vdf_info
+            ):
+                return None, Err.INVALID_CC_ICP_VDF
+        else:
+            assert overflow is not None
+            if header_block.reward_chain_sub_block.challenge_chain_icp_vdf is not None:
+                return None, Err.INVALID_CC_ICP_VDF
 
         # 13. Check cc icp sig
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
-            bytes(header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output),
+            cc_icp_hash,
             header_block.reward_chain_sub_block.challenge_chain_icp_sig,
         ):
             return None, Err.INVALID_CC_SIGNATURE
