@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from bitstring import BitArray
-from blspy import G1Element, G2Element, AugSchemeMPL
+from blspy import G1Element, G2Element
 
 from chiapos import Verifier
 from src.types.sized_bytes import bytes32
@@ -25,15 +25,22 @@ class ProofOfSpace(Streamable):
         return self.calculate_plot_id(self.pool_public_key, self.plot_public_key)
 
     def verify_and_get_quality_string(
-        self, constants: ConsensusConstants, icp_output_hash: Optional[bytes32], icp_signature: Optional[G2Element]
+        self,
+        constants: ConsensusConstants,
+        icp_output_hash: Optional[bytes32],
+        icp_signature: Optional[G2Element],
     ) -> Optional[bytes32]:
         v: Verifier = Verifier()
         plot_id: bytes32 = self.get_plot_id()
 
-        if not self.can_create_proof(constants, plot_id, self.challenge_hash, icp_output_hash, icp_signature):
+        if not self.can_create_proof(
+            constants, plot_id, self.challenge_hash, icp_output_hash, icp_signature
+        ):
             return None
 
-        quality_str = v.validate_proof(plot_id, self.size, self.challenge_hash, bytes(self.proof))
+        quality_str = v.validate_proof(
+            plot_id, self.size, self.challenge_hash, bytes(self.proof)
+        )
 
         if not quality_str:
             return None
@@ -53,7 +60,9 @@ class ProofOfSpace(Streamable):
         if icp_output_hash is None:
             return plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
         else:
-            icp_filter = BitArray(std_hash(plot_id + icp_output_hash + bytes(icp_signature)))
+            icp_filter = BitArray(
+                std_hash(plot_id + icp_output_hash + bytes(icp_signature))
+            )
             return (
                 plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
                 and icp_filter[: constants.NUMBER_ZERO_BITS_ICP_FILTER].uint == 0
@@ -67,5 +76,7 @@ class ProofOfSpace(Streamable):
         return bytes32(std_hash(bytes(pool_public_key) + bytes(plot_public_key)))
 
     @staticmethod
-    def generate_plot_public_key(local_pk: G1Element, farmer_pk: G1Element) -> G1Element:
+    def generate_plot_public_key(
+        local_pk: G1Element, farmer_pk: G1Element
+    ) -> G1Element:
         return local_pk + farmer_pk

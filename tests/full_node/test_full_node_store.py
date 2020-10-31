@@ -105,7 +105,7 @@ class TestFullNodeStore:
             raise
 
         # Different database should have different data
-        db_3 = await FullNodeStore.create(connection_3)
+        await FullNodeStore.create(connection_3)
 
         await connection.close()
         await connection_2.close()

@@ -2,12 +2,15 @@ from dataclasses import dataclass
 from typing import Optional
 
 from src.types.foliage import FoliageSubBlock
-from src.types.reward_chain_sub_block import RewardChainSubBlock, RewardChainSubBlockUnfinished
+from src.types.reward_chain_sub_block import (
+    RewardChainSubBlock,
+    RewardChainSubBlockUnfinished,
+)
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.vdf import VDFInfo, VDFProof
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint64, uint128
+from src.util.ints import uint64
 
 
 """
