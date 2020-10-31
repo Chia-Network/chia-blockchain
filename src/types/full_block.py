@@ -14,14 +14,19 @@ from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
 from src.types.program import Program
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from src.consensus.block_rewards import (
+    calculate_pool_reward,
+    calculate_base_farmer_reward,
+)
 
 
 @dataclass(frozen=True)
 @streamable
 class FullBlock(Streamable):
     # All the information required to validate a block
-    finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
+    finished_slots: List[
+        Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]
+    ]  # If first sb
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
     challenge_chain_icp_proof: VDFProof
     challenge_chain_ip_proof: VDFProof
@@ -29,7 +34,9 @@ class FullBlock(Streamable):
     reward_chain_ip_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
-    transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
+    transactions_info: Optional[
+        TransactionsInfo
+    ]  # Reward chain foliage data (tx block additional)
     transactions_generator: Optional[Program]  # Program that generates transactions
 
     @property
@@ -62,10 +69,14 @@ class FullBlock(Streamable):
             assert self.transactions_info is not None
             farmer_amount += self.transactions_info.fees
         pool_coin: Coin = create_pool_coin(
-            self.height, self.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash, pool_amount
+            self.height,
+            self.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
+            pool_amount,
         )
         farmer_coin: Coin = create_farmer_coin(
-            self.height, self.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash, farmer_amount
+            self.height,
+            self.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
+            farmer_amount,
         )
         return pool_coin, farmer_coin
 
@@ -79,7 +90,9 @@ class FullBlock(Streamable):
 
         if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(self.transactions_generator)
+            err, npc_list, cost = get_name_puzzle_conditions(
+                self.transactions_generator
+            )
             # created coins
             if npc_list is not None:
                 additions.extend(additions_for_npc(npc_list))
@@ -99,7 +112,9 @@ class FullBlock(Streamable):
 
         if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(self.transactions_generator)
+            err, npc_list, cost = get_name_puzzle_conditions(
+                self.transactions_generator
+            )
             # build removals list
             if npc_list is None:
                 return [], []
@@ -115,7 +130,9 @@ def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
     additions: List[Coin] = []
 
     for npc in npc_list:
-        for coin in created_outputs_for_conditions_dict(npc.condition_dict, npc.coin_name):
+        for coin in created_outputs_for_conditions_dict(
+            npc.condition_dict, npc.coin_name
+        ):
             additions.append(coin)
 
     return additions
