@@ -139,7 +139,9 @@ class RequestCompactVDFs:
 class RespondCompactVDFs:
     height: uint32
     header_hash: bytes32
-    end_of_slot_proofs: List[EndOfSlotProofs]  # List of challenge eos vdf and reward eos vdf
+    end_of_slot_proofs: List[
+        EndOfSlotProofs
+    ]  # List of challenge eos vdf and reward eos vdf
     cc_icp_proof: Optional[VDFProof]  # If not first icp
     rc_icp_proof: Optional[VDFProof]  # If not first icp
     cc_ip_proof: VDFProof

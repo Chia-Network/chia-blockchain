@@ -18,7 +18,9 @@ class CoinStore:
     cache_size: uint32
 
     @classmethod
-    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
+    async def create(
+        cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)
+    ):
         self = cls()
 
         self.cache_size = cache_size
@@ -42,11 +44,17 @@ class CoinStore:
             "CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)"
         )
 
-        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
+        await self.coin_record_db.execute(
+            "CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)"
+        )
 
-        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)")
+        await self.coin_record_db.execute(
+            "CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)"
+        )
 
-        await self.coin_record_db.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(puzzle_hash)")
+        await self.coin_record_db.execute(
+            "CREATE INDEX IF NOT EXISTS coin_spent on coin_record(puzzle_hash)"
+        )
 
         await self.coin_record_db.commit()
         self.coin_record_cache = dict()
@@ -66,7 +74,9 @@ class CoinStore:
         coinbase_coin = block.get_coinbase()
         fees_coin = block.get_fees_coin()
 
-        coinbase_r: CoinRecord = CoinRecord(coinbase_coin, block.height, uint32(0), False, True)
+        coinbase_r: CoinRecord = CoinRecord(
+            coinbase_coin, block.height, uint32(0), False, True
+        )
         fees_r: CoinRecord = CoinRecord(fees_coin, block.height, uint32(0), False, True)
 
         await self._add_coin_record(coinbase_r)
@@ -76,16 +86,22 @@ class CoinStore:
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
         if coin_name.hex() in self.coin_record_cache:
             return self.coin_record_cache[coin_name.hex()]
-        cursor = await self.coin_record_db.execute("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),))
+        cursor = await self.coin_record_db.execute(
+            "SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),)
+        )
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
+            )
             return CoinRecord(coin, row[1], row[2], row[3], row[4])
         return None
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
-    async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[CoinRecord]:
+    async def get_coin_records_by_puzzle_hash(
+        self, puzzle_hash: bytes32
+    ) -> List[CoinRecord]:
         coins = set()
         cursor = await self.coin_record_db.execute(
             "SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),)
@@ -93,7 +109,9 @@ class CoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
+            )
             coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4]))
         return list(coins)
 
@@ -120,7 +138,9 @@ class CoinStore:
             del self.coin_record_cache[coin_name]
 
         # Delete from storage
-        c1 = await self.coin_record_db.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
+        c1 = await self.coin_record_db.execute(
+            "DELETE FROM coin_record WHERE confirmed_index>?", (block_index,)
+        )
         await c1.close()
         c2 = await self.coin_record_db.execute(
             "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?",
@@ -131,11 +151,15 @@ class CoinStore:
 
     async def get_unspent_coin_records(self) -> List[CoinRecord]:
         coins = set()
-        cursor = await self.coin_record_db.execute("SELECT * from coin_record WHERE spent=0")
+        cursor = await self.coin_record_db.execute(
+            "SELECT * from coin_record WHERE spent=0"
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
+            )
             coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4]))
         return list(coins)
 

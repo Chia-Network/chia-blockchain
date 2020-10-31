@@ -13,13 +13,17 @@ from src.types.program import Program
 @streamable
 class UnfinishedBlock(Streamable):
     # Full block, without the final VDFs
-    finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
+    finished_slots: List[
+        Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]
+    ]  # If first sb
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
     challenge_chain_icp_proof: VDFProof
     reward_chain_icp_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
-    transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
+    transactions_info: Optional[
+        TransactionsInfo
+    ]  # Reward chain foliage data (tx block additional)
     transactions_generator: Optional[Program]  # Program that generates transactions
 
     @property
