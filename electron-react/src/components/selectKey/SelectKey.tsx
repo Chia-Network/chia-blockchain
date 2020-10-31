@@ -22,8 +22,8 @@ import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
 } from '@material-ui/icons';
-import LayoutHero from '../layout/LayoutHero';
 import { Flex, Button, Link, Logo } from '@chia/core';
+import LayoutHero from '../layout/LayoutHero';
 import {
   login_action,
   delete_key,

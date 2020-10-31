@@ -1,11 +1,18 @@
 import React, { ReactNode } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@material-ui/core';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Button,
+} from '@material-ui/core';
 
 type Props = {
-  id: number,
-  title: ReactNode,
-  body?: ReactNode,
-  onClose: (id: number) => void,
+  id: number;
+  title: ReactNode;
+  body?: ReactNode;
+  onClose: (id: number) => void;
 };
 
 export default function ModalDialog(props: Props) {

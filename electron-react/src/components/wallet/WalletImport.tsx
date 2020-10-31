@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { TextField, Typography, Container, Button, Grid } from '@material-ui/core';
+import {
+  TextField,
+  Typography,
+  Container,
+  Button,
+  Grid,
+} from '@material-ui/core';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router';

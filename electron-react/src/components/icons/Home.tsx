@@ -12,11 +12,5 @@ const StyledHomeIcon = styled(HomeIcon)`
 `;
 
 export default function Home(props: SvgIconProps) {
-  return (
-    <SvgIcon
-      component={StyledHomeIcon}
-      viewBox="0 0 32 31"
-      {...props}
-    />
-  );
+  return <SvgIcon component={StyledHomeIcon} viewBox="0 0 32 31" {...props} />;
 }

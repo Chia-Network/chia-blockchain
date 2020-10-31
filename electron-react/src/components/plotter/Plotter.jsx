@@ -22,6 +22,7 @@ import InputAdornment from '@material-ui/core/InputAdornment';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import isElectron from 'is-electron';
 import Input from '@material-ui/core/Input';
+import { Flex, Log } from '@chia/core';
 import { openDialog } from '../../modules/dialog';
 import {
   workspaceSelected,
@@ -32,7 +33,6 @@ import {
 import { stopService } from '../../modules/daemon_messages';
 import { service_plotter } from '../../util/service_names';
 import DashboardTitle from '../dashboard/DashboardTitle';
-import { Flex, Log } from '@chia/core';
 import LayoutMain from '../layout/LayoutMain';
 
 const StyledContainer = styled(Container)`

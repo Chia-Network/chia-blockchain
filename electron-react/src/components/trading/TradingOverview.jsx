@@ -206,13 +206,7 @@ const getDetailItems = (trade) => {
   };
   let confirmed_string = '';
   const confirmed = trade.confirmed_at_index;
-  if (confirmed === 0) {
-    confirmed_string = (
-      <Trans id="TradeDetail.notConfirmedYet">Not confirmed yet</Trans>
-    );
-  } else {
-    confirmed_string = trade.confirmed_at_index;
-  }
+  confirmed_string = confirmed === 0 ? (<Trans id="TradeDetail.notConfirmedYet">Not confirmed yet</Trans>) : trade.confirmed_at_index;
 
   const executed_at_item = {
     label: <Trans id="TradeDetail.confirmedAtBlock">Confirmed at block:</Trans>,
@@ -225,11 +219,7 @@ const getDetailItems = (trade) => {
     ),
   };
   let our = '';
-  if (trade.my_offer === true) {
-    our = <Trans id="TradeDetail.yes">Yes</Trans>;
-  } else {
-    our = <Trans id="TradeDetail.no">No</Trans>;
-  }
+  our = trade.my_offer === true ? <Trans id="TradeDetail.yes">Yes</Trans> : <Trans id="TradeDetail.no">No</Trans>;
   const offer_creator_item = {
     label: <Trans id="TradeDetail.createdByUs">Created by us:</Trans>,
     value: our,
@@ -244,11 +234,7 @@ const getDetailItems = (trade) => {
   let accepted = '';
   const accepted_time = trade.accepted_at_time;
 
-  if (accepted_time === null) {
-    accepted = <Trans id="TradeDetail.notAcceptedYet">Not accepted yet</Trans>;
-  } else {
-    accepted = unix_to_short_date(trade.accepted_at_time);
-  }
+  accepted = accepted_time === null ? <Trans id="TradeDetail.notAcceptedYet">Not accepted yet</Trans> : unix_to_short_date(trade.accepted_at_time);
 
   const accepted_at_time = {
     label: <Trans id="TradeDetail.acceptedAtTime">Accepted at time:</Trans>,

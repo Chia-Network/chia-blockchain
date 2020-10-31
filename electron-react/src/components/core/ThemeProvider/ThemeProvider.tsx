@@ -1,10 +1,10 @@
 import React, { ReactNode } from 'react';
-import { CssBaseline } from '@material-ui/core';
-import { ThemeProvider as StyledThemeProvider } from 'styled-components';
-import {
+import { CssBaseline ,
   ThemeProvider as MaterialThemeProvider,
   StylesProvider,
 } from '@material-ui/core';
+import { ThemeProvider as StyledThemeProvider } from 'styled-components';
+
 
 type Props = {
   children: ReactNode;

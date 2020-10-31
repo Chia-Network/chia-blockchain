@@ -11,8 +11,8 @@ export default async function computeStatistics(
 }> {
   let totalChia = BigInt(0);
   let biggestHeight = 0;
-  let farmingRewards = BigInt(0);
-  let feesCollected = BigInt(0);
+  const farmingRewards = BigInt(0);
+  const feesCollected = BigInt(0);
 
   for (const wallet of wallets) {
     if (!wallet) {

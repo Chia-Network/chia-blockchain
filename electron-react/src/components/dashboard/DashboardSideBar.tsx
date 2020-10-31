@@ -43,45 +43,33 @@ export default function DashboardSideBar() {
       <StyledList disablePadding>
         <SideBarItem
           to="/dashboard"
-          icon={
-            <HomeIcon fontSize="large" />
-          }
+          icon={<HomeIcon fontSize="large" />}
           title={<Trans id="DashboardSideBar.home">Full Node</Trans>}
           exact
         />
         <SideBarItem
           to="/dashboard/wallets"
-          icon={
-            <WalletIcon fontSize="large" />
-          }
+          icon={<WalletIcon fontSize="large" />}
           title={<Trans id="DashboardSideBar.wallets">Wallets</Trans>}
         />
         <SideBarItem
           to="/dashboard/plot"
-          icon={
-            <PlotIcon fontSize="large" />
-          }
+          icon={<PlotIcon fontSize="large" />}
           title={<Trans id="DashboardSideBar.plot">Plot</Trans>}
         />
         <SideBarItem
           to="/dashboard/farm"
-          icon={
-            <FarmIcon fontSize="large" />
-          }
+          icon={<FarmIcon fontSize="large" />}
           title={<Trans id="DashboardSideBar.farm">Farm</Trans>}
         />
         <SideBarItem
           to="/dashboard/trade"
-          icon={
-            <TradeIcon fontSize="large" />
-          }
+          icon={<TradeIcon fontSize="large" />}
           title={<Trans id="DashboardSideBar.trade">Trade</Trans>}
         />
         <SideBarItem
           to="/"
-          icon={
-            <KeysIcon fontSize="large" />
-          }
+          icon={<KeysIcon fontSize="large" />}
           onSelect={handleLogOut}
           title={<Trans id="DashboardSideBar.keys">Keys</Trans>}
           exact

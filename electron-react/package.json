@@ -75,6 +75,7 @@
     "electron": "^8.5.3",
     "electron-osx-sign": "github:electron/electron-osx-sign#master",
     "electron-winstaller": "^4.0.1",
+    "eslint": "^6.8.0",
     "eslint-config-airbnb-typescript": "^12.0.0",
     "eslint-config-prettier": "^6.15.0",
     "eslint-plugin-eslint-comments": "^3.2.0",

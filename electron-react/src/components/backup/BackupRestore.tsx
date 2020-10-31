@@ -11,6 +11,7 @@ import {
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router';
+import { Flex, Link } from '@chia/core';
 import {
   add_new_key_action,
   add_and_restore_from_backup,
@@ -25,7 +26,6 @@ import {
   setBackupInfo,
   selectFilePath,
 } from '../../modules/backup';
-import { Flex, Link } from '@chia/core';
 import { unix_to_short_date } from '../../util/utils';
 import type { RootState } from '../../modules/rootReducer';
 import Wallet from '../../types/Wallet';

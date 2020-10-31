@@ -9,9 +9,9 @@ import {
   Link,
   Tooltip,
 } from '@material-ui/core';
+import { Flex, Table, TooltipIcon, Block } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 import type { Row } from '../core/Table/Table';
-import { Flex, Table, TooltipIcon, Block } from '@chia/core';
 
 const cols = [
   {

@@ -2,7 +2,7 @@ import React from 'react';
 import { Backdrop, CircularProgress } from '@material-ui/core';
 
 type Props = {
-  show: boolean,
+  show: boolean;
 };
 
 export default function Spinner(props: Props) {

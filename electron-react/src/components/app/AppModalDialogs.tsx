@@ -12,7 +12,5 @@ export default function AppModalDialogs() {
     dispatch(closeDialog(id));
   }
 
-  return (
-    <ModalDialogs dialogs={dialogs} onClose={handleCloseDialog} />
-  );
+  return <ModalDialogs dialogs={dialogs} onClose={handleCloseDialog} />;
 }

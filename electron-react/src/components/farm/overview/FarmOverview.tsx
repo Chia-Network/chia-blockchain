@@ -21,11 +21,11 @@ export default function FarmOverview() {
 
       {loading ? (
         <CircularProgress />
-      ) : hasPlots ? (
+      ) : (hasPlots ? (
         <FarmOverviewCards />
       ) : (
         <FarmOverviewHero />
-      )}
+      ))}
     </>
   );
 }

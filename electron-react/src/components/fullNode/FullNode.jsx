@@ -10,9 +10,9 @@ import { Paper, Tooltip } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import HelpIcon from '@material-ui/icons/Help';
+import { Flex } from '@chia/core';
 import { unix_to_short_date } from '../../util/utils';
 import Connections from '../connections/Connections';
-import { Flex } from '@chia/core';
 import Block from '../block/Block';
 import {
   closeConnection,

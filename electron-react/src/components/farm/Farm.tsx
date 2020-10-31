@@ -17,7 +17,6 @@ import {
   Container,
   CircularProgress,
 } from '@material-ui/core';
-import Accordion from '../core/Accordion/Accordion';
 import Button from '@material-ui/core/Button';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -37,6 +36,9 @@ import TablePagination from '@material-ui/core/TablePagination';
 import RefreshIcon from '@material-ui/icons/Refresh';
 import HelpIcon from '@material-ui/icons/Help';
 import { Flex } from '@chia/core';
+import styled from 'styled-components';
+import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
+import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
 import LayoutMain from '../layout/LayoutMain';
 
 import { closeConnection, openConnection } from '../../modules/farmerMessages';
@@ -61,9 +63,7 @@ import FarmLatestBlockChallenges from './FarmLatestBlockChallenges';
 import FarmFullNodeConnections from './FarmFullNodeConnections';
 import FarmYourHarvesterNetwork from './FarmYourHarvesterNetwork';
 import FarmLastAttemptedProof from './FarmLastAttemptedProof';
-import styled from 'styled-components';
-import KeyboardArrowUpIcon from '@material-ui/icons/KeyboardArrowUp';
-import KeyboardArrowDownIcon from '@material-ui/icons/KeyboardArrowDown';
+import Accordion from '../core/Accordion/Accordion';
 
 const StyledToggleAdvancedOptions = styled(({ expanded, ...rest }) => (
   <Box {...rest} />
@@ -470,49 +470,50 @@ const Plots = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {!!plots && plots
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((item) => (
-                    <TableRow key={item.filename}>
-                      <TableCell component="th" scope="row">
-                        <Tooltip title={item.filename} interactive>
-                          <span>{item.filename.slice(0, 40)}...</span>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell align="right">
-                        {item.size} (
-                        {Math.round(
-                          (item.file_size * 1000) / (1024 * 1024 * 1024),
-                        ) / 1000}
-                        GiB)
-                      </TableCell>
-                      <TableCell align="right">
-                        <Tooltip title={item['plot-seed']} interactive>
-                          <span>{item['plot-seed'].slice(0, 10)}</span>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Tooltip title={item.plot_public_key} interactive>
-                          <span>{item.plot_public_key.slice(0, 10)}...</span>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Tooltip title={item.pool_public_key} interactive>
-                          <span>{item.pool_public_key.slice(0, 10)}...</span>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell
-                        className={classes.clickable}
-                        onClick={() => {
-                          deletePlotSetName(item.filename);
-                          deletePlotSetOpen(true);
-                        }}
-                        align="right"
-                      >
-                        <DeleteForeverIcon fontSize="small" />
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                {!!plots &&
+                  plots
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((item) => (
+                      <TableRow key={item.filename}>
+                        <TableCell component="th" scope="row">
+                          <Tooltip title={item.filename} interactive>
+                            <span>{item.filename.slice(0, 40)}...</span>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell align="right">
+                          {item.size} (
+                          {Math.round(
+                            (item.file_size * 1000) / (1024 * 1024 * 1024),
+                          ) / 1000}
+                          GiB)
+                        </TableCell>
+                        <TableCell align="right">
+                          <Tooltip title={item['plot-seed']} interactive>
+                            <span>{item['plot-seed'].slice(0, 10)}</span>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Tooltip title={item.plot_public_key} interactive>
+                            <span>{item.plot_public_key.slice(0, 10)}...</span>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Tooltip title={item.pool_public_key} interactive>
+                            <span>{item.pool_public_key.slice(0, 10)}...</span>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell
+                          className={classes.clickable}
+                          onClick={() => {
+                            deletePlotSetName(item.filename);
+                            deletePlotSetOpen(true);
+                          }}
+                          align="right"
+                        >
+                          <DeleteForeverIcon fontSize="small" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
               </TableBody>
             </Table>
           </TableContainer>
@@ -578,23 +579,24 @@ const Plots = () => {
                 </Trans>
               </p>
               <List>
-                {!!failed_to_open_filenames && failed_to_open_filenames.map((filename) => (
-                  <ListItem key={filename}>
-                    <ListItemText primary={filename} />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        aria-label="delete"
-                        onClick={() => {
-                          deletePlotSetName(filename);
-                          deletePlotSetOpen(true);
-                        }}
-                      >
-                        <DeleteForeverIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
+                {!!failed_to_open_filenames &&
+                  failed_to_open_filenames.map((filename) => (
+                    <ListItem key={filename}>
+                      <ListItemText primary={filename} />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          aria-label="delete"
+                          onClick={() => {
+                            deletePlotSetName(filename);
+                            deletePlotSetOpen(true);
+                          }}
+                        >
+                          <DeleteForeverIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
               </List>
             </span>
           ) : (
@@ -740,7 +742,7 @@ async function getStatistics(wallets: Wallet[]): Promise<{
     totalChia,
     biggestHeight,
   };
-}*/
+} */
 
 export default function Farm(): JSX.Element {
   const [showAdvancedOptions, toggleShowAdvancedOptions] = useToggle(false);

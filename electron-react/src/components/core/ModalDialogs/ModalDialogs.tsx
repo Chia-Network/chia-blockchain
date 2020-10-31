@@ -3,11 +3,11 @@ import ModalDialog from './ModalDialog';
 
 type Props = {
   dialogs: {
-    id: number,
-    body?: ReactNode,
-    title: ReactNode,
-  }[],
-  onClose: (id: number) => void,
+    id: number;
+    body?: ReactNode;
+    title: ReactNode;
+  }[];
+  onClose: (id: number) => void;
 };
 
 export default function ModalDialogs(props: Props): JSX.Element {
@@ -16,11 +16,7 @@ export default function ModalDialogs(props: Props): JSX.Element {
   return (
     <>
       {dialogs.map((dialog) => (
-        <ModalDialog
-          key={dialog.id}
-          onClose={onClose}
-          {...dialog}
-        />
+        <ModalDialog key={dialog.id} onClose={onClose} {...dialog} />
       ))}
     </>
   );

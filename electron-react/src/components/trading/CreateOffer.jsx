@@ -228,11 +228,7 @@ export default function CreateOffer() {
       mojo = colouredcoin_to_mojo(amount_input.value);
     }
     let trade = null;
-    if (buy_or_sell.value === 1) {
-      trade = newBuy(mojo, wallet_id.value);
-    } else {
-      trade = newSell(mojo, wallet_id.value);
-    }
+    trade = buy_or_sell.value === 1 ? newBuy(mojo, wallet_id.value) : newSell(mojo, wallet_id.value);
     dispatch(addTrade(trade));
   }
   async function save() {

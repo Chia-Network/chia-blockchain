@@ -2,13 +2,16 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import { useSelector } from 'react-redux';
-import {
-  Typography,
-  Tooltip,
-  IconButton,
-} from '@material-ui/core';
+import { Typography, Tooltip, IconButton } from '@material-ui/core';
 import { Delete as DeleteIcon } from '@material-ui/icons';
-import { Flex, Table, Block, TooltipIcon, FormatBytes, FormatConnectionStatus } from '@chia/core';
+import {
+  Flex,
+  Table,
+  Block,
+  TooltipIcon,
+  FormatBytes,
+  FormatConnectionStatus,
+} from '@chia/core';
 import Connection from '../../types/Connection';
 import type { RootState } from '../../modules/rootReducer';
 import FarmCloseConnection from './FarmCloseConnection';
