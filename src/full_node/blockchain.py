@@ -14,8 +14,11 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from src.full_node.deficit import calculate_deficit
-from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters, get_next_ips
+from src.full_node.difficulty_adjustment import (
+    get_next_difficulty,
+    get_next_slot_iters,
+    get_next_ips,
+)
 from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
@@ -35,10 +38,16 @@ from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint8
 from src.full_node.block_root_validation import validate_block_merkle_roots
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from src.consensus.block_rewards import (
+    calculate_pool_reward,
+    calculate_base_farmer_reward,
+)
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.types.name_puzzle_condition import NPC
-from src.full_node.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
+from src.full_node.block_header_validation import (
+    validate_finished_header_block,
+    validate_unfinished_header_block,
+)
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 log = logging.getLogger(__name__)
@@ -55,7 +64,9 @@ class ReceiveBlockResult(Enum):
     ADDED_AS_ORPHAN = 2  # Added as an orphan/stale block (not a new peak of the chain)
     INVALID_BLOCK = 3  # Block was not added because it was invalid
     ALREADY_HAVE_BLOCK = 4  # Block is already present in this blockchain
-    DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
+    DISCONNECTED_BLOCK = (
+        5  # Block's parent (previous pointer) is not in this blockchain
+    )
 
 
 class Blockchain:
@@ -212,7 +223,11 @@ class Blockchain:
         )
 
         required_iters, error_code = await validate_finished_header_block(
-            self.constants, self.sub_blocks, self.height_to_hash, curr_header_block, False
+            self.constants,
+            self.sub_blocks,
+            self.height_to_hash,
+            curr_header_block,
+            False,
         )
 
         if error_code is not None:
@@ -247,7 +262,9 @@ class Blockchain:
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
-    async def _reconsider_peak(self, sub_block: SubBlockRecord, genesis: bool) -> Optional[uint32]:
+    async def _reconsider_peak(
+        self, sub_block: SubBlockRecord, genesis: bool
+    ) -> Optional[uint32]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
@@ -255,7 +272,9 @@ class Blockchain:
         None if there was no update to the heaviest chain.
         """
         if genesis:
-            block: Optional[FullBlock] = await self.block_store.get_block(sub_block.header_hash)
+            block: Optional[FullBlock] = await self.block_store.get_block(
+                sub_block.header_hash
+            )
             assert block is not None
             await self.coin_store.new_block(block)
             self.height_to_hash[uint32(0)] = block.header_hash
@@ -266,7 +285,9 @@ class Blockchain:
         if sub_block.weight > self.get_peak().weight:
             # Find the fork. if the block is just being appended, it will return the peak
             # If no blocks in common, returns -1, and reverts all blocks
-            fork_h: int = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_peak())
+            fork_h: int = find_fork_point_in_chain(
+                self.sub_blocks, sub_block, self.get_peak()
+            )
 
             # Rollback to fork
             await self.coin_store.rollback_to_block(fork_h)
@@ -275,8 +296,12 @@ class Blockchain:
             blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
             curr = sub_block.header_hash
             while fork_h < 0 or curr != self.height_to_hash[uint32(fork_h)]:
-                fetched_block: Optional[FullBlock] = await self.block_store.get_block(curr)
-                fetched_sub_block: Optional[SubBlockRecord] = await self.block_store.get_sub_block(curr)
+                fetched_block: Optional[FullBlock] = await self.block_store.get_block(
+                    curr
+                )
+                fetched_sub_block: Optional[
+                    SubBlockRecord
+                ] = await self.block_store.get_sub_block(curr)
                 assert fetched_block is not None
                 assert fetched_sub_block is not None
                 blocks_to_add.append((fetched_block, fetched_sub_block))
@@ -286,7 +311,9 @@ class Blockchain:
                 curr = fetched_sub_block.prev_hash
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
-                self.height_to_hash[fetched_sub_block.height] = fetched_sub_block.header_hash
+                self.height_to_hash[
+                    fetched_sub_block.height
+                ] = fetched_sub_block.header_hash
                 self.sub_blocks[fetched_sub_block.header_hash] = fetched_sub_block
                 await self.coin_store.new_block(fetched_block)
 
@@ -298,10 +325,14 @@ class Blockchain:
         return None
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        return get_next_difficulty(self.constants, self.sub_blocks, self.height_to_hash, header_hash, new_slot)
+        return get_next_difficulty(
+            self.constants, self.sub_blocks, self.height_to_hash, header_hash, new_slot
+        )
 
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        return get_next_slot_iters(self.constants, self.sub_blocks, self.height_to_hash, header_hash, new_slot)
+        return get_next_slot_iters(
+            self.constants, self.sub_blocks, self.height_to_hash, header_hash, new_slot
+        )
 
     async def pre_validate_blocks_mulpeakrocessing(
         self, blocks: List[FullBlock]
@@ -329,7 +360,15 @@ class Blockchain:
         # return results
         return []
 
-    async def validate_unfinished_block(self, block: UnfinishedBlock) -> Tuple[Optional[uint64], Optional[Err]]:
+    async def validate_unfinished_block(
+        self, block: UnfinishedBlock
+    ) -> Tuple[Optional[uint64], Optional[Err]]:
+        if block.header_hash in self.sub_blocks:
+            return (
+                self.sub_blocks[block.header_hash].required_iters,
+                None,
+            )  # Already validated and added
+
         if block.prev_header_hash not in self.sub_blocks and not block.height == 0:
             return None, Err.INVALID_PREV_BLOCK_HASH
 
@@ -344,7 +383,11 @@ class Blockchain:
         )
 
         required_iters, error_code = await validate_unfinished_header_block(
-            self.constants, self.sub_blocks, self.height_to_hash, unfinished_header_block, False
+            self.constants,
+            self.sub_blocks,
+            self.height_to_hash,
+            unfinished_header_block,
+            False,
         )
 
         if error_code is not None:
@@ -357,7 +400,9 @@ class Blockchain:
 
         return required_iters, None
 
-    async def validate_block_body(self, block: Union[FullBlock, UnfinishedBlock]) -> Optional[Err]:
+    async def validate_block_body(
+        self, block: Union[FullBlock, UnfinishedBlock]
+    ) -> Optional[Err]:
         """
         This assumes the header block has been completely validated.
         Validates the transactions and body of the block. Returns None if everything
@@ -377,18 +422,27 @@ class Blockchain:
             return None  # This means the sub-block is valid
 
         # 2. For blocks, foliage block, transaction filter, transactions info must not be empty
-        if block.foliage_block is None or block.transactions_filter is None or block.transactions_info is None:
+        if (
+            block.foliage_block is None
+            or block.transactions_filter is None
+            or block.transactions_info is None
+        ):
             return Err.IS_BLOCK_BUT_NO_DATA
 
         # keeps track of the reward coins that need to be incorporated
         expected_reward_coins: Set[Coin] = set()
 
         # 3. The transaction info hash in the Foliage block must match the transaction info
-        if block.foliage_block.transactions_info_hash != std_hash(block.transactions_info):
+        if block.foliage_block.transactions_info_hash != std_hash(
+            block.transactions_info
+        ):
             return Err.INVALID_TRANSACTIONS_INFO_HASH
 
         # 4. The foliage block hash in the foliage sub block must match the foliage block
-        if block.foliage_sub_block.foliage_sub_block_data.foliage_block_hash != std_hash(block.foliage_block):
+        if (
+            block.foliage_sub_block.foliage_sub_block_data.foliage_block_hash
+            != std_hash(block.foliage_block)
+        ):
             return Err.INVALID_FOLIAGE_BLOCK_HASH
 
         # 5. The prev generators root must be valid
@@ -396,7 +450,10 @@ class Blockchain:
 
         # 6. The generator root must be the tree-hash of the generator (or zeroes if no generator)
         if block.transactions_generator is not None:
-            if block.transactions_generator.get_tree_hash() != block.transactions_info.generator_root:
+            if (
+                block.transactions_generator.get_tree_hash()
+                != block.transactions_info.generator_root
+            ):
                 return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
         else:
             if block.transactions_info.generator_root != bytes([0] * 32):
@@ -455,7 +512,9 @@ class Blockchain:
                 return Err.COIN_AMOUNT_EXCEEDS_MAXIMUM
 
         # 11. Validate addition and removal roots
-        root_error = validate_block_merkle_roots(block, additions + coinbase_additions, removals)
+        root_error = validate_block_merkle_roots(
+            block, additions + coinbase_additions, removals
+        )
         if root_error:
             return root_error
 
@@ -475,7 +534,9 @@ class Blockchain:
             return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
         # 13. Check for duplicate outputs in additions
-        addition_counter = collections.Counter(_.name() for _ in additions + coinbase_additions)
+        addition_counter = collections.Counter(
+            _.name() for _ in additions + coinbase_additions
+        )
         for k, v in addition_counter.items():
             if v > 1:
                 return Err.DUPLICATE_OUTPUT
@@ -487,14 +548,20 @@ class Blockchain:
                 return Err.DOUBLE_SPEND
 
         # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
-        new_ips = self.get_next_slot_iters(block.prev_header_hash, block.finished_slots is not None)
-        fork_h = find_fork_point_in_chain(self.sub_blocks, self.get_peak(), block.get_sub_block_record(new_ips))
+        new_ips = self.get_next_slot_iters(
+            block.prev_header_hash, block.finished_slots is not None
+        )
+        fork_h = find_fork_point_in_chain(
+            self.sub_blocks, self.get_peak(), block.get_sub_block_record(new_ips)
+        )
 
         # Get additions and removals since (after) fork_h but not including this block
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
         removals_since_fork: Set[bytes32] = set()
         coinbases_since_fork: Dict[bytes32, uint32] = {}
-        curr: Optional[FullBlock] = await self.block_store.get_block(block.prev_header_hash)
+        curr: Optional[FullBlock] = await self.block_store.get_block(
+            block.prev_header_hash
+        )
         assert curr is not None
 
         while curr.height > fork_h:
@@ -514,7 +581,9 @@ class Blockchain:
             if rem in additions_dic:
                 # Ephemeral coin
                 rem_coin: Coin = additions_dic[rem]
-                new_unspent: CoinRecord = CoinRecord(rem_coin, block.height, uint32(0), False, False)
+                new_unspent: CoinRecord = CoinRecord(
+                    rem_coin, block.height, uint32(0), False, False
+                )
                 removal_coin_records[new_unspent.name] = new_unspent
             else:
                 unspent = await self.coin_store.get_coin_record(rem)
@@ -526,7 +595,10 @@ class Blockchain:
                         return Err.DOUBLE_SPEND
                     # If it's a coinbase, check that it's not frozen
                     if unspent.coinbase == 1:
-                        if block.height < unspent.confirmed_block_index + self.coinbase_freeze:
+                        if (
+                            block.height
+                            < unspent.confirmed_block_index + self.coinbase_freeze
+                        ):
                             return Err.COINBASE_NOT_YET_SPENDABLE
                     removal_coin_records[unspent.name] = unspent
                 else:
@@ -537,7 +609,10 @@ class Blockchain:
                         return Err.UNKNOWN_UNSPENT
                     if rem in coinbases_since_fork:
                         # This coin is a coinbase coin
-                        if block.height < coinbases_since_fork[rem] + self.coinbase_freeze:
+                        if (
+                            block.height
+                            < coinbases_since_fork[rem] + self.coinbase_freeze
+                        ):
                             return Err.COINBASE_NOT_YET_SPENDABLE
                     new_coin, confirmed_height = additions_since_fork[rem]
                     new_coin_record: CoinRecord = CoinRecord(
@@ -572,7 +647,9 @@ class Blockchain:
 
         for npc in npc_list:
             if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
-                fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
+                fee_list: List[ConditionVarPair] = npc.condition_dict[
+                    ConditionOpcode.ASSERT_FEE
+                ]
                 for cvp in fee_list:
                     fee = int_from_bytes(cvp.vars[0])
                     assert_fee_sum = assert_fee_sum + fee
@@ -604,7 +681,9 @@ class Blockchain:
             )
             if error:
                 return error
-            for pk, m in pkm_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name):
+            for pk, m in pkm_pairs_for_conditions_dict(
+                npc.condition_dict, npc.coin_name
+            ):
                 pairs_pks.append(pk)
                 pairs_msgs.append(m)
 
@@ -614,7 +693,9 @@ class Blockchain:
             return Err.BAD_AGGREGATE_SIGNATURE
 
         # noinspection PyTypeChecker
-        validates = AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature)
+        validates = AugSchemeMPL.aggregate_verify(
+            pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature
+        )
         if not validates:
             return Err.BAD_AGGREGATE_SIGNATURE
 
