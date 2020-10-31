@@ -7,7 +7,7 @@ from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint32, uint64, uint128
+from src.util.ints import uint32, uint128
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.streamable import Streamable, streamable
 
