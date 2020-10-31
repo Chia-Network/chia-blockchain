@@ -12,7 +12,9 @@ from src.types.foliage import FoliageSubBlock, FoliageBlock
 @streamable
 class UnfinishedHeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator, used by light clients
-    finished_slots: List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]  # If first sb
+    finished_slots: List[
+        Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]
+    ]  # If first sb
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
     challenge_chain_icp_proof: VDFProof
     reward_chain_icp_proof: VDFProof

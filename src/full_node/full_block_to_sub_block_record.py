@@ -4,12 +4,22 @@ from src.full_node.sub_block_record import SubBlockRecord
 from src.util.ints import uint64, uint8
 
 
-def full_block_to_sub_block_record(block: FullBlock, ips: uint64, required_iters: uint64, deficit: uint8):
-    prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
-    timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
+def full_block_to_sub_block_record(
+    block: FullBlock, ips: uint64, required_iters: uint64, deficit: uint8
+):
+    prev_block_hash = (
+        block.foliage_block.prev_block_hash if block.foliage_block is not None else None
+    )
+    timestamp = (
+        block.foliage_block.timestamp if block.foliage_block is not None else None
+    )
     if block.finished_slots is not None:
-        finished_challenge_slot_hashes = [cs.get_hash() for cs, _, _ in block.finished_slots]
-        finished_reward_slot_hashes = [rs.get_hash() for _, rs, _ in block.finished_slots]
+        finished_challenge_slot_hashes = [
+            cs.get_hash() for cs, _, _ in block.finished_slots
+        ]
+        finished_reward_slot_hashes = [
+            rs.get_hash() for _, rs, _ in block.finished_slots
+        ]
     else:
         finished_challenge_slot_hashes = None
         finished_reward_slot_hashes = None
