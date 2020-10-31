@@ -1,5 +1,4 @@
-from typing import Dict, Any, Optional
-from src.util.ints import uint32
+from typing import Dict, Any
 
 
 def find_fork_point_in_chain(hash_to_block: Dict, block_1: Any, block_2: Any) -> int:
