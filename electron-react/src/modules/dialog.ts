@@ -1,12 +1,12 @@
 import { ReactNode } from 'react';
 import createDialog from '../util/createDialog';
 
-export const openDialog = (title: ReactNode, text?: ReactNode) => {
+export const openDialog = (title: ReactNode, body?: ReactNode) => {
   return {
     type: 'DIALOG_CONTROL',
     open: true,
     title,
-    text,
+    body,
   };
 };
 
@@ -21,8 +21,8 @@ export const closeDialog = (id: number) => {
 type DialogState = {
   dialogs: {
     id: number;
-    title: string;
-    label: string;
+    title: ReactNode;
+    body?: ReactNode;
   }[];
 };
 
@@ -37,11 +37,11 @@ export default function dialogReducer(
   switch (action.type) {
     case 'DIALOG_CONTROL':
       if (action.open) {
-        const { title, text } = action;
+        const { title, body } = action;
 
         return {
           ...state,
-          dialogs: [...state.dialogs, createDialog(Date.now(), title, text)],
+          dialogs: [...state.dialogs, createDialog(Date.now(), title, body)],
         };
       }
       return {

@@ -1,4 +1,4 @@
-import type WalletType from './WalletType';
+import type WalletType from '../constants/WalletType';
 
 type Coin = {
   confirmed_block_index: number;

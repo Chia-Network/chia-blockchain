@@ -4,7 +4,7 @@ import ModalDialog from './ModalDialog';
 type Props = {
   dialogs: {
     id: number,
-    text: ReactNode,
+    body?: ReactNode,
     title: ReactNode,
   }[],
   onClose: (id: number) => void,

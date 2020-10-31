@@ -1,6 +1,6 @@
 import React from 'react';
 import { SvgIcon, SvgIconProps } from '@material-ui/core';
-import { ReactComponent as TradeIcon } from './images/pool.svg';
+import { ReactComponent as TradeIcon } from './images/trade.svg';
 
 export default function Trade(props: SvgIconProps) {
   return (

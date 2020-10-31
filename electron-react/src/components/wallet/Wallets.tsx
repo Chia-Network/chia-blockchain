@@ -28,7 +28,7 @@ import { CreateWalletView } from './create/WalletCreate';
 import ColouredWallet from './coloured/WalletColoured';
 import RateLimitedWallet from './rateLimited/WalletRateLimited';
 import type { RootState } from '../../modules/rootReducer';
-import WalletType from '../../types/WalletType';
+import WalletType from '../../constants/WalletType';
 
 const drawerWidth = 180;
 

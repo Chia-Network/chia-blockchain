@@ -1,6 +1,5 @@
 export { default as Accordion } from './Accordion';
 export { default as Block } from './Block';
-export { default as Brand } from './Brand';
 export { default as Button } from './Button';
 export { default as Card } from './Card';
 export { default as DarkModeToggle } from './DarkModeToggle';
