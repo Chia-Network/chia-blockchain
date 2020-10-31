@@ -113,7 +113,12 @@ class Harvester:
         async with self._refresh_lock:
             if not locked:
                 # Avoid double refreshing of plots
-                (changed, self.provers, self.failed_to_open_filenames, self.no_key_filenames,) = load_plots(
+                (
+                    changed,
+                    self.provers,
+                    self.failed_to_open_filenames,
+                    self.no_key_filenames,
+                ) = load_plots(
                     self.provers,
                     self.failed_to_open_filenames,
                     self.farmer_public_keys,
@@ -155,7 +160,9 @@ class Harvester:
         self.server = server
 
     @api_request
-    async def harvester_handshake(self, harvester_handshake: harvester_protocol.HarvesterHandshake):
+    async def harvester_handshake(
+        self, harvester_handshake: harvester_protocol.HarvesterHandshake
+    ):
         """
         Handshake between the harvester and farmer. The harvester receives the pool public keys,
         as well as the farmer pks, which must be put into the plots, before the plotting process begins.
@@ -168,7 +175,9 @@ class Harvester:
         await self._refresh_plots()
 
         if len(self.provers) == 0:
-            log.warning("Not farming any plots on this harvester. Check your configuration.")
+            log.warning(
+                "Not farming any plots on this harvester. Check your configuration."
+            )
             return
 
         for new_challenge in self.cached_challenges:
@@ -203,14 +212,20 @@ class Harvester:
         loop = asyncio.get_running_loop()
         pool_share_threshold: uint64 = self.pool_share_threshold
 
-        def blocking_lookup(filename: Path, plot_info: PlotInfo, prover: DiskProver) -> List[ProofOfSpace]:
+        def blocking_lookup(
+            filename: Path, plot_info: PlotInfo, prover: DiskProver
+        ) -> List[ProofOfSpace]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
-                quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
+                quality_strings = prover.get_qualities_for_challenge(
+                    new_challenge.challenge_hash
+                )
             except Exception:
                 log.error("Error using prover object. Reinitializing prover object.")
-                self.provers[filename] = dataclasses.replace(plot_info, prover=DiskProver(str(filename)))
+                self.provers[filename] = dataclasses.replace(
+                    plot_info, prover=DiskProver(str(filename))
+                )
                 return []
 
             responses: List[ProofOfSpace] = []
@@ -222,10 +237,15 @@ class Harvester:
                         prover.get_size(),
                         new_challenge.difficulty,
                     )
-                    if required_iters < new_challenge.slot_iterations or required_iters < pool_share_threshold:
+                    if (
+                        required_iters < new_challenge.slot_iterations
+                        or required_iters < pool_share_threshold
+                    ):
                         # Found a very good proof of space! will fetch the whole proof from disk, then send to farmer
                         try:
-                            proof_xs = prover.get_full_proof(new_challenge.challenge_hash, index)
+                            proof_xs = prover.get_full_proof(
+                                new_challenge.challenge_hash, index
+                            )
                         except RuntimeError:
                             log.error(f"Exception fetching full proof for {filename}")
                             continue
@@ -244,7 +264,9 @@ class Harvester:
                         )
             return responses
 
-        async def lookup_challenge(filename: Path, prover: DiskProver) -> List[harvester_protocol.ChallengeResponse]:
+        async def lookup_challenge(
+            filename: Path, prover: DiskProver
+        ) -> List[harvester_protocol.ChallengeResponse]:
             # Executes a DiskProverLookup in a thread pool, and returns responses
             all_responses: List[harvester_protocol.ChallengeResponse] = []
             proofs_of_space: List[ProofOfSpace] = await loop.run_in_executor(
@@ -252,7 +274,9 @@ class Harvester:
             )
             for proof_of_space in proofs_of_space:
                 all_responses.append(
-                    harvester_protocol.ChallengeResponse(prover.get_id(), new_challenge.challenge_hash, proof_of_space)
+                    harvester_protocol.ChallengeResponse(
+                        prover.get_id(), new_challenge.challenge_hash, proof_of_space
+                    )
                 )
             return all_responses
 
@@ -262,7 +286,9 @@ class Harvester:
                 # Passes the plot filter (does not check icp filter yet though, since we have not reached icp)
                 # This is being executed at the beginning of the slot
                 if ProofOfSpace.can_create_proof(
-                    self.constants, plot_info.prover.get_id(), new_challenge.challenge_hash
+                    self.constants,
+                    plot_info.prover.get_id(),
+                    new_challenge.challenge_hash,
                 ):
                     awaitables.append(lookup_challenge(filename, plot_info.prover))
 
@@ -296,7 +322,9 @@ class Harvester:
             return
 
         local_sk = plot_info.local_sk
-        agg_pk = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), plot_info.farmer_public_key)
+        agg_pk = ProofOfSpace.generate_plot_public_key(
+            local_sk.get_g1(), plot_info.farmer_public_key
+        )
 
         # This is only a partial signature. When combined with the farmer's half, it will
         # form a complete PrependSignature.
@@ -305,12 +333,14 @@ class Harvester:
             signature: G2Element = AugSchemeMPL.sign(local_sk, message, agg_pk)
             message_signatures.append((message, signature))
 
-        response: harvester_protocol.RespondSignatures = harvester_protocol.RespondSignatures(
-            request.plot_identifier,
-            request.challenge_hash,
-            local_sk.get_g1(),
-            plot_info.farmer_public_key,
-            message_signatures,
+        response: harvester_protocol.RespondSignatures = (
+            harvester_protocol.RespondSignatures(
+                request.plot_identifier,
+                request.challenge_hash,
+                local_sk.get_g1(),
+                plot_info.farmer_public_key,
+                message_signatures,
+            )
         )
 
         yield OutboundMessage(

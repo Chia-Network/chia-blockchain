@@ -28,7 +28,17 @@ def finishes_sub_epoch(
 
     # If we have not crossed the (sub)epoch barrier in this slot, cannot start new (sub)epoch
     if also_finishes_epoch:
-        return height // constants.EPOCH_SUB_BLOCKS != next_height // constants.EPOCH_SUB_BLOCKS
+        if (
+            cur.height // constants.EPOCH_SUB_BLOCKS
+            == next_height // constants.EPOCH_SUB_BLOCKS
+        ):
+            return False
+    else:
+        if (
+            cur.height // constants.SUB_EPOCH_SUB_BLOCKS
+            == next_height // constants.SUB_EPOCH_SUB_BLOCKS
+        ):
+            return False
 
     return height // constants.SUB_EPOCH_SUB_BLOCKS != next_height // constants.SUB_EPOCH_SUB_BLOCKS
 
@@ -65,7 +75,9 @@ def get_next_ips(
 
     height_epoch_surpass: uint32 = next_height % constants.EPOCH_SUB_BLOCKS
     if height_epoch_surpass > constants.MAX_SLOT_SUB_BLOCKS:
-        raise ValueError(f"Height at {next_height} should not create a new slot, it is far past the epoch barrier")
+        raise ValueError(
+            f"Height at {next_height} should not create a new slot, it is far past the epoch barrier"
+        )
 
     # If the prev slot is the first slot, the iterations start at 0
     # We will compute the timestamps of the last block in epoch, as well as the total iterations at infusion
@@ -82,10 +94,12 @@ def get_next_ips(
             pass
     else:
         last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[
-            height_to_hash[uint32(height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1)]
+            height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1
         ]
 
-        curr: SubBlockRecord = sub_blocks[height_to_hash[last_sb_in_prev_epoch.height + 1]]
+        curr: SubBlockRecord = sub_blocks[
+            height_to_hash[last_sb_in_prev_epoch.height + 1]
+        ]
         # Wait until the slot finishes with a challenge chain infusion at start of slot
         while not curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
             last_sb_in_prev_epoch = curr
@@ -106,9 +120,12 @@ def get_next_ips(
 
     # This is computed as the iterations per second in last epoch, times the target number of seconds per slot
     new_ips_precise: uint64 = uint64(
-        (last_block_curr.total_iters - prev_slot_start_iters) // (last_block_curr.timestamp - prev_slot_time_start)
+        (last_block_curr.total_iters - prev_slot_start_iters)
+        // (last_block_curr.timestamp - prev_slot_time_start)
     )
-    new_ips = uint64(truncate_to_significant_bits(new_ips_precise, constants.SIGNIFICANT_BITS))
+    new_ips = uint64(
+        truncate_to_significant_bits(new_ips_precise, constants.SIGNIFICANT_BITS)
+    )
     assert count_significant_bits(new_ips) <= constants.SIGNIFICANT_BITS
 
     # Only change by a max factor as a sanity check
@@ -137,11 +154,16 @@ def get_next_slot_iters(
     header_hash: bytes32,
     new_slot: bool,
 ) -> uint64:
-    return get_next_ips(constants, height_to_hash, sub_blocks, header_hash, new_slot) * constants.SLOT_TIME_TARGET
+    return (
+        get_next_ips(constants, height_to_hash, sub_blocks, header_hash, new_slot)
+        * constants.SLOT_TIME_TARGET
+    )
 
 
 def get_difficulty(
-    constants: ConsensusConstants, sub_blocks: Dict[bytes32, SubBlockRecord], header_hash: bytes32
+    constants: ConsensusConstants,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    header_hash: bytes32,
 ) -> uint64:
     """
     Returns the difficulty of the sub-block referred to by header_hash
@@ -182,7 +204,9 @@ def get_next_difficulty(
 
     height_epoch_surpass: uint32 = next_height % constants.EPOCH_SUB_BLOCKS
     if height_epoch_surpass > constants.MAX_SLOT_SUB_BLOCKS:
-        raise ValueError(f"Height at {next_height} should not create a new slot, it is far past the epoch barrier")
+        raise ValueError(
+            f"Height at {next_height} should not create a new slot, it is far past the epoch barrier"
+        )
 
     # We will compute the timestamps of the last block in epoch, as well as the total iterations at infusion
     first_sb_in_epoch: SubBlockRecord
@@ -194,10 +218,12 @@ def get_next_difficulty(
         prev_slot_start_weight = 0
     else:
         last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[
-            height_to_hash[uint32(height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1)]
+            height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1
         ]
 
-        curr: SubBlockRecord = sub_blocks[height_to_hash[last_sb_in_prev_epoch.height + 1]]
+        curr: SubBlockRecord = sub_blocks[
+            height_to_hash[last_sb_in_prev_epoch.height + 1]
+        ]
         while not curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
             last_sb_in_prev_epoch = curr
             curr = sub_blocks[height_to_hash[curr.height + 1]]
@@ -208,7 +234,9 @@ def get_next_difficulty(
         last_sb_ip_iters = calculate_ip_iters(
             constants, last_sb_in_prev_epoch.ips, last_sb_in_prev_epoch.required_iters
         )
-        last_sb_icp_total_iters = last_sb_in_prev_epoch.total_iters - last_sb_ip_iters + last_sb_icp_iters
+        last_sb_icp_total_iters = (
+            last_sb_in_prev_epoch.total_iters - last_sb_ip_iters + last_sb_icp_iters
+        )
 
         # This fetches the last transaction block before the icp of the last sub-block
         # TODO: check equality
@@ -233,7 +261,9 @@ def get_next_difficulty(
         // (constants.SLOT_SUB_BLOCKS_TARGET * actual_epoch_time)
     )
     # Take only DIFFICULTY_SIGNIFICANT_BITS significant bits
-    new_difficulty = uint64(truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS))
+    new_difficulty = uint64(
+        truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS)
+    )
     assert count_significant_bits(new_difficulty) <= constants.SIGNIFICANT_BITS
 
     # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
