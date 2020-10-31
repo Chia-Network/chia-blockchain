@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
+from typing import Optional
 
 from chiavdf import create_discriminant
 from src.types.classgroup import ClassgroupElement
@@ -25,7 +25,12 @@ class VDFProof(Streamable):
     witness_type: uint8
     witness: bytes
 
-    def is_valid(self, constants: ConsensusConstants, info: VDFInfo, target_vdf_info: Optional[VDFInfo] = None):
+    def is_valid(
+        self,
+        constants: ConsensusConstants,
+        info: VDFInfo,
+        target_vdf_info: Optional[VDFInfo] = None,
+    ):
         """
         If target_vdf_info is passed in, it is compared with info.
         """
@@ -35,7 +40,9 @@ class VDFProof(Streamable):
             return False
         try:
             disc: int = int(
-                create_discriminant(info.challenge_hash, constants.DISCRIMINANT_SIZE_BITS),
+                create_discriminant(
+                    info.challenge_hash, constants.DISCRIMINANT_SIZE_BITS
+                ),
                 16,
             )
             x = ClassGroup.from_ab_discriminant(info.input.a, info.input.b, disc)

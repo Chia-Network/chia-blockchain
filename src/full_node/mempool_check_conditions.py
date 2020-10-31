@@ -5,7 +5,6 @@ from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.coin_record import CoinRecord
 from src.types.name_puzzle_condition import NPC
-from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
@@ -15,7 +14,9 @@ import time
 from src.util.ints import uint64, uint32
 
 
-def mempool_assert_coin_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
+def mempool_assert_coin_consumed(
+    condition: ConditionVarPair, spend_bundle: SpendBundle
+) -> Optional[Err]:
     """
     Checks coin consumed conditions
     Returns None if conditions are met, if not returns the reason why it failed
@@ -27,7 +28,9 @@ def mempool_assert_coin_consumed(condition: ConditionVarPair, spend_bundle: Spen
     return None
 
 
-def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
+def mempool_assert_my_coin_id(
+    condition: ConditionVarPair, unspent: CoinRecord
+) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
     """
@@ -36,7 +39,9 @@ def mempool_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) 
     return None
 
 
-def mempool_assert_block_index_exceeds(condition: ConditionVarPair, peak_height: uint32) -> Optional[Err]:
+def mempool_assert_block_index_exceeds(
+    condition: ConditionVarPair, peak_height: uint32
+) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
     """
@@ -109,7 +114,9 @@ def get_name_puzzle_conditions(
         puzzle_program = puzzle_solution_program.first()
         puzzle_hash = Program.to(puzzle_program).get_tree_hash()
         try:
-            error, conditions_dict, cost_run = conditions_dict_for_solution(puzzle_solution_program)
+            error, conditions_dict, cost_run = conditions_dict_for_solution(
+                puzzle_solution_program
+            )
             cost_sum += cost_run
             if error:
                 return error, [], uint64(cost_sum)
