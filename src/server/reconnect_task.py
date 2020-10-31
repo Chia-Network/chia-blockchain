@@ -29,7 +29,7 @@ def start_reconnect_task(server, peer_info_arg, log, auth):
                 try:
                     await server.start_client(peer_info, None, auth=auth)
                 except Exception as e:
-                    log.warning(f"Failed to connect to {peer_info} {e}")
+                    log.info(f"Failed to connect to {peer_info} {e}")
             await asyncio.sleep(3)
 
     return asyncio.create_task(connection_check())

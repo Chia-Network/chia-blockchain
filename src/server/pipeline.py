@@ -122,7 +122,7 @@ async def initialize_pipeline(
         try:
             await connection.send(message)
         except Exception as e:
-            connection.log.warning(
+            connection.log.info(
                 f"Cannot write to {connection}, already closed. Error {e}."
             )
             global_connections.close(connection, True)
@@ -170,7 +170,8 @@ async def connection_to_outbound(
     pair: Tuple[ChiaConnection, PeerConnections],
 ) -> AsyncGenerator[Tuple[ChiaConnection, OutboundMessage, PeerConnections], None]:
     """
-    Async generator which calls the on_connect async generator method, and yields any outbound messages.
+    Async generator which calls the on_connect async generator method,
+    and yields any outbound messages.
     """
     connection, global_connections = pair
     if connection.on_connect:
@@ -178,7 +179,7 @@ async def connection_to_outbound(
             async for outbound_message in connection.on_connect():
                 yield connection, outbound_message, global_connections
         except Exception as e:
-            connection.log.warning(f"Exception in on_connect: {e}")
+            connection.log.info(f"Exception in on_connect: {e}")
 
 
 async def perform_handshake(
@@ -187,9 +188,9 @@ async def perform_handshake(
     outbound_handshake: Message,
 ) -> AsyncGenerator[Tuple[ChiaConnection, PeerConnections], None]:
     """
-    Performs handshake with this new connection, and yields the connection. If the handshake
-    is unsuccessful, or we already have a connection with this peer, the connection is closed,
-    and nothing is yielded.
+    Performs handshake with this new connection, and yields the connection.
+    If the handshake is unsuccessful, or we already have a connection with
+    this peer, the connection is closed, and nothing is yielded.
     """
     connection, global_connections = pair
 
@@ -274,15 +275,15 @@ async def connection_to_message(
             f"Received EOF from {connection.get_peername()}, closing connection."
         )
     except ConnectionError:
-        connection.log.warning(
+        connection.log.info(
             f"Connection error by peer {connection.get_peername()}, closing connection."
         )
     except AttributeError as e:
-        connection.log.warning(
+        connection.log.info(
             f"AttributeError {e} in connection with peer {connection.get_peername()}."
         )
     except ssl.SSLError as e:
-        connection.log.warning(
+        connection.log.warning(  # leaving this warning to diagnose multiple harvesters
             f"SSLError {e} in connection with peer {connection.get_peername()}."
         )
     except (

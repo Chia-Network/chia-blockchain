@@ -180,7 +180,7 @@ class ChiaServer:
             self._pending_connections.remove(peer_info)
             self._oc_tasks.remove(oc_task)
         except Exception as e:
-            self.log.warning(
+            self.log.info(
                 f"Could not connect to {target_node}. {type(e)}{str(e)}. Aborting and removing peer."
             )
             self.global_connections.failed_connection(target_node)
