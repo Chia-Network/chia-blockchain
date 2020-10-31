@@ -4,8 +4,7 @@ import { TextField, Typography, Container, Button, Grid } from '@material-ui/cor
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router';
-import { Flex } from '@chia/core';
-import { Chia } from '@chia/icons';
+import { Flex, Logo } from '@chia/core';
 import LayoutHero from '../layout/LayoutHero';
 import { mnemonic_word_added, resetMnemonic } from '../../modules/mnemonic';
 import { unselectFingerprint } from '../../modules/message';
@@ -114,7 +113,7 @@ export default function WalletImport() {
     >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
-          <Chia />
+          <Logo />
           <Typography variant="h4" component="h1" gutterBottom>
             <Trans id="WalletImport.title">Import Wallet from Mnemonics</Trans>
           </Typography>

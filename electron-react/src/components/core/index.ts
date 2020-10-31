@@ -11,6 +11,7 @@ export { default as Link } from './Link';
 export { default as Loading } from './Loading';
 export { default as LocaleToggle } from './LocaleToggle';
 export { default as Log } from './Log';
+export { default as Logo } from './Logo';
 export { default as ModalDialogs } from './ModalDialogs';
 export { default as PrivateRoute } from './PrivateRoute';
 export { default as SideBarItem } from './SideBarItem';

@@ -4,8 +4,7 @@ import { TextField, Typography, Button, Grid, Container } from '@material-ui/cor
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffectOnce } from 'react-use';
-import { Flex, Loading, Link } from '@chia/core';
-import { Chia } from '@chia/icons';
+import { Flex, Loading, Link, Logo } from '@chia/core';
 import { genereate_mnemonics, add_new_key_action } from '../../modules/message';
 import LayoutHero from '../layout/LayoutHero';
 import type { RootState } from '../../modules/rootReducer';
@@ -55,7 +54,7 @@ export default function WalletAdd() {
     >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
-          <Chia />
+          <Logo />
           <Typography variant="h4" component="h1" gutterBottom>
             <Trans id="WalletAdd.title">New Wallet</Trans>
           </Typography>

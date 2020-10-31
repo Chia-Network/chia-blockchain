@@ -2,8 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Route, Switch, useRouteMatch } from 'react-router';
 import { AppBar, Toolbar, Drawer, Divider } from '@material-ui/core';
-import { DarkModeToggle, LocaleToggle, Flex, ToolbarSpacing } from '@chia/core';
-import { Chia } from '@chia/icons';
+import { DarkModeToggle, LocaleToggle, Flex, Logo, ToolbarSpacing } from '@chia/core';
 import Wallets from '../wallet/Wallets';
 import FullNode from '../fullNode/FullNode';
 import Plotter from '../plotter/Plotter';
@@ -66,7 +65,7 @@ export default function Dashboard() {
       </StyledAppBar>
       <StyledDrawer variant="permanent">
         <StyledBrandWrapper>
-          <Chia width={2 / 3} />
+          <Logo width={2 / 3} />
         </StyledBrandWrapper>
         <Divider />
         <DashboardSideBar />

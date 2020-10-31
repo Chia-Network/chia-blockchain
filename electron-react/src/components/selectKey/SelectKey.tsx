@@ -23,8 +23,7 @@ import {
   Visibility as VisibilityIcon,
 } from '@material-ui/icons';
 import LayoutHero from '../layout/LayoutHero';
-import { Flex, Button, Link } from '@chia/core';
-import { Chia } from '@chia/icons';
+import { Flex, Button, Link, Logo } from '@chia/core';
 import {
   login_action,
   delete_key,
@@ -80,7 +79,7 @@ export default function SelectKey() {
     <LayoutHero>
       <Container maxWidth="xs">
         <Flex flexDirection="column" alignItems="center" gap={3}>
-          <Chia />
+          <Logo width={130} />
           {hasFingerprints ? (
             <Typography variant="h5" component="h1" gutterBottom>
               <Trans id="SelectKey.title">Select Key</Trans>

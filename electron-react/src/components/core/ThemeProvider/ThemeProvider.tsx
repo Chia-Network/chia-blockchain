@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react';
+import { CssBaseline } from '@material-ui/core';
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 import {
   ThemeProvider as MaterialThemeProvider,
@@ -16,7 +17,10 @@ export default function ThemeProvider(props: Props) {
   return (
     <StylesProvider injectFirst>
       <StyledThemeProvider theme={theme}>
-        <MaterialThemeProvider theme={theme}>{children}</MaterialThemeProvider>
+        <MaterialThemeProvider theme={theme}>
+          <CssBaseline />
+          {children}
+        </MaterialThemeProvider>
       </StyledThemeProvider>
     </StylesProvider>
   );

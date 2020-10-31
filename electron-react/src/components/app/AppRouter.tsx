@@ -11,7 +11,7 @@ import BackupRestore from '../backup/BackupRestore';
 import type { RootState } from '../../modules/rootReducer';
 import LayoutLoading from '../layout/LayoutLoading';
 
-export default function Router() {
+export default function AppRouter() {
   const loggedInReceived = useSelector(
     (state: RootState) => state.wallet_state.logged_in_received,
   );

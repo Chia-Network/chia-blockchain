@@ -1,24 +1,23 @@
 import React, { useEffect } from 'react';
-import { CssBaseline } from '@material-ui/core';
-import { Provider, useSelector, useDispatch } from 'react-redux';
+import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
 import { ConnectedRouter } from 'connected-react-router';
-import { ModalDialogs, Spinner, ThemeProvider } from '@chia/core';
-import Router from '../router/Router';
+import { ThemeProvider } from '@chia/core';
+import AppRouter from './AppRouter';
 import darkTheme from '../../theme/dark';
 import lightTheme from '../../theme/light';
 import WebSocketConnection from '../../hocs/WebsocketConnection';
 import { daemon_rpc_ws } from '../../util/config';
 import store, { history } from '../../modules/store';
 import { exit_and_close } from '../../modules/message';
-import { closeDialog } from '../../modules/dialog';
 import en from '../../locales/en/messages';
 import sk from '../../locales/sk/messages';
 import useLocale from '../../hooks/useLocale';
 import './App.css';
-import { RootState } from '../../modules/rootReducer';
+import AppModalDialogs from './AppModalDialogs';
+import AppLoading from './AppLoading';
 
 const catalogs = {
   en,
@@ -27,15 +26,7 @@ const catalogs = {
 
 export default function App() {
   const { value: darkMode } = useDarkMode();
-  const dialogs = useSelector((state: RootState) => state.dialog_state.dialogs);
-  const showProgressIndicator = useSelector((state: RootState) => state.progress.progress_indicator);
   const [locale] = useLocale('en');
-
-  const dispatch = useDispatch();
-
-  function handleCloseDialog(id: number) {
-    dispatch(closeDialog(id));
-  }
 
   useEffect(() => {
     window.addEventListener('load', () => {
@@ -54,10 +45,9 @@ export default function App() {
         <I18nProvider language={locale} catalogs={catalogs}>
           <WebSocketConnection host={daemon_rpc_ws}>
             <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
-              <CssBaseline />
-              <ModalDialogs dialogs={dialogs} onClose={handleCloseDialog} />
-              <Spinner show={showProgressIndicator} />
-              <Router />
+              <AppModalDialogs />
+              <AppLoading />
+              <AppRouter />
             </ThemeProvider>
           </WebSocketConnection>
         </I18nProvider>
