@@ -16,6 +16,6 @@ def upnp_remap_port(port):
             f"Port {port} opened with UPnP. lanaddr {upnp.lanaddr} external: {upnp.externalipaddress()}"
         )
     except Exception:
-        log.warning(
+        log.info(
             "UPnP failed. This is not required to run chia, but it allows incoming connections from other peers."
         )
