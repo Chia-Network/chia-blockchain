@@ -2,14 +2,14 @@ import React from 'react';
 import { Switch, Route } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
+import { PrivateRoute } from '@chia/core';
 import SelectKey from '../selectKey/SelectKey';
 import WalletAdd from '../wallet/WalletAdd';
 import WalletImport from '../wallet/WalletImport';
-import PrivateRoute from './PrivateRoute';
 import Dashboard from '../dashboard/Dashboard';
 import BackupRestore from '../backup/BackupRestore';
 import type { RootState } from '../../modules/rootReducer';
-import LoadingScreen from '../loading/LoadingScreen';
+import LayoutLoading from '../layout/LayoutLoading';
 
 export default function Router() {
   const loggedInReceived = useSelector(
@@ -22,23 +22,23 @@ export default function Router() {
 
   if (exiting) {
     return (
-      <LoadingScreen>
+      <LayoutLoading>
         <Trans id="Application.closing">Closing down node and server</Trans>
-      </LoadingScreen>
+      </LayoutLoading>
     );
   }
   if (!walletConnected) {
     return (
-      <LoadingScreen>
+      <LayoutLoading>
         <Trans id="Application.connectingToWallet">Connecting to wallet</Trans>
-      </LoadingScreen>
+      </LayoutLoading>
     );
   }
   if (!loggedInReceived) {
     return (
-      <LoadingScreen>
+      <LayoutLoading>
         <Trans id="Application.loggingIn">Logging in</Trans>
-      </LoadingScreen>
+      </LayoutLoading>
     );
   }
 

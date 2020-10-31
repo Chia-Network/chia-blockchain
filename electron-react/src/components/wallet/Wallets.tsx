@@ -15,7 +15,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { Route, Switch, useRouteMatch, useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
-import Flex from '../flex/Flex';
+import { Flex } from '@chia/core';
 import DashboardTitle from '../dashboard/DashboardTitle';
 import StandardWallet from './standard/WalletStandard';
 import {

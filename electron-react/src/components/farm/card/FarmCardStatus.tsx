@@ -2,10 +2,10 @@ import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
+import { Flex } from '@chia/core';
 import { FiberManualRecord as FiberManualRecordIcon } from '@material-ui/icons';
 import type { RootState } from '../../../modules/rootReducer';
 import FarmCard from './FarmCard';
-import Flex from '../../flex/Flex';
 
 const StyledFiberManualRecordIcon = styled(FiberManualRecordIcon)`
   font-size: 1rem;

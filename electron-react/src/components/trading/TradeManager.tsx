@@ -12,11 +12,11 @@ import {
   ListItem,
   ListItemText,
 } from '@material-ui/core';
+import { Flex } from '@chia/core';
 import { OfferSwitch } from './ViewOffer';
 import { TradingOverview } from './TradingOverview';
 import CreateOffer from './CreateOffer';
 import DashboardTitle from '../dashboard/DashboardTitle';
-import Flex from '../flex/Flex';
 
 const drawerWidth = 180;
 

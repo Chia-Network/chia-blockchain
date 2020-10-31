@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
+import { FormatBytes } from '@chia/core';
 import type { RootState } from '../../../modules/rootReducer';
 import FarmCard from './FarmCard';
-import FormatBytes from '../../format/FormatBytes';
 
 export default function FarmCardTotalNetworkSpace() {
   const totalNetworkSpace = useSelector(

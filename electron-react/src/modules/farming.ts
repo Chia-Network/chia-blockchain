@@ -3,7 +3,7 @@ import type Plot from '../types/Plot';
 
 type FarmingState = {
   farmer: {
-    latest_challenges: {
+    latest_challenges?: {
       challenge: string;
       height: number;
       estimates: number[];
@@ -24,25 +24,19 @@ type FarmingState = {
     open_connection_error?: string;
   };
   harvester: {
-    plots: Plot[];
-    not_found_filenames: string[];
-    failed_to_open_filenames: string[];
-    plot_directories: string[];
+    plots?: Plot[];
+    not_found_filenames?: string[];
+    failed_to_open_filenames?: string[];
+    plot_directories?: string[];
   };
 };
 
 const initialState: FarmingState = {
   farmer: {
-    latest_challenges: [],
     connections: [],
     open_connection_error: '',
   },
-  harvester: {
-    plots: [],
-    not_found_filenames: [],
-    failed_to_open_filenames: [],
-    plot_directories: [],
-  },
+  harvester: {},
 };
 
 export default function farmingReducer(
@@ -108,6 +102,7 @@ export default function farmingReducer(
 
       // Harvester API
       if (command === 'get_plots') {
+        console.log('get plots', command);
         if (data.success !== true) {
           return state;
         }

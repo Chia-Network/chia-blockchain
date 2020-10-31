@@ -12,7 +12,8 @@ export default function FarmCardPlotCount() {
   return (
     <FarmCard
       title={<Trans id="FarmCardPlotCount.title">Plot Count</Trans>}
-      value={plots.length}
+      value={plots?.length}
+      loading={!plots}
     />
   );
 }

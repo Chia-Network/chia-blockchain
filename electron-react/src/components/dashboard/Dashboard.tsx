@@ -2,18 +2,15 @@ import React from 'react';
 import styled from 'styled-components';
 import { Route, Switch, useRouteMatch } from 'react-router';
 import { AppBar, Toolbar, Drawer, Divider } from '@material-ui/core';
+import { DarkModeToggle, LocaleToggle, Flex, ToolbarSpacing } from '@chia/core';
+import { Chia } from '@chia/icons';
 import Wallets from '../wallet/Wallets';
 import FullNode from '../fullNode/FullNode';
 import Plotter from '../plotter/Plotter';
 import Farm from '../farm/Farm';
-import Brand from '../brand/Brand';
-import Flex from '../flex/Flex';
 import DashboardSideBar from './DashboardSideBar';
 import { DashboardTitleTarget } from './DashboardTitle';
-import ToolbarSpacing from '../toolbar/ToolbarSpacing';
 import TradeManager from '../trading/TradeManager';
-import DarkModeToggle from '../darkMode/DarkModeToggle';
-import LocaleToggle from '../locale/LocaleToggle';
 import BackupCreate from '../backup/BackupCreate';
 
 const StyledRoot = styled(Flex)`
@@ -69,7 +66,7 @@ export default function Dashboard() {
       </StyledAppBar>
       <StyledDrawer variant="permanent">
         <StyledBrandWrapper>
-          <Brand width={2 / 3} />
+          <Chia width={2 / 3} />
         </StyledBrandWrapper>
         <Divider />
         <DashboardSideBar />

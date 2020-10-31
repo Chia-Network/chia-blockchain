@@ -3,22 +3,15 @@ import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import { useSelector } from 'react-redux';
 import {
-  Card,
-  CardContent,
   Typography,
   Tooltip,
   IconButton,
 } from '@material-ui/core';
 import { Delete as DeleteIcon } from '@material-ui/icons';
-import Table from '../table/Table';
-import Flex from '../flex/Flex';
-import TooltipIcon from '../tooltip/TooltipIcon';
-import FormatBytes from '../format/FormatBytes';
+import { Flex, Table, Block, TooltipIcon, FormatBytes, FormatConnectionStatus } from '@chia/core';
 import Connection from '../../types/Connection';
 import type { RootState } from '../../modules/rootReducer';
-import FormatConnectionStatus from '../format/FormatConnectionStatus';
 import FarmCloseConnection from './FarmCloseConnection';
-import BlockContainer from '../block/BlockContainer';
 
 const StyledIconButton = styled(IconButton)`
   padding: 0.2rem;
@@ -89,7 +82,7 @@ export default function FarmFullNodeConnections() {
   );
 
   return (
-    <BlockContainer>
+    <Block>
       <Flex flexDirection="column" gap={2}>
         <Flex alignItems="center" gap={1}>
           <Typography variant="h5" gutterBottom>
@@ -113,10 +106,9 @@ export default function FarmFullNodeConnections() {
             </Typography>
             <FormatConnectionStatus connected={connected} />
           </Flex>
-
           <Table cols={cols} rows={connections} />
         </Flex>
       </Flex>
-    </BlockContainer>
+    </Block>
   );
 }

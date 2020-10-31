@@ -22,10 +22,9 @@ import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
 } from '@material-ui/icons';
-import Button from '../button/Button';
 import LayoutHero from '../layout/LayoutHero';
-import Flex from '../flex/Flex';
-import Brand from '../brand/Brand';
+import { Flex, Button, Link } from '@chia/core';
+import { Chia } from '@chia/icons';
 import {
   login_action,
   delete_key,
@@ -33,7 +32,6 @@ import {
   selectFingerprint,
   delete_all_keys,
 } from '../../modules/message';
-import Link from '../router/Link';
 import { resetMnemonic } from '../../modules/mnemonic';
 import type { RootState } from '../../modules/rootReducer';
 import type Fingerprint from '../../types/Fingerprint';
@@ -82,7 +80,7 @@ export default function SelectKey() {
     <LayoutHero>
       <Container maxWidth="xs">
         <Flex flexDirection="column" alignItems="center" gap={3}>
-          <Brand />
+          <Chia />
           {hasFingerprints ? (
             <Typography variant="h5" component="h1" gutterBottom>
               <Trans id="SelectKey.title">Select Key</Trans>

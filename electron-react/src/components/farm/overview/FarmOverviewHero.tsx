@@ -3,8 +3,7 @@ import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router-dom';
 import { Button, Card, Grid, CardContent, Typography } from '@material-ui/core';
 import styled from 'styled-components';
-import Link from '../../router/Link';
-import Flex from '../../flex/Flex';
+import { Flex, Link } from '@chia/core';
 import heroSrc from './images/hero.svg';
 
 const StyledImage = styled('img')`

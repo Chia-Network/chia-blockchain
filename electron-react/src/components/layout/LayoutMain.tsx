@@ -1,8 +1,8 @@
 import React, { ReactElement, ReactNode } from 'react';
 import { Container } from '@material-ui/core';
 import styled from 'styled-components';
+import { Flex } from '@chia/core';
 import DashboardTitle from '../dashboard/DashboardTitle';
-import Flex from '../flex/Flex';
 
 const StyledContainer = styled(Container)`
   padding-top: ${({ theme }) => `${theme.spacing(4)}px`};

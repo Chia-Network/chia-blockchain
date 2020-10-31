@@ -10,11 +10,8 @@ import {
   Tooltip,
 } from '@material-ui/core';
 import type { RootState } from '../../modules/rootReducer';
-import Table from '../table/Table';
 import type { Row } from '../table/Table';
-import Flex from '../flex/Flex';
-import TooltipIcon from '../tooltip/TooltipIcon';
-import BlockContainer from '../block/BlockContainer';
+import { Flex, Table, TooltipIcon, Block } from '@chia/core';
 
 const cols = [
   {
@@ -80,10 +77,10 @@ export default function FarmLatestBlockChallenges() {
   const plots = useSelector(
     (state: RootState) => state.farming_state.harvester.plots,
   );
-  const hasPlots = plots.length > 0;
+  const hasPlots = !!plots && plots.length > 0;
 
   return (
-    <BlockContainer>
+    <Block>
       <Flex flexDirection="column" gap={3}>
         <Flex alignItems="center" gap={1}>
           <Typography variant="h5" gutterBottom>
@@ -125,6 +122,6 @@ export default function FarmLatestBlockChallenges() {
           </Trans>
         </Typography>
       </Flex>
-    </BlockContainer>
+    </Block>
   );
 }

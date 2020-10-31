@@ -15,8 +15,9 @@ import {
   Tooltip,
   Theme,
   Container,
+  CircularProgress,
 } from '@material-ui/core';
-import Accordion from '../accordion/Accordion';
+import Accordion from '../core/Accordion/Accordion';
 import Button from '@material-ui/core/Button';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -35,7 +36,7 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 import TablePagination from '@material-ui/core/TablePagination';
 import RefreshIcon from '@material-ui/icons/Refresh';
 import HelpIcon from '@material-ui/icons/Help';
-import Flex from '../flex/Flex';
+import { Flex } from '@chia/core';
 import LayoutMain from '../layout/LayoutMain';
 
 import { closeConnection, openConnection } from '../../modules/farmerMessages';
@@ -362,7 +363,10 @@ const Plots = () => {
     (state: RootState) =>
       state.farming_state.harvester.failed_to_open_filenames,
   );
-  plots.sort((a, b) => b.size - a.size);
+  if (plots) {
+    plots.sort((a, b) => b.size - a.size);
+  }
+
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
   const [addDirectoryOpen, addDirectorySetOpen] = React.useState(false);
@@ -466,7 +470,7 @@ const Plots = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {plots
+                {!!plots && plots
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((item) => (
                     <TableRow key={item.filename}>
@@ -515,14 +519,14 @@ const Plots = () => {
           <TablePagination
             rowsPerPageOptions={[10, 25, 100]}
             component="div"
-            count={plots.length}
+            count={plots?.length ?? 0}
             rowsPerPage={rowsPerPage}
             page={page}
             onChangePage={handleChangePage}
             onChangeRowsPerPage={handleChangeRowsPerPage}
           />
 
-          {not_found_filenames.length > 0 ? (
+          {not_found_filenames && not_found_filenames.length > 0 ? (
             <span>
               <div className={classes.cardTitle}>
                 <Typography component="h6" variant="h6">
@@ -558,7 +562,7 @@ const Plots = () => {
           ) : (
             ''
           )}
-          {failed_to_open_filenames.length > 0 ? (
+          {!!failed_to_open_filenames && failed_to_open_filenames.length > 0 ? (
             <span>
               <div className={classes.cardTitle}>
                 <Typography component="h6" variant="h6">
@@ -574,7 +578,7 @@ const Plots = () => {
                 </Trans>
               </p>
               <List>
-                {failed_to_open_filenames.map((filename) => (
+                {!!failed_to_open_filenames && failed_to_open_filenames.map((filename) => (
                   <ListItem key={filename}>
                     <ListItemText primary={filename} />
                     <ListItemSecondaryAction>
@@ -743,7 +747,8 @@ export default function Farm(): JSX.Element {
   const plots = useSelector(
     (state: RootState) => state.farming_state.harvester.plots,
   );
-  const hasPlots = plots.length > 0;
+
+  const hasPlots = !!plots && plots.length > 0;
 
   return (
     <LayoutMain title={<Trans id="Farmer.title">Farming</Trans>}>

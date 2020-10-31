@@ -1,6 +1,6 @@
 import React, { ReactNode, ReactElement } from 'react';
 import styled from 'styled-components';
-import Flex from '../../flex/Flex';
+import { Flex, TooltipIcon } from '@chia/core';
 import {
   Card,
   CardContent,
@@ -8,7 +8,6 @@ import {
   TypographyProps,
   CircularProgress,
 } from '@material-ui/core';
-import TooltipIcon from '../../tooltip/TooltipIcon';
 
 const StyledCard = styled(Card)`
   height: 100%;

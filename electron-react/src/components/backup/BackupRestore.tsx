@@ -25,12 +25,11 @@ import {
   setBackupInfo,
   selectFilePath,
 } from '../../modules/backup';
-import Link from '../router/Link';
-import Flex from '../flex/Flex';
+import { Flex, Link } from '@chia/core';
 import { unix_to_short_date } from '../../util/utils';
 import type { RootState } from '../../modules/rootReducer';
 import Wallet from '../../types/Wallet';
-import myStyle from '../../pages/style';
+import myStyle from '../../constants/style';
 import LayoutHero from '../layout/LayoutHero';
 
 const StyledDropPaper = styled(Paper)`

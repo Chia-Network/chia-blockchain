@@ -32,8 +32,7 @@ import {
 import { stopService } from '../../modules/daemon_messages';
 import { service_plotter } from '../../util/service_names';
 import DashboardTitle from '../dashboard/DashboardTitle';
-import Flex from '../flex/Flex';
-import Log from '../log/Log';
+import { Flex, Log } from '@chia/core';
 import LayoutMain from '../layout/LayoutMain';
 
 const StyledContainer = styled(Container)`

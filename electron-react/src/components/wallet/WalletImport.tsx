@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { Typography, Container, Button, Grid } from '@material-ui/core';
+import { TextField, Typography, Container, Button, Grid } from '@material-ui/core';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router';
-import TextField from '../form/TextField';
-import Brand from '../brand/Brand';
-import Flex from '../flex/Flex';
+import { Flex } from '@chia/core';
+import { Chia } from '@chia/icons';
 import LayoutHero from '../layout/LayoutHero';
 import { mnemonic_word_added, resetMnemonic } from '../../modules/mnemonic';
 import { unselectFingerprint } from '../../modules/message';
@@ -115,7 +114,7 @@ export default function WalletImport() {
     >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
-          <Brand />
+          <Chia />
           <Typography variant="h4" component="h1" gutterBottom>
             <Trans id="WalletImport.title">Import Wallet from Mnemonics</Trans>
           </Typography>

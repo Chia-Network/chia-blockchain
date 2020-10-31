@@ -1,10 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Card, CardContent, Typography } from '@material-ui/core';
-import Flex from '../flex/Flex';
-import Table from '../table/Table';
-import TooltipIcon from '../tooltip/TooltipIcon';
-import BlockContainer from '../block/BlockContainer';
+import { Flex, Table, TooltipIcon, Block } from '@chia/core';
 
 const cols = [
   {
@@ -23,7 +20,7 @@ const cols = [
 
 export default function FarmLastAttemptedProof() {
   return (
-    <BlockContainer>
+    <Block>
       <Flex flexDirection="column" gap={2}>
         <Flex alignItems="center" gap={1}>
           <Typography variant="h5">
@@ -41,6 +38,6 @@ export default function FarmLastAttemptedProof() {
 
         <Table cols={cols} rows={[]} />
       </Flex>
-    </BlockContainer>
+    </Block>
   );
 }
