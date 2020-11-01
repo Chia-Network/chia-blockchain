@@ -1,10 +1,9 @@
 import io
 from dataclasses import dataclass
-from typing import List
-
-from clvm.casts import int_to_bytes, int_from_bytes
+from typing import Any, List
 
 from src.types.sized_bytes import bytes32
+from src.util.clvm import int_to_bytes, int_from_bytes
 from src.util.hash import std_hash
 from src.util.ints import uint64
 from src.util.streamable import streamable, Streamable
@@ -23,6 +22,9 @@ class Coin(Streamable):
 
     def name(self) -> bytes32:
         return self.get_hash()
+
+    def as_list(self) -> List[Any]:
+        return [self.parent_coin_info, self.puzzle_hash, self.amount]
 
     @property
     def name_str(self) -> str:

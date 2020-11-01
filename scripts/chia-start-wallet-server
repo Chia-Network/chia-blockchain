@@ -1,4 +1,0 @@
-# Starts a websocket for GUI Wallet
-python -m src.wallet.websocket_server
-
-wait

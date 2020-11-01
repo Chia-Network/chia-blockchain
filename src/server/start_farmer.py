@@ -1,53 +1,66 @@
-import asyncio
-import signal
-import logging
+import pathlib
 
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
+from typing import Dict
 
+from src.consensus.constants import ConsensusConstants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.farmer import Farmer
 from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
-from src.util.logging import initialize_logging
-from src.util.config import load_config, load_config_cli
-from src.util.setproctitle import setproctitle
+from src.util.keychain import Keychain
+from src.util.config import load_config_cli
+from src.util.default_root import DEFAULT_ROOT_PATH
+from src.rpc.farmer_rpc_api import FarmerRpcApi
+
+from src.server.start_service import run_service
+
+# See: https://bugs.python.org/issue29288
+u"".encode("idna")
+
+SERVICE_NAME = "farmer"
 
 
-async def main():
-    config = load_config_cli("config.yaml", "farmer")
-    try:
-        key_config = load_config("keys.yaml")
-    except FileNotFoundError:
-        raise RuntimeError("Keys not generated. Run chia-generate-keys")
-    initialize_logging("Farmer %(name)-25s", config["logging"])
-    log = logging.getLogger(__name__)
-    setproctitle("chia_farmer")
+def service_kwargs_for_farmer(
+    root_path: pathlib.Path,
+    config: Dict,
+    config_pool: Dict,
+    keychain: Keychain,
+    consensus_constants: ConsensusConstants,
+) -> Dict:
 
-    farmer = Farmer(config, key_config)
+    connect_peers = []
+    fnp = config.get("full_node_peer")
+    if fnp is not None:
+        connect_peers.append(PeerInfo(fnp["host"], fnp["port"]))
 
-    harvester_peer = PeerInfo(
-        config["harvester_peer"]["host"], config["harvester_peer"]["port"]
+    # TOD: Remove once we have pool server
+    api = Farmer(config, config_pool, keychain, consensus_constants)
+
+    kwargs = dict(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.FARMER,
+        advertised_port=config["port"],
+        service_name=SERVICE_NAME,
+        server_listen_ports=[config["port"]],
+        connect_peers=connect_peers,
+        auth_connect_peers=False,
+        on_connect_callback=api._on_connect,
     )
-    full_node_peer = PeerInfo(
-        config["full_node_peer"]["host"], config["full_node_peer"]["port"]
+    if config["start_rpc_server"]:
+        kwargs["rpc_info"] = (FarmerRpcApi, config["rpc_port"])
+    return kwargs
+
+
+def main():
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
+    keychain = Keychain()
+    kwargs = service_kwargs_for_farmer(
+        DEFAULT_ROOT_PATH, config, config_pool, keychain, DEFAULT_CONSTANTS
     )
-    server = ChiaServer(config["port"], farmer, NodeType.FARMER)
-
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
-
-    _ = await server.start_server(config["host"], farmer._on_connect, config)
-    await asyncio.sleep(1)  # Prevents TCP simultaneous connect with harvester
-    _ = await server.start_client(harvester_peer, None, config)
-    _ = await server.start_client(full_node_peer, None, config)
-
-    await server.await_closed()
-    log.info("Farmer fully closed.")
+    return run_service(**kwargs)
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+if __name__ == "__main__":
+    main()

@@ -16,6 +16,7 @@ class Err(Enum):
     BLOCK_NOT_IN_BLOCKCHAIN = -10
     NO_PROOF_OF_SPACE_FOUND = -11
     PEERS_DONT_HAVE_BLOCK = -12
+    MAX_INBOUND_CONNECTIONS_REACHED = -13
 
     UNKNOWN = -9999
 
@@ -49,7 +50,7 @@ class Err(Enum):
 
     INVALID_POSPACE_HASH = 26
     INVALID_COINBASE_SIGNATURE = 27
-    INVALID_HARVESTER_SIGNATURE = 28
+    INVALID_PLOT_SIGNATURE = 28
     TIMESTAMP_TOO_FAR_IN_PAST = 29
     TIMESTAMP_TOO_FAR_IN_FUTURE = 30
     INVALID_TRANSACTIONS_FILTER_HASH = 31
@@ -66,9 +67,11 @@ class Err(Enum):
     INVALID_POT = 42
     INVALID_POT_CHALLENGE = 43
     INVALID_TRANSACTIONS_GENERATOR_HASH = 44
+    INVALID_POOL_TARGET = 45
 
-    INVALID_COINBASE_PARENT = 45
-    INVALID_FEES_COIN_PARENT = 46
+    INVALID_COINBASE_PARENT = 46
+    INVALID_FEES_COIN_PARENT = 47
+    ASSERT_FEE_CONDITION_FAILED = 48
 
 
 class ConsensusError(Exception):
@@ -80,4 +83,5 @@ class ConsensusError(Exception):
 class ProtocolError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):
         super(ProtocolError, self).__init__(f"Error code: {code.name}")
+        self.code = code
         self.errors = errors

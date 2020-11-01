@@ -1,75 +1,52 @@
-import asyncio
-import signal
-import logging
-from typing import Optional
+import pathlib
 
-from src.consensus.constants import constants
+from typing import Dict
 
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
-
-from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.timelord import Timelord
+from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
-from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
-from src.util.setproctitle import setproctitle
+from src.util.default_root import DEFAULT_ROOT_PATH
+
+from src.server.start_service import run_service
+
+# See: https://bugs.python.org/issue29288
+u"".encode("idna")
+
+SERVICE_NAME = "timelord"
 
 
-async def main():
-    config = load_config_cli("config.yaml", "timelord")
+def service_kwargs_for_timelord(
+    root_path: pathlib.Path, config: Dict, discriminant_size_bits: int
+) -> Dict:
 
-    initialize_logging("Timelord %(name)-23s", config["logging"])
-    log = logging.getLogger(__name__)
-    setproctitle("chia_timelord")
+    connect_peers = [
+        PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
+    ]
 
-    timelord = Timelord(config, constants)
-    server = ChiaServer(config["port"], timelord, NodeType.TIMELORD)
-    _ = await server.start_server(config["host"], None, config)
+    api = Timelord(config, discriminant_size_bits)
 
-    timelord_shutdown_task: Optional[asyncio.Task] = None
-
-    coro = asyncio.start_server(
-        timelord._handle_client,
-        config["vdf_server"]["host"],
-        config["vdf_server"]["port"],
-        loop=asyncio.get_running_loop(),
+    kwargs = dict(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.TIMELORD,
+        advertised_port=config["port"],
+        service_name=SERVICE_NAME,
+        server_listen_ports=[config["port"]],
+        connect_peers=connect_peers,
+        auth_connect_peers=False,
     )
+    return kwargs
 
-    def signal_received():
-        nonlocal timelord_shutdown_task
-        server.close_all()
-        timelord_shutdown_task = asyncio.create_task(timelord._shutdown())
 
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, signal_received)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, signal_received)
-
-    full_node_peer = PeerInfo(
-        timelord.config["full_node_peer"]["host"],
-        timelord.config["full_node_peer"]["port"],
+def main():
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    kwargs = service_kwargs_for_timelord(
+        DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS.DISCRIMINANT_SIZE_BITS
     )
-
-    await asyncio.sleep(1)  # Prevents TCP simultaneous connect with full node
-    await server.start_client(full_node_peer, None, config)
-
-    vdf_server = asyncio.ensure_future(coro)
-
-    async for msg in timelord._manage_discriminant_queue():
-        server.push_message(msg)
-
-    log.info("Closed discriminant queue.")
-    if timelord_shutdown_task is not None:
-        await timelord_shutdown_task
-    log.info("Shutdown timelord.")
-
-    await server.await_closed()
-    vdf_server.cancel()
-    log.info("Timelord fully closed.")
+    return run_service(**kwargs)
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+if __name__ == "__main__":
+    main()

@@ -4,12 +4,11 @@ from typing import List
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 from src.types.header_block import HeaderBlock
-from src.types.peer_info import PeerInfo
 from src.types.proof_of_time import ProofOfTime
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint32, uint64, uint128
-
+from src.util.ints import uint8, uint32, uint64, uint128
+from src.types.peer_info import TimestampedPeerInfo
 
 """
 Protocol between full nodes.
@@ -62,6 +61,7 @@ class NewProofOfTime:
     height: uint32
     challenge_hash: bytes32
     number_of_iterations: uint64
+    witness_type: uint8
 
 
 @dataclass(frozen=True)
@@ -70,6 +70,7 @@ class RequestProofOfTime:
     height: uint32
     challenge_hash: bytes32
     number_of_iterations: uint64
+    witness_type: uint8
 
 
 @dataclass(frozen=True)
@@ -81,35 +82,6 @@ class RespondProofOfTime:
 @dataclass(frozen=True)
 @cbor_message
 class RejectProofOfTimeRequest:
-    challenge_hash: bytes32
-    number_of_iterations: uint64
-
-
-@dataclass(frozen=True)
-@cbor_message
-class NewCompactProofOfTime:
-    height: uint32
-    challenge_hash: bytes32
-    number_of_iterations: uint64
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RequestCompactProofOfTime:
-    height: uint32
-    challenge_hash: bytes32
-    number_of_iterations: uint64
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RespondCompactProofOfTime:
-    proof: ProofOfTime
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RejectCompactProofOfTimeRequest:
     challenge_hash: bytes32
     number_of_iterations: uint64
 
@@ -162,20 +134,6 @@ class RejectBlockRequest:
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestPeers:
-    """
-    Return full list of peers
-    """
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RespondPeers:
-    peer_list: List[PeerInfo]
-
-
-@dataclass(frozen=True)
-@cbor_message
 class RequestAllHeaderHashes:
     tip_header_hash: bytes32
 
@@ -210,3 +168,17 @@ class RejectHeaderBlockRequest:
 @cbor_message
 class RequestMempoolTransactions:
     filter: bytes
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RequestPeers:
+    """
+    Return full list of peers
+    """
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondPeers:
+    peer_list: List[TimestampedPeerInfo]

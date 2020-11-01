@@ -1,289 +1,295 @@
-import signal
-from typing import Any, Dict, Optional
-from pathlib import Path
 import asyncio
+import signal
 
-import aiosqlite
-import blspy
 from secrets import token_bytes
-
-from src.consensus.constants import constants
-from src.full_node.blockchain import Blockchain
-from src.full_node.mempool_manager import MempoolManager
-from src.full_node.store import FullNodeStore
+from typing import Dict, Tuple, List, Optional
+from src.consensus.constants import ConsensusConstants
 from src.full_node.full_node import FullNode
-from src.server.connection import NodeType
 from src.server.server import ChiaServer
-from src.simulator.full_node_simulator import FullNodeSimulator
 from src.timelord_launcher import spawn_process, kill_processes
-from src.wallet.wallet_node import WalletNode
-from src.types.full_block import FullBlock
-from src.full_node.coin_store import CoinStore
-from tests.block_tools import BlockTools
-from src.types.BLSSignature import BLSPublicKey
-from src.util.config import load_config
-from src.consensus.coinbase import create_puzzlehash_for_pk
-from src.harvester import Harvester
-from src.farmer import Farmer
-from src.introducer import Introducer
-from src.timelord import Timelord
+from src.util.keychain import Keychain, bytes_to_mnemonic
 from src.server.connection import PeerInfo
-from src.util.ints import uint16
+from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
+from src.server.start_farmer import service_kwargs_for_farmer
+from src.server.start_full_node import service_kwargs_for_full_node
+from src.server.start_harvester import service_kwargs_for_harvester
+from src.server.start_introducer import service_kwargs_for_introducer
+from src.server.start_timelord import service_kwargs_for_timelord
+from src.server.start_wallet import service_kwargs_for_wallet
+from src.server.start_service import Service
+from src.util.ints import uint16, uint32
+from src.util.make_test_constants import make_test_constants_with_genesis
+from src.util.chech32 import encode_puzzle_hash
 
+from tests.time_out_assert import time_out_assert
 
-bt = BlockTools()
-
-test_constants: Dict[str, Any] = {
-    "DIFFICULTY_STARTING": 1,
-    "DISCRIMINANT_SIZE_BITS": 16,
-    "BLOCK_TIME_TARGET": 10,
-    "MIN_BLOCK_TIME": 2,
-    "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-    "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-    "PROPAGATION_THRESHOLD": 10,
-    "PROPAGATION_DELAY_THRESHOLD": 20,
-    "TX_PER_SEC": 1,
-    "MEMPOOL_BLOCK_BUFFER": 10,
-    "MIN_ITERS_STARTING": 50 * 2,
-}
-test_constants["GENESIS_BLOCK"] = bytes(
-    bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
+test_constants, bt = make_test_constants_with_genesis(
+    {
+        "DIFFICULTY_STARTING": 1,
+        "DISCRIMINANT_SIZE_BITS": 8,
+        "BLOCK_TIME_TARGET": 10,
+        "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
+        "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
+        "PROPAGATION_THRESHOLD": 10,
+        "PROPAGATION_DELAY_THRESHOLD": 20,
+        "TX_PER_SEC": 1,
+        "MEMPOOL_BLOCK_BUFFER": 10,
+        "MIN_ITERS_STARTING": 50 * 1,
+        "NUMBER_ZERO_BITS_CHALLENGE_SIG": 1,
+        "CLVM_COST_RATIO_CONSTANT": 108,
+    }
 )
 
+self_hostname = bt.config["self_hostname"]
 
-async def setup_full_node_simulator(db_name, port, introducer_port=None, dic={}):
-    # SETUP
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
 
-    db_path = Path(db_name)
-    connection = await aiosqlite.connect(db_path)
-    store_1 = await FullNodeStore.create(connection)
-    await store_1._clear_database()
-    unspent_store_1 = await CoinStore.create(connection)
-    await unspent_store_1._clear_database()
-    mempool_1 = MempoolManager(unspent_store_1, test_constants_copy)
+def constants_for_dic(dic):
+    return test_constants.replace(**dic)
 
-    b_1: Blockchain = await Blockchain.create(
-        unspent_store_1, store_1, test_constants_copy
-    )
-    await mempool_1.new_tips(await b_1.get_full_tips())
 
-    await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
+async def _teardown_nodes(node_aiters: List) -> None:
+    awaitables = [node_iter.__anext__() for node_iter in node_aiters]
+    for sublist_awaitable in asyncio.as_completed(awaitables):
+        try:
+            await sublist_awaitable
+        except StopAsyncIteration:
+            pass
 
-    config = load_config("config.yaml", "full_node")
+
+async def setup_full_node(
+    consensus_constants: ConsensusConstants,
+    db_name,
+    port,
+    introducer_port=None,
+    simulator=False,
+    send_uncompact_interval=30,
+):
+    db_path = bt.root_path / f"{db_name}"
+    if db_path.exists():
+        db_path.unlink()
+
+    config = bt.config["full_node"]
+    config["database_path"] = db_name
+    config["send_uncompact_interval"] = send_uncompact_interval
+    config["peer_connect_interval"] = 3
+    config["introducer_peer"]["host"] = "::1"
     if introducer_port is not None:
-        config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
-    full_node_1 = FullNodeSimulator(
-        store_1,
-        b_1,
-        config,
-        mempool_1,
-        unspent_store_1,
-        f"full_node_{port}",
-        test_constants_copy,
+    config["port"] = port
+    config["rpc_port"] = port + 1000
+
+    if simulator:
+        kwargs = service_kwargs_for_full_node_simulator(
+            bt.root_path, config, consensus_constants, bt
+        )
+    else:
+        kwargs = service_kwargs_for_full_node(bt.root_path, config, consensus_constants)
+
+    kwargs.update(
+        parse_cli_args=False,
     )
-    server_1 = ChiaServer(
-        port, full_node_1, NodeType.FULL_NODE, name="full-node-simulator-server"
-    )
-    _ = await server_1.start_server(config["host"], full_node_1._on_connect)
-    full_node_1._set_server(server_1)
 
-    yield (full_node_1, server_1)
+    service = Service(**kwargs)
 
-    # TEARDOWN
-    full_node_1._shutdown()
-    server_1.close_all()
-    await server_1.await_closed()
-    await connection.close()
-    Path(db_name).unlink()
+    await service.start()
+
+    yield service._api, service._api.server
+
+    service.stop()
+    await service.wait_closed()
+    if db_path.exists():
+        db_path.unlink()
 
 
-async def setup_full_node(db_name, port, introducer_port=None, dic={}):
-    # SETUP
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
+async def setup_wallet_node(
+    port,
+    consensus_constants: ConsensusConstants,
+    full_node_port=None,
+    introducer_port=None,
+    key_seed=None,
+    starting_height=None,
+):
+    config = bt.config["wallet"]
+    config["port"] = port
+    config["rpc_port"] = port + 1000
+    if starting_height is not None:
+        config["starting_height"] = starting_height
+    config["initial_num_public_keys"] = 5
 
-    db_path = Path(db_name)
-    connection = await aiosqlite.connect(db_path)
-    store_1 = await FullNodeStore.create(connection)
-    await store_1._clear_database()
-    unspent_store_1 = await CoinStore.create(connection)
-    await unspent_store_1._clear_database()
-    mempool_1 = MempoolManager(unspent_store_1, test_constants_copy)
+    entropy = token_bytes(32)
+    keychain = Keychain(entropy.hex(), True)
+    keychain.add_private_key(bytes_to_mnemonic(entropy), "")
+    first_pk = keychain.get_first_public_key()
+    assert first_pk is not None
+    db_path_key_suffix = str(first_pk.get_fingerprint())
+    db_name = f"test-wallet-db-{port}"
+    db_path = bt.root_path / f"test-wallet-db-{port}-{db_path_key_suffix}"
+    if db_path.exists():
+        db_path.unlink()
+    config["database_path"] = str(db_name)
+    config["testing"] = True
 
-    b_1: Blockchain = await Blockchain.create(
-        unspent_store_1, store_1, test_constants_copy
-    )
-    await mempool_1.new_tips(await b_1.get_full_tips())
-
-    await store_1.add_block(FullBlock.from_bytes(test_constants_copy["GENESIS_BLOCK"]))
-
-    config = load_config("config.yaml", "full_node")
+    config["introducer_peer"]["host"] = "::1"
     if introducer_port is not None:
-        config["introducer_peer"]["host"] = "127.0.0.1"
         config["introducer_peer"]["port"] = introducer_port
-    full_node_1 = FullNode(
-        store_1,
-        b_1,
-        config,
-        mempool_1,
-        unspent_store_1,
-        f"full_node_{port}",
-        test_constants_copy,
+        config["peer_connect_interval"] = 10
+
+    if full_node_port is not None:
+        config["full_node_peer"]["host"] = self_hostname
+        config["full_node_peer"]["port"] = full_node_port
+    else:
+        del config["full_node_peer"]
+
+    kwargs = service_kwargs_for_wallet(
+        bt.root_path, config, consensus_constants, keychain
     )
-    server_1 = ChiaServer(port, full_node_1, NodeType.FULL_NODE)
-    _ = await server_1.start_server(config["host"], full_node_1._on_connect)
-    full_node_1._set_server(server_1)
-
-    yield (full_node_1, server_1)
-
-    # TEARDOWN
-    full_node_1._shutdown()
-    server_1.close_all()
-    await connection.close()
-    Path(db_name).unlink()
-
-
-async def setup_wallet_node(port, introducer_port=None, key_seed=b"", dic={}):
-    config = load_config("config.yaml", "wallet")
-    if "starting_height" in dic:
-        config["starting_height"] = dic["starting_height"]
-    key_config = {
-        "wallet_sk": bytes(blspy.ExtendedPrivateKey.from_seed(key_seed)).hex(),
-    }
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
-    db_path = "test-wallet-db" + token_bytes(32).hex() + ".db"
-    if Path(db_path).exists():
-        Path(db_path).unlink()
-    config["database_path"] = db_path
-    wallet = await WalletNode.create(
-        config, key_config, override_constants=test_constants_copy, name="wallet1",
-    )
-    server = ChiaServer(port, wallet, NodeType.WALLET, name="wallet-server")
-    wallet.set_server(server)
-
-    yield (wallet, server)
-
-    server.close_all()
-    await wallet.wallet_state_manager.clear_all_stores()
-    await wallet.wallet_state_manager.close_all_stores()
-    wallet.wallet_state_manager.unlink_db()
-    await server.await_closed()
-
-
-async def setup_harvester(port, dic={}):
-    config = load_config("config.yaml", "harvester")
-
-    harvester = Harvester(config, bt.plot_config)
-    server = ChiaServer(port, harvester, NodeType.HARVESTER)
-    _ = await server.start_server(config["host"], None)
-
-    yield (harvester, server)
-
-    harvester._shutdown()
-    server.close_all()
-    await harvester._await_shutdown()
-    await server.await_closed()
-
-
-async def setup_farmer(port, dic={}):
-    config = load_config("config.yaml", "farmer")
-    pool_sk = bt.pool_sk
-    pool_target = create_puzzlehash_for_pk(
-        BLSPublicKey(bytes(pool_sk.get_public_key()))
-    )
-    wallet_sk = bt.wallet_sk
-    wallet_target = create_puzzlehash_for_pk(
-        BLSPublicKey(bytes(wallet_sk.get_public_key()))
+    kwargs.update(
+        parse_cli_args=False,
     )
 
-    key_config = {
-        "wallet_sk": bytes(wallet_sk).hex(),
-        "wallet_target": wallet_target.hex(),
-        "pool_sks": [bytes(pool_sk).hex()],
-        "pool_target": pool_target.hex(),
-    }
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
+    service = Service(**kwargs)
 
-    farmer = Farmer(config, key_config, test_constants_copy)
-    server = ChiaServer(port, farmer, NodeType.FARMER)
-    _ = await server.start_server(config["host"], farmer._on_connect)
+    await service.start(new_wallet=True)
 
-    yield (farmer, server)
+    yield service._api, service._api.server
 
-    server.close_all()
-    await server.await_closed()
+    service.stop()
+    await service.wait_closed()
+    if db_path.exists():
+        db_path.unlink()
+    keychain.delete_all_keys()
 
 
-async def setup_introducer(port, dic={}):
-    config = load_config("config.yaml", "introducer")
+async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants):
+    kwargs = service_kwargs_for_harvester(
+        bt.root_path, bt.config["harvester"], consensus_constants
+    )
+    kwargs.update(
+        server_listen_ports=[port],
+        advertised_port=port,
+        connect_peers=[PeerInfo(self_hostname, farmer_port)],
+        parse_cli_args=False,
+    )
 
-    introducer = Introducer(config)
-    server = ChiaServer(port, introducer, NodeType.INTRODUCER)
-    _ = await server.start_server(port, None)
+    service = Service(**kwargs)
 
-    yield (introducer, server)
+    await service.start()
 
-    server.close_all()
-    await server.await_closed()
+    yield service._api, service._api.server
+
+    service.stop()
+    await service.wait_closed()
+
+
+async def setup_farmer(
+    port,
+    consensus_constants: ConsensusConstants,
+    full_node_port: Optional[uint16] = None,
+):
+    config = bt.config["farmer"]
+    config_pool = bt.config["pool"]
+
+    config["xch_target_address"] = encode_puzzle_hash(bt.farmer_ph)
+    config["pool_public_keys"] = [bytes(pk).hex() for pk in bt.pool_pubkeys]
+    config["port"] = port
+    config_pool["xch_target_address"] = encode_puzzle_hash(bt.pool_ph)
+
+    if full_node_port:
+        config["full_node_peer"]["host"] = self_hostname
+        config["full_node_peer"]["port"] = full_node_port
+    else:
+        del config["full_node_peer"]
+
+    kwargs = service_kwargs_for_farmer(
+        bt.root_path, config, config_pool, bt.keychain, consensus_constants
+    )
+    kwargs.update(
+        parse_cli_args=False,
+    )
+
+    service = Service(**kwargs)
+
+    await service.start()
+
+    yield service._api, service._api.server
+
+    service.stop()
+    await service.wait_closed()
+
+
+async def setup_introducer(port):
+    kwargs = service_kwargs_for_introducer(
+        bt.root_path,
+        bt.config["introducer"],
+    )
+    kwargs.update(
+        advertised_port=port,
+        parse_cli_args=False,
+    )
+
+    service = Service(**kwargs)
+
+    await service.start()
+
+    yield service._api, service._api.server
+
+    service.stop()
+    await service.wait_closed()
 
 
 async def setup_vdf_clients(port):
-    vdf_task = asyncio.create_task(spawn_process("127.0.0.1", port, 1))
+    vdf_task = asyncio.create_task(spawn_process(self_hostname, port, 1))
+
+    def stop():
+        asyncio.create_task(kill_processes())
+
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
+    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
 
     yield vdf_task
 
     await kill_processes()
 
 
-async def setup_timelord(port, dic={}):
-    config = load_config("config.yaml", "timelord")
-    test_constants_copy = test_constants.copy()
-    for k in dic.keys():
-        test_constants_copy[k] = dic[k]
-    timelord = Timelord(config, test_constants_copy)
-    server = ChiaServer(port, timelord, NodeType.TIMELORD)
-    _ = await server.start_server(port, None, config)
+async def setup_timelord(
+    port, full_node_port, sanitizer, consensus_constants: ConsensusConstants
+):
+    config = bt.config["timelord"]
+    config["port"] = port
+    config["full_node_peer"]["port"] = full_node_port
+    config["sanitizer_mode"] = sanitizer
+    if sanitizer:
+        config["vdf_server"]["port"] = 7999
 
-    coro = asyncio.start_server(
-        timelord._handle_client,
-        config["vdf_server"]["host"],
-        config["vdf_server"]["port"],
-        loop=asyncio.get_running_loop(),
+    kwargs = service_kwargs_for_timelord(
+        bt.root_path, config, consensus_constants.DISCRIMINANT_SIZE_BITS
+    )
+    kwargs.update(
+        parse_cli_args=False,
     )
 
-    vdf_server = asyncio.ensure_future(coro)
+    service = Service(**kwargs)
 
-    async def run_timelord():
-        async for msg in timelord._manage_discriminant_queue():
-            server.push_message(msg)
+    await service.start()
 
-    timelord_task = asyncio.create_task(run_timelord())
+    yield service._api, service._api.server
 
-    yield (timelord, server)
-
-    vdf_server.cancel()
-    server.close_all()
-    await timelord._shutdown()
-    await timelord_task
-    await server.await_closed()
+    service.stop()
+    await service.wait_closed()
 
 
-async def setup_two_nodes(dic={}):
+async def setup_two_nodes(consensus_constants: ConsensusConstants):
+
     """
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
     node_iters = [
-        setup_full_node("blockchain_test.db", 21234, dic=dic),
-        setup_full_node("blockchain_test_2.db", 21235, dic=dic),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21234, simulator=False
+        ),
+        setup_full_node(
+            consensus_constants, "blockchain_test_2.db", 21235, simulator=False
+        ),
     ]
 
     fn1, s1 = await node_iters[0].__anext__()
@@ -291,17 +297,19 @@ async def setup_two_nodes(dic={}):
 
     yield (fn1, fn2, s1, s2)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
-async def setup_node_and_wallet(dic={}):
+async def setup_node_and_wallet(
+    consensus_constants: ConsensusConstants, starting_height=None
+):
     node_iters = [
-        setup_full_node_simulator("blockchain_test.db", 21234, dic=dic),
-        setup_wallet_node(21235, dic=dic),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21234, simulator=False
+        ),
+        setup_wallet_node(
+            21235, consensus_constants, None, starting_height=starting_height
+        ),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()
@@ -309,133 +317,103 @@ async def setup_node_and_wallet(dic={}):
 
     yield (full_node, wallet, s1, s2)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
-async def setup_node_simulator_and_wallet(dic={}):
+async def setup_simulators_and_wallets(
+    simulator_count: int,
+    wallet_count: int,
+    dic: Dict,
+    starting_height=None,
+):
+    simulators: List[Tuple[FullNode, ChiaServer]] = []
+    wallets = []
+    node_iters = []
+
+    consensus_constants = constants_for_dic(dic)
+    for index in range(0, simulator_count):
+        port = 50000 + index
+        db_name = f"blockchain_test_{port}.db"
+        sim = setup_full_node(consensus_constants, db_name, port, simulator=True)
+        simulators.append(await sim.__anext__())
+        node_iters.append(sim)
+
+    for index in range(0, wallet_count):
+        seed = bytes(uint32(index))
+        port = 55000 + index
+        wlt = setup_wallet_node(
+            port,
+            consensus_constants,
+            None,
+            key_seed=seed,
+            starting_height=starting_height,
+        )
+        wallets.append(await wlt.__anext__())
+        node_iters.append(wlt)
+
+    yield (simulators, wallets)
+
+    await _teardown_nodes(node_iters)
+
+
+async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
     node_iters = [
-        setup_full_node_simulator("blockchain_test.db", 21234, dic=dic),
-        setup_wallet_node(21235, dic=dic),
+        setup_harvester(21234, 21235, consensus_constants),
+        setup_farmer(21235, consensus_constants),
     ]
 
-    full_node, s1 = await node_iters[0].__anext__()
-    wallet, s2 = await node_iters[1].__anext__()
+    harvester, harvester_server = await node_iters[0].__anext__()
+    farmer, farmer_server = await node_iters[1].__anext__()
 
-    yield (full_node, wallet, s1, s2)
+    yield (harvester, farmer)
 
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)
 
 
-async def setup_node_and_two_wallets(dic={}):
-    node_iters = [
-        setup_full_node("blockchain_test.db", 21234, dic=dic),
-        setup_wallet_node(21235, key_seed=b"Test node 1", dic=dic),
-        setup_wallet_node(21236, key_seed=b"Test node 2", dic=dic),
-    ]
-
-    full_node, s1 = await node_iters[0].__anext__()
-    wallet, s2 = await node_iters[1].__anext__()
-    wallet_2, s3 = await node_iters[2].__anext__()
-
-    yield (full_node, wallet, wallet_2, s1, s2, s3)
-
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
-
-
-async def setup_node_simulator_and_two_wallets(dic={}):
-    node_iters = [
-        setup_full_node_simulator("blockchain_test.db", 21234, dic=dic),
-        setup_wallet_node(21235, key_seed=b"Test node 1", dic=dic),
-        setup_wallet_node(21236, key_seed=b"Test node 2", dic=dic),
-    ]
-
-    full_node, s1 = await node_iters[0].__anext__()
-    wallet, s2 = await node_iters[1].__anext__()
-    wallet_2, s3 = await node_iters[2].__anext__()
-
-    yield (full_node, wallet, wallet_2, s1, s2, s3)
-
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
-
-
-async def setup_three_simulators_and_two_wallets(dic={}):
-    node_iters = [
-        setup_full_node_simulator("blockchain_test0.db", 21234, dic=dic),
-        setup_full_node_simulator("blockchain_test1.db", 21235, dic=dic),
-        setup_full_node_simulator("blockchain_test2.db", 21236, dic=dic),
-        setup_wallet_node(21237, key_seed=b"Test node 1", dic=dic),
-        setup_wallet_node(21238, key_seed=b"Test node 2", dic=dic),
-    ]
-
-    full_node0, s0 = await node_iters[0].__anext__()
-    full_node1, s1 = await node_iters[1].__anext__()
-    full_node2, s2 = await node_iters[2].__anext__()
-
-    wallet_0, s3 = await node_iters[3].__anext__()
-    wallet_1, s4 = await node_iters[4].__anext__()
-
-    full_nodes = [(full_node0, s0), (full_node1, s1), (full_node2, s2)]
-    wallets = [(wallet_0, s3), (wallet_1, s4)]
-    yield (full_nodes, wallets)
-
-    for node_iter in node_iters:
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
-
-
-async def setup_full_system(dic={}):
+async def setup_full_system(consensus_constants: ConsensusConstants):
     node_iters = [
         setup_introducer(21233),
-        setup_harvester(21234),
-        setup_farmer(21235),
-        setup_timelord(21236),
+        setup_harvester(21234, 21235, consensus_constants),
+        setup_farmer(21235, consensus_constants, uint16(21237)),
         setup_vdf_clients(8000),
-        setup_full_node("blockchain_test.db", 21237, 21233, dic),
-        setup_full_node("blockchain_test_2.db", 21238, 21233, dic),
+        setup_timelord(21236, 21237, False, consensus_constants),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21237, 21232, False, 10
+        ),
+        setup_full_node(
+            consensus_constants, "blockchain_test_2.db", 21238, 21232, False, 10
+        ),
+        setup_vdf_clients(7999),
+        setup_timelord(21239, 21238, True, consensus_constants),
     ]
 
     introducer, introducer_server = await node_iters[0].__anext__()
     harvester, harvester_server = await node_iters[1].__anext__()
     farmer, farmer_server = await node_iters[2].__anext__()
-    timelord, timelord_server = await node_iters[3].__anext__()
-    vdf = await node_iters[4].__anext__()
+
+    async def num_connections():
+        return len(harvester.global_connections.get_connections())
+
+    await time_out_assert(10, num_connections, 1)
+
+    vdf = await node_iters[3].__anext__()
+    timelord, timelord_server = await node_iters[4].__anext__()
     node1, node1_server = await node_iters[5].__anext__()
     node2, node2_server = await node_iters[6].__anext__()
+    vdf_sanitizer = await node_iters[7].__anext__()
+    sanitizer, sanitizer_server = await node_iters[8].__anext__()
 
-    await harvester_server.start_client(
-        PeerInfo(farmer_server._host, uint16(farmer_server._port)), None
+    yield (
+        node1,
+        node2,
+        harvester,
+        farmer,
+        introducer,
+        timelord,
+        vdf,
+        sanitizer,
+        vdf_sanitizer,
+        node1_server,
     )
-    await farmer_server.start_client(
-        PeerInfo(node1_server._host, uint16(node1_server._port)), None
-    )
 
-    await timelord_server.start_client(
-        PeerInfo(node1_server._host, uint16(node1_server._port)), None
-    )
-
-    yield (node1, node2)
-
-    for node_iter in node_iters:
-
-        try:
-            await node_iter.__anext__()
-        except StopAsyncIteration:
-            pass
+    await _teardown_nodes(node_iters)

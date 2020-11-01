@@ -1,0 +1,110 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+trigger:
+  branches:
+    include:
+      - "*"
+  tags:
+    include:
+    - "*"
+
+pool:
+  vmImage: "macOS-10.14"
+strategy:
+  matrix:
+    Mojave DMG:
+      python.version: "3.7"
+#    Python38:
+#      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
+#                               Also, installer can target one verison
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: "$(python.version)"
+    displayName: "Use Python $(python.version)"
+
+  # Install Apple certificate
+  # Install an Apple certificate required to build on a macOS agent machine
+  - task: InstallAppleCertificate@2
+    inputs:
+      certSecureFile: 'chia-apple-dev-id-app.p12'
+      certPwd: $(CHIA_APPLE_DEV_ID_APP_PASS)
+      keychain: temp
+      deleteCert: true
+
+  #  since we're installing miniupnpc & setproctitle below,
+  #  only cbor2 will end up in wheels/
+  - script: |
+      python -m venv venv
+      ln -s venv/bin/activate .
+      . ./activate
+      python -m pip install --upgrade pip
+      pip install wheel pep517 setuptools_scm
+      node -v
+      pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
+    displayName: "Install dependencies"
+
+  - script: |
+      . ./activate
+      clang --version
+      pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
+    displayName: "Build wheels"
+
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '12.x'
+    displayName: "Setup Node 12.x"
+
+  - script: |
+      . ./activate
+      cd ./electron-react
+      npm install
+      npm audit fix
+    displayName: "Build Electron UI"
+
+  #  Using wheels and release style install so no sh install.sh
+  - script: |
+      . ./activate
+      pip install .
+    displayName: "Install wheels"
+
+#  install-timelord.sh in venv
+#  - script: |
+#      . ./activate
+#      brew install boost
+#      sh install-timelord.sh
+#    displayName: "Install timelord"
+
+#  - script: |
+#      . ./activate
+#      python -m pip install -r requirements-dev.txt
+#    displayName: "Install dev dependencies"
+
+#  - script: |
+#      . ./activate
+#      pip install pytest pytest-azurepipelines
+#      py.test tests -s -v
+#    displayName: "pytest"
+
+  - script: |
+      . ./activate
+      cd build_scripts
+      sh build_macos.sh
+      ls -l final_installer
+    displayName: "Build DMG with build_scripts/build_macos.sh"
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: $(System.DefaultWorkingDirectory)/wheels
+      artifactName: MacOS-wheels
+    displayName: "Upload MacOS wheels"
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: $(System.DefaultWorkingDirectory)/build_scripts/final_installer/
+      artifactName: MacOS-DMG
+    displayName: "Upload MacOS DMG"

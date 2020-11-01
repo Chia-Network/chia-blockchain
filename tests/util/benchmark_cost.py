@@ -1,19 +1,16 @@
 import time
 from secrets import token_bytes
 
-import clvm
-from blspy import ExtendedPrivateKey
-from clvm import run_program
+from blspy import PrivateKey, AugSchemeMPL
 from clvm_tools import binutils
 
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.condition_var_pair import ConditionVarPair
-from src.types.BLSSignature import BLSSignature
 from src.types.program import Program
-from src.util.condition_tools import parse_sexp_to_conditions
-from src.wallet.BLSPrivateKey import BLSPrivateKey
 from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
-from tests.wallet_tools import WalletTool
+from src.util.wallet_tools import WalletTool
+from src.util.ints import uint32
+from src.wallet.derive_keys import master_sk_to_wallet_sk
 
 
 def float_to_str(f):
@@ -36,12 +33,15 @@ def float_to_str(f):
 def run_and_return_cost_time(chialisp):
 
     start = time.time()
-    clvm_loop = f"((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a)))) (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a)) (c (- (f (r (a))) (q 1)) (c (f (r (r (a)))) (q ())))))) ((c (f (r (r (a)))) (q ()))))) (q (q ()))) (a)))) (a))))"
+    clvm_loop = "((c (q ((c (f (a)) (c (f (a)) (c (f (r (a))) (c (f (r (r (a))))"
+    " (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a))"
+    " (c (- (f (r (a))) (q 1)) (c (f (r (r (a)))) (q ()))))))"
+    " ((c (f (r (r (a)))) (q ()))))) (q (q ()))) (a)))) (a))))"
     loop_program = Program(binutils.assemble(clvm_loop))
     clvm_loop_solution = f"(1000 {chialisp})"
     solution_program = Program(binutils.assemble(clvm_loop_solution))
 
-    cost, sexp = run_program(loop_program, solution_program)
+    cost, sexp = loop_program.run_with_cost(solution_program)
 
     end = time.time()
     total_time = end - start
@@ -62,7 +62,9 @@ def benchmark_all_operators():
     if_clvm = "(i (= (q 1000000000) (q 1000000000)) (q 1000000000) (q 1000000000))"
     sha256tree = "(sha256 (q 1000000000))"
     pubkey_for_exp = "(pubkey_for_exp (q 1))"
-    point_add = "(point_add (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb) (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb))"
+    point_add = "(point_add"
+    " (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb)"
+    " (q 0x17f1d3a73197d7942695638c4fa9ac0fc3688c4f9774b905a14e3a3f171bac586c55e83ff97a1aeffb3af00adb22c6bb))"
     point_add_cost, point_add_time = run_and_return_cost_time(point_add)
     addition_cost, addition_time = run_and_return_cost_time(addition)
     substraction_cost, substraction_time = run_and_return_cost_time(substraction)
@@ -125,16 +127,14 @@ if __name__ == "__main__":
     """
     wallet_tool = WalletTool()
     benchmark_all_operators()
-    extended_secret_key: ExtendedPrivateKey = ExtendedPrivateKey.from_seed(b"a")
+    secret_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
     puzzles = []
     solutions = []
     private_keys = []
     public_keys = []
 
     for i in range(0, 1000):
-        private_key: BLSPrivateKey = BLSPrivateKey(
-            extended_secret_key.private_child(i).get_private_key()
-        )
+        private_key: PrivateKey = master_sk_to_wallet_sk(secret_key, uint32(i))
         public_key = private_key.public_key()
         solution = wallet_tool.make_solution(
             {
@@ -145,7 +145,7 @@ if __name__ == "__main__":
                 ]
             }
         )
-        puzzle = puzzle_for_pk(public_key)
+        puzzle = puzzle_for_pk(bytes(public_key))
         puzzles.append(puzzle)
         solutions.append(solution)
         private_keys.append(private_key)
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     puzzle_start = time.time()
     clvm_cost = 0
     for i in range(0, 1000):
-        cost_run, sexp = run_program(puzzles[i], solutions[i])
+        cost_run, sexp = puzzles[i].run_with_cost(solutions[i])
         clvm_cost += cost_run
 
     puzzle_end = time.time()
@@ -163,17 +163,18 @@ if __name__ == "__main__":
     print(f"Puzzle_time is: {puzzle_time}")
     print(f"Puzzle cost sum is: {clvm_cost}")
 
-    private_key = BLSPrivateKey(extended_secret_key.private_child(0).get_private_key())
-    public_key = private_key.public_key()
+    private_key = master_sk_to_wallet_sk(secret_key, uint32(0))
+    public_key = private_key.get_g1()
     message = token_bytes()
-    signature = private_key.sign(message)
-    pk_message_pair = BLSSignature.PkMessagePair(public_key, message)
+    signature = AugSchemeMPL.sign(private_key, message)
+    pk_message_pair = (public_key, message)
 
     # Run AggSig 1000 times
     agg_sig_start = time.time()
     agg_sig_cost = 0
     for i in range(0, 1000):
-        valid = signature.validate([pk_message_pair])
+        valid = AugSchemeMPL.verify(public_key, message, signature)
+        assert valid
         agg_sig_cost += 20
     agg_sig_end = time.time()
     agg_sig_time = agg_sig_end - agg_sig_start

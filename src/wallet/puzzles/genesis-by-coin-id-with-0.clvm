@@ -1,0 +1,39 @@
+; This is a "genesis checker" for use with cc.clvm.
+;
+; This checker allows new ccs to be created if they have a particular
+; coin id as parent; or created by anyone if their value is 0.
+
+(mod (
+      genesis-id
+      lineage-proof-parameters
+      my-coin-info
+      (parent-coin zero-parent-inner-puzzle-hash)
+    )
+
+    ;; boolean or macro
+    ;; This lets you write something like (if (or COND1 COND2 COND3) (do-something) (do-something-else))
+    (defmacro or ARGS
+        (if ARGS
+            (qq (if (unquote (f ARGS))
+                1
+                (unquote (c or (r ARGS)))
+            ))
+        0)
+    )
+
+    (defun-inline main (
+      genesis-id
+      my-coin-info
+    )
+
+      (or
+        (= (f (r (r my-coin-info))) 0)
+        (= (f my-coin-info) genesis-id)
+      )
+    )
+
+    (main
+      genesis-id
+      my-coin-info
+    )
+)

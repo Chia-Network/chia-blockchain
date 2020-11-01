@@ -35,6 +35,7 @@ def make_sized_bytes(size):
 
     @classmethod  # type: ignore
     def from_bytes(cls: Any, blob: bytes) -> Any:
+        # pylint: disable=no-member
         f = io.BytesIO(blob)
         return cls.parse(f)
 

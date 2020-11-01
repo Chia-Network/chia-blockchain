@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any
+from typing import Any, Optional
+from src.types.sized_bytes import bytes32
 
 
 class NodeType(IntEnum):
@@ -23,6 +24,8 @@ class Delivery(IntEnum):
     RANDOM = 4
     # Pseudo-message to close the current connection
     CLOSE = 5
+    # A message is sent to a speicific peer, specified in OutboundMessage
+    SPECIFIC = 6
 
 
 @dataclass
@@ -40,3 +43,6 @@ class OutboundMessage:
     # Message to send
     message: Message
     delivery_method: Delivery
+
+    # Node id to send the request to, only applies to SPECIFIC delivery type
+    specific_peer_node_id: Optional[bytes32] = None

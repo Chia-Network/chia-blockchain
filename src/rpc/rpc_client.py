@@ -3,16 +3,13 @@ import asyncio
 
 from typing import Dict, Optional, List
 from src.util.byte_types import hexstr_to_bytes
-from src.types.full_block import FullBlock
-from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint16
-from src.types.coin_record import CoinRecord
 
 
 class RpcClient:
     """
-    Client to Chia RPC, connects to a local full node. Uses HTTP/JSON, and converts back from
+    Client to Chia RPC, connects to a local service. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
     Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
     protocol on top of TCP), it's a separate protocol on top of HTTP thats provides easy access
@@ -24,9 +21,9 @@ class RpcClient:
     closing_task: Optional[asyncio.Task]
 
     @classmethod
-    async def create(cls, port: uint16):
+    async def create(cls, self_hostname: str, port: uint16):
         self = cls()
-        self.url = f"http://localhost:{str(port)}/"
+        self.url = f"http://{self_hostname}:{str(port)}/"
         self.session = aiohttp.ClientSession()
         self.closing_task = None
         return self
@@ -34,39 +31,16 @@ class RpcClient:
     async def fetch(self, path, request_json):
         async with self.session.post(self.url + path, json=request_json) as response:
             response.raise_for_status()
-            return await response.json()
-
-    async def get_blockchain_state(self) -> Dict:
-        response = await self.fetch("get_blockchain_state", {})
-        response["tips"] = [Header.from_json_dict(tip) for tip in response["tips"]]
-        response["lca"] = Header.from_json_dict(response["lca"])
-        return response
-
-    async def get_block(self, header_hash) -> Optional[FullBlock]:
-        try:
-            response = await self.fetch("get_block", {"header_hash": header_hash.hex()})
-        except aiohttp.client_exceptions.ClientResponseError as e:
-            if e.message == "Not Found":
-                return None
-            raise
-        return FullBlock.from_json_dict(response)
-
-    async def get_header(self, header_hash) -> Optional[Header]:
-        try:
-            response = await self.fetch(
-                "get_header", {"header_hash": header_hash.hex()}
-            )
-        except aiohttp.client_exceptions.ClientResponseError as e:
-            if e.message == "Not Found":
-                return None
-            raise
-        return Header.from_json_dict(response)
+            res_json = await response.json()
+            if not res_json["success"]:
+                raise ValueError(res_json)
+            return res_json
 
     async def get_connections(self) -> List[Dict]:
         response = await self.fetch("get_connections", {})
-        for connection in response:
+        for connection in response["connections"]:
             connection["node_id"] = hexstr_to_bytes(connection["node_id"])
-        return response
+        return response["connections"]
 
     async def open_connection(self, host: str, port: int) -> Dict:
         return await self.fetch("open_connection", {"host": host, "port": int(port)})
@@ -76,22 +50,6 @@ class RpcClient:
 
     async def stop_node(self) -> Dict:
         return await self.fetch("stop_node", {})
-
-    async def get_unspent_coins(
-        self, puzzle_hash: bytes32, header_hash: Optional[bytes32] = None
-    ) -> List:
-        if header_hash is not None:
-            d = {"puzzle_hash": puzzle_hash.hex(), "header_hash": header_hash.hex()}
-        else:
-            d = {"puzzle_hash": puzzle_hash.hex()}
-        return [
-            CoinRecord.from_json_dict(coin)
-            for coin in await self.fetch("get_unspent_coins", d)
-        ]
-
-    async def get_heaviest_block_seen(self) -> Header:
-        response = await self.fetch("get_heaviest_block_seen", {})
-        return Header.from_json_dict(response)
 
     def close(self):
         self.closing_task = asyncio.create_task(self.session.close())

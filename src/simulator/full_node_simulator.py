@@ -1,50 +1,29 @@
 from secrets import token_bytes
 
 from src.full_node.full_node import FullNode
-from typing import AsyncGenerator, List, Dict, Optional
-from src.full_node.blockchain import Blockchain
-from src.full_node.store import FullNodeStore
+from typing import AsyncGenerator, List, Optional
 from src.protocols import (
     full_node_protocol,
     wallet_protocol,
 )
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from src.util.bundle_tools import best_solution_program
-from src.full_node.mempool_manager import MempoolManager
+from src.full_node.bundle_tools import best_solution_program
 from src.server.outbound_message import OutboundMessage
 from src.server.server import ChiaServer
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 from src.types.header import Header
-from src.full_node.coin_store import CoinStore
 from src.util.api_decorators import api_request
-from tests.block_tools import BlockTools
+from src.util.ints import uint64
+
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
-bt = BlockTools()
-
 
 class FullNodeSimulator(FullNode):
-    def __init__(
-        self,
-        store: FullNodeStore,
-        blockchain: Blockchain,
-        config: Dict,
-        mempool_manager: MempoolManager,
-        coin_store: CoinStore,
-        name: str = None,
-        override_constants=None,
-    ):
-        super().__init__(
-            store,
-            blockchain,
-            config,
-            mempool_manager,
-            coin_store,
-            name,
-            override_constants,
-        )
+    def __init__(self, config, root_path, consensus_constants, name, bt):
+        super().__init__(config, root_path, consensus_constants, name)
+        self.bt = bt
 
     def _set_server(self, server: ChiaServer):
         super()._set_server(server)
@@ -127,7 +106,7 @@ class FullNodeSimulator(FullNode):
             if tip_hash == self.blockchain.genesis.header_hash:
                 current_blocks.append(self.blockchain.genesis)
                 break
-            full = await self.store.get_block(tip_hash)
+            full = await self.block_store.get_block(tip_hash)
             if full is None:
                 break
             current_blocks.append(full)
@@ -149,18 +128,21 @@ class FullNodeSimulator(FullNode):
         ] = await self.mempool_manager.create_bundle_for_tip(top_tip)
 
         dict_h = {}
-
+        fees = 0
         if bundle is not None:
             program = best_solution_program(bundle)
             dict_h[top_tip.height + 1] = (program, bundle.aggregated_signature)
+            fees = bundle.fees()
 
-        more_blocks = bt.get_consecutive_blocks(
+        more_blocks = self.bt.get_consecutive_blocks(
             self.constants,
             1,
             current_block,
             10,
             reward_puzzlehash=request.puzzle_hash,
             transaction_data_at_height=dict_h,
+            seed=token_bytes(),
+            fees=uint64(fees),
         )
         new_lca = more_blocks[-1]
 
@@ -178,7 +160,7 @@ class FullNodeSimulator(FullNode):
         current_blocks = await self.get_current_blocks(top_tip)
         block_count = new_index - old_index
 
-        more_blocks = bt.get_consecutive_blocks(
+        more_blocks = self.bt.get_consecutive_blocks(
             self.constants,
             block_count,
             current_blocks[:old_index],

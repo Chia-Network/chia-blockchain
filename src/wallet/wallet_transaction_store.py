@@ -27,18 +27,19 @@ class WalletTransactionStore:
         self.db_connection = connection
         await self.db_connection.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS transaction_record("
-                f" transaction_record blob,"
-                f" bundle_id text PRIMARY KEY,"
-                f" confirmed_at_index int,"
-                f" created_at_time bigint,"
-                f" to_puzzle_hash text,"
-                f" amount bigint,"
-                f" fee_amount bigint,"
-                f" incoming int,"
-                f" confirmed int,"
-                f" sent int,"
-                f" wallet_id int)"
+                "CREATE TABLE IF NOT EXISTS transaction_record("
+                " transaction_record blob,"
+                " bundle_id text PRIMARY KEY,"
+                " confirmed_at_index bigint,"
+                " created_at_time bigint,"
+                " to_puzzle_hash text,"
+                " amount bigint,"
+                " fee_amount bigint,"
+                " incoming int,"
+                " confirmed int,"
+                " sent int,"
+                " wallet_id bigint,"
+                " trade_id text)"
             )
         )
 
@@ -93,7 +94,7 @@ class WalletTransactionStore:
         """
 
         cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO transaction_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 bytes(record),
                 record.name().hex(),
@@ -106,6 +107,7 @@ class WalletTransactionStore:
                 int(record.confirmed),
                 record.sent,
                 record.wallet_id,
+                record.trade_id,
             ),
         )
         await cursor.close()
@@ -137,34 +139,35 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=current.sent_to,
+            trade_id=None,
         )
         await self.add_transaction_record(tx)
 
     async def unconfirmed_with_removal_coin(
         self, removal_id: bytes32
-    ) -> Optional[TransactionRecord]:
+    ) -> List[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
-
+        result = []
         all_unconfirmed: List[TransactionRecord] = await self.get_all_unconfirmed()
         for record in all_unconfirmed:
             for coin in record.removals:
                 if coin.name() == removal_id:
-                    return record
+                    result.append(record)
 
-        return None
+        return result
 
-    async def unconfirmed_with_addition_coin(
-        self, removal_id: bytes32
-    ) -> Optional[TransactionRecord]:
+    async def tx_with_addition_coin(
+        self, removal_id: bytes32, wallet_id: int
+    ) -> List[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
-
-        all_unconfirmed: List[TransactionRecord] = await self.get_all_unconfirmed()
-        for record in all_unconfirmed:
+        result = []
+        all: List[TransactionRecord] = await self.get_all_transactions(wallet_id)
+        for record in all:
             for coin in record.additions:
                 if coin.name() == removal_id:
-                    return record
+                    result.append(record)
 
-        return None
+        return result
 
     async def increment_sent(
         self,
@@ -172,23 +175,25 @@ class WalletTransactionStore:
         name: str,
         send_status: MempoolInclusionStatus,
         err: Optional[Err],
-    ):
+    ) -> bool:
         """
         Updates transaction sent count (Full Node has received spend_bundle and sent ack).
         """
 
         current: Optional[TransactionRecord] = await self.get_transaction_record(id)
         if current is None:
-            return
-
-        # Don't increment count if it's already sent to othis peer
-        if name in current.sent_to:
-            return
+            return False
 
         sent_to = current.sent_to.copy()
 
         err_str = err.name if err is not None else None
-        sent_to.append((name, uint8(send_status.value), err_str))
+        append_data = (name, uint8(send_status.value), err_str)
+
+        # Don't increment count if it's already sent to othis peer
+        if append_data in sent_to:
+            return False
+
+        sent_to.append(append_data)
 
         tx: TransactionRecord = TransactionRecord(
             confirmed_at_index=current.confirmed_at_index,
@@ -204,32 +209,35 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=sent_to,
+            trade_id=None,
         )
 
         await self.add_transaction_record(tx)
+        return True
 
-    async def set_not_sent(self, id: bytes32):
+    async def tx_reorged(self, id: bytes32):
         """
-        Updates transaction sent count to 0.
+        Updates transaction sent count to 0 and resets confirmation data
         """
 
         current: Optional[TransactionRecord] = await self.get_transaction_record(id)
         if current is None:
             return
         tx: TransactionRecord = TransactionRecord(
-            confirmed_at_index=current.confirmed_at_index,
+            confirmed_at_index=uint32(0),
             created_at_time=current.created_at_time,
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
             fee_amount=current.fee_amount,
             incoming=current.incoming,
-            confirmed=current.confirmed,
+            confirmed=False,
             sent=uint32(0),
             spend_bundle=current.spend_bundle,
             additions=current.additions,
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=[],
+            trade_id=None,
         )
         await self.add_transaction_record(tx)
 
@@ -237,7 +245,6 @@ class WalletTransactionStore:
         """
         Checks DB and cache for TransactionRecord with id: id and returns it.
         """
-
         if id.hex() in self.tx_record_cache:
             return self.tx_record_cache[id.hex()]
         cursor = await self.db_connection.execute(
@@ -256,7 +263,11 @@ class WalletTransactionStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE sent<? and confirmed=?", (4, 0,)
+            "SELECT * from transaction_record WHERE sent<? and confirmed=?",
+            (
+                4,
+                0,
+            ),
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -294,7 +305,10 @@ class WalletTransactionStore:
 
         cursor = await self.db_connection.execute(
             "SELECT * from transaction_record WHERE confirmed=? and wallet_id=?",
-            (0, wallet_id,),
+            (
+                0,
+                wallet_id,
+            ),
         )
         rows = await cursor.fetchall()
         await cursor.close()
