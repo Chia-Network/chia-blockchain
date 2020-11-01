@@ -159,13 +159,14 @@ class BlockTools:
         self.finished_slots: Optional[List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]] = None
         self.ips: uint64 = uint64(0)
         self.deficit = 0
-        self.number_iters: uint64 = uint64(0)
-        self.proof_of_space = None
-        self.quality = 0
+        self.last_challenge_proof_of_space = None
+        self.curr_proof_of_space = None
+        self.quality: Optional[bytes32] = None
         self.plot_pk = None
         self.curr_slot_iters = 0
         self.next_slot_iters = 0
-        self.difficulty = 0
+        self.difficulty: Optional[uint128] = None
+        self.previous_generators_root: bytes32 = None
 
         farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in self.all_sks]
         self.match_str = None
@@ -221,6 +222,7 @@ class BlockTools:
                 self.height_to_hash,
                 self.sub_blocks,
                 prev_block.header_hash,
+                new_slot,
             )
 
     def handle_end_of_sub_epoch(self, prev_block):
@@ -250,7 +252,7 @@ class BlockTools:
         if block_list is None or len(block_list) == 0:
             genesis = self.create_genesis_block(test_constants, seed)
             self.difficulty = test_constants.DIFFICULTY_STARTING
-            self.ips = test_constants.IPS_STARTING
+            self.ips = uint64(test_constants.IPS_STARTING)
             self.chain_head = genesis
             self.deficit = 5
             block_list = List[FullBlock]
@@ -278,9 +280,14 @@ class BlockTools:
             prev_block = block_list[-1]
             self.sub_blocks[prev_block.get_hash()] = prev_block.get_sub_block_record()
             self.height_to_hash[prev_block.height] = prev_block.get_hash()
+
+            number_iters: uint64 = pot_iterations.calculate_iterations(
+                test_constants, self.last_challenge_proof_of_space, self.difficulty
+            )
+
             new_slot = False
             # check is new slot
-            if self.number_iters > self.next_slot_iters:
+            if number_iters > self.next_slot_iters:
                 new_slot = True
                 self.curr_slot_iters = self.next_slot_iters
                 self.next_slot_iters = get_next_slot_iters(
@@ -311,7 +318,7 @@ class BlockTools:
 
                 challenge_slot = ChallengeSlot(
                     self.prev_subepoch_summary_hash,
-                    self.proof_of_space,
+                    self.last_challenge_proof_of_space,
                     prev_block.reward_chain_sub_block.challenge_chain_icp_vdf,
                     prev_block.reward_chain_sub_block.challenge_chain_icp_sig,
                     prev_block.reward_chain_sub_block.challenge_chain_ip_vdf,
@@ -325,20 +332,33 @@ class BlockTools:
 
                 # proof of space
                 (
-                    self.number_iters,
-                    self.proof_of_space,
+                    self.curr_proof_of_space,
                     self.quality,
                     self.plot_pk,
                 ) = self.get_prams_from_plots(test_constants, std_hash(end_of_slot), seed)
 
-                self.quality = self.proof_of_space.verify_and_get_quality_string(
+                self.quality = self.curr_proof_of_space.last_challenge_proof_of_space.verify_and_get_quality_string(
                     test_constants,
                     prev_block.reward_chain_sub_block.challenge_chain_icp_vdf.output.get_hash(),
                     prev_block.reward_chain_sub_block.challenge_chain_icp_sig,
                 )
 
             # if valid PoSpace
-            if self.quality != None:
+            if self.quality is not None:
+                required_iters: uint64 = calculate_iterations_quality(
+                    self.quality, self.curr_proof_of_space.size, self.difficulty
+                )
+
+                # if we have deficit, subtract one
+                if self.deficit > 0:
+                    self.deficit = self.deficit - 1
+
+                # if overflow update num of overflow blocks
+                overflow = False
+                if is_overflow_sub_block(test_constants, self.ips, required_iters):
+                    self.num_sub_blocks_overflow = self.num_sub_blocks_overflow + 1
+                    overflow = True
+
                 block = self.create_next_block(
                     test_constants,
                     fees,
@@ -348,11 +368,9 @@ class BlockTools:
                     timestamp,
                     reward_puzzlehash,
                     new_slot,
+                    required_iters,
+                    overflow,
                 )
-
-                # keep track of deficit
-                if self.deficit > 0:
-                    self.deficit = self.deficit - 1
 
                 # zero finish slots
                 self.finished_slots = List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]
@@ -362,6 +380,7 @@ class BlockTools:
                     self.sub_blocks = Dict[bytes32, SubBlockRecord]
                     # new challenge chain block, reset deficit
                     self.deficit = 5
+                    self.last_challenge_proof_of_space = self.curr_proof_of_space
 
                 block_list.append(block)
 
@@ -375,20 +394,23 @@ class BlockTools:
         Creates the genesis block with the specified details.
         """
 
-        (self.number_iters, self.proof_of_space, self.quality, self.plot_pk,) = self.get_prams_from_plots(
-            test_constants, test_constants.FIRST_RC_CHALLENGE, test_constants.DIFFICULTY_STARTING, seed
+        (self.last_challenge_proof_of_space, self.quality, self.plot_pk,) = self.get_prams_from_plots(
+            test_constants, test_constants.FIRST_RC_CHALLENGE, test_constants.DIFFICULTY_STARTING
         )
 
         required_iters: uint64 = calculate_iterations_quality(
-            self.quality, self.proof_of_space.size, test_constants.DIFFICULTY_STARTING
+            self.quality, self.last_challenge_proof_of_space.size, test_constants.DIFFICULTY_STARTING
         )
 
         icp_iters: uint64 = calculate_icp_iters(test_constants, uint64(test_constants.IPS_STARTING), required_iters)
 
         ip_iters: uint64 = calculate_ip_iters(test_constants, uint64(test_constants.IPS_STARTING), required_iters)
+        number_iters: uint64 = pot_iterations.calculate_iterations(
+            test_constants, self.last_challenge_proof_of_space, self.difficulty
+        )
 
         cc_icp_output, cc_ip_output, rc_icp_output, rc_ip_output = get_vdf_outputs(
-            self.number_iters,
+            number_iters,
             test_constants.FIRST_CC_CHALLENGE,
             test_constants.FIRST_RC_CHALLENGE,
             ClassgroupElement.get_default_element(),
@@ -437,8 +459,8 @@ class BlockTools:
 
         rc_sub_block = RewardChainSubBlock(
             test_constants.DIFFICULTY_STARTING,
-            self.number_iters,
-            self.proof_of_space,
+            number_iters,
+            self.last_challenge_proof_of_space,
             cc_ip_vdf,
             cc_icp_vdf,
             cc_icp_signature,
@@ -465,7 +487,6 @@ class BlockTools:
     def create_next_block(
         self,
         test_constants: ConsensusConstants,
-        difficulty: int,
         fees: uint64,
         head: FullBlock,
         transactions: Optional[Program],
@@ -473,13 +494,12 @@ class BlockTools:
         timestamp: uint64,
         reward_puzzlehash: bytes32,
         new_slot: bool,
+        required_iters: uint64,
+        overflow: bool,
     ) -> (FullBlock, bool):
         """
         Creates the next block with the specified details.
         """
-        required_iters: uint64 = calculate_iterations_quality(self.quality, self.proof_of_space.size, difficulty)
-
-        overflow = is_overflow_sub_block(test_constants, self.ips, required_iters)
 
         # use default element if new slot
         if new_slot:
@@ -489,8 +509,12 @@ class BlockTools:
             cc_vdf_input = head.reward_chain_sub_block.challenge_chain_ip_vdf.output
             rc_vdf_challenge = self.sub_blocks[self.chain_head.prev_header_hash]
 
+        number_iters: uint64 = pot_iterations.calculate_iterations(
+            test_constants, self.last_challenge_proof_of_space, self.difficulty
+        )
+
         cc_icp_output, cc_ip_output, rc_icp_output, rc_ip_output = get_vdf_outputs(
-            std_hash(new_slot), cc_vdf_input, test_constants
+            number_iters, std_hash(new_slot), cc_vdf_input, test_constants
         )
 
         icp_iters: uint64 = calculate_icp_iters(test_constants, self.ips, required_iters)
@@ -505,9 +529,9 @@ class BlockTools:
         rc_icp_sig: G2Element = self.get_plot_signature(head, self.plot_pk)
 
         reward_chain_sub_block = RewardChainSubBlock(
-            head.weight + difficulty,
-            self.number_iters,
-            self.proof_of_space,
+            head.weight + self.difficulty,
+            number_iters,
+            self.curr_proof_of_space,
             cc_ip_vdf,
             cc_icp_vdf,
             cc_icp_signature,
@@ -517,29 +541,27 @@ class BlockTools:
         )
 
         foliage_sub_block, foliage_block, transactions_info, transactions_generator = self.create_foliage(
-            self.tx_height,
             fees,
             aggsig,
             transactions,
             block_rewards,  # todo
-            self.plot_pk,
-            self.prev_foliage_block,
-            head.get_hash(),
+            head,
             timestamp,
-            self.challenge_chain_head.get_hash(),
             head.reward_chain_sub_block.get_unfinished().get_hash(),
             is_transaction_block(
                 overflow,
-                self.number_iters,
+                number_iters,
                 ip_iters,
                 icp_iters,
                 self.curr_slot_iters,
                 head.total_iters,
             ),
             reward_puzzlehash,
+            self.curr_proof_of_space,
         )
 
         self.prev_foliage_block = foliage_block
+        self.previous_generators_root = transactions_generator.get_tree_hash()
 
         full_block: FullBlock = FullBlock(
             finished_slots=self.finished_slots,
@@ -558,23 +580,23 @@ class BlockTools:
 
     def create_foliage(
         self,
-        height: uint32,
         fees: uint64,
         aggsig: G2Element,
         transactions: Program,
         reward_claims_incorporated: List[Coin],
-        plot_pk: G2Element,
-        prev_foliage_block: FoliageBlock,
+        prev_block: FullBlock,
         reward_block_hash: bytes32,
         timestamp: uint64,
-        prev_block_hash,
         unfinished_reward_block_hash: bytes32,
         is_transaction: bool,
+        proof_of_space: ProofOfSpace,
         reward_puzzlehash: bytes32 = None,
     ) -> (FoliageSubBlock, FoliageBlock, TransactionsInfo, Program):
 
         # Use the extension data to create different blocks based on header hash
-        # extension_data: bytes32 = bytes32([random.randint(0, 255) for _ in range(32)])  # todo
+        # extension_data: bytes32 = bytes32([random.randint(0, 255) for _ in range(32)])  # todo start from same seed always
+        height = uint32(len(self.height_to_hash))
+
         extension_data = bytes32("todo")
 
         cost: uint64 = uint64(0)
@@ -635,7 +657,7 @@ class BlockTools:
         filter_hash = std_hash(encoded)
 
         pool_target = PoolTarget(pool_ph, uint32(height))
-        pool_target_signature = self.get_pool_key_signature(pool_target, self.proof_of_space.pool_public_key)
+        pool_target_signature = self.get_pool_key_signature(pool_target, proof_of_space.pool_public_key)
         assert pool_target_signature is not None
         final_aggsig: G2Element = pool_target_signature
         if aggsig is not None:
@@ -649,24 +671,26 @@ class BlockTools:
             extension_data,
         )
 
-        plot_key_signature: G2Element = self.get_plot_signature(foliage_sub_block_data, plot_pk)
+        signed_foliage_sub_block_data: G2Element = self.get_plot_signature(foliage_sub_block_data, self.plot_pk)
+        signed_prev_foliage_sub_block: G2Element = self.get_plot_signature(prev_block.foliage_block, self.plot_pk)
 
         foliage_sub_block = FoliageSubBlock(
-            prev_foliage_block.get_hash(),
+            prev_block.get_hash(),
             reward_block_hash,
-            is_transaction,
             foliage_sub_block_data,
-            plot_key_signature,
+            signed_foliage_sub_block_data,
+            prev_block.foliage_block.get_hash(),
+            signed_prev_foliage_sub_block,
         )
 
         transactions_info_hash = None
         if is_transaction:
             transactions_info_hash = TransactionsInfo(
-                generator_hash, final_aggsig, fees, cost, reward_claims_incorporated
+                self.previous_generators_root, generator_hash, final_aggsig, fees, cost, reward_claims_incorporated
             )
 
         foliage_block = FoliageBlock(
-            prev_block_hash,
+            prev_block.get_hash(),
             timestamp,
             filter_hash,
             additions_root,
@@ -722,7 +746,7 @@ class BlockTools:
         if self.real_plots:
             print(f"Performing {number_iters} VDF iterations")
 
-        return number_iters, proof_of_space, selected_quality, plot_pk
+        return proof_of_space, selected_quality, plot_pk
 
 
 def get_end_of_slot_proofs(curr_slot_iters, challnge, test_constants):
