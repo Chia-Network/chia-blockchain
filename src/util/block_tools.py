@@ -507,7 +507,9 @@ class BlockTools:
             rc_vdf_challenge = self.chain_head.finished_slots[-1][1].get_hash()
         else:
             cc_vdf_input = head.reward_chain_sub_block.challenge_chain_ip_vdf.output
-            rc_vdf_challenge = self.sub_blocks[self.chain_head.prev_header_hash]
+            rc_vdf_challenge = head.reward_chain_sub_block.reward_chain_ip_vdf.output.get_hash()
+
+        cc_vdf_challenge = self.finished_slots[-1][0].get_hash()
 
         number_iters: uint64 = pot_iterations.calculate_iterations(
             test_constants, self.last_challenge_proof_of_space, self.difficulty
@@ -520,8 +522,8 @@ class BlockTools:
         icp_iters: uint64 = calculate_icp_iters(test_constants, self.ips, required_iters)
         ip_iters: uint64 = calculate_ip_iters(test_constants, self.ips, required_iters)
 
-        cc_icp_vdf: VDFInfo = get_challenge_chain_icp_vdf(head, icp_iters, cc_vdf_input, cc_icp_output)
-        cc_ip_vdf: VDFInfo = get_challenge_chain_ip_vdf(head, ip_iters, cc_vdf_input, cc_ip_output)
+        cc_icp_vdf: VDFInfo = get_challenge_chain_icp_vdf(cc_vdf_challenge, icp_iters, cc_vdf_input, cc_icp_output)
+        cc_ip_vdf: VDFInfo = get_challenge_chain_ip_vdf(cc_vdf_challenge, ip_iters, cc_vdf_input, cc_ip_output)
         cc_icp_signature: G2Element = self.get_plot_signature(self.chain_head, self.plot_pk)
 
         rc_icp_vdf: VDFInfo = get_reward_chain_icp_vdf(rc_vdf_challenge, icp_iters, rc_icp_output)
@@ -822,13 +824,12 @@ def get_plot_dir():
 
 
 def get_challenge_chain_icp_vdf(
-    block: FullBlock, icp_iters: uint64, input: ClassgroupElement, output: ClassgroupElement
+    challenge: bytes32, icp_iters: uint64, input: ClassgroupElement, output: ClassgroupElement
 ) -> Optional[VDFInfo]:
     if icp_iters == 0:
         return None
-    cc_vdf_challenge: bytes32 = block.finished_slots[-1][0].get_hash()
     return VDFInfo(
-        challenge_hash=cc_vdf_challenge,
+        challenge_hash=challenge,
         input=input,
         number_of_iterations=icp_iters,
         output=output,
