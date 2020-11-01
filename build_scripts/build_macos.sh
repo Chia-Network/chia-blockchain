@@ -12,7 +12,7 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
 npm install electron-packager -g
-npm install electron/electron-osx-sign#master --save-dev -g
+npm install electron/electron-osx-sign #master --save-dev -g
 
 echo "Create dist/"
 sudo rm -rf dist
@@ -27,9 +27,13 @@ cd electron-react || exit
 
 echo "npm build"
 npm install
-npm run build
+LAST_EXIT_CODE=$?
+if [ "$LAST_EXIT_CODE" -ne 0 ]; then
+    >&2 echo "npm run build failed!"
+    exit $LAST_EXIT_CODE
+fi
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain --appVersion=$CHIA_INSTALLER_VERSION
-electron-osx-sign Chia-darwin-x64/Chia.app --no-gatekeeper-assess  --platform=darwin  --hardened-runtime --provisioning-profile=chiablockchain.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
+electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
 mv Chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts || exit
 
