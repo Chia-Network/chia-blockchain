@@ -7,20 +7,16 @@ from typing import List, Optional
 
 from src.server.connection import NodeType
 from src.types.header_block import HeaderBlock
-from src.rpc.rpc_client import RpcClient
+from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
+from src.util.config import load_config
+from src.util.default_root import DEFAULT_ROOT_PATH
+from src.util.chech32 import encode_puzzle_hash
 
 
-def show_parser(parser):
+def make_parser(parser):
 
-    parser.add_argument(
-        "-b",
-        "--block_header_hash",
-        help="Look up a block by block header hash string.",
-        type=str,
-        default="",
-    )
     parser.add_argument(
         "-s",
         "--state",
@@ -30,6 +26,7 @@ def show_parser(parser):
         const=True,
         default=False,
     )
+
     parser.add_argument(
         "-c",
         "--connections",
@@ -41,21 +38,19 @@ def show_parser(parser):
     )
 
     parser.add_argument(
-        "-p",
-        "--rpc-port",
-        help=f"Set the port where the Full Node is hosting the RPC interface. See the rpc_port "
-        f"under full_node in config.yaml. Defaults to 8555",
-        type=int,
-        default=8555,
+        "-b",
+        "--block-by-header-hash",
+        help="Look up a block by block header hash.",
+        type=str,
+        default="",
     )
 
     parser.add_argument(
-        "-e",
-        "--exit-node",
-        help="Shut down the running Full Node",
-        nargs="?",
-        const=True,
-        default=False,
+        "-bh",
+        "--block-header-hash-by-height",
+        help="Look up a block header hash by block height.",
+        type=str,
+        default="",
     )
 
     parser.add_argument(
@@ -73,50 +68,86 @@ def show_parser(parser):
         type=str,
         default="",
     )
+
+    parser.add_argument(
+        "-e",
+        "--exit-node",
+        help="Shut down the running Full Node",
+        nargs="?",
+        const=True,
+        default=False,
+    )
+
+    parser.add_argument(
+        "-p",
+        "--rpc-port",
+        help="Set the port where the Full Node is hosting the RPC interface."
+        + " See the rpc_port under full_node in config.yaml."
+        + "Defaults to 8555",
+        type=int,
+        default=8555,
+    )
+
+    parser.add_argument(
+        "-wp",
+        "--wallet-rpc-port",
+        help="Set the port where the Wallet is hosting the RPC interface."
+        + " See the rpc_port under wallet in config.yaml."
+        + "Defaults to 9256",
+        type=int,
+        default=9256,
+    )
+
     parser.set_defaults(function=show)
 
 
 async def show_async(args, parser):
 
-    # print(args)
-    try:
-        client = await RpcClient.create(args.rpc_port)
+    # TODO read configuration for rpc_port instead of assuming default
 
-        # print (dir(client))
-        # TODO: Add other rpc calls
-        # TODO: pretty print response
+    try:
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        self_hostname = config["self_hostname"]
+        if "rpc_port" not in args or args.rpc_port is None:
+            rpc_port = config["full_node"]["rpc_port"]
+        else:
+            rpc_port = args.rpc_port
+        client = await FullNodeRpcClient.create(self_hostname, rpc_port)
+
         if args.state:
             blockchain_state = await client.get_blockchain_state()
             lca_block = blockchain_state["lca"]
             tips = blockchain_state["tips"]
             difficulty = blockchain_state["difficulty"]
             ips = blockchain_state["ips"]
-            sync_mode = blockchain_state["sync_mode"]
+            sync_mode = blockchain_state["sync"]["sync_mode"]
             total_iters = lca_block.data.total_iters
             num_blocks: int = 10
 
             if sync_mode:
-                sync_max_block = await client.get_heaviest_block_seen()
+                sync_max_block = blockchain_state["sync"]["sync_tip_height"]
+                sync_current_block = blockchain_state["sync"]["sync_progress_height"]
                 # print (max_block)
                 print(
-                    "Current Blockchain Status. Full Node Syncing to",
-                    sync_max_block.data.height,
+                    "Current Blockchain Status: Full Node syncing to",
+                    sync_max_block,
+                    "\nCurrently synched to tip:",
+                    sync_current_block,
                 )
             else:
-                print("Current Blockchain Status. Full Node Synced")
-            print("Current least common ancestor ", lca_block.header_hash)
-            # print ("LCA time",time.ctime(lca_block.data.timestamp),"LCA height:",lca_block.height)
+                print("Current Blockchain Status: Full Node Synced")
+            print("Latest Common Ancestor:\n    ", lca_block.header_hash)
             lca_time = struct_time(localtime(lca_block.data.timestamp))
+            # Should auto format the align right of LCA height
             print(
-                "LCA time",
+                "     LCA time:",
                 time.strftime("%a %b %d %Y %T %Z", lca_time),
-                "LCA height:",
+                "       LCA height:",
                 lca_block.height,
             )
             print("Heights of tips: " + str([h.height for h in tips]))
             print(f"Current difficulty: {difficulty}")
             print(f"Current VDF iterations per second: {ips:.0f}")
-            # print("LCA data:\n", lca_block.data)
             print("Total iterations since genesis:", total_iters)
             print("")
             heads: List[HeaderBlock] = tips
@@ -151,15 +182,15 @@ async def show_async(args, parser):
                     )
                 else:
                     print("", latest_blocks_labels[i])
-            # if called together with other arguments, leave a blank line
+            # if called together with connections, leave a blank line
             if args.connections:
                 print("")
         if args.connections:
             connections = await client.get_connections()
             print("Connections")
             print(
-                f"Type      IP                                      Ports      NodeID        Last Connect"
-                f"       MB Up|Dwn"
+                "Type      IP                                      Ports      NodeID        Last Connect"
+                + "       MiB Up|Dwn"
             )
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
@@ -176,7 +207,7 @@ async def show_async(args, parser):
                     f"{mb_down:7.1f}|{mb_up:<7.1f}"
                 )
                 print(con_str)
-            # if called together with other arguments, leave a blank line
+            # if called together with state, leave a blank line
             if args.state:
                 print("")
         if args.exit_node:
@@ -195,7 +226,7 @@ async def show_async(args, parser):
             print(f"Connecting to {ip}, {port}")
             try:
                 await client.open_connection(ip, int(port))
-            except BaseException:
+            except Exception:
                 # TODO: catch right exception
                 print(f"Failed to connect to {ip}:{port}")
         if args.remove_connection:
@@ -211,7 +242,7 @@ async def show_async(args, parser):
                         )
                         try:
                             await client.close_connection(con["node_id"])
-                        except BaseException:
+                        except Exception:
                             result_txt = (
                                 f"Failed to disconnect NodeID {args.remove_connection}"
                             )
@@ -221,22 +252,60 @@ async def show_async(args, parser):
                     elif result_txt == "":
                         result_txt = f"NodeID {args.remove_connection}... not found."
             print(result_txt)
-        elif args.block_header_hash != "":
-            block = await client.get_block(hexstr_to_bytes(args.block_header_hash))
-            # print(dir(block))
-            if block is not None:
-                print("Block header:")
-                print(block.header)
-                block_time = struct_time(localtime(block.header.data.timestamp))
-                print("Block time:", time.strftime("%a %b %d %Y %T %Z", block_time))
+        if args.block_header_hash_by_height != "":
+            block_header = await client.get_header_by_height(
+                args.block_header_hash_by_height
+            )
+            if block_header is not None:
+                block_header_string = str(block_header.get_hash())
+                print(
+                    f"Header hash of block {args.block_header_hash_by_height}: {block_header_string}"
+                )
             else:
-                print("Block hash", args.block_header_hash, "not found.")
+                print("Block height", args.block_header_hash_by_height, "not found.")
+        if args.block_by_header_hash != "":
+            block = await client.get_block(hexstr_to_bytes(args.block_by_header_hash))
+            # Would like to have a verbose flag for this
+            if block is not None:
+                prev_block_header_hash = block.header.data.prev_header_hash
+                prev_block_header = await client.get_block(prev_block_header_hash)
+                block_time = struct_time(localtime(block.header.data.timestamp))
+                block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
+                if block.header.data.aggregated_signature is None:
+                    aggregated_signature = block.header.data.aggregated_signature
+                else:
+                    aggregated_signature = block.header.data.aggregated_signature
+                print("Block", block.header.data.height, ":")
+                print(
+                    f"Header Hash            0x{args.block_by_header_hash}\n"
+                    f"Timestamp              {block_time_string}\n"
+                    f"Height                 {block.header.data.height}\n"
+                    f"Weight                 {block.header.data.weight}\n"
+                    f"Previous Block         0x{block.header.data.prev_header_hash}\n"
+                    f"Cost                   {block.header.data.cost}\n"
+                    f"Difficulty             {block.header.data.weight-prev_block_header.header.data.weight}\n"
+                    f"Total VDF Iterations   {block.header.data.total_iters}\n"
+                    f"Block VDF Iterations   {block.proof_of_time.number_of_iterations}\n"
+                    f"PoTime Witness Type    {block.proof_of_time.witness_type}\n"
+                    f"PoSpace 'k' Size       {block.proof_of_space.size}\n"
+                    f"Plot Public Key        0x{block.proof_of_space.plot_public_key}\n"
+                    f"Pool Public Key        0x{block.proof_of_space.pool_public_key}\n"
+                    f"Tx Filter Hash         {b'block.transactions_filter'.hex()}\n"
+                    f"Tx Generator Hash      {block.transactions_generator}\n"
+                    f"Coinbase Amount        {block.get_coinbase().amount/1000000000000}\n"
+                    f"Coinbase Address       {encode_puzzle_hash(block.get_coinbase().puzzle_hash)}\n"
+                    f"Fees Amount            {block.get_fees_coin().amount/1000000000000}\n"
+                    f"Fees Address           {encode_puzzle_hash(block.get_fees_coin().puzzle_hash)}\n"
+                    f"Aggregated Signature   {aggregated_signature}"
+                )
+            else:
+                print("Block with header hash", args.block_by_header_hash, "not found.")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
             print(f"Connection error. Check if full node is running at {args.rpc_port}")
         else:
-            print(f"Exception {e}")
+            print(f"Exception from 'show' {e}")
 
     client.close()
     await client.await_closed()

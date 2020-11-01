@@ -34,7 +34,7 @@ class RequestData:
 @cbor_message
 class RespondData:
     posting_url: str
-    pool_pubkey: PublicKey
+    pool_public_key: PublicKey
     partials_threshold: uint64
     coinbase_info: List[SignedCoinbase]
 

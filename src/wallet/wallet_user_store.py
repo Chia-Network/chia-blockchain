@@ -22,11 +22,11 @@ class WalletUserStore:
 
         await self.db_connection.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS users_wallets("
-                f"id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                f" name text,"
-                f" wallet_type int,"
-                f" data text)"
+                "CREATE TABLE IF NOT EXISTS users_wallets("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                " name text,"
+                " wallet_type int,"
+                " data text)"
             )
         )
 
@@ -47,7 +47,7 @@ class WalletUserStore:
         return self
 
     async def init_wallet(self):
-        all_wallets = await self.get_all_wallets()
+        all_wallets = await self.get_all_wallet_info_entries()
         if len(all_wallets) == 0:
             await self.create_wallet("Chia Wallet", WalletType.STANDARD_WALLET, "")
 
@@ -56,10 +56,20 @@ class WalletUserStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def create_wallet(self, name: str, wallet_type: WalletType, data: str):
+    async def create_wallet(
+        self, name: str, wallet_type: int, data: str, id: Optional[int] = None
+    ) -> Optional[WalletInfo]:
         cursor = await self.db_connection.execute(
             "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
-            (None, name, wallet_type.value, data),
+            (id, name, wallet_type, data),
+        )
+        await cursor.close()
+        await self.db_connection.commit()
+        return await self.get_last_wallet()
+
+    async def delete_wallet(self, id: int):
+        cursor = await self.db_connection.execute(
+            f"DELETE FROM users_wallets where id={id}"
         )
         await cursor.close()
         await self.db_connection.commit()
@@ -70,7 +80,7 @@ class WalletUserStore:
             (
                 wallet_info.id,
                 wallet_info.name,
-                wallet_info.type.value,
+                wallet_info.type,
                 wallet_info.data,
             ),
         )
@@ -87,7 +97,7 @@ class WalletUserStore:
 
         return await self.get_wallet_by_id(row[0])
 
-    async def get_all_wallets(self) -> List[WalletInfo]:
+    async def get_all_wallet_info_entries(self) -> List[WalletInfo]:
         """
         Return a set containing all wallets
         """
@@ -98,7 +108,7 @@ class WalletUserStore:
         result = []
 
         for row in rows:
-            result.append(WalletInfo(row[0], row[1], WalletType(row[2]), row[3]))
+            result.append(WalletInfo(row[0], row[1], row[2], row[3]))
 
         return result
 
@@ -116,4 +126,4 @@ class WalletUserStore:
         if row is None:
             return None
 
-        return WalletInfo(row[0], row[1], WalletType(row[2]), row[3])
+        return WalletInfo(row[0], row[1], row[2], row[3])

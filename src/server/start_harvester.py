@@ -1,50 +1,55 @@
-import asyncio
-import signal
-import logging
+import pathlib
 
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
+from typing import Dict
 
+from src.consensus.constants import ConsensusConstants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.harvester import Harvester
 from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
-from src.util.logging import initialize_logging
-from src.util.config import load_config, load_config_cli
-from src.util.setproctitle import setproctitle
+from src.util.config import load_config_cli
+from src.util.default_root import DEFAULT_ROOT_PATH
+from src.rpc.harvester_rpc_api import HarvesterRpcApi
+
+from src.server.start_service import run_service
+
+# See: https://bugs.python.org/issue29288
+u"".encode("idna")
+
+SERVICE_NAME = "harvester"
 
 
-async def main():
-    config = load_config_cli("config.yaml", "harvester")
-    try:
-        plot_config = load_config("plots.yaml")
-    except FileNotFoundError:
-        raise RuntimeError("Plots not generated. Run chia-create-plots")
+def service_kwargs_for_harvester(
+    root_path: pathlib.Path,
+    config: Dict,
+    consensus_constants: ConsensusConstants,
+) -> Dict:
+    connect_peers = [
+        PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])
+    ]
 
-    initialize_logging("Harvester %(name)-22s", config["logging"])
-    log = logging.getLogger(__name__)
-    setproctitle("chia_harvester")
+    api = Harvester(root_path, consensus_constants)
 
-    harvester = Harvester(config, plot_config)
-    server = ChiaServer(config["port"], harvester, NodeType.HARVESTER)
-    _ = await server.start_server(config["host"], None, config)
-
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
-
-    peer_info = PeerInfo(
-        harvester.config["farmer_peer"]["host"], harvester.config["farmer_peer"]["port"]
+    kwargs = dict(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.HARVESTER,
+        advertised_port=config["port"],
+        service_name=SERVICE_NAME,
+        server_listen_ports=[config["port"]],
+        connect_peers=connect_peers,
+        auth_connect_peers=True,
     )
-
-    _ = await server.start_client(peer_info, None, config)
-    await server.await_closed()
-    harvester._shutdown()
-    await harvester._await_shutdown()
-    log.info("Harvester fully closed.")
+    if config["start_rpc_server"]:
+        kwargs["rpc_info"] = (HarvesterRpcApi, config["rpc_port"])
+    return kwargs
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+def main():
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    kwargs = service_kwargs_for_harvester(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
+    return run_service(**kwargs)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,39 +1,42 @@
-import asyncio
-import signal
-import logging
+import pathlib
 
-try:
-    import uvloop
-except ImportError:
-    uvloop = None
+from typing import Dict
 
 from src.introducer import Introducer
 from src.server.outbound_message import NodeType
-from src.server.server import ChiaServer
-from src.util.logging import initialize_logging
 from src.util.config import load_config_cli
-from src.util.setproctitle import setproctitle
+from src.util.default_root import DEFAULT_ROOT_PATH
+
+from src.server.start_service import run_service
+
+# See: https://bugs.python.org/issue29288
+u"".encode("idna")
+
+SERVICE_NAME = "introducer"
 
 
-async def main():
-    config = load_config_cli("config.yaml", "introducer")
+def service_kwargs_for_introducer(
+    root_path: pathlib.Path,
+    config: Dict,
+) -> Dict:
+    api = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
 
-    initialize_logging("Introducer %(name)-21s", config["logging"])
-    log = logging.getLogger(__name__)
-    setproctitle("chia_introducer")
-
-    introducer = Introducer(config)
-    server = ChiaServer(config["port"], introducer, NodeType.INTRODUCER)
-    introducer.set_server(server)
-    _ = await server.start_server(config["host"], None, config)
-
-    asyncio.get_running_loop().add_signal_handler(signal.SIGINT, server.close_all)
-    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, server.close_all)
-
-    await server.await_closed()
-    log.info("Introducer fully closed.")
+    kwargs = dict(
+        root_path=root_path,
+        api=api,
+        node_type=NodeType.INTRODUCER,
+        advertised_port=config["port"],
+        service_name=SERVICE_NAME,
+        server_listen_ports=[config["port"]],
+    )
+    return kwargs
 
 
-if uvloop is not None:
-    uvloop.install()
-asyncio.run(main())
+def main():
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    kwargs = service_kwargs_for_introducer(DEFAULT_ROOT_PATH, config)
+    return run_service(**kwargs)
+
+
+if __name__ == "__main__":
+    main()

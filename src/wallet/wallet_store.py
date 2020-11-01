@@ -28,22 +28,22 @@ class WalletStore:
         self.db_connection = connection
         await self.db_connection.execute(
             (
-                f"CREATE TABLE IF NOT EXISTS coin_record("
-                f"coin_name text PRIMARY KEY,"
-                f" confirmed_index bigint,"
-                f" spent_index bigint,"
-                f" spent int,"
-                f" coinbase int,"
-                f" puzzle_hash text,"
-                f" coin_parent text,"
-                f" amount bigint,"
-                f" wallet_type int,"
-                f" wallet_id int)"
+                "CREATE TABLE IF NOT EXISTS coin_record("
+                "coin_name text PRIMARY KEY,"
+                " confirmed_index bigint,"
+                " spent_index bigint,"
+                " spent int,"
+                " coinbase int,"
+                " puzzle_hash text,"
+                " coin_parent text,"
+                " amount bigint,"
+                " wallet_type int,"
+                " wallet_id int)"
             )
         )
         await self.db_connection.execute(
-            f"CREATE TABLE IF NOT EXISTS block_records(header_hash text PRIMARY KEY, height int,"
-            f" in_lca_path tinyint, block blob)"
+            "CREATE TABLE IF NOT EXISTS block_records(header_hash text PRIMARY KEY, height int,"
+            " in_lca_path tinyint, timestamp int, block blob)"
         )
 
         # Useful for reorg lookups
@@ -71,6 +71,22 @@ class WalletStore:
             "CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)"
         )
 
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS header_hash on block_records(header_hash)"
+        )
+
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS timestamp on block_records(timestamp)"
+        )
+
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS height on block_records(height)"
+        )
+
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS in_lca_path on block_records(in_lca_path)"
+        )
+
         await self.db_connection.commit()
         self.coin_record_cache = dict()
         return self
@@ -95,7 +111,7 @@ class WalletStore:
                 str(record.coin.puzzle_hash.hex()),
                 str(record.coin.parent_coin_info.hex()),
                 record.coin.amount,
-                record.wallet_type.value,
+                record.wallet_type,
                 record.wallet_id,
             ),
         )
@@ -143,19 +159,36 @@ class WalletStore:
             )
         return None
 
-    async def get_coin_records_by_spent(
-        self, spent: bool, spend_before_height: Optional[uint32] = None
+    async def get_first_coin_height(self) -> Optional[uint32]:
+        """ Returns height of first confirmed coin"""
+        cursor = await self.db_connection.execute(
+            "SELECT MIN(confirmed_index) FROM coin_record;"
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+
+        if row is not None and row[0] is not None:
+            return uint32(row[0])
+
+        return None
+
+    async def get_unspent_coins_at_height(
+        self, height: Optional[uint32] = None
     ) -> Set[WalletCoinRecord]:
-        """ Returns set of CoinRecords that have not been spent yet. """
+        """
+        Returns set of CoinRecords that have not been spent yet. If a height is specified,
+        We can also return coins that were unspent at this height (but maybe spent later).
+        Finally, the coins must be confirmed at the height or less.
+        """
         coins = set()
-        if spend_before_height:
+        if height is not None:
             cursor = await self.db_connection.execute(
-                "SELECT * from coin_record WHERE spent=? OR spent_index>=?",
-                (int(spent), spend_before_height),
+                "SELECT * from coin_record WHERE (spent=? OR spent_index>?) AND confirmed_index<=?",
+                (0, height, height),
             )
         else:
             cursor = await self.db_connection.execute(
-                "SELECT * from coin_record WHERE spent=?", (int(spent),)
+                "SELECT * from coin_record WHERE spent=?", (0,)
             )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -170,16 +203,34 @@ class WalletStore:
             )
         return coins
 
-    async def get_coin_records_by_spent_and_wallet(
-        self, spent: bool, wallet_id: int
+    async def get_unspent_coins_for_wallet(
+        self, wallet_id: int
     ) -> Set[WalletCoinRecord]:
-        """ Returns set of CoinRecords that have not been spent yet. """
+        """ Returns set of CoinRecords that have not been spent yet for a wallet. """
         coins = set()
 
         cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=? and wallet_id=?",
-            (int(spent), wallet_id,),
+            "SELECT * from coin_record WHERE spent=0 and wallet_id=?",
+            (wallet_id,),
         )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        for row in rows:
+            coin = Coin(
+                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
+            )
+            coins.add(
+                WalletCoinRecord(
+                    coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
+                )
+            )
+        return coins
+
+    async def get_all_coins(self) -> Set[WalletCoinRecord]:
+        """ Returns set of all CoinRecords."""
+        coins = set()
+
+        cursor = await self.db_connection.execute("SELECT * from coin_record")
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
@@ -194,11 +245,13 @@ class WalletStore:
         return coins
 
     async def get_spendable_for_index(
-        self, index: uint32, wallet_id: int
+        self, index: int, wallet_id: int
     ) -> Set[WalletCoinRecord]:
-        """ Returns set of CoinRecords that have been confirmed before index height. """
+        """
+        Returns set of unspent coin records that are not coinbases, or if they are coinbases,
+        must have been confirmed at or before index.
+        """
         coins = set()
-        print("index,", index, "walelt id", wallet_id)
 
         cursor_coinbase_coins = await self.db_connection.execute(
             "SELECT * from coin_record WHERE spent=? and confirmed_index<=? and wallet_id=? and coinbase=?",
@@ -210,13 +263,17 @@ class WalletStore:
 
         cursor_regular_coins = await self.db_connection.execute(
             "SELECT * from coin_record WHERE spent=? and wallet_id=? and coinbase=?",
-            (0, wallet_id, 0,),
+            (
+                0,
+                wallet_id,
+                0,
+            ),
         )
 
         regular_rows = await cursor_regular_coins.fetchall()
         await cursor_regular_coins.close()
 
-        for row in coinbase_rows:
+        for row in list(coinbase_rows) + list(regular_rows):
             coin = Coin(
                 bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
             )
@@ -225,35 +282,13 @@ class WalletStore:
                     coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
                 )
             )
-
-        for row in regular_rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
-            )
-            coins.add(
-                WalletCoinRecord(
-                    coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
-                )
-            )
-
         return coins
-
-    async def get_unspent_coins(self) -> Dict[bytes32, Coin]:
-        """ Returns a dictionary of all unspent coins. """
-        result: Dict[bytes32, Coin] = {}
-        unspent_coin_records: Set[
-            WalletCoinRecord
-        ] = await self.get_coin_records_by_spent(False)
-
-        for record in unspent_coin_records:
-            result[record.name()] = record.coin
-
-        return result
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
         self, puzzle_hash: bytes32
     ) -> List[WalletCoinRecord]:
+        """Returns a list of all coin records with the given puzzle hash"""
         coins = set()
         cursor = await self.db_connection.execute(
             "SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),)
@@ -274,6 +309,7 @@ class WalletStore:
     async def get_coin_record_by_coin_id(
         self, coin_id: bytes32
     ) -> Optional[WalletCoinRecord]:
+        """Returns a coin records with the given name, if it exists"""
         cursor = await self.db_connection.execute(
             "SELECT * from coin_record WHERE coin_name=?", (coin_id.hex(),)
         )
@@ -291,6 +327,11 @@ class WalletStore:
         return coin_record
 
     async def rollback_lca_to_block(self, block_index):
+        """
+        Rolls back the blockchain to block_index. All blocks confirmed after this point
+        are removed from the LCA. All coins confirmed after this point are removed.
+        All coins spent after this point are set to unspent.
+        """
         # Update memory cache
         delete_queue: bytes32 = []
         for coin_name, coin_record in self.coin_record_cache.items():
@@ -338,38 +379,48 @@ class WalletStore:
         hash_to_br: Dict = {}
         max_height = -1
         for row in rows:
-            br = BlockRecord.from_bytes(row[3])
+            br = BlockRecord.from_bytes(row[4])
             hash_to_br[bytes.fromhex(row[0])] = br
             assert row[0] == br.header_hash.hex()
             assert row[1] == br.height
             if br.height > max_height:
                 max_height = br.height
         # Makes sure there's exactly one block per height
-        assert max_height == len(rows) - 1
+        assert max_height == len(list(rows)) - 1
         return hash_to_br
 
     async def add_block_record(self, block_record: BlockRecord, in_lca_path: bool):
+        """
+        Adds a block record to the database. This block record is assumed to be connected
+        to the chain, but it may or may not be in the LCA path.
+        """
         cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?, ?)",
             (
                 block_record.header_hash.hex(),
                 block_record.height,
                 in_lca_path,
+                block_record.timestamp,
                 bytes(block_record),
             ),
         )
         await cursor.close()
         await self.db_connection.commit()
 
-    async def get_block_record(self, header_hash: bytes32) -> BlockRecord:
+    async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
+        """Gets a block record from the database, if present"""
         cursor = await self.db_connection.execute(
             "SELECT * from block_records WHERE header_hash=?", (header_hash.hex(),)
         )
         row = await cursor.fetchone()
         await cursor.close()
-        return BlockRecord.from_bytes(row[1])
+        if row is not None:
+            return BlockRecord.from_bytes(row[4])
+        else:
+            return None
 
     async def add_block_to_path(self, header_hash: bytes32) -> None:
+        """Adds a block record to the LCA path."""
         cursor = await self.db_connection.execute(
             "UPDATE block_records SET in_lca_path=1 WHERE header_hash=?",
             (header_hash.hex(),),
@@ -383,7 +434,8 @@ class WalletStore:
         height. This is used during reorgs to rollback the current lca.
         """
         cursor = await self.db_connection.execute(
-            "UPDATE block_records SET in_lca_path=0 WHERE height>?", (from_height,),
+            "UPDATE block_records SET in_lca_path=0 WHERE height>?",
+            (from_height,),
         )
         await cursor.close()
         await self.db_connection.commit()

@@ -3,51 +3,60 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.1.15",  # Signature library
-    "cbor2==5.0.1",  # Used for network wire format
-    "clvm==0.4",  # contract language
-    "PyYAML==5.3",  # Used for config file format
-    "aiosqlite==0.11.0",  # asyncio wrapper for sqlite, to store blocks
-    "aiohttp==3.6.2",  # HTTP server for full node rpc
-    "colorlog==4.1.0",  # Adds color to logs
-    "chiavdf==0.12.2",  # timelord and vdf verification
-    "chiabip158==0.12",  # bip158-style wallet filters
-    "chiapos==0.12.3",  # proof of space
-    "sortedcontainers==2.1.0",  # For maintaining sorted mempools
+    "blspy==0.2.4",  # Signature library
+    "chiavdf==0.12.26",  # timelord and vdf verification
+    "chiabip158==0.16",  # bip158-style wallet filters
+    "chiapos==0.12.33",  # proof of space
+    "clvm==0.5.3",
+    "clvm_tools==0.1.6",
+    "aiohttp==3.6.3",  # HTTP server for full node rpc
+    "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@28cb5754deec562ac931da8fca799fb82df97a12#egg=aiosqlite",
+    # asyncio wrapper for sqlite, to store blocks
+    "bitstring==3.1.7",  # Binary data management library
+    "cbor2==5.1.2",  # Used for network wire format
+    "colorlog==4.4.0",  # Adds color to logs
+    "concurrent-log-handler==0.9.17",  # Concurrently log and rotate logs
+    "cryptography==3.1.1",  # Python cryptography library for TLS
+    "keyring==21.4.0",  # Store keys in MacOS Keychain, Windows Credential Locker
+    "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
+    "PyYAML==5.3.1",  # Used for config file format
+    "sortedcontainers==2.2.2",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
-    "clvm-tools==0.1.1",  # clvm compiler tools
 ]
 
 upnp_dependencies = [
-    "miniupnpc==2.0.2",  # Allows users to open ports on their router
+    "miniupnpc==2.1",  # Allows users to open ports on their router
 ]
 dev_dependencies = [
     "pytest",
+    "pytest-asyncio",
     "flake8",
     "mypy",
-    "isort",
-    "autoflake",
     "black",
-    "pytest-asyncio",
 ]
 
 kwargs = dict(
     name="chia-blockchain",
     author="Mariano Sorgente",
     author_email="mariano@chia.net",
-    description="Chia proof of space plotting, proving, and verifying (wraps C++)",
+    description="Chia blockchain full node, farmer, timelord, and wallet.",
+    url="https://chia.net/",
     license="Apache License",
     python_requires=">=3.7, <4",
     keywords="chia blockchain node",
     install_requires=dependencies,
     setup_requires=["setuptools_scm"],
     extras_require=dict(
-        uvloop=["uvloop"], dev=dev_dependencies, upnp=upnp_dependencies,
+        uvloop=["uvloop"],
+        dev=dev_dependencies,
+        upnp=upnp_dependencies,
     ),
     packages=[
+        "build_scripts",
         "src",
         "src.cmds",
         "src.consensus",
+        "src.daemon",
         "src.full_node",
         "src.protocols",
         "src.rpc",
@@ -58,37 +67,31 @@ kwargs = dict(
         "src.wallet",
         "src.wallet.puzzles",
         "src.wallet.rl_wallet",
+        "src.wallet.cc_wallet",
         "src.wallet.util",
-    ],
-    scripts=[
-        "scripts/_chia-common",
-        "scripts/chia-drop-db",
-        "scripts/chia-start-all",
-        "scripts/chia-start-farmer",
-        "scripts/chia-start-harvester",
-        "scripts/chia-start-introducer",
-        "scripts/chia-start-node",
-        "scripts/chia-start-sim",
-        "scripts/chia-start-timelord",
-        "scripts/chia-start-wallet-gui",
-        "scripts/chia-start-wallet-server",
-        "scripts/chia-stop-all",
+        "src.wallet.trading",
+        "src.ssl",
     ],
     entry_points={
         "console_scripts": [
-            "chia = src.cmds.cli:main",
-            "chia-check-plots = src.cmds.check_plots:main",
-            "chia-create-plots = src.cmds.create_plots:main",
-            "chia-generate-keys = src.cmds.generate_keys:main",
-            "chia-websocket-server = src.wallet.websocket_server:main",
+            "chia = src.cmds.chia:main",
+            "chia_wallet = src.server.start_wallet:main",
+            "chia_full_node = src.server.start_full_node:main",
+            "chia_harvester = src.server.start_harvester:main",
+            "chia_farmer = src.server.start_farmer:main",
+            "chia_introducer = src.server.start_introducer:main",
+            "chia_timelord = src.server.start_timelord:main",
+            "chia_timelord_launcher = src.timelord_launcher:main",
+            "chia_full_node_simulator = src.simulator.start_simulator:main",
         ]
     },
     package_data={
-        "src.util": ["initial-*.yaml"],
+        "src.util": ["initial-*.yaml", "english.txt"],
         "src.server": ["dummy.crt", "dummy.key"],
     },
     use_scm_version={"fallback_version": "unknown-no-.git-directory"},
     long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     zip_safe=False,
 )
 

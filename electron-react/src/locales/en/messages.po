@@ -1,0 +1,1514 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2020-09-21 21:27+0200\n"
+"Mime-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: en\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#: src/components/wallet/standard/WalletStandard.tsx:513
+msgid "AddressCard.address"
+msgstr "Address"
+
+#: src/components/wallet/standard/WalletStandard.tsx:517
+msgid "AddressCard.copy"
+msgstr "Copy"
+
+#: src/components/wallet/standard/WalletStandard.tsx:529
+msgid "AddressCard.newAddress"
+msgstr "New Address"
+
+#: src/components/wallet/standard/WalletStandard.tsx:505
+msgid "AddressCard.title"
+msgstr "Receive Address"
+
+#: src/components/router/Router.tsx:18
+msgid "Application.closing"
+msgstr "Closing down node and server"
+
+#: src/components/router/Router.tsx:23
+msgid "Application.connectingToWallet"
+msgstr "Connecting to wallet"
+
+#: src/components/router/Router.tsx:28
+msgid "Application.loggingIn"
+msgstr "Logging in"
+
+#: src/components/wallet/standard/WalletStandard.tsx:201
+msgid "BalanceCard.balance"
+msgstr "Balance"
+
+#: src/components/wallet/standard/WalletStandard.tsx:238
+msgid "BalanceCard.pendingBalance"
+msgstr "Pending Balance"
+
+#: src/components/wallet/standard/WalletStandard.tsx:240
+msgid "BalanceCard.pendingBalanceTooltip"
+msgstr "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
+
+#: src/components/wallet/standard/WalletStandard.tsx:253
+msgid "BalanceCard.pendingChange"
+msgstr "Pending Change"
+
+#: src/components/wallet/standard/WalletStandard.tsx:255
+msgid "BalanceCard.pendingChangeTooltip"
+msgstr "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
+
+#: src/components/wallet/standard/WalletStandard.tsx:245
+msgid "BalanceCard.pendingFarmingRewards"
+msgstr "Pending Farming Rewards"
+
+#: src/components/wallet/standard/WalletStandard.tsx:247
+msgid "BalanceCard.pendingFarmingRewardsTooltip"
+msgstr "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable. Farming rewards are frozen for 200 blocks."
+
+#: src/components/wallet/standard/WalletStandard.tsx:231
+msgid "BalanceCard.pendingTotalBalance"
+msgstr "Pending Total Balance"
+
+#: src/components/wallet/standard/WalletStandard.tsx:233
+msgid "BalanceCard.pendingTotalBalanceTooltip"
+msgstr "This is the total balance + pending balance: it it what your balance will be after all pending transactions are confirmed."
+
+#: src/components/wallet/standard/WalletStandard.tsx:211
+msgid "BalanceCard.spendableBalance"
+msgstr "Spendable Balance"
+
+#: src/components/wallet/standard/WalletStandard.tsx:211
+msgid "BalanceCard.spendableBalanceTooltip"
+msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transctions, and Chia that you have just spent but is not yet in the blockchain."
+
+#: src/components/wallet/standard/WalletStandard.tsx:205
+msgid "BalanceCard.totalBalance"
+msgstr "Total Balance"
+
+#: src/components/wallet/standard/WalletStandard.tsx:205
+msgid "BalanceCard.totalBalanceTooltip"
+msgstr "This is the total amount of Chia in the blockchain at the LCA block (latest common ancestor) that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+
+#: src/components/wallet/standard/WalletStandard.tsx:224
+msgid "BalanceCard.viewPendingBalances"
+msgstr "View pending balances"
+
+#: src/components/block/Block.jsx:196
+msgid "Block.blockVDFIterations"
+msgstr "Block VDF Iterations"
+
+#: src/components/block/Block.jsx:199
+msgid "Block.blockVDFIterationsTooltip"
+msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
+
+#: src/components/block/Block.jsx:244
+msgid "Block.coinbaseAmount"
+msgstr "Coinbase Amount"
+
+#: src/components/block/Block.jsx:247
+msgid "Block.coinbaseAmountTooltip"
+msgstr "The Chia block reward, goes to the pool (or farmer if not pooling)"
+
+#: src/components/block/Block.jsx:253
+msgid "Block.coinbasePuzzleHash"
+msgstr "Coinbase Puzzle Hash"
+
+#: src/components/block/Block.jsx:280
+msgid "Block.description"
+msgstr "Block at height {0} in the Chia blockchain"
+
+#: src/components/block/Block.jsx:182
+msgid "Block.difficulty"
+msgstr "Difficulty"
+
+#: src/components/block/Block.jsx:257
+msgid "Block.feesAmount"
+msgstr "Fees Amount"
+
+#: src/components/block/Block.jsx:260
+msgid "Block.feesAmountTooltip"
+msgstr "The total fees in this block, goes to the farmer"
+
+#: src/components/block/Block.jsx:266
+msgid "Block.feesPuzzleHash"
+msgstr "Fees Puzzle Hash"
+
+#: src/components/block/Block.jsx:149
+msgid "Block.headerHash"
+msgstr "Header hash"
+
+#: src/components/block/Block.jsx:163
+msgid "Block.height"
+msgstr "Height"
+
+#: src/components/block/Block.jsx:218
+msgid "Block.plotId"
+msgstr "Plot Id"
+
+#: src/components/block/Block.jsx:221
+msgid "Block.plotIdTooltip"
+msgstr "The seed used to create the plot, this depends on the pool pk and plot pk"
+
+#: src/components/block/Block.jsx:210
+msgid "Block.plotPublicKey"
+msgstr "Plot Public Key"
+
+#: src/components/block/Block.jsx:214
+msgid "Block.poolPublicKey"
+msgstr "Pool Public Key"
+
+#: src/components/block/Block.jsx:177
+msgid "Block.previousBlock"
+msgstr "Previous block"
+
+#: src/components/block/Block.jsx:206
+msgid "Block.proofOfSpaceSize"
+msgstr "Proof of Space Size"
+
+#: src/components/block/Block.jsx:153
+msgid "Block.timestamp"
+msgstr "Timestamp"
+
+#: src/components/block/Block.jsx:156
+msgid "Block.timestampTooltip"
+msgstr "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
+
+#: src/components/block/Block.jsx:276
+msgid "Block.title"
+msgstr "Block"
+
+#: src/components/block/Block.jsx:186
+msgid "Block.totalVDFIterations"
+msgstr "Total VDF Iterations"
+
+#: src/components/block/Block.jsx:189
+msgid "Block.totalVDFIterationsTooltip"
+msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
+
+#: src/components/block/Block.jsx:229
+msgid "Block.transactionsFilterHash"
+msgstr "Transactions Filter Hash"
+
+#: src/components/block/Block.jsx:237
+msgid "Block.transactionsGeneratorHash"
+msgstr "Transactions Generator Hash"
+
+#: src/components/block/Block.jsx:167
+msgid "Block.weight"
+msgstr "Weight"
+
+#: src/components/block/Block.jsx:170
+msgid "Block.weightTooltip"
+msgstr "Weight is the total added difficulty of all blocks up to and including this one"
+
+#: src/components/fullNode/FullNode.jsx:427
+msgid "BlocksCard.expectedFinishTime"
+msgstr "Expected finish time"
+
+#: src/components/fullNode/FullNode.jsx:418
+msgid "BlocksCard.headerHash"
+msgstr "Header Hash"
+
+#: src/components/fullNode/FullNode.jsx:421
+msgid "BlocksCard.height"
+msgstr "Height"
+
+#: src/components/fullNode/FullNode.jsx:424
+msgid "BlocksCard.timeCreated"
+msgstr "Time Created"
+
+#: src/components/fullNode/FullNode.jsx:406
+msgid "BlocksCard.title"
+msgstr "Blocks"
+
+#: src/components/wallet/create/WalletCreate.jsx:164
+msgid "CCListItems.title"
+msgstr "Coloured Coin Options"
+
+#: src/components/farmer/Farmer.jsx:288
+msgid "Challenges.bestEstimate"
+msgstr "Best estimate"
+
+#: src/components/farmer/Farmer.jsx:277
+msgid "Challenges.challengeHash"
+msgstr "Challenge hash"
+
+#: src/components/farmer/Farmer.jsx:280
+msgid "Challenges.height"
+msgstr "Height"
+
+#: src/components/farmer/Farmer.jsx:283
+msgid "Challenges.numberOfProofs"
+msgstr "Number of proofs"
+
+#: src/components/farmer/Farmer.jsx:265
+msgid "Challenges.title"
+msgstr "Challenges"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:194
+msgid "ColourCard.colour"
+msgstr "Colour:"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:210
+msgid "ColourCard.nickname"
+msgstr "Nickname"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:216
+msgid "ColourCard.rename"
+msgstr "Rename"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:185
+msgid "ColourCard.title"
+msgstr "Colour Info"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:584
+msgid "ColouredAddressCard.address"
+msgstr "Address"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:588
+msgid "ColouredAddressCard.copy"
+msgstr "Copy"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:600
+msgid "ColouredAddressCard.newAddress"
+msgstr "New Address"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:576
+msgid "ColouredAddressCard.title"
+msgstr "Receive Addresss"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:312
+msgid "ColouredBalanceCard.spendableBalance"
+msgstr "Spendable Balance"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:307
+msgid "ColouredBalanceCard.title"
+msgstr "Balance"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:311
+msgid "ColouredBalanceCard.totalBalance"
+msgstr "Total Balance"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:321
+msgid "ColouredBalanceCard.viewPendingBalances"
+msgstr "View pending balances..."
+
+#: src/components/wallet/coloured/WalletColoured.tsx:481
+msgid "ColouredHistoryCard.title"
+msgstr "History"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:430
+msgid "ColouredSendCard.address"
+msgstr "Address"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:442
+msgid "ColouredSendCard.amount"
+msgstr "Amount ({cc_unit})"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:459
+msgid "ColouredSendCard.farm"
+msgstr "Farm"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:449
+msgid "ColouredSendCard.fee"
+msgstr "Fee (TXCH)"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:464
+msgid "ColouredSendCard.send"
+msgstr "Send"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:415
+msgid "ColouredSendCard.title"
+msgstr "Create Transaction"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:528
+msgid "ColouredTransactionTable.amount"
+msgstr "Amount"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:509
+msgid "ColouredTransactionTable.confirmed"
+msgstr "Confirmed"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:522
+msgid "ColouredTransactionTable.date"
+msgstr "Date"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:531
+msgid "ColouredTransactionTable.fee"
+msgstr "Fee"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:504
+msgid "ColouredTransactionTable.incoming"
+msgstr "Incoming"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:497
+msgid "ColouredTransactionTable.noPreviousTransactions"
+msgstr "No previous transactions"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:506
+msgid "ColouredTransactionTable.outgoing"
+msgstr "Outgoing"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:509
+msgid "ColouredTransactionTable.pending"
+msgstr "Pending"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:525
+msgid "ColouredTransactionTable.status"
+msgstr "Status"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:519
+msgid "ColouredTransactionTable.to"
+msgstr "To"
+
+#: src/components/wallet/coloured/WalletColoured.tsx:516
+msgid "ColouredTransactionTable.type"
+msgstr "Type"
+
+#: src/components/connections/Connections.jsx:198
+msgid "Connections.connect"
+msgstr "Connect"
+
+#: src/components/connections/Connections.jsx:174
+msgid "Connections.connectToOtherPeersTitle"
+msgstr "Connect to other peers"
+
+#: src/components/connections/Connections.jsx:115
+msgid "Connections.connected"
+msgstr "Connected"
+
+#: src/components/connections/Connections.jsx:109
+msgid "Connections.connectionType"
+msgstr "Connection type"
+
+#: src/components/connections/Connections.jsx:124
+msgid "Connections.delete"
+msgstr "Delete"
+
+#: src/components/connections/Connections.jsx:100
+msgid "Connections.ipAddress"
+msgstr "Ip address"
+
+#: src/components/connections/Connections.jsx:181
+msgid "Connections.ipAddressHost"
+msgstr "Ip address / host"
+
+#: src/components/connections/Connections.jsx:120
+msgid "Connections.lastMessage"
+msgstr "Last message"
+
+#: src/components/connections/Connections.jsx:97
+msgid "Connections.nodeId"
+msgstr "Node Id"
+
+#: src/components/connections/Connections.jsx:103
+#: src/components/connections/Connections.jsx:187
+msgid "Connections.port"
+msgstr "Port"
+
+#: src/components/connections/Connections.jsx:85
+msgid "Connections.title"
+msgstr "Connections"
+
+#: src/components/connections/Connections.jsx:106
+msgid "Connections.upDown"
+msgstr "Up/Down"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:112
+msgid "CreateExistingCCWallet.colourString"
+msgstr "Colour String"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:138
+msgid "CreateExistingCCWallet.create"
+msgstr "Create"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:68
+msgid "CreateExistingCCWallet.enterValidFee"
+msgstr "Please enter a valid numeric fee"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:128
+msgid "CreateExistingCCWallet.fee"
+msgstr "Fee"
+
+#: src/components/wallet/create/createExistingColouredCoin.jsx:92
+msgid "CreateExistingCCWallet.title"
+msgstr "Create wallet for colour"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:120
+msgid "CreateNewCCWallet.amount"
+msgstr "Amount"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:143
+msgid "CreateNewCCWallet.create"
+msgstr "Create"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:67
+msgid "CreateNewCCWallet.enterValidAmount"
+msgstr "Please enter a valid numeric amount"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:77
+msgid "CreateNewCCWallet.enterValidFee"
+msgstr "Please enter a valid numeric fee"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:133
+msgid "CreateNewCCWallet.fee"
+msgstr "Fee"
+
+#: src/components/wallet/create/createNewColouredCoin.jsx:101
+msgid "CreateNewCCWallet.generateNewColour"
+msgstr "Generate New Colour"
+
+#: src/components/trading/CreateOffer.jsx:354
+msgid "CreateOffer.add"
+msgstr "Add"
+
+#: src/components/trading/CreateOffer.jsx:244
+msgid "CreateOffer.addTradePair"
+msgstr "Please add trade pair"
+
+#: src/components/trading/CreateOffer.jsx:343
+msgid "CreateOffer.amount"
+msgstr "Amount"
+
+#: src/components/trading/CreateOffer.jsx:266
+msgid "CreateOffer.availableOnlyFromElectron"
+msgstr "This feature is available only from electron app"
+
+#: src/components/trading/CreateOffer.jsx:303
+msgid "CreateOffer.buyOrSell"
+msgstr "Buy Or Sell"
+
+#: src/components/trading/CreateOffer.jsx:380
+msgid "CreateOffer.cancel"
+msgstr "Cancel"
+
+#: src/components/trading/CreateOffer.jsx:322
+msgid "CreateOffer.colour"
+msgstr "Colour"
+
+#: src/components/trading/CreateOffer.jsx:370
+msgid "CreateOffer.save"
+msgstr "Save"
+
+#: src/components/trading/CreateOffer.jsx:210
+msgid "CreateOffer.selectAmount"
+msgstr "Please select amount"
+
+#: src/components/trading/CreateOffer.jsx:219
+msgid "CreateOffer.selectBuyOrSell"
+msgstr "Please select buy or sell"
+
+#: src/components/trading/CreateOffer.jsx:199
+msgid "CreateOffer.selectCoinType"
+msgstr "Please select coin type"
+
+#: src/components/trading/CreateOffer.jsx:283
+msgid "CreateOffer.title"
+msgstr "Create Trade Offer"
+
+#: src/components/plotter/Plotter.jsx:482
+msgid "CreatePlot.colour"
+msgstr "Colour"
+
+#: src/components/plotter/Plotter.jsx:590
+msgid "CreatePlot.create"
+msgstr "Create"
+
+#: src/components/plotter/Plotter.jsx:433
+msgid "CreatePlot.description"
+msgstr "Using this tool, you can create plots, which are allocated space on your hard drive used to farm and earn Chia. Also, temporary files are created during the plotting process, which exceed the size of the final plot files, so make sure you have enough space. Try to use a fast drive like an SSD for the temporary folder, and a large slow hard drive (like external HDD) for the final folder."
+
+#: src/components/plotter/Plotter.jsx:543
+msgid "CreatePlot.numberOfBuckets"
+msgstr "Number of buckets"
+
+#: src/components/plotter/Plotter.jsx:553
+msgid "CreatePlot.numberOfBucketsDescription"
+msgstr "0 automatically chooses bucket count"
+
+#: src/components/plotter/Plotter.jsx:525
+msgid "CreatePlot.numberOfThreads"
+msgstr "Number of threads"
+
+#: src/components/plotter/Plotter.jsx:478
+msgid "CreatePlot.plotCount"
+msgstr "Plot Count"
+
+#: src/components/plotter/Plotter.jsx:453
+#: src/components/plotter/Plotter.jsx:458
+msgid "CreatePlot.plotSize"
+msgstr "Plot Size"
+
+#: src/components/plotter/Plotter.jsx:499
+msgid "CreatePlot.ramMaxUsage"
+msgstr "RAM max usage"
+
+#: src/components/plotter/Plotter.jsx:510
+msgid "CreatePlot.ramMaxUsageDescription"
+msgstr "More memory slightly increases speed"
+
+#: src/components/plotter/Plotter.jsx:389
+msgid "CreatePlot.specifyFinalDirectory"
+msgstr "Please specify a temporary and final directory"
+
+#: src/components/plotter/Plotter.jsx:566
+msgid "CreatePlot.stripeSize"
+msgstr "Stripe Size"
+
+#: src/components/plotter/Plotter.jsx:427
+msgid "CreatePlot.title"
+msgstr "Create Plot"
+
+#: src/components/wallet/create/createRLAdmin.jsx:248
+msgid "CreateRLAdminWallet.amountForInitialCoin"
+msgstr "Amount For Initial Coin"
+
+#: src/components/wallet/create/createRLAdmin.jsx:322
+msgid "CreateRLAdminWallet.create"
+msgstr "Create"
+
+#: src/components/wallet/create/createRLAdmin.jsx:187
+msgid "CreateRLAdminWallet.createRateLimitedAdminWallet"
+msgstr "Create Rate Limited Admin Wallet"
+
+#: src/components/wallet/create/createRLAdmin.jsx:138
+msgid "CreateRLAdminWallet.enterValidInitialCoin"
+msgstr "Please enter a valid initial coin amount"
+
+#: src/components/wallet/create/createRLAdmin.jsx:148
+msgid "CreateRLAdminWallet.enterValidNumericFee"
+msgstr "Please enter a valid numeric fee"
+
+#: src/components/wallet/create/createRLAdmin.jsx:98
+msgid "CreateRLAdminWallet.enterValidNumericInterval"
+msgstr "Please enter a valid numeric interval length"
+
+#: src/components/wallet/create/createRLAdmin.jsx:123
+msgid "CreateRLAdminWallet.enterValidPubkey"
+msgstr "Please enter a valid pubkey"
+
+#: src/components/wallet/create/createRLAdmin.jsx:113
+msgid "CreateRLAdminWallet.enterValidSpendableAmount"
+msgstr "Please enter a valid numeric spendable amount"
+
+#: src/components/wallet/create/createRLAdmin.jsx:255
+#: src/components/wallet/create/createRLAdmin.jsx:287
+msgid "CreateRLAdminWallet.fee"
+msgstr "Fee"
+
+#: src/components/wallet/create/createRLAdmin.jsx:272
+msgid "CreateRLAdminWallet.initialAmount"
+msgstr "Initial Amount"
+
+#: src/components/wallet/create/createRLAdmin.jsx:223
+msgid "CreateRLAdminWallet.interval"
+msgstr "Interval"
+
+#: src/components/wallet/create/createRLAdmin.jsx:312
+msgid "CreateRLAdminWallet.pubkey"
+msgstr "Pubkey"
+
+#: src/components/wallet/create/createRLAdmin.jsx:236
+msgid "CreateRLAdminWallet.spendableAmount"
+msgstr "Spendable Amount"
+
+#: src/components/wallet/create/createRLAdmin.jsx:205
+msgid "CreateRLAdminWallet.spendableAmountPerInterval"
+msgstr "Spendable Amount Per Interval"
+
+#: src/components/wallet/create/createRLAdmin.jsx:198
+msgid "CreateRLAdminWallet.spendingIntervalLength"
+msgstr "Spending Interval Length (number of blocks)"
+
+#: src/components/wallet/create/createRLAdmin.jsx:296
+msgid "CreateRLAdminWallet.userPubkey"
+msgstr "User Pubkey"
+
+#: src/components/wallet/create/createRLUser.jsx:103
+msgid "CreateRLUserWallet.create"
+msgstr "Create"
+
+#: src/components/wallet/create/createRLUser.jsx:89
+msgid "CreateRLUserWallet.description"
+msgstr "Initialize a Rate Limited User Wallet:"
+
+#: src/components/wallet/create/createRLUser.jsx:78
+msgid "CreateRLUserWallet.title"
+msgstr "Create Rate Limited User Wallet"
+
+#: src/components/wallet/Wallets.tsx:129
+msgid "CreateWallet.addWallet"
+msgstr "Add Wallet"
+
+#: src/components/dashboard/DashboardSideBar.tsx:38
+msgid "DashboardSideBar.farm"
+msgstr "Farm"
+
+#: src/components/dashboard/DashboardSideBar.tsx:35
+msgid "DashboardSideBar.home"
+msgstr "Full Node"
+
+#: src/components/dashboard/DashboardSideBar.tsx:40
+msgid "DashboardSideBar.keys"
+msgstr "Keys"
+
+#: src/components/dashboard/DashboardSideBar.tsx:37
+msgid "DashboardSideBar.plot"
+msgstr "Plot"
+
+#: src/components/dashboard/DashboardSideBar.tsx:39
+msgid "DashboardSideBar.trade"
+msgstr "Trade"
+
+#: src/components/dashboard/DashboardSideBar.tsx:36
+msgid "DashboardSideBar.wallets"
+msgstr "Wallets"
+
+#: src/components/selectKey/SelectKey.tsx:133
+msgid "DeleteAllKeys.back"
+msgstr "Back"
+
+#: src/components/selectKey/SelectKey.tsx:136
+msgid "DeleteAllKeys.delete"
+msgstr "Delete"
+
+#: src/components/selectKey/SelectKey.tsx:124
+msgid "DeleteAllKeys.description"
+msgstr "Deleting all keys will permanatly remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
+
+#: src/components/selectKey/SelectKey.tsx:120
+msgid "DeleteAllKeys.title"
+msgstr "Delete all keys"
+
+#: src/components/farmer/Farmer.jsx:711
+msgid "Farmer.title"
+msgstr "Farming"
+
+#: src/components/farmer/Farmer.jsx:122
+msgid "FarmerStatus.connected"
+msgstr "Connected"
+
+#: src/components/farmer/Farmer.jsx:120
+#: src/components/farmer/Farmer.jsx:129
+msgid "FarmerStatus.connectionStatus"
+msgstr "Connection Status"
+
+#: src/components/farmer/Farmer.jsx:161
+#: src/components/farmer/Farmer.jsx:170
+msgid "FarmerStatus.lastHeightFarmed"
+msgstr "Last height farmed"
+
+#: src/components/farmer/Farmer.jsx:164
+msgid "FarmerStatus.noBlocksFarmedYet"
+msgstr "No blocks farmed yet"
+
+#: src/components/farmer/Farmer.jsx:131
+msgid "FarmerStatus.notConnected"
+msgstr "Not connected"
+
+#: src/components/farmer/Farmer.jsx:238
+msgid "FarmerStatus.title"
+msgstr "Farmer Status"
+
+#: src/components/farmer/Farmer.jsx:155
+msgid "FarmerStatus.totalChiaFarmed"
+msgstr "Total chia farmed"
+
+#: src/components/farmer/Farmer.jsx:142
+msgid "FarmerStatus.totalSizeOfLocalPlots"
+msgstr "Total size of local plots"
+
+#: src/components/fullNode/FullNode.jsx:546
+msgid "FullNode.title"
+msgstr "Full Node"
+
+#: src/components/fullNode/FullNode.jsx:376
+msgid "FullNodeStatus.title"
+msgstr "Full Node Status"
+
+#: src/components/wallet/standard/WalletStandard.tsx:408
+msgid "HistoryCard.title"
+msgstr "History"
+
+#: src/components/locale/LocaleToggle.tsx:36
+msgid "LocaleToggle.helpToTranslate"
+msgstr "Help to translate"
+
+#: src/components/wallet/create/WalletCreate.jsx:116
+msgid "MainWalletList.colouredCoin"
+msgstr "Coloured Coin"
+
+#: src/components/wallet/create/WalletCreate.jsx:240
+msgid "MainWalletList.createAdminWallet"
+msgstr "Create admin wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:176
+msgid "MainWalletList.createNewColouredCoin"
+msgstr "Create new coloured coin"
+
+#: src/components/wallet/create/WalletCreate.jsx:252
+msgid "MainWalletList.createUserWallet"
+msgstr "Create user wallet"
+
+#: src/components/wallet/create/WalletCreate.jsx:188
+msgid "MainWalletList.createWalletForExistingColour"
+msgstr "Create wallet for existing colour"
+
+#: src/components/wallet/create/WalletCreate.jsx:126
+msgid "MainWalletList.rateLimited"
+msgstr "Rate Limited"
+
+#: src/components/wallet/create/WalletCreate.jsx:104
+msgid "MainWalletList.title"
+msgstr "Select Wallet Type"
+
+#: src/components/trading/ViewOffer.jsx:196
+msgid "OfferDropView.dragAndDropOfferFile"
+msgstr "Drag and drop offer file"
+
+#: src/components/trading/ViewOffer.jsx:182
+msgid "OfferDropView.title"
+msgstr "View Offer"
+
+#: src/components/trading/ViewOffer.jsx:280
+msgid "OfferRow.buy"
+msgstr "Buy"
+
+#: src/components/trading/ViewOffer.jsx:278
+msgid "OfferRow.sell"
+msgstr "Sell"
+
+#: src/components/trading/ViewOffer.jsx:252
+msgid "OfferView.accept"
+msgstr "Accept"
+
+#: src/components/trading/ViewOffer.jsx:262
+msgid "OfferView.cancel"
+msgstr "Cancel"
+
+#: src/components/trading/ViewOffer.jsx:231
+msgid "OfferView.title"
+msgstr "View Offer"
+
+#: src/components/trading/TradingOverview.jsx:451
+msgid "PendingTrades.title"
+msgstr "Offers Created"
+
+#: src/components/farmer/Farmer.jsx:581
+msgid "Plots.back"
+msgstr "Back"
+
+#: src/components/farmer/Farmer.jsx:425
+#: src/components/farmer/Farmer.jsx:588
+msgid "Plots.delete"
+msgstr "Delete"
+
+#: src/components/farmer/Farmer.jsx:569
+msgid "Plots.deleteAllKeys"
+msgstr "Delete all keys"
+
+#: src/components/farmer/Farmer.jsx:573
+msgid "Plots.deleteAllKeysDescription"
+msgstr "Are you sure you want to delete the plot? The plot cannot be recovered."
+
+#: src/components/farmer/Farmer.jsx:494
+msgid "Plots.deletePlotsDescription"
+msgstr "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
+
+#: src/components/farmer/Farmer.jsx:526
+msgid "Plots.failedToOpenPlots"
+msgstr "Failed to open (invalid plots)"
+
+#: src/components/farmer/Farmer.jsx:532
+msgid "Plots.failedToOpenPlotsDescription"
+msgstr "These plots are invalid, you might want to delete them forever."
+
+#: src/components/farmer/Farmer.jsx:410
+msgid "Plots.filename"
+msgstr "Filename"
+
+#: src/components/farmer/Farmer.jsx:385
+msgid "Plots.managePlotDirectories"
+msgstr "Manage plot directories"
+
+#: src/components/farmer/Farmer.jsx:490
+msgid "Plots.notFoundPlots"
+msgstr "Not found plots"
+
+#: src/components/farmer/Farmer.jsx:416
+msgid "Plots.plotId"
+msgstr "Plot id"
+
+#: src/components/farmer/Farmer.jsx:419
+msgid "Plots.plotPk"
+msgstr "Plot pk"
+
+#: src/components/farmer/Farmer.jsx:422
+msgid "Plots.poolPk"
+msgstr "Pool pk"
+
+#: src/components/farmer/Farmer.jsx:374
+msgid "Plots.refreshPlots"
+msgstr "Refresh plots"
+
+#: src/components/farmer/Farmer.jsx:413
+msgid "Plots.size"
+msgstr "Size"
+
+#: src/components/farmer/Farmer.jsx:366
+msgid "Plots.title"
+msgstr "Plots"
+
+#: src/components/plotter/Plotter.jsx:677
+msgid "Plotter.title"
+msgstr "Plot"
+
+#: src/components/plotter/Plotter.jsx:298
+msgid "PlotterFinalLocation.availableOnlyFromElectron"
+msgstr "This feature is available only from electron app"
+
+#: src/components/plotter/Plotter.jsx:318
+msgid "PlotterFinalLocation.finalFolderLocation"
+msgstr "Final folder location"
+
+#: src/components/plotter/Plotter.jsx:335
+msgid "PlotterFinalLocation.select"
+msgstr "Select"
+
+#: src/components/plotter/Plotter.jsx:646
+msgid "PlotterProgress.cancel"
+msgstr "Cancel"
+
+#: src/components/plotter/Plotter.jsx:657
+msgid "PlotterProgress.clearLog"
+msgstr "Clear Log"
+
+#: src/components/plotter/Plotter.jsx:630
+msgid "PlotterProgress.plottingStoppedSuccesfully"
+msgstr "Plotting stopped succesfully."
+
+#: src/components/plotter/Plotter.jsx:619
+msgid "PlotterProgress.title"
+msgstr "Progress"
+
+#: src/components/plotter/Plotter.jsx:232
+msgid "PlotterWorkLocation.availableOnlyFromElectron"
+msgstr "This feature is available only from electron app"
+
+#: src/components/plotter/Plotter.jsx:269
+msgid "PlotterWorkLocation.select"
+msgstr "Select"
+
+#: src/components/plotter/Plotter.jsx:253
+msgid "PlotterWorkLocation.temporaryFolderLocation"
+msgstr "Temporary folder location"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
+msgid "RLBalanceCard.pendingBalance"
+msgstr "Pending Balance"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:658
+msgid "RLBalanceCard.pendingChange"
+msgstr "Pending Change"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:640
+msgid "RLBalanceCard.pendingTotalBalance"
+msgstr "Pending Total Balance"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:615
+msgid "RLBalanceCard.spendableBalance"
+msgstr "Spendable Balance"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:604
+msgid "RLBalanceCard.title"
+msgstr "Balance"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:609
+msgid "RLBalanceCard.totalBalance"
+msgstr "Total Balance"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:631
+msgid "RLBalanceCard.viewPendingBalances"
+msgstr "View pending balances"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:466
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:540
+msgid "RLDetailsCard.copy"
+msgstr "Copy"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:513
+msgid "RLDetailsCard.description"
+msgstr "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:526
+msgid "RLDetailsCard.infoPacket"
+msgstr "Info Packet"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:453
+msgid "RLDetailsCard.myPubkey"
+msgstr "My Pubkey"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:430
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:492
+msgid "RLDetailsCard.spendingInterval"
+msgstr "Spending Interval (number of blocks): {interval}"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:437
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:499
+msgid "RLDetailsCard.spendingLimit"
+msgstr "Spending Limit (chia per interval): {0}"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:421
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:483
+msgid "RLDetailsCard.title"
+msgstr "Rate Limited Info"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:868
+msgid "RLHistoryCard.title"
+msgstr "History"
+
+#: src/components/wallet/create/WalletCreate.jsx:228
+msgid "RLListItems.title"
+msgstr "Rate Limited Options"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:794
+msgid "RLSendCard.addressPuzzleHash"
+msgstr "Address / Puzzle hash"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:818
+msgid "RLSendCard.amount"
+msgstr "Amount"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:752
+msgid "RLSendCard.enter0fee"
+msgstr "Please enter 0 fee. Positive fees not supported yet for RL."
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:723
+msgid "RLSendCard.enterValidAmount"
+msgstr "Please enter a valid numeric amount"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
+msgid "RLSendCard.enterValidFee"
+msgstr "Please enter a valid numeric fee"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:831
+msgid "RLSendCard.fee"
+msgstr "Fee"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:848
+msgid "RLSendCard.send"
+msgstr "Send"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:772
+msgid "RLSendCard.title"
+msgstr "Create Transaction"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:707
+msgid "RLSendCard.waitForSyncing"
+msgstr "Please finish syncing before making a transaction"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:929
+msgid "RLTransactionTable.amount"
+msgstr "Amount"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:905
+msgid "RLTransactionTable.confirmed"
+msgstr "Confirmed"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:923
+msgid "RLTransactionTable.date"
+msgstr "Date"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:932
+msgid "RLTransactionTable.fee"
+msgstr "Fee"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:899
+msgid "RLTransactionTable.incoming"
+msgstr "Incoming"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:890
+msgid "RLTransactionTable.noPreviousTransactions"
+msgstr "No previous transactions"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:901
+msgid "RLTransactionTable.outgoing"
+msgstr "Outgoing"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:907
+msgid "RLTransactionTable.pending"
+msgstr "Pending"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:926
+msgid "RLTransactionTable.status"
+msgstr "Status"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:920
+msgid "RLTransactionTable.to"
+msgstr "To"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:917
+msgid "RLTransactionTable.type"
+msgstr "Type"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:327
+msgid "RTIncompleteCard.copy"
+msgstr "Copy"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:297
+msgid "RTIncompleteCard.description"
+msgstr "Send your pubkey to your Rate Limited Wallet admin:"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:338
+msgid "RTIncompleteCard.description2"
+msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:356
+msgid "RTIncompleteCard.infoPacket"
+msgstr "Info Packet"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:371
+msgid "RTIncompleteCard.submit"
+msgstr "Submit"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:286
+msgid "RTIncompleteCard.title"
+msgstr "Rate Limited User Wallet Setup"
+
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:313
+msgid "RTIncompleteCard.userPubkey"
+msgstr "User Pubkey"
+
+#: src/components/fullNode/FullNode.jsx:501
+msgid "SearchBlock.blockHash"
+msgstr "Block hash"
+
+#: src/components/fullNode/FullNode.jsx:514
+msgid "SearchBlock.search"
+msgstr "Search"
+
+#: src/components/fullNode/FullNode.jsx:491
+msgid "SearchBlock.title"
+msgstr "Search block by header hash"
+
+#: src/components/selectKey/SelectKey.tsx:100
+msgid "SelectKey.createNewPrivateKey"
+msgstr "Create a new private key"
+
+#: src/components/selectKey/SelectKey.tsx:113
+msgid "SelectKey.deleteAllKeys"
+msgstr "Delete all keys"
+
+#: src/components/selectKey/SelectKey.tsx:107
+msgid "SelectKey.importFromMnemonics"
+msgstr "Import from Mnemonics (24 words)"
+
+#: src/components/selectKey/SelectKey.tsx:78
+msgid "SelectKey.selectFingerprint"
+msgstr "Private key with public fingerprint {fingerprint}"
+
+#: src/components/selectKey/SelectKey.tsx:80
+msgid "SelectKey.selectKeyCanBeBacked"
+msgstr "Can be backed up to mnemonic seed"
+
+#: src/components/selectKey/SelectKey.tsx:68
+msgid "SelectKey.signInDescription"
+msgstr "Welcome to Chia. Please log in with an existing key, or create a a new key."
+
+#: src/components/selectKey/SelectKey.tsx:65
+msgid "SelectKey.signInTitle"
+msgstr "Sign In"
+
+#: src/components/selectKey/SelectKey.tsx:62
+msgid "SelectKey.title"
+msgstr "Select Key"
+
+#: src/components/wallet/standard/WalletStandard.tsx:359
+msgid "SendCard.address"
+msgstr "Address / Puzzle hash"
+
+#: src/components/wallet/standard/WalletStandard.tsx:371
+msgid "SendCard.amount"
+msgstr "Amount"
+
+#: src/components/wallet/standard/WalletStandard.tsx:320
+msgid "SendCard.enterValidAddress"
+msgstr "Error: Cannot send chia to coloured address. Please enter a chia address."
+
+#: src/components/wallet/standard/WalletStandard.tsx:306
+msgid "SendCard.enterValidAmount"
+msgstr "Please enter a valid numeric amount"
+
+#: src/components/wallet/standard/WalletStandard.tsx:312
+msgid "SendCard.enterValidFee"
+msgstr "Please enter a valid numeric fee"
+
+#: src/components/wallet/standard/WalletStandard.tsx:386
+msgid "SendCard.farm"
+msgstr "Farm"
+
+#: src/components/wallet/standard/WalletStandard.tsx:376
+msgid "SendCard.fee"
+msgstr "Fee"
+
+#: src/components/wallet/standard/WalletStandard.tsx:296
+msgid "SendCard.finishSyncingBeforeTransaction"
+msgstr "Please finish syncing before making a transaction"
+
+#: src/components/wallet/standard/WalletStandard.tsx:391
+msgid "SendCard.send"
+msgstr "Send"
+
+#: src/components/wallet/standard/WalletStandard.tsx:344
+msgid "SendCard.title"
+msgstr "Create Transaction"
+
+#: src/components/wallet/Wallets.tsx:159
+msgid "StatusCard.connections"
+msgstr "connections:"
+
+#: src/components/wallet/Wallets.tsx:153
+msgid "StatusCard.height"
+msgstr "height:"
+
+#: src/components/wallet/Wallets.tsx:145
+msgid "StatusCard.status"
+msgstr "status:"
+
+#: src/components/wallet/Wallets.tsx:148
+msgid "StatusCard.synced"
+msgstr "synced"
+
+#: src/components/wallet/Wallets.tsx:148
+msgid "StatusCard.syncing"
+msgstr "syncing"
+
+#: src/components/wallet/Wallets.tsx:140
+msgid "StatusCard.title"
+msgstr "Status"
+
+#: src/components/fullNode/FullNode.jsx:260
+#: src/components/fullNode/FullNode.jsx:267
+msgid "StatusItem.connectionStatus"
+msgstr "Connection Status"
+
+#: src/components/fullNode/FullNode.jsx:261
+msgid "StatusItem.connectionStatusConnected"
+msgstr "Connected"
+
+#: src/components/fullNode/FullNode.jsx:269
+msgid "StatusItem.connectionStatusNotConnected"
+msgstr "Not connected"
+
+#: src/components/fullNode/FullNode.jsx:279
+msgid "StatusItem.difficulty"
+msgstr "Difficulty"
+
+#: src/components/fullNode/FullNode.jsx:311
+msgid "StatusItem.estimatedNetworkSpace"
+msgstr "Estimated network space"
+
+#: src/components/fullNode/FullNode.jsx:317
+msgid "StatusItem.estimatedNetworkSpaceTooltip"
+msgstr "Estimated sum of all the plotted disk space of all farmers in the network"
+
+#: src/components/fullNode/FullNode.jsx:287
+msgid "StatusItem.iterationsPerSecond"
+msgstr "Iterations per Second"
+
+#: src/components/fullNode/FullNode.jsx:291
+msgid "StatusItem.iterationsPerSecondTooltip"
+msgstr "The estimated proof of time speed of the fastest timelord in the network."
+
+#: src/components/fullNode/FullNode.jsx:199
+#: src/components/fullNode/FullNode.jsx:205
+msgid "StatusItem.lcaBlockHeight"
+msgstr "LCA Block Height"
+
+#: src/components/fullNode/FullNode.jsx:239
+#: src/components/fullNode/FullNode.jsx:252
+msgid "StatusItem.lcaTime"
+msgstr "LCA Time"
+
+#: src/components/fullNode/FullNode.jsx:242
+msgid "StatusItem.lcaTimeTooltip"
+msgstr "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height."
+
+#: src/components/fullNode/FullNode.jsx:220
+#: src/components/fullNode/FullNode.jsx:228
+msgid "StatusItem.maxTipBlockHeight"
+msgstr "Max Tip Block Height"
+
+#: src/components/fullNode/FullNode.jsx:301
+msgid "StatusItem.minIterations"
+msgstr "Min Iterations"
+
+#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:177
+#: src/components/fullNode/FullNode.jsx:189
+msgid "StatusItem.status"
+msgstr "Status"
+
+#: src/components/fullNode/FullNode.jsx:190
+msgid "StatusItem.statusNotConnected"
+msgstr "Not connected"
+
+#: src/components/fullNode/FullNode.jsx:178
+msgid "StatusItem.statusSynced"
+msgstr "Synced"
+
+#: src/components/fullNode/FullNode.jsx:181
+msgid "StatusItem.statusSyncedTooltip"
+msgstr "This node is fully caught up and validating the network"
+
+#: src/components/fullNode/FullNode.jsx:168
+msgid "StatusItem.statusTooltip"
+msgstr "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
+
+#: src/components/fullNode/FullNode.jsx:162
+msgid "StatusItem.statusValue"
+msgstr "Syncing {progress}/{tip}"
+
+#: src/components/trading/TradingOverview.jsx:254
+msgid "TradeDetail.acceptedAtTime"
+msgstr "Accepted at time:"
+
+#: src/components/trading/TradingOverview.jsx:258
+msgid "TradeDetail.acceptedAtTimeTooltip"
+msgstr "Indicated what time this offer was accepted"
+
+#: src/components/trading/TradingOverview.jsx:434
+msgid "TradeDetail.cancel"
+msgstr "Cancel"
+
+#: src/components/trading/TradingOverview.jsx:423
+msgid "TradeDetail.cancelAndSpend"
+msgstr "Cancel and Spend"
+
+#: src/components/trading/TradingOverview.jsx:400
+msgid "TradeDetail.coins"
+msgstr "Coins:"
+
+#: src/components/trading/TradingOverview.jsx:218
+msgid "TradeDetail.confirmedAtBlock"
+msgstr "Confirmed at block:"
+
+#: src/components/trading/TradingOverview.jsx:222
+msgid "TradeDetail.confirmedAtBlockTooltip"
+msgstr "This trade was included on blockchain at this block height"
+
+#: src/components/trading/TradingOverview.jsx:198
+msgid "TradeDetail.createdAt"
+msgstr "Created At:"
+
+#: src/components/trading/TradingOverview.jsx:202
+msgid "TradeDetail.createdAtTooltip"
+msgstr "Time this trade was created at this time"
+
+#: src/components/trading/TradingOverview.jsx:234
+msgid "TradeDetail.createdByUs"
+msgstr "Created by us:"
+
+#: src/components/trading/TradingOverview.jsx:238
+msgid "TradeDetail.createdByUsTooltip"
+msgstr "Indicated if this offer was created by us"
+
+#: src/components/trading/TradingOverview.jsx:231
+msgid "TradeDetail.no"
+msgstr "No"
+
+#: src/components/trading/TradingOverview.jsx:248
+msgid "TradeDetail.notAcceptedYet"
+msgstr "Not accepted yet"
+
+#: src/components/trading/TradingOverview.jsx:211
+msgid "TradeDetail.notConfirmedYet"
+msgstr "Not confirmed yet"
+
+#: src/components/trading/TradingOverview.jsx:191
+msgid "TradeDetail.status"
+msgstr "Status:"
+
+#: src/components/trading/TradingOverview.jsx:194
+msgid "TradeDetail.statusTooltip"
+msgstr "Current trade status"
+
+#: src/components/trading/TradingOverview.jsx:384
+msgid "TradeDetail.title"
+msgstr "Trade Details"
+
+#: src/components/trading/TradingOverview.jsx:184
+msgid "TradeDetail.tradeId"
+msgstr "Trade ID:"
+
+#: src/components/trading/TradingOverview.jsx:187
+msgid "TradeDetail.tradeIdTooltip"
+msgstr "Unique identifier"
+
+#: src/components/trading/TradingOverview.jsx:229
+msgid "TradeDetail.yes"
+msgstr "Yes"
+
+#: src/components/trading/CreateOffer.jsx:150
+msgid "TradeList.amount"
+msgstr "Amount"
+
+#: src/components/trading/CreateOffer.jsx:160
+msgid "TradeList.colour"
+msgstr "Colour"
+
+#: src/components/trading/CreateOffer.jsx:147
+msgid "TradeList.side"
+msgstr "Side"
+
+#: src/components/trading/TradeManager.tsx:68
+msgid "TradeManager.createTrade"
+msgstr "Create Trade"
+
+#: src/components/trading/TradeManager.tsx:54
+msgid "TradeManager.title"
+msgstr "Trading"
+
+#: src/components/trading/TradeManager.tsx:63
+msgid "TradeManager.tradeOverview"
+msgstr "Trade Overview"
+
+#: src/components/trading/TradeManager.tsx:73
+msgid "TradeManager.viewTrade"
+msgstr "View Trade"
+
+#: src/components/trading/TradingOverview.jsx:321
+msgid "TradeOfferRow.buy"
+msgstr "Buy"
+
+#: src/components/trading/TradingOverview.jsx:319
+msgid "TradeOfferRow.sell"
+msgstr "Sell"
+
+#: src/components/trading/TradingOverview.jsx:163
+msgid "TradeOverviewTable.tradesShowUpHere"
+msgstr "Trades will show up here"
+
+#: src/components/trading/TradingOverview.jsx:147
+msgid "TradeOverviewTableHeader.date"
+msgstr "Date"
+
+#: src/components/trading/TradingOverview.jsx:138
+msgid "TradeOverviewTableHeader.status"
+msgstr "Status"
+
+#: src/components/trading/TradingOverview.jsx:135
+msgid "TradeOverviewTableHeader.tradeId"
+msgstr "Trade ID"
+
+#: src/components/trading/TradingOverview.jsx:466
+msgid "TradingHistory.title"
+msgstr "Trading History"
+
+#: src/components/wallet/standard/WalletStandard.tsx:453
+msgid "TransactionTable.amount"
+msgstr "Amount"
+
+#: src/components/wallet/standard/WalletStandard.tsx:432
+msgid "TransactionTable.confirmedAtHeight"
+msgstr "Confirmed at height {0}"
+
+#: src/components/wallet/standard/WalletStandard.tsx:447
+msgid "TransactionTable.date"
+msgstr "Date"
+
+#: src/components/wallet/standard/WalletStandard.tsx:456
+msgid "TransactionTable.fee"
+msgstr "Fee"
+
+#: src/components/wallet/standard/WalletStandard.tsx:427
+msgid "TransactionTable.incoming"
+msgstr "Incoming"
+
+#: src/components/wallet/standard/WalletStandard.tsx:429
+msgid "TransactionTable.outgoing"
+msgstr "Outgoing"
+
+#: src/components/wallet/standard/WalletStandard.tsx:434
+msgid "TransactionTable.pending"
+msgstr "Pending"
+
+#: src/components/wallet/standard/WalletStandard.tsx:450
+msgid "TransactionTable.status"
+msgstr "Status"
+
+#: src/components/wallet/standard/WalletStandard.tsx:444
+msgid "TransactionTable.to"
+msgstr "To"
+
+#: src/components/wallet/standard/WalletStandard.tsx:441
+msgid "TransactionTable.type"
+msgstr "Type"
+
+#: src/components/wallet/WalletAdd.tsx:41
+msgid "WalletAdd.description"
+msgstr "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
+
+#: src/components/wallet/WalletAdd.tsx:53
+msgid "WalletAdd.next"
+msgstr "Next"
+
+#: src/components/wallet/WalletAdd.tsx:38
+msgid "WalletAdd.title"
+msgstr "New Wallet"
+
+#: src/components/wallet/WalletImport.tsx:70
+msgid "WalletImport.description"
+msgstr "Enter the 24 word mmemonic that you have saved in order to restore your Chia wallet."
+
+#: src/components/wallet/WalletImport.tsx:80
+msgid "WalletImport.next"
+msgstr "Next"
+
+#: src/components/wallet/WalletImport.tsx:67
+msgid "WalletImport.title"
+msgstr "Import Wallet from Mnemonics"
+
+#: src/components/wallet/Wallets.tsx:91
+msgid "WalletItem.ccWallet"
+msgstr "CC Wallet"
+
+#: src/components/wallet/Wallets.tsx:87
+msgid "WalletItem.chiaWallet"
+msgstr "Chia Wallet"
+
+#: src/components/wallet/Wallets.tsx:98
+msgid "WalletItem.rlWallet"
+msgstr "RL Wallet"
+
+#: src/components/wallet/WalletStatusCard.tsx:30
+msgid "WalletStatusCard.connections"
+msgstr "connections:"
+
+#: src/components/wallet/WalletStatusCard.tsx:24
+msgid "WalletStatusCard.height"
+msgstr "height:"
+
+#: src/components/wallet/WalletStatusCard.tsx:16
+msgid "WalletStatusCard.status"
+msgstr "status:"
+
+#: src/components/wallet/WalletStatusCard.tsx:19
+msgid "WalletStatusCard.synced"
+msgstr "synced"
+
+#: src/components/wallet/WalletStatusCard.tsx:19
+msgid "WalletStatusCard.syncing"
+msgstr "syncing"
+
+#: src/components/wallet/WalletStatusCard.tsx:11
+msgid "WalletStatusCard.title"
+msgstr "Status"
+
+#: src/components/wallet/Wallets.tsx:175
+msgid "Wallets.title"
+msgstr "Wallets"

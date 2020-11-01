@@ -36,6 +36,14 @@ class ClassGroup(tuple):
         super(ClassGroup, self).__init__()
         self._discriminant = None
 
+    def __eq__(self, obj):
+        return (
+            isinstance(obj, ClassGroup)
+            and obj[0] == self[0]
+            and obj[1] == self[1]
+            and obj[2] == self[2]
+        )
+
     def identity(self):
         return self.identity_for_discriminant(self.discriminant())
 

@@ -6,6 +6,8 @@ def calculate_block_reward(height: uint32) -> uint64:
     Returns the coinbase reward at a certain block height.
     1 Chia coin = 16,000,000,000,000 = 16 trillion mojo.
     """
+    if height == 0:
+        return uint64(500000000000000000)
     return uint64(14000000000000)
 
 
