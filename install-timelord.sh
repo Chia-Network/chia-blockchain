@@ -57,7 +57,7 @@ else
     echo venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
     venv/bin/python -m pip install --force --no-binary chiavdf "$CHIAVDF_VERSION"
     symlink_vdf_bench "$PYTHON_VERSION"
-  elif [ -e venv/bin/python ] && [ test $MACOS ] && [ brew info boost | grep -q 'Not installed' ]; then
+  elif [ -e venv/bin/python ] && [ test $MACOS ] && [ brew info boost | grep -c 'Not installed' ]; then
     echo "Installing chiavdf requirement boost for MacOS"
     brew install boost
     echo "installing chiavdf from source"
