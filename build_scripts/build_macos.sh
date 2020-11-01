@@ -4,8 +4,8 @@ pip install setuptools_scm
 CHIA_INSTALLER_VERSION=$(python installer-version.py)
 
 if [ ! "$CHIA_INSTALLER_VERSION" ]; then
-  echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
-  CHIA_INSTALLER_VERSION="0.0.0"
+	echo "WARNING: No environment variable CHIA_INSTALLER_VERSION set. Using 0.0.0."
+	CHIA_INSTALLER_VERSION="0.0.0"
 fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
@@ -29,8 +29,8 @@ echo "npm build"
 npm install
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-    >&2 echo "npm run build failed!"
-    exit $LAST_EXIT_CODE
+	echo >&2 "npm run build failed!"
+	exit $LAST_EXIT_CODE
 fi
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain --appVersion=$CHIA_INSTALLER_VERSION
 electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
