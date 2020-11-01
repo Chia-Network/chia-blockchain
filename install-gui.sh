@@ -36,7 +36,7 @@ fi
 echo ""
 UBUNTU_PRE_2004=false
 if $UBUNTU; then
-  UBUNTU_PRE_2004=$(python -c 'import subprocess; process = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(float(process.stdout) < float(20.04))')
+  UBUNTU_PRE_2004=$(python3.7 -c 'import subprocess; process = subprocess.run(["lsb_release", "-rs"], stdout=subprocess.PIPE); print(float(process.stdout) < float(20.04))')
 fi
 
 if [ "$UBUNTU_PRE_2004" = "True" ]; then
