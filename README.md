@@ -37,4 +37,3 @@ Once installed, a
 [Quick Start Guide](https://github.com/Chia-Network/chia-blockchain/wiki/Quick-Start-Guide)
 is available from the repository
 [wiki](https://github.com/Chia-Network/chia-blockchain/wiki).
-f745601d810a27e7c3887216199a6637a0261573
