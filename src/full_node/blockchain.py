@@ -14,6 +14,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
+from src.full_node.deficit import calculate_deficit
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_slot_iters, get_next_ips
 from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.types.coin import Coin
@@ -179,41 +180,6 @@ class Blockchain:
             ret_hashes.append(curr.header_hash)
         return list(reversed(ret_hashes))
 
-    def find_fork_point_alternate_chain(self, alternate_chain: List[bytes32]) -> uint32:
-        """
-        Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
-        where both blockchains are equal.
-        """
-        if self.peak_height is None:
-            raise ValueError("Empty blockchain")
-
-        peak: SubBlockRecord = self.get_peak()
-
-        if peak.height >= len(alternate_chain) - 1:
-            raise ValueError("Alternate chain is shorter")
-        low: uint32 = uint32(0)
-        high = peak.height
-        while low + 1 < high:
-            mid = (low + high) // 2
-            if self.height_to_hash[uint32(mid)] != alternate_chain[mid]:
-                high = mid
-            else:
-                low = mid
-        if low == high and low == 0:
-            assert self.height_to_hash[uint32(0)] == alternate_chain[0]
-            return uint32(0)
-        assert low + 1 == high
-        if self.height_to_hash[uint32(low)] == alternate_chain[low]:
-            if self.height_to_hash[uint32(high)] == alternate_chain[high]:
-                return high
-            else:
-                return low
-        elif low > 0:
-            assert self.height_to_hash[uint32(low - 1)] == alternate_chain[low - 1]
-            return uint32(low - 1)
-        else:
-            raise ValueError("Invalid genesis block")
-
     async def receive_block(
         self,
         block: FullBlock,
@@ -257,34 +223,19 @@ class Blockchain:
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
-        ips = get_next_ips(
-            self.constants,
-            self.height_to_hash,
-            self.sub_blocks,
-            block.prev_header_hash,
-            block.finished_slots is not None,
-        )
-        overflow = is_overflow_sub_block(self.constants, ips, required_iters)
         if block.height == 0:
-            deficit = uint8(self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK) - 1
+            ips = self.constants.IPS_STARTING
         else:
-            prev_sb = self.sub_blocks[block.prev_header_hash]
-            if prev_sb.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-                # Prev sb must be an overflow sb
-                if overflow and block.finished_slots is None:
-                    # Still overflowed, so we cannot decrease the deficit
-                    deficit: uint8 = prev_sb.deficit
-                else:
-                    # We have passed the first overflow, can decrease
-                    deficit: uint8 = prev_sb.deficit - 1
-            elif prev_sb.deficit == 0:
-                if block.finished_slots is not None:
-                    deficit = uint8(self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK)
-                else:
-                    deficit = uint8(0)
-            else:
-                deficit = prev_sb.deficit - 1
-
+            ips = get_next_ips(
+                self.constants,
+                self.height_to_hash,
+                self.sub_blocks,
+                block.prev_header_hash,
+                block.finished_slots is not None,
+            )
+        overflow = is_overflow_sub_block(self.constants, ips, required_iters)
+        prev_sb: Optional[SubBlockRecord] = self.sub_blocks.get(block.prev_header_hash, None)
+        deficit = calculate_deficit(self.constants, block.height, prev_sb, overflow, block.finished_slots is not None)
         sub_block = full_block_to_sub_block_record(block, ips, required_iters, deficit)
 
         # Always add the block to the database
@@ -379,9 +330,6 @@ class Blockchain:
         return []
 
     async def validate_unfinished_block(self, block: UnfinishedBlock) -> Tuple[Optional[uint64], Optional[Err]]:
-        if block.header_hash in self.sub_blocks:
-            return self.sub_blocks[block.header_hash].required_iters, None  # Already validated and added
-
         if block.prev_header_hash not in self.sub_blocks and not block.height == 0:
             return None, Err.INVALID_PREV_BLOCK_HASH
 
