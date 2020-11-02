@@ -12,19 +12,24 @@ from src.types.vdf import VDFInfo
 @streamable
 class ChallengeBlockInfo(Streamable):
     proof_of_space: ProofOfSpace
-    icp_vdf: Optional[VDFInfo]  # Only present if not the first icp
-    icp_signature: G2Element
-    ip_vdf: Optional[VDFInfo]
+    challenge_chain_sp_vdf: Optional[VDFInfo]  # Only present if not the first icp
+    challenge_chain_sp_signature: G2Element
+    challenge_chain_ip_vdf: Optional[VDFInfo]  # Iff deficit < 4
 
 
 @dataclass(frozen=True)
 @streamable
-class ChallengeSlot(Streamable):
-    subepoch_summary_hash: Optional[
-        bytes32
-    ]  # Only once per sub-epoch, and one sub-epoch delayed
+class InfusedChallengeChainSubSlot(Streamable):
+    subepoch_summary_hash: Optional[bytes32]  # Only once per sub-epoch, and one sub-epoch delayed
     proof_of_space: Optional[ProofOfSpace]
-    icp_vdf: Optional[VDFInfo]
-    icp_signature: Optional[G2Element]
-    ip_vdf: Optional[VDFInfo]
-    end_of_slot_vdf: VDFInfo
+    challenge_chain_sp_vdf: Optional[VDFInfo]
+    challenge_chain_sp_signature: Optional[G2Element]
+    challenge_chain_ip_vdf: Optional[VDFInfo]
+    infused_challenge_chain_end_of_slot_vdf: Optional[VDFInfo]  # Iff deficit <=4
+
+
+@dataclass(frozen=True)
+@streamable
+class ChallengeChainSubSlot(Streamable):
+    challenge_chain_end_of_slot_vdf: VDFInfo
+    infused_challenge_chain_sub_slot_hash: Optional[bytes32]  # Only at the end of a slot

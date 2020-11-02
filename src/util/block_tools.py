@@ -49,7 +49,7 @@ from src.types.full_block import FullBlock, additions_for_npc
 from src.types.pool_target import PoolTarget
 from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
-from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot, EndOfSlotProofs
+from src.types.reward_chain_end_of_slot import RewardChainSubSlot, SubSlotProofs
 from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
@@ -156,7 +156,7 @@ class BlockTools:
         self.curr_sub_epoch = 1
         self.sub_blocks: Optional[Dict[bytes32, SubBlockRecord]] = None
         self.height_to_hash: Optional[Dict[uint32, bytes32]] = None
-        self.finished_slots: Optional[List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]] = None
+        self.finished_sub_slots: Optional[List[Tuple[ChallengeSlot, RewardChainSubSlot, SubSlotProofs]]] = None
         self.ips: uint64 = uint64(0)
         self.deficit = 0
         self.last_challenge_proof_of_space = None
@@ -268,7 +268,7 @@ class BlockTools:
 
         starting_height: int = block_list[-1].height + 1
         timestamp: uint64 = block_list[-1].header.data.timestamp
-        end_of_slot: Optional[RewardChainEndOfSlot] = None
+        end_of_slot: Optional[RewardChainSubSlot] = None
         transactions: Optional[Program] = None
         aggsig: Optional[G2Element] = None
         for next_height in range(starting_height, starting_height + num_blocks):
@@ -297,7 +297,7 @@ class BlockTools:
                     True,
                 )
 
-                challnge = self.chain_head.finished_slots[-1][0].get_hash()
+                challnge = self.chain_head.finished_sub_slots[-1][0].get_hash()
 
                 output = get_vdf_output(
                     challnge,
@@ -318,16 +318,16 @@ class BlockTools:
                 challenge_slot = ChallengeSlot(
                     self.prev_subepoch_summary_hash,
                     self.last_challenge_proof_of_space,
-                    prev_block.reward_chain_sub_block.challenge_chain_icp_vdf,
+                    prev_block.reward_chain_sub_block.challenge_chain_sp_vdf,
                     prev_block.reward_chain_sub_block.challenge_chain_icp_sig,
                     prev_block.reward_chain_sub_block.challenge_chain_ip_vdf,
                     end_of_slot_vdf,
                 )
 
-                rc_eos = RewardChainEndOfSlot(end_of_slot_vdf, std_hash(challenge_slot), self.deficit)
+                rc_eos = RewardChainSubSlot(end_of_slot_vdf, std_hash(challenge_slot), self.deficit)
 
                 end_slot_proofs = get_end_of_slot_proofs(self.curr_slot_iters, challnge, test_constants)
-                self.finished_slots.append(Tuple[challenge_slot, rc_eos, end_slot_proofs])
+                self.finished_sub_slots.append(Tuple[challenge_slot, rc_eos, end_slot_proofs])
 
                 # proof of space
                 (
@@ -337,7 +337,7 @@ class BlockTools:
 
                 self.quality = self.curr_proof_of_space.last_challenge_proof_of_space.verify_and_get_quality_string(
                     test_constants,
-                    prev_block.reward_chain_sub_block.challenge_chain_icp_vdf.output.get_hash(),
+                    prev_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash(),
                     prev_block.reward_chain_sub_block.challenge_chain_icp_sig,
                 )
 
@@ -371,7 +371,7 @@ class BlockTools:
                 )
 
                 # zero finish slots
-                self.finished_slots = List[Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]]
+                self.finished_sub_slots = List[Tuple[ChallengeSlot, RewardChainSubSlot, SubSlotProofs]]
 
                 if new_slot and self.deficit == 0:
                     # new challenge chain block, zero sub block list
@@ -418,7 +418,7 @@ class BlockTools:
             test_constants, self.curr_proof_of_space, self.difficulty
         )
 
-        cc_icp_output, cc_ip_output, rc_icp_output, rc_ip_output = get_vdf_outputs(
+        cc_sp_output, cc_ip_output, rc_sp_output, rc_ip_output = get_vdf_outputs(
             number_iters,
             test_constants.FIRST_CC_CHALLENGE,
             test_constants.FIRST_RC_CHALLENGE,
@@ -426,11 +426,11 @@ class BlockTools:
             test_constants,
         )
 
-        cc_icp_vdf = VDFInfo(
+        cc_sp_vdf = VDFInfo(
             test_constants.FIRST_CC_CHALLENGE,
             ClassgroupElement.get_default_element(),
             ip_iters,
-            cc_icp_output,
+            cc_sp_output,
         )
 
         cc_ip_vdf = (
@@ -442,12 +442,12 @@ class BlockTools:
             ),
         )
 
-        rc_icp_vdf = (
+        rc_sp_vdf = (
             VDFInfo(
                 test_constants.FIRST_RC_CHALLENGE,
                 ClassgroupElement.get_default_element(),
                 ip_iters,
-                rc_icp_output,
+                rc_sp_output,
             ),
         )
         rc_ip_vdf = (
@@ -459,22 +459,22 @@ class BlockTools:
             ),
         )
 
-        cc_icp_proof = VDFProof(witness=std_hash(cc_icp_output), witness_type=uint8(1))
+        cc_sp_proof = VDFProof(witness=std_hash(cc_sp_output), witness_type=uint8(1))
         cc_ip_proof = VDFProof(witness=std_hash(cc_ip_output), witness_type=uint8(1))
-        rc_icp_proof = VDFProof(witness=std_hash(rc_icp_output), witness_type=uint8(1))
+        rc_sp_proof = VDFProof(witness=std_hash(rc_sp_output), witness_type=uint8(1))
         rc_ip_proof = VDFProof(witness=std_hash(rc_ip_output), witness_type=uint8(1))
-        rc_icp_sig: G2Element = self.get_plot_signature(None, self.plot_pk)
-        cc_icp_signature = self.get_plot_signature(None, self.plot_pk)
+        rc_sp_sig: G2Element = self.get_plot_signature(None, self.plot_pk)
+        cc_sp_signature = self.get_plot_signature(None, self.plot_pk)
 
         rc_sub_block = RewardChainSubBlock(
             test_constants.DIFFICULTY_STARTING,
             number_iters,
             self.curr_proof_of_space,
             cc_ip_vdf,
-            cc_icp_vdf,
-            cc_icp_signature,
-            rc_icp_vdf,
-            rc_icp_sig,
+            cc_sp_vdf,
+            cc_sp_signature,
+            rc_sp_vdf,
+            rc_sp_sig,
             rc_ip_vdf,
         )
 
@@ -493,9 +493,9 @@ class BlockTools:
 
         full_block: FullBlock = FullBlock(
             finished_slots=None,
-            challenge_chain_icp_proof=cc_icp_proof,
+            challenge_chain_icp_proof=cc_sp_proof,
             challenge_chain_ip_proof=cc_ip_proof,
-            reward_chain_icp_proof=rc_icp_proof,
+            reward_chain_icp_proof=rc_sp_proof,
             reward_chain_ip_proof=rc_ip_proof,
             reward_chain_sub_block=rc_sub_block,
             # foliage_sub_block=foliage_sub_block,
@@ -524,41 +524,41 @@ class BlockTools:
         # use default element if new slot
         if new_slot:
             cc_vdf_input = ClassgroupElement.get_default_element()
-            rc_vdf_challenge = self.chain_head.finished_slots[-1][1].get_hash()
+            rc_vdf_challenge = self.chain_head.finished_sub_slots[-1][1].get_hash()
         else:
             cc_vdf_input = head.reward_chain_sub_block.challenge_chain_ip_vdf.output
             rc_vdf_challenge = head.reward_chain_sub_block.reward_chain_ip_vdf.output.get_hash()
 
-        cc_vdf_challenge = self.finished_slots[-1][0].get_hash()
+        cc_vdf_challenge = self.finished_sub_slots[-1][0].get_hash()
 
         number_iters: uint64 = pot_iterations.calculate_iterations(
             test_constants, self.last_challenge_proof_of_space, self.difficulty
         )
 
-        cc_icp_output, cc_ip_output, rc_icp_output, rc_ip_output = get_vdf_outputs(
+        cc_sp_output, cc_ip_output, rc_sp_output, rc_ip_output = get_vdf_outputs(
             number_iters, std_hash(new_slot), cc_vdf_input, test_constants
         )
 
         icp_iters: uint64 = calculate_icp_iters(test_constants, self.ips, required_iters)
         ip_iters: uint64 = calculate_ip_iters(test_constants, self.ips, required_iters)
 
-        cc_icp_vdf: VDFInfo = get_challenge_chain_icp_vdf(cc_vdf_challenge, icp_iters, cc_vdf_input, cc_icp_output)
+        cc_sp_vdf: VDFInfo = get_challenge_chain_sp_vdf(cc_vdf_challenge, icp_iters, cc_vdf_input, cc_sp_output)
         cc_ip_vdf: VDFInfo = get_challenge_chain_ip_vdf(cc_vdf_challenge, ip_iters, cc_vdf_input, cc_ip_output)
-        cc_icp_signature: G2Element = self.get_plot_signature(self.chain_head, self.plot_pk)
+        cc_sp_signature: G2Element = self.get_plot_signature(self.chain_head, self.plot_pk)
 
-        rc_icp_vdf: VDFInfo = get_reward_chain_icp_vdf(rc_vdf_challenge, icp_iters, rc_icp_output)
+        rc_sp_vdf: VDFInfo = get_reward_chain_sp_vdf(rc_vdf_challenge, icp_iters, rc_sp_output)
         rc_ip_vdf: VDFInfo = get_reward_chain_ip_vdf(rc_vdf_challenge, ip_iters, rc_ip_output)
-        rc_icp_sig: G2Element = self.get_plot_signature(head, self.plot_pk)
+        rc_sp_sig: G2Element = self.get_plot_signature(head, self.plot_pk)
 
         reward_chain_sub_block = RewardChainSubBlock(
             head.weight + self.difficulty,
             number_iters,
             self.curr_proof_of_space,
             cc_ip_vdf,
-            cc_icp_vdf,
-            cc_icp_signature,
-            rc_icp_vdf,
-            rc_icp_sig,
+            cc_sp_vdf,
+            cc_sp_signature,
+            rc_sp_vdf,
+            rc_sp_sig,
             rc_ip_vdf,
         )
 
@@ -586,10 +586,10 @@ class BlockTools:
         self.previous_generators_root = transactions_generator.get_tree_hash()
 
         full_block: FullBlock = FullBlock(
-            finished_slots=self.finished_slots,
+            finished_slots=self.finished_sub_slots,
             challenge_chain_ip_proof=VDFProof(witness=cc_ip_output.get_hash(), witness_type=uint8(1)),
-            challenge_chain_icp_proof=VDFProof(witness=cc_icp_output.get_hash(), witness_type=uint8(1)),
-            reward_chain_icp_proof=VDFProof(witness=rc_icp_output.get_hash(), witness_type=uint8(1)),
+            challenge_chain_icp_proof=VDFProof(witness=cc_sp_output.get_hash(), witness_type=uint8(1)),
+            reward_chain_icp_proof=VDFProof(witness=rc_sp_output.get_hash(), witness_type=uint8(1)),
             reward_chain_ip_proof=VDFProof(witness=rc_ip_output.get_hash(), witness_type=uint8(1)),
             reward_chain_sub_block=reward_chain_sub_block,
             foliage_sub_block=foliage_sub_block,
@@ -784,7 +784,7 @@ def get_end_of_slot_proofs(curr_slot_iters, challnge, test_constants):
         curr_slot_iters,
         test_constants.DISCRIMINANT_SIZE_BITS,
     )
-    end_slot_proofs = EndOfSlotProofs(challenge_chain_slot_proof, reward_chain_slot_proof)
+    end_slot_proofs = SubSlotProofs(challenge_chain_slot_proof, reward_chain_slot_proof)
     return end_slot_proofs
 
 
@@ -808,7 +808,7 @@ def get_vdf_outputs(
     cc_vdf_Input: ClassgroupElement,
     test_constants,
 ):
-    cc_icp_output = get_vdf_output(
+    cc_sp_output = get_vdf_output(
         cc_vdf_Input,
         cc_challenge,
         test_constants.DISCRIMINANT_SIZE_BITS,
@@ -821,7 +821,7 @@ def get_vdf_outputs(
         number_iters,
     )
 
-    rc_icp_output = get_vdf_output(
+    rc_sp_output = get_vdf_output(
         ClassgroupElement.get_default_element(),
         rc_challenge,
         test_constants.DISCRIMINANT_SIZE_BITS,
@@ -834,7 +834,7 @@ def get_vdf_outputs(
         test_constants.DISCRIMINANT_SIZE_BITS,
         number_iters,
     )
-    return cc_icp_output, cc_ip_output, rc_icp_output, rc_ip_output
+    return cc_sp_output, cc_ip_output, rc_sp_output, rc_ip_output
 
 
 def get_plot_dir():
@@ -843,7 +843,7 @@ def get_plot_dir():
     return cache_path
 
 
-def get_challenge_chain_icp_vdf(
+def get_challenge_chain_sp_vdf(
     challenge: bytes32, icp_iters: uint64, input: ClassgroupElement, output: ClassgroupElement
 ) -> Optional[VDFInfo]:
     if icp_iters == 0:
@@ -856,7 +856,7 @@ def get_challenge_chain_icp_vdf(
     )
 
 
-def get_reward_chain_icp_vdf(challenge: bytes32, icp_iters: uint64, output: ClassgroupElement) -> Optional[VDFInfo]:
+def get_reward_chain_sp_vdf(challenge: bytes32, icp_iters: uint64, output: ClassgroupElement) -> Optional[VDFInfo]:
     if icp_iters == 0:
         return None
     return VDFInfo(
@@ -879,7 +879,7 @@ def get_challenge_chain_ip_vdf(
 
 
 def get_reward_chain_ip_vdf(block: FullBlock, ip_iters: uint64, output: ClassgroupElement) -> VDFInfo:
-    cc_vdf_challenge: bytes32 = block.finished_slots[-1][1].get_hash()
+    cc_vdf_challenge: bytes32 = block.finished_sub_slots[-1][1].get_hash()
     return VDFInfo(
         challenge_hash=cc_vdf_challenge,
         input=ClassgroupElement.get_default_element(),
