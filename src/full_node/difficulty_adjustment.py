@@ -4,7 +4,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_icp_iters, calculate_ip_iters
 from src.types.sized_bytes import bytes32
 from src.full_node.sub_block_record import SubBlockRecord
-from src.util.ints import uint32, uint64, uint128
+from src.util.ints import uint32, uint64, uint128, uint8
 from src.util.significant_bits import (
     count_significant_bits,
     truncate_to_significant_bits,
@@ -13,55 +13,51 @@ from src.util.significant_bits import (
 
 def finishes_sub_epoch(
     constants: ConsensusConstants,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
-    header_hash: bytes32,
+    height: uint32,
+    deficit: uint8,
     also_finishes_epoch: bool,
 ) -> bool:
     """
     Returns true if the next block after header_hash can start a new challenge_slot or not.
     """
-    sub_block: SubBlockRecord = sub_blocks[header_hash]
-    next_height: uint32 = uint32(sub_block.height + 1)
-    cur: SubBlockRecord = sub_block
+    next_height: uint32 = uint32(height + 1)
 
     # If last slot does not have enough blocks for a new challenge chain infusion, return same difficulty
-    if sub_block.deficit > 0:
+    if deficit > 0:
         return False
 
     # If we have not crossed the (sub)epoch barrier in this slot, cannot start new (sub)epoch
     if also_finishes_epoch:
-        if cur.height // constants.EPOCH_SUB_BLOCKS == next_height // constants.EPOCH_SUB_BLOCKS:
-            return False
-    else:
-        if cur.height // constants.SUB_EPOCH_SUB_BLOCKS == next_height // constants.SUB_EPOCH_SUB_BLOCKS:
-            return False
+        return height // constants.EPOCH_SUB_BLOCKS != next_height // constants.EPOCH_SUB_BLOCKS
 
-    return True
+    return height // constants.SUB_EPOCH_SUB_BLOCKS != next_height // constants.SUB_EPOCH_SUB_BLOCKS
 
 
 def get_next_ips(
     constants: ConsensusConstants,
     height_to_hash: Dict[uint32, bytes32],
     sub_blocks: Dict[bytes32, SubBlockRecord],
-    header_hash: bytes32,
+    prev_header_hash: bytes32,
+    height: uint32,
+    deficit: uint8,
+    ips: uint64,
     new_slot: bool,
 ) -> uint64:
     """
     Returns the slot iterations required for the next block after header hash, where new_slot is true iff
     the next block will be in the next slot.
     """
-    sub_block: SubBlockRecord = sub_blocks[header_hash]
-    next_height: uint32 = uint32(sub_block.height + 1)
+    next_height: uint32 = uint32(height + 1)
 
-    if height_to_hash[sub_block.height] not in height_to_hash:
-        raise ValueError(f"Header hash {header_hash} not in height_to_hash chain")
+    if prev_header_hash not in sub_blocks:
+        raise ValueError(f"Header hash {prev_header_hash} not in sub blocks")
 
     if next_height < constants.EPOCH_SUB_BLOCKS:
         return uint64(constants.IPS_STARTING)
 
     # If we are in the same epoch, return same ips
-    if not new_slot or not finishes_sub_epoch(constants, sub_blocks, header_hash, True):
-        return sub_block.ips
+    if not new_slot or not finishes_sub_epoch(constants, height, deficit, True):
+        return ips
 
     #       prev epoch surpassed  prev epoch started                  epoch sur.  epoch started
     #        v                       v                                v         v
@@ -80,9 +76,14 @@ def get_next_ips(
         prev_slot_start_iters = uint128(0)
         # The genesis block is an edge case, where we measure from the first block in epoch, as opposed to the last
         # block in the previous epoch
-        prev_slot_time_start = sub_blocks[height_to_hash[uint32(0)]].timestamp
+        if height_to_hash[height - 1] == prev_header_hash:
+            prev_slot_time_start = sub_blocks[height_to_hash[uint32(0)]].timestamp
+        else:
+            pass
     else:
-        last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
+        last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[
+            height_to_hash[uint32(height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1)]
+        ]
 
         curr: SubBlockRecord = sub_blocks[height_to_hash[last_sb_in_prev_epoch.height + 1]]
         # Wait until the slot finishes with a challenge chain infusion at start of slot
@@ -156,6 +157,8 @@ def get_next_difficulty(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
+    prev_header_hash: bytes32,
+    height: uint32,
     header_hash: bytes32,
     new_slot: bool,
 ) -> uint64:
@@ -164,18 +167,17 @@ def get_next_difficulty(
     Used to calculate the number of iterations. When changing this, also change the implementation
     in wallet_state_manager.py.
     """
-    sub_block: SubBlockRecord = sub_blocks[header_hash]
-    next_height: uint32 = uint32(sub_block.height + 1)
+    next_height: uint32 = uint32(height + 1)
 
-    if height_to_hash[sub_block.height] not in height_to_hash:
-        raise ValueError(f"Header hash {header_hash} not in height_to_hash chain")
+    if prev_header_hash not in sub_blocks:
+        raise ValueError(f"Header hash {prev_header_hash} not in sub blocks")
 
     if next_height < constants.EPOCH_SUB_BLOCKS:
         # We are in the first epoch
         return uint64(constants.DIFFICULTY_STARTING)
 
     # If we are in the same slot as previous sub-block, return same difficulty
-    if not new_slot or not finishes_sub_epoch(constants, sub_blocks, header_hash, True):
+    if not new_slot or not finishes_sub_epoch(constants, sub_block.height, sub_block.deficit, True):
         return get_difficulty(constants, sub_blocks, header_hash)
 
     height_epoch_surpass: uint32 = next_height % constants.EPOCH_SUB_BLOCKS
@@ -191,7 +193,9 @@ def get_next_difficulty(
         prev_slot_start_timestamp = sub_blocks[height_to_hash[uint32(0)]].timestamp
         prev_slot_start_weight = 0
     else:
-        last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1]
+        last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[
+            height_to_hash[uint32(height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1)]
+        ]
 
         curr: SubBlockRecord = sub_blocks[height_to_hash[last_sb_in_prev_epoch.height + 1]]
         while not curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:

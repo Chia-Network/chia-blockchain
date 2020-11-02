@@ -226,8 +226,8 @@ async def validate_unfinished_header_block(
             if prev_sb is None:
                 return None, Err.INVALID_SUB_EPOCH_SUMMARY
 
-            finishes_se = finishes_sub_epoch(constants, sub_blocks, header_block.prev_header_hash, False)
-            finishes_epoch: bool = finishes_sub_epoch(constants, sub_blocks, header_block.prev_header_hash, True)
+            finishes_se = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, False)
+            finishes_epoch: bool = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, True)
 
             # 3b. Check that we finished a slot and we finished a sub-epoch
             if not new_slot or not finishes_se:
@@ -259,7 +259,7 @@ async def validate_unfinished_header_block(
         else:
             # 3d. Check that we don't have to include a sub-epoch summary
             if prev_sb is not None and new_slot:
-                finishes = finishes_sub_epoch(constants, sub_blocks, header_block.prev_header_hash, False)
+                finishes = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, False)
                 if finishes:
                     return None, Err.INVALID_SUB_EPOCH_SUMMARY
 
@@ -525,6 +525,7 @@ async def validate_unfinished_header_block(
         # 21. Check if foliage block is present
         if header_block.foliage_sub_block.foliage_block_hash is not None != (header_block.foliage_block is not None):
             return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
+
         if (
             header_block.foliage_sub_block.foliage_sub_block_signature
             is not None
@@ -679,5 +680,9 @@ async def validate_finished_header_block(
     # 28. Check reward block hash
     if header_block.foliage_sub_block.reward_block_hash != header_block.reward_chain_sub_block.get_hash():
         return None, Err.INVALID_REWARD_BLOCK_HASH
+
+    # 29. Check reward block is_block
+    if (header_block.foliage_sub_block.foliage_block_hash is not None) != header_block.reward_chain_sub_block.is_block:
+        return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
     return required_iters, None
