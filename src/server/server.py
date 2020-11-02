@@ -9,6 +9,11 @@ from aiohttp import web
 
 from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload
+from src.server.ssl_context import (
+    load_ssl_paths,
+    ssl_context_for_server,
+    ssl_context_for_client,
+)
 from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
@@ -66,6 +71,11 @@ class ChiaServer:
         if self._local_type is NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
+        cert_path, key_path = load_ssl_paths(root_path, config)
+
+        self._private_cert_path = cert_path
+        self._private_key_path = key_path
+
         self.incoming_task = asyncio.create_task(self.incoming_api_task())
         self.app = None
         self.site = None
@@ -79,7 +89,13 @@ class ChiaServer:
         self.app.add_routes(routes)
         self.runner = web.AppRunner(self.app, access_log=None)
         await self.runner.setup()
-        self.site = web.TCPSite(self.runner, port=self._port, shutdown_timeout=3)
+        require_cert = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
+        ssl_context = ssl_context_for_server(
+            self._private_cert_path, self._private_key_path, require_cert
+        )
+        self.site = web.TCPSite(
+            self.runner, port=self._port, shutdown_timeout=3, ssl_context=ssl_context
+        )
         await self.site.start()
         self.log.info(f"Started listening on port: {self._port}")
 
@@ -145,14 +161,15 @@ class ChiaServer:
         """
         session = None
         try:
+            ssl_context = ssl_context_for_client(
+                self._private_cert_path, self._private_key_path, auth
+            )
             timeout = aiohttp.ClientTimeout(total=10)
             session = aiohttp.ClientSession(timeout=timeout)
             url = f"ws://{target_node.host}:{target_node.port}/ws"
             self.log.info(f"Connecting: {url}")
             ws = await session.ws_connect(
-                url,
-                autoclose=False,
-                autoping=True,
+                url, autoclose=False, autoping=True, ssl_context=ssl_context
             )
             if ws is not None:
                 connection = WSChiaConnection(
