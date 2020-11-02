@@ -5,7 +5,7 @@
       "@chia/core": ["./components/core"],
       "@chia/core*": ["./components/core*"],
       "@chia/icons": ["./components/icons"],
-      "@chia/icons*": ["./components/icons*"],
+      "@chia/icons*": ["./components/icons*"]
     }
   }
 }

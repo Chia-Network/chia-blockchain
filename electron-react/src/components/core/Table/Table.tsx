@@ -26,7 +26,7 @@ const StyledTableRow = styled(TableRow)`
 const StyledTableCell = styled(({ width, minWidth, maxWidth, ...rest }) => (
   <TableCell {...rest} />
 ))`
-  max-width: ${({ maxWidth, width }) => (maxWidth || width ?? '0')};
+  max-width: ${({ maxWidth, width }) => ((maxWidth || width) ?? '0')};
   min-width: ${({ minWidth }) => (minWidth || '0')};
   width: ${({ width }) => (width || 'auto')};
   overflow: hidden;

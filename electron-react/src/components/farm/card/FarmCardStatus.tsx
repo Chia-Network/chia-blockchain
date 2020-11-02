@@ -15,6 +15,10 @@ export default function FarmCardStatus() {
   const connected = useSelector(
     (state: RootState) => state.daemon_state.farmer_connected,
   );
+  const running = useSelector(
+    (state: RootState) => state.daemon_state.farmer_running,
+  );
+  const connectedNotRunning = connected && !running;
   const color = connected ? 'primary' : 'secondary';
 
   return (
@@ -23,15 +27,20 @@ export default function FarmCardStatus() {
       value={
         <Flex alignItems="center" gap={1}>
           <span>
-            {connected ? (
+            {running ? (
               <Trans id="FarmCardStatus.farming">Farming</Trans>
+            ) : connected ? (
+              <Trans id="FarmCardStatus.connected">Connected</Trans>
             ) : (
-              <Trans id="FarmCardStatus.notConnected">Not connected</Trans>
+              <Trans id="FarmCardStatus.notConnected">Not Connected</Trans>
             )}
           </span>
           <StyledFiberManualRecordIcon color={color} />
         </Flex>
       }
+      description={connectedNotRunning && (
+        <Trans id="FarmCardStatus.connectedNotFarming">Connected but Not Farming</Trans>
+      )}
       valueColor={color}
     />
   );
