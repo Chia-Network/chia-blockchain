@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from src.types.challenge_slot import ChallengeSlot
 from src.types.full_block import FullBlock
-from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot, EndOfSlotProofs
+from src.types.reward_chain_end_of_slot import RewardChainSubSlot, SubSlotProofs
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.sized_bytes import bytes32
@@ -118,8 +118,8 @@ class RespondInfusionChallengePoint:
 @cbor_message
 class RespondEndOfSlot:
     challenge_slot: ChallengeSlot
-    reward_slot: RewardChainEndOfSlot
-    slot_proofs: EndOfSlotProofs
+    reward_slot: RewardChainSubSlot
+    slot_proofs: SubSlotProofs
 
 
 @dataclass(frozen=True)
@@ -139,11 +139,9 @@ class RequestCompactVDFs:
 class RespondCompactVDFs:
     height: uint32
     header_hash: bytes32
-    end_of_slot_proofs: List[
-        EndOfSlotProofs
-    ]  # List of challenge eos vdf and reward eos vdf
-    cc_icp_proof: Optional[VDFProof]  # If not first icp
-    rc_icp_proof: Optional[VDFProof]  # If not first icp
+    end_of_slot_proofs: List[SubSlotProofs]  # List of challenge eos vdf and reward eos vdf
+    cc_sp_proof: Optional[VDFProof]  # If not first icp
+    rc_sp_proof: Optional[VDFProof]  # If not first icp
     cc_ip_proof: VDFProof
     rc_ip_proof: VDFProof
 

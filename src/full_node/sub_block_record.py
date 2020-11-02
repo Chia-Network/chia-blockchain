@@ -22,6 +22,7 @@ class SubBlockRecord(Streamable):
     weight: uint128  # Total cumulative difficulty of all ancestor blocks since genesis
     total_iters: uint128  # Total number of VDF iterations since genesis, including this sub-block
     challenge_vdf_output: ClassgroupElement  # This is the intermediary VDF output at ip_iters in challenge chain
+    infused_challenge_vdf_output: ClassgroupElement  # This is the intermediary VDF output at ip_iters in infused cc
     reward_infusion_output: bytes32  # The reward chain infusion output, input to next VDF
     challenge_block_info_hash: bytes32  # Hash of challenge chain data, used to validate end of slots in the future
     ips: uint64  # Current network iterations per second parameter
@@ -34,7 +35,7 @@ class SubBlockRecord(Streamable):
     timestamp: Optional[uint64]
     prev_block_hash: Optional[bytes32]  # Header hash of the previous transaction block
 
-    # Slot (present iff this is the first SB in slot)
+    # Slot (present iff this is the first SB in sub slot)
     finished_challenge_slot_hashes: Optional[List[bytes32]]
     finished_reward_slot_hashes: Optional[List[bytes32]]
 
