@@ -34,10 +34,16 @@ from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint8
 from src.full_node.block_root_validation import validate_block_merkle_roots
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from src.consensus.block_rewards import (
+    calculate_pool_reward,
+    calculate_base_farmer_reward,
+)
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.types.name_puzzle_condition import NPC
-from src.full_node.block_header_validation import validate_finished_header_block, validate_unfinished_header_block
+from src.full_node.block_header_validation import (
+    validate_finished_header_block,
+    validate_unfinished_header_block,
+)
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 log = logging.getLogger(__name__)
@@ -209,7 +215,11 @@ class Blockchain:
         )
 
         required_iters, error_code = await validate_finished_header_block(
-            self.constants, self.sub_blocks, self.height_to_hash, curr_header_block, False
+            self.constants,
+            self.sub_blocks,
+            self.height_to_hash,
+            curr_header_block,
+            False,
         )
 
         if error_code is not None:
@@ -341,7 +351,11 @@ class Blockchain:
         )
 
         required_iters, error_code = await validate_unfinished_header_block(
-            self.constants, self.sub_blocks, self.height_to_hash, unfinished_header_block, False
+            self.constants,
+            self.sub_blocks,
+            self.height_to_hash,
+            unfinished_header_block,
+            False,
         )
 
         if error_code is not None:

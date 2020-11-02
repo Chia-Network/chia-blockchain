@@ -43,7 +43,7 @@ class RewardChainSubBlock(Streamable):
             self.total_iters,
             self.proof_of_space,
             self.challenge_chain_icp_vdf,
-            self.challenge_challenge_point_sig,
+            self.challenge_chain_icp_sig,
             self.reward_chain_icp_vdf,
             self.reward_chain_icp_sig,
         )

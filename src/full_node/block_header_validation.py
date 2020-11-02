@@ -143,7 +143,11 @@ async def validate_unfinished_header_block(
                 else:
                     # There might be an ips adjustment after the previous block
                     ips_empty_slots: uint64 = get_next_ips(
-                        constants, height_to_hash, sub_blocks, header_block.prev_header_hash, True
+                        constants,
+                        height_to_hash,
+                        sub_blocks,
+                        header_block.prev_header_hash,
+                        True,
                     )
                 target_vdf_info = VDFInfo(
                     challenge_slot.end_of_slot_vdf.challenge_hash,  # already validated above
@@ -191,7 +195,11 @@ async def validate_unfinished_header_block(
                 else:
                     # At least one empty slot, so use previous slot hash. IPS might change because it's a new slot
                     ips: uint64 = get_next_ips(
-                        constants, height_to_hash, sub_blocks, header_block.prev_header_hash, True
+                        constants,
+                        height_to_hash,
+                        sub_blocks,
+                        header_block.prev_header_hash,
+                        True,
                     )
                     rc_eos_vdf_challenge: bytes32 = header_block.finished_slots[finished_slot_n - 1][1].get_hash()
                     rc_eos_vdf_iters = calculate_slot_iters(constants, ips)
@@ -239,9 +247,19 @@ async def validate_unfinished_header_block(
 
             if finishes_epoch:
                 next_diff = get_next_difficulty(
-                    constants, sub_blocks, height_to_hash, header_block.prev_header_hash, True
+                    constants,
+                    sub_blocks,
+                    height_to_hash,
+                    header_block.prev_header_hash,
+                    True,
                 )
-                next_ips = get_next_ips(constants, sub_blocks, height_to_hash, header_block.prev_header_hash, True)
+                next_ips = get_next_ips(
+                    constants,
+                    sub_blocks,
+                    height_to_hash,
+                    header_block.prev_header_hash,
+                    True,
+                )
             else:
                 next_diff = None
                 next_ips = None
@@ -405,7 +423,9 @@ async def validate_unfinished_header_block(
                 header_block.reward_chain_sub_block.reward_chain_icp_vdf.output,
             )
             if not header_block.reward_chain_icp_proof.is_valid(
-                constants, header_block.reward_chain_sub_block.reward_chain_icp_vdf, target_vdf_info
+                constants,
+                header_block.reward_chain_sub_block.reward_chain_icp_vdf,
+                target_vdf_info,
             ):
                 return None, Err.INVALID_RC_ICP_VDF
             rc_icp_hash = header_block.reward_chain_sub_block.reward_chain_icp_vdf.get_hash()
@@ -444,7 +464,9 @@ async def validate_unfinished_header_block(
                 header_block.reward_chain_sub_block.challenge_chain_icp_vdf.output,
             )
             if not header_block.challenge_chain_icp_proof.is_valid(
-                constants, header_block.reward_chain_sub_block.challenge_chain_icp_vdf, target_vdf_info
+                constants,
+                header_block.reward_chain_sub_block.challenge_chain_icp_vdf,
+                target_vdf_info,
             ):
                 return None, Err.INVALID_CC_ICP_VDF
         else:
@@ -615,7 +637,13 @@ async def validate_finished_header_block(
     if prev_sb is None:
         ips = uint64(constants.IPS_STARTING)
     else:
-        ips: uint64 = get_next_ips(constants, sub_blocks, height_to_hash, header_block.prev_header_hash, new_slot)
+        ips: uint64 = get_next_ips(
+            constants,
+            sub_blocks,
+            height_to_hash,
+            header_block.prev_header_hash,
+            new_slot,
+        )
     ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
 
     # RC vdf challenge is taken from more recent of (slot start, prev_block)
@@ -661,7 +689,9 @@ async def validate_finished_header_block(
         header_block.reward_chain_sub_block.challenge_chain_ip_vdf.output,
     )
     if not header_block.challenge_chain_ip_proof.is_valid(
-        constants, header_block.reward_chain_sub_block.challenge_chain_ip_vdf, cc_target_vdf_info
+        constants,
+        header_block.reward_chain_sub_block.challenge_chain_ip_vdf,
+        cc_target_vdf_info,
     ):
         return None, Err.INVALID_CC_IP_VDF
 
@@ -673,7 +703,9 @@ async def validate_finished_header_block(
         header_block.reward_chain_sub_block.reward_chain_ip_vdf.output,
     )
     if not header_block.reward_chain_ip_proof.is_valid(
-        constants, header_block.reward_chain_sub_block.reward_chain_ip_vdf, rc_target_vdf_info
+        constants,
+        header_block.reward_chain_sub_block.reward_chain_ip_vdf,
+        rc_target_vdf_info,
     ):
         return None, Err.INVALID_RC_IP_VDF
 

@@ -141,7 +141,9 @@ def get_next_slot_iters(
 
 
 def get_difficulty(
-    constants: ConsensusConstants, sub_blocks: Dict[bytes32, SubBlockRecord], header_hash: bytes32
+    constants: ConsensusConstants,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    header_hash: bytes32,
 ) -> uint64:
     """
     Returns the difficulty of the sub-block referred to by header_hash

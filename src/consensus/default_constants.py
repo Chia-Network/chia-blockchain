@@ -33,7 +33,9 @@ testnet_kwargs = {
     # Replace this any time the constants change.
     "FIRST_CC_CHALLENGE": bytes([0x00] * 32),
     "FIRST_RC_CHALLENGE": bytes([0x00] * 32),
-    "GENESIS_PRE_FARM_PUZZLE_HASH": bytes.fromhex("7a916bdc50d3d0337b0998668a4f439670339467d7e9039b8650ba7b1d4fc1a0"),
+    "GENESIS_PRE_FARM_PUZZLE_HASH": bytes.fromhex(
+        "7a916bdc50d3d0337b0998668a4f439670339467d7e9039b8650ba7b1d4fc1a0"
+    ),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec
     "TX_PER_SEC": 20,

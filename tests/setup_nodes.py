@@ -81,7 +81,9 @@ async def setup_full_node(
     config["rpc_port"] = port + 1000
 
     if simulator:
-        kwargs = service_kwargs_for_full_node_simulator(bt.root_path, config, consensus_constants, bt)
+        kwargs = service_kwargs_for_full_node_simulator(
+            bt.root_path, config, consensus_constants, bt
+        )
     else:
         kwargs = service_kwargs_for_full_node(bt.root_path, config, consensus_constants)
 
@@ -140,7 +142,9 @@ async def setup_wallet_node(
     else:
         del config["full_node_peer"]
 
-    kwargs = service_kwargs_for_wallet(bt.root_path, config, consensus_constants, keychain)
+    kwargs = service_kwargs_for_wallet(
+        bt.root_path, config, consensus_constants, keychain
+    )
     kwargs.update(
         parse_cli_args=False,
     )
@@ -159,7 +163,9 @@ async def setup_wallet_node(
 
 
 async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConstants):
-    kwargs = service_kwargs_for_harvester(bt.root_path, bt.config["harvester"], consensus_constants)
+    kwargs = service_kwargs_for_harvester(
+        bt.root_path, bt.config["harvester"], consensus_constants
+    )
     kwargs.update(
         server_listen_ports=[port],
         advertised_port=port,
@@ -196,7 +202,9 @@ async def setup_farmer(
     else:
         del config["full_node_peer"]
 
-    kwargs = service_kwargs_for_farmer(bt.root_path, config, config_pool, bt.keychain, consensus_constants)
+    kwargs = service_kwargs_for_farmer(
+        bt.root_path, config, config_pool, bt.keychain, consensus_constants
+    )
     kwargs.update(
         parse_cli_args=False,
     )
@@ -245,7 +253,9 @@ async def setup_vdf_clients(port):
     await kill_processes()
 
 
-async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: ConsensusConstants):
+async def setup_timelord(
+    port, full_node_port, sanitizer, consensus_constants: ConsensusConstants
+):
     config = bt.config["timelord"]
     config["port"] = port
     config["full_node_peer"]["port"] = full_node_port
@@ -253,7 +263,9 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
     if sanitizer:
         config["vdf_server"]["port"] = 7999
 
-    kwargs = service_kwargs_for_timelord(bt.root_path, config, consensus_constants.DISCRIMINANT_SIZE_BITS)
+    kwargs = service_kwargs_for_timelord(
+        bt.root_path, config, consensus_constants.DISCRIMINANT_SIZE_BITS
+    )
     kwargs.update(
         parse_cli_args=False,
     )
@@ -274,8 +286,12 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
     Setup and teardown of two full nodes, with blockchains and separate DBs.
     """
     node_iters = [
-        setup_full_node(consensus_constants, "blockchain_test.db", 21234, simulator=False),
-        setup_full_node(consensus_constants, "blockchain_test_2.db", 21235, simulator=False),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21234, simulator=False
+        ),
+        setup_full_node(
+            consensus_constants, "blockchain_test_2.db", 21235, simulator=False
+        ),
     ]
 
     fn1, s1 = await node_iters[0].__anext__()
@@ -286,10 +302,16 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
     await _teardown_nodes(node_iters)
 
 
-async def setup_node_and_wallet(consensus_constants: ConsensusConstants, starting_height=None):
+async def setup_node_and_wallet(
+    consensus_constants: ConsensusConstants, starting_height=None
+):
     node_iters = [
-        setup_full_node(consensus_constants, "blockchain_test.db", 21234, simulator=False),
-        setup_wallet_node(21235, consensus_constants, None, starting_height=starting_height),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21234, simulator=False
+        ),
+        setup_wallet_node(
+            21235, consensus_constants, None, starting_height=starting_height
+        ),
     ]
 
     full_node, s1 = await node_iters[0].__anext__()
@@ -357,8 +379,12 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         setup_farmer(21235, consensus_constants, uint16(21237)),
         setup_vdf_clients(8000),
         setup_timelord(21236, 21237, False, consensus_constants),
-        setup_full_node(consensus_constants, "blockchain_test.db", 21237, 21232, False, 10),
-        setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, 21232, False, 10),
+        setup_full_node(
+            consensus_constants, "blockchain_test.db", 21237, 21232, False, 10
+        ),
+        setup_full_node(
+            consensus_constants, "blockchain_test_2.db", 21238, 21232, False, 10
+        ),
         setup_vdf_clients(7999),
         setup_timelord(21239, 21238, True, consensus_constants),
     ]
