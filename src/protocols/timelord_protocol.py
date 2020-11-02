@@ -37,9 +37,9 @@ class NewInfusionPointVDF:
 @dataclass(frozen=True)
 @cbor_message
 class NewInfusionChallengePointVDF:
-    challenge_chain_icp_vdf: VDFInfo
+    challenge_chain_sp_vdf: VDFInfo
     challenge_chain_icp_proof: VDFProof
-    reward_chain_icp_vdf: VDFInfo
+    reward_chain_sp_vdf: VDFInfo
     reward_chain_icp_proof: VDFProof
 
 

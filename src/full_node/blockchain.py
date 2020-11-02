@@ -211,7 +211,7 @@ class Blockchain:
             return ReceiveBlockResult.DISCONNECTED_BLOCK, None, None
 
         curr_header_block = HeaderBlock(
-            block.finished_slots,
+            block.finished_sub_slots,
             block.reward_chain_sub_block,
             block.challenge_chain_icp_proof,
             block.challenge_chain_ip_proof,
@@ -246,11 +246,13 @@ class Blockchain:
                 self.height_to_hash,
                 self.sub_blocks,
                 block.prev_header_hash,
-                block.finished_slots is not None,
+                block.finished_sub_slots is not None,
             )
         overflow = is_overflow_sub_block(self.constants, ips, required_iters)
         prev_sb: Optional[SubBlockRecord] = self.sub_blocks.get(block.prev_header_hash, None)
-        deficit = calculate_deficit(self.constants, block.height, prev_sb, overflow, block.finished_slots is not None)
+        deficit = calculate_deficit(
+            self.constants, block.height, prev_sb, overflow, block.finished_sub_slots is not None
+        )
         sub_block = full_block_to_sub_block_record(block, ips, required_iters, deficit)
 
         # Always add the block to the database
@@ -373,7 +375,7 @@ class Blockchain:
             return None, Err.INVALID_PREV_BLOCK_HASH
 
         unfinished_header_block = UnfinishedHeaderBlock(
-            block.finished_slots,
+            block.finished_sub_slots,
             block.reward_chain_sub_block,
             block.challenge_chain_icp_proof,
             block.reward_chain_icp_proof,
@@ -548,12 +550,8 @@ class Blockchain:
                 return Err.DOUBLE_SPEND
 
         # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
-        new_ips = self.get_next_slot_iters(
-            block.prev_header_hash, block.finished_slots is not None
-        )
-        fork_h = find_fork_point_in_chain(
-            self.sub_blocks, self.get_peak(), block.get_sub_block_record(new_ips)
-        )
+        new_ips = self.get_next_slot_iters(block.prev_header_hash, block.finished_sub_slots is not None)
+        fork_h = find_fork_point_in_chain(self.sub_blocks, self.get_peak(), block.get_sub_block_record(new_ips))
 
         # Get additions and removals since (after) fork_h but not including this block
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}

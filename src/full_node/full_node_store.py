@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Tuple
 from src.consensus.constants import ConsensusConstants
 from src.types.challenge_slot import ChallengeSlot
 from src.types.full_block import FullBlock
-from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot, EndOfSlotProofs
+from src.types.reward_chain_end_of_slot import RewardChainSubSlot, SubSlotProofs
 from src.types.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFProof, VDFInfo
@@ -31,9 +31,7 @@ class FullNodeStore:
 
     # Finished slots and icps from the peak's slot onwards
     # We store all 32 ICPs for each slot, starting as 32 Nones and filling them as we go
-    finished_slots: List[
-        Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs, ICPs]
-    ]
+    finished_slots: List[Tuple[ChallengeSlot, RewardChainSubSlot, SubSlotProofs, ICPs]]
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):
@@ -52,9 +50,7 @@ class FullNodeStore:
     def add_disconnected_block(self, block: FullBlock) -> None:
         self.disconnected_blocks[block.header_hash] = block
 
-    def get_disconnected_block_by_prev(
-        self, prev_header_hash: bytes32
-    ) -> Optional[FullBlock]:
+    def get_disconnected_block_by_prev(self, prev_header_hash: bytes32) -> Optional[FullBlock]:
         for _, block in self.disconnected_blocks.items():
             if block.prev_header_hash == prev_header_hash:
                 return block
@@ -90,13 +86,9 @@ class FullNodeStore:
                 pass
 
     def add_unfinished_block(self, unfinished_block: UnfinishedBlock) -> None:
-        self.unfinished_blocks[
-            unfinished_block.reward_chain_sub_block.get_hash()
-        ] = unfinished_block
+        self.unfinished_blocks[unfinished_block.reward_chain_sub_block.get_hash()] = unfinished_block
 
-    def get_unfinished_block(
-        self, unfinished_reward_hash: bytes32
-    ) -> Optional[UnfinishedBlock]:
+    def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
         return self.unfinished_blocks.get(unfinished_reward_hash, None)
 
     def seen_unfinished_block(self, temp_header_hash: bytes32) -> bool:
@@ -121,31 +113,27 @@ class FullNodeStore:
             del self.unfinished_blocks[partial_reward_hash]
 
     def clear_slots(self):
-        self.finished_slots.clear()
+        self.finished_sub_slots.clear()
 
-    def new_finished_slot(
-        self, cs: ChallengeSlot, reward: RewardChainEndOfSlot, proofs: EndOfSlotProofs
-    ):
+    def new_finished_slot(self, cs: ChallengeSlot, reward: RewardChainSubSlot, proofs: SubSlotProofs):
         """
         Returns true if finished slot successfully added
         """
         icps = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
-        if len(self.finished_slots) == 0:
-            self.finished_slots.append((cs, reward, proofs, icps))
+        if len(self.finished_sub_slots) == 0:
+            self.finished_sub_slots.append((cs, reward, proofs, icps))
             return True
-        if cs.proof_of_space.challenge_hash != self.finished_slots[-1][0].get_hash():
+        if cs.proof_of_space.challenge_hash != self.finished_sub_slots[-1][0].get_hash():
             # This slot does not append to our next slot
             return False
-        self.finished_slots.append((cs, reward, proofs, icps))
+        self.finished_sub_slots.append((cs, reward, proofs, icps))
         return True
 
-    def new_icp(
-        self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof
-    ) -> bool:
+    def new_icp(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof) -> bool:
         """
         Returns true if icp successfully added
         """
-        for cs, reward, proofs, icps in self.finished_slots:
+        for cs, reward, proofs, icps in self.finished_sub_slots:
             if cs.get_hash() == challenge_hash:
                 icps[index] = (vdf_info, proof)
                 return True
