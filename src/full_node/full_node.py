@@ -11,9 +11,12 @@ from chiapos import Verifier
 import dataclasses
 
 from src.consensus.constants import ConsensusConstants
+from src.consensus.pot_iterations import calculate_icp_iters, calculate_ip_iters, is_overflow_sub_block
 from src.full_node.block_store import BlockStore
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
+from src.full_node.deficit import calculate_deficit
+from src.full_node.difficulty_adjustment import finishes_sub_epoch, get_next_ips
 from src.full_node.full_node_store import FullNodeStore
 from src.full_node.mempool_manager import MempoolManager
 from src.full_node.sub_block_record import SubBlockRecord
@@ -786,8 +789,14 @@ class FullNode:
         """
         block = respond_unfinished_sub_block.unfinished_sub_block
         # Adds the unfinished block to seen, and check if it's seen before, to prevent
-        # processing it twice
+        # processing it twice. This searches for the exact version of the unfinished block (there can be many different
+        # foliages for the same trunk). Note that it does not require that this block was successfully processed
         if self.full_node_store.seen_unfinished_block(block.header_hash):
+            return
+
+        # This searched for the trunk hash (unfinished reward hash). If we have already added a block with the same
+        # hash, return
+        if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
             return
 
         if block.height > 0 and not self.blockchain.contains_block(block.prev_header_hash):
@@ -795,48 +804,54 @@ class FullNode:
             self.log.info(f"Received a disconnected unfinished block at height {block.height}")
             return
 
+        peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
+        if peak is not None:
+            peak_icp = calculate_icp_iters(self.constants, peak.ips, peak.required_iters)
+            peak_ip_iters = calculate_ip_iters(self.constants, peak.ips, peak.required_iters)
+            icp_iters = peak.total_iters - (peak_ip_iters - peak_icp)
+            if block.total_iters < icp_iters:
+                # This means this unfinished block is pretty far behind, it will not add weight to our chain
+                return
+
         async with self.blockchain.lock:
             # TODO: pre-validate VDFs outside of lock
-            error_code: Optional[Err] = await self.blockchain.validate_unfinished_block(block)
+            required_iters, error_code = await self.blockchain.validate_unfinished_block(block)
             if error_code is not None:
                 raise ConsensusError(error_code)
 
-        assert iterations_needed is not None
+        assert required_iters is not None
 
-        challenge = self.blockchain.get_challenge(prev_full_block)
-        assert challenge is not None
-        challenge_hash = challenge.get_hash()
-
-        if await (self.full_node_store.get_unfinished_block((challenge_hash, iterations_needed))) is not None:
+        # Perform another check, in case we have already concurrently added the same unfinished block
+        if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
             return
 
-        expected_time: uint64 = uint64(int(iterations_needed / (self.full_node_store.get_proof_of_time_estimate_ips())))
+        self.full_node_store.add_unfinished_block(block)
 
-        if expected_time > self.constants.PROPAGATION_DELAY_THRESHOLD:
-            self.log.info(f"Block is slow, expected {expected_time} seconds, waiting")
-            # If this block is slow, sleep to allow faster blocks to come out first
-            await asyncio.sleep(5)
-
-        leader: Tuple[uint32, uint64] = self.full_node_store.get_unfinished_block_leader()
-        if leader is None or block.height > leader[0]:
-            self.log.info(f"This is the first unfinished block at height {block.height}, so propagate.")
-            # If this is the first block we see at this height, propagate
-            self.full_node_store.set_unfinished_block_leader((block.height, expected_time))
-        elif block.height == leader[0]:
-            if expected_time > leader[1] + self.constants.PROPAGATION_THRESHOLD:
-                # If VDF is expected to finish X seconds later than the best, don't propagate
-                self.log.info(f"VDF will finish too late {expected_time} seconds, so don't propagate")
-                return
-            elif expected_time < leader[1]:
-                self.log.info(f"New best unfinished block at height {block.height}")
-                # If this will be the first block to finalize, update our leader
-                self.full_node_store.set_unfinished_block_leader((leader[0], expected_time))
+        if block.height == 0:
+            ips = self.constants.IPS_STARTING
         else:
-            # If we have seen an unfinished block at a greater or equal height, don't propagate
-            self.log.info("Unfinished block at old height, so don't propagate")
-            return
+            ips = get_next_ips(
+                self.constants,
+                self.blockchain.height_to_hash,
+                self.blockchain.sub_blocks,
+                block.prev_header_hash,
+                block.finished_slots is not None,
+            )
+        overflow = is_overflow_sub_block(self.constants, ips, required_iters)
+        prev_sb: Optional[SubBlockRecord] = self.blockchain.sub_blocks.get(block.prev_header_hash, None)
+        deficit = calculate_deficit(self.constants, block.height, prev_sb, overflow, block.finished_slots is not None)
+        finishes_se = finishes_sub_epoch(self.constants, block.height, deficit, False)
+        finishes_epoch: bool = finishes_sub_epoch(self.constants, block.height, deficit, True)
 
-        await self.full_node_store.add_unfinished_block((challenge_hash, iterations_needed), block)
+        # if finishes_se:
+        #     if finishes_epoch:
+        #         difficulty
+        timelord_request = timelord_protocol.NewUnfinishedSubBlock(
+            block.reward_chain_sub_block,
+            block.challenge_chain_icp_proof,
+            block.reward_chain_icp_proof,
+            block.foliage_sub_block,
+        )
 
         timelord_request = timelord_protocol.ProofOfSpaceInfo(challenge_hash, iterations_needed)
 

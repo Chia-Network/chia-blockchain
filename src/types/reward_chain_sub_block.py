@@ -34,6 +34,7 @@ class RewardChainSubBlock(Streamable):
     reward_chain_icp_vdf: Optional[VDFInfo]  # Not present for first icp in slot
     reward_chain_icp_sig: G2Element
     reward_chain_ip_vdf: VDFInfo
+    is_block: bool
 
     def get_unfinished(self) -> RewardChainSubBlockUnfinished:
         return RewardChainSubBlockUnfinished(
