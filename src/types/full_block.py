@@ -8,9 +8,8 @@ from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.condition_tools import created_outputs_for_conditions_dict
 from src.util.streamable import Streamable, streamable
 from src.types.vdf import VDFProof
-from src.types.challenge_slot import ChallengeSlot
-from src.types.reward_chain_end_of_slot import RewardChainEndOfSlot, EndOfSlotProofs
 from src.types.reward_chain_sub_block import RewardChainSubBlock
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
 from src.types.program import Program
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
@@ -24,19 +23,16 @@ from src.consensus.block_rewards import (
 @streamable
 class FullBlock(Streamable):
     # All the information required to validate a block
-    finished_slots: List[
-        Tuple[ChallengeSlot, RewardChainEndOfSlot, EndOfSlotProofs]
-    ]  # If first sb
+    finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
     challenge_chain_icp_proof: VDFProof
     challenge_chain_ip_proof: VDFProof
     reward_chain_icp_proof: VDFProof
     reward_chain_ip_proof: VDFProof
+    infused_challenge_chain_ip_proof: Optional[VDFProof]  # Iff deficit < 4
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
-    transactions_info: Optional[
-        TransactionsInfo
-    ]  # Reward chain foliage data (tx block additional)
+    transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
     transactions_generator: Optional[Program]  # Program that generates transactions
 
     @property
@@ -90,9 +86,7 @@ class FullBlock(Streamable):
 
         if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(
-                self.transactions_generator
-            )
+            err, npc_list, cost = get_name_puzzle_conditions(self.transactions_generator)
             # created coins
             if npc_list is not None:
                 additions.extend(additions_for_npc(npc_list))
@@ -112,9 +106,7 @@ class FullBlock(Streamable):
 
         if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(
-                self.transactions_generator
-            )
+            err, npc_list, cost = get_name_puzzle_conditions(self.transactions_generator)
             # build removals list
             if npc_list is None:
                 return [], []
@@ -130,9 +122,7 @@ def additions_for_npc(npc_list: List[NPC]) -> List[Coin]:
     additions: List[Coin] = []
 
     for npc in npc_list:
-        for coin in created_outputs_for_conditions_dict(
-            npc.condition_dict, npc.coin_name
-        ):
+        for coin in created_outputs_for_conditions_dict(npc.condition_dict, npc.coin_name):
             additions.append(coin)
 
     return additions
