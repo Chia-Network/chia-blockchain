@@ -126,14 +126,12 @@ class ChiaServer:
             )
 
             assert handshake is True
-            if self.on_connect is not None:
-                await self.on_connect(connection)
+            await self.connection_added(connection, self.on_connect)
             if (
                 self._local_type is NodeType.INTRODUCER
                 and connection.connection_type is NodeType.FULL_NODE
             ):
                 self.introducer_peers.add(connection.get_peer_info())
-            self.connection_added(connection)
         except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception: {e}")
@@ -143,10 +141,12 @@ class ChiaServer:
         await close_event.wait()
         return ws
 
-    def connection_added(self, connection: WSChiaConnection):
+    async def connection_added(self, connection: WSChiaConnection, on_connect=None):
         self.all_connections[connection.peer_node_id] = connection
         if connection.connection_type is NodeType.FULL_NODE:
             self.full_nodes[connection.peer_node_id] = connection
+        if on_connect is not None:
+            await on_connect(connection)
 
     async def start_client(
         self,
@@ -192,9 +192,7 @@ class ChiaServer:
                     self._local_type,
                 )
                 assert handshake is True
-                if on_connect is not None:
-                    await on_connect(connection)
-                self.connection_added(connection)
+                await self.connection_added(connection, on_connect)
                 self.log.info("Connected")
             return True
         except Exception as e:
