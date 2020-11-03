@@ -256,6 +256,7 @@ class BlockTools:
             self.deficit = 5
             block_list: List[FullBlock] = [genesis]
             self.prev_foliage_block = genesis.foliage_block
+            random.seed(seed)
         else:
             assert block_list[-1].proof_of_time is not None
             curr_min_iters = calculate_min_iters_from_iterations(
@@ -265,8 +266,9 @@ class BlockTools:
                 test_constants.NUMBER_ZERO_BITS_CHALLENGE_SIG,
             )
 
-        starting_height: int = block_list[-1].height + 1
-        timestamp: uint64 = block_list[-1].header.data.timestamp
+        prev_block = block_list[-1]
+        starting_height: int = prev_block.height + 1
+        timestamp: uint64 = prev_block.foliage_block.timestamp
         end_of_slot: Optional[RewardChainSubSlot] = None
         transactions: Optional[Program] = None
         aggsig: Optional[G2Element] = None
@@ -276,15 +278,12 @@ class BlockTools:
 
             # update values
             prev_block = block_list[-1]
-            self.sub_blocks[prev_block.get_hash()] = prev_block.get_sub_block_record()
-            self.height_to_hash[prev_block.height] = prev_block.get_hash()
-
+            header_hash = prev_block.header_hash
+            new_slot = False
+            # check is new slot
             number_iters: uint64 = pot_iterations.calculate_iterations(
                 test_constants, self.last_challenge_proof_of_space, self.difficulty
             )
-
-            new_slot = False
-            # check is new slot
             if number_iters > self.next_slot_iters:
                 new_slot = True
                 self.curr_slot_iters = self.next_slot_iters
@@ -292,11 +291,11 @@ class BlockTools:
                     test_constants,
                     self.height_to_hash,
                     self.sub_blocks,
-                    prev_block.reward_chain_sub_block.get_hash(),
+                    header_hash,
                     True,
                 )
 
-                challnge = self.chain_head.finished_sub_slots[-1][0].get_hash()
+                challnge = self.chain_head.finished_slots[-1][0].get_hash()
 
                 output = get_vdf_output(
                     challnge,
@@ -367,6 +366,11 @@ class BlockTools:
                     new_slot,
                     required_iters,
                     overflow,
+                )
+
+                self.height_to_hash[prev_block.height] = header_hash
+                self.sub_blocks[header_hash] = full_block_to_sub_block_record(
+                    prev_block, self.ips, self.required_iters, self.deficit
                 )
 
                 # zero finish slots
@@ -477,28 +481,44 @@ class BlockTools:
             rc_ip_vdf,
         )
 
-        foliage_sub_block, _, _, _ = self.create_foliage(
+        foliage_sub_block, foliage_block, _, _ = self.create_foliage(
             fees,
+            0,
             None,
             None,
             None,
-            seed,
+            None,
+            std_hash(seed),
             uint64(0),
-            seed,
-            False,
-            seed,
+            rc_sub_block.get_unfinished().get_hash(),  # unfinished r block
+            True,
             self.curr_proof_of_space,
+            seed,
         )
 
         full_block: FullBlock = FullBlock(
-            finished_slots=None,
-            challenge_chain_sp_proof=cc_sp_proof,
+            finished_slots=[],  # todo make finished slots optional
+            challenge_chain_icp_proof=cc_sp_proof,
             challenge_chain_ip_proof=cc_ip_proof,
-            reward_chain_sp_proof=rc_sp_proof,
+            reward_chain_icp_proof=rc_sp_proof,
             reward_chain_ip_proof=rc_ip_proof,
             reward_chain_sub_block=rc_sub_block,
-            # foliage_sub_block=foliage_sub_block,
-            # foliage_block=foliage_block,
+            foliage_sub_block=foliage_sub_block,
+            foliage_block=foliage_block,
+            transactions_info=None,
+            transactions_generator=None,
+        )
+        self.height_to_hash[0] = full_block.header_hash
+        self.sub_blocks[full_block.header_hash] = full_block_to_sub_block_record(
+            full_block, self.ips, self.required_iters, uint8(test_constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK)
+        )
+
+        self.next_slot_iters = get_next_slot_iters(
+            test_constants,
+            self.height_to_hash,
+            self.sub_blocks,
+            full_block.header_hash,
+            True,
         )
 
         return full_block
@@ -528,7 +548,10 @@ class BlockTools:
             cc_vdf_input = head.reward_chain_sub_block.challenge_chain_ip_vdf.output
             rc_vdf_challenge = head.reward_chain_sub_block.reward_chain_ip_vdf.output.get_hash()
 
-        cc_vdf_challenge = self.finished_sub_slots[-1][0].get_hash()
+        if head.height == 0:
+            cc_vdf_challenge = head.header_hash
+        else:
+            cc_vdf_challenge = self.finished_slots[-1][0].get_hash()
 
         number_iters: uint64 = pot_iterations.calculate_iterations(
             test_constants, self.last_challenge_proof_of_space, self.difficulty
@@ -563,6 +586,7 @@ class BlockTools:
 
         foliage_sub_block, foliage_block, transactions_info, transactions_generator = self.create_foliage(
             fees,
+            head.height + 1,
             aggsig,
             transactions,
             block_rewards,  # todo
@@ -602,6 +626,7 @@ class BlockTools:
     def create_foliage(
         self,
         fees: uint64,
+        height,
         aggsig: Optional[G2Element],
         transactions: Optional[Program],
         reward_claims_incorporated: Optional[List[Coin]],
@@ -611,17 +636,13 @@ class BlockTools:
         unfinished_reward_block_hash: bytes32,
         is_transaction: bool,
         proof_of_space: ProofOfSpace,
+        seed: bytes,
         reward_puzzlehash: bytes32 = None,
     ) -> (FoliageSubBlock, FoliageBlock, TransactionsInfo, Program):
 
         # Use the extension data to create different blocks based on header hash
-        # extension_data: bytes32 = bytes32([random.randint(0, 255) for _ in range(32)])  # todo start from same seed always
-        height = uint32(len(self.height_to_hash))
-
-        extension_data = bytes32("todo")
-
+        extension_data: bytes32 = bytes32([random.randint(0, 255) for _ in range(32)])
         cost: uint64 = uint64(0)
-
         fee_reward: uint64 = uint64(block_rewards.calculate_base_farmer_reward(height) + fees)
 
         # Create filter
@@ -692,31 +713,43 @@ class BlockTools:
             extension_data,
         )
 
-        signed_foliage_sub_block_data: G2Element = self.get_plot_signature(foliage_sub_block_data, self.plot_pk)
-        signed_prev_foliage_sub_block: G2Element = self.get_plot_signature(prev_block.foliage_block, self.plot_pk)
+        signed_foliage_sub_block_data: G2Element = self.get_plot_signature(
+            foliage_sub_block_data.get_hash(), self.plot_pk
+        )
+
+        prev_foliage_block_hash: Optional[bytes32] = None
+        signed_prev_foliage_sub_block: Optional[G2Element] = None
+        prev_block_hash = std_hash(seed)
+        transactions_info_hash = std_hash(seed)
+        foliage_block = None
+        if is_transaction:
+            if prev_block != None:
+                prev_block_hash = prev_block.get_hash()
+                prev_foliage_block_hash = prev_block.foliage_block.get_hash()
+                signed_prev_foliage_sub_block: G2Element = self.get_plot_signature(
+                    prev_block.foliage_block.get_hash(), self.plot_pk
+                )
+
+                transactions_info_hash = TransactionsInfo(
+                    self.previous_generators_root, generator_hash, final_aggsig, fees, cost, reward_claims_incorporated
+                ).get_hash()
+
+            foliage_block = FoliageBlock(
+                prev_block_hash,
+                timestamp,
+                filter_hash,
+                additions_root,
+                removals_root,
+                transactions_info_hash,
+            )
 
         foliage_sub_block = FoliageSubBlock(
-            prev_block.get_hash(),
+            prev_block_hash,
             reward_block_hash,
             foliage_sub_block_data,
             signed_foliage_sub_block_data,
-            prev_block.foliage_block.get_hash(),
+            prev_foliage_block_hash,
             signed_prev_foliage_sub_block,
-        )
-
-        transactions_info_hash = None
-        if is_transaction:
-            transactions_info_hash = TransactionsInfo(
-                self.previous_generators_root, generator_hash, final_aggsig, fees, cost, reward_claims_incorporated
-            )
-
-        foliage_block = FoliageBlock(
-            prev_block.get_hash(),
-            timestamp,
-            filter_hash,
-            additions_root,
-            removals_root,
-            transactions_info_hash,
         )
 
         return foliage_sub_block, foliage_block, transactions_info_hash, generator_hash
