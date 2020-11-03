@@ -24,7 +24,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_iterations_quality,
-    calculate_icp_iters,
+    calculate_sp_iters,
     is_overflow_sub_block,
 )
 from src.full_node.difficulty_adjustment import (
@@ -405,7 +405,7 @@ class BlockTools:
             self.quality, self.curr_proof_of_space.size, test_constants.DIFFICULTY_STARTING
         )
 
-        icp_iters: uint64 = calculate_icp_iters(test_constants, uint64(test_constants.IPS_STARTING), required_iters)
+        icp_iters: uint64 = calculate_sp_iters(test_constants, uint64(test_constants.IPS_STARTING), required_iters)
 
         ip_iters: uint64 = calculate_ip_iters(test_constants, uint64(test_constants.IPS_STARTING), required_iters)
         number_iters: uint64 = pot_iterations.calculate_iterations(
@@ -533,7 +533,7 @@ class BlockTools:
             number_iters, std_hash(new_slot), cc_vdf_input, test_constants
         )
 
-        icp_iters: uint64 = calculate_icp_iters(test_constants, self.ips, required_iters)
+        icp_iters: uint64 = calculate_sp_iters(test_constants, self.ips, required_iters)
         ip_iters: uint64 = calculate_ip_iters(test_constants, self.ips, required_iters)
 
         cc_sp_vdf: VDFInfo = get_challenge_chain_sp_vdf(cc_vdf_challenge, icp_iters, cc_vdf_input, cc_sp_output)
