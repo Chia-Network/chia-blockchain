@@ -22,20 +22,13 @@ testnet_kwargs = {
     # For the first epoch, since we have no previous blocks, we can't estimate vdf iterations per second
     "MIN_ITERS_STARTING": (2 ** 22),
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more
-    "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBEBR_OF_TIMESTAMPS blocks
-    # If an unfinished block is more than these many seconds slower than the best unfinished block,
-    # don't propagate it.
-    "PROPAGATION_THRESHOLD": 300,
-    # If the expected time is more than these seconds, slightly delay the propagation of the unfinished
-    # block, to allow better leaders to be released first. This is a slow block.
-    "PROPAGATION_DELAY_THRESHOLD": 1500,
-    # Hardcoded genesis block, generated using tests/block_tools.py
-    # Replace this any time the constants change.
+    "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     "FIRST_CC_CHALLENGE": bytes([0x00] * 32),
     "FIRST_RC_CHALLENGE": bytes([0x00] * 32),
-    "GENESIS_PRE_FARM_PUZZLE_HASH": bytes.fromhex(
+    "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
         "7a916bdc50d3d0337b0998668a4f439670339467d7e9039b8650ba7b1d4fc1a0"
     ),
+    "GENESIS_PREV_HASH": bytes([0] * 32),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec
     "TX_PER_SEC": 20,

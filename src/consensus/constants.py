@@ -22,17 +22,10 @@ class ConsensusConstants:
     EXTRA_ITERS_TIME_TARGET: float
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
-    # If an unfinished block is more than these many seconds slower than the best unfinished block,
-    # don't propagate it.
-    PROPAGATION_THRESHOLD: int
-    # If the expected time is more than these seconds, slightly delay the propagation of the unfinished
-    # block, to allow better leaders to be released first. This is a slow block.
-    PROPAGATION_DELAY_THRESHOLD: int
-    # Hardcoded genesis block, generated using tests/block_tools.py
-    # Replace this any time the constants change.
     FIRST_CC_CHALLENGE: bytes
     FIRST_RC_CHALLENGE: bytes
-    GENESIS_PRE_FARM_PUZZLE_HASH: bytes
+    GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes
+    GENESIS_PREV_HASH: bytes
     MAX_VDF_WITNESS_SIZE: int
     # Target tx count per sec
     TX_PER_SEC: int
