@@ -348,25 +348,7 @@ class Blockchain:
         )
 
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        assert header_hash in self.sub_blocks
-        curr = self.sub_blocks[header_hash]
-
-        ip_iters = calculate_ip_iters(self.constants, curr.ips, curr.required_iters)
-        sp_iters = calculate_sp_iters(self.constants, curr.ips, curr.required_iters)
-        return (
-            get_next_ips(
-                self.constants,
-                self.sub_blocks,
-                self.height_to_hash,
-                header_hash,
-                curr.height,
-                curr.deficit,
-                curr.ips,
-                new_slot,
-                uint128(curr.total_iters - ip_iters + sp_iters),
-            )
-            * self.constants.SLOT_TIME_TARGET
-        )
+        return get_next_slot_iters(header_hash, self.sub_blocks, self.constants, self.height_to_hash, new_slot)
 
     async def pre_validate_blocks_mulpeakrocessing(
         self, blocks: List[FullBlock]
@@ -730,3 +712,31 @@ class Blockchain:
             return Err.BAD_AGGREGATE_SIGNATURE
 
         return None
+
+
+def get_next_slot_iters(
+    header_hash: bytes32,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    constants: ConsensusConstants,
+    height_to_hash: Dict[uint32, bytes32],
+    new_slot: bool,
+) -> uint64:
+    assert header_hash in sub_blocks
+    curr = sub_blocks[header_hash]
+
+    ip_iters = calculate_ip_iters(constants, curr.ips, curr.required_iters)
+    sp_iters = calculate_sp_iters(constants, curr.ips, curr.required_iters)
+    return (
+        get_next_ips(
+            constants,
+            sub_blocks,
+            height_to_hash,
+            header_hash,
+            curr.height,
+            curr.deficit,
+            curr.ips,
+            new_slot,
+            uint128(curr.total_iters - ip_iters + sp_iters),
+        )
+        * constants.SLOT_TIME_TARGET
+    )
