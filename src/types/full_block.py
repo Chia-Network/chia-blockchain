@@ -25,9 +25,9 @@ class FullBlock(Streamable):
     # All the information required to validate a block
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
     reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
-    challenge_chain_sp_proof: VDFProof
+    challenge_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
     challenge_chain_ip_proof: VDFProof
-    reward_chain_sp_proof: VDFProof
+    reward_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
     reward_chain_ip_proof: VDFProof
     infused_challenge_chain_ip_proof: Optional[VDFProof]  # Iff deficit < 4
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data

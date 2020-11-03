@@ -8,17 +8,21 @@ def full_block_to_sub_block_record(block: FullBlock, ips: uint64, required_iters
     prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
     timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
     if block.finished_sub_slots is not None:
-        finished_challenge_slot_hashes = [cs.get_hash() for cs, _, _ in block.finished_sub_slots]
-        finished_reward_slot_hashes = [rs.get_hash() for _, rs, _ in block.finished_sub_slots]
+        finished_challenge_slot_hashes = [sub_slot.challenge_chain.get_hash() for sub_slot in block.finished_sub_slots]
+        finished_reward_slot_hashes = [sub_slot.reward_chain.get_hash() for sub_slot in block.finished_sub_slots]
+        finished_infused_challenge_slot_hashes = [
+            sub_slot.infused_challenge_chain.get_hash() for sub_slot in block.finished_sub_slots
+        ]
     else:
         finished_challenge_slot_hashes = None
         finished_reward_slot_hashes = None
+        finished_infused_challenge_slot_hashes = None
 
     sub_epoch_summary_included_hash = None
     if block.finished_sub_slots is not None:
-        for cs, _, _ in block.finished_sub_slots:
-            if cs.subepoch_summary_hash is not None:
-                sub_epoch_summary_included_hash = cs.subepoch_summary_hash
+        for sub_slot in block.finished_sub_slots:
+            if sub_slot.challenge_chain.subepoch_summary_hash is not None:
+                sub_epoch_summary_included_hash = sub_slot.challenge_chain.subepoch_summary_hash
 
     cbi = ChallengeBlockInfo(
         block.reward_chain_sub_block.proof_of_space,
@@ -45,6 +49,7 @@ def full_block_to_sub_block_record(block: FullBlock, ips: uint64, required_iters
         timestamp,
         prev_block_hash,
         finished_challenge_slot_hashes,
+        finished_infused_challenge_slot_hashes,
         finished_reward_slot_hashes,
         sub_epoch_summary_included_hash,
     )
