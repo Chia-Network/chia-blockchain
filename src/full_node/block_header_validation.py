@@ -303,7 +303,7 @@ async def validate_unfinished_header_block(
             # 3c. Check the actual sub-epoch is correct
             expected_sub_epoch_summary = SubEpochSummary(
                 curr.sub_epoch_summary_included_hash,
-                curr.finished_reward_slot_hashes[-1],
+                curr.finished_reward_slot_hashes[0],
                 curr.height % constants.SUB_EPOCH_SUB_BLOCKS,
                 difficulty if finishes_epoch else None,
                 ips if finishes_epoch else None,
@@ -321,7 +321,7 @@ async def validate_unfinished_header_block(
 
         # 4. Check proof of space
         if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
-            # Edge case of first icp (start of slot), where icp_iters == 0
+            # Edge case of first icp (start of slot), where sp_iters == 0
             cc_sp_hash: bytes32 = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
         else:
             cc_sp_hash = header_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
@@ -331,7 +331,7 @@ async def validate_unfinished_header_block(
         ] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
             constants,
             cc_sp_hash,
-            header_block.reward_chain_sub_block.challenge_chain_icp_sig,
+            header_block.reward_chain_sub_block.challenge_chain_sp_sig,
         )
         if q_str is None:
             return None, Err.INVALID_POSPACE
@@ -343,7 +343,7 @@ async def validate_unfinished_header_block(
             difficulty,
         )
 
-        icp_iters: uint64 = calculate_sp_iters(constants, ips, required_iters)
+        sp_iters: uint64 = calculate_sp_iters(constants, ips, required_iters)
         ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
         slot_iters: uint64 = calculate_slot_iters(constants, ips)
         overflow = is_overflow_sub_block(constants, ips, required_iters)
@@ -436,36 +436,34 @@ async def validate_unfinished_header_block(
             # Start from start of this slot. Case of no overflow slots. Also includes genesis block after empty slot(s),
             # but not overflowing
             rc_vdf_challenge: bytes32 = header_block.finished_sub_slots[-1][1].get_hash()
-            icp_vdf_iters = icp_iters
+            sp_vdf_iters = sp_iters
             cc_vdf_input = ClassgroupElement.get_default_element()
         elif new_slot and overflow and len(header_block.finished_sub_slots) > 1:
             # Start from start of prev slot. Rare case of empty prev slot. Includes genesis block after 2 empty slots
             rc_vdf_challenge = header_block.finished_sub_slots[-2][1].get_hash()
-            icp_vdf_iters = icp_iters
+            sp_vdf_iters = sp_iters
             cc_vdf_input = ClassgroupElement.get_default_element()
         elif prev_sb is None:
             # Genesis block case, first challenge
             rc_vdf_challenge = constants.FIRST_CC_CHALLENGE
-            icp_vdf_iters = icp_iters
+            sp_vdf_iters = sp_iters
             cc_vdf_input = ClassgroupElement.get_default_element()
         else:
             # Start from prev block. This is when there is no new slot or if there is a new slot and we overflow
             # but the prev block was is in the same slot (prev slot). This is the normal overflow case.
             rc_vdf_challenge = prev_sb.reward_infusion_output
-            icp_vdf_iters = (
-                (total_iters - required_iters) + icp_iters - prev_sb.total_iters
-            )
+            sp_vdf_iters = (total_iters - required_iters) + sp_iters - prev_sb.total_iters
             cc_vdf_input = prev_sb.challenge_vdf_output
 
         # 10. Check reward chain icp proof
-        if icp_iters != 0:
+        if sp_iters != 0:
             target_vdf_info = VDFInfo(
                 rc_vdf_challenge,
                 ClassgroupElement.get_default_element(),
-                icp_vdf_iters,
+                sp_vdf_iters,
                 header_block.reward_chain_sub_block.reward_chain_sp_vdf.output,
             )
-            if not header_block.reward_chain_icp_proof.is_valid(
+            if not header_block.reward_chain_sp_proof.is_valid(
                 constants,
                 header_block.reward_chain_sub_block.reward_chain_sp_vdf,
                 target_vdf_info,
@@ -473,7 +471,7 @@ async def validate_unfinished_header_block(
                 return None, Err.INVALID_RC_ICP_VDF
             rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.get_hash()
         else:
-            # Edge case of first icp (start of slot), where icp_iters == 0
+            # Edge case of first icp (start of slot), where sp_iters == 0
             assert overflow is not None
             if header_block.reward_chain_sub_block.reward_chain_sp_vdf is not None:
                 return None, Err.INVALID_RC_ICP_VDF
@@ -483,7 +481,7 @@ async def validate_unfinished_header_block(
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
             rc_sp_hash,
-            header_block.reward_chain_sub_block.reward_chain_icp_sig,
+            header_block.reward_chain_sub_block.reward_chain_sp_sig,
         ):
             return None, Err.INVALID_RC_SIGNATURE
 
@@ -499,14 +497,14 @@ async def validate_unfinished_header_block(
                 cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
         # 12. Check cc icp
-        if icp_iters != 0:
+        if sp_iters != 0:
             target_vdf_info = VDFInfo(
                 cc_vdf_challenge,
                 cc_vdf_input,
-                icp_vdf_iters,
+                sp_vdf_iters,
                 header_block.reward_chain_sub_block.challenge_chain_sp_vdf.output,
             )
-            if not header_block.challenge_chain_icp_proof.is_valid(
+            if not header_block.challenge_chain_sp_proof.is_valid(
                 constants,
                 header_block.reward_chain_sub_block.challenge_chain_sp_vdf,
                 target_vdf_info,
@@ -521,7 +519,7 @@ async def validate_unfinished_header_block(
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
             cc_sp_hash,
-            header_block.reward_chain_sub_block.challenge_chain_icp_sig,
+            header_block.reward_chain_sub_block.challenge_chain_sp_sig,
         ):
             return None, Err.INVALID_CC_SIGNATURE
 
@@ -537,18 +535,10 @@ async def validate_unfinished_header_block(
 
             # The first sub-block to have an icp > the last block's infusion iters, is a block
             if overflow:
-                our_icp_total_iters: uint128 = uint128(
-                    total_iters - ip_iters + icp_iters - slot_iters
-                )
+                our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - slot_iters)
             else:
-                our_icp_total_iters: uint128 = uint128(
-                    total_iters - ip_iters + icp_iters
-                )
-            if (
-                (our_icp_total_iters > curr.total_iters)
-                != header_block.foliage_sub_block.foliage_block_hash
-                is not None
-            ):
+                our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters)
+            if (our_sp_total_iters > curr.total_iters) != header_block.foliage_sub_block.foliage_block_hash is not None:
                 return None, Err.INVALID_IS_BLOCK
 
         # 16. Check foliage sub block signature by plot key
@@ -682,8 +672,8 @@ async def validate_finished_header_block(
     unfinished_header_block = UnfinishedHeaderBlock(
         header_block.finished_sub_slots,
         header_block.reward_chain_sub_block.get_unfinished(),
-        header_block.challenge_chain_icp_proof,
-        header_block.reward_chain_icp_proof,
+        header_block.challenge_chain_sp_proof,
+        header_block.reward_chain_sp_proof,
         header_block.foliage_sub_block,
         header_block.foliage_block,
         header_block.transactions_filter,

@@ -8,7 +8,7 @@ from src.util.keychain import Keychain
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
     calculate_iterations_quality,
-    calculate_icp_index,
+    calculate_sp_index,
 )
 from src.protocols import farmer_protocol, harvester_protocol
 from src.server.connection import PeerConnections
@@ -178,16 +178,16 @@ class Farmer:
             self._state_changed("challenge")
             ips = slot_iters // self.constants.SLOT_TIME_TARGET
             # This is the icp which this proof of space is assigned to
-            target_icp_index: uint8 = calculate_icp_index(self.constants, ips, required_iters)
+            target_sp_index: uint8 = calculate_sp_index(self.constants, ips, required_iters)
 
             # Requests signatures for the first icp (maybe the second if we were really slow at getting proofs)
             for icp in self.icps[challenge_response.proof.challenge_hash]:
                 # If we already have the target icp, proceed at getting the signatures for this PoSpace
-                if icp.index == target_icp_index:
+                if icp.index == target_sp_index:
                     request = harvester_protocol.RequestSignatures(
                         challenge_response.plot_identifier,
                         challenge_response.proof.challenge_hash,
-                        [icp.challenge_chain_icp, icp.reward_chain_icp],
+                        [icp.challenge_chain_sp, icp.reward_chain_sp],
                     )
                     yield OutboundMessage(
                         NodeType.HARVESTER,
@@ -198,7 +198,7 @@ class Farmer:
                 self.proofs_of_space[challenge_response.proof.challenge_hash] = [
                     (
                         challenge_response.plot_identifier,
-                        target_icp_index,
+                        target_sp_index,
                         challenge_response.proof,
                     )
                 ]
@@ -206,7 +206,7 @@ class Farmer:
                 self.proofs_of_space[challenge_response.proof.challenge_hash].append(
                     (
                         challenge_response.plot_identifier,
-                        target_icp_index,
+                        target_sp_index,
                         challenge_response.proof,
                     )
                 )
@@ -225,11 +225,11 @@ class Farmer:
         if response.challenge_hash not in self.icps:
             log.warning(f"Do not have challenge hash {response.challenge_hash}")
             return
-        is_icp_signatures: bool = False
+        is_sp_signatures: bool = False
         for icp in self.icps[response.challenge_hash]:
-            if icp.challenge_chain_icp == response.message_signatures[0]:
-                assert icp.reward_chain_icp == response.message_signatures[1]
-                is_icp_signatures = True
+            if icp.challenge_chain_sp == response.message_signatures[0]:
+                assert icp.reward_chain_sp == response.message_signatures[1]
+                is_sp_signatures = True
                 break
 
         pospace = None
@@ -238,30 +238,30 @@ class Farmer:
                 pospace = candidate_pospace
         assert pospace is not None
 
-        if is_icp_signatures:
+        if is_sp_signatures:
             (
-                challenge_chain_icp,
-                challenge_chain_icp_harv_sig,
+                challenge_chain_sp,
+                challenge_chain_sp_harv_sig,
             ) = response.message_signatures[0]
-            reward_chain_icp, reward_chain_icp_harv_sig = response.message_signatures[1]
+            reward_chain_sp, reward_chain_sp_harv_sig = response.message_signatures[1]
             for sk in self._get_private_keys():
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
                     agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
                     assert agg_pk == pospace.plot_public_key
-                    farmer_share_cc_sp = AugSchemeMPL.sign(sk, challenge_chain_icp, agg_pk)
-                    agg_sig_cc_sp = AugSchemeMPL.aggregate([challenge_chain_icp_harv_sig, farmer_share_cc_sp])
-                    assert AugSchemeMPL.verify(agg_pk, challenge_chain_icp, agg_sig_cc_sp)
+                    farmer_share_cc_sp = AugSchemeMPL.sign(sk, challenge_chain_sp, agg_pk)
+                    agg_sig_cc_sp = AugSchemeMPL.aggregate([challenge_chain_sp_harv_sig, farmer_share_cc_sp])
+                    assert AugSchemeMPL.verify(agg_pk, challenge_chain_sp, agg_sig_cc_sp)
 
                     computed_quality_string = pospace.verify_and_get_quality_string(
-                        self.constants, challenge_chain_icp, agg_sig_cc_sp
+                        self.constants, challenge_chain_sp, agg_sig_cc_sp
                     )
 
                     # This means it passes the icp filter
                     if computed_quality_string is not None:
-                        farmer_share_rc_sp = AugSchemeMPL.sign(sk, reward_chain_icp, agg_pk)
-                        agg_sig_rc_sp = AugSchemeMPL.aggregate([reward_chain_icp_harv_sig, farmer_share_rc_sp])
-                        assert AugSchemeMPL.verify(agg_pk, reward_chain_icp, agg_sig_rc_sp)
+                        farmer_share_rc_sp = AugSchemeMPL.sign(sk, reward_chain_sp, agg_pk)
+                        agg_sig_rc_sp = AugSchemeMPL.aggregate([reward_chain_sp_harv_sig, farmer_share_rc_sp])
+                        assert AugSchemeMPL.verify(agg_pk, reward_chain_sp, agg_sig_rc_sp)
 
                         pool_pk = bytes(pospace.pool_public_key)
                         if pool_pk not in self.pool_sks_map:
@@ -272,7 +272,7 @@ class Farmer:
                             self.pool_sks_map[pool_pk], bytes(pool_target)
                         )
                         request = farmer_protocol.DeclareProofOfSpace(
-                            challenge_chain_icp,
+                            challenge_chain_sp,
                             pospace,
                             agg_sig_cc_sp,
                             agg_sig_rc_sp,
@@ -364,17 +364,17 @@ class Farmer:
 
         # We already have fetched proofs for this challenge
         if infusion_challenge_point.challenge_hash in self.proofs_of_space:
-            for plot_identifier, target_icp_index, pospace in self.proofs_of_space[
+            for plot_identifier, target_sp_index, pospace in self.proofs_of_space[
                 infusion_challenge_point.challenge_hash
             ]:
-                if target_icp_index == infusion_challenge_point.index:
+                if target_sp_index == infusion_challenge_point.index:
                     # Only proceeds with proofs of space that can be infused at this infusion point
                     request = harvester_protocol.RequestSignatures(
                         plot_identifier,
                         infusion_challenge_point.challenge_hash,
                         [
-                            infusion_challenge_point.challenge_chain_icp,
-                            infusion_challenge_point.reward_chain_icp,
+                            infusion_challenge_point.challenge_chain_sp,
+                            infusion_challenge_point.reward_chain_sp,
                         ],
                     )
 
