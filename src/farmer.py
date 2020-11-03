@@ -41,10 +41,10 @@ class Farmer:
         # To send to harvester on connect
         self.latest_challenge: bytes32 = None
 
-        # Keep track of all icps for each challenge
-        self.icps: Dict[bytes32, List[farmer_protocol.InfusionChallengePoint]] = {}
+        # Keep track of all sps for each challenge
+        self.sps: Dict[bytes32, List[farmer_protocol.InfusionChallengePoint]] = {}
 
-        # Keep track of harvester plot identifier (str), target icp index, and PoSpace for each challenge
+        # Keep track of harvester plot identifier (str), target sp index, and PoSpace for each challenge
         self.proofs_of_space: Dict[bytes32, List[Tuple[str, uint8, ProofOfSpace]]] = {}
 
         # Quality string to plot identifier and challenge_hash, for use with harvester.RequestSignatures
@@ -97,9 +97,9 @@ class Farmer:
             self.config["pool_share_threshold"],
         )
         yield OutboundMessage(NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND)
-        if self.latest_challenge is not None and len(self.icps[self.latest_challenge]) > 0:
-            icp = self.icps[self.latest_challenge][0]
-            message = harvester_protocol.NewChallenge(icp.challenge_hash, icp.difficulty, icp.slot_iterations)
+        if self.latest_challenge is not None and len(self.sps[self.latest_challenge]) > 0:
+            sp = self.sps[self.latest_challenge][0]
+            message = harvester_protocol.NewChallenge(sp.challenge_hash, sp.difficulty, sp.slot_iterations)
             yield OutboundMessage(
                 NodeType.HARVESTER,
                 Message("new_challenge", message),
@@ -145,9 +145,9 @@ class Farmer:
             return
 
         difficulty: uint64 = uint64(0)
-        for icp in self.icps[challenge_response.proof.challenge_hash]:
-            if icp.challenge_hash == challenge_response.proof.challenge_hash:
-                difficulty = icp.difficulty
+        for sp in self.sps[challenge_response.proof.challenge_hash]:
+            if sp.challenge_hash == challenge_response.proof.challenge_hash:
+                difficulty = sp.difficulty
         if difficulty == 0:
             log.error(f"Did not find challenge {challenge_response.proof.challenge_hash}")
             return
@@ -163,31 +163,31 @@ class Farmer:
             difficulty,
         )
 
-        if challenge_response.proof.challenge_hash not in self.icps:
+        if challenge_response.proof.challenge_hash not in self.sps:
             log.warning(f"Received response for challenge that we do not have {challenge_response.challenge_hash}")
             return
-        elif len(self.icps[challenge_response.proof.challenge_hash]) == 0:
-            log.warning(f"Received response for challenge {challenge_response.challenge_hash} with no icp data")
+        elif len(self.sps[challenge_response.proof.challenge_hash]) == 0:
+            log.warning(f"Received response for challenge {challenge_response.challenge_hash} with no sp data")
             return
 
-        slot_iters = self.icps[challenge_response.proof.challenge_hash][0].slot_iterations
+        slot_iters = self.sps[challenge_response.proof.challenge_hash][0].slot_iterations
 
         # Double check that the iters are good
         if required_iters < slot_iters or required_iters < self.config["pool_share_threshold"]:
             self.number_of_responses[challenge_response.proof.challenge_hash] += 1
             self._state_changed("challenge")
             ips = slot_iters // self.constants.SLOT_TIME_TARGET
-            # This is the icp which this proof of space is assigned to
+            # This is the sp which this proof of space is assigned to
             target_sp_index: uint8 = calculate_sp_index(self.constants, ips, required_iters)
 
-            # Requests signatures for the first icp (maybe the second if we were really slow at getting proofs)
-            for icp in self.icps[challenge_response.proof.challenge_hash]:
-                # If we already have the target icp, proceed at getting the signatures for this PoSpace
-                if icp.index == target_sp_index:
+            # Requests signatures for the first sp (maybe the second if we were really slow at getting proofs)
+            for sp in self.sps[challenge_response.proof.challenge_hash]:
+                # If we already have the target sp, proceed at getting the signatures for this PoSpace
+                if sp.index == target_sp_index:
                     request = harvester_protocol.RequestSignatures(
                         challenge_response.plot_identifier,
                         challenge_response.proof.challenge_hash,
-                        [icp.challenge_chain_sp, icp.reward_chain_sp],
+                        [sp.challenge_chain_sp, sp.reward_chain_sp],
                     )
                     yield OutboundMessage(
                         NodeType.HARVESTER,
@@ -220,15 +220,15 @@ class Farmer:
     @api_request
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures):
         """
-        There are two cases: receiving signatures for icps, or receiving signatures for the block.
+        There are two cases: receiving signatures for sps, or receiving signatures for the block.
         """
-        if response.challenge_hash not in self.icps:
+        if response.challenge_hash not in self.sps:
             log.warning(f"Do not have challenge hash {response.challenge_hash}")
             return
         is_sp_signatures: bool = False
-        for icp in self.icps[response.challenge_hash]:
-            if icp.challenge_chain_sp == response.message_signatures[0]:
-                assert icp.reward_chain_sp == response.message_signatures[1]
+        for sp in self.sps[response.challenge_hash]:
+            if sp.challenge_chain_sp == response.message_signatures[0]:
+                assert sp.reward_chain_sp == response.message_signatures[1]
                 is_sp_signatures = True
                 break
 
@@ -257,7 +257,7 @@ class Farmer:
                         self.constants, challenge_chain_sp, agg_sig_cc_sp
                     )
 
-                    # This means it passes the icp filter
+                    # This means it passes the sp filter
                     if computed_quality_string is not None:
                         farmer_share_rc_sp = AugSchemeMPL.sign(sk, reward_chain_sp, agg_pk)
                         agg_sig_rc_sp = AugSchemeMPL.aggregate([reward_chain_sp_harv_sig, farmer_share_rc_sp])
@@ -357,10 +357,10 @@ class Farmer:
         if self.latest_challenge != infusion_challenge_point.challenge_hash:
             self.latest_challenge = infusion_challenge_point.challenge_hash
 
-        if self.latest_challenge not in self.icps:
-            self.icps[self.latest_challenge] = [infusion_challenge_point]
+        if self.latest_challenge not in self.sps:
+            self.sps[self.latest_challenge] = [infusion_challenge_point]
         else:
-            self.icps[self.latest_challenge].append(infusion_challenge_point)
+            self.sps[self.latest_challenge].append(infusion_challenge_point)
 
         # We already have fetched proofs for this challenge
         if infusion_challenge_point.challenge_hash in self.proofs_of_space:

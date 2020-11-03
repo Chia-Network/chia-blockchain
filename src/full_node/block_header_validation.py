@@ -321,7 +321,7 @@ async def validate_unfinished_header_block(
 
         # 4. Check proof of space
         if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
-            # Edge case of first icp (start of slot), where sp_iters == 0
+            # Edge case of first sp (start of slot), where sp_iters == 0
             cc_sp_hash: bytes32 = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
         else:
             cc_sp_hash = header_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
@@ -455,7 +455,7 @@ async def validate_unfinished_header_block(
             sp_vdf_iters = (total_iters - required_iters) + sp_iters - prev_sb.total_iters
             cc_vdf_input = prev_sb.challenge_vdf_output
 
-        # 10. Check reward chain icp proof
+        # 10. Check reward chain sp proof
         if sp_iters != 0:
             target_vdf_info = VDFInfo(
                 rc_vdf_challenge,
@@ -471,13 +471,13 @@ async def validate_unfinished_header_block(
                 return None, Err.INVALID_RC_ICP_VDF
             rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.get_hash()
         else:
-            # Edge case of first icp (start of slot), where sp_iters == 0
+            # Edge case of first sp (start of slot), where sp_iters == 0
             assert overflow is not None
             if header_block.reward_chain_sub_block.reward_chain_sp_vdf is not None:
                 return None, Err.INVALID_RC_ICP_VDF
             rc_sp_hash = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
 
-        # 11. Check reward chain icp signature
+        # 11. Check reward chain sp signature
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
             rc_sp_hash,
@@ -496,7 +496,7 @@ async def validate_unfinished_header_block(
                     curr = sub_blocks[curr.prev_hash]
                 cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
-        # 12. Check cc icp
+        # 12. Check cc sp
         if sp_iters != 0:
             target_vdf_info = VDFInfo(
                 cc_vdf_challenge,
@@ -515,7 +515,7 @@ async def validate_unfinished_header_block(
             if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is not None:
                 return None, Err.INVALID_CC_ICP_VDF
 
-        # 13. Check cc icp sig
+        # 13. Check cc sp sig
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
             cc_sp_hash,
@@ -533,7 +533,7 @@ async def validate_unfinished_header_block(
             while not curr.is_block:
                 curr = sub_blocks[curr.prev_hash]
 
-            # The first sub-block to have an icp > the last block's infusion iters, is a block
+            # The first sub-block to have an sp > the last block's infusion iters, is a block
             if overflow:
                 our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - slot_iters)
             else:
