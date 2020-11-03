@@ -108,22 +108,9 @@ async def validate_unfinished_header_block(
                 ):
                     return None, Err.INVALID_PREV_CHALLENGE_SLOT_HASH
 
-            # 2b. check sub-epoch summary hash is None for empty slots
-            if sub_slot.infused_challenge_chain is not None:
-                if sub_slot.infused_challenge_chain.subepoch_summary_hash is not None:
-                    assert ses_hash is None
-                    ses_hash = sub_slot.infused_challenge_chain.subepoch_summary_hash
-
-            if finished_sub_slot_n != 0:
-                if (
-                    sub_slot.infused_challenge_chain is not None
-                    and sub_slot.infused_challenge_chain.subepoch_summary_hash is not None
-                ):
-                    return None, Err.INVALID_SUB_EPOCH_SUMMARY_HASH
-
             if sub_slot.infused_challenge_chain is not None:
                 # There is a challenge block in this sub-slot
-                # 2c. Find the challenge block
+                # 2b. Find the challenge block
                 if finished_sub_slot_n != 0:
                     return None, Err.SHOULD_NOT_MAKE_CHALLENGE_BLOCK
                 if prev_sb.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
@@ -134,7 +121,7 @@ async def validate_unfinished_header_block(
                 ):
                     curr = sub_blocks[curr.prev_hash]
 
-                # 2e. Check infused challenge chain sub-slot VDF
+                # 2c. Check infused challenge chain sub-slot VDF
                 ip_iters = calculate_ip_iters(constants, curr.ips, curr.required_iters)
                 eos_iters: uint64 = calculate_slot_iters(constants, curr.ips) - ip_iters
                 target_vdf_info = VDFInfo(
@@ -152,7 +139,7 @@ async def validate_unfinished_header_block(
             else:
                 # There is no challenge infusion in this finished_slot tuple (empty slot)
 
-                # 2f. Check that there should be no challenge infusion and no infused challenge chain object
+                # 2d. Check that there should be no challenge infusion and no infused challenge chain object
                 if prev_sb is None:
                     # For the first block, there is no infused challenge chain before it
                     if sub_slot.infused_challenge_chain is not None:
@@ -178,7 +165,7 @@ async def validate_unfinished_header_block(
                                 return None, Err.SHOULD_HAVE_ICC
                             # This is when deficit is <5 and thus we have challenge block and full empty slot of VDFs
                             # Check full ICC vdf
-                            # 2g. Check infused challenge chain sub-slot VDF
+                            # 2e. Check infused challenge chain sub-slot VDF
                             target_vdf_info = VDFInfo(
                                 header_block.finished_sub_slots[
                                     finished_sub_slot_n - 1
@@ -192,8 +179,8 @@ async def validate_unfinished_header_block(
                             ):
                                 return None, Err.INVALID_ICC_VDF
 
-            # 2h. Check infused challenge sub-slot hash in challenge sub-slot
-            # 2i. Check infused challenge sub-slot hash in reward sub-slot
+            # 2f. Check infused challenge sub-slot hash in challenge sub-slot
+            # 2g. Check infused challenge sub-slot hash in reward sub-slot
             if sub_slot.infused_challenge_chain is not None:
                 if sub_slot.reward_chain.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                     if (
@@ -215,6 +202,26 @@ async def validate_unfinished_header_block(
                     return None, Err.INVALID_ICC_HASH_CC
                 if sub_slot.reward_chain.infused_challenge_chain_sub_slot_hash is not None:
                     return None, Err.INVALID_ICC_HASH_RC
+
+            # 2h. check sub-epoch summary hash is None for empty slots
+            if sub_slot.challenge_chain.subepoch_summary_hash is not None:
+                assert ses_hash is None
+                ses_hash = sub_slot.infused_challenge_chain.subepoch_summary_hash
+
+            if finished_sub_slot_n != 0:
+                if sub_slot.challenge_chain.subepoch_summary_hash is not None:
+                    return None, Err.INVALID_SUB_EPOCH_SUMMARY_HASH
+            # 2i. Check new difficulty
+            if finishes_epoch:
+                if sub_slot.challenge_chain.new_ips != ips:
+                    return None, Err.INVALID_NEW_IPS
+                if sub_slot.challenge_chain.new_difficulty != difficulty:
+                    return None, Err.INVALID_NEW_DIFFICULTY
+            else:
+                if sub_slot.challenge_chain.new_ips is not None:
+                    return None, Err.INVALID_NEW_IPS
+                if sub_slot.challenge_chain.new_difficulty is not None:
+                    return None, Err.INVALID_NEW_DIFFICULTY
 
             # 2j. Check challenge sub-slot hash in reward sub-slot
             if sub_slot.challenge_chain.get_hash() != sub_slot.reward_chain.challenge_chain_sub_slot_hash:
