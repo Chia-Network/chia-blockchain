@@ -781,9 +781,11 @@ async def validate_finished_header_block(
         )
 
         if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:
+            # If we don't have an ICC chain, deficit must be 4 or 5
             if deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                 return None, Err.INVALID_ICC_VDF
         else:
+            # If we have an ICC chain, deficit must be 0, 1, 2 or 3
             if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                 return None, Err.INVALID_ICC_VDF
             if new_slot:
@@ -806,6 +808,9 @@ async def validate_finished_header_block(
                 icc_target_vdf_info,
             ):
                 return None, Err.INVALID_ICC_VDF
+    else:
+        if header_block.infused_challenge_chain_ip_proof is not None:
+            return None, Err.INVALID_ICC_VDF
 
     # 29. Check reward block hash
     if header_block.foliage_sub_block.reward_block_hash != header_block.reward_chain_sub_block.get_hash():
