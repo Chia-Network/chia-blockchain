@@ -571,7 +571,7 @@ class CCWallet:
             self.log.info(f"Successfully selected coins: {used_coins}")
             return used_coins
 
-    async def get_sigs(self, innerpuz: Program, innersol: Program) -> List[G2Element]:
+    async def get_sigs(self, innerpuz: Program, innersol: Program, coin_name) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         sigs: List[G2Element] = []
@@ -579,7 +579,7 @@ class CCWallet:
         sexp = Program.to(code_)
         error, conditions, cost = conditions_dict_for_solution(sexp)
         if conditions is not None:
-            for _, msg in pkm_pairs_for_conditions_dict(conditions):
+            for _, msg in pkm_pairs_for_conditions_dict(conditions, coin_name):
                 signature = AugSchemeMPL.sign(private, msg)
                 sigs.append(signature)
         return sigs
@@ -643,7 +643,7 @@ class CCWallet:
         )
         innersol_list = [innersol]
 
-        sigs = sigs + await self.get_sigs(inner_puzzle, innersol)
+        sigs = sigs + await self.get_sigs(inner_puzzle, innersol, coin.name())
         lineage_proof = await self.get_lineage_proof_for_coin(coin)
         assert lineage_proof is not None
         spendable_cc_list = [SpendableCC(coin, genesis_id, inner_puzzle, lineage_proof)]
@@ -653,7 +653,7 @@ class CCWallet:
             coin_inner_puzzle = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
             innersol = self.standard_wallet.make_solution()
             innersol_list.append(innersol)
-            sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol)
+            sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol, coin.name())
         spend_bundle = spend_bundle_for_spendable_ccs(
             CC_MOD,
             self.cc_info.my_genesis_checker,
@@ -759,7 +759,7 @@ class CCWallet:
                     consumed=[output_created.name()]
                 )
             innerpuz: Program = await self.inner_puzzle_for_cc_puzhash(coin.puzzle_hash)
-            sigs = sigs + await self.get_sigs(innerpuz, innersol)
+            sigs = sigs + await self.get_sigs(innerpuz, innersol, coin.name())
             lineage_proof = await self.get_lineage_proof_for_coin(coin)
             puzzle_reveal = cc_puzzle_for_inner_puzzle(
                 CC_MOD, self.cc_info.my_genesis_checker, innerpuz
