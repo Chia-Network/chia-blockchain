@@ -17,7 +17,7 @@ from src.types.vdf import VDFInfo
 from src.consensus.pot_iterations import (
     is_overflow_sub_block,
     calculate_ip_iters,
-    calculate_icp_iters,
+    calculate_sp_iters,
     calculate_slot_iters,
     calculate_iterations_quality,
 )
@@ -44,12 +44,42 @@ async def validate_unfinished_header_block(
     # 1. Check that the previous block exists in the blockchain
     if header_block.height == 0:
         prev_sb: Optional[SubBlockRecord] = None
+        finishes_se = False
+        finishes_epoch = False
+        difficulty: uint64 = uint64(constants.DIFFICULTY_STARTING)
+        ips: uint64 = uint64(constants.IPS_STARTING)
     else:
         prev_sb: Optional[SubBlockRecord] = sub_blocks[header_block.prev_header_hash]
-        if prev_sb is not None:
+        if prev_sb is None:
             return None, Err.DOES_NOT_EXTEND
-    new_slot: bool = len(header_block.finished_sub_slots) > 0
 
+        finishes_se = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, False)
+        finishes_epoch: bool = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, True)
+
+        difficulty: uint64 = get_next_difficulty(
+            constants,
+            sub_blocks,
+            height_to_hash,
+            header_block.prev_header_hash,
+            prev_sb.height,
+            prev_sb.deficit,
+            uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight),
+            True,
+            prev_sb.total_iters,
+        )
+        ips: uint64 = get_next_ips(
+            constants,
+            sub_blocks,
+            height_to_hash,
+            header_block.prev_header_hash,
+            prev_sb.height,
+            prev_sb.deficit,
+            prev_sb.ips,
+            True,
+            prev_sb.total_iters,
+        )
+
+    new_slot: bool = len(header_block.finished_sub_slots) > 0
     # 2. Check finished slots
     if new_slot:
         # Finished a slot(s) since previous block
@@ -148,21 +178,13 @@ async def validate_unfinished_header_block(
                                 return None, Err.SHOULD_HAVE_ICC
                             # This is when deficit is <5 and thus we have challenge block and full empty slot of VDFs
                             # Check full ICC vdf
-                            ips_empty_slots: uint64 = get_next_ips(
-                                constants,
-                                height_to_hash,
-                                sub_blocks,
-                                header_block.prev_header_hash,
-                                True,
-                            )
-
                             # 2g. Check infused challenge chain sub-slot VDF
                             target_vdf_info = VDFInfo(
                                 header_block.finished_sub_slots[
                                     finished_sub_slot_n - 1
                                 ].infused_challenge_chain.get_hash(),
                                 ClassgroupElement.get_default_element(),
-                                ips_empty_slots * constants.SLOT_TIME_TARGET,
+                                uint64(ips * constants.SLOT_TIME_TARGET),
                                 sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
                             )
                             if sub_slot.proofs.challenge_chain_slot_proof.is_valid(
@@ -201,7 +223,6 @@ async def validate_unfinished_header_block(
             # 2k. Check challenge chain sub-slot VDF
             # 2l. Check end of reward slot VDF
             if prev_sb is None:
-                ips: uint64 = uint64(constants.IPS_STARTING)
                 eos_vdf_iters: uint64 = calculate_slot_iters(constants, ips)
                 cc_start_element: ClassgroupElement = ClassgroupElement.get_default_element()
                 if finished_sub_slot_n == 0:
@@ -226,13 +247,6 @@ async def validate_unfinished_header_block(
                     cc_start_element: ClassgroupElement = prev_sb.challenge_vdf_output
                 else:
                     # At least one empty slot, so use previous slot hash. IPS might change because it's a new slot
-                    ips: uint64 = get_next_ips(
-                        constants,
-                        height_to_hash,
-                        sub_blocks,
-                        header_block.prev_header_hash,
-                        True,
-                    )
                     rc_eos_vdf_challenge: bytes32 = header_block.finished_sub_slots[
                         finished_sub_slot_n - 1
                     ].reward_chain.get_hash()
@@ -294,13 +308,6 @@ async def validate_unfinished_header_block(
             if prev_sb is None:
                 return None, Err.INVALID_SUB_EPOCH_SUMMARY
 
-            finishes_se = finishes_sub_epoch(
-                constants, sub_blocks, header_block.prev_header_hash, False
-            )
-            finishes_epoch: bool = finishes_sub_epoch(
-                constants, sub_blocks, header_block.prev_header_hash, True
-            )
-
             # 3b. Check that we finished a slot and we finished a sub-epoch
             if not new_slot or not finishes_se:
                 return None, Err.INVALID_SUB_EPOCH_SUMMARY
@@ -309,32 +316,13 @@ async def validate_unfinished_header_block(
             while curr.sub_epoch_summary_included_hash is None:
                 curr = sub_blocks[curr.prev_hash]
 
-            if finishes_epoch:
-                next_diff = get_next_difficulty(
-                    constants,
-                    sub_blocks,
-                    height_to_hash,
-                    header_block.prev_header_hash,
-                    True,
-                )
-                next_ips = get_next_ips(
-                    constants,
-                    sub_blocks,
-                    height_to_hash,
-                    header_block.prev_header_hash,
-                    True,
-                )
-            else:
-                next_diff = None
-                next_ips = None
-
             # 3c. Check the actual sub-epoch is correct
             expected_sub_epoch_summary = SubEpochSummary(
                 curr.sub_epoch_summary_included_hash,
                 curr.finished_reward_slot_hashes[-1],
                 curr.height % constants.SUB_EPOCH_SUB_BLOCKS,
-                next_diff,
-                next_ips,
+                difficulty if finishes_epoch else None,
+                ips if finishes_epoch else None,
             )
             if expected_sub_epoch_summary.get_hash() != ses_hash:
                 return None, Err.INVALID_SUB_EPOCH_SUMMARY
@@ -363,16 +351,6 @@ async def validate_unfinished_header_block(
         )
         if q_str is None:
             return None, Err.INVALID_POSPACE
-        if prev_sb is None:
-            difficulty: uint64 = uint64(constants.DIFFICULTY_STARTING)
-            ips: uint64 = uint64(constants.IPS_STARTING)
-        else:
-            difficulty = get_next_difficulty(
-                constants, sub_blocks, height_to_hash, prev_sb.header_hash, new_slot
-            )
-            ips: uint64 = get_next_ips(
-                constants, sub_blocks, height_to_hash, prev_sb.header_hash, new_slot
-            )
 
         # Note that required iters might be from the previous slot (if we are in an overflow sub-block)
         required_iters: uint64 = calculate_iterations_quality(
@@ -381,7 +359,7 @@ async def validate_unfinished_header_block(
             difficulty,
         )
 
-        icp_iters: uint64 = calculate_icp_iters(constants, ips, required_iters)
+        icp_iters: uint64 = calculate_sp_iters(constants, ips, required_iters)
         ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
         slot_iters: uint64 = calculate_slot_iters(constants, ips)
         overflow = is_overflow_sub_block(constants, ips, required_iters)
@@ -746,7 +724,11 @@ async def validate_finished_header_block(
             sub_blocks,
             height_to_hash,
             header_block.prev_header_hash,
-            new_slot,
+            prev_sb.height,
+            prev_sb.deficit,
+            prev_sb.ips,
+            True,
+            prev_sb.total_iters,
         )
     ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
 
@@ -815,17 +797,14 @@ async def validate_finished_header_block(
     ):
         return None, Err.INVALID_RC_IP_VDF
 
-    # 27. Check infused challenge chain infusion point VDF
+    # 28. Check infused challenge chain infusion point VDF
     # TODO
 
-    # 28. Check reward block hash
-    if (
-        header_block.foliage_sub_block.reward_block_hash
-        != header_block.reward_chain_sub_block.get_hash()
-    ):
+    # 29. Check reward block hash
+    if header_block.foliage_sub_block.reward_block_hash != header_block.reward_chain_sub_block.get_hash():
         return None, Err.INVALID_REWARD_BLOCK_HASH
 
-    # 29. Check reward block is_block
+    # 30. Check reward block is_block
     if (header_block.foliage_sub_block.foliage_block_hash is not None) != header_block.reward_chain_sub_block.is_block:
         return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
