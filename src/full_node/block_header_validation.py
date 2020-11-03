@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 from typing import Dict, Optional, List, Tuple
 import time
@@ -5,7 +6,7 @@ import time
 from blspy import AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
-from src.types.challenge_slot import ChallengeBlockInfo
+from src.types.slots import ChallengeBlockInfo
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
 from src.util.ints import uint32, uint64, uint128
@@ -56,12 +57,12 @@ async def validate_unfinished_header_block(
         ses_hash: Optional[bytes32] = None
         for finished_sub_slot_n, sub_slot in enumerate(header_block.finished_sub_slots):
             # Start of slot challenge is fetched from ICP
-            prev_slot_hash = sub_slot.get_prev_challenge_hash()
+            challenge_hash: bytes32 = sub_slot.get_prev_challenge_hash()
 
-            # 2a. check prev slot hash
+            # 2a. check sub-slot challenge hash
             if finished_sub_slot_n == 0:
                 if prev_sb is None:
-                    if prev_slot_hash != constants.FIRST_CC_CHALLENGE:
+                    if challenge_hash != constants.FIRST_CC_CHALLENGE:
                         return None, Err.INVALID_PREV_CHALLENGE_SLOT_HASH
                 else:
                     if finished_sub_slot_n == 0:
@@ -69,15 +70,12 @@ async def validate_unfinished_header_block(
                         while curr.finished_challenge_slot_hashes is None:
                             curr = sub_blocks[curr.prev_hash]
                         assert curr.finished_challenge_slot_hashes is not None
-                        if (
-                            not curr.finished_challenge_slot_hashes[-1]
-                            != prev_slot_hash
-                        ):
+                        if not curr.finished_challenge_slot_hashes[-1] != challenge_hash:
                             return None, Err.INVALID_PREV_CHALLENGE_SLOT_HASH
             else:
                 if (
                     not header_block.finished_sub_slots[finished_sub_slot_n - 1].challenge_chain.get_hash()
-                    == prev_slot_hash
+                    == challenge_hash
                 ):
                     return None, Err.INVALID_PREV_CHALLENGE_SLOT_HASH
 
@@ -96,7 +94,6 @@ async def validate_unfinished_header_block(
 
             if sub_slot.infused_challenge_chain.proof_of_space is not None:
                 # There is a challenge block in this sub-slot
-
                 # 2c. Find the challenge block
                 if finished_sub_slot_n != 0:
                     return None, Err.SHOULD_NOT_MAKE_CHALLENGE_BLOCK
@@ -117,91 +114,128 @@ async def validate_unfinished_header_block(
                     sub_slot.infused_challenge_chain.challenge_chain_sp_signature,
                     sub_slot.infused_challenge_chain.challenge_chain_ip_vdf,
                 ).get_hash()
+
+                # 2d. Check the data used for the infused challenge chain is correct (already validated in prev sb)
                 if curr.challenge_block_info_hash != challenge_block_info_hash:
                     return None, Err.INVALID_CHALLENGE_CHAIN_DATA
 
-                # 2d. Check challenge chain end of slot VDF
+                # 2e. Check infused challenge chain sub-slot VDF
                 ip_iters = calculate_ip_iters(constants, curr.ips, curr.required_iters)
                 eos_iters: uint64 = calculate_slot_iters(constants, curr.ips) - ip_iters
                 target_vdf_info = VDFInfo(
-                    prev_slot_hash,
-                    curr.challenge_vdf_output,
+                    challenge_block_info_hash,
+                    ClassgroupElement.get_default_element(),
                     eos_iters,
-                    sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.output,
+                    sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
                 )
                 if sub_slot.proofs.challenge_chain_slot_proof.is_valid(
                     constants, sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf, target_vdf_info
                 ):
-                    return None, Err.INVALID_CC_EOS_VDF
+                    return None, Err.INVALID_ICC_VDF
 
             else:
                 # There is no challenge infusion in this finished_slot tuple (empty slot)
-                # 2f. Check that there should be no challenge infusion
-                if finished_sub_slot_n == 0:
-                    # If finished_sub_slot_n > 0, guaranteed that deficit did not go down to zero
-                    if prev_sb is not None:
+
+                # 2f. Check that there should be no challenge infusion and no infused challenge chain object
+                if prev_sb is None:
+                    # For the first block, there is no infused challenge chain before it
+                    if sub_slot.infused_challenge_chain is not None:
+                        return None, Err.SHOULD_NOT_HAVE_ICC
+                else:
+                    if finished_sub_slot_n == 0:
+                        # On the first finished sub-slot, guaranteed to have no challenge block, since challenge block
+                        # has to be in first finished sub-slot if present.
+                        if sub_slot.infused_challenge_chain is not None:
+                            return None, Err.SHOULD_NOT_HAVE_ICC
+
                         # Prev deficit of zero means the next finished slot should infuse into challenge chain
                         if prev_sb.deficit == 0:
                             return None, Err.SHOULD_MAKE_CHALLENGE_BLOCK
+                    else:
+                        # On the other finished sub-slots, there are two cases
+                        if sub_slot.reward_chain.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                            # This is when deficit is 5 and thus still no challenge block
+                            if sub_slot.infused_challenge_chain is not None:
+                                return None, Err.SHOULD_NOT_HAVE_ICC
+                        else:
+                            # This is when deficit is <5 and thus we have challenge block and full empty slot of VDFs
+                            # Check full ICC vdf
+                            ips_empty_slots: uint64 = get_next_ips(
+                                constants,
+                                height_to_hash,
+                                sub_blocks,
+                                header_block.prev_header_hash,
+                                True,
+                            )
 
-                if prev_sb is None:
-                    ips_empty_slots: uint64 = uint64(constants.IPS_STARTING)
+                            # 2g. Check infused challenge chain sub-slot VDF
+                            target_vdf_info = VDFInfo(
+                                header_block.finished_sub_slots[
+                                    finished_sub_slot_n - 1
+                                ].infused_challenge_chain.get_hash(),
+                                ClassgroupElement.get_default_element(),
+                                ips_empty_slots * constants.SLOT_TIME_TARGET,
+                                sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
+                            )
+                            if sub_slot.proofs.challenge_chain_slot_proof.is_valid(
+                                constants, sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf, target_vdf_info
+                            ):
+                                return None, Err.INVALID_ICC_VDF
+
+            # 2h. Check infused challenge sub-slot hash in challenge sub-slot
+            # 2i. Check infused challenge sub-slot hash in reward sub-slot
+            if sub_slot.infused_challenge_chain is not None:
+                if sub_slot.reward_chain.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                    if (
+                        sub_slot.infused_challenge_chain.get_hash()
+                        != sub_slot.challenge_chain.infused_challenge_chain_sub_slot_hash
+                    ):
+                        return None, Err.INVALID_ICC_HASH_CC
                 else:
-                    # There might be an ips adjustment after the previous block
-                    ips_empty_slots: uint64 = get_next_ips(
-                        constants,
-                        height_to_hash,
-                        sub_blocks,
-                        header_block.prev_header_hash,
-                        True,
-                    )
-                target_vdf_info = VDFInfo(
-                    challenge_slot.end_of_slot_vdf.challenge_hash,  # already validated above
-                    ClassgroupElement.get_default_element(),
-                    calculate_slot_iters(constants, ips_empty_slots),
-                    challenge_slot.end_of_slot_vdf.output,
-                )
-                if not slot_proofs.challenge_chain_slot_proof.is_valid(
-                    constants, challenge_slot.end_of_slot_vdf, target_vdf_info
-                ):
-                    return None, Err.INVALID_CC_EOS_VDF
+                    if sub_slot.challenge_chain.infused_challenge_chain_sub_slot_hash is not None:
+                        return None, Err.INVALID_ICC_HASH_CC
 
-                # 2g. Check that empty slots have nothing in challenge chain, and no sub-epoch summary
                 if (
-                    challenge_slot.subepoch_summary_hash is not None
-                    or challenge_slot.proof_of_space is not None
-                    or challenge_slot.icp_vdf is not None
-                    or challenge_slot.icp_signature is not None
-                    or challenge_slot.ip_vdf is not None
+                    sub_slot.infused_challenge_chain.get_hash()
+                    != sub_slot.reward_chain.infused_challenge_chain_sub_slot_hash
                 ):
-                    return None, Err.INVALID_CHALLENGE_CHAIN_DATA
+                    return None, Err.INVALID_ICC_HASH_RC
+            else:
+                if sub_slot.challenge_chain.infused_challenge_chain_sub_slot_hash is not None:
+                    return None, Err.INVALID_ICC_HASH_CC
+                if sub_slot.reward_chain.infused_challenge_chain_sub_slot_hash is not None:
+                    return None, Err.INVALID_ICC_HASH_RC
 
-            # 2h. Check challenge slot hash in reward slot
-            if reward_slot.challenge_slot_hash != challenge_slot.get_hash():
+            # 2j. Check challenge sub-slot hash in reward sub-slot
+            if sub_slot.challenge_chain.get_hash() != sub_slot.reward_chain.challenge_chain_sub_slot_hash:
                 return None, Err.INVALID_CHALLENGE_SLOT_HASH_RC
 
-            # 2i. Check end of reward slot VDF
+            # 2k. Check challenge chain sub-slot VDF
+            # 2l. Check end of reward slot VDF
             if prev_sb is None:
                 ips: uint64 = uint64(constants.IPS_STARTING)
-                rc_eos_vdf_iters: uint64 = calculate_slot_iters(constants, ips)
+                eos_vdf_iters: uint64 = calculate_slot_iters(constants, ips)
+                cc_start_element: ClassgroupElement = ClassgroupElement.get_default_element()
                 if finished_sub_slot_n == 0:
                     # First block, one empty slot. prior_point is the initial challenge
                     rc_eos_vdf_challenge: bytes32 = constants.FIRST_RC_CHALLENGE
+                    cc_eos_vdf_challenge: bytes32 = constants.FIRST_CC_CHALLENGE
                 else:
                     # First block, but have at least two empty slots
-                    rc_eos_vdf_challenge: bytes32 = header_block.finished_sub_slots[finished_sub_slot_n - 1][
-                        1
-                    ].get_hash()
+                    rc_eos_vdf_challenge: bytes32 = header_block.finished_sub_slots[
+                        finished_sub_slot_n - 1
+                    ].reward_chain_chain.get_hash()
+                    cc_eos_vdf_challenge: bytes32 = challenge_hash
             else:
+                cc_eos_vdf_challenge: bytes32 = challenge_hash
                 if finished_sub_slot_n == 0:
                     # No empty slots, so the starting point of VDF is the last reward block. Uses
                     # the same IPS as the previous block, since it's the same slot
                     rc_eos_vdf_challenge: bytes32 = prev_sb.reward_infusion_output
-                    rc_eos_vdf_iters = calculate_slot_iters(
-                        constants, prev_sb.ips
-                    ) - calculate_ip_iters(
+                    eos_vdf_iters = calculate_slot_iters(constants, prev_sb.ips) - calculate_ip_iters(
                         constants, prev_sb.ips, prev_sb.required_iters
                     )
+                    cc_start_element: ClassgroupElement = prev_sb.challenge_vdf_output
                 else:
                     # At least one empty slot, so use previous slot hash. IPS might change because it's a new slot
                     ips: uint64 = get_next_ips(
@@ -211,37 +245,58 @@ async def validate_unfinished_header_block(
                         header_block.prev_header_hash,
                         True,
                     )
-                    rc_eos_vdf_challenge: bytes32 = header_block.finished_sub_slots[finished_sub_slot_n - 1][
-                        1
-                    ].get_hash()
-                    rc_eos_vdf_iters = calculate_slot_iters(constants, ips)
+                    rc_eos_vdf_challenge: bytes32 = header_block.finished_sub_slots[
+                        finished_sub_slot_n - 1
+                    ].reward_chain.get_hash()
+                    eos_vdf_iters = calculate_slot_iters(constants, ips)
+                    cc_start_element: ClassgroupElement = ClassgroupElement.get_default_element()
 
             target_vdf_info = VDFInfo(
                 rc_eos_vdf_challenge,
                 ClassgroupElement.get_default_element(),
-                rc_eos_vdf_iters,
-                reward_slot.end_of_slot_vdf.output,
+                eos_vdf_iters,
+                sub_slot.reward_chain.end_of_slot_vdf.output,
             )
-            if slot_proofs.reward_chain_slot_proof.is_valid(
-                constants, reward_slot.end_of_slot_vdf, target_vdf_info
+            if sub_slot.proofs.reward_chain_slot_proof.is_valid(
+                constants, sub_slot.reward_chain.end_of_slot_vdf, target_vdf_info
             ):
                 return None, Err.INVALID_RC_EOS_VDF
 
-            # 2j. Check deficit (5 deficit edge case for genesis block)
+            partial_cc_vdf_info = VDFInfo(
+                cc_eos_vdf_challenge,
+                cc_start_element,
+                eos_vdf_iters,
+                sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.output,
+            )
+            if finished_sub_slot_n == 0:
+                # Check that the modified data is correct
+                if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf != dataclasses.replace(
+                    partial_cc_vdf_info, input=ClassgroupElement.get_default_element()
+                ):
+                    return None, Err.INVALID_CC_EOS_VDF
+
+                # Pass in None for target info since we are only checking the proof from the temporary point,
+                # but the challenge_chain_end_of_slot_vdf actually starts from the start of slot (for light clients)
+                if sub_slot.proofs.challenge_chain_slot_proof.is_valid(constants, partial_cc_vdf_info, None):
+                    return None, Err.INVALID_CC_EOS_VDF
+            else:
+                if sub_slot.proofs.challenge_chain_slot_proof.is_valid(
+                    constants, sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf, partial_cc_vdf_info
+                ):
+                    return None, Err.INVALID_CC_EOS_VDF
+
+            # 2m. Check deficit (5 deficit edge case for genesis block)
             if prev_sb is None:
-                if reward_slot.deficit != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                if sub_slot.reward_chain.deficit != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                     return None, Err.INVALID_DEFICIT
             else:
                 if prev_sb.deficit == 0:
                     # If there is a challenge chain infusion, resets deficit to 5
-                    if (
-                        reward_slot.deficit
-                        != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
-                    ):
+                    if sub_slot.reward_chain.deficit != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                         return None, Err.INVALID_DEFICIT
                 else:
                     # Otherwise, deficit stays the same at the slot ends, cannot reset until 0
-                    if reward_slot.deficit != prev_sb.deficit:
+                    if sub_slot.reward_chain.deficit != prev_sb.deficit:
                         return None, Err.INVALID_DEFICIT
 
         # 3. Check sub-epoch summary

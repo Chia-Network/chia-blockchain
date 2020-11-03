@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from src.types.challenge_slot import ChallengeSlot
+from src.types.slots import ChallengeSlot
 from src.types.full_block import FullBlock
 from src.types.reward_chain_end_of_slot import RewardChainSubSlot, SubSlotProofs
 from src.types.spend_bundle import SpendBundle
