@@ -544,7 +544,7 @@ async def validate_unfinished_header_block(
         # 16. Check foliage sub block signature by plot key
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
-            bytes(header_block.foliage_sub_block.foliage_sub_block_data),
+            header_block.foliage_sub_block.foliage_sub_block_data.get_hash(),
             header_block.foliage_sub_block.foliage_sub_block_signature,
         ):
             return None, Err.INVALID_PLOT_SIGNATURE
@@ -554,7 +554,7 @@ async def validate_unfinished_header_block(
             if not AugSchemeMPL.verify(
                 header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
                 header_block.foliage_sub_block.foliage_block_hash,
-                header_block.foliage_sub_block.foliage_sub_block_signature,
+                header_block.foliage_sub_block.foliage_block_signature,
             ):
                 return None, Err.INVALID_PLOT_SIGNATURE
 
