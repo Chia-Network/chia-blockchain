@@ -22,8 +22,11 @@ class TestBlockStore:
     @pytest.mark.asyncio
     async def test_block_store(self):
         assert sqlite3.threadsafety == 1
-        blocks = bt.get_consecutive_blocks(test_constants, 9, [], 9, b"0")
-        blocks_alt = bt.get_consecutive_blocks(test_constants, 3, [], 9, b"1")
+        block_1 = bt.create_genesis_block(test_constants, seed=b"1")
+        block_2 = bt.create_genesis_block(test_constants, seed=b"2")
+        block_3 = bt.create_genesis_block(test_constants, seed=b"3")
+        blocks = [block_1, block_2, block_3]
+
         db_filename = Path("blockchain_test.db")
         db_filename_2 = Path("blockchain_test_2.db")
         db_filename_3 = Path("blockchain_test_3.db")
@@ -51,37 +54,20 @@ class TestBlockStore:
                 await db.add_block(block)
                 assert block == await db.get_block(block.header_hash)
 
-            await db.add_block(blocks_alt[2])
-            assert len(await db.get_blocks_at([1, 2])) == 3
+            assert len(await db.get_blocks_at([1])) == 0
+            assert len(await db.get_blocks_at([0])) == 3
 
-            # Get sub blocks (added alt block also, so +1)
-            assert len(await db.get_sub_blocks()) == len(blocks) + 1
+            # Get sub blocks
+            assert len(await db.get_sub_blocks()) == len(blocks)
 
-            # Test LCA
-            assert (await db.get_lca()) is None
-            await db.set_lca(blocks[-3].header_hash)
-            assert (await db.get_lca()) == blocks[-3].header
-            await db.set_tips([blocks[-2].header_hash, blocks[-1].header_hash])
-            assert (await db.get_tips()) == [blocks[-2].header, blocks[-1].header]
-
-            coin_store: CoinStore = await CoinStore.create(connection_3)
-            b: Blockchain = await Blockchain.create(coin_store, db_3, test_constants)
-
-            assert b.lca_block == genesis.header
-            assert b.tips == [genesis.header]
-            assert await db_3.get_lca() == genesis.header
-            assert await db_3.get_tips() == [genesis.header]
-
-            for block in blocks:
-                await b.receive_block(block)
-
-            assert b.lca_block == blocks[-3].header
-            assert set(b.tips) == set(
-                [blocks[-3].header, blocks[-2].header, blocks[-1].header]
-            )
-            left = sorted(b.tips, key=lambda t: t.height)
-            right = sorted((await db_3.get_tips()), key=lambda t: t.height)
-            assert left == right
+            # for block in blocks:
+            #     await b.receive_block(block)
+            #
+            # assert b.lca_block == blocks[-3].header
+            # assert set(b.tips) == set([blocks[-3].header, blocks[-2].header, blocks[-1].header])
+            # left = sorted(b.tips, key=lambda t: t.height)
+            # right = sorted((await db_3.get_tips()), key=lambda t: t.height)
+            # assert left == right
 
         except Exception:
             await connection.close()
@@ -90,7 +76,7 @@ class TestBlockStore:
             db_filename.unlink()
             db_filename_2.unlink()
             db_filename_3.unlink()
-            b.shut_down()
+            # b.shut_down()
             raise
 
         await connection.close()
@@ -99,28 +85,26 @@ class TestBlockStore:
         db_filename.unlink()
         db_filename_2.unlink()
         db_filename_3.unlink()
-        b.shut_down()
+        # b.shut_down()
 
-    @pytest.mark.asyncio
-    async def test_deadlock(self):
-        blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
-        db_filename = Path("blockchain_test.db")
-
-        if db_filename.exists():
-            db_filename.unlink()
-
-        connection = await aiosqlite.connect(db_filename)
-        db = await BlockStore.create(connection)
-        tasks = []
-
-        for i in range(10000):
-            rand_i = random.randint(0, 10)
-            if random.random() < 0.5:
-                tasks.append(asyncio.create_task(db.add_block(blocks[rand_i])))
-            if random.random() < 0.5:
-                tasks.append(
-                    asyncio.create_task(db.get_block(blocks[rand_i].header_hash))
-                )
-        await asyncio.gather(*tasks)
-        await connection.close()
-        db_filename.unlink()
+    # @pytest.mark.asyncio
+    # async def test_deadlock(self):
+    #     blocks = bt.get_consecutive_blocks(test_constants, 10, [], 9, b"0")
+    #     db_filename = Path("blockchain_test.db")
+    #
+    #     if db_filename.exists():
+    #         db_filename.unlink()
+    #
+    #     connection = await aiosqlite.connect(db_filename)
+    #     db = await BlockStore.create(connection)
+    #     tasks = []
+    #
+    #     for i in range(10000):
+    #         rand_i = random.randint(0, 10)
+    #         if random.random() < 0.5:
+    #             tasks.append(asyncio.create_task(db.add_block(blocks[rand_i])))
+    #         if random.random() < 0.5:
+    #             tasks.append(asyncio.create_task(db.get_block(blocks[rand_i].header_hash)))
+    #     await asyncio.gather(*tasks)
+    #     await connection.close()
+    #     db_filename.unlink()
