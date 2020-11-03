@@ -1,4 +1,4 @@
-from src.types.challenge_slot import ChallengeBlockInfo
+from src.types.slots import ChallengeBlockInfo
 from src.types.full_block import FullBlock
 from src.full_node.sub_block_record import SubBlockRecord
 from src.util.ints import uint64, uint8
