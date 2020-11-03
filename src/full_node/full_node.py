@@ -9,7 +9,7 @@ from chiapos import Verifier
 import dataclasses
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_icp_iters, calculate_ip_iters, is_overflow_sub_block
+from src.consensus.pot_iterations import calculate_sp_iters, calculate_ip_iters, is_overflow_sub_block
 from src.full_node.block_store import BlockStore
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
@@ -800,7 +800,7 @@ class FullNode:
 
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
         if peak is not None:
-            peak_icp = calculate_icp_iters(self.constants, peak.ips, peak.required_iters)
+            peak_icp = calculate_sp_iters(self.constants, peak.ips, peak.required_iters)
             peak_ip_iters = calculate_ip_iters(self.constants, peak.ips, peak.required_iters)
             icp_iters = peak.total_iters - (peak_ip_iters - peak_icp)
             if block.total_iters < icp_iters:

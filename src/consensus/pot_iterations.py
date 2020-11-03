@@ -5,14 +5,10 @@ from src.consensus.pos_quality import quality_str_to_quality
 from src.consensus.constants import ConsensusConstants
 
 
-def is_overflow_sub_block(
-    constants: ConsensusConstants, ips: uint64, required_iters: uint64
-) -> bool:
+def is_overflow_sub_block(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> bool:
     slot_iters: uint64 = calculate_slot_iters(constants, ips)
     if required_iters >= slot_iters:
-        raise ValueError(
-            f"Required iters {required_iters} is not below the slot iterations"
-        )
+        raise ValueError(f"Required iters {required_iters} is not below the slot iterations")
     extra_iters: uint64 = uint64(int(float(ips) * constants.EXTRA_ITERS_TIME_TARGET))
     return required_iters + extra_iters >= slot_iters
 
@@ -21,14 +17,10 @@ def calculate_slot_iters(constants: ConsensusConstants, ips: uint64) -> uint64:
     return ips * constants.SLOT_TIME_TARGET
 
 
-def calculate_icp_iters(
-    constants: ConsensusConstants, ips: uint64, required_iters: uint64
-) -> uint64:
+def calculate_sp_iters(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint64:
     slot_iters: uint64 = calculate_slot_iters(constants, ips)
     if required_iters >= slot_iters:
-        raise ValueError(
-            f"Required iters {required_iters} is not below the slot iterations"
-        )
+        raise ValueError(f"Required iters {required_iters} is not below the slot iterations")
     checkpoint_size: uint64 = uint64(slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
     checkpoint_index: int = required_iters // checkpoint_size
 
@@ -39,10 +31,8 @@ def calculate_icp_iters(
         return required_iters - required_iters % checkpoint_size
 
 
-def calculate_icp_index(
-    constants: ConsensusConstants, ips: uint64, required_iters: uint64
-) -> uint8:
-    icp_iters = calculate_icp_iters(constants, ips, required_iters)
+def calculate_icp_index(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint8:
+    icp_iters = calculate_sp_iters(constants, ips, required_iters)
     slot_iters: uint64 = calculate_slot_iters(constants, ips)
     checkpoint_size: uint64 = uint64(slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
     assert icp_iters % checkpoint_size == 0
@@ -50,15 +40,11 @@ def calculate_icp_index(
     return uint8(target_index)
 
 
-def calculate_ip_iters(
-    constants: ConsensusConstants, ips: uint64, required_iters: uint64
-) -> uint64:
+def calculate_ip_iters(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint64:
     # Note that the IPS is for the block passed in, which might be in the previous epoch
     slot_iters: uint64 = calculate_slot_iters(constants, ips)
     if required_iters >= slot_iters:
-        raise ValueError(
-            f"Required iters {required_iters} is not below the slot iterations"
-        )
+        raise ValueError(f"Required iters {required_iters} is not below the slot iterations")
     extra_iters: uint64 = uint64(int(float(ips) * constants.EXTRA_ITERS_TIME_TARGET))
     return (required_iters + extra_iters) % slot_iters
 
@@ -73,9 +59,7 @@ def calculate_iterations_quality(
     between 0 and 1, then divided by expected plot size, and finally multiplied by the
     difficulty.
     """
-    iters = uint64(
-        uint128(int(difficulty) << 32) // quality_str_to_quality(quality, size)
-    )
+    iters = uint64(uint128(int(difficulty) << 32) // quality_str_to_quality(quality, size))
     return max(iters, uint64(1))
 
 
@@ -88,8 +72,6 @@ def calculate_iterations(
     Convenience function to calculate the number of iterations using the proof instead
     of the quality. The quality must be retrieved from the proof.
     """
-    quality: bytes32 = proof_of_space.verify_and_get_quality_string(
-        constants, None, None
-    )
+    quality: bytes32 = proof_of_space.verify_and_get_quality_string(constants, None, None)
     assert quality is not None
     return calculate_iterations_quality(quality, proof_of_space.size, difficulty)
