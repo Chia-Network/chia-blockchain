@@ -36,13 +36,11 @@ class VDFProof(Streamable):
         """
         if target_vdf_info is not None and info != target_vdf_info:
             return False
-        if len(self.sections) > constants.MAX_VDF_WITNESS_SIZE:
+        if self.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
             return False
         try:
             disc: int = int(
-                create_discriminant(
-                    info.challenge_hash, constants.DISCRIMINANT_SIZE_BITS
-                ),
+                create_discriminant(info.challenge_hash, constants.DISCRIMINANT_SIZE_BITS),
                 16,
             )
             x = ClassGroup.from_ab_discriminant(info.input.a, info.input.b, disc)
@@ -55,7 +53,6 @@ class VDFProof(Streamable):
             disc,
             x,
             y,
-            self.sections,
             info.number_of_iterations,
             constants.DISCRIMINANT_SIZE_BITS,
             self.witness_type,
