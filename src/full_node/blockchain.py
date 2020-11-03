@@ -205,9 +205,9 @@ class Blockchain:
         curr_header_block = HeaderBlock(
             block.finished_sub_slots,
             block.reward_chain_sub_block,
-            block.challenge_chain_icp_proof,
+            block.challenge_chain_sp_proof,
             block.challenge_chain_ip_proof,
-            block.reward_chain_icp_proof,
+            block.reward_chain_sp_proof,
             block.reward_chain_ip_proof,
             block.infused_challenge_chain_ip_proof,
             block.foliage_sub_block,
@@ -384,8 +384,8 @@ class Blockchain:
         unfinished_header_block = UnfinishedHeaderBlock(
             block.finished_sub_slots,
             block.reward_chain_sub_block,
-            block.challenge_chain_icp_proof,
-            block.reward_chain_icp_proof,
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
             block.foliage_sub_block,
             block.foliage_block,
             b"",

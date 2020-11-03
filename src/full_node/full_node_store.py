@@ -129,7 +129,7 @@ class FullNodeStore:
         self.finished_sub_slots.append((cs, reward, proofs, icps))
         return True
 
-    def new_icp(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof) -> bool:
+    def new_sp(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof) -> bool:
         """
         Returns true if icp successfully added
         """

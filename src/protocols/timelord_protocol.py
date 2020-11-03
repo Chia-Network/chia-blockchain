@@ -38,17 +38,17 @@ class NewInfusionPointVDF:
 @cbor_message
 class NewInfusionChallengePointVDF:
     challenge_chain_sp_vdf: VDFInfo
-    challenge_chain_icp_proof: VDFProof
+    challenge_chain_sp_proof: VDFProof
     reward_chain_sp_vdf: VDFInfo
-    reward_chain_icp_proof: VDFProof
+    reward_chain_sp_proof: VDFProof
 
 
 @dataclass(frozen=True)
 @cbor_message
 class NewUnfinishedSubBlock:
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
-    challenge_chain_icp_proof: VDFProof
-    reward_chain_icp_proof: VDFProof
+    challenge_chain_sp_proof: VDFProof
+    reward_chain_sp_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     sub_epoch_summary: Optional[SubEpochSummary]
     new_ips: Optional[SubEpochSummary]
