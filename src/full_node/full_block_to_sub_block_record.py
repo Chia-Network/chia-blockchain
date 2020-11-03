@@ -23,7 +23,7 @@ def full_block_to_sub_block_record(block: FullBlock, ips: uint64, required_iters
     cbi = ChallengeBlockInfo(
         block.reward_chain_sub_block.proof_of_space,
         block.reward_chain_sub_block.challenge_chain_sp_vdf,
-        block.reward_chain_sub_block.challenge_chain_icp_sig,
+        block.reward_chain_sub_block.challenge_chain_sp_sig,
         block.reward_chain_sub_block.challenge_chain_ip_vdf,
     )
 

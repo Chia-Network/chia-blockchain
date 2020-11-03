@@ -31,13 +31,13 @@ class ProofOfSpace(Streamable):
     def verify_and_get_quality_string(
         self,
         constants: ConsensusConstants,
-        icp_output_hash: Optional[bytes32],
-        icp_signature: Optional[G2Element],
+        sp_output_hash: Optional[bytes32],
+        sp_signature: Optional[G2Element],
     ) -> Optional[bytes32]:
         v: Verifier = Verifier()
         plot_id: bytes32 = self.get_plot_id()
 
-        if not self.can_create_proof(constants, plot_id, self.challenge_hash, icp_output_hash, icp_signature):
+        if not self.can_create_proof(constants, plot_id, self.challenge_hash, sp_output_hash, sp_signature):
             return None
 
         quality_str = v.validate_proof(plot_id, self.size, self.challenge_hash, bytes(self.proof))
@@ -52,18 +52,18 @@ class ProofOfSpace(Streamable):
         constants: ConsensusConstants,
         plot_id: bytes32,
         challenge_hash: bytes32,
-        icp_output_hash: Optional[bytes32] = None,
-        icp_signature: Optional[G2Element] = None,
+        sp_output_hash: Optional[bytes32] = None,
+        sp_signature: Optional[G2Element] = None,
     ) -> bool:
-        # If icp_output is provided, both plot filters are checked. Otherwise only the first one is checked
+        # If sp_output is provided, both plot filters are checked. Otherwise only the first one is checked
         plot_filter = BitArray(std_hash(plot_id + challenge_hash))
-        if icp_output_hash is None:
+        if sp_output_hash is None:
             return plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
         else:
-            icp_filter = BitArray(std_hash(plot_id + icp_output_hash + bytes(icp_signature)))
+            sp_filter = BitArray(std_hash(plot_id + sp_output_hash + bytes(sp_signature)))
             return (
                 plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
-                and icp_filter[: constants.NUMBER_ZERO_BITS_ICP_FILTER].uint == 0
+                and sp_filter[: constants.NUMBER_ZERO_BITS_ICP_FILTER].uint == 0
             )
 
     @staticmethod
