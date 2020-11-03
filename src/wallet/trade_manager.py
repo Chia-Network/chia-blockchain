@@ -543,6 +543,7 @@ class TradeManager:
                 sigs = await wallets[colour].get_sigs(
                     inner_puzzle,
                     inner_solution,
+                    coloured_coin.name()
                 )
                 sigs.append(aggsig)
                 aggsig = AugSchemeMPL.aggregate(sigs)
@@ -599,6 +600,7 @@ class TradeManager:
             sigs = await wallets[colour].get_sigs(
                 inner_puzzle,
                 inner_solution,
+                my_output_coin.name()
             )
             sigs.append(aggsig)
             aggsig = AugSchemeMPL.aggregate(sigs)
