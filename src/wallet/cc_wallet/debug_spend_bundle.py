@@ -3,13 +3,14 @@ from typing import Tuple
 from clvm import KEYWORD_FROM_ATOM
 
 from clvm_tools.binutils import disassemble as bu_disassemble
-
+from blspy import AugSchemeMPL
 from src.types.coin import Coin
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import conditions_dict_for_solution
+from src.util.condition_tools import pkm_pairs_for_conditions_dict
 
 
 CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())
@@ -49,6 +50,9 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
 
     assert_consumed_set = set()
 
+    pks = []
+    msgs = []
+
     print("=" * 80)
     for coin_solution in spend_bundle.coin_solutions:
         coin, solution_pair = coin_solution.coin, Program.to(coin_solution.solution)
@@ -66,7 +70,10 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
         )
         if error:
             print(f"*** error {error}")
-        else:
+        elif conditions is not None:
+            for pk, m in pkm_pairs_for_conditions_dict(conditions, coin.name()):
+                pks.append(pk)
+                msgs.append(m)
             print()
             r = puzzle_reveal.run(solution)
             print(disassemble(r))
@@ -120,11 +127,16 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     set_difference = zero_coin_set ^ assert_consumed_set
     print(f"zero_coin_set ^ assert_consumed_set = {sorted(set_difference)}")
     if len(set_difference):
-        print("not all zero coins asserted consumed or vice versa, entering debugger")
-        breakpoint()
+        print("not all zero coins asserted consumed or vice versa")
 
     print()
     print("=" * 80)
+    print()
+    if len(msgs) > 0:
+        validates = AugSchemeMPL.aggregate_verify(
+            pks, msgs, spend_bundle.aggregated_signature
+        )
+    print(f"aggregated signature check pass: {validates}")
 
 
 def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Program:
