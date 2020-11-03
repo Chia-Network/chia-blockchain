@@ -11,14 +11,11 @@ from blspy import AugSchemeMPL
 from chiabip158 import PyBIP158
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import is_overflow_sub_block
+from src.consensus.pot_iterations import is_overflow_sub_block, calculate_ip_iters, calculate_sp_iters
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from src.full_node.difficulty_adjustment import (
-    get_next_difficulty,
-    get_next_slot_iters,
-    get_next_ips,
-)
+from src.full_node.deficit import calculate_deficit
+from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_ips
 from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
@@ -35,7 +32,7 @@ from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.full_node.cost_calculator import calculate_cost_of_program
 from src.util.errors import Err
 from src.util.hash import std_hash
-from src.util.ints import uint32, uint64, uint8
+from src.util.ints import uint32, uint64, uint128
 from src.full_node.block_root_validation import validate_block_merkle_roots
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_rewards import (
@@ -217,6 +214,7 @@ class Blockchain:
             block.challenge_chain_ip_proof,
             block.reward_chain_icp_proof,
             block.reward_chain_ip_proof,
+            block.infused_challenge_chain_ip_proof,
             block.foliage_sub_block,
             block.foliage_block,
             b"",  # No filter
@@ -238,18 +236,23 @@ class Blockchain:
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
-        if block.height == 0:
-            ips = self.constants.IPS_STARTING
-        else:
-            ips = get_next_ips(
-                self.constants,
-                self.height_to_hash,
-                self.sub_blocks,
-                block.prev_header_hash,
-                block.finished_sub_slots is not None,
-            )
-        overflow = is_overflow_sub_block(self.constants, ips, required_iters)
         prev_sb: Optional[SubBlockRecord] = self.sub_blocks.get(block.prev_header_hash, None)
+        if prev_sb is None:
+            ips: uint64 = uint64(self.constants.IPS_STARTING)
+        else:
+            ips: uint64 = get_next_ips(
+                self.constants,
+                self.sub_blocks,
+                self.height_to_hash,
+                block.prev_header_hash,
+                prev_sb.height,
+                prev_sb.deficit,
+                prev_sb.ips,
+                True,
+                prev_sb.total_iters,
+            )
+
+        overflow = is_overflow_sub_block(self.constants, ips, required_iters)
         deficit = calculate_deficit(
             self.constants, block.height, prev_sb, overflow, block.finished_sub_slots is not None
         )
@@ -327,13 +330,42 @@ class Blockchain:
         return None
 
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
+        assert header_hash in self.sub_blocks
+        curr = self.sub_blocks[header_hash]
+
+        ip_iters = calculate_ip_iters(self.constants, curr.ips, curr.required_iters)
+        sp_iters = calculate_sp_iters(self.constants, curr.ips, curr.required_iters)
         return get_next_difficulty(
-            self.constants, self.sub_blocks, self.height_to_hash, header_hash, new_slot
+            self.constants,
+            self.sub_blocks,
+            self.height_to_hash,
+            header_hash,
+            curr.height,
+            curr.deficit,
+            uint64(curr.weight - self.sub_blocks[curr.prev_hash].weight),
+            new_slot,
+            uint128(curr.total_iters - ip_iters + sp_iters),
         )
 
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
-        return get_next_slot_iters(
-            self.constants, self.sub_blocks, self.height_to_hash, header_hash, new_slot
+        assert header_hash in self.sub_blocks
+        curr = self.sub_blocks[header_hash]
+
+        ip_iters = calculate_ip_iters(self.constants, curr.ips, curr.required_iters)
+        sp_iters = calculate_sp_iters(self.constants, curr.ips, curr.required_iters)
+        return (
+            get_next_ips(
+                self.constants,
+                self.sub_blocks,
+                self.height_to_hash,
+                header_hash,
+                curr.height,
+                curr.deficit,
+                curr.ips,
+                new_slot,
+                uint128(curr.total_iters - ip_iters + sp_iters),
+            )
+            * self.constants.SLOT_TIME_TARGET
         )
 
     async def pre_validate_blocks_mulpeakrocessing(
