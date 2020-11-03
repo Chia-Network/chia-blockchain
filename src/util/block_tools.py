@@ -482,7 +482,6 @@ class BlockTools:
         )
         cc_sp_signature: G2Element = self.get_plot_signature(to_sign_cc, selected_proof[1].plot_public_key)
         rc_sp_signature: G2Element = self.get_plot_signature(to_sign_rc, selected_proof[1].plot_public_key)
-        print("Sigs", cc_sp_signature, rc_sp_signature)
 
         rc_sub_block = RewardChainSubBlock(
             uint128(constants.DIFFICULTY_STARTING),
@@ -928,19 +927,3 @@ def is_transaction_block(overflow: bool, total_iters, ip_iters, sp_iters, slot_i
     else:
         our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters)
     return our_sp_total_iters > curr_total_iters
-
-
-test_constants = DEFAULT_CONSTANTS.replace(
-    **{
-        "DIFFICULTY_STARTING": 1,
-        "DISCRIMINANT_SIZE_BITS": 8,
-        "SUB_EPOCH_SUB_BLOCKS": 128,
-        "EPOCH_SUB_BLOCKS": 512,
-        "IPS_STARTING": 10 * 1,
-        "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
-        "NUMBER_ZERO_BITS_ICP_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
-    }
-)
-bt = BlockTools()
-g = bt.create_genesis_block(test_constants)
-print(g)

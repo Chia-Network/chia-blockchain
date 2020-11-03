@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from src.types.slots import ChallengeSlot
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.reward_chain_end_of_slot import RewardChainSubSlot, SubSlotProofs
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.sized_bytes import bytes32
@@ -117,9 +116,7 @@ class RespondInfusionChallengePoint:
 @dataclass(frozen=True)
 @cbor_message
 class RespondEndOfSlot:
-    challenge_slot: ChallengeSlot
-    reward_slot: RewardChainSubSlot
-    slot_proofs: SubSlotProofs
+    end_of_slot_bundle: EndOfSubSlotBundle
 
 
 @dataclass(frozen=True)
@@ -139,7 +136,7 @@ class RequestCompactVDFs:
 class RespondCompactVDFs:
     height: uint32
     header_hash: bytes32
-    end_of_slot_proofs: List[SubSlotProofs]  # List of challenge eos vdf and reward eos vdf
+    end_of_slot_proofs: List[EndOfSubSlotBundle]  # List of challenge eos vdf and reward eos vdf
     cc_sp_proof: Optional[VDFProof]  # If not first sp
     rc_sp_proof: Optional[VDFProof]  # If not first sp
     cc_ip_proof: VDFProof
