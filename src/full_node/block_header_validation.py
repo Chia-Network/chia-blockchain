@@ -6,6 +6,7 @@ import time
 from blspy import AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
+from src.full_node.deficit import calculate_deficit
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
 from src.util.ints import uint32, uint64, uint128
@@ -741,6 +742,7 @@ async def validate_finished_header_block(
 
     # RC vdf challenge is taken from more recent of (slot start, prev_block)
     if prev_sb is None:
+        icc_vdf_output: ClassgroupElement = None
         cc_vdf_output = ClassgroupElement.get_default_element()
         ip_vdf_iters = ip_iters
         if new_slot:
@@ -753,6 +755,7 @@ async def validate_finished_header_block(
             rc_vdf_challenge = header_block.finished_sub_slots[-1][1].get_hash()
             ip_vdf_iters = ip_iters
             cc_vdf_output = ClassgroupElement.get_default_element()
+            icc_vdf_output = ClassgroupElement.get_default_element()
 
         else:
             # Prev sb is more recent
@@ -761,6 +764,7 @@ async def validate_finished_header_block(
                 header_block.reward_chain_sub_block.total_iters - prev_sb.total_iters
             )
             cc_vdf_output = prev_sb.challenge_vdf_output
+            icc_vdf_output = prev_sb.infused_challenge_vdf_output
 
     # 26. Check challenge chain infusion point VDF
     if header_block.finished_sub_slots is not None:
@@ -805,7 +809,39 @@ async def validate_finished_header_block(
         return None, Err.INVALID_RC_IP_VDF
 
     # 28. Check infused challenge chain infusion point VDF
-    # TODO
+    if prev_sb is not None:
+        overflow = is_overflow_sub_block(constants, ips, required_iters)
+        deficit = calculate_deficit(
+            constants, header_block.height, prev_sb, overflow, header_block.finished_sub_slots is not None
+        )
+
+        if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:
+            assert icc_vdf_output is None
+            if deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+                return None, Err.INVALID_ICC_VDF
+        else:
+            if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+                return None, Err.INVALID_ICC_VDF
+            if new_slot:
+                icc_vdf_challenge: bytes32 = header_block.finished_sub_slots[-1].infused_challenge_chain.get_hash()
+            else:
+                curr = prev_sb
+                while curr.finished_infused_challenge_slot_hashes is None:
+                    curr = sub_blocks[curr.prev_hash]
+                icc_vdf_challenge: bytes32 = curr.finished_infused_challenge_slot_hashes[-1]
+
+            icc_target_vdf_info = VDFInfo(
+                icc_vdf_challenge,
+                icc_vdf_output,
+                ip_vdf_iters,
+                header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf.output,
+            )
+            if not header_block.infused_challenge_chain_ip_proof.is_valid(
+                constants,
+                header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf,
+                icc_target_vdf_info,
+            ):
+                return None, Err.INVALID_ICC_VDF
 
     # 29. Check reward block hash
     if header_block.foliage_sub_block.reward_block_hash != header_block.reward_chain_sub_block.get_hash():
