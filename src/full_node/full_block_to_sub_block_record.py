@@ -27,10 +27,14 @@ def full_block_to_sub_block_record(block: FullBlock, ips: uint64, required_iters
     cbi = ChallengeBlockInfo(
         block.reward_chain_sub_block.proof_of_space,
         block.reward_chain_sub_block.challenge_chain_sp_vdf,
-        block.reward_chain_sub_block.challenge_chain_sp_sig,
+        block.reward_chain_sub_block.challenge_chain_sp_signature,
         block.reward_chain_sub_block.challenge_chain_ip_vdf,
     )
 
+    if block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is not None:
+        icc_output = block.reward_chain_sub_block.infused_challenge_chain_ip_vdf.output
+    else:
+        icc_output = None
     return SubBlockRecord(
         block.header_hash,
         block.prev_header_hash,
@@ -38,7 +42,7 @@ def full_block_to_sub_block_record(block: FullBlock, ips: uint64, required_iters
         block.weight,
         block.total_iters,
         block.reward_chain_sub_block.challenge_chain_ip_vdf.output,
-        block.reward_chain_sub_block.infused_challenge_chain_ip_vdf.output,
+        icc_output,
         block.reward_chain_sub_block.get_hash(),
         cbi.get_hash(),
         ips,

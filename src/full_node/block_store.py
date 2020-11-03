@@ -31,23 +31,16 @@ class BlockStore:
         )
 
         # Height index so we can look up in order of height for sync purposes
-        await self.db.execute(
-            "CREATE INDEX IF NOT EXISTS full_block_height on blocks(height)"
-        )
-        await self.db.execute(
-            "CREATE INDEX IF NOT EXISTS sub_block_height on sub_blocks(height)"
-        )
+        await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_height on blocks(height)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS sub_block_height on sub_blocks(height)")
 
-        await self.db.execute(
-            "CREATE INDEX IF NOT EXISTS hh on sub_blocks(header_hash)"
-        )
+        await self.db.execute("CREATE INDEX IF NOT EXISTS hh on sub_blocks(header_hash)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS peak on sub_blocks(is_peak)")
         await self.db.commit()
 
         return self
 
     async def add_block(self, block: FullBlock, sub_block: SubBlockRecord) -> None:
-        assert block.proof_of_time is not None
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
             (block.height, block.header_hash.hex(), bytes(block)),
@@ -60,8 +53,8 @@ class BlockStore:
                 block.header_hash.hex(),
                 block.prev_header_hash.hex(),
                 block.height,
-                block.weight.to_bytes(128 / 8, "big", signed=False).hex(),
-                block.total_iters.to_bytes(128 / 8, "big", signed=False).hex(),
+                block.weight.to_bytes(128 // 8, "big", signed=False).hex(),
+                block.total_iters.to_bytes(128 // 8, "big", signed=False).hex(),
                 bytes(sub_block),
                 False,
             ),
@@ -70,9 +63,7 @@ class BlockStore:
         await self.db.commit()
 
     async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        cursor = await self.db.execute(
-            "SELECT block from blocks WHERE header_hash=?", (header_hash.hex(),)
-        )
+        cursor = await self.db.execute("SELECT block from blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
@@ -91,9 +82,7 @@ class BlockStore:
         return [FullBlock.from_bytes(row[0]) for row in rows]
 
     async def get_sub_block(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
-        cursor = await self.db.execute(
-            "SELECT sub_block from sub_blocks WHERE header_hash=?", (header_hash.hex(),)
-        )
+        cursor = await self.db.execute("SELECT sub_block from sub_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
@@ -121,12 +110,8 @@ class BlockStore:
         return ret, peak
 
     async def set_peak(self, header_hash: bytes32) -> None:
-        cursor_1 = await self.db.execute(
-            "UPDATE sub_blocks SET is_peak=0 WHERE is_peak=1"
-        )
+        cursor_1 = await self.db.execute("UPDATE sub_blocks SET is_peak=0 WHERE is_peak=1")
         await cursor_1.close()
-        cursor_2 = await self.db.execute(
-            "UPDATE sub_blocks SET is_peak=1 WHERE header_hash=?", (header_hash.hex())
-        )
+        cursor_2 = await self.db.execute("UPDATE sub_blocks SET is_peak=1 WHERE header_hash=?", (header_hash.hex()))
         await cursor_2.close()
         await self.db.commit()

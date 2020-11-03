@@ -8,6 +8,7 @@ import pytest
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.blockchain import Blockchain
+from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.types.full_block import FullBlock
 from tests.setup_nodes import test_constants, bt
 
@@ -47,11 +48,10 @@ class TestBlockStore:
         await BlockStore.create(connection_2)
         db_3 = await BlockStore.create(connection_3)
         try:
-            genesis = FullBlock.from_bytes(test_constants.GENESIS_BLOCK)
-
             # Save/get block
             for block in blocks:
-                await db.add_block(block)
+                sub_block = full_block_to_sub_block_record(block, 0, 0, 5)
+                await db.add_block(block, sub_block)
                 assert block == await db.get_block(block.header_hash)
 
             assert len(await db.get_blocks_at([1])) == 0
