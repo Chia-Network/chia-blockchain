@@ -29,7 +29,7 @@ class FullNodeStore:
     # Unfinished blocks, keyed from reward hash
     unfinished_blocks: Dict[bytes32, UnfinishedBlock]
 
-    # Finished slots and icps from the peak's slot onwards
+    # Finished slots and sps from the peak's slot onwards
     # We store all 32 ICPs for each slot, starting as 32 Nones and filling them as we go
     finished_slots: List[Tuple[ChallengeSlot, RewardChainSubSlot, SubSlotProofs, ICPs]]
 
@@ -119,23 +119,23 @@ class FullNodeStore:
         """
         Returns true if finished slot successfully added
         """
-        icps = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
+        sps = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
         if len(self.finished_sub_slots) == 0:
-            self.finished_sub_slots.append((cs, reward, proofs, icps))
+            self.finished_sub_slots.append((cs, reward, proofs, sps))
             return True
         if cs.proof_of_space.challenge_hash != self.finished_sub_slots[-1][0].get_hash():
             # This slot does not append to our next slot
             return False
-        self.finished_sub_slots.append((cs, reward, proofs, icps))
+        self.finished_sub_slots.append((cs, reward, proofs, sps))
         return True
 
     def new_sp(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof) -> bool:
         """
-        Returns true if icp successfully added
+        Returns true if sp successfully added
         """
-        for cs, reward, proofs, icps in self.finished_sub_slots:
+        for cs, reward, proofs, sps in self.finished_sub_slots:
             if cs.get_hash() == challenge_hash:
-                icps[index] = (vdf_info, proof)
+                sps[index] = (vdf_info, proof)
                 return True
         return False
 

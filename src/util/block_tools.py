@@ -888,7 +888,7 @@ def get_reward_chain_ip_vdf(block: FullBlock, ip_iters: uint64, output: Classgro
 
 
 def is_transaction_block(overflow: bool, total_iters, ip_iters, sp_iters, slot_iters, curr_total_iters) -> bool:
-    # The first sub-block to have an icp > the last block's infusion iters, is a block
+    # The first sub-block to have an sp > the last block's infusion iters, is a block
     if overflow:
         our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - slot_iters)
     else:
