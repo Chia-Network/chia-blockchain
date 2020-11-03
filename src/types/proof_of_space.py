@@ -26,13 +26,13 @@ class ProofOfSpace(Streamable):
         assert self.pool_public_key is None or self.pool_contract_puzzle_hash is None
         if self.pool_public_key is None:
             return self.calculate_plot_id_ph(self.pool_contract_puzzle_hash, self.plot_public_key)
-        return self.calculate_plot_id(self.pool_public_key, self.plot_public_key)
+        return self.calculate_plot_id_pk(self.pool_public_key, self.plot_public_key)
 
     def verify_and_get_quality_string(
         self,
         constants: ConsensusConstants,
-        sp_output_hash: Optional[bytes32],
-        sp_signature: Optional[G2Element],
+        sp_output_hash: Optional[bytes32] = None,
+        sp_signature: Optional[G2Element] = None,
     ) -> Optional[bytes32]:
         v: Verifier = Verifier()
         plot_id: bytes32 = self.get_plot_id()
