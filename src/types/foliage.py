@@ -39,7 +39,7 @@ class FoliageSubBlockData(Streamable):
     # Part of the sub-block that is signed by the plot key
     unfinished_reward_block_hash: bytes32
     pool_target: PoolTarget
-    pool_signature: G2Element
+    pool_signature: Optional[G2Element]  # Iff ProofOfSpace has a pool pk
     farmer_reward_puzzle_hash: bytes32
     extension_data: bytes32
 
