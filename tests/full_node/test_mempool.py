@@ -813,7 +813,10 @@ class TestMempool:
         )
         assert len(pkm_pairs) == 1
 
-        assert pkm_pairs[0][1] == solution.first().get_tree_hash() + coin_solution.coin.name()
+        assert (
+            pkm_pairs[0][1]
+            == solution.first().get_tree_hash() + coin_solution.coin.name()
+        )
 
         spend_bundle = WALLET_A.sign_transaction(unsigned)
         assert spend_bundle is not None

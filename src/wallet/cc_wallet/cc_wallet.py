@@ -571,7 +571,9 @@ class CCWallet:
             self.log.info(f"Successfully selected coins: {used_coins}")
             return used_coins
 
-    async def get_sigs(self, innerpuz: Program, innersol: Program, coin_name) -> List[G2Element]:
+    async def get_sigs(
+        self, innerpuz: Program, innersol: Program, coin_name
+    ) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         sigs: List[G2Element] = []
