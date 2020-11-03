@@ -27,7 +27,10 @@ def calculate_cost_of_program(
     total_vbyte_cost = 0
     for npc in npc_list:
         for condition, cvp_list in npc.condition_dict.items():
-            if condition is ConditionOpcode.AGG_SIG or condition is ConditionOpcode.AGG_SIG_ME:
+            if (
+                condition is ConditionOpcode.AGG_SIG
+                or condition is ConditionOpcode.AGG_SIG_ME
+            ):
                 total_vbyte_cost += len(cvp_list) * ConditionCost.AGG_SIG.value
             elif condition is ConditionOpcode.CREATE_COIN:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_COIN.value
