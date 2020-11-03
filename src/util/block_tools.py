@@ -460,8 +460,9 @@ class BlockTools:
                     rc_sp_vdf, rc_sp_proof = get_vdf_info_and_proof(
                         constants, ClassgroupElement.get_default_element(), rc_challenge, sp_iters
                     )
-                    to_sign_cc = cc_sp_vdf.get_hash()
-                    to_sign_rc = rc_sp_vdf.get_hash()
+
+                    to_sign_cc = cc_sp_vdf.output.get_hash()
+                    to_sign_rc = rc_sp_vdf.output.get_hash()
 
                 cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
                     constants, ClassgroupElement.get_default_element(), cc_challenge, ip_iters

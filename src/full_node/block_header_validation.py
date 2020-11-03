@@ -465,7 +465,7 @@ async def validate_unfinished_header_block(
             target_vdf_info,
         ):
             return None, Err.INVALID_RC_ICP_VDF
-        rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.get_hash()
+        rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.output.get_hash()
     else:
         print("Case 1")
         # Edge case of first sp (start of slot), where sp_iters == 0
