@@ -15,8 +15,8 @@ class UnfinishedBlock(Streamable):
     # Full block, without the final VDFs
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
-    challenge_chain_sp_proof: VDFProof
-    reward_chain_sp_proof: VDFProof
+    challenge_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
+    reward_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
     transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
