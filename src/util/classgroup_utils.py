@@ -37,12 +37,7 @@ class ClassGroup(tuple):
         self._discriminant = None
 
     def __eq__(self, obj):
-        return (
-            isinstance(obj, ClassGroup)
-            and obj[0] == self[0]
-            and obj[1] == self[1]
-            and obj[2] == self[2]
-        )
+        return isinstance(obj, ClassGroup) and obj[0] == self[0] and obj[1] == self[1] and obj[2] == self[2]
 
     def identity(self):
         return self.identity_for_discriminant(self.discriminant())
@@ -74,28 +69,20 @@ class ClassGroup(tuple):
         r = self.reduced()
         int_size_bits = int(self.discriminant().bit_length())
         int_size = (int_size_bits + 16) >> 4
-        return b"".join(
-            [x.to_bytes(int_size, "big", signed=True) for x in [r[0], r[1]]]
-        )
+        return b"".join([x.to_bytes(int_size, "big", signed=True) for x in [r[0], r[1]]])
 
 
 def deserialize_proof(proof_blob, discriminant):
     int_size = (discriminant.bit_length() + 16) >> 4
-    proof_arr = [
-        proof_blob[_ : _ + 2 * int_size]
-        for _ in range(0, len(proof_blob), 2 * int_size)
-    ]
+    proof_arr = [proof_blob[_ : _ + 2 * int_size] for _ in range(0, len(proof_blob), 2 * int_size)]
     return [ClassGroup.from_bytes(blob, discriminant) for blob in proof_arr]
 
 
-def check_proof_of_time_nwesolowski(
-    discriminant, x, y, sections, iterations, int_size_bits, depth
-):
+def check_proof_of_time_nwesolowski(discriminant, x, proof_blob, iterations, int_size_bits, depth):
     """
     Check the nested wesolowski proof. The proof blob
     includes the output of the VDF, along with the proof. The following
     table gives an example of the checks for a depth of 2.
-
     x   |  proof_blob
     ---------------------------------------------
     x   |  y3, proof3, y2, proof2, y1, proof1
@@ -111,9 +98,7 @@ def check_proof_of_time_nwesolowski(
         iter_list = []
         for i in range(4 * int_size, len(proof_blob), 4 * int_size + 8):
             iter_list.append(int.from_bytes(proof_blob[i : (i + 8)], byteorder="big"))
-            new_proof_blob = (
-                new_proof_blob + proof_blob[(i + 8) : (i + 8 + 4 * int_size)]
-            )
+            new_proof_blob = new_proof_blob + proof_blob[(i + 8) : (i + 8 + 4 * int_size)]
         proof_blob = new_proof_blob
 
         result_bytes = proof_blob[: (2 * int_size)]

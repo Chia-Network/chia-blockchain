@@ -4,14 +4,10 @@ test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,
-        "BLOCK_TIME_TARGET": 10,
-        "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-        "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-        "PROPAGATION_THRESHOLD": 10,
-        "PROPAGATION_DELAY_THRESHOLD": 20,
+        "SLOT_TIME_TARGET": 300,
         "TX_PER_SEC": 1,
         "MEMPOOL_BLOCK_BUFFER": 10,
-        "MIN_ITERS_STARTING": 50 * 1,
+        "IPS_STARTING": 10 * 1,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "NUMBER_ZERO_BITS_ICP_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "CLVM_COST_RATIO_CONSTANT": 108,
