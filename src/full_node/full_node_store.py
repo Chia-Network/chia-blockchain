@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
-from src.types.challenge_slot import ChallengeSlot
+from src.types.slots import ChallengeSlot
 from src.types.full_block import FullBlock
 from src.types.reward_chain_end_of_slot import RewardChainSubSlot, SubSlotProofs
 from src.types.sized_bytes import bytes32

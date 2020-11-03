@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from src.types.challenge_slot import ChallengeChainSubSlot, InfusedChallengeChainSubSlot
-from src.types.reward_chain_end_of_slot import RewardChainSubSlot, SubSlotProofs
+from src.types.slots import ChallengeChainSubSlot, InfusedChallengeChainSubSlot
+from src.types.slots import RewardChainSubSlot, SubSlotProofs
 from src.util.streamable import Streamable, streamable
 
 
