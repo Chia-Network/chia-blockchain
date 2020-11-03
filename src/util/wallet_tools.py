@@ -176,7 +176,7 @@ class WalletTool:
             conditions_dict = conditions_by_opcode(con)
 
             for _, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, bytes(coin_solution.coin)
+                conditions_dict, bytes(coin_solution.coin.name())
             ):
                 signature = AugSchemeMPL.sign(secretkey, msg)
                 sigs.append(signature)

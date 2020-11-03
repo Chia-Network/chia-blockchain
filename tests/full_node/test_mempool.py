@@ -35,11 +35,11 @@ def generate_test_spend_bundle(
 ) -> SpendBundle:
     if condition_dic is None:
         condition_dic = {}
-    transaction = WALLET_A.generate_unsigned_transaction(
+    transaction = WALLET_A.generate_signed_transaction(
         amount, newpuzzlehash, coin, condition_dic, fee
     )
     assert transaction is not None
-    return WALLET_A.sign_transaction(transaction)
+    return transaction
 
 
 @pytest.fixture(scope="module")
@@ -813,7 +813,7 @@ class TestMempool:
         )
         assert len(pkm_pairs) == 1
 
-        assert pkm_pairs[0][1] == solution.first().get_tree_hash()
+        assert pkm_pairs[0][1] == solution.first().get_tree_hash() + coin_solution.coin.name()
 
         spend_bundle = WALLET_A.sign_transaction(unsigned)
         assert spend_bundle is not None
