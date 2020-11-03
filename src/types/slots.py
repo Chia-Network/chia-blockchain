@@ -22,20 +22,7 @@ class ChallengeBlockInfo(Streamable):  # The hash of this is used as the challen
 @streamable
 class InfusedChallengeChainSubSlot(Streamable):
     subepoch_summary_hash: Optional[bytes32]  # Only once per sub-epoch, and one sub-epoch delayed
-    proof_of_space: Optional[ProofOfSpace]
-    challenge_chain_sp_vdf: Optional[VDFInfo]
-    challenge_chain_sp_signature: Optional[G2Element]
-    challenge_chain_ip_vdf: Optional[VDFInfo]
-    infused_challenge_chain_end_of_slot_vdf: Optional[VDFInfo]  # Iff deficit <=4
-
-    def is_empty_sub_slot(self) -> bool:
-        if self.challenge_chain_sp_signature is None:
-            assert self.subepoch_summary_hash is None
-            assert self.proof_of_space is None
-            assert self.challenge_chain_sp_vdf is None
-            assert self.challenge_chain_ip_vdf is None
-            return True
-        return False
+    infused_challenge_chain_end_of_slot_vdf: VDFInfo
 
 
 @dataclass(frozen=True)
