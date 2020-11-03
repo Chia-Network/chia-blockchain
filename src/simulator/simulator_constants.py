@@ -4,11 +4,7 @@ test_constants = constants.replace(
     **{
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,
-        "BLOCK_TIME_TARGET": 10,
-        "DIFFICULTY_EPOCH": 12,  # The number of blocks per epoch
-        "DIFFICULTY_DELAY": 3,  # EPOCH / WARP_FACTOR
-        "PROPAGATION_THRESHOLD": 10,
-        "PROPAGATION_DELAY_THRESHOLD": 20,
+        "SLOT_TIME_TARGET": 300,
         "TX_PER_SEC": 1,
         "MEMPOOL_BLOCK_BUFFER": 10,
         "MIN_ITERS_STARTING": 50 * 1,
