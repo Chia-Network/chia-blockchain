@@ -26,7 +26,7 @@ class BlockStore:
         # Sub blocks
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS sub_blocks(header_hash "
-            "text PRIMARY KEY, prev_hash text, height bigint, weight bigint, total_iters text"
+            "text PRIMARY KEY, prev_hash text, height bigint, weight bigint, total_iters text,"
             "sub_block blob, is_peak tinyint)"
         )
 
@@ -112,6 +112,6 @@ class BlockStore:
     async def set_peak(self, header_hash: bytes32) -> None:
         cursor_1 = await self.db.execute("UPDATE sub_blocks SET is_peak=0 WHERE is_peak=1")
         await cursor_1.close()
-        cursor_2 = await self.db.execute("UPDATE sub_blocks SET is_peak=1 WHERE header_hash=?", (header_hash.hex()))
+        cursor_2 = await self.db.execute("UPDATE sub_blocks SET is_peak=1 WHERE header_hash=?", (header_hash.hex(),))
         await cursor_2.close()
         await self.db.commit()
