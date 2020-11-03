@@ -396,14 +396,25 @@ class BlockTools:
         timestamp: Optional[uint64] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
     ) -> FullBlock:
-        """
-        Creates the genesis block with the specified details.
-        """
+        ip_iters: uint64 = uint64(0)
+        cc_sp_vdf = None
+        cc_sp_signature = None
+        cc_ip_vdf = None
+        rc_sp_vdf = None
+        rc_sp_signature = None
+        rc_ip_vdf = None
+        cc_sp_proof = None
+        cc_ip_proof = None
+        rc_sp_proof = None
+        rc_ip_proof = None
+
         if timestamp is None:
             timestamp = time.time()
-        selected_proof: Optional[Tuple[uint64, ProofOfSpace]] = None
         finished_slots: List[EndOfSubSlotBundle] = []
         slot_iters: uint64 = uint64(constants.IPS_STARTING * constants.SLOT_TIME_TARGET)
+        selected_proof: Optional[Tuple[uint64, ProofOfSpace]] = None
+
+        # Keep trying until we get a good proof of space that also passes sp filter
         while True:
             if len(finished_slots) == 0:
                 challenge = constants.FIRST_CC_CHALLENGE
@@ -418,10 +429,59 @@ class BlockTools:
                 uint64(constants.DIFFICULTY_STARTING),
                 uint64(constants.IPS_STARTING),
             )
-            if len(proofs_of_space) > 0:
-                selected_proof = sorted(proofs_of_space)[0]
+
+            # Try each of the proofs of space
+            for required_iters, proof_of_space in sorted(proofs_of_space):
+                sp_iters: uint64 = calculate_sp_iters(constants, uint64(constants.IPS_STARTING), required_iters)
+                ip_iters: uint64 = calculate_ip_iters(constants, uint64(constants.IPS_STARTING), required_iters)
+
+                if len(finished_slots) == 0:
+                    cc_challenge: bytes32 = constants.FIRST_CC_CHALLENGE
+                    rc_challenge: bytes32 = constants.FIRST_RC_CHALLENGE
+                else:
+                    cc_challenge: bytes32 = finished_slots[-1].challenge_chain.get_hash()
+                    rc_challenge: bytes32 = finished_slots[-1].reward_chain.get_hash()
+
+                if sp_iters == 0:
+                    cc_sp_vdf: Optional[VDFInfo] = None
+                    cc_sp_proof: Optional[VDFProof] = None
+                    rc_sp_vdf: Optional[VDFInfo] = None
+                    rc_sp_proof: Optional[VDFProof] = None
+                    to_sign_cc: Optional[bytes32] = constants.FIRST_CC_CHALLENGE
+                    to_sign_rc: Optional[bytes32] = constants.FIRST_RC_CHALLENGE
+                else:
+                    cc_sp_vdf, cc_sp_proof = get_vdf_info_and_proof(
+                        constants, ClassgroupElement.get_default_element(), cc_challenge, sp_iters
+                    )
+                    rc_sp_vdf, rc_sp_proof = get_vdf_info_and_proof(
+                        constants, ClassgroupElement.get_default_element(), rc_challenge, sp_iters
+                    )
+                    to_sign_cc = cc_sp_vdf.get_hash()
+                    to_sign_rc = rc_sp_vdf.get_hash()
+
+                cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
+                    constants, ClassgroupElement.get_default_element(), cc_challenge, ip_iters
+                )
+                rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
+                    constants, ClassgroupElement.get_default_element(), rc_challenge, ip_iters
+                )
+                cc_sp_signature: Optional[G2Element] = self.get_plot_signature(
+                    to_sign_cc, proof_of_space.plot_public_key
+                )
+                rc_sp_signature: Optional[G2Element] = self.get_plot_signature(
+                    to_sign_rc, proof_of_space.plot_public_key
+                )
+
+                # Checks sp filter
+                plot_id = proof_of_space.get_plot_id()
+                if ProofOfSpace.can_create_proof(constants, plot_id, challenge, to_sign_cc, cc_sp_signature):
+                    selected_proof = (required_iters, proof_of_space)
+                    break
+
+            if selected_proof is not None:
                 break
 
+            # Finish the end of sub-slot and try again next sub-slot
             cc_vdf, cc_proof = get_vdf_info_and_proof(
                 constants,
                 ClassgroupElement.get_default_element(),
@@ -446,43 +506,6 @@ class BlockTools:
                 )
             )
 
-        required_iters: uint64 = selected_proof[0]
-        sp_iters: uint64 = calculate_sp_iters(constants, uint64(constants.IPS_STARTING), required_iters)
-        ip_iters: uint64 = calculate_ip_iters(constants, uint64(constants.IPS_STARTING), required_iters)
-
-        if len(finished_slots) == 0:
-            cc_challenge: bytes32 = constants.FIRST_CC_CHALLENGE
-            rc_challenge: bytes32 = constants.FIRST_RC_CHALLENGE
-        else:
-            cc_challenge: bytes32 = finished_slots[-1].challenge_chain.get_hash()
-            rc_challenge: bytes32 = finished_slots[-1].reward_chain.get_hash()
-
-        if sp_iters == 0:
-            cc_sp_vdf: Optional[VDFInfo] = None
-            cc_sp_proof: Optional[VDFProof] = None
-            rc_sp_vdf: Optional[VDFInfo] = None
-            rc_sp_proof: Optional[VDFProof] = None
-            to_sign_cc: Optional[bytes32] = constants.FIRST_CC_CHALLENGE
-            to_sign_rc: Optional[bytes32] = constants.FIRST_RC_CHALLENGE
-        else:
-            cc_sp_vdf, cc_sp_proof = get_vdf_info_and_proof(
-                constants, ClassgroupElement.get_default_element(), cc_challenge, sp_iters
-            )
-            rc_sp_vdf, rc_sp_proof = get_vdf_info_and_proof(
-                constants, ClassgroupElement.get_default_element(), rc_challenge, sp_iters
-            )
-            to_sign_cc = cc_sp_vdf.get_hash()
-            to_sign_rc = rc_sp_vdf.get_hash()
-
-        cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
-            constants, ClassgroupElement.get_default_element(), cc_challenge, ip_iters
-        )
-        rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
-            constants, ClassgroupElement.get_default_element(), rc_challenge, ip_iters
-        )
-        cc_sp_signature: G2Element = self.get_plot_signature(to_sign_cc, selected_proof[1].plot_public_key)
-        rc_sp_signature: G2Element = self.get_plot_signature(to_sign_rc, selected_proof[1].plot_public_key)
-
         rc_sub_block = RewardChainSubBlock(
             uint128(constants.DIFFICULTY_STARTING),
             uint32(0),
@@ -497,6 +520,7 @@ class BlockTools:
             None,
             True,
         )
+        print("diff is", rc_sub_block.weight, type(rc_sub_block.weight))
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
         pool_coin = create_pool_coin(
