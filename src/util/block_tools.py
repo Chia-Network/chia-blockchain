@@ -36,7 +36,7 @@ from src.full_node.difficulty_adjustment import (
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.full_node.sub_block_record import SubBlockRecord
 from src.plotting.plot_tools import load_plots
-from src.types.challenge_slot import ChallengeSlot
+from src.types.slots import ChallengeSlot
 from src.types.classgroup import ClassgroupElement
 from src.types.coin import hash_coin_list, Coin
 from src.types.foliage import (
