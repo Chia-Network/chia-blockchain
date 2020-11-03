@@ -6,7 +6,6 @@ import time
 from blspy import AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
-from src.types.slots import ChallengeBlockInfo
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
 from src.util.ints import uint32, uint64, uint128
@@ -92,7 +91,7 @@ async def validate_unfinished_header_block(
                 ):
                     return None, Err.INVALID_SUB_EPOCH_SUMMARY_HASH
 
-            if sub_slot.infused_challenge_chain.proof_of_space is not None:
+            if sub_slot.infused_challenge_chain is not None:
                 # There is a challenge block in this sub-slot
                 # 2c. Find the challenge block
                 if finished_sub_slot_n != 0:
@@ -105,34 +104,21 @@ async def validate_unfinished_header_block(
                 ):
                     curr = sub_blocks[curr.prev_hash]
 
-                assert sub_slot.infused_challenge_chain is not None
-                assert sub_slot.infused_challenge_chain.challenge_chain_sp_signature is not None
-
-                challenge_block_info_hash = ChallengeBlockInfo(
-                    sub_slot.infused_challenge_chain.proof_of_space,
-                    sub_slot.infused_challenge_chain.challenge_chain_sp_vdf,
-                    sub_slot.infused_challenge_chain.challenge_chain_sp_signature,
-                    sub_slot.infused_challenge_chain.challenge_chain_ip_vdf,
-                ).get_hash()
-
-                # 2d. Check the data used for the infused challenge chain is correct (already validated in prev sb)
-                if curr.challenge_block_info_hash != challenge_block_info_hash:
-                    return None, Err.INVALID_CHALLENGE_CHAIN_DATA
-
                 # 2e. Check infused challenge chain sub-slot VDF
                 ip_iters = calculate_ip_iters(constants, curr.ips, curr.required_iters)
                 eos_iters: uint64 = calculate_slot_iters(constants, curr.ips) - ip_iters
                 target_vdf_info = VDFInfo(
-                    challenge_block_info_hash,
-                    ClassgroupElement.get_default_element(),
+                    curr.challenge_block_info_hash,
+                    curr.infused_challenge_vdf_output,
                     eos_iters,
                     sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
                 )
-                if sub_slot.proofs.challenge_chain_slot_proof.is_valid(
-                    constants, sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf, target_vdf_info
+                if sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf != dataclasses.replace(
+                    target_vdf_info, input=ClassgroupElement.get_default_element()
                 ):
                     return None, Err.INVALID_ICC_VDF
-
+                if sub_slot.proofs.challenge_chain_slot_proof.is_valid(constants, target_vdf_info, None):
+                    return None, Err.INVALID_ICC_VDF
             else:
                 # There is no challenge infusion in this finished_slot tuple (empty slot)
 
@@ -158,6 +144,8 @@ async def validate_unfinished_header_block(
                             if sub_slot.infused_challenge_chain is not None:
                                 return None, Err.SHOULD_NOT_HAVE_ICC
                         else:
+                            if sub_slot.infused_challenge_chain is None:
+                                return None, Err.SHOULD_HAVE_ICC
                             # This is when deficit is <5 and thus we have challenge block and full empty slot of VDFs
                             # Check full ICC vdf
                             ips_empty_slots: uint64 = get_next_ips(
