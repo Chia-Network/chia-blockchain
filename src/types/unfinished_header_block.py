@@ -14,8 +14,8 @@ class UnfinishedHeaderBlock(Streamable):
     # Same as a FullBlock but without TransactionInfo and Generator, used by light clients
     finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
-    challenge_chain_icp_proof: VDFProof
-    reward_chain_icp_proof: VDFProof
+    challenge_chain_sp_proof: VDFProof
+    reward_chain_sp_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
     transactions_filter: bytes  # Filter for block transactions

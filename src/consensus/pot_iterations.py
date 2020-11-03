@@ -31,12 +31,12 @@ def calculate_sp_iters(constants: ConsensusConstants, ips: uint64, required_iter
         return required_iters - required_iters % checkpoint_size
 
 
-def calculate_icp_index(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint8:
-    icp_iters = calculate_sp_iters(constants, ips, required_iters)
+def calculate_sp_index(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint8:
+    sp_iters = calculate_sp_iters(constants, ips, required_iters)
     slot_iters: uint64 = calculate_slot_iters(constants, ips)
     checkpoint_size: uint64 = uint64(slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
-    assert icp_iters % checkpoint_size == 0
-    target_index = icp_iters // checkpoint_size
+    assert sp_iters % checkpoint_size == 0
+    target_index = sp_iters // checkpoint_size
     return uint8(target_index)
 
 
