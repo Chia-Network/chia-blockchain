@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from blspy import G2Element
 
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint8
+from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
 from src.types.proof_of_space import ProofOfSpace
 from src.types.vdf import VDFInfo, VDFProof
@@ -21,7 +21,6 @@ class ChallengeBlockInfo(Streamable):  # The hash of this is used as the challen
 @dataclass(frozen=True)
 @streamable
 class InfusedChallengeChainSubSlot(Streamable):
-    subepoch_summary_hash: Optional[bytes32]  # Only once per sub-epoch, and one sub-epoch delayed
     infused_challenge_chain_end_of_slot_vdf: VDFInfo
 
 
@@ -30,6 +29,9 @@ class InfusedChallengeChainSubSlot(Streamable):
 class ChallengeChainSubSlot(Streamable):
     challenge_chain_end_of_slot_vdf: VDFInfo
     infused_challenge_chain_sub_slot_hash: Optional[bytes32]  # Only at the end of a slot
+    subepoch_summary_hash: Optional[bytes32]  # Only once per sub-epoch, and one sub-epoch delayed
+    new_ips: Optional[uint64]  # Only at the end of epoch, sub-epoch, and slot
+    new_difficulty: Optional[uint64]  # Only at the end of epoch, sub-epoch, and slot
 
 
 @dataclass(frozen=True)
