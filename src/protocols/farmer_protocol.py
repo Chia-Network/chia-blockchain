@@ -27,8 +27,8 @@ class InfusionChallengePoint:
 class DeclareProofOfSpace:
     challenge_chain_sp: bytes32
     proof_of_space: ProofOfSpace
-    challenge_chain_sp_sig: G2Element
-    reward_chain_sp_sig: G2Element
+    challenge_chain_sp_signature: G2Element
+    reward_chain_sp_signature: G2Element
     farmer_puzzle_hash: bytes32
     pool_target: PoolTarget
     pool_signature: G2Element
