@@ -541,9 +541,7 @@ class TradeManager:
                 assert inner_puzzle is not None
 
                 sigs = await wallets[colour].get_sigs(
-                    inner_puzzle,
-                    inner_solution,
-                    coloured_coin.name()
+                    inner_puzzle, inner_solution, coloured_coin.name()
                 )
                 sigs.append(aggsig)
                 aggsig = AugSchemeMPL.aggregate(sigs)
@@ -598,9 +596,7 @@ class TradeManager:
             innersol_list.append(inner_solution)
 
             sigs = await wallets[colour].get_sigs(
-                inner_puzzle,
-                inner_solution,
-                my_output_coin.name()
+                inner_puzzle, inner_solution, my_output_coin.name()
             )
             sigs.append(aggsig)
             aggsig = AugSchemeMPL.aggregate(sigs)
