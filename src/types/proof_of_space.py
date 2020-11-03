@@ -38,11 +38,13 @@ class ProofOfSpace(Streamable):
         plot_id: bytes32 = self.get_plot_id()
 
         if not self.can_create_proof(constants, plot_id, self.challenge_hash, sp_output_hash, sp_signature):
+            print("Fails the filter")
             return None
 
         quality_str = v.validate_proof(plot_id, self.size, self.challenge_hash, bytes(self.proof))
 
         if not quality_str:
+            print("Fails the QS")
             return None
 
         return quality_str
