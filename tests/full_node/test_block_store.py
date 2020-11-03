@@ -29,8 +29,8 @@ class TestBlockStore:
         blocks = [block_1, block_2, block_3]
 
         db_filename = Path("blockchain_test.db")
-        db_filename_2 = Path("blockchain_test_2.db")
-        db_filename_3 = Path("blockchain_test_3.db")
+        db_filename_2 = Path("blockchain_test2.db")
+        db_filename_3 = Path("blockchain_test3.db")
 
         if db_filename.exists():
             db_filename.unlink()
@@ -51,15 +51,22 @@ class TestBlockStore:
             # Save/get block
             for block in blocks:
                 sub_block = full_block_to_sub_block_record(block, 0, 0, 5)
+                sub_block_hh = sub_block.header_hash
+                await db.add_block(block, sub_block)
                 await db.add_block(block, sub_block)
                 assert block == await db.get_block(block.header_hash)
+                assert block == await db.get_block(block.header_hash)
+                assert sub_block == (await db.get_sub_block(sub_block_hh))
+                await db.set_peak(sub_block.header_hash)
+                await db.set_peak(sub_block.header_hash)
 
             assert len(await db.get_blocks_at([1])) == 0
             assert len(await db.get_blocks_at([0])) == 3
 
             # Get sub blocks
-            assert len(await db.get_sub_blocks()) == len(blocks)
+            assert len((await db.get_sub_blocks())[0]) == len(blocks)
 
+            # TODO
             # for block in blocks:
             #     await b.receive_block(block)
             #
