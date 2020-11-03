@@ -438,11 +438,7 @@ class Blockchain:
             return None  # This means the sub-block is valid
 
         # 2. For blocks, foliage block, transaction filter, transactions info must not be empty
-        if (
-            block.foliage_block is None
-            or block.transactions_filter is None
-            or block.transactions_info is None
-        ):
+        if block.foliage_block is None or block.foliage_block.filter_hash is None or block.transactions_info is None:
             return Err.IS_BLOCK_BUT_NO_DATA
 
         # keeps track of the reward coins that need to be incorporated
@@ -455,10 +451,7 @@ class Blockchain:
             return Err.INVALID_TRANSACTIONS_INFO_HASH
 
         # 4. The foliage block hash in the foliage sub block must match the foliage block
-        if (
-            block.foliage_sub_block.foliage_sub_block_data.foliage_block_hash
-            != std_hash(block.foliage_block)
-        ):
+        if block.foliage_sub_block.foliage_block_hash != std_hash(block.foliage_block):
             return Err.INVALID_FOLIAGE_BLOCK_HASH
 
         # 5. The prev generators root must be valid
