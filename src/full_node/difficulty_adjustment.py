@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_icp_iters, calculate_ip_iters
@@ -59,11 +59,13 @@ def get_next_ips(
     """
     next_height: uint32 = uint32(height + 1)
 
+    if next_height < constants.EPOCH_SUB_BLOCKS:
+        return uint64(constants.IPS_STARTING)
+
     if prev_header_hash not in sub_blocks:
         raise ValueError(f"Header hash {prev_header_hash} not in sub blocks")
 
-    if next_height < constants.EPOCH_SUB_BLOCKS:
-        return uint64(constants.IPS_STARTING)
+    prev_sb: SubBlockRecord = sub_blocks[prev_header_hash]
 
     # If we are in the same epoch, return same ips
     if not new_slot or not finishes_sub_epoch(constants, height, deficit, True):
@@ -83,27 +85,43 @@ def get_next_ips(
     # We will compute the timestamps of the last block in epoch, as well as the total iterations at infusion
     first_sb_in_epoch: SubBlockRecord
     prev_slot_start_iters: uint128
+    prev_slot_time_start: uint64
+    in_heaviest_chain = height_to_hash[height - 1] == prev_header_hash
+
+    def get_blocks_at_height(target_height: uint32, max_num_blocks: uint32 = 1) -> List[SubBlockRecord]:
+        if in_heaviest_chain:
+            # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain
+            return [
+                sub_blocks[height_to_hash[h]]
+                for h in range(target_height, target_height + max_num_blocks)
+                if h in height_to_hash
+            ]
+        # slow fetching, goes back one by one
+        curr_b: SubBlockRecord = prev_sb
+        target_blocks = []
+        while curr_b.height >= target_height:
+            if curr_b.height < target_height + max_num_blocks:
+                target_blocks.append(curr_b)
+            curr_b = sub_blocks[curr.prev_hash]
+        return target_blocks
 
     if height_epoch_surpass == 0:
         prev_slot_start_iters = uint128(0)
         # The genesis block is an edge case, where we measure from the first block in epoch, as opposed to the last
         # block in the previous epoch
-        if height_to_hash[height - 1] == prev_header_hash:
-            prev_slot_time_start = sub_blocks[height_to_hash[uint32(0)]].timestamp
-        else:
-            pass
+        prev_slot_time_start = get_blocks_at_height(uint32(0))[1].timestamp
     else:
-        last_sb_in_prev_epoch: SubBlockRecord = sub_blocks[
-            height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1
-        ]
-
-        curr: SubBlockRecord = sub_blocks[
-            height_to_hash[last_sb_in_prev_epoch.height + 1]
-        ]
+        fetched_blocks = get_blocks_at_height(
+            uint32(height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - 1), uint32(constants.MAX_SLOT_SUB_BLOCKS + 1)
+        )
+        last_sb_in_prev_epoch: SubBlockRecord = fetched_blocks[0]
+        fetched_index: int = 1
+        curr: SubBlockRecord = fetched_blocks[fetched_index]
         # Wait until the slot finishes with a challenge chain infusion at start of slot
         while not curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
             last_sb_in_prev_epoch = curr
-            curr = sub_blocks[height_to_hash[curr.height + 1]]
+            curr = fetched_blocks[fetched_index]
+            fetched_index += 1
 
         # Ensure that we get a block (which has a timestamp)
         curr = last_sb_in_prev_epoch
