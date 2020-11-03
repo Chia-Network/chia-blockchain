@@ -579,22 +579,17 @@ async def validate_unfinished_header_block(
 
     # 20. Check extension data if applicable. None for mainnet.
     # 21. Check if foliage block is present
-    if header_block.foliage_sub_block.foliage_block_hash is not None != (header_block.foliage_block is not None):
+    if (header_block.foliage_sub_block.foliage_block_hash is not None) != (header_block.foliage_block is not None):
         return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
-    if (
-        header_block.foliage_sub_block.foliage_sub_block_signature
-        is not None
-        != (header_block.foliage_block is not None)
+    if (header_block.foliage_sub_block.foliage_sub_block_signature is not None) != (
+        header_block.foliage_block is not None
     ):
         return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
     if header_block.foliage_block is not None:
         # 22. Check foliage block hash
-        if (
-            header_block.foliage_block.get_hash()
-            != header_block.foliage_sub_block.foliage_sub_block_data.foliage_block_hash
-        ):
+        if header_block.foliage_block.get_hash() != header_block.foliage_sub_block.foliage_block_hash:
             return None, Err.INVALID_FOLIAGE_BLOCK_HASH
 
         # 23. Check prev block hash
@@ -711,7 +706,7 @@ async def validate_finished_header_block(
             icc_vdf_output = prev_sb.infused_challenge_vdf_output
 
     # 26. Check challenge chain infusion point VDF
-    if header_block.finished_sub_slots is not None:
+    if header_block.finished_sub_slots is not None and header_block.finished_sub_slots != []:
         cc_vdf_challenge = header_block.finished_sub_slots[-1][0].get_hash()
     else:
         # Not first sub-block in slot
