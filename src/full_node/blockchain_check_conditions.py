@@ -3,17 +3,14 @@ from typing import Optional, Dict, List
 
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.coin_record import CoinRecord
-from src.types.header import Header
 from src.types.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode
 from src.util.errors import Err
-from src.util.ints import uint64
+from src.util.ints import uint64, uint32
 
 
-def blockchain_assert_coin_consumed(
-    condition: ConditionVarPair, removed: Dict[bytes32, CoinRecord]
-) -> Optional[Err]:
+def blockchain_assert_coin_consumed(condition: ConditionVarPair, removed: Dict[bytes32, CoinRecord]) -> Optional[Err]:
     """
     Checks coin consumed conditions
     Returns None if conditions are met, if not returns the reason why it failed
@@ -24,9 +21,7 @@ def blockchain_assert_coin_consumed(
     return None
 
 
-def blockchain_assert_my_coin_id(
-    condition: ConditionVarPair, unspent: CoinRecord
-) -> Optional[Err]:
+def blockchain_assert_my_coin_id(condition: ConditionVarPair, unspent: CoinRecord) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
     """
@@ -35,9 +30,7 @@ def blockchain_assert_my_coin_id(
     return None
 
 
-def blockchain_assert_block_index_exceeds(
-    condition: ConditionVarPair, header: Header
-) -> Optional[Err]:
+def blockchain_assert_block_index_exceeds(condition: ConditionVarPair, height: uint32) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
     """
@@ -46,13 +39,13 @@ def blockchain_assert_block_index_exceeds(
     except ValueError:
         return Err.INVALID_CONDITION
     # + 1 because min block it can be included is +1 from current
-    if header.height <= expected_block_index:
+    if height <= expected_block_index:
         return Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
     return None
 
 
 def blockchain_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: CoinRecord, header: Header
+    condition: ConditionVarPair, unspent: CoinRecord, height: uint32
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
@@ -62,7 +55,7 @@ def blockchain_assert_block_age_exceeds(
         expected_block_index = expected_block_age + unspent.confirmed_block_index
     except ValueError:
         return Err.INVALID_CONDITION
-    if header.height <= expected_block_index:
+    if height <= expected_block_index:
         return Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
     return None
 
@@ -86,7 +79,7 @@ def blockchain_check_conditions_dict(
     unspent: CoinRecord,
     removed: Dict[bytes32, CoinRecord],
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
-    header: Header,
+    height: uint32,
 ) -> Optional[Err]:
     """
     Check all conditions against current state.
@@ -100,9 +93,9 @@ def blockchain_check_conditions_dict(
             elif cvp.opcode is ConditionOpcode.ASSERT_MY_COIN_ID:
                 error = blockchain_assert_my_coin_id(cvp, unspent)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                error = blockchain_assert_block_index_exceeds(cvp, header)
+                error = blockchain_assert_block_index_exceeds(cvp, height)
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                error = blockchain_assert_block_age_exceeds(cvp, unspent, header)
+                error = blockchain_assert_block_age_exceeds(cvp, unspent, height)
             elif cvp.opcode is ConditionOpcode.ASSERT_TIME_EXCEEDS:
                 error = blockchain_assert_time_exceeds(cvp)
 

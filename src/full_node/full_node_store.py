@@ -2,9 +2,8 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
-from src.types.slots import ChallengeSlot
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.reward_chain_end_of_slot import RewardChainSubSlot, SubSlotProofs
 from src.types.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFProof, VDFInfo
@@ -31,7 +30,7 @@ class FullNodeStore:
 
     # Finished slots and sps from the peak's slot onwards
     # We store all 32 ICPs for each slot, starting as 32 Nones and filling them as we go
-    finished_slots: List[Tuple[ChallengeSlot, RewardChainSubSlot, SubSlotProofs, ICPs]]
+    finished_slots: List[Tuple[EndOfSubSlotBundle, ICPs]]
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):
@@ -115,18 +114,18 @@ class FullNodeStore:
     def clear_slots(self):
         self.finished_sub_slots.clear()
 
-    def new_finished_slot(self, cs: ChallengeSlot, reward: RewardChainSubSlot, proofs: SubSlotProofs):
+    def new_finished_slot(self, eos: EndOfSubSlotBundle):
         """
         Returns true if finished slot successfully added
         """
         sps = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
         if len(self.finished_sub_slots) == 0:
-            self.finished_sub_slots.append((cs, reward, proofs, sps))
+            self.finished_sub_slots.append((eos, sps))
             return True
-        if cs.proof_of_space.challenge_hash != self.finished_sub_slots[-1][0].get_hash():
+        if eos.challenge_chain.proof_of_space.challenge_hash != self.finished_sub_slots[-1][0].get_hash():
             # This slot does not append to our next slot
             return False
-        self.finished_sub_slots.append((cs, reward, proofs, sps))
+        self.finished_sub_slots.append((eos, sps))
         return True
 
     def new_sp(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof) -> bool:
