@@ -7,6 +7,8 @@ import pytest
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
+from src.types.classgroup import ClassgroupElement
+from src.util.block_tools import get_vdf_info_and_proof
 from tests.setup_nodes import test_constants, bt
 
 
@@ -18,6 +20,14 @@ def event_loop():
 
 class TestGenesisBlock:
     @pytest.mark.asyncio
+    async def test_block_tools_proofs(self):
+        vdf, proof = get_vdf_info_and_proof(
+            test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, 231
+        )
+        if proof.is_valid(test_constants, vdf) is False:
+            raise Exception("invalid proof")
+
+    @pytest.mark.asyncio
     async def test_basic_blockchain(self):
         db_path = Path("blockchain_test.db")
         if db_path.exists():
@@ -28,7 +38,7 @@ class TestGenesisBlock:
         bc1 = await Blockchain.create(coin_store, store, test_constants)
         assert bc1.get_peak() is None
 
-        genesis = bt.create_genesis_block(test_constants)
+        genesis = bt.get_consecutive_blocks(test_constants, 1)[0]
         result = await bc1.receive_block(genesis, False)
         assert result == ReceiveBlockResult.NEW_PEAK
 

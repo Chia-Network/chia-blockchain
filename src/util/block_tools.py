@@ -246,27 +246,28 @@ class BlockTools:
             )
             self.prev_subepoch_summary_hash = std_hash(sub_epoch_summery)
 
-    #
-    # def get_consecutive_blocks(
-    #     self,
-    #     constants: ConsensusConstants,
-    #     num_blocks: int,
-    #     block_list: List[FullBlock] = None,
-    #     reward_puzzlehash: bytes32 = None,
-    #     fees: uint64 = uint64(0),
-    #     transaction_data_at_height: Dict[int, Tuple[Program, G2Element]] = None,
-    #     seed: bytes = b"",
-    # ) -> List[FullBlock]:
-    #     if transaction_data_at_height is None:
-    #         transaction_data_at_height = {}
-    #     if block_list is None or len(block_list) == 0:
-    #         self.difficulty = constants.DIFFICULTY_STARTING
-    #         self.ips = uint64(constants.IPS_STARTING)
-    #         genesis = self.create_genesis_block(constants, fees, seed)
-    #         self.latest_sub_block = genesis
-    #         self.deficit = 5
-    #         block_list: List[FullBlock] = [genesis]
-    #         self.prev_foliage_block = genesis.foliage_block
+    def get_consecutive_blocks(
+        self,
+        constants: ConsensusConstants,
+        num_blocks: int,
+        block_list: List[FullBlock] = None,
+        reward_puzzlehash: bytes32 = None,
+        fees: uint64 = uint64(0),
+        transaction_data_at_height: Dict[int, Tuple[Program, G2Element]] = None,
+        seed: bytes = b"",
+    ) -> List[FullBlock]:
+        if transaction_data_at_height is None:
+            transaction_data_at_height = {}
+        if block_list is None or len(block_list) == 0:
+            self.difficulty = constants.DIFFICULTY_STARTING
+            self.ips = uint64(constants.IPS_STARTING)
+            genesis = self.create_genesis_block(constants, fees, seed)
+            self.latest_sub_block = genesis
+            self.deficit = 5
+            block_list: List[FullBlock] = [genesis]
+            self.prev_foliage_block = genesis.foliage_block
+            return block_list
+
     #     else:
     #         assert block_list[-1].proof_of_time is not None
     #
@@ -477,8 +478,11 @@ class BlockTools:
 
                 # Checks sp filter
                 plot_id = proof_of_space.get_plot_id()
-                if ProofOfSpace.can_create_proof(constants, plot_id, challenge, to_sign_cc, cc_sp_signature):
+                if ProofOfSpace.can_create_proof(
+                    constants, plot_id, challenge, cc_sp_vdf.output.get_hash(), cc_sp_signature
+                ):
                     selected_proof = (required_iters, proof_of_space)
+                    self.curr_proof_of_space = selected_proof
                     break
 
             if selected_proof is not None:
