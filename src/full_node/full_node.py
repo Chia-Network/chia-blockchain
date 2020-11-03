@@ -800,10 +800,10 @@ class FullNode:
 
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
         if peak is not None:
-            peak_icp = calculate_sp_iters(self.constants, peak.ips, peak.required_iters)
+            peak_sp = calculate_sp_iters(self.constants, peak.ips, peak.required_iters)
             peak_ip_iters = calculate_ip_iters(self.constants, peak.ips, peak.required_iters)
-            icp_iters = peak.total_iters - (peak_ip_iters - peak_icp)
-            if block.total_iters < icp_iters:
+            sp_iters = peak.total_iters - (peak_ip_iters - peak_sp)
+            if block.total_iters < sp_iters:
                 # This means this unfinished block is pretty far behind, it will not add weight to our chain
                 return
 
@@ -862,8 +862,8 @@ class FullNode:
         #         difficulty
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
             block.reward_chain_sub_block,
-            block.challenge_chain_icp_proof,
-            block.reward_chain_icp_proof,
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
             block.foliage_sub_block,
         )
 
