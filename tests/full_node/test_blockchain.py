@@ -24,7 +24,6 @@ class TestGenesisBlock:
         vdf, proof = get_vdf_info_and_proof(
             test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, 231
         )
-        print(vdf, proof)
         if proof.is_valid(test_constants, vdf) is False:
             raise Exception("invalid proof")
 
@@ -59,6 +58,44 @@ class TestGenesisBlock:
         assert bc1.get_peak() is None
 
         genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=True)[0]
+        result, err, _ = await bc1.receive_block(genesis, False)
+        assert err is None
+        assert result == ReceiveBlockResult.NEW_PEAK
+
+        await connection.close()
+        bc1.shut_down()
+
+    @pytest.mark.asyncio
+    async def test_genesis_empty_slots(self):
+        db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
+        connection = await aiosqlite.connect(db_path)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        bc1 = await Blockchain.create(coin_store, store, test_constants)
+        assert bc1.get_peak() is None
+
+        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, force_empty_slots=9)[0]
+        result, err, _ = await bc1.receive_block(genesis, False)
+        assert err is None
+        assert result == ReceiveBlockResult.NEW_PEAK
+
+        await connection.close()
+        bc1.shut_down()
+
+    @pytest.mark.asyncio
+    async def test_overflow_genesis_empty_slots(self):
+        db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
+        connection = await aiosqlite.connect(db_path)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        bc1 = await Blockchain.create(coin_store, store, test_constants)
+        assert bc1.get_peak() is None
+
+        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=True, force_empty_slots=10)[0]
         result, err, _ = await bc1.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK

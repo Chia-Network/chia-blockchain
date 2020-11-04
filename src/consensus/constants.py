@@ -17,7 +17,7 @@ class ConsensusConstants:
     SIGNIFICANT_BITS: int  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     DISCRIMINANT_SIZE_BITS: int  # Max is 1024 (based on ClassGroupElement int size)
     NUMBER_ZERO_BITS_PLOT_FILTER: int  # H(plot signature of the challenge) must start with these many zeroes
-    NUMBER_ZERO_BITS_ICP_FILTER: int  # H(plot signature of the sp) must start with these many zeroes
+    NUMBER_ZERO_BITS_SP_FILTER: int  # H(plot signature of the sp) must start with these many zeroes
     SLOT_TIME_TARGET: int  # The target number of seconds per block
     EXTRA_ITERS_TIME_TARGET: float
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
