@@ -16,6 +16,7 @@ from src.full_node.coin_store import CoinStore
 from src.full_node.deficit import calculate_deficit
 from src.full_node.difficulty_adjustment import finishes_sub_epoch, get_next_ips, get_next_difficulty
 from src.full_node.full_node_store import FullNodeStore
+from src.full_node.make_sub_epoch_summary import make_sub_epoch_summary
 from src.full_node.mempool_manager import MempoolManager
 from src.full_node.sub_block_record import SubBlockRecord
 from src.full_node.sync_peers_handler import SyncPeersHandler
@@ -409,7 +410,7 @@ class FullNode:
         #         )
         #         yield OutboundMessage(NodeType.WALLET, Message("new_lca", new_lca_req), Delivery.BROADCAST)
         #
-        #     self._state_changed("block")
+        #     self._state_changed("sub_block")
         #     await asyncio.sleep(5)
         #
         # # Awaits for all blocks to be processed, a timeout to happen, or the node to shutdown
@@ -460,7 +461,7 @@ class FullNode:
             peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height
         )
         yield OutboundMessage(NodeType.WALLET, Message("new_peak", request_wallet), Delivery.BROADCAST)
-        self._state_changed("block")
+        self._state_changed("sub_block")
 
     @api_request
     async def new_peak(self, request: full_node_protocol.NewPeak) -> OutboundMessageGenerator:
@@ -742,7 +743,7 @@ class FullNode:
         self.full_node_store.clear_candidate_blocks_below(clear_height)
         self.full_node_store.clear_disconnected_blocks_below(clear_height)
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
-        self._state_changed("block")
+        self._state_changed("sub_block")
 
     @api_request
     async def new_unfinished_sub_block(
@@ -781,7 +782,7 @@ class FullNode:
         self, respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedSubBlock
     ) -> OutboundMessageGenerator:
         """
-        We have received an unfinished block, either created by us, or from another peer.
+        We have received an unfinished sub-block, either created by us, or from another peer.
         We can validate it and if it's a good block, propagate it to other peers and
         timelords.
         """
@@ -840,25 +841,32 @@ class FullNode:
             # If this block is slow, sleep to allow faster blocks to come out first
             await asyncio.sleep(5)
 
+        prev_sb: Optional[SubBlockRecord] = self.blockchain.sub_blocks.get(block.prev_header_hash, None)
+
         if block.height == 0:
             ips = self.constants.IPS_STARTING
         else:
+            assert prev_sb is not None
+            prev_ip_iters = calculate_ip_iters(self.constants, prev_sb.ips, prev_sb.required_iters)
+            prev_sp_iters = calculate_sp_iters(self.constants, prev_sb.ips, prev_sb.required_iters)
             ips = get_next_ips(
                 self.constants,
                 self.blockchain.height_to_hash,
                 self.blockchain.sub_blocks,
                 block.prev_header_hash,
+                prev_sb.height,
+                prev_sb.deficit,
+                prev_sb.ips,
                 len(block.finished_sub_slots) > 0,
+                uint128(block.total_iters - prev_ip_iters + prev_sp_iters),
             )
         overflow = is_overflow_sub_block(self.constants, ips, required_iters)
-        prev_sb: Optional[SubBlockRecord] = self.blockchain.sub_blocks.get(block.prev_header_hash, None)
         deficit = calculate_deficit(self.constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
         finishes_se = finishes_sub_epoch(self.constants, block.height, deficit, False)
         finishes_epoch: bool = finishes_sub_epoch(self.constants, block.height, deficit, True)
 
         if finishes_se:
             assert prev_sb is not None
-            SubEpochSummary()
             if finishes_epoch:
                 ip_iters = calculate_ip_iters(self.constants, ips, required_iters)
                 sp_iters = calculate_sp_iters(self.constants, ips, required_iters)
@@ -884,70 +892,42 @@ class FullNode:
                     True,
                     uint128(block.total_iters - ip_iters + sp_iters),
                 )
+            else:
+                next_difficulty = None
+                next_ips = None
+            ses: Optional[SubEpochSummary] = make_sub_epoch_summary(
+                self.constants, self.blockchain.sub_blocks, block.height, prev_sb, next_difficulty, next_ips
+            )
+        else:
+            ses: Optional[SubEpochSummary] = None
 
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
             block.reward_chain_sub_block,
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,
             block.foliage_sub_block,
+            ses,
         )
-
-        # timelord_request = timelord_protocol.ProofOfSpaceInfo(challenge_hash, iterations_needed)
-        iterations_needed = 0
 
         yield OutboundMessage(
             NodeType.TIMELORD,
-            Message("proof_of_space_info", timelord_request),
+            Message("new_unfinished_sub_block", timelord_request),
             Delivery.BROADCAST,
         )
-        new_unfinished_block = full_node_protocol.NewUnfinishedSubBlock(block.reward_chain_sub_block.get_hash())
+
+        full_node_request = full_node_protocol.NewUnfinishedSubBlock(block.reward_chain_sub_block.get_hash())
         yield OutboundMessage(
             NodeType.FULL_NODE,
-            Message("new_unfinished_block", new_unfinished_block),
+            Message("new_unfinished_sub_block", full_node_request),
             Delivery.BROADCAST_TO_OTHERS,
         )
-        self._state_changed("block")
+        self._state_changed("sub_block")
 
-    # @api_request
-    # async def request_header_block(self, request: full_node_protocol.RequestHeaderBlock) -> OutboundMessageGenerator:
-    #     """
-    #     A peer requests a list of header blocks, by height. Used for syncing or light clients.
-    #     """
-    #     full_block: Optional[FullBlock] = await self.block_store.get_block(request.header_hash)
-    #     if full_block is not None:
-    #         header_block: Optional[HeaderBlock] = full_block.get_header_block()
-    #         if header_block is not None and header_block.height == request.height:
-    #             response = full_node_protocol.RespondHeaderBlock(header_block)
-    #             yield OutboundMessage(
-    #                 NodeType.FULL_NODE,
-    #                 Message("respond_header_block", response),
-    #                 Delivery.RESPOND,
-    #             )
-    #             return
-    #     reject = full_node_protocol.RejectHeaderBlockRequest(request.height, request.header_hash)
-    #     yield OutboundMessage(
-    #         NodeType.FULL_NODE,
-    #         Message("reject_header_block_request", reject),
-    #         Delivery.RESPOND,
-    #     )
-    #
-    # @api_request
-    # async def respond_header_block(self, request: full_node_protocol.RespondHeaderBlock) -> OutboundMessageGenerator:
-    #     """
-    #     Receive header blocks from a peer.
-    #     """
-    #     self.log.info(f"Received header block {request.header_block.height}.")
-    #     if self.sync_peers_handler is not None:
-    #         async for req in self.sync_peers_handler.new_block(request.header_block):
-    #             yield req
-    #
-    # @api_request
-    # async def reject_header_block_request(
-    #     self, request: full_node_protocol.RejectHeaderBlockRequest
-    # ) -> OutboundMessageGenerator:
-    #     self.log.warning(f"Reject header block request, {request}")
-    #     if self.sync_store.get_sync_mode():
-    #         yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
+    @api_request
+    async def new_signage_point_or_end_of_sub_slot(
+        self, request: full_node_protocol.NewSignagePointOrEndOfSubSlot
+    ) -> OutboundMessageGenerator:
+        pass
 
     # FARMER PROTOCOL
     @api_request
