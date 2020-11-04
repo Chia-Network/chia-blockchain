@@ -20,18 +20,18 @@ class ChallengeBlockInfo(Streamable):  # The hash of this is used as the challen
 
 @dataclass(frozen=True)
 @streamable
-class InfusedChallengeChainSubSlot(Streamable):
-    infused_challenge_chain_end_of_slot_vdf: VDFInfo
-
-
-@dataclass(frozen=True)
-@streamable
 class ChallengeChainSubSlot(Streamable):
     challenge_chain_end_of_slot_vdf: VDFInfo
     infused_challenge_chain_sub_slot_hash: Optional[bytes32]  # Only at the end of a slot
     subepoch_summary_hash: Optional[bytes32]  # Only once per sub-epoch, and one sub-epoch delayed
     new_ips: Optional[uint64]  # Only at the end of epoch, sub-epoch, and slot
     new_difficulty: Optional[uint64]  # Only at the end of epoch, sub-epoch, and slot
+
+
+@dataclass(frozen=True)
+@streamable
+class InfusedChallengeChainSubSlot(Streamable):
+    infused_challenge_chain_end_of_slot_vdf: VDFInfo
 
 
 @dataclass(frozen=True)
