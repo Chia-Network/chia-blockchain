@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+from typing import Any
 
 import aiosqlite
 import pytest
@@ -9,8 +10,10 @@ from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.types.classgroup import ClassgroupElement
 from src.util.block_tools import get_vdf_info_and_proof
+from src.util.errors import Err
 from src.util.ints import uint64
 from tests.setup_nodes import test_constants, bt
+from tests.recursive_replace import recursive_replace
 
 
 @pytest.fixture(scope="module")
@@ -76,8 +79,12 @@ class TestGenesisBlock:
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
-    async def test_genesis_1(self, empty_blockchain):
-        pass
+    async def test_genesis_validate_1(self, empty_blockchain):
+        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False)[0]
+        bad_prev = bytes([1] * 32)
+        genesis = recursive_replace(genesis, "foliage_sub_block.prev_sub_block_hash", bad_prev)
+        result, err, _ = await empty_blockchain.receive_block(genesis, False)
+        assert err == Err.INVALID_PREV_BLOCK_HASH
 
 
 # class TestBlockValidation:
