@@ -363,15 +363,15 @@ async def validate_unfinished_header_block(
     else:
         if new_slot:
             if overflow:
-                if header_block.finished_sub_slots[-1][0].proof_of_space is not None:
+                if header_block.finished_sub_slots[-1].challenge_chain.proof_of_space is not None:
                     # New slot with overflow block, where prev slot had challenge block
-                    challenge = header_block.finished_sub_slots[-1][0].proof_of_space.challenge_hash
+                    challenge = header_block.finished_sub_slots[-1].challenge_chain.proof_of_space.challenge_hash
                 else:
                     # New slot with overflow block, where prev slot had no challenge block
-                    challenge = header_block.finished_sub_slots[-1][0].end_of_slot_vdf.challenge_hash
+                    challenge = header_block.finished_sub_slots[-1].challenge_chain.end_of_slot_vdf.challenge_hash
             else:
                 # No overflow, new slot with a new challenge
-                challenge = header_block.finished_sub_slots[-1][0].get_hash()
+                challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
         else:
             if overflow:
                 # Overflow infusion, so get the second to last challenge
@@ -428,12 +428,12 @@ async def validate_unfinished_header_block(
     if new_slot and not overflow:
         # Start from start of this slot. Case of no overflow slots. Also includes genesis block after empty slot(s),
         # but not overflowing
-        rc_vdf_challenge: bytes32 = header_block.finished_sub_slots[-1][1].get_hash()
+        rc_vdf_challenge: bytes32 = header_block.finished_sub_slots[-1].reward_chain.get_hash()
         sp_vdf_iters = sp_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
     elif new_slot and overflow and len(header_block.finished_sub_slots) > 1:
         # Start from start of prev slot. Rare case of empty prev slot. Includes genesis block after 2 empty slots
-        rc_vdf_challenge = header_block.finished_sub_slots[-2][1].get_hash()
+        rc_vdf_challenge = header_block.finished_sub_slots[-2].reward_chain.get_hash()
         sp_vdf_iters = sp_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
     elif prev_sb is None:
@@ -482,7 +482,7 @@ async def validate_unfinished_header_block(
         cc_vdf_challenge = constants.FIRST_CC_CHALLENGE
     else:
         if new_slot:
-            cc_vdf_challenge = header_block.finished_sub_slots[-1][0].get_hash()
+            cc_vdf_challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
         else:
             curr: SubBlockRecord = prev_sb
             while not curr.first_in_slot:
@@ -680,13 +680,13 @@ async def validate_finished_header_block(
         cc_vdf_output = ClassgroupElement.get_default_element()
         ip_vdf_iters = ip_iters
         if new_slot:
-            rc_vdf_challenge = header_block.finished_sub_slots[-1][1].get_hash()
+            rc_vdf_challenge = header_block.finished_sub_slots[-1].reward_chain.get_hash()
         else:
             rc_vdf_challenge = constants.FIRST_RC_CHALLENGE
     else:
         if new_slot:
             # slot start is more recent
-            rc_vdf_challenge = header_block.finished_sub_slots[-1][1].get_hash()
+            rc_vdf_challenge = header_block.finished_sub_slots[-1].reward_chain.get_hash()
             ip_vdf_iters = ip_iters
             cc_vdf_output = ClassgroupElement.get_default_element()
 
@@ -700,8 +700,8 @@ async def validate_finished_header_block(
             icc_vdf_output = prev_sb.infused_challenge_vdf_output
 
     # 26. Check challenge chain infusion point VDF
-    if header_block.finished_sub_slots is not None and header_block.finished_sub_slots != []:
-        cc_vdf_challenge = header_block.finished_sub_slots[-1][0].get_hash()
+    if new_slot:
+        cc_vdf_challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
     else:
         # Not first sub-block in slot
         if prev_sb is None:
