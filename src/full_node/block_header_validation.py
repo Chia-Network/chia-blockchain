@@ -42,8 +42,7 @@ async def validate_unfinished_header_block(
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
     and without transactions and transaction info (header). Returns (required_iters, error).
     """
-    # 1. Check that the previous block exists in the blockchain
-
+    # 1. Check that the previous block exists in the blockchain, or that it is correct
     new_slot: bool = len(header_block.finished_sub_slots) > 0
     if header_block.height == 0:
         prev_sb: Optional[SubBlockRecord] = None
@@ -51,6 +50,8 @@ async def validate_unfinished_header_block(
         finishes_epoch = False
         difficulty: uint64 = uint64(constants.DIFFICULTY_STARTING)
         ips: uint64 = uint64(constants.IPS_STARTING)
+        if header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
+            return None, Err.DOES_NOT_EXTEND
     else:
         prev_sb: Optional[SubBlockRecord] = sub_blocks[header_block.prev_header_hash]
         if prev_sb is None:
