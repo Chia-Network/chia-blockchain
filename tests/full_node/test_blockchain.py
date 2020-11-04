@@ -40,8 +40,9 @@ class TestGenesisBlock:
         assert bc1.get_peak() is None
 
         genesis = bt.get_consecutive_blocks(test_constants, 1)[0]
-        result = await bc1.receive_block(genesis, False)
+        result, err, _ = await bc1.receive_block(genesis, False)
         assert result == ReceiveBlockResult.NEW_PEAK
+        assert err is None
 
         await connection.close()
         bc1.shut_down()

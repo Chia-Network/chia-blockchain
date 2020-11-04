@@ -693,7 +693,9 @@ class BlockTools:
         extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
         height = reward_sub_block.sub_block_height
         cost: uint64 = uint64(0)
-        fee_reward: uint64 = uint64(block_rewards.calculate_base_farmer_reward(height) + fees)
+
+        farmer_reward: uint64 = uint64(block_rewards.calculate_base_farmer_reward(height) + fees)
+        pool_reward: uint64 = uint64(block_rewards.calculate_pool_reward(height))
 
         # Create filter
         byte_array_tx: List[bytes32] = []
@@ -729,9 +731,9 @@ class BlockTools:
 
         # Create addition Merkle set
         puzzlehash_coin_map: Dict[bytes32, List[Coin]] = {}
-        # print(height, reward_puzzlehash, fee_reward)
-        pool_coin = create_pool_coin(height, pool_ph, fee_reward)
-        farmer_coin = create_farmer_coin(height, farmer_ph, fee_reward)
+
+        pool_coin = create_pool_coin(height, pool_ph, pool_reward)
+        farmer_coin = create_farmer_coin(height, farmer_ph, farmer_reward)
 
         for coin in tx_additions + [pool_coin, farmer_coin]:
             if coin.puzzle_hash in puzzlehash_coin_map:
@@ -740,6 +742,7 @@ class BlockTools:
                 puzzlehash_coin_map[coin.puzzle_hash] = [coin]
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+        print("Additions creation: ", puzzlehash_coin_map)
         for puzzle, coins in puzzlehash_coin_map.items():
             addition_merkle_set.add_already_hashed(puzzle)
             addition_merkle_set.add_already_hashed(hash_coin_list(coins))
