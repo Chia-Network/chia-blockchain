@@ -204,7 +204,7 @@ class Blockchain:
             block.foliage_block,
             b"",  # No filter
         )
-        print("Validating: ", block)
+        # print("Validating: ", block)
         required_iters, error_code = await validate_finished_header_block(
             self.constants,
             self.sub_blocks,

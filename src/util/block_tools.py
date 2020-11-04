@@ -254,6 +254,7 @@ class BlockTools:
         reward_puzzlehash: bytes32 = None,
         fees: uint64 = uint64(0),
         transaction_data_at_height: Dict[int, Tuple[Program, G2Element]] = None,
+        force_overflow: bool = False,
         seed: bytes = b"",
     ) -> List[FullBlock]:
         if transaction_data_at_height is None:
@@ -261,7 +262,7 @@ class BlockTools:
         if block_list is None or len(block_list) == 0:
             self.difficulty = constants.DIFFICULTY_STARTING
             self.ips = uint64(constants.IPS_STARTING)
-            genesis = self.create_genesis_block(constants, fees, seed)
+            genesis = self.create_genesis_block(constants, fees, seed, force_overflow=force_overflow)
             self.latest_sub_block = genesis
             self.deficit = 5
             block_list: List[FullBlock] = [genesis]
@@ -399,6 +400,7 @@ class BlockTools:
         seed: bytes32 = b"",
         timestamp: Optional[uint64] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
+        force_overflow: bool = False,
     ) -> FullBlock:
         ip_iters: uint64 = uint64(0)
         cc_sp_vdf = None
@@ -411,12 +413,14 @@ class BlockTools:
         cc_ip_proof = None
         rc_sp_proof = None
         rc_ip_proof = None
+        ip_iters: uint64 = uint64(0)
 
         if timestamp is None:
             timestamp = time.time()
         finished_sub_slots: List[EndOfSubSlotBundle] = []
         slot_iters: uint64 = uint64(constants.IPS_STARTING * constants.SLOT_TIME_TARGET)
         selected_proof: Optional[Tuple[uint64, ProofOfSpace]] = None
+        selected_proof_is_overflow: bool = False
 
         # Keep trying until we get a good proof of space that also passes sp filter
         while True:
@@ -436,8 +440,12 @@ class BlockTools:
 
             # Try each of the proofs of space
             for required_iters, proof_of_space in sorted(proofs_of_space):
+
                 sp_iters: uint64 = calculate_sp_iters(constants, uint64(constants.IPS_STARTING), required_iters)
-                ip_iters: uint64 = calculate_ip_iters(constants, uint64(constants.IPS_STARTING), required_iters)
+                ip_iters = calculate_ip_iters(constants, uint64(constants.IPS_STARTING), required_iters)
+                is_overflow_block = sp_iters > ip_iters
+                if force_overflow and not is_overflow_block:
+                    continue
 
                 if len(finished_sub_slots) == 0:
                     cc_challenge: bytes32 = constants.FIRST_CC_CHALLENGE
@@ -463,13 +471,16 @@ class BlockTools:
 
                     to_sign_cc = cc_sp_vdf.output.get_hash()
                     to_sign_rc = rc_sp_vdf.output.get_hash()
-
-                cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
-                    constants, ClassgroupElement.get_default_element(), cc_challenge, ip_iters
-                )
-                rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
-                    constants, ClassgroupElement.get_default_element(), rc_challenge, ip_iters
-                )
+                if is_overflow_block:
+                    # Handle the infusion point stuff after finishing the sub-slot
+                    pass
+                else:
+                    cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
+                        constants, ClassgroupElement.get_default_element(), cc_challenge, ip_iters
+                    )
+                    rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
+                        constants, ClassgroupElement.get_default_element(), rc_challenge, ip_iters
+                    )
                 cc_sp_signature: Optional[G2Element] = self.get_plot_signature(
                     to_sign_cc, proof_of_space.plot_public_key
                 )
@@ -483,10 +494,12 @@ class BlockTools:
                     constants, plot_id, challenge, cc_sp_vdf.output.get_hash(), cc_sp_signature
                 ):
                     selected_proof = (required_iters, proof_of_space)
+                    selected_proof_is_overflow = is_overflow_block
                     self.curr_proof_of_space = selected_proof
                     break
 
-            if selected_proof is not None:
+            if selected_proof is not None and not selected_proof_is_overflow:
+                # Break if found the proof of space. Don't break for overflow, need to finish the slot first
                 break
 
             # Finish the end of sub-slot and try again next sub-slot
@@ -513,11 +526,27 @@ class BlockTools:
                     SubSlotProofs(cc_proof, None, rc_proof),
                 )
             )
+            if selected_proof is not None:
+                # Break for overflow sub-block
+                assert selected_proof_is_overflow
+                cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
+                    constants,
+                    ClassgroupElement.get_default_element(),
+                    finished_sub_slots[-1].challenge_chain.get_hash(),
+                    ip_iters,
+                )
+                rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
+                    constants,
+                    ClassgroupElement.get_default_element(),
+                    finished_sub_slots[-1].reward_chain.get_hash(),
+                    ip_iters,
+                )
+                break
 
         rc_sub_block = RewardChainSubBlock(
             uint128(constants.DIFFICULTY_STARTING),
             uint32(0),
-            uint128(ip_iters),
+            uint128(slot_iters * len(finished_sub_slots) + ip_iters),
             selected_proof[1],
             cc_sp_vdf,
             cc_sp_signature,
@@ -742,7 +771,6 @@ class BlockTools:
                 puzzlehash_coin_map[coin.puzzle_hash] = [coin]
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-        print("Additions creation: ", puzzlehash_coin_map)
         for puzzle, coins in puzzlehash_coin_map.items():
             addition_merkle_set.add_already_hashed(puzzle)
             addition_merkle_set.add_already_hashed(hash_coin_list(coins))
