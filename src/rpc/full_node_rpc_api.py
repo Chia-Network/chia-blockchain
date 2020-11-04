@@ -31,7 +31,7 @@ class FullNodeRpcApi:
 
     async def _state_changed(self, change: str) -> List[Dict]:
         payloads = []
-        if change == "block":
+        if change == "sub_block":
             data = await self.get_latest_block_headers({})
             assert data is not None
             payloads.append(
@@ -123,7 +123,7 @@ class FullNodeRpcApi:
     #     if block is None:
     #         raise ValueError(f"Block {header_hash.hex()} not found")
     #
-    #     return {"block": block}
+    #     return {"sub_block": block}
     #
     # async def get_header_by_height(self, request: Dict) -> Optional[Dict]:
     #     if "height" not in request:
