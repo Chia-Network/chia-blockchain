@@ -51,7 +51,7 @@ async def validate_unfinished_header_block(
         difficulty: uint64 = uint64(constants.DIFFICULTY_STARTING)
         ips: uint64 = uint64(constants.IPS_STARTING)
         if header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
-            return None, Err.DOES_NOT_EXTEND
+            return None, Err.INVALID_PREV_BLOCK_HASH
     else:
         prev_sb: Optional[SubBlockRecord] = sub_blocks[header_block.prev_header_hash]
         if prev_sb is None:
