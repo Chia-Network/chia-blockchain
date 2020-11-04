@@ -53,5 +53,3 @@ class NewUnfinishedSubBlock:
     reward_chain_sp_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     sub_epoch_summary: Optional[SubEpochSummary]
-    new_ips: Optional[SubEpochSummary]
-    new_difficulty: Optional[uint64]
