@@ -9,7 +9,7 @@ from src.consensus.constants import ConsensusConstants
 from src.full_node.deficit import calculate_deficit
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
-from src.util.ints import uint32, uint64, uint128
+from src.util.ints import uint32, uint64, uint128, uint8
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.types.header_block import HeaderBlock
 from src.full_node.sub_block_record import SubBlockRecord
@@ -299,15 +299,23 @@ async def validate_unfinished_header_block(
             if not new_slot or not finishes_se:
                 return None, Err.INVALID_SUB_EPOCH_SUMMARY
 
-            curr = prev_sb
-            while curr.sub_epoch_summary_included_hash is None:
-                curr = sub_blocks[curr.prev_hash]
+            if header_block.height // constants.SUB_EPOCH_SUB_BLOCKS == 1:
+                prev_ses_hash: bytes32 = constants.GENESIS_SES_HASH
+                prev_reward_hash: bytes32 = constants.FIRST_RC_CHALLENGE
+                ses_overflow: uint8 = uint8(0)
+            else:
+                curr = prev_sb
+                while curr.sub_epoch_summary_included is None:
+                    curr = sub_blocks[curr.prev_hash]
+                prev_ses_hash: bytes32 = curr.sub_epoch_summary_included.get_hash()
+                prev_reward_hash: bytes32 = curr.finished_reward_slot_hashes[0]
+                ses_overflow: uint8 = uint8(curr.height % constants.SUB_EPOCH_SUB_BLOCKS)
 
             # 3c. Check the actual sub-epoch is correct
             expected_sub_epoch_summary = SubEpochSummary(
-                curr.sub_epoch_summary_included_hash,
-                curr.finished_reward_slot_hashes[0],
-                curr.height % constants.SUB_EPOCH_SUB_BLOCKS,
+                prev_ses_hash,
+                prev_reward_hash,
+                ses_overflow,
                 difficulty if finishes_epoch else None,
                 ips if finishes_epoch else None,
             )
@@ -741,7 +749,7 @@ async def validate_finished_header_block(
     if prev_sb is not None:
         overflow = is_overflow_sub_block(constants, ips, required_iters)
         deficit = calculate_deficit(
-            constants, header_block.height, prev_sb, overflow, header_block.finished_sub_slots is not None
+            constants, header_block.height, prev_sb, overflow, len(header_block.finished_sub_slots) > 0
         )
 
         if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:

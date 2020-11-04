@@ -25,6 +25,7 @@ testnet_kwargs = {
         "7a916bdc50d3d0337b0998668a4f439670339467d7e9039b8650ba7b1d4fc1a0"
     ),
     "GENESIS_PREV_HASH": bytes([0] * 32),
+    "GENESIS_SES_HASH": bytes([0] * 32),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec
     "TX_PER_SEC": 20,
