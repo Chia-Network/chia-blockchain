@@ -35,8 +35,10 @@ class VDFProof(Streamable):
         If target_vdf_info is passed in, it is compared with info.
         """
         if target_vdf_info is not None and info != target_vdf_info:
+            print(f"INVALID VDF INFO {target_vdf_info} {info}")
             return False
         if self.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
+            print(f"WITNESS SIZE TO BIG {constants.MAX_VDF_WITNESS_SIZE}")
             return False
         try:
             disc: int = int(
@@ -47,7 +49,6 @@ class VDFProof(Streamable):
             y = ClassGroup.from_ab_discriminant(info.output.a, info.output.b, disc)
         except Exception:
             return False
-        print("Starting to validate VDF")
         # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
         # TODO: check for maximum witness type
         return check_proof_of_time_nwesolowski(
