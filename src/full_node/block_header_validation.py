@@ -450,15 +450,12 @@ async def validate_unfinished_header_block(
 
     # 10. Check reward chain sp proof
     if sp_iters != 0:
-        print("Case 0")
         target_vdf_info = VDFInfo(
             rc_vdf_challenge,
             ClassgroupElement.get_default_element(),
             sp_vdf_iters,
             header_block.reward_chain_sub_block.reward_chain_sp_vdf.output,
         )
-        print(target_vdf_info)
-        print(header_block.reward_chain_sub_block.reward_chain_sp_vdf)
         if not header_block.reward_chain_sp_proof.is_valid(
             constants,
             header_block.reward_chain_sub_block.reward_chain_sp_vdf,
@@ -467,7 +464,6 @@ async def validate_unfinished_header_block(
             return None, Err.INVALID_RC_ICP_VDF
         rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.output.get_hash()
     else:
-        print("Case 1")
         # Edge case of first sp (start of slot), where sp_iters == 0
         assert overflow is not None
         if header_block.reward_chain_sub_block.reward_chain_sp_vdf is not None:
