@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from typing import Optional
+
 from blspy import G2Element
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
@@ -13,12 +15,12 @@ Protocol between farmer and full node.
 
 @dataclass(frozen=True)
 @cbor_message
-class InfusionChallengePoint:
+class SignagePoint:
     challenge_hash: bytes32
     challenge_chain_sp: bytes32
     reward_chain_sp: bytes32
     difficulty: uint64
-    index: uint8
+    signage_point_index: uint8
     slot_iterations: uint64
 
 
@@ -30,8 +32,8 @@ class DeclareProofOfSpace:
     challenge_chain_sp_signature: G2Element
     reward_chain_sp_signature: G2Element
     farmer_puzzle_hash: bytes32
-    pool_target: PoolTarget
-    pool_signature: G2Element
+    pool_target: Optional[PoolTarget]
+    pool_signature: Optional[G2Element]
 
 
 @dataclass(frozen=True)

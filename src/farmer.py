@@ -42,7 +42,7 @@ class Farmer:
         self.latest_challenge: bytes32 = None
 
         # Keep track of all sps for each challenge
-        self.sps: Dict[bytes32, List[farmer_protocol.InfusionChallengePoint]] = {}
+        self.sps: Dict[bytes32, List[farmer_protocol.SignagePoint]] = {}
 
         # Keep track of harvester plot identifier (str), target sp index, and PoSpace for each challenge
         self.proofs_of_space: Dict[bytes32, List[Tuple[str, uint8, ProofOfSpace]]] = {}
@@ -183,7 +183,7 @@ class Farmer:
             # Requests signatures for the first sp (maybe the second if we were really slow at getting proofs)
             for sp in self.sps[challenge_response.proof.challenge_hash]:
                 # If we already have the target sp, proceed at getting the signatures for this PoSpace
-                if sp.index == target_sp_index:
+                if sp.signage_point_index == target_sp_index:
                     request = harvester_protocol.RequestSignatures(
                         challenge_response.plot_identifier,
                         challenge_response.proof.challenge_hash,
@@ -333,19 +333,19 @@ class Farmer:
     """
 
     @api_request
-    async def infusion_challenge_point(self, infusion_challenge_point: farmer_protocol.InfusionChallengePoint):
-        if infusion_challenge_point.challenge_hash not in self.seen_challenges:
+    async def signage_point(self, signage_point: farmer_protocol.SignagePoint):
+        if signage_point.challenge_hash not in self.seen_challenges:
             message = harvester_protocol.NewChallenge(
-                infusion_challenge_point.challenge_hash,
-                infusion_challenge_point.difficulty,
-                infusion_challenge_point.slot_iterations,
+                signage_point.challenge_hash,
+                signage_point.difficulty,
+                signage_point.slot_iterations,
             )
             yield OutboundMessage(
                 NodeType.HARVESTER,
                 Message("new_challenge", message),
                 Delivery.BROADCAST,
             )
-            self.seen_challenges.add(infusion_challenge_point.challenge_hash)
+            self.seen_challenges.add(signage_point.challenge_hash)
             # This allows time for the collection of proofs from the harvester
             self._state_changed("challenge")
             for _ in range(20):
@@ -354,27 +354,25 @@ class Farmer:
                 await asyncio.sleep(1)
             self._state_changed("challenge")
 
-        if self.latest_challenge != infusion_challenge_point.challenge_hash:
-            self.latest_challenge = infusion_challenge_point.challenge_hash
+        if self.latest_challenge != signage_point.challenge_hash:
+            self.latest_challenge = signage_point.challenge_hash
 
         if self.latest_challenge not in self.sps:
-            self.sps[self.latest_challenge] = [infusion_challenge_point]
+            self.sps[self.latest_challenge] = [signage_point]
         else:
-            self.sps[self.latest_challenge].append(infusion_challenge_point)
+            self.sps[self.latest_challenge].append(signage_point)
 
         # We already have fetched proofs for this challenge
-        if infusion_challenge_point.challenge_hash in self.proofs_of_space:
-            for plot_identifier, target_sp_index, pospace in self.proofs_of_space[
-                infusion_challenge_point.challenge_hash
-            ]:
-                if target_sp_index == infusion_challenge_point.index:
+        if signage_point.challenge_hash in self.proofs_of_space:
+            for plot_identifier, target_sp_index, pospace in self.proofs_of_space[signage_point.challenge_hash]:
+                if target_sp_index == signage_point.signage_point_index:
                     # Only proceeds with proofs of space that can be infused at this infusion point
                     request = harvester_protocol.RequestSignatures(
                         plot_identifier,
-                        infusion_challenge_point.challenge_hash,
+                        signage_point.challenge_hash,
                         [
-                            infusion_challenge_point.challenge_chain_sp,
-                            infusion_challenge_point.reward_chain_sp,
+                            signage_point.challenge_chain_sp,
+                            signage_point.reward_chain_sp,
                         ],
                     )
 

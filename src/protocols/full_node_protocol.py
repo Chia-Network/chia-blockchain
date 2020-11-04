@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
+from src.types.slots import SubSlotProofs
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.sized_bytes import bytes32
@@ -90,21 +91,21 @@ class RespondUnfinishedSubBlock:
 
 @dataclass(frozen=True)
 @cbor_message
-class NewInfusionChallengePointOrEndOfSlot:
+class NewSignagePointOrEndOfSubSlot:
     challenge_hash: uint32
     index_from_challenge: uint8
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestInfusionChallengePointOrEndOfSlot:
+class RequestSignagePointOrEndOfSubSlot:
     challenge_hash: uint32
     index_from_challenge: int32
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RespondInfusionChallengePoint:
+class RespondSignagePoint:
     challenge_hash: bytes32
     index: uint8
     challenge_chain_vdf: VDFInfo
@@ -136,10 +137,11 @@ class RequestCompactVDFs:
 class RespondCompactVDFs:
     height: uint32
     header_hash: bytes32
-    end_of_slot_proofs: List[EndOfSubSlotBundle]  # List of challenge eos vdf and reward eos vdf
+    end_of_slot_proofs: List[SubSlotProofs]  # List of challenge eos vdf and reward eos vdf
     cc_sp_proof: Optional[VDFProof]  # If not first sp
     rc_sp_proof: Optional[VDFProof]  # If not first sp
     cc_ip_proof: VDFProof
+    icc_ip_proof: Optional[VDFProof]
     rc_ip_proof: VDFProof
 
 
