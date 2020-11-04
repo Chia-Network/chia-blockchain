@@ -16,7 +16,7 @@ from chiavdf import prove
 from src.cmds.init import create_default_chia_config, initialize_ssl
 from src.cmds.plots import create_plots
 from src.consensus import pot_iterations, block_rewards
-from src.consensus.block_rewards import calculate_pool_reward
+from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.consensus.coinbase import (
     create_puzzlehash_for_pk,
     create_pool_coin,
@@ -534,7 +534,7 @@ class BlockTools:
         pool_coin = create_pool_coin(
             uint32(0), constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, calculate_pool_reward(uint32(0))
         )
-        farmer_coin = create_farmer_coin(uint32(0), farmer_reward_puzzle_hash, calculate_pool_reward(uint32(0)))
+        farmer_coin = create_farmer_coin(uint32(0), farmer_reward_puzzle_hash, calculate_base_farmer_reward(uint32(0)))
 
         foliage_sub_block, foliage_block, transactions_info = self.create_foliage(
             constants,
