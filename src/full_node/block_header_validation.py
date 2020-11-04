@@ -641,8 +641,6 @@ async def validate_finished_header_block(
     Fully validates the header of a sub-block. A header block is the same as a full block, but
     without transactions and transaction info. Returns (required_iters, error).
     """
-    print("Validating", header_block)
-
     unfinished_header_block = UnfinishedHeaderBlock(
         header_block.finished_sub_slots,
         header_block.reward_chain_sub_block.get_unfinished(),
