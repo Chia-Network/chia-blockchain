@@ -33,7 +33,6 @@ def validate_block_merkle_roots(
             puzzlehash_coins_map[coin.puzzle_hash] = [coin]
 
     # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-    print("Additions: ", puzzlehash_coins_map)
     for puzzle, coins in puzzlehash_coins_map.items():
         addition_merkle_set.add_already_hashed(puzzle)
         addition_merkle_set.add_already_hashed(hash_coin_list(coins))
