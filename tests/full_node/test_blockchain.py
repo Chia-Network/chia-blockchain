@@ -1,19 +1,18 @@
 import asyncio
 from pathlib import Path
-from typing import Any
 
 import aiosqlite
 import pytest
 
-from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.block_store import BlockStore
+from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.types.classgroup import ClassgroupElement
 from src.util.block_tools import get_vdf_info_and_proof
 from src.util.errors import Err
 from src.util.ints import uint64
-from tests.setup_nodes import test_constants, bt
 from tests.recursive_replace import recursive_replace
+from tests.setup_nodes import test_constants, bt
 
 
 @pytest.fixture(scope="module")
@@ -44,9 +43,8 @@ class TestGenesisBlock:
 
     @pytest.mark.asyncio
     async def test_block_tools_proofs(self):
-        vdf, proof = get_vdf_info_and_proof(
-            test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, uint64(231)
-        )
+        vdf, proof = get_vdf_info_and_proof(test_constants, ClassgroupElement.get_default_element(),
+                                            test_constants.FIRST_CC_CHALLENGE, uint64(231))
         if proof.is_valid(test_constants, vdf) is False:
             raise Exception("invalid proof")
 
@@ -86,6 +84,17 @@ class TestGenesisBlock:
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err == Err.INVALID_PREV_BLOCK_HASH
 
+    @pytest.mark.asyncio
+    async def test_non_genesis(self, empty_blockchain):
+        blks = bt.get_consecutive_blocks(
+            test_constants, 1, force_overflow=False, force_empty_slots=9
+        )
+        result, err, _ = await empty_blockchain.receive_block(blks[0], False)
+        assert err is None
+        assert result == ReceiveBlockResult.NEW_PEAK
+        result, err, _ = await empty_blockchain.receive_block(blks[1], False)
+        assert err is None
+        assert result == ReceiveBlockResult.NEW_PEAK
 
 # class TestBlockValidation:
 #     @pytest.fixture(scope="module")
