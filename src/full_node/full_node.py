@@ -14,7 +14,7 @@ from src.full_node.block_store import BlockStore
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.full_node.deficit import calculate_deficit
-from src.full_node.difficulty_adjustment import finishes_sub_epoch, get_next_ips
+from src.full_node.difficulty_adjustment import finishes_sub_epoch, get_next_ips, get_next_difficulty
 from src.full_node.full_node_store import FullNodeStore
 from src.full_node.mempool_manager import MempoolManager
 from src.full_node.sub_block_record import SubBlockRecord
@@ -38,10 +38,11 @@ from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
+from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request
 from src.util.errors import ConsensusError, Err
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 from src.util.merkle_set import MerkleSet
 from src.util.path import mkdir, path_from_root
 from src.server.node_discovery import FullNodePeers
@@ -847,19 +848,43 @@ class FullNode:
                 self.blockchain.height_to_hash,
                 self.blockchain.sub_blocks,
                 block.prev_header_hash,
-                block.finished_sub_slots is not None,
+                len(block.finished_sub_slots) > 0,
             )
         overflow = is_overflow_sub_block(self.constants, ips, required_iters)
         prev_sb: Optional[SubBlockRecord] = self.blockchain.sub_blocks.get(block.prev_header_hash, None)
-        deficit = calculate_deficit(
-            self.constants, block.height, prev_sb, overflow, block.finished_sub_slots is not None
-        )
+        deficit = calculate_deficit(self.constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
         finishes_se = finishes_sub_epoch(self.constants, block.height, deficit, False)
         finishes_epoch: bool = finishes_sub_epoch(self.constants, block.height, deficit, True)
 
-        # if finishes_se:
-        #     if finishes_epoch:
-        #         difficulty
+        if finishes_se:
+            assert prev_sb is not None
+            SubEpochSummary()
+            if finishes_epoch:
+                ip_iters = calculate_ip_iters(self.constants, ips, required_iters)
+                sp_iters = calculate_sp_iters(self.constants, ips, required_iters)
+                next_difficulty = get_next_difficulty(
+                    self.constants,
+                    self.blockchain.sub_blocks,
+                    self.blockchain.height_to_hash,
+                    block.header_hash,
+                    block.height,
+                    deficit,
+                    uint64(block.weight - prev_sb.weight),
+                    True,
+                    uint128(block.total_iters - ip_iters + sp_iters),
+                )
+                next_ips = get_next_ips(
+                    self.constants,
+                    self.blockchain.sub_blocks,
+                    self.blockchain.height_to_hash,
+                    block.header_hash,
+                    block.height,
+                    deficit,
+                    ips,
+                    True,
+                    uint128(block.total_iters - ip_iters + sp_iters),
+                )
+
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
             block.reward_chain_sub_block,
             block.challenge_chain_sp_proof,
@@ -875,9 +900,7 @@ class FullNode:
             Message("proof_of_space_info", timelord_request),
             Delivery.BROADCAST,
         )
-        new_unfinished_block = full_node_protocol.NewUnfinishedBlock(
-            block.prev_header_hash, iterations_needed, block.header_hash
-        )
+        new_unfinished_block = full_node_protocol.NewUnfinishedSubBlock(block.reward_chain_sub_block.get_hash())
         yield OutboundMessage(
             NodeType.FULL_NODE,
             Message("new_unfinished_block", new_unfinished_block),
@@ -933,6 +956,9 @@ class FullNode:
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
         by the farmer, and sends the hash of the header data back to the farmer.
         """
+        if request.pool_target is None or request.pool_signature is None:
+            raise ValueError("Adaptable pool protocol not yet available.")
+
         plot_id: bytes32 = request.proof_of_space.get_plot_id()
 
         # Checks that the proof of space is valid

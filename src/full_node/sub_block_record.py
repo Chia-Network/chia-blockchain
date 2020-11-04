@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional, List
 
+from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
@@ -43,7 +44,7 @@ class SubBlockRecord(Streamable):
     finished_reward_slot_hashes: Optional[List[bytes32]]
 
     # Sub-epoch (present iff this is the first SB after sub-epoch)
-    sub_epoch_summary_included_hash: Optional[bytes32]
+    sub_epoch_summary_included: Optional[SubEpochSummary]
 
     @property
     def height(self):

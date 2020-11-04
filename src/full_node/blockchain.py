@@ -27,6 +27,8 @@ from src.types.unfinished_block import UnfinishedBlock
 from src.types.sized_bytes import bytes32
 from src.full_node.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.full_node.sub_block_record import SubBlockRecord
+from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.unfinished_block import UnfinishedBlock
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.full_node.cost_calculator import calculate_cost_of_program
@@ -70,10 +72,13 @@ class Blockchain:
     constants: ConsensusConstants
     # peak of the blockchain
     peak_height: Optional[uint32]
-    # Defines the path from genesis to the peak, no orphan sub-blocks
-    height_to_hash: Dict[uint32, bytes32]
     # All sub blocks in peak path are guaranteed to be included, can include orphan sub-blocks
     sub_blocks: Dict[bytes32, SubBlockRecord]
+    # Defines the path from genesis to the peak, no orphan sub-blocks
+    height_to_hash: Dict[uint32, bytes32]
+    # All sub-epoch summaries that have been included in the blockchain from the beginning until and including the peak
+    # (height_included, SubEpochSummary). Note: ONLY for the sub-blocks in the path to the peak
+    sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
     # Unspent Store
     coin_store: CoinStore
     # Store
@@ -126,6 +131,7 @@ class Blockchain:
         """
         self.sub_blocks, peak = await self.block_store.get_sub_blocks()
         self.height_to_hash = {}
+        self.sub_epoch_summaries = {}
 
         if len(self.sub_blocks) == 0:
             assert peak is None
@@ -137,9 +143,14 @@ class Blockchain:
         self.peak_height = self.sub_blocks[peak].height
 
         # Sets the other state variables (peak_height and height_to_hash)
-        for hh, sb in self.sub_blocks:
-            self.height_to_hash[sb.height] = hh
-
+        curr: SubBlockRecord = self.sub_blocks[peak]
+        while True:
+            self.height_to_hash[curr.height] = curr.header_hash
+            if curr.sub_epoch_summary_included is not None:
+                self.sub_epoch_summaries[curr.height] = curr.sub_epoch_summary_included
+            if curr.height == 0:
+                break
+            curr = self.sub_blocks[curr.prev_hash]
         assert len(self.sub_blocks) == len(self.height_to_hash) == self.peak_height + 1
 
     def get_peak(self) -> Optional[SubBlockRecord]:
@@ -204,7 +215,6 @@ class Blockchain:
             block.foliage_block,
             b"",  # No filter
         )
-        # print("Validating: ", block)
         required_iters, error_code = await validate_finished_header_block(
             self.constants,
             self.sub_blocks,
@@ -221,27 +231,13 @@ class Blockchain:
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
-        prev_sb: Optional[SubBlockRecord] = self.sub_blocks.get(block.prev_header_hash, None)
-        if prev_sb is None:
-            ips: uint64 = uint64(self.constants.IPS_STARTING)
-        else:
-            ips: uint64 = get_next_ips(
-                self.constants,
-                self.sub_blocks,
-                self.height_to_hash,
-                block.prev_header_hash,
-                prev_sb.height,
-                prev_sb.deficit,
-                prev_sb.ips,
-                True,
-                prev_sb.total_iters,
-            )
-
-        overflow = is_overflow_sub_block(self.constants, ips, required_iters)
-        deficit = calculate_deficit(
-            self.constants, block.height, prev_sb, overflow, block.finished_sub_slots is not None
+        sub_block = full_block_to_sub_block_record(
+            self.constants,
+            self.sub_blocks,
+            self.height_to_hash,
+            block,
+            required_iters,
         )
-        sub_block = full_block_to_sub_block_record(block, ips, required_iters, deficit)
 
         # Always add the block to the database
         await self.block_store.add_block(block, sub_block)
@@ -282,6 +278,11 @@ class Blockchain:
             # Rollback to fork
             await self.coin_store.rollback_to_block(fork_h)
 
+            # Rollback sub_epoch_summaries
+            for ses_included_height in self.sub_epoch_summaries.keys():
+                if ses_included_height > fork_h:
+                    del self.sub_epoch_summaries[ses_included_height]
+
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
             curr = sub_block.header_hash
@@ -306,6 +307,8 @@ class Blockchain:
                 ] = fetched_sub_block.header_hash
                 self.sub_blocks[fetched_sub_block.header_hash] = fetched_sub_block
                 await self.coin_store.new_block(fetched_block)
+                if fetched_sub_block.sub_epoch_summary_included is not None:
+                    self.sub_epoch_summaries[fetched_sub_block.height] = fetched_sub_block.sub_epoch_summary_included
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(sub_block.header_hash)
@@ -546,7 +549,6 @@ class Blockchain:
                 return Err.DOUBLE_SPEND
 
         # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
-        # new_ips = self.get_next_slot_iters(block.prev_header_hash, block.finished_sub_slots is not None)
         if self.get_peak() is None or block.height == 0:
             fork_h: int = -1
         else:
