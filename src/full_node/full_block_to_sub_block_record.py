@@ -9,7 +9,8 @@ from src.types.slots import ChallengeBlockInfo
 from src.types.full_block import FullBlock
 from src.full_node.sub_block_record import SubBlockRecord
 from src.types.sub_epoch_summary import SubEpochSummary
-from src.util.ints import uint64, uint8, uint32
+from src.util.ints import uint64, uint32
+from src.full_node.make_sub_epoch_summary import make_sub_epoch_summary
 
 
 def full_block_to_sub_block_record(
@@ -60,24 +61,14 @@ def full_block_to_sub_block_record(
                 found_ses_hash = sub_slot.challenge_chain.subepoch_summary_hash
     if found_ses_hash:
         assert len(block.finished_sub_slots) > 0
-        curr = prev_sb
-        while curr.sub_epoch_summary_included is None and curr.height > 0:
-            curr = sub_blocks[curr.prev_hash]
-        if curr.height == 0:
-            ses = SubEpochSummary(
-                constants.GENESIS_SES_HASH, constants.FIRST_RC_CHALLENGE, uint8(0), None, None
-            ).get_hash()
-        else:
-            assert curr.sub_epoch_summary_included is not None
-            prev_ses = curr.sub_epoch_summary_included.get_hash()
-            ses = SubEpochSummary(
-                prev_ses,
-                curr.finished_reward_slot_hashes[-1],
-                curr.height % constants.SUB_EPOCH_SUB_BLOCKS,
-                block.finished_sub_slots[0].challenge_chain.new_difficulty,
-                block.finished_sub_slots[0].challenge_chain.new_ips,
-            )
-        assert ses is not None
+        ses = make_sub_epoch_summary(
+            constants,
+            sub_blocks,
+            block.height,
+            prev_sb,
+            block.finished_sub_slots[0].challenge_chain.new_difficulty,
+            block.finished_sub_slots[0].challenge_chain.new_difficulty,
+        )
         assert ses.get_hash() == found_ses_hash
 
     cbi = ChallengeBlockInfo(
