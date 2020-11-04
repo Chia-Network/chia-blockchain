@@ -32,11 +32,13 @@ class NewInfusionPointVDF:
     challenge_chain_ip_proof: VDFProof
     reward_chain_ip_vdf: VDFInfo
     reward_chain_ip_proof: VDFProof
+    infused_challenge_chain_ip_vdf: VDFInfo
+    infused_challenge_chain_ip_proof: VDFProof
 
 
 @dataclass(frozen=True)
 @cbor_message
-class NewInfusionChallengePointVDF:
+class NewSignagePointVDF:
     challenge_chain_sp_vdf: VDFInfo
     challenge_chain_sp_proof: VDFProof
     reward_chain_sp_vdf: VDFInfo

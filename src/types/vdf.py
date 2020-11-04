@@ -47,12 +47,13 @@ class VDFProof(Streamable):
             y = ClassGroup.from_ab_discriminant(info.output.a, info.output.b, disc)
         except Exception:
             return False
+        print("Starting to validate VDF")
         # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
         # TODO: check for maximum witness type
         return check_proof_of_time_nwesolowski(
             disc,
             x,
-            y,
+            y.serialize() + bytes(self.witness),
             info.number_of_iterations,
             constants.DISCRIMINANT_SIZE_BITS,
             self.witness_type,
