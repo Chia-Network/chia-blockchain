@@ -407,6 +407,105 @@ class BlockTools:
         force_empty_slots: uint32 = uint32(0),
     ) -> FullBlock:
         ip_iters: uint64 = uint64(0)
+
+        if timestamp is None:
+            timestamp = time.time()
+        finished_sub_slots: List[EndOfSubSlotBundle] = []
+        slot_iters: uint64 = uint64(constants.IPS_STARTING * constants.SLOT_TIME_TARGET)
+        selected_proof: Optional[Tuple[uint64, ProofOfSpace]] = None
+        selected_proof_is_overflow: bool = False
+
+        (
+            cc_ip_proof,
+            cc_ip_vdf,
+            cc_sp_proof,
+            cc_sp_signature,
+            cc_sp_vdf,
+            ip_iters,
+            rc_ip_proof,
+            rc_ip_vdf,
+            rc_sp_proof,
+            rc_sp_signature,
+            rc_sp_vdf,
+            selected_proof,
+        ) = self.get_pospace(
+            constants,
+            finished_sub_slots,
+            force_empty_slots,
+            force_overflow,
+            ip_iters,
+            seed,
+            selected_proof,
+            selected_proof_is_overflow,
+            slot_iters,
+            True,
+        )
+
+        rc_sub_block = RewardChainSubBlock(
+            uint128(constants.DIFFICULTY_STARTING),
+            uint32(0),
+            uint128(slot_iters * len(finished_sub_slots) + ip_iters),
+            selected_proof[1],
+            cc_sp_vdf,
+            cc_sp_signature,
+            cc_ip_vdf,
+            rc_sp_vdf,
+            rc_sp_signature,
+            rc_ip_vdf,
+            None,
+            True,
+        )
+        # print("Created RCSB", rc_sub_block)
+        if farmer_reward_puzzle_hash is None:
+            farmer_reward_puzzle_hash = self.farmer_ph
+        pool_coin = create_pool_coin(
+            uint32(0), constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, calculate_pool_reward(uint32(0))
+        )
+        farmer_coin = create_farmer_coin(uint32(0), farmer_reward_puzzle_hash, calculate_base_farmer_reward(uint32(0)))
+
+        foliage_sub_block, foliage_block, transactions_info = self.create_foliage(
+            constants,
+            rc_sub_block,
+            fees,
+            None,
+            None,
+            [pool_coin, farmer_coin],
+            None,
+            None,
+            timestamp,
+            True,
+            farmer_reward_puzzle_hash,
+            constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
+            seed,
+        )
+
+        return FullBlock(
+            finished_sub_slots,
+            rc_sub_block,
+            cc_sp_proof,
+            cc_ip_proof,
+            rc_sp_proof,
+            rc_ip_proof,
+            None,
+            foliage_sub_block,
+            foliage_block,
+            transactions_info,
+            None,
+        )
+
+    def get_pospace(
+        self,
+        constants,
+        finished_sub_slots,
+        force_empty_slots,
+        force_overflow,
+        ip_iters,
+        seed,
+        selected_proof,
+        selected_proof_is_overflow,
+        slot_iters,
+        genesis,
+    ):
         cc_sp_vdf = None
         cc_sp_signature = None
         cc_ip_vdf = None
@@ -417,20 +516,14 @@ class BlockTools:
         cc_ip_proof = None
         rc_sp_proof = None
         rc_ip_proof = None
-        ip_iters: uint64 = uint64(0)
-
-        if timestamp is None:
-            timestamp = time.time()
-        finished_sub_slots: List[EndOfSubSlotBundle] = []
-        slot_iters: uint64 = uint64(constants.IPS_STARTING * constants.SLOT_TIME_TARGET)
-        selected_proof: Optional[Tuple[uint64, ProofOfSpace]] = None
-        selected_proof_is_overflow: bool = False
-
+        challenge = None
+        rc_challenge = None
         # Keep trying until we get a good proof of space that also passes sp filter
         while True:
             if len(finished_sub_slots) == 0:
-                challenge = constants.FIRST_CC_CHALLENGE
-                rc_challenge = constants.FIRST_RC_CHALLENGE
+                if genesis:
+                    challenge = constants.FIRST_CC_CHALLENGE
+                    rc_challenge = constants.FIRST_RC_CHALLENGE
             else:
                 challenge = finished_sub_slots[-1].challenge_chain.get_hash()
                 rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
@@ -546,58 +639,19 @@ class BlockTools:
                     ip_iters,
                 )
                 break
-
-        rc_sub_block = RewardChainSubBlock(
-            uint128(constants.DIFFICULTY_STARTING),
-            uint32(0),
-            uint128(slot_iters * len(finished_sub_slots) + ip_iters),
-            selected_proof[1],
-            cc_sp_vdf,
-            cc_sp_signature,
-            cc_ip_vdf,
-            rc_sp_vdf,
-            rc_sp_signature,
-            rc_ip_vdf,
-            None,
-            True,
-        )
-        # print("Created RCSB", rc_sub_block)
-        if farmer_reward_puzzle_hash is None:
-            farmer_reward_puzzle_hash = self.farmer_ph
-        pool_coin = create_pool_coin(
-            uint32(0), constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, calculate_pool_reward(uint32(0))
-        )
-        farmer_coin = create_farmer_coin(uint32(0), farmer_reward_puzzle_hash, calculate_base_farmer_reward(uint32(0)))
-
-        foliage_sub_block, foliage_block, transactions_info = self.create_foliage(
-            constants,
-            rc_sub_block,
-            fees,
-            0,
-            None,
-            None,
-            [pool_coin, farmer_coin],
-            None,
-            None,
-            timestamp,
-            True,
-            farmer_reward_puzzle_hash,
-            constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
-            seed,
-        )
-
-        return FullBlock(
-            finished_sub_slots,
-            rc_sub_block,
-            cc_sp_proof,
+        return (
             cc_ip_proof,
-            rc_sp_proof,
+            cc_ip_vdf,
+            cc_sp_proof,
+            cc_sp_signature,
+            cc_sp_vdf,
+            ip_iters,
             rc_ip_proof,
-            None,
-            foliage_sub_block,
-            foliage_block,
-            transactions_info,
-            None,
+            rc_ip_vdf,
+            rc_sp_proof,
+            rc_sp_signature,
+            rc_sp_vdf,
+            selected_proof,
         )
 
     def create_next_block(
