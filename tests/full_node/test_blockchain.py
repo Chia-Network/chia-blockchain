@@ -9,6 +9,7 @@ from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.types.classgroup import ClassgroupElement
 from src.util.block_tools import get_vdf_info_and_proof
+from src.util.ints import uint64
 from tests.setup_nodes import test_constants, bt
 
 
@@ -19,89 +20,64 @@ def event_loop():
 
 
 class TestGenesisBlock:
+    @pytest.fixture(scope="function")
+    async def empty_blockchain(self):
+        """
+        Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
+        """
+        db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
+        connection = await aiosqlite.connect(db_path)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        bc1 = await Blockchain.create(coin_store, store, test_constants)
+        assert bc1.get_peak() is None
+
+        yield bc1
+
+        await connection.close()
+        bc1.shut_down()
+
     @pytest.mark.asyncio
     async def test_block_tools_proofs(self):
         vdf, proof = get_vdf_info_and_proof(
-            test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, 231
+            test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, uint64(231)
         )
         if proof.is_valid(test_constants, vdf) is False:
             raise Exception("invalid proof")
 
     @pytest.mark.asyncio
-    async def test_non_overflow_genesis(self):
-        db_path = Path("blockchain_test.db")
-        if db_path.exists():
-            db_path.unlink()
-        connection = await aiosqlite.connect(db_path)
-        coin_store = await CoinStore.create(connection)
-        store = await BlockStore.create(connection)
-        bc1 = await Blockchain.create(coin_store, store, test_constants)
-        assert bc1.get_peak() is None
-
+    async def test_non_overflow_genesis(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False)[0]
-        result, err, _ = await bc1.receive_block(genesis, False)
+        result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
-        await connection.close()
-        bc1.shut_down()
-
     @pytest.mark.asyncio
-    async def test_overflow_genesis(self):
-        db_path = Path("blockchain_test.db")
-        if db_path.exists():
-            db_path.unlink()
-        connection = await aiosqlite.connect(db_path)
-        coin_store = await CoinStore.create(connection)
-        store = await BlockStore.create(connection)
-        bc1 = await Blockchain.create(coin_store, store, test_constants)
-        assert bc1.get_peak() is None
-
+    async def test_overflow_genesis(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=True)[0]
-        result, err, _ = await bc1.receive_block(genesis, False)
+        result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
-        await connection.close()
-        bc1.shut_down()
-
     @pytest.mark.asyncio
-    async def test_genesis_empty_slots(self):
-        db_path = Path("blockchain_test.db")
-        if db_path.exists():
-            db_path.unlink()
-        connection = await aiosqlite.connect(db_path)
-        coin_store = await CoinStore.create(connection)
-        store = await BlockStore.create(connection)
-        bc1 = await Blockchain.create(coin_store, store, test_constants)
-        assert bc1.get_peak() is None
-
+    async def test_genesis_empty_slots(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, force_empty_slots=9)[0]
-        result, err, _ = await bc1.receive_block(genesis, False)
+        result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
-
-        await connection.close()
-        bc1.shut_down()
 
     @pytest.mark.asyncio
-    async def test_overflow_genesis_empty_slots(self):
-        db_path = Path("blockchain_test.db")
-        if db_path.exists():
-            db_path.unlink()
-        connection = await aiosqlite.connect(db_path)
-        coin_store = await CoinStore.create(connection)
-        store = await BlockStore.create(connection)
-        bc1 = await Blockchain.create(coin_store, store, test_constants)
-        assert bc1.get_peak() is None
-
+    async def test_overflow_genesis_empty_slots(self, empty_blockchain):
         genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=True, force_empty_slots=10)[0]
-        result, err, _ = await bc1.receive_block(genesis, False)
+        result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
-        await connection.close()
-        bc1.shut_down()
+    @pytest.mark.asyncio
+    async def test_genesis_1(self, empty_blockchain):
+        pass
 
 
 # class TestBlockValidation:
