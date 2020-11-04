@@ -256,13 +256,16 @@ class BlockTools:
         transaction_data_at_height: Dict[int, Tuple[Program, G2Element]] = None,
         force_overflow: bool = False,
         seed: bytes = b"",
+        force_empty_slots: uint32 = uint32(0),  # Force at least this number of empty slots before the first SB
     ) -> List[FullBlock]:
         if transaction_data_at_height is None:
             transaction_data_at_height = {}
         if block_list is None or len(block_list) == 0:
             self.difficulty = constants.DIFFICULTY_STARTING
             self.ips = uint64(constants.IPS_STARTING)
-            genesis = self.create_genesis_block(constants, fees, seed, force_overflow=force_overflow)
+            genesis = self.create_genesis_block(
+                constants, fees, seed, force_overflow=force_overflow, force_empty_slots=force_empty_slots
+            )
             self.latest_sub_block = genesis
             self.deficit = 5
             block_list: List[FullBlock] = [genesis]
@@ -401,6 +404,7 @@ class BlockTools:
         timestamp: Optional[uint64] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         force_overflow: bool = False,
+        force_empty_slots: uint32 = uint32(0),
     ) -> FullBlock:
         ip_iters: uint64 = uint64(0)
         cc_sp_vdf = None
@@ -439,12 +443,14 @@ class BlockTools:
             )
 
             # Try each of the proofs of space
-            for required_iters, proof_of_space in sorted(proofs_of_space):
+            for required_iters, proof_of_space in sorted(proofs_of_space, key=lambda t: t[0]):
 
                 sp_iters: uint64 = calculate_sp_iters(constants, uint64(constants.IPS_STARTING), required_iters)
                 ip_iters = calculate_ip_iters(constants, uint64(constants.IPS_STARTING), required_iters)
                 is_overflow_block = sp_iters > ip_iters
                 if force_overflow and not is_overflow_block:
+                    continue
+                if len(finished_sub_slots) < force_empty_slots:
                     continue
 
                 if len(finished_sub_slots) == 0:
@@ -490,9 +496,7 @@ class BlockTools:
 
                 # Checks sp filter
                 plot_id = proof_of_space.get_plot_id()
-                if ProofOfSpace.can_create_proof(
-                    constants, plot_id, challenge, cc_sp_vdf.output.get_hash(), cc_sp_signature
-                ):
+                if ProofOfSpace.can_create_proof(constants, plot_id, challenge, to_sign_cc, cc_sp_signature):
                     selected_proof = (required_iters, proof_of_space)
                     selected_proof_is_overflow = is_overflow_block
                     self.curr_proof_of_space = selected_proof
@@ -557,7 +561,7 @@ class BlockTools:
             None,
             True,
         )
-        print("diff is", rc_sub_block.weight, type(rc_sub_block.weight))
+        # print("Created RCSB", rc_sub_block)
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
         pool_coin = create_pool_coin(
@@ -853,7 +857,7 @@ class BlockTools:
             plot_info for _, plot_info in sorted(list(self.plots.items()), key=lambda x: str(x[0]))
         ]
         random.seed(seed)
-        print("Trying", len(plots) // 2, "plots")
+        # print("Trying", len(plots) // 2, "plots")
         passed_plot_filter = 0
         # Use the seed to select a random number of plots, so we generate different chains
         for plot_info in random.sample(plots, len(plots) // 2):
@@ -885,10 +889,10 @@ class BlockTools:
                             proof_xs,
                         )
                         found_proofs.append((required_iters, proof_of_space))
-                    else:
-                        print("Iters too high", required_iters)
-        print("Passed filter:", passed_plot_filter)
-        print("Total eligible proofs:", len(found_proofs))
+                    # else:
+                    #     print("Iters too high", required_iters)
+        # print("Passed filter:", passed_plot_filter)
+        # print("Total eligible proofs:", len(found_proofs))
         return found_proofs
 
 

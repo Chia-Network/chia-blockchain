@@ -89,7 +89,7 @@ async def validate_unfinished_header_block(
         # Finished a slot(s) since previous block. The first sub-slot must have at least one sub-block, and all
         # subsequent sub-slots must be empty
         for finished_sub_slot_n, sub_slot in enumerate(header_block.finished_sub_slots):
-            # Start of slot challenge is fetched from ICP
+            # Start of slot challenge is fetched from SP
             challenge_hash: bytes32 = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
 
             # 2a. check sub-slot challenge hash
@@ -358,20 +358,18 @@ async def validate_unfinished_header_block(
 
     # If sub_block state is correct, we should always find a challenge here
     # This computes what the challenge should be for this sub-block
-    if prev_sb is None:
-        challenge: bytes32 = constants.FIRST_CC_CHALLENGE
+    if new_slot:
+        if overflow:
+            # New slot with overflow block
+            challenge: bytes32 = header_block.finished_sub_slots[
+                -1
+            ].challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
+        else:
+            # No overflow, new slot with a new challenge
+            challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
     else:
-        if new_slot:
-            if overflow:
-                if header_block.finished_sub_slots[-1].challenge_chain.proof_of_space is not None:
-                    # New slot with overflow block, where prev slot had challenge block
-                    challenge = header_block.finished_sub_slots[-1].challenge_chain.proof_of_space.challenge_hash
-                else:
-                    # New slot with overflow block, where prev slot had no challenge block
-                    challenge = header_block.finished_sub_slots[-1].challenge_chain.end_of_slot_vdf.challenge_hash
-            else:
-                # No overflow, new slot with a new challenge
-                challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
+        if prev_sb is None:
+            challenge = constants.FIRST_CC_CHALLENGE
         else:
             if overflow:
                 # Overflow infusion, so get the second to last challenge
@@ -429,16 +427,19 @@ async def validate_unfinished_header_block(
         # Start from start of this slot. Case of no overflow slots. Also includes genesis block after empty slot(s),
         # but not overflowing
         rc_vdf_challenge: bytes32 = header_block.finished_sub_slots[-1].reward_chain.get_hash()
+        cc_vdf_challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
         sp_vdf_iters = sp_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
     elif new_slot and overflow and len(header_block.finished_sub_slots) > 1:
         # Start from start of prev slot. Rare case of empty prev slot. Includes genesis block after 2 empty slots
         rc_vdf_challenge = header_block.finished_sub_slots[-2].reward_chain.get_hash()
+        cc_vdf_challenge = header_block.finished_sub_slots[-2].challenge_chain.get_hash()
         sp_vdf_iters = sp_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
     elif prev_sb is None:
         # Genesis block case, first challenge
-        rc_vdf_challenge = constants.FIRST_CC_CHALLENGE
+        rc_vdf_challenge = constants.FIRST_RC_CHALLENGE
+        cc_vdf_challenge = constants.FIRST_CC_CHALLENGE
         sp_vdf_iters = sp_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
     else:
@@ -447,6 +448,11 @@ async def validate_unfinished_header_block(
         rc_vdf_challenge = prev_sb.reward_infusion_output
         sp_vdf_iters = (total_iters - required_iters) + sp_iters - prev_sb.total_iters
         cc_vdf_input = prev_sb.challenge_vdf_output
+
+        curr: SubBlockRecord = prev_sb
+        while not curr.first_in_slot:
+            curr = sub_blocks[curr.prev_hash]
+        cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
     # 10. Check reward chain sp proof
     if sp_iters != 0:
@@ -461,13 +467,13 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.reward_chain_sp_vdf,
             target_vdf_info,
         ):
-            return None, Err.INVALID_RC_ICP_VDF
+            return None, Err.INVALID_RC_SP_VDF
         rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.output.get_hash()
     else:
         # Edge case of first sp (start of slot), where sp_iters == 0
         assert overflow is not None
         if header_block.reward_chain_sub_block.reward_chain_sp_vdf is not None:
-            return None, Err.INVALID_RC_ICP_VDF
+            return None, Err.INVALID_RC_SP_VDF
         rc_sp_hash = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
 
     # 11. Check reward chain sp signature
@@ -477,17 +483,6 @@ async def validate_unfinished_header_block(
         header_block.reward_chain_sub_block.reward_chain_sp_signature,
     ):
         return None, Err.INVALID_RC_SIGNATURE
-
-    if prev_sb is None:
-        cc_vdf_challenge = constants.FIRST_CC_CHALLENGE
-    else:
-        if new_slot:
-            cc_vdf_challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
-        else:
-            curr: SubBlockRecord = prev_sb
-            while not curr.first_in_slot:
-                curr = sub_blocks[curr.prev_hash]
-            cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
     # 12. Check cc sp
     if sp_iters != 0:
@@ -502,11 +497,11 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.challenge_chain_sp_vdf,
             target_vdf_info,
         ):
-            return None, Err.INVALID_CC_ICP_VDF
+            return None, Err.INVALID_CC_SP_VDF
     else:
         assert overflow is not None
         if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is not None:
-            return None, Err.INVALID_CC_ICP_VDF
+            return None, Err.INVALID_CC_SP_VDF
 
     # 13. Check cc sp sig
     if not AugSchemeMPL.verify(
