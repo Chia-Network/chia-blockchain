@@ -11,7 +11,7 @@ from src.util.ints import uint32, uint8
 
 log = logging.getLogger(__name__)
 
-ICPs = List[Optional[Tuple[VDFInfo, VDFProof]]]
+SPs = List[Optional[Tuple[VDFInfo, VDFProof]]]
 
 
 class FullNodeStore:
@@ -29,8 +29,8 @@ class FullNodeStore:
     unfinished_blocks: Dict[bytes32, UnfinishedBlock]
 
     # Finished slots and sps from the peak's slot onwards
-    # We store all 32 ICPs for each slot, starting as 32 Nones and filling them as we go
-    finished_slots: List[Tuple[EndOfSubSlotBundle, ICPs]]
+    # We store all 32 SPs for each slot, starting as 32 Nones and filling them as we go
+    finished_slots: List[Tuple[EndOfSubSlotBundle, SPs]]
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):

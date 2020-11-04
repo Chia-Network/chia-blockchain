@@ -13,7 +13,7 @@ class TestProofOfSpace:
         """
         num_trials = 40000
         success_count = 0
-        target_filter = (2 ** constants.NUMBER_ZERO_BITS_PLOT_FILTER) * (2 ** constants.NUMBER_ZERO_BITS_ICP_FILTER)
+        target_filter = (2 ** constants.NUMBER_ZERO_BITS_PLOT_FILTER) * (2 ** constants.NUMBER_ZERO_BITS_SP_FILTER)
         sk = AugSchemeMPL.key_gen(bytes([0x44] * 32))
         sig = AugSchemeMPL.sign(sk, b"")
         for _ in range(num_trials):
