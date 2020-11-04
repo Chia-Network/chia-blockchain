@@ -582,9 +582,7 @@ async def validate_unfinished_header_block(
     if (header_block.foliage_sub_block.foliage_block_hash is not None) != (header_block.foliage_block is not None):
         return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
-    if (header_block.foliage_sub_block.foliage_sub_block_signature is not None) != (
-        header_block.foliage_block is not None
-    ):
+    if (header_block.foliage_sub_block.foliage_block_signature is not None) != (header_block.foliage_block is not None):
         return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
     if header_block.foliage_block is not None:
@@ -638,7 +636,7 @@ async def validate_finished_header_block(
     check_filter: bool,
 ) -> Tuple[Optional[uint64], Optional[Err]]:
     """
-    Fully validates the header of a sub-block. A header block is the same as a full block, but
+    Fully validates the header of a sub-block. A header block is the same  as a full block, but
     without transactions and transaction info. Returns (required_iters, error).
     """
     unfinished_header_block = UnfinishedHeaderBlock(
