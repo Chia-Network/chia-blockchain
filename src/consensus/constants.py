@@ -26,6 +26,7 @@ class ConsensusConstants:
     FIRST_RC_CHALLENGE: bytes
     GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes
     GENESIS_PREV_HASH: bytes
+    GENESIS_SES_HASH: bytes
     MAX_VDF_WITNESS_SIZE: int
     # Target tx count per sec
     TX_PER_SEC: int

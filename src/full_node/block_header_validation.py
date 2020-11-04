@@ -7,6 +7,7 @@ from blspy import AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
 from src.full_node.deficit import calculate_deficit
+from src.full_node.make_sub_epoch_summary import make_sub_epoch_summary
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
 from src.util.ints import uint32, uint64, uint128
@@ -25,7 +26,6 @@ from src.consensus.pot_iterations import (
 from src.full_node.difficulty_adjustment import finishes_sub_epoch
 from src.util.hash import std_hash
 from src.types.classgroup import ClassgroupElement
-from src.types.sub_epoch_summary import SubEpochSummary
 
 log = logging.getLogger(__name__)
 
@@ -301,15 +301,12 @@ async def validate_unfinished_header_block(
             if not new_slot or not finishes_se:
                 return None, Err.INVALID_SUB_EPOCH_SUMMARY
 
-            curr = prev_sb
-            while curr.sub_epoch_summary_included_hash is None:
-                curr = sub_blocks[curr.prev_hash]
-
             # 3c. Check the actual sub-epoch is correct
-            expected_sub_epoch_summary = SubEpochSummary(
-                curr.sub_epoch_summary_included_hash,
-                curr.finished_reward_slot_hashes[0],
-                curr.height % constants.SUB_EPOCH_SUB_BLOCKS,
+            expected_sub_epoch_summary = make_sub_epoch_summary(
+                constants,
+                sub_blocks,
+                header_block.height - 1,
+                prev_sb,
                 difficulty if finishes_epoch else None,
                 ips if finishes_epoch else None,
             )
@@ -739,7 +736,7 @@ async def validate_finished_header_block(
     if not genesis_block:
         overflow = is_overflow_sub_block(constants, ips, required_iters)
         deficit = calculate_deficit(
-            constants, header_block.height, prev_sb, overflow, header_block.finished_sub_slots is not None
+            constants, header_block.height, prev_sb, overflow, len(header_block.finished_sub_slots) > 0
         )
 
         if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:
