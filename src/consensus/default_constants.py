@@ -13,14 +13,10 @@ testnet_kwargs = {
     "DIFFICULTY_DELAY": 64,  # EPOCH / WARP_FACTOR
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
-    "NUMBER_ZERO_BITS_CHALLENGE_SIG": 8,  # H(plot signature of the challenge) must start with these many zeroes
-    "BLOCK_TIME_TARGET": 300,  # The target number of seconds per block
-    # The proportion (denominator) of the total time that that the VDF must be run for, at a minimum
-    # (1/min_iters_proportion). For example, if this is two, approximately half of the iterations
-    # will be contant and required for all blocks.
-    "MIN_ITERS_PROPORTION": 10,
-    # For the first epoch, since we have no previous blocks, we can't estimate vdf iterations per second
-    "MIN_ITERS_STARTING": (2 ** 22),
+    "NUMBER_ZERO_BITS_PLOT_FILTER": 3,  # H(plot signature of the challenge) must start with these many zeroes
+    "NUMBER_ZERO_BITS_SP_FILTER": 4,  # H(plot signature of the challenge) must start with these many zeroes
+    "SLOT_TIME_TARGET": 300,  # The target number of seconds per slot
+    "EXTRA_ITERS_TIME_TARGET": 37.5,
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more
     "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     "FIRST_CC_CHALLENGE": bytes([0x00] * 32),

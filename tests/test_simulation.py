@@ -13,7 +13,7 @@ test_constants = constants.replace(
         "DIFFICULTY_STARTING": 1000,
         "MIN_ITERS_STARTING": 100000,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,
-        "NUMBER_ZERO_BITS_ICP_FILTER": 1,
+        "NUMBER_ZERO_BITS_SP_FILTER": 1,
     }
 )
 
@@ -45,12 +45,8 @@ class TestSimulation:
 
         async def has_compact(node1, node2, max_height):
             for h in range(1, max_height):
-                blocks_1: List[FullBlock] = await node1.block_store.get_blocks_at(
-                    [uint32(h)]
-                )
-                blocks_2: List[FullBlock] = await node2.block_store.get_blocks_at(
-                    [uint32(h)]
-                )
+                blocks_1: List[FullBlock] = await node1.block_store.get_blocks_at([uint32(h)])
+                blocks_2: List[FullBlock] = await node2.block_store.get_blocks_at([uint32(h)])
                 has_compact_1 = False
                 has_compact_2 = False
                 for block in blocks_1:
@@ -67,6 +63,4 @@ class TestSimulation:
                     return True
             return True
 
-        await time_out_assert_custom_interval(
-            120, 2, has_compact, True, node1, node2, max_height
-        )
+        await time_out_assert_custom_interval(120, 2, has_compact, True, node1, node2, max_height)
