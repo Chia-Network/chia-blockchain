@@ -7,9 +7,10 @@ from blspy import AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
 from src.full_node.deficit import calculate_deficit
+from src.full_node.make_sub_epoch_summary import make_sub_epoch_summary
 from src.types.sized_bytes import bytes32
 from src.util.errors import Err
-from src.util.ints import uint32, uint64, uint128, uint8
+from src.util.ints import uint32, uint64, uint128
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.types.header_block import HeaderBlock
 from src.full_node.sub_block_record import SubBlockRecord
@@ -25,7 +26,6 @@ from src.consensus.pot_iterations import (
 from src.full_node.difficulty_adjustment import finishes_sub_epoch
 from src.util.hash import std_hash
 from src.types.classgroup import ClassgroupElement
-from src.types.sub_epoch_summary import SubEpochSummary
 
 log = logging.getLogger(__name__)
 
@@ -299,23 +299,12 @@ async def validate_unfinished_header_block(
             if not new_slot or not finishes_se:
                 return None, Err.INVALID_SUB_EPOCH_SUMMARY
 
-            if header_block.height // constants.SUB_EPOCH_SUB_BLOCKS == 1:
-                prev_ses_hash: bytes32 = constants.GENESIS_SES_HASH
-                prev_reward_hash: bytes32 = constants.FIRST_RC_CHALLENGE
-                ses_overflow: uint8 = uint8(0)
-            else:
-                curr = prev_sb
-                while curr.sub_epoch_summary_included is None:
-                    curr = sub_blocks[curr.prev_hash]
-                prev_ses_hash: bytes32 = curr.sub_epoch_summary_included.get_hash()
-                prev_reward_hash: bytes32 = curr.finished_reward_slot_hashes[0]
-                ses_overflow: uint8 = uint8(curr.height % constants.SUB_EPOCH_SUB_BLOCKS)
-
             # 3c. Check the actual sub-epoch is correct
-            expected_sub_epoch_summary = SubEpochSummary(
-                prev_ses_hash,
-                prev_reward_hash,
-                ses_overflow,
+            expected_sub_epoch_summary = make_sub_epoch_summary(
+                constants,
+                sub_blocks,
+                header_block.height - 1,
+                prev_sb,
                 difficulty if finishes_epoch else None,
                 ips if finishes_epoch else None,
             )
