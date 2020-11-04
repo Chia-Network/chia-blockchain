@@ -28,23 +28,23 @@ class TestGenesisBlock:
         if proof.is_valid(test_constants, vdf) is False:
             raise Exception("invalid proof")
 
-    # @pytest.mark.asyncio
-    # async def test_basic_blockchain(self):
-    #     db_path = Path("blockchain_test.db")
-    #     if db_path.exists():
-    #         db_path.unlink()
-    #     connection = await aiosqlite.connect(db_path)
-    #     coin_store = await CoinStore.create(connection)
-    #     store = await BlockStore.create(connection)
-    #     bc1 = await Blockchain.create(coin_store, store, test_constants)
-    #     assert bc1.get_peak() is None
-    #
-    #     genesis = bt.get_consecutive_blocks(test_constants, 1)[0]
-    #     result = await bc1.receive_block(genesis, False)
-    #     assert result == ReceiveBlockResult.NEW_PEAK
-    #
-    #     await connection.close()
-    #     bc1.shut_down()
+    @pytest.mark.asyncio
+    async def test_basic_blockchain(self):
+        db_path = Path("blockchain_test.db")
+        if db_path.exists():
+            db_path.unlink()
+        connection = await aiosqlite.connect(db_path)
+        coin_store = await CoinStore.create(connection)
+        store = await BlockStore.create(connection)
+        bc1 = await Blockchain.create(coin_store, store, test_constants)
+        assert bc1.get_peak() is None
+
+        genesis = bt.get_consecutive_blocks(test_constants, 1)[0]
+        result = await bc1.receive_block(genesis, False)
+        assert result == ReceiveBlockResult.NEW_PEAK
+
+        await connection.close()
+        bc1.shut_down()
 
 
 # class TestBlockValidation:
