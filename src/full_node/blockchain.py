@@ -219,7 +219,7 @@ class Blockchain:
             block.foliage_block,
             b"",  # No filter
         )
-
+        print("Validating: ", block)
         required_iters, error_code = await validate_finished_header_block(
             self.constants,
             self.sub_blocks,
@@ -481,7 +481,8 @@ class Blockchain:
         )
         expected_reward_coins.add(pool_coin)
         expected_reward_coins.add(farmer_coin)
-        if block.transactions_info.reward_claims_incorporated != expected_reward_coins:
+
+        if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
             return Err.INVALID_REWARD_COINS
 
         removals: List[bytes32] = []
