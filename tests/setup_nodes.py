@@ -33,7 +33,7 @@ test_constants = constants.replace(
         "EPOCH_SUB_BLOCKS": 512,
         "IPS_STARTING": 10 * 1,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
-        "NUMBER_ZERO_BITS_ICP_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
+        "NUMBER_ZERO_BITS_SP_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
     }
 )
 bt = BlockTools()

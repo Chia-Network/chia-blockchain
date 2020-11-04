@@ -65,7 +65,7 @@ class ProofOfSpace(Streamable):
             sp_filter = BitArray(std_hash(plot_id + sp_output_hash + bytes(sp_signature)))
             return (
                 plot_filter[: constants.NUMBER_ZERO_BITS_PLOT_FILTER].uint == 0
-                and sp_filter[: constants.NUMBER_ZERO_BITS_ICP_FILTER].uint == 0
+                and sp_filter[: constants.NUMBER_ZERO_BITS_SP_FILTER].uint == 0
             )
 
     @staticmethod
