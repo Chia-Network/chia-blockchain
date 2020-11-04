@@ -6,7 +6,7 @@ from enum import Enum
 import multiprocessing
 import concurrent
 from typing import Dict, List, Optional, Set, Tuple, Union
-from blspy import AugSchemeMPL
+from blspy import AugSchemeMPL, G2Element
 
 from chiabip158 import PyBIP158
 
@@ -96,7 +96,7 @@ class Blockchain:
         consensus_constants: ConsensusConstants,
     ):
         """
-        Initializes a blockchain with the header blocks from disk, assuming they have all been
+        Initializes a blockchain with the SubBlockRecords from disk, assuming they have all been
         validated. Uses the genesis block given in override_constants, or as a fallback,
         in the consensus constants config.
         """
@@ -122,8 +122,7 @@ class Blockchain:
 
     async def _load_chain_from_store(self) -> None:
         """
-        Initializes the state of the Blockchain class from the database. Sets the LCA, peaks,
-        headers, height_to_hash, and block_store DiffStores.
+        Initializes the state of the Blockchain class from the database.
         """
         self.sub_blocks, peak = await self.block_store.get_sub_blocks()
         self.height_to_hash = {}
@@ -173,20 +172,6 @@ class Blockchain:
         that we have added but no longer keep in memory.
         """
         return header_hash in self.sub_blocks
-
-    def get_header_hashes(self, peak_header_hash: bytes32) -> List[bytes32]:
-        """
-        Returns a list of all header hashes from genesis to the peak, inclusive.
-        """
-        if peak_header_hash not in self.sub_blocks:
-            raise ValueError("Invalid peak requested")
-
-        curr = self.sub_blocks[peak_header_hash]
-        ret_hashes = [peak_header_hash]
-        while curr.height != 0:
-            curr = self.sub_blocks[curr.prev_header_hash]
-            ret_hashes.append(curr.header_hash)
-        return list(reversed(ret_hashes))
 
     async def receive_block(
         self,
@@ -523,7 +508,10 @@ class Blockchain:
 
         # 11. Validate addition and removal roots
         root_error = validate_block_merkle_roots(
-            block, additions + coinbase_additions, removals
+            block.foliage_block.additions_root,
+            block.foliage_block.removals_root,
+            additions + coinbase_additions,
+            removals,
         )
         if root_error:
             return root_error
@@ -540,7 +528,7 @@ class Blockchain:
         encoded_filter = bytes(bip158.GetEncoded())
         filter_hash = std_hash(encoded_filter)
 
-        if filter_hash != block.header.data.filter_hash:
+        if filter_hash != block.foliage_block.filter_hash:
             return Err.INVALID_TRANSACTIONS_FILTER_HASH
 
         # 13. Check for duplicate outputs in additions
@@ -558,29 +546,34 @@ class Blockchain:
                 return Err.DOUBLE_SPEND
 
         # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
-        new_ips = self.get_next_slot_iters(block.prev_header_hash, block.finished_sub_slots is not None)
-        fork_h = find_fork_point_in_chain(self.sub_blocks, self.get_peak(), block.get_sub_block_record(new_ips))
+        # new_ips = self.get_next_slot_iters(block.prev_header_hash, block.finished_sub_slots is not None)
+        if self.get_peak() is None or block.height == 0:
+            fork_h: int = -1
+        else:
+            fork_h: int = find_fork_point_in_chain(
+                self.sub_blocks, self.get_peak(), self.sub_blocks[block.prev_header_hash]
+            )
 
         # Get additions and removals since (after) fork_h but not including this block
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
         removals_since_fork: Set[bytes32] = set()
         coinbases_since_fork: Dict[bytes32, uint32] = {}
-        curr: Optional[FullBlock] = await self.block_store.get_block(
-            block.prev_header_hash
-        )
-        assert curr is not None
 
-        while curr.height > fork_h:
-            removals_in_curr, additions_in_curr = await curr.tx_removals_and_additions()
-            for c_name in removals_in_curr:
-                removals_since_fork.add(c_name)
-            for c in additions_in_curr:
-                additions_since_fork[c.name()] = (c, curr.height)
-
-            for coinbase_coin in curr.get_included_reward_coins():
-                coinbases_since_fork[coinbase_coin.name()] = curr.height
-            curr = await self.block_store.get_block(curr.prev_header_hash)
+        if block.height > 0:
+            curr: Optional[FullBlock] = await self.block_store.get_block(block.prev_header_hash)
             assert curr is not None
+
+            while curr.height > fork_h:
+                removals_in_curr, additions_in_curr = await curr.tx_removals_and_additions()
+                for c_name in removals_in_curr:
+                    removals_since_fork.add(c_name)
+                for c in additions_in_curr:
+                    additions_since_fork[c.name()] = (c, curr.height)
+
+                for coinbase_coin in curr.get_included_reward_coins():
+                    coinbases_since_fork[coinbase_coin.name()] = curr.height
+                curr = await self.block_store.get_block(curr.prev_header_hash)
+                assert curr is not None
 
         removal_coin_records: Dict[bytes32, CoinRecord] = {}
         for rem in removals:
@@ -683,7 +676,7 @@ class Blockchain:
                 unspent,
                 removal_coin_records,
                 npc.condition_dict,
-                block.header,
+                block.height,
             )
             if error:
                 return error
@@ -698,12 +691,16 @@ class Blockchain:
         if not block.transactions_info.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
 
-        # noinspection PyTypeChecker
-        validates = AugSchemeMPL.aggregate_verify(
-            pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature
-        )
-        if not validates:
-            return Err.BAD_AGGREGATE_SIGNATURE
+        if len(pairs_pks) == 0:
+            if len(pairs_msgs) != 0 or block.transactions_info.aggregated_signature != G2Element.infinity():
+                return Err.BAD_AGGREGATE_SIGNATURE
+        else:
+            # noinspection PyTypeChecker
+            validates = AugSchemeMPL.aggregate_verify(
+                pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature
+            )
+            if not validates:
+                return Err.BAD_AGGREGATE_SIGNATURE
 
         return None
 
