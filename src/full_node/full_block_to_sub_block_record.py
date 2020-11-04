@@ -11,7 +11,9 @@ def full_block_to_sub_block_record(block: FullBlock, ips: uint64, required_iters
         finished_challenge_slot_hashes = [sub_slot.challenge_chain.get_hash() for sub_slot in block.finished_sub_slots]
         finished_reward_slot_hashes = [sub_slot.reward_chain.get_hash() for sub_slot in block.finished_sub_slots]
         finished_infused_challenge_slot_hashes = [
-            sub_slot.infused_challenge_chain.get_hash() for sub_slot in block.finished_sub_slots
+            sub_slot.infused_challenge_chain.get_hash()
+            for sub_slot in block.finished_sub_slots
+            if sub_slot.infused_challenge_chain is not None
         ]
     else:
         finished_challenge_slot_hashes = None
