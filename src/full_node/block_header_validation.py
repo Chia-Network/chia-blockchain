@@ -63,6 +63,12 @@ async def validate_unfinished_header_block(
         finishes_se = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, False)
         finishes_epoch: bool = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, True)
 
+        if prev_sb.height != 0:
+            curr_diffculty = uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight)
+        else:
+            # prev block is genesis
+            curr_diffculty = uint64(prev_sb.weight)
+
         difficulty: uint64 = get_next_difficulty(
             constants,
             sub_blocks,
@@ -70,7 +76,7 @@ async def validate_unfinished_header_block(
             header_block.prev_header_hash,
             prev_sb.height,
             prev_sb.deficit,
-            uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight),
+            curr_diffculty,
             new_slot,
             prev_sb.total_iters,
         )
@@ -108,10 +114,7 @@ async def validate_unfinished_header_block(
                     if not curr.finished_challenge_slot_hashes[-1] == challenge_hash:
                         return None, Err.INVALID_PREV_CHALLENGE_SLOT_HASH
             else:
-                if (
-                    not header_block.finished_sub_slots[finished_sub_slot_n - 1].challenge_chain.get_hash()
-                    == challenge_hash
-                ):
+                if not header_block.finished_sub_slots[finished_sub_slot_n - 1].challenge_chain.get_hash() == challenge_hash:
                     return None, Err.INVALID_PREV_CHALLENGE_SLOT_HASH
 
             # 2b. Validate the infusion challenge chain VDF
@@ -126,28 +129,21 @@ async def validate_unfinished_header_block(
                     icc_challenge_hash: Optional[bytes32] = None
                 else:
                     if finished_sub_slot_n == 0:
-                        while (
-                            curr.deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
-                            and not curr.first_in_sub_slot
-                        ):
+                        while curr.deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1 and not curr.first_in_sub_slot:
                             curr = sub_blocks[curr.prev_hash]
                         if curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                             icc_challenge_hash = curr.challenge_block_info_hash
                             ip_iters_prev = calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
                             ip_iters_challenge_block = calculate_ip_iters(constants, curr.ips, curr.required_iters)
                             icc_iters_proof: uint64 = calculate_slot_iters(constants, prev_sb.ips) - ip_iters_prev
-                            icc_iters_committed: uint64 = (
-                                calculate_slot_iters(constants, prev_sb.ips) - ip_iters_challenge_block
-                            )
+                            icc_iters_committed: uint64 = calculate_slot_iters(constants, prev_sb.ips) - ip_iters_challenge_block
 
                         else:
                             icc_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
                             icc_iters_committed = calculate_slot_iters(constants, prev_sb.ips)
                             icc_iters_proof = icc_iters_committed
                     else:
-                        icc_challenge_hash = header_block.finished_sub_slots[
-                            finished_sub_slot_n - 1
-                        ].infused_challenge_chain.get_hash()
+                        icc_challenge_hash = header_block.finished_sub_slots[finished_sub_slot_n - 1].infused_challenge_chain.get_hash()
                         icc_iters_committed = calculate_slot_iters(constants, prev_sb.ips)
                         icc_iters_proof = icc_iters_committed
 
@@ -173,20 +169,14 @@ async def validate_unfinished_header_block(
 
                     # 2d. Check infused challenge sub-slot hash in challenge sub-slot
                     if sub_slot.reward_chain.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-                        if (
-                            sub_slot.infused_challenge_chain.get_hash()
-                            != sub_slot.challenge_chain.infused_challenge_chain_sub_slot_hash
-                        ):
+                        if sub_slot.infused_challenge_chain.get_hash() != sub_slot.challenge_chain.infused_challenge_chain_sub_slot_hash:
                             return None, Err.INVALID_ICC_HASH_CC
                     else:
                         if sub_slot.challenge_chain.infused_challenge_chain_sub_slot_hash is not None:
                             return None, Err.INVALID_ICC_HASH_CC
 
                     # 2e. Check infused challenge sub-slot hash in reward sub-slot
-                    if (
-                        sub_slot.infused_challenge_chain.get_hash()
-                        != sub_slot.reward_chain.infused_challenge_chain_sub_slot_hash
-                    ):
+                    if sub_slot.infused_challenge_chain.get_hash() != sub_slot.reward_chain.infused_challenge_chain_sub_slot_hash:
                         return None, Err.INVALID_ICC_HASH_RC
                 else:
                     assert sub_slot.infused_challenge_chain is None
@@ -233,9 +223,7 @@ async def validate_unfinished_header_block(
                     cc_eos_vdf_challenge: bytes32 = constants.FIRST_CC_CHALLENGE
                 else:
                     # First block, but have at least two empty slots
-                    rc_eos_vdf_challenge: bytes32 = header_block.finished_sub_slots[
-                        finished_sub_slot_n - 1
-                    ].reward_chain.get_hash()
+                    rc_eos_vdf_challenge: bytes32 = header_block.finished_sub_slots[finished_sub_slot_n - 1].reward_chain.get_hash()
             else:
                 if finished_sub_slot_n == 0:
                     # No empty slots, so the starting point of VDF is the last reward block. Uses
@@ -246,9 +234,7 @@ async def validate_unfinished_header_block(
                     cc_start_element: ClassgroupElement = prev_sb.challenge_vdf_output
                 else:
                     # At least one empty slot, so use previous slot hash. IPS might change because it's a new slot
-                    rc_eos_vdf_challenge: bytes32 = header_block.finished_sub_slots[
-                        finished_sub_slot_n - 1
-                    ].reward_chain.get_hash()
+                    rc_eos_vdf_challenge: bytes32 = header_block.finished_sub_slots[finished_sub_slot_n - 1].reward_chain.get_hash()
 
             target_vdf_info = VDFInfo(
                 rc_eos_vdf_challenge,
@@ -256,9 +242,7 @@ async def validate_unfinished_header_block(
                 eos_vdf_iters,
                 sub_slot.reward_chain.end_of_slot_vdf.output,
             )
-            if not sub_slot.proofs.reward_chain_slot_proof.is_valid(
-                constants, sub_slot.reward_chain.end_of_slot_vdf, target_vdf_info
-            ):
+            if not sub_slot.proofs.reward_chain_slot_proof.is_valid(constants, sub_slot.reward_chain.end_of_slot_vdf, target_vdf_info):
                 return None, Err.INVALID_RC_EOS_VDF
 
             partial_cc_vdf_info = VDFInfo(
@@ -361,9 +345,7 @@ async def validate_unfinished_header_block(
     if new_slot:
         if overflow:
             # New slot with overflow block
-            challenge: bytes32 = header_block.finished_sub_slots[
-                -1
-            ].challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
+            challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
         else:
             # No overflow, new slot with a new challenge
             challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
@@ -381,6 +363,8 @@ async def validate_unfinished_header_block(
             while len(reversed_challenge_hashes) < challenges_to_look_for:
                 if curr.first_in_sub_slot:
                     reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
+                if curr.height == 0:
+                    break
                 curr = sub_blocks[curr.prev_hash]
             challenge = reversed_challenge_hashes[-challenges_to_look_for]
     assert challenge is not None
@@ -403,9 +387,7 @@ async def validate_unfinished_header_block(
 
     # 9. Check total iters
     if genesis_block:
-        total_iters: uint128 = uint128(
-            constants.IPS_STARTING * constants.SLOT_TIME_TARGET * len(header_block.finished_sub_slots)
-        )
+        total_iters: uint128 = uint128(constants.IPS_STARTING * constants.SLOT_TIME_TARGET * len(header_block.finished_sub_slots))
         total_iters += ip_iters
     else:
         prev_sb_iters = calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
@@ -547,10 +529,7 @@ async def validate_unfinished_header_block(
             return None, Err.INVALID_PLOT_SIGNATURE
 
     # 17. Check unfinished reward chain sub block hash
-    if (
-        header_block.reward_chain_sub_block.get_hash()
-        != header_block.foliage_sub_block.foliage_sub_block_data.unfinished_reward_block_hash
-    ):
+    if header_block.reward_chain_sub_block.get_hash() != header_block.foliage_sub_block.foliage_sub_block_data.unfinished_reward_block_hash:
         return None, Err.INVALID_URSB_HASH
 
     # 18. Check pool target max height
@@ -583,13 +562,13 @@ async def validate_unfinished_header_block(
 
         # 23. Check prev block hash
         if genesis_block:
-            if header_block.foliage_block.prev_block_hash != bytes([0] * 32):
+            if header_block.foliage_block.prev_sub_block_hash != bytes([0] * 32):
                 return None, Err.INVALID_PREV_BLOCK_HASH
         else:
             curr_sb: SubBlockRecord = prev_sb
             while not curr_sb.is_block:
                 curr_sb = sub_blocks[curr_sb.prev_hash]
-            if not header_block.foliage_block.prev_block_hash == curr_sb.header_hash:
+            if not header_block.foliage_block.prev_sub_block_hash == curr_sb.header_hash:
                 return None, Err.INVALID_PREV_BLOCK_HASH
 
         # 24. The filter hash in the Foliage Block must be the hash of the filter
@@ -600,7 +579,7 @@ async def validate_unfinished_header_block(
         # 25. The timestamp in Foliage Block must comply with the timestamp rules
         if prev_sb is not None:
             last_timestamps: List[uint64] = []
-            curr_sb: SubBlockRecord = sub_blocks[header_block.foliage_block.prev_block_hash]
+            curr_sb: SubBlockRecord = sub_blocks[header_block.foliage_block.prev_sub_block_hash]
             while len(last_timestamps) < constants.NUMBER_OF_TIMESTAMPS:
                 last_timestamps.append(curr_sb.timestamp)
                 fetched: Optional[SubBlockRecord] = sub_blocks.get(curr_sb.prev_block_hash, None)
@@ -640,9 +619,7 @@ async def validate_finished_header_block(
         header_block.transactions_filter,
     )
 
-    required_iters, validate_unfinished_result = await validate_unfinished_header_block(
-        constants, sub_blocks, height_to_hash, unfinished_header_block, check_filter
-    )
+    required_iters, validate_unfinished_result = await validate_unfinished_header_block(constants, sub_blocks, height_to_hash, unfinished_header_block, check_filter)
 
     genesis_block = False
     if validate_unfinished_result is not None:
@@ -737,9 +714,7 @@ async def validate_finished_header_block(
     # 28. Check infused challenge chain infusion point VDF
     if not genesis_block:
         overflow = is_overflow_sub_block(constants, ips, required_iters)
-        deficit = calculate_deficit(
-            constants, header_block.height, prev_sb, overflow, len(header_block.finished_sub_slots) > 0
-        )
+        deficit = calculate_deficit(constants, header_block.height, prev_sb, overflow, len(header_block.finished_sub_slots) > 0)
 
         if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:
             # If we don't have an ICC chain, deficit must be 4 or 5
