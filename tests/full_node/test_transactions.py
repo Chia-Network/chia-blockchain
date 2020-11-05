@@ -52,7 +52,7 @@ class TestTransactions:
             PeerInfo("localhost", uint16(full_node_server._port)), None
         )
         for i in range(1, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
@@ -94,7 +94,7 @@ class TestTransactions:
         )
 
         for i in range(1, num_blocks):
-            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
             [
@@ -134,9 +134,7 @@ class TestTransactions:
 
         # Farm another block
         for i in range(1, 8):
-            await full_node_api_1.farm_new_block(
-                FarmNewBlockProtocol(token_bytes()), None
-            )
+            await full_node_api_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
         funds = sum(
             [
                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
@@ -175,7 +173,7 @@ class TestTransactions:
         await server_0.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, num_blocks):
-            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
 
         all_blocks = await full_node_api_0.get_current_blocks(full_node_api_0.get_tip())
 
