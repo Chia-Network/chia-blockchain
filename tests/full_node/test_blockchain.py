@@ -85,18 +85,17 @@ class TestGenesisBlock:
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err == Err.INVALID_PREV_BLOCK_HASH
 
+    @pytest.mark.asyncio
+    async def test_non_genesis(self, empty_blockchain):
+        blks = bt.get_consecutive_blocks(test_constants, 3, force_overflow=False, force_empty_slots=9)
+        result, err, _ = await empty_blockchain.receive_block(blks[0], False)
+        assert err is None
+        assert result == ReceiveBlockResult.NEW_PEAK
+        result, err, _ = await empty_blockchain.receive_block(blks[1], False)
+        assert err is None
+        assert result == ReceiveBlockResult.NEW_PEAK
 
-#     @pytest.mark.asyncio
-#     async def test_non_genesis(self, empty_blockchain):
-#         blks = bt.get_consecutive_blocks(
-#             test_constants, 1, force_overflow=False, force_empty_slots=9
-#         )
-#         result, err, _ = await empty_blockchain.receive_block(blks[0], False)
-#         assert err is None
-#         assert result == ReceiveBlockResult.NEW_PEAK
-#         result, err, _ = await empty_blockchain.receive_block(blks[1], False)
-#         assert err is None
-#         assert result == ReceiveBlockResult.NEW_PEAK
+
 #
 # # class TestBlockValidation:
 #     @pytest.fixture(scope="module")

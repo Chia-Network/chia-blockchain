@@ -26,7 +26,7 @@ class SubBlockRecord(Streamable):
     infused_challenge_vdf_output: Optional[
         ClassgroupElement
     ]  # This is the intermediary VDF output at ip_iters in infused cc, iff deficit <= 3
-    reward_infusion_output: bytes32  # The reward chain infusion output, input to next VDF
+    reward_infusion_new_challenge: bytes32  # The reward chain infusion output, input to next VDF
     challenge_block_info_hash: bytes32  # Hash of challenge chain data, used to validate end of slots in the future
     ips: uint64  # Current network iterations per second parameter
     pool_puzzle_hash: bytes32  # Need to keep track of these because Coins are created in a future block
