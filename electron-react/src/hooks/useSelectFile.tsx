@@ -13,7 +13,7 @@ export default function useSelectFile(): () => Promise<string | undefined> {
       const { filePath } = result;
 
       return filePath;
-    } else {
+    } 
       openDialog({
         body: (
           <Trans id="useSelectFile.availableOnlyFromElectron">
@@ -21,10 +21,9 @@ export default function useSelectFile(): () => Promise<string | undefined> {
           </Trans>
         ),
       });
-      return undefined;
-    }
+      
+    
   }
 
   return handleSelect;
 }
-

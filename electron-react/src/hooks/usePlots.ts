@@ -4,8 +4,8 @@ import type { RootState } from '../modules/rootReducer';
 
 export default function usePlots(): {
   loading: boolean;
-  plots?: Plot[],
-  hasPlots: boolean,
+  plots?: Plot[];
+  hasPlots: boolean;
 } {
   const plots = useSelector(
     (state: RootState) => state.farming_state.harvester.plots,

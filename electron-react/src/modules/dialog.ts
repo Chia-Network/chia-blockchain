@@ -13,8 +13,8 @@ export function closeDialog(id: number) {
 }
 
 export function openDialog(options: {
-  title?: ReactNode,
-  body?: ReactNode,
+  title?: ReactNode;
+  body?: ReactNode;
 }): ThunkAction<void, RootState, unknown, Action<Object>> {
   return (dispatch) => {
     const id = nextId++;
@@ -53,11 +53,14 @@ export default function dialogReducer(
 
       return {
         ...state,
-        dialogs: [...state.dialogs, {
-          title,
-          body,
-          id,
-        }],
+        dialogs: [
+          ...state.dialogs,
+          {
+            title,
+            body,
+            id,
+          },
+        ],
       };
     case 'DIALOG_CLOSE':
       return {

@@ -3,7 +3,9 @@ import isElectron from 'is-electron';
 import { Trans } from '@lingui/macro';
 import useOpenDialog from './useOpenDialog';
 
-export default function useSelectDirectory(): () => Promise<string | undefined> {
+export default function useSelectDirectory(): () => Promise<
+  string | undefined
+> {
   const openDialog = useOpenDialog();
 
   async function handleSelect(): Promise<string | undefined> {
@@ -15,7 +17,7 @@ export default function useSelectDirectory(): () => Promise<string | undefined> 
       const filePath = result.filePaths[0];
 
       return filePath;
-    } else {
+    } 
       openDialog({
         body: (
           <Trans id="useSelectDirectory.availableOnlyFromElectron">
@@ -23,10 +25,9 @@ export default function useSelectDirectory(): () => Promise<string | undefined> 
           </Trans>
         ),
       });
-      return undefined;
-    }
+      
+    
   }
 
   return handleSelect;
 }
-
