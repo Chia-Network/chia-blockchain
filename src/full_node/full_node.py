@@ -43,7 +43,7 @@ from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request
 from src.util.errors import ConsensusError, Err
-from src.util.ints import uint32, uint64, uint128
+from src.util.ints import uint32, uint64, uint128, int32
 from src.util.merkle_set import MerkleSet
 from src.util.path import mkdir, path_from_root
 from src.server.node_discovery import FullNodePeers
@@ -678,6 +678,12 @@ class FullNode:
             difficulty = self.blockchain.get_next_difficulty(self.blockchain.get_peak(), False)
             slot_iters = self.blockchain.get_next_slot_iters(self.blockchain.get_peak(), False)
             self.log.info(f"Difficulty {difficulty} slot iterations {slot_iters}")
+
+            for sub_slot in respond_sub_block.sub_block.finished_sub_slots:
+                # Removes the slots that we have finished from the full node cache
+                self.full_node_store.remove_sub_slot(
+                    sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
+                )
             if self.blockchain.get_peak().height % 1000 == 0:
                 # Occasionally clear the seen list to keep it small
                 self.full_node_store.clear_seen_unfinished_blocks()
@@ -925,7 +931,23 @@ class FullNode:
 
     @api_request
     async def new_signage_point_or_end_of_sub_slot(
-        self, request: full_node_protocol.NewSignagePointOrEndOfSubSlot
+        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot
+    ) -> OutboundMessageGenerator:
+        if self.full_node_store.have_sub_slot(new_sp.challenge_hash, new_sp.index_from_challenge):
+            return
+
+        full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
+            new_sp.challenge_hash, int32(new_sp.index_from_challenge)
+        )
+        yield OutboundMessage(
+            NodeType.FULL_NODE,
+            Message("request_signage_point_or_end_of_sub_slot", full_node_request),
+            Delivery.RESPOND,
+        )
+
+    @api_request
+    async def request_signage_point_or_end_of_sub_slot(
+        self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
     ) -> OutboundMessageGenerator:
         pass
 
