@@ -13,9 +13,9 @@ from src.util.ws_message import create_payload
 
 
 class FullNodeRpcApi:
-    def __init__(self, full_node_api: FullNodeAPI):
-        self.service = full_node_api
-        self.full_node = full_node_api.full_node
+    def __init__(self, full_node: FullNode):
+        self.service = full_node
+        self.full_node = full_node
         self.service_name = "chia_full_node"
         self.cached_blockchain_state: Optional[Dict] = None
 
