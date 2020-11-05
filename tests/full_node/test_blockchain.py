@@ -43,9 +43,7 @@ class TestGenesisBlock:
 
     @pytest.mark.asyncio
     async def test_block_tools_proofs(self):
-        vdf, proof = get_vdf_info_and_proof(
-            test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, uint64(231)
-        )
+        vdf, proof = get_vdf_info_and_proof(test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, uint64(231))
         if proof.is_valid(test_constants, vdf) is False:
             raise Exception("invalid proof")
 
