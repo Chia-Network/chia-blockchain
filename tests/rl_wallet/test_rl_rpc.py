@@ -49,9 +49,9 @@ class TestRLWallet:
         await wallet_server_2.start_client(
             PeerInfo("localhost", uint16(full_node_server._port)), None
         )
-        await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
+        await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
         for i in range(0, num_blocks + 1):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         fund_owners_initial_balance = await wallet.get_confirmed_balance()
 
         api_user = WalletRpcApi(wallet_node_1)
@@ -108,7 +108,7 @@ class TestRLWallet:
             "wallet_balance"
         ]["confirmed_wallet_balance"] == 0
         for i in range(0, 2 * num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
 
         assert await wallet.get_confirmed_balance() == fund_owners_initial_balance - 101
 
@@ -146,7 +146,7 @@ class TestRLWallet:
         )
 
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 95, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 3)
         val = await api_admin.add_rate_limited_funds(
@@ -154,7 +154,7 @@ class TestRLWallet:
         )
         assert val["status"] == "SUCCESS"
         for i in range(0, 50):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 195, api_user, user_wallet_id)
 
         # test spending
@@ -171,7 +171,7 @@ class TestRLWallet:
             15, is_transaction_in_mempool, True, api_user, val["transaction_id"]
         )
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 90, api_user, user_wallet_id)
         await time_out_assert(15, receiving_wallet.get_spendable_balance, 108)
 
@@ -182,7 +182,7 @@ class TestRLWallet:
             15, is_transaction_in_mempool, True, api_admin, val["transaction_id"]
         )
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
         await time_out_assert(15, check_balance, 0, api_user, user_wallet_id)
         await time_out_assert(15, check_balance, 0, api_admin, user_wallet_id)
         final_balance = await wallet.get_confirmed_balance()

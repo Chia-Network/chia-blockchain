@@ -195,7 +195,7 @@ class ChiaServer:
             url = f"wss://{target_node.host}:{target_node.port}/ws"
             self.log.info(f"Connecting: {url}")
             ws = await session.ws_connect(
-                url, autoclose=False, autoping=True, ssl_context=ssl_context
+                url, autoclose=False, autoping=True, ssl=ssl_context
             )
             if ws is not None:
                 connection = WSChiaConnection(

@@ -78,7 +78,7 @@ class TestMempool:
         tx: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle)
         )
-        await full_node_api.respond_transaction(tx, None)
+        await full_node_api.respond_transaction(tx)
 
         sb = full_node_api.full_node.mempool_manager.get_spendbundle(
             spend_bundle.name()
@@ -103,7 +103,7 @@ class TestMempool:
             full_node_protocol.RespondTransaction(spend_bundle)
         )
 
-        await full_node_api.respond_transaction(tx, None)
+        await full_node_api.respond_transaction(tx)
 
         sb = full_node_api.full_node.mempool_manager.get_spendbundle(
             spend_bundle.name()
@@ -117,7 +117,7 @@ class TestMempool:
                 full_node_protocol.RespondBlock(blocks[i])
             )
 
-        await full_node_api.respond_transaction(tx, None)
+        await full_node_api.respond_transaction(tx)
 
         sb = full_node_api.full_node.mempool_manager.get_spendbundle(
             spend_bundle.name()
@@ -142,7 +142,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_api.respond_transaction(tx1, None)
+        await full_node_api.respond_transaction(tx1)
 
         spend_bundle2 = generate_test_spend_bundle(
             block.get_coinbase(),
@@ -152,7 +152,7 @@ class TestMempool:
         tx2: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle2)
         )
-        await full_node_api.respond_transaction(tx2, None)
+        await full_node_api.respond_transaction(tx2)
 
         sb1 = full_node_api.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -182,7 +182,7 @@ class TestMempool:
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
 
-        await full_node_api.respond_transaction(tx1, None)
+        await full_node_api.respond_transaction(tx1)
 
         spend_bundle2 = generate_test_spend_bundle(block.get_coinbase(), fee=1)
 
@@ -191,7 +191,7 @@ class TestMempool:
             full_node_protocol.RespondTransaction(spend_bundle2)
         )
 
-        await full_node_api.respond_transaction(tx2, None)
+        await full_node_api.respond_transaction(tx2)
 
         sb1 = full_node_api.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -228,7 +228,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_api.respond_transaction(tx1, None)
+        await full_node_api.respond_transaction(tx1)
 
         sb1 = full_node_api.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -261,7 +261,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -292,7 +292,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -324,7 +324,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -357,7 +357,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -392,7 +392,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -427,7 +427,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -465,7 +465,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         # Sleep so that 3 sec passes
         await asyncio.sleep(3)
@@ -473,7 +473,7 @@ class TestMempool:
         tx2: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_1.respond_transaction(tx2, None)
+        await full_node_1.respond_transaction(tx2)
 
         sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -512,7 +512,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(bundle)
         )
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(
             bundle.name()
@@ -548,7 +548,7 @@ class TestMempool:
         tx1: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -585,7 +585,7 @@ class TestMempool:
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
 
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -622,7 +622,7 @@ class TestMempool:
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
 
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -676,7 +676,7 @@ class TestMempool:
             full_node_protocol.RespondTransaction(spend_bundle1)
         )
 
-        await full_node_1.respond_transaction(tx1, None)
+        await full_node_1.respond_transaction(tx1)
 
         mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle1.name()
@@ -713,7 +713,7 @@ class TestMempool:
             full_node_protocol.RespondTransaction(spend_bundle_combined)
         )
 
-        await full_node_1.respond_transaction(tx, None)
+        await full_node_1.respond_transaction(tx)
 
         sb = full_node_1.full_node.mempool_manager.get_spendbundle(
             spend_bundle_combined.name()
@@ -763,7 +763,7 @@ class TestMempool:
         tx: full_node_protocol.RespondTransaction = (
             full_node_protocol.RespondTransaction(spend_bundle)
         )
-        await full_node_1.respond_transaction(tx, None)
+        await full_node_1.respond_transaction(tx)
 
         sb = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle

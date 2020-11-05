@@ -41,7 +41,7 @@ class TestWalletRpc:
         )
 
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         initial_funds = sum(
             [

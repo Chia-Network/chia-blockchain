@@ -24,7 +24,7 @@ class TestRpc:
 
         for i in range(1, num_blocks):
             await full_node_1.respond_unfinished_block(
-                full_node_protocol.RespondUnfinishedBlock(blocks[i]), None
+                full_node_protocol.RespondUnfinishedBlock(blocks[i])
             )
             await full_node_1.full_node._respond_block(
                 full_node_protocol.RespondBlock(blocks[i])
