@@ -77,7 +77,9 @@ export default function FarmLatestBlockChallenges() {
   const plots = useSelector(
     (state: RootState) => state.farming_state.harvester.plots,
   );
+
   const hasPlots = !!plots && plots.length > 0;
+  const reducedLatestChallenges = latestChallenges.slice(0, 5);
 
   return (
     <Block>
@@ -107,7 +109,7 @@ export default function FarmLatestBlockChallenges() {
             </Trans>
           </Typography>
         )}
-        <Table cols={cols} rows={latestChallenges} />
+        <Table cols={cols} rows={reducedLatestChallenges} />
         <Typography variant="caption">
           <Trans id="FarmLatestBlockChallenges.subDescription">
             *Want to explore Chia’s blocks further? Check out{' '}

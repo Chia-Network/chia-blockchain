@@ -2,7 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import { useSelector } from 'react-redux';
-import { Typography, Tooltip, IconButton } from '@material-ui/core';
+import { Link, Typography, Tooltip, IconButton } from '@material-ui/core';
 import { Delete as DeleteIcon } from '@material-ui/icons';
 import {
   Flex,
@@ -95,8 +95,10 @@ export default function FarmFullNodeConnections() {
           </Typography>
           <TooltipIcon interactive>
             <Trans id="FarmFullNodeConnections.description">
-              The full node that your farmer is connected to is below. Learn
-              more
+              {'The full node that your farmer is connected to is below. '}
+              <Link target="_blank" href="https://github.com/Chia-Network/chia-blockchain/wiki/Network-Architecture">
+                Learn more
+              </Link>
             </Trans>
           </TooltipIcon>
         </Flex>

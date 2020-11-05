@@ -1,27 +1,40 @@
 import { ReactNode } from 'react';
-import createDialog from '../util/createDialog';
+import { Action } from 'redux';
+import { ThunkAction } from 'redux-thunk';
+import type { RootState } from './rootReducer';
 
-export const openDialog = (title: ReactNode, body?: ReactNode) => {
-  return {
-    type: 'DIALOG_CONTROL',
-    open: true,
-    title,
-    body,
-  };
-};
+let nextId = 1;
 
-export const closeDialog = (id: number) => {
+export function closeDialog(id: number) {
   return {
-    type: 'DIALOG_CONTROL',
-    open: false,
+    type: 'DIALOG_CLOSE',
     id,
   };
-};
+}
+
+export function openDialog(options: {
+  title?: ReactNode,
+  body?: ReactNode,
+}): ThunkAction<void, RootState, unknown, Action<Object>> {
+  return (dispatch) => {
+    const id = nextId++;
+
+    dispatch({
+      type: 'DIALOG_OPEN',
+      ...options,
+      id,
+    });
+
+    return () => {
+      return dispatch(closeDialog(id));
+    };
+  };
+}
 
 type DialogState = {
   dialogs: {
     id: number;
-    title: ReactNode;
+    title?: ReactNode;
     body?: ReactNode;
   }[];
 };
@@ -35,20 +48,22 @@ export default function dialogReducer(
   action: any,
 ): DialogState {
   switch (action.type) {
-    case 'DIALOG_CONTROL':
-      if (action.open) {
-        const { title, body } = action;
+    case 'DIALOG_OPEN':
+      const { title, body, id } = action;
 
-        return {
-          ...state,
-          dialogs: [...state.dialogs, createDialog(Date.now(), title, body)],
-        };
-      }
+      return {
+        ...state,
+        dialogs: [...state.dialogs, {
+          title,
+          body,
+          id,
+        }],
+      };
+    case 'DIALOG_CLOSE':
       return {
         ...state,
         dialogs: state.dialogs.filter((dialog) => dialog.id !== action.id),
       };
-
     default:
       return state;
   }

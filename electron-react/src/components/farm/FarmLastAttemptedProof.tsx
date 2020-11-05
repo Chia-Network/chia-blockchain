@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Card, CardContent, Typography } from '@material-ui/core';
+import { Typography } from '@material-ui/core';
 import { Flex, Table, TooltipIcon, Block } from '@chia/core';
 
 const cols = [
@@ -19,6 +19,9 @@ const cols = [
 ];
 
 export default function FarmLastAttemptedProof() {
+  const lastAttemtedProof: Object[] = []; // TODO use real data when it is available
+  const reducedLastAttemtedProof = lastAttemtedProof.slice(0, 3);
+
   return (
     <Block>
       <Flex flexDirection="column" gap={2}>
@@ -36,7 +39,7 @@ export default function FarmLastAttemptedProof() {
           </TooltipIcon>
         </Flex>
 
-        <Table cols={cols} rows={[]} />
+        <Table cols={cols} rows={reducedLastAttemtedProof} />
       </Flex>
     </Block>
   );

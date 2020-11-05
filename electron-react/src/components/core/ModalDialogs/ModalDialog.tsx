@@ -7,10 +7,11 @@ import {
   DialogActions,
   Button,
 } from '@material-ui/core';
+import { Trans } from '@lingui/macro';
 
 type Props = {
   id: number;
-  title: ReactNode;
+  title?: ReactNode;
   body?: ReactNode;
   onClose: (id: number) => void;
 };
@@ -23,25 +24,29 @@ export default function ModalDialog(props: Props) {
   }
 
   return (
-    <div>
-      <Dialog
-        onClose={handleClose}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-        open
-      >
+    <Dialog
+      onClose={handleClose}
+      aria-labelledby="alert-dialog-title"
+      aria-describedby="alert-dialog-description"
+      open
+    >
+      {title && (
         <DialogTitle id="alert-dialog-title">{title}</DialogTitle>
+      )}
+      {body && (
         <DialogContent>
           <DialogContentText id="alert-dialog-description">
             {body}
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="secondary" autoFocus>
+      )}
+      <DialogActions>
+        <Button onClick={handleClose} color="secondary" autoFocus>
+          <Trans id="ModalDialog.ok">
             Ok
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </div>
+          </Trans>
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

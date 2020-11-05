@@ -11,7 +11,7 @@ import {
 } from '@chia/core';
 import Wallets from '../wallet/Wallets';
 import FullNode from '../fullNode/FullNode';
-import Plotter from '../plotter/Plotter';
+import Plot from '../plot/Plot';
 import Farm from '../farm/Farm';
 import DashboardSideBar from './DashboardSideBar';
 import { DashboardTitleTarget } from './DashboardTitle';
@@ -88,7 +88,7 @@ export default function Dashboard() {
                 <Wallets />
               </Route>
               <Route path={`${path}/plot`}>
-                <Plotter />
+                <Plot />
               </Route>
               <Route path={`${path}/farm`}>
                 <Farm />

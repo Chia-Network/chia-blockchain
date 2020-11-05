@@ -423,11 +423,13 @@ function SendCard(props: SendCardProps) {
     }
     if (syncing) {
       dispatch(
-        openDialog(
-          <Trans id="SendCard.finishSyncingBeforeTransaction">
-            Please finish syncing before making a transaction
-          </Trans>,
-        ),
+        openDialog({
+          title: (
+            <Trans id="SendCard.finishSyncingBeforeTransaction">
+              Please finish syncing before making a transaction
+            </Trans>
+          ),
+        }),
       );
       return;
     }
@@ -440,21 +442,25 @@ function SendCard(props: SendCardProps) {
       isNaN(Number(amount_input.value))
     ) {
       dispatch(
-        openDialog(
-          <Trans id="SendCard.enterValidAmount">
-            Please enter a valid numeric amount
-          </Trans>,
-        ),
+        openDialog({
+          title: (
+            <Trans id="SendCard.enterValidAmount">
+              Please enter a valid numeric amount
+            </Trans>
+          ),
+        }),
       );
       return;
     }
     if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
       dispatch(
-        openDialog(
-          <Trans id="SendCard.enterValidFee">
-            Please enter a valid numeric fee
-          </Trans>,
-        ),
+        openDialog({
+          title: (
+            <Trans id="SendCard.enterValidFee">
+              Please enter a valid numeric fee
+            </Trans>
+          ),
+        }),
       );
       return;
     }
@@ -463,12 +469,14 @@ function SendCard(props: SendCardProps) {
 
     if (address.includes('colour')) {
       dispatch(
-        openDialog(
-          <Trans id="SendCard.enterValidAddress">
-            Error: Cannot send chia to coloured address. Please enter a chia
-            address.
-          </Trans>,
-        ),
+        openDialog({
+          title: (
+            <Trans id="SendCard.enterValidAddress">
+              Error: Cannot send chia to coloured address. Please enter a chia
+              address.
+            </Trans>
+          ),
+        }),
       );
       return;
     }

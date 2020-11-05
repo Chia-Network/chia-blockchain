@@ -5,7 +5,7 @@ type Props = {
   dialogs: {
     id: number;
     body?: ReactNode;
-    title: ReactNode;
+    title?: ReactNode;
   }[];
   onClose: (id: number) => void;
 };

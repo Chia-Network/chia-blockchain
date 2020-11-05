@@ -1,6 +1,8 @@
 import { withStyles } from '@material-ui/styles';
 import TextField from '@material-ui/core/TextField';
 
+export default TextField;
+/*
 const CssTextField = withStyles({
   root: {
     '& .MuiFormLabel-root': {
@@ -46,3 +48,4 @@ const CssTextField = withStyles({
 })(TextField);
 
 export default CssTextField;
+*/

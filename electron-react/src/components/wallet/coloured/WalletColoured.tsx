@@ -493,7 +493,9 @@ function SendCard(props: SendCardProps) {
       return;
     }
     if (syncing) {
-      dispatch(openDialog('Please finish syncing before making a transaction'));
+      dispatch(openDialog({
+        title: 'Please finish syncing before making a transaction',
+      }));
       return;
     }
     let address = address_input.value.trim();
@@ -503,11 +505,15 @@ function SendCard(props: SendCardProps) {
       !Number(amount_input.value) ||
       isNaN(Number(amount_input.value))
     ) {
-      dispatch(openDialog('Please enter a valid numeric amount'));
+      dispatch(openDialog({
+        title: 'Please enter a valid numeric amount',
+      }));
       return;
     }
     if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
-      dispatch(openDialog('Please enter a valid numeric fee'));
+      dispatch(openDialog({
+        title: 'Please enter a valid numeric fee',
+      }));
       return;
     }
 
@@ -516,9 +522,9 @@ function SendCard(props: SendCardProps) {
 
     if (address.includes('chia_addr') || address.includes('colour_desc')) {
       dispatch(
-        openDialog(
-          'Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address',
-        ),
+        openDialog({
+          title: 'Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address',
+        }),
       );
       return;
     }
@@ -527,9 +533,9 @@ function SendCard(props: SendCardProps) {
       address = address.slice(79);
       if (colour_id !== colour) {
         dispatch(
-          openDialog(
-            'Error the entered address appears to be for a different colour.',
-          ),
+          openDialog({
+            title: 'Error the entered address appears to be for a different colour.',
+          }),
         );
         return;
       }
@@ -544,9 +550,9 @@ function SendCard(props: SendCardProps) {
 
     if (fee_value !== 0) {
       dispatch(
-        openDialog(
-          'Please enter 0 fee. Positive fees not supported yet for coloured coins.',
-        ),
+        openDialog({
+          title: 'Please enter 0 fee. Positive fees not supported yet for coloured coins.',
+        }),
       );
       return;
     }

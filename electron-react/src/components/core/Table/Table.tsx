@@ -85,6 +85,7 @@ export default function Table(props: Props) {
                     minWidth={col.minWidth}
                     maxWidth={col.maxWidth}
                     width={col.width}
+                    key={colIndex}
                   >
                     {value}
                   </StyledTableCell>

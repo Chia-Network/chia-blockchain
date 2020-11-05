@@ -413,13 +413,12 @@ function CreatePlot() {
                   variant="outlined"
                   className={classes.formControl}
                 >
-                  <InputLabel>
+                  <InputLabel shrink>
                     <Trans id="CreatePlot.plotSize">Plot Size</Trans>
                   </InputLabel>
                   <Select
                     value={plotSize}
                     onChange={changePlotSize}
-                    label={<Trans id="CreatePlot.plotSize">Plot Size</Trans>}
                   >
                     {plot_size_options.map((option) => (
                       <MenuItem

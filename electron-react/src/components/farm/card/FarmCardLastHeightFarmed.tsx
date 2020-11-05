@@ -12,7 +12,6 @@ export default function FarmCardLastHeightFarmed() {
     wallets,
   ]);
 
-  console.log('wallets', wallets);
   const biggestHeight = value?.biggestHeight;
 
   return (

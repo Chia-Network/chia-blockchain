@@ -38,7 +38,7 @@ export default function FarmOverviewCards() {
         <Grid xs={12} sm={6} md={4} item>
           <FarmCardTotalNetworkSpace />
         </Grid>
-        <Grid xs={12} sm={6} md={4} item>
+        <Grid xs={12} md={4} item>
           <FarmCardExpectedTimeToWin />
         </Grid>
       </Grid>

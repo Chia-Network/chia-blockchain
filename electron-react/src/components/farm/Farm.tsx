@@ -64,12 +64,11 @@ import FarmFullNodeConnections from './FarmFullNodeConnections';
 import FarmYourHarvesterNetwork from './FarmYourHarvesterNetwork';
 import FarmLastAttemptedProof from './FarmLastAttemptedProof';
 import Accordion from '../core/Accordion/Accordion';
+import usePlots from '../../hooks/usePlots';
 
 const StyledToggleAdvancedOptions = styled(({ expanded, ...rest }) => (
-  <Box {...rest} />
+  <Typography {...rest} />
 ))`
-  color: ${({ expanded, theme }) =>
-    expanded ? '#AA271E' : theme.palette.primary.main};
   cursor: pointer;
 `;
 
@@ -746,11 +745,7 @@ async function getStatistics(wallets: Wallet[]): Promise<{
 
 export default function Farm(): JSX.Element {
   const [showAdvancedOptions, toggleShowAdvancedOptions] = useToggle(false);
-  const plots = useSelector(
-    (state: RootState) => state.farming_state.harvester.plots,
-  );
-
-  const hasPlots = !!plots && plots.length > 0;
+  const { hasPlots } = usePlots();
 
   return (
     <LayoutMain title={<Trans id="Farmer.title">Farming</Trans>}>
@@ -764,6 +759,7 @@ export default function Farm(): JSX.Element {
             <FarmLastAttemptedProof />
 
             <StyledToggleAdvancedOptions
+              variant="button"
               expanded={showAdvancedOptions}
               onClick={toggleShowAdvancedOptions}
             >
