@@ -55,5 +55,5 @@ class SubBlockRecord(Streamable):
         return self.timestamp is not None
 
     @property
-    def first_in_slot(self):
+    def first_in_sub_slot(self):
         return self.finished_challenge_slot_hashes is not None
