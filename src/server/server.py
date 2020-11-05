@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import ssl
 from asyncio import Queue
 from pathlib import Path
 from typing import Any, List, Dict, Tuple, Callable, Optional
@@ -11,8 +12,6 @@ from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload
 from src.server.ssl_context import (
     load_ssl_paths,
-    ssl_context_for_server,
-    ssl_context_for_client,
 )
 from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
@@ -22,6 +21,33 @@ from src.util.ints import uint16
 from src.util.network import create_node_id
 from src.protocols.shared_protocol import protocol_version
 import traceback
+
+
+def ssl_context_for_server(
+    private_cert_path: Path, private_key_path: Path, require_cert: bool = False
+) -> Optional[ssl.SSLContext]:
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
+    ssl_context.load_cert_chain(
+        certfile=str(private_cert_path), keyfile=str(private_key_path)
+    )
+    ssl_context.load_verify_locations(str(private_cert_path))
+    ssl_context.verify_mode = ssl.CERT_REQUIRED if require_cert else ssl.CERT_NONE
+    return ssl_context
+
+
+def ssl_context_for_client(
+    private_cert_path: Path, private_key_path: Path, auth: bool
+) -> Optional[ssl.SSLContext]:
+    ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
+    ssl_context.load_cert_chain(
+        certfile=str(private_cert_path), keyfile=str(private_key_path)
+    )
+    if auth:
+        ssl_context.verify_mode = ssl.CERT_REQUIRED
+        ssl_context.load_verify_locations(str(private_cert_path))
+    else:
+        ssl_context.verify_mode = ssl.CERT_NONE
+    return ssl_context
 
 
 class ChiaServer:
@@ -159,14 +185,14 @@ class ChiaServer:
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
+        ssl_context = ssl_context_for_client(
+            self._private_cert_path, self._private_key_path, auth
+        )
         session = None
         try:
-            ssl_context = ssl_context_for_client(
-                self._private_cert_path, self._private_key_path, auth
-            )
             timeout = aiohttp.ClientTimeout(total=10)
             session = aiohttp.ClientSession(timeout=timeout)
-            url = f"ws://{target_node.host}:{target_node.port}/ws"
+            url = f"wss://{target_node.host}:{target_node.port}/ws"
             self.log.info(f"Connecting: {url}")
             ws = await session.ws_connect(
                 url, autoclose=False, autoping=True, ssl_context=ssl_context
@@ -209,7 +235,7 @@ class ChiaServer:
         if connection.peer_node_id in self.all_connections:
             self.all_connections.pop(connection.peer_node_id)
         if connection.peer_node_id in self.full_nodes:
-            self.all_connections.pop(connection.peer_node_id)
+            self.full_nodes.pop(connection.peer_node_id)
 
     async def incoming_api_task(self):
         self.tasks = set()

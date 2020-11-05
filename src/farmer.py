@@ -95,17 +95,18 @@ class Farmer:
 
     async def _on_connect(self, peer: WSChiaConnection):
         # Sends a handshake to the harvester
-        h_msg = harvester_protocol.HarvesterHandshake(
-            self._get_public_keys(), self.pool_public_keys
-        )
-        msg = Message("harvester_handshake", h_msg)
-        await peer.send_message(msg)
+        if peer.connection_type is NodeType.HARVESTER:
+            h_msg = harvester_protocol.HarvesterHandshake(
+                self._get_public_keys(), self.pool_public_keys
+            )
+            msg = Message("harvester_handshake", h_msg)
+            await peer.send_message(msg)
 
-        if self.current_weight in self.challenges:
-            for posf in self.challenges[self.current_weight]:
-                message = harvester_protocol.NewChallenge(posf.challenge_hash)
-                msg = Message("new_challenge", message)
-                await peer.send_message(msg)
+            if self.current_weight in self.challenges:
+                for posf in self.challenges[self.current_weight]:
+                    message = harvester_protocol.NewChallenge(posf.challenge_hash)
+                    msg = Message("new_challenge", message)
+                    await peer.send_message(msg)
 
     def _set_server(self, server):
         self.server = server
