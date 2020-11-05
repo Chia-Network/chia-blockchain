@@ -240,7 +240,7 @@ async def validate_unfinished_header_block(
                 if finished_sub_slot_n == 0:
                     # No empty slots, so the starting point of VDF is the last reward block. Uses
                     # the same IPS as the previous block, since it's the same slot
-                    rc_eos_vdf_challenge: bytes32 = prev_sb.reward_infusion_output
+                    rc_eos_vdf_challenge: bytes32 = prev_sb.reward_infusion_new_challenge
                     slot_iters = calculate_slot_iters(constants, prev_sb.ips)
                     eos_vdf_iters = slot_iters - calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
                     cc_start_element: ClassgroupElement = prev_sb.challenge_vdf_output
@@ -445,7 +445,7 @@ async def validate_unfinished_header_block(
     else:
         # Start from prev block. This is when there is no new sub-slot or if there is a new slot and we overflow
         # but the prev block was is in the same slot (prev slot). This is the normal overflow case.
-        rc_vdf_challenge = prev_sb.reward_infusion_output
+        rc_vdf_challenge = prev_sb.reward_infusion_new_challenge
         sp_vdf_iters = (total_iters - required_iters) + sp_iters - prev_sb.total_iters
         cc_vdf_input = prev_sb.challenge_vdf_output
 
@@ -687,10 +687,8 @@ async def validate_finished_header_block(
 
         else:
             # Prev sb is more recent
-            rc_vdf_challenge: bytes32 = prev_sb.reward_infusion_output
-            ip_vdf_iters: uint64 = uint64(
-                header_block.reward_chain_sub_block.total_iters - prev_sb.total_iters
-            )
+            rc_vdf_challenge: bytes32 = prev_sb.reward_infusion_new_challenge
+            ip_vdf_iters: uint64 = uint64(header_block.reward_chain_sub_block.total_iters - prev_sb.total_iters)
             cc_vdf_output = prev_sb.challenge_vdf_output
             icc_vdf_output = prev_sb.infused_challenge_vdf_output
 
