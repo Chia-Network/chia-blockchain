@@ -45,7 +45,7 @@ class TestCCWallet:
         )
 
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         rl_admin: RLWallet = await RLWallet.create_rl_admin(
             wallet_node.wallet_state_manager
@@ -73,10 +73,10 @@ class TestCCWallet:
         )
 
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
 
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
 
         await time_out_assert(15, rl_user.get_confirmed_balance, 100)
         balance = await rl_user.rl_available_balance()
@@ -86,7 +86,7 @@ class TestCCWallet:
         await wallet_node_1.wallet_state_manager.main_wallet.push_transaction(tx_record)
 
         for i in range(0, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"), None)
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"\0"))
 
         balance = await rl_user.get_confirmed_balance()
         print(balance)
