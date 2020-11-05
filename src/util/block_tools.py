@@ -267,6 +267,9 @@ class BlockTools:
         difficulty: uint64 = uint64(0)
         if transaction_data_at_height is None:
             transaction_data_at_height = {}
+
+        if timestamp is None:
+            timestamp = time.time()
         if block_list is None or len(block_list) == 0:
             genesis = self.create_genesis_block(
                 constants,
@@ -901,7 +904,7 @@ class BlockTools:
         removals_root = removal_merkle_set.get_root()
 
         generator_hash = transactions.get_tree_hash() if transactions is not None else bytes32([0] * 32)
-        filter_hash = std_hash(encoded)
+        filter_hash: bytes32 = std_hash(encoded)
 
         pool_target = PoolTarget(pool_ph, uint32(height))
         pool_target_signature = self.get_pool_key_signature(pool_target, reward_sub_block.proof_of_space.pool_public_key)
@@ -916,24 +919,19 @@ class BlockTools:
         )
 
         foliage_sub_block_signature: G2Element = self.get_plot_signature(foliage_sub_block_data.get_hash(), reward_sub_block.proof_of_space.plot_public_key)
+
+        prev_sub_block_hash: bytes32 = constants.GENESIS_PREV_HASH
         if height != 0:
-            prev_sub_block_hash = prev_sub_block.get_hash()
-        else:
-            prev_sub_block_hash = constants.GENESIS_PREV_HASH
+            prev_sub_block_hash = prev_sub_block.header_hash
 
         if is_transaction:
-            if height != 0:
-                prev_hash: Optional[bytes32] = self.latest_block.header_hash
-            else:
-                prev_hash = constants.GENESIS_PREV_HASH
-
             if aggsig is None:
                 aggsig = G2Element.infinity()
             # TODO: prev generators root
             transactions_info = TransactionsInfo(bytes([0] * 32), generator_hash, aggsig, fees, cost, reward_claims_incorporated)
 
             foliage_block = FoliageBlock(
-                prev_hash,
+                prev_sub_block_hash,
                 timestamp,
                 filter_hash,
                 additions_root,
