@@ -129,6 +129,7 @@ class FullNodeStore:
         return None
 
     def get_sub_slot(self, challenge_hash: bytes32) -> Optional[EndOfSubSlotBundle]:
+        pass
 
     def new_finished_sub_slot(self, eos: EndOfSubSlotBundle):
         """
