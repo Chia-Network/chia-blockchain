@@ -30,7 +30,7 @@ class FullNodeStore:
 
     # Finished slots and sps from the peak's slot onwards
     # We store all 32 SPs for each slot, starting as 32 Nones and filling them as we go
-    finished_slots: List[Tuple[EndOfSubSlotBundle, SPs]]
+    finished_sub_slots: List[Tuple[EndOfSubSlotBundle, SPs, SPs]]
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):
@@ -114,29 +114,58 @@ class FullNodeStore:
     def clear_slots(self):
         self.finished_sub_slots.clear()
 
-    def new_finished_slot(self, eos: EndOfSubSlotBundle):
+    def have_sub_slot(self, challenge_hash: bytes32, index: uint8) -> bool:
+        for sub_slot, sps in self.finished_sub_slots:
+            if sub_slot.challenge_chain.get_hash() == challenge_hash:
+                if index == 0:
+                    return True
+                return sps[index] is not None
+        return False
+
+    def get_sub_slot(self, challenge_hash: bytes32) -> Optional[EndOfSubSlotBundle]:
+        for sub_slot, sps in self.finished_sub_slots:
+            if sub_slot.challenge_chain.get_hash() == challenge_hash:
+                return sub_slot
+        return None
+
+    def get_sub_slot(self, challenge_hash: bytes32) -> Optional[EndOfSubSlotBundle]:
+
+    def new_finished_sub_slot(self, eos: EndOfSubSlotBundle):
         """
         Returns true if finished slot successfully added
         """
+        # First one is the challenge itself and will stay as None
         sps = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
         if len(self.finished_sub_slots) == 0:
             self.finished_sub_slots.append((eos, sps))
             return True
         if eos.challenge_chain.proof_of_space.challenge_hash != self.finished_sub_slots[-1][0].get_hash():
             # This slot does not append to our next slot
+            # This prevent other peers from appending fake VDFs to our cache
             return False
         self.finished_sub_slots.append((eos, sps))
         return True
 
-    def new_sp(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof) -> bool:
+    def new_signage_point(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof) -> bool:
         """
         Returns true if sp successfully added
         """
-        for cs, reward, proofs, sps in self.finished_sub_slots:
-            if cs.get_hash() == challenge_hash:
+        assert 0 < index < self.constants.NUM_CHECKPOINTS_PER_SLOT
+        for sub_slot, sps in self.finished_sub_slots:
+            if sub_slot.challenge_chain.get_hash() == challenge_hash:
                 sps[index] = (vdf_info, proof)
                 return True
         return False
+
+    def remove_sub_slot(self, old_challenge_hash: bytes32):
+        new_sub_slots = []
+        for index, (sub_slot, sps) in enumerate(self.finished_sub_slots):
+            if sub_slot.challenge_chain.get_hash() != old_challenge_hash:
+                new_sub_slots.append((sub_slot, sps))
+            else:
+                # Force removal from the front, to ensure we are always clearing the cache
+                assert index == 0
+        self.finished_sub_slots = new_sub_slots
 
     # TODO(mariano)
     # def add_proof_of_time_heights(self, challenge_iters: Tuple[bytes32, uint64], height: uint32) -> None:
