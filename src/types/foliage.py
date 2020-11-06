@@ -25,7 +25,7 @@ class TransactionsInfo(Streamable):
 @streamable
 class FoliageBlock(Streamable):
     # Information that goes along with each transaction block that is relevant for light clients
-    prev_sub_block_hash: bytes32
+    prev_block_hash: bytes32
     timestamp: uint64
     filter_hash: bytes32
     additions_root: bytes32
