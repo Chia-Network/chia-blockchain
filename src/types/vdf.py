@@ -35,7 +35,7 @@ class VDFProof(Streamable):
         If target_vdf_info is passed in, it is compared with info.
         """
         if target_vdf_info is not None and info != target_vdf_info:
-            print(f"INVALID VDF INFO {target_vdf_info} {info}")
+            print(f"INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
             return False
         if self.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
             print(f"WITNESS SIZE TO BIG {constants.MAX_VDF_WITNESS_SIZE}")
