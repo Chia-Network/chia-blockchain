@@ -241,7 +241,6 @@ class Blockchain:
 
         # Always add the block to the database
         await self.block_store.add_block(block, sub_block)
-        self.sub_blocks[sub_block.header_hash] = sub_block
 
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
@@ -265,6 +264,7 @@ class Blockchain:
             assert block is not None
             await self.coin_store.new_block(block)
             self.height_to_hash[uint32(0)] = block.header_hash
+            self.sub_blocks[block.header_hash] = sub_block
             self.peak_height = uint32(0)
             return uint32(0)
 
@@ -339,7 +339,9 @@ class Blockchain:
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
         return get_next_slot_iters(header_hash, self.sub_blocks, self.constants, self.height_to_hash, new_slot)
 
-    async def pre_validate_blocks_mulpeakrocessing(self, blocks: List[FullBlock]) -> List[Tuple[bool, Optional[bytes32]]]:
+    async def pre_validate_blocks_mulpeakrocessing(
+        self, blocks: List[FullBlock]
+    ) -> List[Tuple[bool, Optional[bytes32]]]:
         # TODO(mariano): review
         # futures = []
         # # Pool of workers to validate blocks concurrently
@@ -415,7 +417,12 @@ class Blockchain:
         # 1. For non block sub-blocks, foliage block, transaction filter, transactions info, and generator must be empty
         # If it is a sub block but not a block, there is no body to validate. Check that all fields are None
         if block.foliage_sub_block.foliage_block_hash is None:
-            if block.foliage_block is not None or block.transactions_filter is not None or block.transactions_info is not None or block.transactions_generator is not None:
+            if (
+                block.foliage_block is not None
+                or block.transactions_filter is not None
+                or block.transactions_info is not None
+                or block.transactions_generator is not None
+            ):
                 return Err.NOT_BLOCK_BUT_HAS_DATA
             return None  # This means the sub-block is valid
 
@@ -476,7 +483,9 @@ class Blockchain:
 
         if block.transactions_generator is not None:
             # Get List of names removed, puzzles hashes for removed coins and conditions crated
-            error, npc_list, cost = calculate_cost_of_program(block.transactions_generator, self.constants.CLVM_COST_RATIO_CONSTANT)
+            error, npc_list, cost = calculate_cost_of_program(
+                block.transactions_generator, self.constants.CLVM_COST_RATIO_CONSTANT
+            )
 
             # 8. Check that cost <= MAX_BLOCK_COST_CLVM
             if cost > self.constants.MAX_BLOCK_COST_CLVM:
@@ -544,7 +553,9 @@ class Blockchain:
         if self.get_peak() is None or block.height == 0:
             fork_h: int = -1
         else:
-            fork_h: int = find_fork_point_in_chain(self.sub_blocks, self.get_peak(), self.sub_blocks[block.prev_header_hash])
+            fork_h: int = find_fork_point_in_chain(
+                self.sub_blocks, self.get_peak(), self.sub_blocks[block.prev_header_hash]
+            )
 
         # Get additions and removals since (after) fork_h but not including this block
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
@@ -688,7 +699,9 @@ class Blockchain:
                 return Err.BAD_AGGREGATE_SIGNATURE
         else:
             # noinspection PyTypeChecker
-            validates = AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature)
+            validates = AugSchemeMPL.aggregate_verify(
+                pairs_pks, pairs_msgs, block.transactions_info.aggregated_signature
+            )
             if not validates:
                 return Err.BAD_AGGREGATE_SIGNATURE
 
