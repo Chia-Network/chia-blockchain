@@ -92,14 +92,12 @@ class TestGenesisBlock:
 class TestAddingMoreBlocks:
     @pytest.mark.asyncio
     async def test_non_genesis(self, empty_blockchain):
-        blks = bt.get_consecutive_blocks(test_constants, 2, force_overflow=False, force_empty_slots=0)
-        result, err, _ = await empty_blockchain.receive_block(blks[0], False)
-        assert err is None
-        assert result == ReceiveBlockResult.NEW_PEAK
-        result, err, _ = await empty_blockchain.receive_block(blks[1], False)
-        assert err is None
-        assert result == ReceiveBlockResult.NEW_PEAK
-        assert empty_blockchain.get_peak().height == 1
+        blocks = bt.get_consecutive_blocks(test_constants, 3, force_overflow=False, force_empty_slots=0)
+        for block in blocks:
+            result, err, _ = await empty_blockchain.receive_block(block)
+            assert err is None
+            assert result == ReceiveBlockResult.NEW_PEAK
+        assert empty_blockchain.get_peak().height == len(blocks) - 1
 
 
 #
