@@ -704,7 +704,6 @@ async def validate_finished_header_block(
     ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
 
     # RC vdf challenge is taken from more recent of (slot start, prev_block)
-    icc_vdf_output = ClassgroupElement.get_default_element()
     if genesis_block:
         cc_vdf_output = ClassgroupElement.get_default_element()
         ip_vdf_iters = ip_iters
@@ -724,7 +723,6 @@ async def validate_finished_header_block(
             rc_vdf_challenge: bytes32 = prev_sb.reward_infusion_new_challenge
             ip_vdf_iters: uint64 = uint64(header_block.reward_chain_sub_block.total_iters - prev_sb.total_iters)
             cc_vdf_output = prev_sb.challenge_vdf_output
-            icc_vdf_output = prev_sb.infused_challenge_vdf_output
 
     # 26. Check challenge chain infusion point VDF
     if new_slot:
@@ -785,15 +783,26 @@ async def validate_finished_header_block(
                 return None, Err.INVALID_ICC_VDF
             if new_slot:
                 icc_vdf_challenge: bytes32 = header_block.finished_sub_slots[-1].infused_challenge_chain.get_hash()
+                icc_vdf_input = ClassgroupElement.get_default_element()
             else:
+                if prev_sb.is_challenge_sub_block(constants):
+                    icc_vdf_input = ClassgroupElement.get_default_element()
+                else:
+                    icc_vdf_input = prev_sb.infused_challenge_vdf_output
                 curr = prev_sb
-                while curr.finished_infused_challenge_slot_hashes is None:
+                while curr.finished_infused_challenge_slot_hashes is None and not curr.is_challenge_sub_block(
+                    constants
+                ):
                     curr = sub_blocks[curr.prev_hash]
-                icc_vdf_challenge: bytes32 = curr.finished_infused_challenge_slot_hashes[-1]
+
+                if curr.is_challenge_sub_block(constants):
+                    icc_vdf_challenge: bytes32 = curr.challenge_block_info_hash
+                else:
+                    icc_vdf_challenge: bytes32 = curr.finished_infused_challenge_slot_hashes[-1]
 
             icc_target_vdf_info = VDFInfo(
                 icc_vdf_challenge,
-                icc_vdf_output,
+                icc_vdf_input,
                 ip_vdf_iters,
                 header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf.output,
             )

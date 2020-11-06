@@ -1,22 +1,24 @@
 from typing import Dict, Any
 
+from src.full_node.sub_block_record import SubBlockRecord
 
-def find_fork_point_in_chain(hash_to_block: Dict, block_1: Any, block_2: Any) -> int:
-    """Tries to find height where new chain (block_2) diverged from block_1 (assuming prev blocks
+
+def find_fork_point_in_chain(hash_to_block: Dict, sub_block_1: SubBlockRecord, sub_block_2: SubBlockRecord) -> int:
+    """Tries to find height where new chain (sub_block_2) diverged from sub_block_1 (assuming prev blocks
     are all included in chain)
     Returns -1 if chains have no common ancestor
     """
-    while block_2.height > 0 or block_1.height > 0:
-        if block_2.height > block_1.height:
-            block_2 = hash_to_block[block_2.prev_header_hash]
-        elif block_1.height > block_2.height:
-            block_1 = hash_to_block[block_1.prev_header_hash]
+    while sub_block_2.height > 0 or sub_block_1.height > 0:
+        if sub_block_2.height > sub_block_1.height:
+            sub_block_2 = hash_to_block[sub_block_2.prev_hash]
+        elif sub_block_1.height > sub_block_2.height:
+            sub_block_1 = hash_to_block[sub_block_1.prev_hash]
         else:
-            if block_2.header_hash == block_1.header_hash:
-                return block_2.height
-            block_2 = hash_to_block[block_2.prev_header_hash]
-            block_1 = hash_to_block[block_1.prev_header_hash]
-    if block_2 != block_1:
+            if sub_block_2.header_hash == sub_block_1.header_hash:
+                return sub_block_2.height
+            sub_block_2 = hash_to_block[sub_block_2.prev_hash]
+            sub_block_1 = hash_to_block[sub_block_1.prev_hash]
+    if sub_block_2 != sub_block_1:
         # All blocks are different
         return -1
 
