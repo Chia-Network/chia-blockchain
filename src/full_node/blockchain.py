@@ -313,6 +313,7 @@ class Blockchain:
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(sub_block.header_hash)
+            self.peak_height = sub_block.height
             return uint32(min(fork_h, 0))
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
@@ -419,7 +420,6 @@ class Blockchain:
         if block.foliage_sub_block.foliage_block_hash is None:
             if (
                 block.foliage_block is not None
-                or block.transactions_filter is not None
                 or block.transactions_info is not None
                 or block.transactions_generator is not None
             ):
