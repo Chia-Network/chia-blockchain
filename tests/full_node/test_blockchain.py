@@ -52,10 +52,12 @@ class TestGenesisBlock:
 
     @pytest.mark.asyncio
     async def test_non_overflow_genesis(self, empty_blockchain):
+        assert empty_blockchain.get_peak() is None
         genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
+        assert empty_blockchain.get_peak().height == 0
 
     @pytest.mark.asyncio
     async def test_overflow_genesis(self, empty_blockchain):
@@ -97,6 +99,7 @@ class TestAddingMoreBlocks:
         result, err, _ = await empty_blockchain.receive_block(blks[1], False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
+        assert empty_blockchain.get_peak().height == 1
 
 
 #
