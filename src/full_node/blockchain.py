@@ -471,11 +471,25 @@ class Blockchain:
         expected_reward_coins.add(pool_coin)
         expected_reward_coins.add(farmer_coin)
 
+        if block.height > 0:
+            # Add reward claims for all sub-blocks since the last block
+            curr_sb = self.sub_blocks[block.prev_header_hash]
+            while not curr_sb.is_block:
+                expected_reward_coins.add(
+                    create_pool_coin(curr_sb.height, curr_sb.pool_puzzle_hash, calculate_pool_reward(curr_sb.height))
+                )
+                expected_reward_coins.add(
+                    create_farmer_coin(
+                        curr_sb.height, curr_sb.farmer_puzzle_hash, calculate_base_farmer_reward(curr_sb.height)
+                    )
+                )
+                curr_sb = self.sub_blocks[curr_sb.prev_hash]
+
         if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
             return Err.INVALID_REWARD_COINS
 
         removals: List[bytes32] = []
-        coinbase_additions: List[Coin] = [farmer_coin, pool_coin]
+        coinbase_additions: List[Coin] = list(expected_reward_coins)
         additions: List[Coin] = []
         npc_list: List[NPC] = []
         removals_puzzle_dic: Dict[bytes32, bytes32] = {}

@@ -207,6 +207,7 @@ class BlockTools:
         num_blocks: int,
         block_list: List[FullBlock] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
+        pool_reward_puzzle_hash: Optional[bytes32] = None,
         fees: uint64 = uint64(0),
         transaction_data_at_height: Dict[int, Tuple[Program, G2Element]] = None,
         seed: bytes = b"",
@@ -301,6 +302,7 @@ class BlockTools:
                         slot_rc_challenge,
                         difficulty,
                         farmer_reward_puzzle_hash,
+                        pool_reward_puzzle_hash,
                         fees,
                         timestamp,
                         seed,
@@ -476,6 +478,7 @@ class BlockTools:
         slot_rc_challenge: bytes32,
         difficulty: uint64,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
+        pool_reward_puzzle_hash: Optional[bytes32] = None,
         fees: uint64 = uint64(0),
         timestamp: Optional[uint64] = None,
         seed: bytes32 = b"",
@@ -575,10 +578,6 @@ class BlockTools:
         )
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
-        pool_coin = create_pool_coin(
-            uint32(0), constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, calculate_pool_reward(uint32(0))
-        )
-        farmer_coin = create_farmer_coin(uint32(0), farmer_reward_puzzle_hash, calculate_base_farmer_reward(uint32(0)))
 
         foliage_sub_block, foliage_block, transactions_info = self.create_foliage(
             constants,
@@ -586,13 +585,13 @@ class BlockTools:
             fees,
             None,
             None,
-            [pool_coin, farmer_coin],
             prev_sub_block,
             prev_block,
+            sub_blocks,
             is_block,
             timestamp,
             farmer_reward_puzzle_hash,
-            constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
+            pool_reward_puzzle_hash,
             seed,
         )
 
@@ -658,6 +657,7 @@ class BlockTools:
                     rc_challenge,
                     uint64(constants.DIFFICULTY_STARTING),
                     farmer_reward_puzzle_hash,
+                    constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
                     fees,
                     timestamp,
                     seed,
@@ -750,9 +750,9 @@ class BlockTools:
         fees: uint64,
         aggsig: Optional[G2Element],
         transactions: Optional[Program],
-        reward_claims_incorporated: Optional[List[Coin]],
-        prev_sub_block: Optional[FullBlock],
-        prev_block: Optional[FullBlock],
+        prev_sub_block: Optional[SubBlockRecord],
+        prev_block: Optional[SubBlockRecord],
+        sub_blocks: Dict[bytes32, SubBlockRecord],
         is_block: bool,
         timestamp: uint64,
         farmer_reward_puzzlehash: bytes32 = None,
@@ -764,23 +764,6 @@ class BlockTools:
         extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
         height = reward_sub_block.sub_block_height
         cost: uint64 = uint64(0)
-
-        farmer_reward: uint64 = uint64(block_rewards.calculate_base_farmer_reward(height) + fees)
-        pool_reward: uint64 = uint64(block_rewards.calculate_pool_reward(height))
-
-        # Create filter
-        byte_array_tx: List[bytes32] = []
-        tx_additions: List[Coin] = []
-        tx_removals: List[bytes32] = []
-        if is_block and transactions:
-            error, npc_list, _ = get_name_puzzle_conditions(transactions)
-            additions: List[Coin] = additions_for_npc(npc_list)
-            for coin in additions:
-                tx_additions.append(coin)
-                byte_array_tx.append(bytearray(coin.puzzle_hash))
-            for npc in npc_list:
-                tx_removals.append(npc.coin_name)
-                byte_array_tx.append(bytearray(npc.coin_name))
         farmer_ph = self.farmer_ph
         pool_ph = self.pool_ph
         if farmer_reward_puzzlehash is not None:
@@ -788,40 +771,10 @@ class BlockTools:
         if pool_reward_puzzlehash is not None:
             pool_ph = pool_reward_puzzlehash
 
-        byte_array_tx.append(bytearray(farmer_ph))
-        byte_array_tx.append(bytearray(pool_ph))
-        bip158: PyBIP158 = PyBIP158(byte_array_tx)
-        encoded = bytes(bip158.GetEncoded())
-
-        removal_merkle_set = MerkleSet()
-        addition_merkle_set = MerkleSet()
-
-        # Create removal Merkle set
-        for coin_name in tx_removals:
-            removal_merkle_set.add_already_hashed(coin_name)
-
-        # Create addition Merkle set
-        puzzlehash_coin_map: Dict[bytes32, List[Coin]] = {}
-
-        pool_coin = create_pool_coin(height, pool_ph, pool_reward)
-        farmer_coin = create_farmer_coin(height, farmer_ph, farmer_reward)
-
-        for coin in tx_additions + [pool_coin, farmer_coin]:
-            if coin.puzzle_hash in puzzlehash_coin_map:
-                puzzlehash_coin_map[coin.puzzle_hash].append(coin)
-            else:
-                puzzlehash_coin_map[coin.puzzle_hash] = [coin]
-
-        # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-        for puzzle, coins in puzzlehash_coin_map.items():
-            addition_merkle_set.add_already_hashed(puzzle)
-            addition_merkle_set.add_already_hashed(hash_coin_list(coins))
-
-        additions_root = addition_merkle_set.get_root()
-        removals_root = removal_merkle_set.get_root()
-
-        generator_hash = transactions.get_tree_hash() if transactions is not None else bytes32([0] * 32)
-        filter_hash: bytes32 = std_hash(encoded)
+        # Create filter
+        byte_array_tx: List[bytes32] = []
+        tx_additions: List[Coin] = []
+        tx_removals: List[bytes32] = []
 
         pool_target = PoolTarget(pool_ph, uint32(height))
         pool_target_signature = self.get_pool_key_signature(
@@ -849,6 +802,62 @@ class BlockTools:
             if aggsig is None:
                 aggsig = G2Element.infinity()
             # TODO: prev generators root
+            pool_coin = create_pool_coin(height, pool_ph, calculate_pool_reward(height))
+            farmer_coin = create_farmer_coin(uint32(height), farmer_ph, calculate_base_farmer_reward(uint32(height)))
+            reward_claims_incorporated = [pool_coin, farmer_coin]
+            if height > 0:
+                curr: SubBlockRecord = prev_sub_block
+                while not curr.is_block:
+                    pool_coin = create_pool_coin(curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height))
+                    farmer_coin = create_farmer_coin(
+                        curr.height, curr.farmer_puzzle_hash, calculate_base_farmer_reward(curr.height)
+                    )
+                    reward_claims_incorporated += [pool_coin, farmer_coin]
+                    curr = sub_blocks[curr.prev_hash]
+            additions: List[Coin] = reward_claims_incorporated
+            npc_list = []
+            if transactions is not None:
+                error, npc_list, _ = get_name_puzzle_conditions(transactions)
+                additions += additions_for_npc(npc_list)
+            for coin in additions:
+                tx_additions.append(coin)
+                byte_array_tx.append(bytearray(coin.puzzle_hash))
+            for npc in npc_list:
+                tx_removals.append(npc.coin_name)
+                byte_array_tx.append(bytearray(npc.coin_name))
+
+            byte_array_tx.append(bytearray(farmer_ph))
+            byte_array_tx.append(bytearray(pool_ph))
+            bip158: PyBIP158 = PyBIP158(byte_array_tx)
+            encoded = bytes(bip158.GetEncoded())
+
+            removal_merkle_set = MerkleSet()
+            addition_merkle_set = MerkleSet()
+
+            # Create removal Merkle set
+            for coin_name in tx_removals:
+                removal_merkle_set.add_already_hashed(coin_name)
+
+            # Create addition Merkle set
+            puzzlehash_coin_map: Dict[bytes32, List[Coin]] = {}
+
+            for coin in tx_additions:
+                if coin.puzzle_hash in puzzlehash_coin_map:
+                    puzzlehash_coin_map[coin.puzzle_hash].append(coin)
+                else:
+                    puzzlehash_coin_map[coin.puzzle_hash] = [coin]
+
+            # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+            for puzzle, coins in puzzlehash_coin_map.items():
+                addition_merkle_set.add_already_hashed(puzzle)
+                addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+
+            additions_root = addition_merkle_set.get_root()
+            removals_root = removal_merkle_set.get_root()
+
+            generator_hash = transactions.get_tree_hash() if transactions is not None else bytes32([0] * 32)
+            filter_hash: bytes32 = std_hash(encoded)
+
             transactions_info = TransactionsInfo(
                 bytes([0] * 32), generator_hash, aggsig, fees, cost, reward_claims_incorporated
             )
@@ -1101,13 +1110,15 @@ def get_icc(
     else:
         if len(finished_sub_slots) == 0:
             curr = latest_sub_block  # curr deficit is 0, 1, 2, 3, or 4
-            while curr.deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1 and not curr.first_in_sub_slot:
+            while not curr.is_challenge_sub_block(constants) and not curr.first_in_sub_slot:
                 curr = sub_blocks[curr.prev_hash]
             icc_iters = uint64(vdf_end_total_iters - latest_sub_block.total_iters)
-            icc_input = latest_sub_block.infused_challenge_vdf_output
-            if curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:  # Deficit 4
-                icc_challenge_hash = curr.challenge_block_info_hash
+            if latest_sub_block.is_challenge_sub_block(constants):
                 icc_input = ClassgroupElement.get_default_element()
+            else:
+                icc_input = latest_sub_block.infused_challenge_vdf_output
+            if curr.is_challenge_sub_block(constants):  # Deficit 4
+                icc_challenge_hash = curr.challenge_block_info_hash
             else:
                 # First sub block in sub slot has deficit 0,1,2 or 3
                 icc_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
