@@ -40,13 +40,15 @@ def full_block_to_sub_block_record(
 
     overflow = is_overflow_sub_block(constants, ips, required_iters)
     deficit = calculate_deficit(constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
-    prev_block_hash = block.foliage_block.prev_sub_block_hash if block.foliage_block is not None else None
+    prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
     timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
     if len(block.finished_sub_slots) > 0:
         finished_challenge_slot_hashes = [sub_slot.challenge_chain.get_hash() for sub_slot in block.finished_sub_slots]
         finished_reward_slot_hashes = [sub_slot.reward_chain.get_hash() for sub_slot in block.finished_sub_slots]
         finished_infused_challenge_slot_hashes = [
-            sub_slot.infused_challenge_chain.get_hash() for sub_slot in block.finished_sub_slots if sub_slot.infused_challenge_chain is not None
+            sub_slot.infused_challenge_chain.get_hash()
+            for sub_slot in block.finished_sub_slots
+            if sub_slot.infused_challenge_chain is not None
         ]
     else:
         finished_challenge_slot_hashes = None
