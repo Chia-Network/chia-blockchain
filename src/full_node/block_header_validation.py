@@ -387,7 +387,6 @@ async def validate_unfinished_header_block(
             while len(reversed_challenge_hashes) < challenges_to_look_for:
                 if curr.first_in_sub_slot:
                     reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
-                # todo somthing here is wrong
                 if curr.height == 0:
                     break
                 curr = sub_blocks[curr.prev_hash]
@@ -452,13 +451,39 @@ async def validate_unfinished_header_block(
         sp_vdf_iters = sp_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
     else:
-        # Start from prev block. This is when there is no new sub-slot or if there is a new slot and we overflow
-        # but the prev block was is in the same slot (prev slot). This is the normal overflow case.
-        rc_vdf_challenge = prev_sb.reward_infusion_new_challenge
-        sp_vdf_iters = (total_iters - required_iters) + sp_iters - prev_sb.total_iters
-        cc_vdf_input = prev_sb.challenge_vdf_output
+        if new_sub_slot and overflow:
+            num_sub_slots_to_look_for = 1  # Starting at prev will skip 1 sub-slot
+        elif not new_sub_slot and overflow:
+            num_sub_slots_to_look_for = 2  # Starting at prev does not skip any sub slots
+        elif not new_sub_slot and not overflow:
+            num_sub_slots_to_look_for = 1  # Starting at prev does not skip any sub slots, but we should not go back
+        else:
+            assert False
+        sp_total_iters = total_iters - ip_iters + sp_iters
+        if overflow:
+            sp_total_iters -= slot_iters
 
         curr: SubBlockRecord = prev_sb
+        # Finds a sub-block which is BEFORE our signage point, otherwise goes back to the end of sub-slot
+        # Note that for overflow sub-blocks, we are looking at the end of the previous sub-slot
+        while num_sub_slots_to_look_for > 0:
+            if curr.first_in_sub_slot:
+                num_sub_slots_to_look_for -= 1
+            if curr.total_iters < sp_total_iters:
+                break
+            if curr.height == 0:
+                break
+            curr = sub_blocks[curr.prev_hash]
+
+        if curr.total_iters < sp_total_iters:
+            sp_vdf_iters = sp_total_iters - curr.total_iters
+            cc_vdf_input = curr.challenge_vdf_output
+            rc_vdf_challenge = curr.reward_infusion_new_challenge
+        else:
+            sp_vdf_iters = sp_iters
+            cc_vdf_input = ClassgroupElement.get_default_element()
+            rc_vdf_challenge = curr.finished_reward_slot_hashes[-1]
+
         while not curr.first_in_sub_slot:
             curr = sub_blocks[curr.prev_hash]
         cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]

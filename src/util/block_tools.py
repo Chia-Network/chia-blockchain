@@ -78,35 +78,6 @@ from src.wallet.derive_keys import (
 from tests.recursive_replace import recursive_replace
 
 
-def get_challenges(
-    sub_blocks: Dict[uint32, SubBlockRecord],
-    finished_sub_slots: List[EndOfSubSlotBundle],
-    prev_header_hash: bytes32,
-):
-    if len(finished_sub_slots) == 0:
-        curr = sub_blocks[prev_header_hash]
-        while True:
-            curr = sub_blocks[curr.header_hash]
-            if curr.first_in_sub_slot:
-                break
-        cc_challenge = curr.finished_challenge_slot_hashes[-1]
-        rc_challenge = curr.finished_challenge_slot_hashes[-1]
-    else:
-        cc_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
-        rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
-    return cc_challenge, rc_challenge
-
-
-def get_genesis_challenges(constants, finished_sub_slots):
-    if len(finished_sub_slots) == 0:
-        challenge = constants.FIRST_CC_CHALLENGE
-        rc_challenge = constants.FIRST_RC_CHALLENGE
-    else:
-        challenge = finished_sub_slots[-1].challenge_chain.get_hash()
-        rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
-    return challenge, rc_challenge
-
-
 class BlockTools:
     """
     Tools to generate blocks for testing.
@@ -280,13 +251,7 @@ class BlockTools:
         curr = latest_sub_block
         while not curr.first_in_sub_slot:
             curr = sub_blocks[curr.prev_hash]
-        if curr.height == 0:
-            if len(curr.finished_challenge_slot_hashes) > 0:
-                curr_challenge: bytes32 = curr.finished_challenge_slot_hashes[-1]
-            else:
-                curr_challenge: bytes32 = constants.FIRST_CC_CHALLENGE
-        else:
-            curr_challenge: bytes32 = curr.finished_challenge_slot_hashes[-1]
+        curr_challenge: bytes32 = curr.finished_challenge_slot_hashes[-1]
 
         finished_sub_slots: List[EndOfSubSlotBundle] = []  # Sub-slots since last sub block
         ips: uint64 = latest_sub_block.ips
@@ -334,7 +299,7 @@ class BlockTools:
                         proof_of_space,
                         slot_cc_challenge,
                         slot_rc_challenge,
-                        latest_sub_block.height + 1,
+                        difficulty,
                         farmer_reward_puzzle_hash,
                         fees,
                         timestamp,
@@ -495,9 +460,6 @@ class BlockTools:
                     curr_epoch = curr_epoch + 1
                 overflow_count = uint8(0)
 
-                # For block in overflows:
-                #     Process the block
-                #     If reached our block count, return
             num_empty_slots_added += 1
             same_slot_as_last = False
             sub_slot_start_total_iters += slot_iters
@@ -512,7 +474,7 @@ class BlockTools:
         proof_of_space: ProofOfSpace,
         slot_cc_challenge: bytes32,
         slot_rc_challenge: bytes32,
-        height: uint32,
+        difficulty: uint64,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         fees: uint64 = uint64(0),
         timestamp: Optional[uint64] = None,
@@ -530,11 +492,21 @@ class BlockTools:
         total_iters_sp = sub_slot_start_total_iters + sp_iters
         prev_block: Optional[SubBlockRecord] = None  # Set this if we are a block
         if prev_sub_block is not None:
+            height = uint32(prev_sub_block.height + 1)
+            weight: uint128 = uint128(prev_sub_block.weight + difficulty)
             curr = prev_sub_block
             while not curr.is_block:
                 curr = sub_blocks[curr.prev_hash]
             if total_iters_sp > curr.total_iters:
                 prev_block = curr
+                is_block = True
+            else:
+                is_block = False
+        else:
+            # Genesis is a block
+            is_block = True
+            height = uint32(0)
+            weight: uint128 = uint128(constants.DIFFICULTY_STARTING)
 
         if sp_iters == 0:
             cc_sp_vdf: Optional[VDFInfo] = None
@@ -592,7 +564,7 @@ class BlockTools:
         total_iters = get_total_iters(constants, ip_iters, slot_iters, prev_sub_block, finished_sub_slots, overflow)
 
         rc_sub_block = RewardChainSubBlockUnfinished(
-            uint128(constants.DIFFICULTY_STARTING),
+            weight,
             height,
             total_iters,
             proof_of_space,
@@ -617,6 +589,7 @@ class BlockTools:
             [pool_coin, farmer_coin],
             prev_sub_block,
             prev_block,
+            is_block,
             timestamp,
             farmer_reward_puzzle_hash,
             constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
@@ -683,7 +656,7 @@ class BlockTools:
                     proof_of_space,
                     cc_challenge,
                     rc_challenge,
-                    uint32(0),
+                    uint64(constants.DIFFICULTY_STARTING),
                     farmer_reward_puzzle_hash,
                     fees,
                     timestamp,
@@ -780,12 +753,12 @@ class BlockTools:
         reward_claims_incorporated: Optional[List[Coin]],
         prev_sub_block: Optional[FullBlock],
         prev_block: Optional[FullBlock],
+        is_block: bool,
         timestamp: uint64,
         farmer_reward_puzzlehash: bytes32 = None,
         pool_reward_puzzlehash: bytes32 = None,
         seed: bytes32 = b"",
     ) -> (FoliageSubBlock, Optional[FoliageBlock], Optional[TransactionsInfo]):
-        is_block: bool = prev_block is not None
         # Use the extension data to create different blocks based on header hash
         random.seed(seed)
         extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
@@ -879,9 +852,13 @@ class BlockTools:
             transactions_info = TransactionsInfo(
                 bytes([0] * 32), generator_hash, aggsig, fees, cost, reward_claims_incorporated
             )
+            if prev_block is None:
+                prev_block_hash: bytes32 = constants.GENESIS_PREV_HASH
+            else:
+                prev_block_hash = prev_block.header_hash
 
             foliage_block = FoliageBlock(
-                prev_block.header_hash,
+                prev_block_hash,
                 timestamp,
                 filter_hash,
                 additions_root,
@@ -949,6 +926,35 @@ class BlockTools:
                         )
                         found_proofs.append((required_iters, proof_of_space))
         return found_proofs
+
+
+def get_challenges(
+    sub_blocks: Dict[uint32, SubBlockRecord],
+    finished_sub_slots: List[EndOfSubSlotBundle],
+    prev_header_hash: bytes32,
+):
+    if len(finished_sub_slots) == 0:
+        curr = sub_blocks[prev_header_hash]
+        while True:
+            curr = sub_blocks[curr.header_hash]
+            if curr.first_in_sub_slot:
+                break
+        cc_challenge = curr.finished_challenge_slot_hashes[-1]
+        rc_challenge = curr.finished_challenge_slot_hashes[-1]
+    else:
+        cc_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
+        rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
+    return cc_challenge, rc_challenge
+
+
+def get_genesis_challenges(constants, finished_sub_slots):
+    if len(finished_sub_slots) == 0:
+        challenge = constants.FIRST_CC_CHALLENGE
+        rc_challenge = constants.FIRST_RC_CHALLENGE
+    else:
+        challenge = finished_sub_slots[-1].challenge_chain.get_hash()
+        rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
+    return challenge, rc_challenge
 
 
 def get_vdf_info_and_proof(

@@ -1,18 +1,21 @@
 import dataclasses
 
+from src.types.sized_bytes import bytes32
+from src.util.ints import uint64, uint32
+
 
 @dataclasses.dataclass(frozen=True)
 class ConsensusConstants:
-    SLOT_SUB_BLOCKS_TARGET: int
-    MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK: int
-    MAX_SLOT_SUB_BLOCKS: int
-    NUM_CHECKPOINTS_PER_SLOT: int
-    IPS_STARTING: int
+    SLOT_SUB_BLOCKS_TARGET: uint32
+    MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK: uint32
+    MAX_SLOT_SUB_BLOCKS: uint32
+    NUM_CHECKPOINTS_PER_SLOT: uint32
+    IPS_STARTING: uint64
 
-    DIFFICULTY_STARTING: int
-    DIFFICULTY_FACTOR: int
-    SUB_EPOCH_SUB_BLOCKS: int
-    EPOCH_SUB_BLOCKS: int
+    DIFFICULTY_STARTING: uint64
+    DIFFICULTY_FACTOR: uint32
+    SUB_EPOCH_SUB_BLOCKS: uint32
+    EPOCH_SUB_BLOCKS: uint32
 
     SIGNIFICANT_BITS: int  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     DISCRIMINANT_SIZE_BITS: int  # Max is 1024 (based on ClassGroupElement int size)
@@ -24,9 +27,9 @@ class ConsensusConstants:
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     FIRST_CC_CHALLENGE: bytes
     FIRST_RC_CHALLENGE: bytes
-    GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes
-    GENESIS_PREV_HASH: bytes
-    GENESIS_SES_HASH: bytes
+    GENESIS_PRE_FARM_POOL_PUZZLE_HASH: bytes32
+    GENESIS_PREV_HASH: bytes32
+    GENESIS_SES_HASH: bytes32
     MAX_VDF_WITNESS_SIZE: int
     # Target tx count per sec
     TX_PER_SEC: int
