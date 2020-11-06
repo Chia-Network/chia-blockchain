@@ -64,10 +64,10 @@ async def validate_unfinished_header_block(
         finishes_epoch: bool = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, True)
 
         if prev_sb.height != 0:
-            curr_diffculty = uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight)
+            prev_difficulty: uint64 = uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight)
         else:
             # prev block is genesis
-            curr_diffculty = uint64(prev_sb.weight)
+            prev_difficulty: uint64 = uint64(prev_sb.weight)
 
         difficulty: uint64 = get_next_difficulty(
             constants,
@@ -76,7 +76,7 @@ async def validate_unfinished_header_block(
             header_block.prev_header_hash,
             prev_sb.height,
             prev_sb.deficit,
-            curr_diffculty,
+            prev_difficulty,
             new_sub_slot,
             prev_sb.total_iters,
         )
@@ -592,13 +592,13 @@ async def validate_unfinished_header_block(
 
         # 23. Check prev block hash
         if genesis_block:
-            if header_block.foliage_block.prev_sub_block_hash != bytes([0] * 32):
+            if header_block.foliage_block.prev_block_hash != bytes([0] * 32):
                 return None, Err.INVALID_PREV_BLOCK_HASH
         else:
             curr_sb: SubBlockRecord = prev_sb
             while not curr_sb.is_block:
                 curr_sb = sub_blocks[curr_sb.prev_hash]
-            if not header_block.foliage_block.prev_sub_block_hash == curr_sb.header_hash:
+            if not header_block.foliage_block.prev_block_hash == curr_sb.header_hash:
                 return None, Err.INVALID_PREV_BLOCK_HASH
 
         # 24. The filter hash in the Foliage Block must be the hash of the filter
@@ -609,7 +609,7 @@ async def validate_unfinished_header_block(
         # 25. The timestamp in Foliage Block must comply with the timestamp rules
         if prev_sb is not None:
             last_timestamps: List[uint64] = []
-            curr_sb: SubBlockRecord = sub_blocks[header_block.foliage_block.prev_sub_block_hash]
+            curr_sb: SubBlockRecord = sub_blocks[header_block.foliage_block.prev_block_hash]
             while len(last_timestamps) < constants.NUMBER_OF_TIMESTAMPS:
                 last_timestamps.append(curr_sb.timestamp)
                 fetched: Optional[SubBlockRecord] = sub_blocks.get(curr_sb.prev_block_hash, None)
