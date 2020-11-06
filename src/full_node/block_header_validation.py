@@ -159,7 +159,6 @@ async def validate_unfinished_header_block(
 
                 assert (sub_slot.infused_challenge_chain is None) == (icc_challenge_hash is None)
                 if sub_slot.infused_challenge_chain is not None:
-                    print("2c")
                     # 2c. Check infused challenge chain sub-slot VDF
                     # Only validate from prev_sb to optimize
                     target_vdf_info = VDFInfo(
@@ -173,9 +172,9 @@ async def validate_unfinished_header_block(
                         input=ClassgroupElement.get_default_element(),
                         number_of_iterations=icc_iters_committed,
                     ):
-                        return None, Err.INVALID_ICC_VDF
+                        return None, Err.INVALID_ICC_EOS_VDF
                     if not sub_slot.proofs.challenge_chain_slot_proof.is_valid(constants, target_vdf_info, None):
-                        return None, Err.INVALID_ICC_VDF
+                        return None, Err.INVALID_ICC_EOS_VDF
 
                     # 2d. Check infused challenge sub-slot hash in challenge sub-slot
                     if sub_slot.reward_chain.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
@@ -560,7 +559,9 @@ async def validate_unfinished_header_block(
             our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - slot_iters)
         else:
             our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters)
-        if (our_sp_total_iters > curr.total_iters) != header_block.foliage_sub_block.foliage_block_hash is not None:
+        if (our_sp_total_iters > curr.total_iters) != (header_block.foliage_sub_block.foliage_block_hash is not None):
+            a = our_sp_total_iters > curr.total_iters
+            b = header_block.foliage_sub_block.foliage_block_hash is not None
             return None, Err.INVALID_IS_BLOCK
 
     # 16. Check foliage sub block signature by plot key
