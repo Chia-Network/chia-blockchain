@@ -50,6 +50,10 @@ def full_block_to_sub_block_record(
             for sub_slot in block.finished_sub_slots
             if sub_slot.infused_challenge_chain is not None
         ]
+    elif block.height == 0:
+        finished_challenge_slot_hashes = [constants.FIRST_CC_CHALLENGE]
+        finished_reward_slot_hashes = [constants.FIRST_RC_CHALLENGE]
+        finished_infused_challenge_slot_hashes = None
     else:
         finished_challenge_slot_hashes = None
         finished_reward_slot_hashes = None
