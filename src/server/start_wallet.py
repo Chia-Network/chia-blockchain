@@ -61,10 +61,18 @@ def service_kwargs_for_wallet(
 
 def main():
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    # This is simulator
+    local_test = config["testing"]
+    if local_test is True:
+        from src.simulator.simulator_constants import test_constants
+
+        constants = test_constants
+        current = config["database_path"]
+        config["database_path"] = f"{current}_simulation"
+    else:
+        constants = DEFAULT_CONSTANTS
     keychain = Keychain(testing=False)
-    kwargs = service_kwargs_for_wallet(
-        DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS, keychain
-    )
+    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants, keychain)
     return run_service(**kwargs)
 
 
