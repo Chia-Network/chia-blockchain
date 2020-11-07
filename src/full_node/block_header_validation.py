@@ -173,7 +173,9 @@ async def validate_unfinished_header_block(
                         number_of_iterations=icc_iters_committed,
                     ):
                         return None, Err.INVALID_ICC_EOS_VDF
-                    if not sub_slot.proofs.challenge_chain_slot_proof.is_valid(constants, target_vdf_info, None):
+                    if not sub_slot.proofs.infused_challenge_chain_slot_proof.is_valid(
+                        constants, target_vdf_info, None
+                    ):
                         return None, Err.INVALID_ICC_EOS_VDF
 
                     # 2d. Check infused challenge sub-slot hash in challenge sub-slot
@@ -394,6 +396,7 @@ async def validate_unfinished_header_block(
 
     # 6. Check challenge in proof of space is valid
     if challenge != header_block.reward_chain_sub_block.proof_of_space.challenge_hash:
+        print("Challenge", challenge, header_block.reward_chain_sub_block.proof_of_space, header_block.total_iters)
         return None, Err.INVALID_POSPACE_CHALLENGE
 
     if not genesis_block:
@@ -413,7 +416,6 @@ async def validate_unfinished_header_block(
         total_iters: uint128 = uint128(
             constants.IPS_STARTING * constants.SLOT_TIME_TARGET * len(header_block.finished_sub_slots)
         )
-        total_iters += ip_iters
     else:
         prev_sb_iters = calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
         if new_sub_slot:
@@ -422,11 +424,12 @@ async def validate_unfinished_header_block(
             # Add the rest of the slot of prev_sb
             total_iters += prev_sb_slot_iters - prev_sb_iters
             # Add other empty slots
-            total_iters += slot_iters * (len(header_block.finished_slot) - 1)
+            total_iters += slot_iters * (len(header_block.finished_sub_slots) - 1)
         else:
             # Slot iters is guaranteed to be the same for header_block and prev_sb
             # This takes the beginning of the slot, and adds ip_iters
-            total_iters = uint128(prev_sb.total_iters - prev_sb_iters) + ip_iters
+            total_iters = uint128(prev_sb.total_iters - prev_sb_iters)
+    total_iters += ip_iters
     if total_iters != header_block.reward_chain_sub_block.total_iters:
         return None, Err.INVALID_TOTAL_ITERS
 
@@ -566,8 +569,6 @@ async def validate_unfinished_header_block(
         else:
             our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters)
         if (our_sp_total_iters > curr.total_iters) != (header_block.foliage_sub_block.foliage_block_hash is not None):
-            a = our_sp_total_iters > curr.total_iters
-            b = header_block.foliage_sub_block.foliage_block_hash is not None
             return None, Err.INVALID_IS_BLOCK
 
     # 16. Check foliage sub block signature by plot key
@@ -788,7 +789,6 @@ async def validate_finished_header_block(
         else:
             # If we have an ICC chain, deficit must be 0, 1, 2 or 3
             if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
-                print(1)
                 return None, Err.INVALID_ICC_VDF
             if new_slot:
                 icc_vdf_challenge: bytes32 = header_block.finished_sub_slots[-1].infused_challenge_chain.get_hash()
@@ -807,6 +807,7 @@ async def validate_finished_header_block(
                 if curr.is_challenge_sub_block(constants):
                     icc_vdf_challenge: bytes32 = curr.challenge_block_info_hash
                 else:
+                    assert curr.finished_infused_challenge_slot_hashes is not None
                     icc_vdf_challenge: bytes32 = curr.finished_infused_challenge_slot_hashes[-1]
 
             icc_target_vdf_info = VDFInfo(
@@ -820,11 +821,9 @@ async def validate_finished_header_block(
                 header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf,
                 icc_target_vdf_info,
             ):
-                print(3)
                 return None, Err.INVALID_ICC_VDF
     else:
         if header_block.infused_challenge_chain_ip_proof is not None:
-            print(4)
             return None, Err.INVALID_ICC_VDF
 
     # 29. Check reward block hash
