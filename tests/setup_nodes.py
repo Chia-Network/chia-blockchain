@@ -28,7 +28,7 @@ from tests.time_out_assert import time_out_assert
 test_constants = constants.replace(
     **{
         "DIFFICULTY_STARTING": 1,
-        "DISCRIMINANT_SIZE_BITS": 16,
+        "DISCRIMINANT_SIZE_BITS": 32,
         "SUB_EPOCH_SUB_BLOCKS": 128,
         "EPOCH_SUB_BLOCKS": 512,
         "IPS_STARTING": 10 * 1,
