@@ -1,9 +1,8 @@
 import React from 'react';
-import { Trans } from '@lingui/macro';
 import { Loading, Flex } from '@chia/core';
-import { Route, Switch } from 'react-router-dom';
-import { Button, Breadcrumbs, Divider, Grid, Typography } from '@material-ui/core';
+import { Grid } from '@material-ui/core';
 import PlotHero from './PlotOverviewHero';
+import PlotOverviewPlots from './PlotOverviewPlots';
 import usePlots from '../../../hooks/usePlots';
 
 export default function PlotOverview() {
@@ -13,8 +12,8 @@ export default function PlotOverview() {
     <Flex flexDirection="column" gap={2}>
       {loading ? (
         <Loading />
-      ) : !hasPlots ? (
-        <PlotOverview />
+      ) : hasPlots ? (
+        <PlotOverviewPlots />
       ) : (
         <Grid container spacing={3}>
           <Grid xs={12} item>
