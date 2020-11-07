@@ -269,23 +269,24 @@ class BlockTools:
 
             # If did not reach empty slot counts, continue
             if num_empty_slots_added >= force_empty_slots:
+                slot_cc_challenge, slot_rc_challenge = get_challenges(
+                    sub_blocks, finished_sub_slots, latest_sub_block.header_hash
+                )
+
                 # Get all proofs of space for challenge.
                 proofs_of_space: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
                     constants,
-                    curr_challenge,
+                    slot_cc_challenge,
                     seed,
                     difficulty,
                     ips,
-                )
-
-                slot_cc_challenge, slot_rc_challenge = get_challenges(
-                    sub_blocks, finished_sub_slots, latest_sub_block.header_hash
                 )
 
                 for required_iters, proof_of_space in sorted(proofs_of_space, key=lambda t: t[0]):
                     if same_slot_as_last and required_iters <= latest_sub_block.required_iters:
                         # Ignore this sub-block because it's in the past
                         continue
+                    print(f"Looking at Pospace with ri: {required_iters}")
                     sp_iters: uint64 = calculate_sp_iters(constants, uint64(constants.IPS_STARTING), required_iters)
                     ip_iters = calculate_ip_iters(constants, uint64(constants.IPS_STARTING), required_iters)
                     is_overflow_block = sp_iters > ip_iters
@@ -378,7 +379,7 @@ class BlockTools:
                         latest_sub_block = sub_blocks[full_block.header_hash]
                         finished_sub_slots = []
                         print(
-                            f"Created block {full_block.height} is block: {full_block.is_block()} at iters {full_block.total_iters}"
+                            f"Created block {full_block.height} is block: {full_block.is_block()} at posace {proof_of_space} RI: {required_iters} iters {full_block.total_iters}"
                         )
 
                 # Finish the end of sub-slot and try again next sub-slot
@@ -418,6 +419,9 @@ class BlockTools:
                 )
                 # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
                 # in order for light clients to validate.
+                cc_vdf = VDFInfo(
+                    cc_vdf.challenge_hash, ClassgroupElement.get_default_element(), slot_iters, cc_vdf.output
+                )
                 if icc_ip_vdf is not None:
                     if len(finished_sub_slots) == 0:
                         curr = latest_sub_block
@@ -429,15 +433,17 @@ class BlockTools:
                             icc_eos_iters = slot_iters
                     else:
                         icc_eos_iters = slot_iters
-                    icc_ip_vdf = recursive_replace(icc_ip_vdf, "number_of_iterations", icc_eos_iters)
+                    icc_ip_vdf = VDFInfo(
+                        icc_ip_vdf.challenge_hash,
+                        ClassgroupElement.get_default_element(),
+                        icc_eos_iters,
+                        icc_ip_vdf.output,
+                    )
                     icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_ip_vdf)
                     cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_sub_slot.get_hash(), None, None, None)
                 else:
                     icc_sub_slot = None
                     cc_sub_slot = ChallengeChainSubSlot(cc_vdf, None, None, None, None)
-                cc_sub_slot = recursive_replace(
-                    cc_sub_slot, "challenge_chain_end_of_slot_vdf.number_of_iterations", slot_iters
-                )
 
                 finished_sub_slots.append(
                     EndOfSubSlotBundle(
