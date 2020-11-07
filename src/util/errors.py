@@ -123,7 +123,7 @@ class Err(Enum):
     INVALID_ICC_VDF = 97
     INVALID_ICC_HASH_CC = 98
     INVALID_ICC_HASH_RC = 99
-    INVALID_ICC_EOS_VDF = 97
+    INVALID_ICC_EOS_VDF = 100
 
 
 class ConsensusError(Exception):
