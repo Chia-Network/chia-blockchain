@@ -15,7 +15,7 @@ from src.util.keychain import Keychain
 from src.types.peer_info import PeerInfo
 
 # See: https://bugs.python.org/issue29288
-u"".encode("idna")
+"".encode("idna")
 
 SERVICE_NAME = "wallet"
 
