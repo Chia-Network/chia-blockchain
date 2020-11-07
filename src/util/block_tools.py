@@ -9,9 +9,10 @@ from argparse import Namespace
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
+import blspy
 from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
 from chiabip158 import PyBIP158
-from chiavdf import prove
+from chiavdf import prove, create_discriminant
 
 from src.cmds.init import create_default_chia_config, initialize_ssl
 from src.cmds.plots import create_plots
@@ -259,12 +260,12 @@ class BlockTools:
         slot_iters: uint64 = calculate_slot_iters(constants, ips)
         num_empty_slots_added = 0
         same_slot_as_last = True
+        sub_slot_start_total_iters: uint128 = uint128(0)
 
         # Start at the last block in block list
         # Get the challenge for that slot
         while True:
-            latest_ip_iters = calculate_ip_iters(constants, ips, latest_sub_block.required_iters)
-            sub_slot_start_total_iters: uint128 = uint128(latest_sub_block.total_iters - latest_ip_iters)
+            print("Starting new slot at iters", sub_slot_start_total_iters)
 
             # If did not reach empty slot counts, continue
             if num_empty_slots_added >= force_empty_slots:
@@ -334,7 +335,7 @@ class BlockTools:
                             cc_vdf_challenge,
                             new_ip_iters,
                         )
-
+                        print(f"Creating IP challenge for sub block {unfinished_block.total_iters} output {cc_ip_vdf}")
                         icc_ip_vdf, icc_ip_proof = get_icc(
                             constants,
                             unfinished_block.total_iters,
@@ -376,6 +377,9 @@ class BlockTools:
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_sub_block = sub_blocks[full_block.header_hash]
                         finished_sub_slots = []
+                        print(
+                            f"Created block {full_block.height} is block: {full_block.is_block()} at iters {full_block.total_iters}"
+                        )
 
                 # Finish the end of sub-slot and try again next sub-slot
                 # End of sub-slot logic
@@ -412,12 +416,28 @@ class BlockTools:
                     sub_blocks,
                     sub_slot_start_total_iters,
                 )
+                # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
+                # in order for light clients to validate.
                 if icc_ip_vdf is not None:
+                    if len(finished_sub_slots) == 0:
+                        curr = latest_sub_block
+                        while not curr.is_challenge_sub_block(constants) and not curr.first_in_sub_slot:
+                            curr = sub_blocks[curr.prev_hash]
+                        if curr.is_challenge_sub_block(constants):
+                            icc_eos_iters = sub_slot_start_total_iters + slot_iters - curr.total_iters
+                        else:
+                            icc_eos_iters = slot_iters
+                    else:
+                        icc_eos_iters = slot_iters
+                    icc_ip_vdf = recursive_replace(icc_ip_vdf, "number_of_iterations", icc_eos_iters)
                     icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_ip_vdf)
                     cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_sub_slot.get_hash(), None, None, None)
                 else:
                     icc_sub_slot = None
                     cc_sub_slot = ChallengeChainSubSlot(cc_vdf, None, None, None, None)
+                cc_sub_slot = recursive_replace(
+                    cc_sub_slot, "challenge_chain_end_of_slot_vdf.number_of_iterations", slot_iters
+                )
 
                 finished_sub_slots.append(
                     EndOfSubSlotBundle(
@@ -524,20 +544,35 @@ class BlockTools:
                 rc_challenge = slot_rc_challenge
                 cc_sp_iters = sp_iters
                 rc_sp_iters = sp_iters
+            elif len(finished_sub_slots) > 0:
+                cc_vdf_input = ClassgroupElement.get_default_element()
+                rc_challenge = slot_rc_challenge
+                cc_sp_iters = sp_iters
+                rc_sp_iters = sp_iters
             else:
                 curr = prev_sub_block
-                while curr.total_iters >= total_iters_sp and curr.height != 0:
+                while curr.total_iters >= total_iters_sp and not curr.first_in_sub_slot:
                     curr = sub_blocks[curr.prev_hash]
-
                 if curr.total_iters >= total_iters_sp:
                     cc_vdf_input = ClassgroupElement.get_default_element()
-                    rc_challenge = constants.FIRST_RC_CHALLENGE
+                    rc_challenge = curr.finished_reward_slot_hashes[-1]
                     cc_sp_iters = sp_iters
                     rc_sp_iters = sp_iters
                 else:
                     cc_vdf_input = curr.challenge_vdf_output
                     rc_challenge = curr.reward_infusion_new_challenge
                     cc_sp_iters = rc_sp_iters = total_iters_sp - curr.total_iters
+            print(
+                "sub slot start total iters",
+                sub_slot_start_total_iters,
+                total_iters_sp,
+                ip_iters,
+                len(finished_sub_slots),
+                "challenge: ",
+                slot_cc_challenge,
+                "input ",
+                cc_vdf_input,
+            )
             cc_sp_vdf, cc_sp_proof = get_vdf_info_and_proof(
                 constants,
                 cc_vdf_input,
@@ -556,6 +591,7 @@ class BlockTools:
 
         cc_sp_signature: Optional[G2Element] = self.get_plot_signature(to_sign_cc, proof_of_space.plot_public_key)
         rc_sp_signature: Optional[G2Element] = self.get_plot_signature(to_sign_rc, proof_of_space.plot_public_key)
+        assert blspy.AugSchemeMPL.verify(proof_of_space.plot_public_key, to_sign_cc, cc_sp_signature)
 
         # Checks sp filter
         plot_id = proof_of_space.get_plot_id()
@@ -564,7 +600,7 @@ class BlockTools:
         ):
             return None
 
-        total_iters = get_total_iters(constants, ip_iters, slot_iters, prev_sub_block, finished_sub_slots, overflow)
+        total_iters = uint128(sub_slot_start_total_iters + ip_iters + (slot_iters if overflow else 0))
 
         rc_sub_block = RewardChainSubBlockUnfinished(
             weight,
@@ -622,10 +658,12 @@ class BlockTools:
         slot_iters: uint64 = uint64(constants.IPS_STARTING * constants.SLOT_TIME_TARGET)
         unfinished_block: Optional[UnfinishedBlock] = None
         ip_iters: uint64 = uint64(0)
+        sub_slot_total_iters: uint128 = uint128(0)
 
         # Keep trying until we get a good proof of space that also passes sp filter
         while True:
             cc_challenge, rc_challenge = get_genesis_challenges(constants, finished_sub_slots)
+            print("cc challenge", cc_challenge)
             proofs_of_space: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
                 constants,
                 cc_challenge,
@@ -644,11 +682,9 @@ class BlockTools:
                 if len(finished_sub_slots) < force_empty_slots:
                     continue
 
-                cc_challenge, rc_challenge = get_genesis_challenges(constants, finished_sub_slots)
-
                 unfinished_block = self.create_unfinished_block(
                     constants,
-                    uint128(0),
+                    sub_slot_total_iters,
                     slot_iters,
                     sp_iters,
                     ip_iters,
@@ -742,6 +778,7 @@ class BlockTools:
                     None,
                     finished_sub_slots,
                 )
+            sub_slot_total_iters += slot_iters
 
     def create_foliage(
         self,
@@ -973,9 +1010,17 @@ def get_vdf_info_and_proof(
     number_iters: uint64,
 ) -> Tuple[VDFInfo, VDFProof]:
     int_size = (constants.DISCRIMINANT_SIZE_BITS + 16) >> 4
+
+    disc: int = int(
+        create_discriminant(challenge_hash, constants.DISCRIMINANT_SIZE_BITS),
+        16,
+    )
+    # print("Disc", disc)
+    # print(vdf_input)
     result: bytes = prove(
         challenge_hash, str(vdf_input.a), str(vdf_input.b), constants.DISCRIMINANT_SIZE_BITS, number_iters
     )
+
     output = ClassgroupElement(
         int512(
             int.from_bytes(
@@ -992,6 +1037,7 @@ def get_vdf_info_and_proof(
             )
         ),
     )
+    # print("Output:", output)
     proof_bytes = result[2 * int_size : 4 * int_size]
     return VDFInfo(challenge_hash, vdf_input, number_iters, output), VDFProof(uint8(0), proof_bytes)
 
@@ -1000,37 +1046,6 @@ def get_plot_dir():
     cache_path = Path(os.path.expanduser(os.getenv("CHIA_ROOT", "~/.chia/"))) / "test-plots"
     mkdir(cache_path)
     return cache_path
-
-
-def get_total_iters(
-    constants: ConsensusConstants,
-    ip_iters: uint64,
-    slot_iters: uint64,
-    prev_sb: Optional[SubBlockRecord],
-    finished_sub_slots_before_sp: List[EndOfSubSlotBundle],
-    overflow: bool,
-):
-    if prev_sb is None:
-        total_iters: uint128 = uint128(
-            constants.IPS_STARTING * constants.SLOT_TIME_TARGET * len(finished_sub_slots_before_sp)
-        )
-        total_iters += ip_iters
-    else:
-        prev_sb_iters = calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
-        if len(finished_sub_slots_before_sp) > 0:
-            total_iters: uint128 = prev_sb.total_iters
-            prev_sb_slot_iters = calculate_slot_iters(constants, prev_sb.ips)
-            # Add the rest of the slot of prev_sb
-            total_iters += prev_sb_slot_iters - prev_sb_iters
-            # Add other empty slots
-            total_iters += slot_iters * (len(finished_sub_slots_before_sp) - 1)
-        else:
-            # Slot iters is guaranteed to be the same for header_block and prev_sb
-            # This takes the beginning of the slot, and adds ip_iters
-            total_iters = uint128(prev_sb.total_iters - prev_sb_iters) + ip_iters
-    if overflow:
-        total_iters += slot_iters
-    return total_iters
 
 
 def unfinished_block_to_full_block(
