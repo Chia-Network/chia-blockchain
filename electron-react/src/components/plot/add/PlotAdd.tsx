@@ -29,6 +29,7 @@ export default function PlotAdd(): JSX.Element {
   const dispatch = useDispatch();
 
   const methods = useForm<FormData>({
+    shouldUnregister: false,
     defaultValues: {
       plotSize: 32,
       plotCount: 1,
@@ -43,6 +44,7 @@ export default function PlotAdd(): JSX.Element {
   });
 
   const handleSubmit: SubmitHandler<FormData> = (data) => {
+    console.log('data', data);
     const {
       plotSize,
       plotCount,

@@ -177,9 +177,13 @@ export const handle_message = (store, payload) => {
       store.dispatch(format_message('get_public_keys', {}));
     }
   } else if (payload.command === 'get_public_keys') {
+    /*
     if (payload.data.success) {
+      console.log('redirect to / after get_public_keys');
+      console.log(new Error('why ???'));
       store.dispatch(push('/'));
     }
+    */
   } else if (payload.command === 'get_private_key') {
     const text =
       `Private key: ${payload.data.private_key.sk}\n` +

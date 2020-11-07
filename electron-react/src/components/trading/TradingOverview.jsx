@@ -101,7 +101,6 @@ const TradeRow = (props) => {
   const dispatch = useDispatch();
 
   function displayTrade() {
-    console.log('Show this trade');
     dispatch(presentTrade(props.trade));
   }
 

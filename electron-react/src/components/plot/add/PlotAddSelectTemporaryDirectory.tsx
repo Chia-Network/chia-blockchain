@@ -18,7 +18,7 @@ export default function PlotAddSelectTemporaryDirectory() {
   async function handleSelect() {
     const location = await selectDirectory();
     if (location) {
-      setValue('workspaceLocation', location);
+      setValue('workspaceLocation', location, { shouldValidate: true });
     }
   }
 

@@ -15,7 +15,7 @@ export default function PlotAddSelectFinalDirectory() {
   async function handleSelect() {
     const location = await selectDirectory();
     if (location) {
-      setValue('finalLocation', location);
+      setValue('finalLocation', location, { shouldValidate: true });
     }
   }
 

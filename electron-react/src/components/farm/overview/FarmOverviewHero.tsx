@@ -14,7 +14,7 @@ export default function FarmOverviewHero() {
   const history = useHistory();
 
   function handleAddPlot() {
-    history.push('/dashboard/plot');
+    history.push('/dashboard/plot/add');
   }
 
   return (

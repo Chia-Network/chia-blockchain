@@ -12,7 +12,7 @@ import TextField from '@material-ui/core/TextField';
 import HelpIcon from '@material-ui/icons/Help';
 import { Flex } from '@chia/core';
 import { unix_to_short_date } from '../../util/utils';
-import Connections from '../connections/Connections';
+import FullNodeConnections from './FullNodeConnections';
 import Block from '../block/Block';
 import {
   closeConnection,
@@ -564,7 +564,7 @@ export default function FullNode() {
                   <BlocksCard />
                 </Grid>
                 <Grid item xs={12}>
-                  <Connections
+                  <FullNodeConnections
                     connections={connections}
                     connectionError={connectionError}
                     openConnection={openConnectionCallback}

@@ -710,7 +710,6 @@ export const clawback_rl_coin = (wallet_id) => {
 export const exit_and_close = (event) => {
   return (dispatch) => {
     return async_api(dispatch, exitDaemon(), false).then((response) => {
-      console.log('GOT RESPONSE', response);
       dispatch(wsDisconnect());
       event.sender.send('daemon-exited');
     });

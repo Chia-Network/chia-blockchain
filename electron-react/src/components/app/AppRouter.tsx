@@ -3,7 +3,7 @@ import { Switch, Route } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { PrivateRoute } from '@chia/core';
-import SelectKey from '../selectKey/SelectKey';
+import Index from '../index/Index';
 import WalletAdd from '../wallet/WalletAdd';
 import WalletImport from '../wallet/WalletImport';
 import Dashboard from '../dashboard/Dashboard';
@@ -45,7 +45,7 @@ export default function AppRouter() {
   return (
     <Switch>
       <Route path="/" exact>
-        <SelectKey />
+        <Index />
       </Route>
       <Route path="/wallet/add" exact>
         <WalletAdd />

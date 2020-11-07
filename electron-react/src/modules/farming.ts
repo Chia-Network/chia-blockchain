@@ -58,9 +58,6 @@ export default function farmingReducer(
       const { command } = message;
 
       // Farmer API
-      if (command === 'request_proof_of_space') {
-        console.log('request_proof_of_space', data);
-      }
       if (command === 'get_latest_challenges') {
         if (data.success === false) {
           return state;
@@ -102,7 +99,7 @@ export default function farmingReducer(
 
       // Harvester API
       if (command === 'get_plots') {
-        console.log('get plots', command);
+        console.log('get plots', data);
         if (data.success !== true) {
           return state;
         }

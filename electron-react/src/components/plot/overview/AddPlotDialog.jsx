@@ -17,11 +17,11 @@ import FolderIcon from '@material-ui/icons/Folder';
 import DeleteIcon from '@material-ui/icons/Delete';
 import { useSelector, useDispatch } from 'react-redux';
 import { makeStyles } from '@material-ui/core/styles';
-import { openDialog } from '../../modules/dialog';
+import { openDialog } from '../../../modules/dialog';
 import {
   add_plot_directory_and_refresh,
   remove_plot_directory_and_refresh,
-} from '../../modules/message';
+} from '../../../modules/message';
 
 const styles = (theme) => ({
   dialogTitle: {
@@ -62,7 +62,6 @@ const AddPlotDialog = (props) => {
         buttonLabel: 'Select Plot Directory',
       };
       const result = await window.remote.dialog.showOpenDialog(dialogOptions);
-      console.log(result);
       if (!result.canceled) {
         const filePath = result.filePaths[0];
         dispatch(add_plot_directory_and_refresh(filePath));

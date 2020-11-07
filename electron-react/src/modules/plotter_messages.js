@@ -20,6 +20,8 @@ export const startPlotting = (k, n, t, t2, d, b, u, r, s) => {
     r,
     s,
   };
+
+  console.log('action', action);
   return action;
 };
 

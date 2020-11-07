@@ -17,13 +17,6 @@ export default function PlotAddNumberOfPlots() {
         <Trans id="PlotAddNumberOfPlots.title">Choose Number of Plots</Trans>
       )}
     >
-      <Typography variant="subtitle1">
-        <Trans id="PlotAddNumberOfPlots.description">
-          {'We recommend you keep less than 200 total plots. '}
-          <Link target="_blank" href="https://github.com/Chia-Network/chia-blockchain/wiki/k-sizes">Learn more</Link>
-        </Trans>
-      </Typography>
-
       <Grid container>
         <Grid xs={12} sm={10} md={8} lg={6} item>
           <FormControl

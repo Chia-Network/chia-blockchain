@@ -24,7 +24,6 @@ export default async function computeStatistics(
         continue;
       }
 
-      console.log('Checking tx', tx);
       // Height here is filled into the whole 256 bits (32 bytes) of the parent
       const hexHeight = arr_to_hex(
         big_int_to_array(BigInt(tx.confirmed_at_index), 32),
@@ -48,23 +47,12 @@ export default async function computeStatistics(
         }
 
         /*
-        const chia_cb = chia_formatter(
-          Number.parseFloat(calculate_block_reward(block.header.data.height)),
-          'mojo',
-        )
-          .to('chia')
-          .toString();
-        const chia_fees = chia_formatter(
-          Number.parseFloat(BigInt(block.header.data.total_transaction_fees)),
-          'mojo',
-        )
-          .to('chia')
-          .toString();
-
-        /*
         if (tx.coinbase) {
-          farmingRewards += BigInt(tx.fee_amount);
-          feesCollected += BigInt(tx.fee_amount);
+          if (tx.type === 'REWARD') {
+            farmingRewards += BigInt(tx.amount);
+          } else {
+            feesCollected += BigInt(tx.amount);
+          }
         }
         */
       }
