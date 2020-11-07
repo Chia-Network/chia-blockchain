@@ -507,7 +507,13 @@ async def validate_unfinished_header_block(
         assert overflow is not None
         if header_block.reward_chain_sub_block.reward_chain_sp_vdf is not None:
             return None, Err.INVALID_RC_SP_VDF
-        rc_sp_hash = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
+        if new_sub_slot:
+            rc_sp_hash = header_block.finished_sub_slots[-1].reward_chain.get_hash()
+        else:
+            curr = prev_sb
+            while not curr.first_in_sub_slot():
+                curr = sub_blocks[curr.prev_hash]
+            rc_sp_hash = curr.finished_reward_slot_hashes[-1]
 
     # 11. Check reward chain sp signature
     if not AugSchemeMPL.verify(
@@ -777,10 +783,12 @@ async def validate_finished_header_block(
         if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:
             # If we don't have an ICC chain, deficit must be 4 or 5
             if deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+                print(0)
                 return None, Err.INVALID_ICC_VDF
         else:
             # If we have an ICC chain, deficit must be 0, 1, 2 or 3
             if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+                print(1)
                 return None, Err.INVALID_ICC_VDF
             if new_slot:
                 icc_vdf_challenge: bytes32 = header_block.finished_sub_slots[-1].infused_challenge_chain.get_hash()
@@ -812,9 +820,11 @@ async def validate_finished_header_block(
                 header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf,
                 icc_target_vdf_info,
             ):
+                print(3)
                 return None, Err.INVALID_ICC_VDF
     else:
         if header_block.infused_challenge_chain_ip_proof is not None:
+            print(4)
             return None, Err.INVALID_ICC_VDF
 
     # 29. Check reward block hash
