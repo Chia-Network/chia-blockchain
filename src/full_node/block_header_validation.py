@@ -288,15 +288,31 @@ async def validate_unfinished_header_block(
             # 2k. Check deficit (5 deficit edge case for genesis block)
             if genesis_block:
                 if sub_slot.reward_chain.deficit != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                    print(
+                        header_block.log_string,
+                        "failed validation, genesis and deficit is not",
+                        constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
+                    )
+
                     return None, Err.INVALID_DEFICIT
             else:
                 if prev_sb.deficit == 0:
                     # If there is a challenge chain infusion, resets deficit to 5
                     if sub_slot.reward_chain.deficit != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                        print(
+                            header_block.log_string,
+                            " failed validation, deficit should be",
+                            constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
+                        )
                         return None, Err.INVALID_DEFICIT
                 else:
                     # Otherwise, deficit stays the same at the slot ends, cannot reset until 0
                     if sub_slot.reward_chain.deficit != prev_sb.deficit:
+                        print(
+                            header_block.log_string,
+                            "failed validation, deficit is wrong at slot end ",
+                            constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
+                        )
                         return None, Err.INVALID_DEFICIT
 
         # 3. Check sub-epoch summary
