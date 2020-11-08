@@ -503,12 +503,14 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.reward_chain_sp_vdf,
             target_vdf_info,
         ):
+            print(header_block.log_string, "failed rc vdf validation ")
             return None, Err.INVALID_RC_SP_VDF
         rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.output.get_hash()
     else:
         # Edge case of first sp (start of slot), where sp_iters == 0
         assert overflow is not None
         if header_block.reward_chain_sub_block.reward_chain_sp_vdf is not None:
+            print(header_block.log_string, "failed rc vdf validation ")
             return None, Err.INVALID_RC_SP_VDF
         if new_sub_slot:
             rc_sp_hash = header_block.finished_sub_slots[-1].reward_chain.get_hash()
@@ -539,10 +541,12 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.challenge_chain_sp_vdf,
             target_vdf_info,
         ):
+            print(header_block.log_string, "failed cc vdf validation ")
             return None, Err.INVALID_CC_SP_VDF
     else:
         assert overflow is not None
         if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is not None:
+            print(header_block.log_string, "failed cc vdf validation ")
             return None, Err.INVALID_CC_SP_VDF
 
     # 13. Check cc sp sig
@@ -694,7 +698,7 @@ async def validate_finished_header_block(
         genesis_block = True
     else:
         prev_sb: Optional[SubBlockRecord] = sub_blocks[header_block.prev_header_hash]
-    new_slot: bool = len(header_block.finished_sub_slots) > 0
+    new_sub_slot: bool = len(header_block.finished_sub_slots) > 0
     if genesis_block:
         ips = uint64(constants.IPS_STARTING)
     else:
@@ -715,12 +719,12 @@ async def validate_finished_header_block(
     if genesis_block:
         cc_vdf_output = ClassgroupElement.get_default_element()
         ip_vdf_iters = ip_iters
-        if new_slot:
+        if new_sub_slot:
             rc_vdf_challenge = header_block.finished_sub_slots[-1].reward_chain.get_hash()
         else:
             rc_vdf_challenge = constants.FIRST_RC_CHALLENGE
     else:
-        if new_slot:
+        if new_sub_slot:
             # slot start is more recent
             rc_vdf_challenge = header_block.finished_sub_slots[-1].reward_chain.get_hash()
             ip_vdf_iters = ip_iters
@@ -733,7 +737,7 @@ async def validate_finished_header_block(
             cc_vdf_output = prev_sb.challenge_vdf_output
 
     # 26. Check challenge chain infusion point VDF
-    if new_slot:
+    if new_sub_slot:
         cc_vdf_challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
     else:
         # Not first sub-block in slot
@@ -784,13 +788,22 @@ async def validate_finished_header_block(
         if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:
             # If we don't have an ICC chain, deficit must be 4 or 5
             if deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
-                print(0)
+                print(
+                    header_block.log_string,
+                    "failed validation no icc vdf and deficit is lower than ",
+                    constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1,
+                )
                 return None, Err.INVALID_ICC_VDF
         else:
             # If we have an ICC chain, deficit must be 0, 1, 2 or 3
             if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+                print(
+                    header_block.log_string,
+                    "failed validation icc vdf and deficit is bigger or equal to",
+                    constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1,
+                )
                 return None, Err.INVALID_ICC_VDF
-            if new_slot:
+            if new_sub_slot:
                 icc_vdf_challenge: bytes32 = header_block.finished_sub_slots[-1].infused_challenge_chain.get_hash()
                 icc_vdf_input = ClassgroupElement.get_default_element()
             else:
@@ -821,6 +834,7 @@ async def validate_finished_header_block(
                 header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf,
                 icc_target_vdf_info,
             ):
+                print(header_block.log_string, "failed validation invalid icc proof")
                 return None, Err.INVALID_ICC_VDF
     else:
         if header_block.infused_challenge_chain_ip_proof is not None:
