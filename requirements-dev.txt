@@ -1,6 +1,6 @@
 black>=19.10b0
 # black Dependencies
-appdirs
+appdirs~=1.4.4
 attrs>=18.1.0
 click>=6.5
 mypy_extensions>=0.4.3
@@ -31,3 +31,39 @@ pytest-asyncio>=0.14.0
 
 setuptools_scm>=4.1.2
 # No Dependencies
+
+aiohttp~=3.7.1
+blspy~=0.2.4
+cryptography~=3.2
+PyYAML~=5.3.1
+cbor2~=5.1.2
+clvm~=0.5.3
+colorlog~=4.4.0
+keyring~=21.4.0
+bitstring~=3.1.7
+chiabip158~=0.16
+chiavdf~=0.12.27
+setproctitle~=1.1.10
+chiapos~=0.12.33
+websockets~=8.1
+miniupnpc~=2.1
+aiter~=0.13.20191203
+aiosqlite~=0.15.0
+sortedcontainers~=2.2.2
+py~=1.9.0
+pip~=20.2.4
+wheel~=0.35.1
+idna~=2.10
+multidict~=5.0.0
+six~=1.15.0
+cffi~=1.14.3
+setuptools~=49.2.1
+pluggy~=0.13.1
+iniconfig~=1.1.1
+yarl~=1.6.2
+chardet~=3.0.4
+pyparsing~=2.4.7
+pycparser~=2.20
+packaging~=20.4
+zipp~=3.4.0
+portalocker~=2.0.0
