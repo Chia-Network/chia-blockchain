@@ -42,3 +42,7 @@ class HeaderBlock(Streamable):
     @property
     def total_iters(self):
         return self.reward_chain_sub_block.total_iters
+
+    @property
+    def log_string(self):
+        return "block " + str(self.header_hash) + " height " + str(self.height) + " "
