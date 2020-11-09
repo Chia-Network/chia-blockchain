@@ -44,21 +44,17 @@ async def validate_unfinished_header_block(
     """
     # 1. Check that the previous block exists in the blockchain, or that it is correct
     new_sub_slot: bool = len(header_block.finished_sub_slots) > 0
-    if header_block.height == 0:
-        prev_sb: Optional[SubBlockRecord] = None
+    prev_sb = sub_blocks.get(header_block.prev_header_hash, None)
+    genesis_block = prev_sb is None
+    if genesis_block:
         finishes_se = False
         finishes_epoch = False
-        genesis_block = True
         difficulty: uint64 = uint64(constants.DIFFICULTY_STARTING)
         ips: uint64 = uint64(constants.IPS_STARTING)
         if header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
             return None, Err.INVALID_PREV_BLOCK_HASH
+        height: uint32 = uint32(0)
     else:
-        genesis_block = False
-        prev_sb: Optional[SubBlockRecord] = sub_blocks[header_block.prev_header_hash]
-        if prev_sb is None:
-            return None, Err.DOES_NOT_EXTEND
-
         # If the previous sub block finishes a sub-epoch, that means that this sub-block should have an updated diff
         finishes_se = finishes_sub_epoch(
             constants, prev_sb.height, prev_sb.deficit, False, sub_blocks, prev_sb.prev_hash
@@ -95,6 +91,7 @@ async def validate_unfinished_header_block(
             new_sub_slot,
             prev_sb.total_iters,
         )
+        height: uint32 = uint32(prev_sb.height + 1)
 
     # 2. Check finished slots that have been crossed since prev_sb
     ses_hash: Optional[bytes32] = None
@@ -333,7 +330,7 @@ async def validate_unfinished_header_block(
             expected_sub_epoch_summary = make_sub_epoch_summary(
                 constants,
                 sub_blocks,
-                header_block.height,
+                uint32(prev_sb.height + 1),
                 prev_sb,
                 difficulty if finishes_epoch else None,
                 ips if finishes_epoch else None,
@@ -421,19 +418,7 @@ async def validate_unfinished_header_block(
         print("Challenge", challenge, header_block.reward_chain_sub_block.proof_of_space, header_block.total_iters)
         return None, Err.INVALID_POSPACE_CHALLENGE
 
-    if not genesis_block:
-        # 7. Check sub-block height
-        if header_block.height != prev_sb.height + 1:
-            return None, Err.INVALID_HEIGHT
-
-        # 8. Check weight
-        if header_block.weight != prev_sb.weight + difficulty:
-            return None, Err.INVALID_WEIGHT
-    else:
-        if header_block.weight != constants.DIFFICULTY_STARTING:
-            return None, Err.INVALID_WEIGHT
-
-    # 9. Check total iters
+    # 7. Check total iters
     if genesis_block:
         total_iters: uint128 = uint128(
             constants.IPS_STARTING * constants.SLOT_TIME_TARGET * len(header_block.finished_sub_slots)
@@ -512,7 +497,7 @@ async def validate_unfinished_header_block(
             curr = sub_blocks[curr.prev_hash]
         cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
 
-    # 10. Check reward chain sp proof
+    # 8. Check reward chain sp proof
     if sp_iters != 0:
         target_vdf_info = VDFInfo(
             rc_vdf_challenge,
@@ -543,7 +528,7 @@ async def validate_unfinished_header_block(
                     curr = sub_blocks[curr.prev_hash]
                 rc_sp_hash = curr.finished_reward_slot_hashes[-1]
 
-    # 11. Check reward chain sp signature
+    # 9. Check reward chain sp signature
     if not AugSchemeMPL.verify(
         header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
         rc_sp_hash,
@@ -551,7 +536,7 @@ async def validate_unfinished_header_block(
     ):
         return None, Err.INVALID_RC_SIGNATURE
 
-    # 12. Check cc sp
+    # 10. Check cc sp
     if sp_iters != 0:
         target_vdf_info = VDFInfo(
             cc_vdf_challenge,
@@ -570,7 +555,7 @@ async def validate_unfinished_header_block(
         if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is not None:
             return None, Err.INVALID_CC_SP_VDF
 
-    # 13. Check cc sp sig
+    # 11. Check cc sp sig
     if not AugSchemeMPL.verify(
         header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
         cc_sp_hash,
@@ -578,7 +563,7 @@ async def validate_unfinished_header_block(
     ):
         return None, Err.INVALID_CC_SIGNATURE
 
-    # 15. Check is_block
+    # 12. Check is_block
     if genesis_block:
         if header_block.foliage_sub_block.foliage_block_hash is None:
             return None, Err.INVALID_IS_BLOCK
@@ -596,7 +581,7 @@ async def validate_unfinished_header_block(
         if (our_sp_total_iters > curr.total_iters) != (header_block.foliage_sub_block.foliage_block_hash is not None):
             return None, Err.INVALID_IS_BLOCK
 
-    # 16. Check foliage sub block signature by plot key
+    # 13. Check foliage sub block signature by plot key
     if not AugSchemeMPL.verify(
         header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
         header_block.foliage_sub_block.foliage_sub_block_data.get_hash(),
@@ -604,7 +589,7 @@ async def validate_unfinished_header_block(
     ):
         return None, Err.INVALID_PLOT_SIGNATURE
 
-    # 16. Check foliage block signature by plot key
+    # 14. Check foliage block signature by plot key
     if header_block.foliage_sub_block.foliage_block_hash is not None:
         if not AugSchemeMPL.verify(
             header_block.reward_chain_sub_block.proof_of_space.plot_public_key,
@@ -613,21 +598,21 @@ async def validate_unfinished_header_block(
         ):
             return None, Err.INVALID_PLOT_SIGNATURE
 
-    # 17. Check unfinished reward chain sub block hash
+    # 15. Check unfinished reward chain sub block hash
     if (
         header_block.reward_chain_sub_block.get_hash()
         != header_block.foliage_sub_block.foliage_sub_block_data.unfinished_reward_block_hash
     ):
         return None, Err.INVALID_URSB_HASH
 
-    # 18. Check pool target max height
+    # 16. Check pool target max height
     if (
         header_block.foliage_sub_block.foliage_sub_block_data.pool_target.max_height != 0
-        and header_block.foliage_sub_block.foliage_sub_block_data.pool_target.max_height < header_block.height
+        and header_block.foliage_sub_block.foliage_sub_block_data.pool_target.max_height < height
     ):
         return None, Err.OLD_POOL_TARGET
 
-    # 19. Check pool target signature
+    # 17. Check pool target signature
     if not AugSchemeMPL.verify(
         header_block.reward_chain_sub_block.proof_of_space.pool_public_key,
         bytes(header_block.foliage_sub_block.foliage_sub_block_data.pool_target),
@@ -635,8 +620,8 @@ async def validate_unfinished_header_block(
     ):
         return None, Err.INVALID_POOL_SIGNATURE
 
-    # 20. Check extension data if applicable. None for mainnet.
-    # 21. Check if foliage block is present
+    # 18. Check extension data if applicable. None for mainnet.
+    # 19. Check if foliage block is present
     if (header_block.foliage_sub_block.foliage_block_hash is not None) != (header_block.foliage_block is not None):
         return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
@@ -644,11 +629,11 @@ async def validate_unfinished_header_block(
         return None, Err.INVALID_FOLIAGE_BLOCK_PRESENCE
 
     if header_block.foliage_block is not None:
-        # 22. Check foliage block hash
+        # 20. Check foliage block hash
         if header_block.foliage_block.get_hash() != header_block.foliage_sub_block.foliage_block_hash:
             return None, Err.INVALID_FOLIAGE_BLOCK_HASH
 
-        # 23. Check prev block hash
+        # 21. Check prev block hash
         if genesis_block:
             if header_block.foliage_block.prev_block_hash != bytes([0] * 32):
                 return None, Err.INVALID_PREV_BLOCK_HASH
@@ -659,12 +644,12 @@ async def validate_unfinished_header_block(
             if not header_block.foliage_block.prev_block_hash == curr_sb.header_hash:
                 return None, Err.INVALID_PREV_BLOCK_HASH
 
-        # 24. The filter hash in the Foliage Block must be the hash of the filter
+        # 22. The filter hash in the Foliage Block must be the hash of the filter
         if check_filter:
             if header_block.foliage_block.filter_hash != std_hash(header_block.transactions_filter):
                 return None, Err.INVALID_TRANSACTIONS_FILTER_HASH
 
-        # 25. The timestamp in Foliage Block must comply with the timestamp rules
+        # 23. The timestamp in Foliage Block must comply with the timestamp rules
         if prev_sb is not None:
             last_timestamps: List[uint64] = []
             curr_sb: SubBlockRecord = sub_blocks[header_block.foliage_block.prev_block_hash]
@@ -721,7 +706,8 @@ async def validate_finished_header_block(
         prev_sb: Optional[SubBlockRecord] = sub_blocks[header_block.prev_header_hash]
     new_sub_slot: bool = len(header_block.finished_sub_slots) > 0
     if genesis_block:
-        ips = uint64(constants.IPS_STARTING)
+        ips = constants.IPS_STARTING
+        difficulty = constants.DIFFICULTY_STARTING
     else:
         ips: uint64 = get_next_ips(
             constants,
@@ -734,7 +720,33 @@ async def validate_finished_header_block(
             len(header_block.finished_sub_slots) > 0,
             prev_sb.total_iters,
         )
+        if prev_sb.height < 1:
+            difficulty = constants.DIFFICULTY_STARTING
+        else:
+            difficulty: uint64 = get_next_difficulty(
+                constants,
+                sub_blocks,
+                height_to_hash,
+                prev_sb.prev_hash,
+                prev_sb.height,
+                prev_sb.deficit,
+                uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight),
+                len(header_block.finished_sub_slots) > 0,
+                prev_sb.total_iters,
+            )
     ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
+
+    if not genesis_block:
+        # 24. Check sub-block height
+        if header_block.height != prev_sb.height + 1:
+            return None, Err.INVALID_HEIGHT
+
+        # 25. Check weight
+        if header_block.weight != prev_sb.weight + difficulty:
+            return None, Err.INVALID_WEIGHT
+    else:
+        if header_block.weight != constants.DIFFICULTY_STARTING:
+            return None, Err.INVALID_WEIGHT
 
     # RC vdf challenge is taken from more recent of (slot start, prev_block)
     if genesis_block:

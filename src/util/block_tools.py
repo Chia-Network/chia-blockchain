@@ -6,6 +6,7 @@ import sys
 import tempfile
 import time
 from argparse import Namespace
+from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
@@ -274,6 +275,7 @@ class BlockTools:
                     difficulty,
                     ips,
                 )
+                overflow_sub_blocks: List[Tuple[uint64, UnfinishedBlock]] = []
 
                 for required_iters, proof_of_space in sorted(proofs_of_space, key=lambda t: t[0]):
                     if same_slot_as_last and required_iters <= latest_sub_block.required_iters:
@@ -310,76 +312,32 @@ class BlockTools:
 
                     if unfinished_block is None:
                         continue
+                    if is_overflow_block:
+                        overflow_sub_blocks.append((required_iters, unfinished_block))
+                        continue
 
-                    if not is_overflow_block:
-                        cc_vdf_challenge = slot_cc_challenge
-                        # non overflow block
-                        if len(finished_sub_slots) == 0:
-                            new_ip_iters = unfinished_block.total_iters - latest_sub_block.total_iters
-                            cc_vdf_input = latest_sub_block.challenge_vdf_output
-                            rc_vdf_challenge = latest_sub_block.reward_infusion_new_challenge
-                        else:
-                            new_ip_iters = ip_iters
-                            cc_vdf_input = ClassgroupElement.get_default_element()
-                            rc_vdf_challenge = slot_rc_challenge
-
-                        cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
-                            constants,
-                            cc_vdf_input,
-                            cc_vdf_challenge,
-                            new_ip_iters,
-                        )
-
-                        deficit = calculate_deficit(
-                            constants, latest_sub_block.height + 1, latest_sub_block, False, len(finished_sub_slots) > 0
-                        )
-
-                        icc_ip_vdf, icc_ip_proof = get_icc(
-                            constants,
-                            unfinished_block.total_iters,
-                            finished_sub_slots,
-                            latest_sub_block,
-                            sub_blocks,
-                            sub_slot_start_total_iters,
-                            deficit,
-                        )
-
-                        rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
-                            constants,
-                            ClassgroupElement.get_default_element(),
-                            rc_vdf_challenge,
-                            new_ip_iters,
-                        )
-                        assert unfinished_block is not None
-                        full_block: FullBlock = unfinished_block_to_full_block(
-                            unfinished_block,
-                            cc_ip_vdf,
-                            cc_ip_proof,
-                            rc_ip_vdf,
-                            rc_ip_proof,
-                            icc_ip_vdf,
-                            icc_ip_proof,
-                            finished_sub_slots,
-                        )
-                        block_list.append(full_block)
-                        num_blocks -= 1
-                        if num_blocks == 0:
-                            return block_list
-
-                        sub_blocks[full_block.header_hash] = full_block_to_sub_block_record(
-                            constants,
-                            sub_blocks,
-                            height_to_hash,
-                            full_block,
-                            required_iters,
-                        )
-                        height_to_hash[uint32(full_block.height)] = full_block.header_hash
-                        latest_sub_block = sub_blocks[full_block.header_hash]
-                        finished_sub_slots = []
-                        print(
-                            f"Created block {full_block.height} is block: {full_block.is_block()}: "
-                            f"{full_block.total_iters}"
-                        )
+                    full_block, sub_block_record = finish_sub_block(
+                        constants,
+                        sub_blocks,
+                        height_to_hash,
+                        finished_sub_slots,
+                        sub_slot_start_total_iters,
+                        unfinished_block,
+                        required_iters,
+                        ip_iters,
+                        slot_cc_challenge,
+                        slot_rc_challenge,
+                        latest_sub_block,
+                        difficulty,
+                    )
+                    block_list.append(full_block)
+                    num_blocks -= 1
+                    if num_blocks == 0:
+                        return block_list
+                    sub_blocks[full_block.header_hash] = sub_block_record
+                    height_to_hash[uint32(full_block.height)] = full_block.header_hash
+                    latest_sub_block = sub_blocks[full_block.header_hash]
+                    finished_sub_slots = []
 
                 # Finish the end of sub-slot and try again next sub-slot
                 # End of sub-slot logic
@@ -435,6 +393,7 @@ class BlockTools:
                     if new_ips is not None:
                         ips = new_ips
                         difficulty = new_difficulty
+                        overflow_sub_blocks = []  # No overflow blocks on new difficulty
                 else:
                     ses_hash = None
                     new_ips = None
@@ -479,6 +438,32 @@ class BlockTools:
                         SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
                     )
                 )
+                overflow_cc_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
+                overflow_rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
+                for required_iters, unfinished_sub_block in overflow_sub_blocks:
+                    ip_iters = calculate_ip_iters(constants, ips, required_iters)
+                    full_block, sub_block_record = finish_sub_block(
+                        constants,
+                        sub_blocks,
+                        height_to_hash,
+                        finished_sub_slots,
+                        sub_slot_start_total_iters,
+                        unfinished_sub_block,
+                        required_iters,
+                        ip_iters,
+                        overflow_cc_challenge,
+                        overflow_rc_challenge,
+                        latest_sub_block,
+                        difficulty,
+                    )
+                    block_list.append(full_block)
+                    num_blocks -= 1
+                    if num_blocks == 0:
+                        return block_list
+                    sub_blocks[full_block.header_hash] = sub_block_record
+                    height_to_hash[uint32(full_block.height)] = full_block.header_hash
+                    latest_sub_block = sub_blocks[full_block.header_hash]
+                    finished_sub_slots = []
 
             num_empty_slots_added += 1
             same_slot_as_last = False
@@ -510,8 +495,6 @@ class BlockTools:
         prev_block: Optional[SubBlockRecord] = None  # Set this if we are a block
         is_genesis = False
         if prev_sub_block is not None:
-            height = uint32(prev_sub_block.height + 1)
-            weight: uint128 = uint128(prev_sub_block.weight + difficulty)
             curr = prev_sub_block
             is_block, prev_block = get_prev_block(curr, prev_block, sub_blocks, total_iters_sp)
             prev_sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, prev_sub_block.ips)
@@ -519,8 +502,6 @@ class BlockTools:
             # Genesis is a block
             is_genesis = True
             is_block = True
-            height = uint32(0)
-            weight: uint128 = uint128(constants.DIFFICULTY_STARTING)
             prev_sub_slot_iters = calculate_sub_slot_iters(constants, constants.IPS_STARTING)
 
         new_sub_slot: bool = len(finished_sub_slots) > 0
@@ -626,8 +607,6 @@ class BlockTools:
         total_iters = uint128(sub_slot_start_total_iters + ip_iters + (prev_sub_slot_iters if overflow else 0))
 
         rc_sub_block = RewardChainSubBlockUnfinished(
-            weight,
-            height,
             total_iters,
             proof_of_space,
             cc_sp_vdf,
@@ -746,6 +725,8 @@ class BlockTools:
                         None,
                         None,
                         finished_sub_slots,
+                        None,
+                        constants.DIFFICULTY_STARTING,
                     )
 
             # Finish the end of sub-slot and try again next sub-slot
@@ -788,7 +769,6 @@ class BlockTools:
                     finished_sub_slots[-1].reward_chain.get_hash(),
                     ip_iters,
                 )
-                # icc_info, icc_proof = self.get_icc()
                 return unfinished_block_to_full_block(
                     unfinished_block,
                     cc_ip_vdf,
@@ -798,6 +778,8 @@ class BlockTools:
                     None,
                     None,
                     finished_sub_slots,
+                    None,
+                    constants.DIFFICULTY_STARTING,
                 )
             sub_slot_total_iters += sub_slot_iters
 
@@ -820,7 +802,10 @@ class BlockTools:
         # Use the extension data to create different blocks based on header hash
         random.seed(seed)
         extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
-        height = reward_sub_block.sub_block_height
+        if prev_sub_block is None:
+            height: uint32 = uint32(0)
+        else:
+            height = uint32(prev_sub_block.height + 1)
         cost: uint64 = uint64(0)
         farmer_ph = self.farmer_ph
         pool_ph = self.pool_ph
@@ -1003,6 +988,81 @@ class BlockTools:
         return random_sample
 
 
+def finish_sub_block(
+    constants: ConsensusConstants,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    height_to_hash: Dict[uint32, bytes32],
+    finished_sub_slots: List[EndOfSubSlotBundle],
+    sub_slot_start_total_iters: uint128,
+    unfinished_block: UnfinishedBlock,
+    required_iters: uint64,
+    ip_iters: uint64,
+    slot_cc_challenge: bytes32,
+    slot_rc_challenge: bytes32,
+    latest_sub_block: SubBlockRecord,
+    difficulty,
+):
+    is_overflow = required_iters > ip_iters
+    cc_vdf_challenge = slot_cc_challenge
+    if len(finished_sub_slots) == 0:
+        new_ip_iters = unfinished_block.total_iters - latest_sub_block.total_iters
+        cc_vdf_input = latest_sub_block.challenge_vdf_output
+        rc_vdf_challenge = latest_sub_block.reward_infusion_new_challenge
+    else:
+        new_ip_iters = ip_iters
+        cc_vdf_input = ClassgroupElement.get_default_element()
+        rc_vdf_challenge = slot_rc_challenge
+
+    cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
+        constants,
+        cc_vdf_input,
+        cc_vdf_challenge,
+        new_ip_iters,
+    )
+    deficit = calculate_deficit(
+        constants, latest_sub_block.height + 1, latest_sub_block, is_overflow, len(finished_sub_slots) > 0
+    )
+
+    icc_ip_vdf, icc_ip_proof = get_icc(
+        constants,
+        unfinished_block.total_iters,
+        finished_sub_slots,
+        latest_sub_block,
+        sub_blocks,
+        sub_slot_start_total_iters,
+        deficit,
+    )
+
+    rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
+        constants,
+        ClassgroupElement.get_default_element(),
+        rc_vdf_challenge,
+        new_ip_iters,
+    )
+    assert unfinished_block is not None
+    full_block: FullBlock = unfinished_block_to_full_block(
+        unfinished_block,
+        cc_ip_vdf,
+        cc_ip_proof,
+        rc_ip_vdf,
+        rc_ip_proof,
+        icc_ip_vdf,
+        icc_ip_proof,
+        finished_sub_slots,
+        latest_sub_block,
+        difficulty,
+    )
+
+    sub_block_record = full_block_to_sub_block_record(
+        constants,
+        sub_blocks,
+        height_to_hash,
+        full_block,
+        required_iters,
+    )
+    return full_block, sub_block_record
+
+
 def get_challenges(
     sub_blocks: Dict[uint32, SubBlockRecord],
     finished_sub_slots: List[EndOfSubSlotBundle],
@@ -1010,10 +1070,8 @@ def get_challenges(
 ):
     if len(finished_sub_slots) == 0:
         curr = sub_blocks[prev_header_hash]
-        while True:
-            curr = sub_blocks[curr.header_hash]
-            if curr.first_in_sub_slot:
-                break
+        while not curr.first_in_sub_slot:
+            curr = sub_blocks[curr.prev_hash]
         cc_challenge = curr.finished_challenge_slot_hashes[-1]
         rc_challenge = curr.finished_challenge_slot_hashes[-1]
     else:
@@ -1078,12 +1136,25 @@ def unfinished_block_to_full_block(
     icc_ip_vdf: Optional[VDFInfo],
     icc_ip_proof: Optional[VDFProof],
     finished_sub_slots: List[EndOfSubSlotBundle],
+    prev_sub_block: Optional[SubBlockRecord],
+    difficulty: uint64,
 ):
+    # Replace things that need to be replaced, since foliage blocks did not necessarily have the latest information
+    if prev_sub_block is None:
+        new_weight = uint128(difficulty)
+        new_height = uint32(0)
+        new_foliage_sub_block = unfinished_block.foliage_sub_block
+    else:
+        new_weight = uint128(prev_sub_block.weight + difficulty)
+        new_height = uint32(prev_sub_block.height + 1)
+        new_foliage_sub_block = replace(
+            unfinished_block.foliage_sub_block, prev_sub_block_hash=prev_sub_block.header_hash
+        )
     ret = FullBlock(
         finished_sub_slots,
         RewardChainSubBlock(
-            unfinished_block.reward_chain_sub_block.weight,
-            unfinished_block.reward_chain_sub_block.sub_block_height,
+            new_weight,
+            new_height,
             unfinished_block.reward_chain_sub_block.total_iters,
             unfinished_block.reward_chain_sub_block.proof_of_space,
             unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf,
@@ -1100,7 +1171,7 @@ def unfinished_block_to_full_block(
         unfinished_block.reward_chain_sp_proof,
         rc_ip_proof,
         icc_ip_proof,
-        unfinished_block.foliage_sub_block,
+        new_foliage_sub_block,
         unfinished_block.foliage_block,
         unfinished_block.transactions_info,
         unfinished_block.transactions_generator,
@@ -1143,7 +1214,6 @@ def get_icc(
     sub_slot_start_total_iters: uint128,
     deficit: uint8,
 ) -> Tuple[Optional[VDFInfo], Optional[VDFProof]]:
-
     if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
         # Curr block has deficit either 4 or 5 so no need for ICC vdfs
         return None, None

@@ -18,11 +18,11 @@ def calculate_deficit(
         prev_deficit: uint8 = prev_sb.deficit
         if prev_deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
             # Prev sb must be an overflow sb
-            if overflow and not passed_slot_barrier:
+            if overflow:
                 # Still overflowed, so we cannot decrease the deficit
                 return uint8(prev_deficit)
             else:
-                # We have passed the first overflow, can decrease
+                # We are no longer overflow, can decrease
                 return uint8(prev_deficit - 1)
         elif prev_deficit == 0:
             if passed_slot_barrier:
