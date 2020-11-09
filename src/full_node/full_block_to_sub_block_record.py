@@ -20,7 +20,6 @@ def full_block_to_sub_block_record(
     block: FullBlock,
     required_iters: uint64,
 ):
-    # genesis
     if block.height == 0:
         prev_sb = None
         ips: uint64 = uint64(constants.IPS_STARTING)
@@ -30,14 +29,13 @@ def full_block_to_sub_block_record(
             constants,
             sub_blocks,
             height_to_hash,
-            block.prev_header_hash,
+            prev_sb.prev_hash,
             prev_sb.height,
             prev_sb.deficit,
             prev_sb.ips,
-            True,
+            len(block.finished_sub_slots) > 0,
             prev_sb.total_iters,
         )
-
     overflow = is_overflow_sub_block(constants, ips, required_iters)
     deficit = calculate_deficit(constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
     prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
