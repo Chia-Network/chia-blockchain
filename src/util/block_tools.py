@@ -281,7 +281,7 @@ class BlockTools:
                 ips,
             )
             overflow_pos = []
-
+            prev_num_of_blocks = num_blocks
             for required_iters, proof_of_space in sorted(proofs_of_space, key=lambda t: t[0]):
                 if same_slot_as_last and required_iters <= latest_sub_block.required_iters:
                     # Ignore this sub-block because it's in the past
@@ -482,6 +482,7 @@ class BlockTools:
                 num_blocks -= 1
                 if num_blocks == 0:
                     return block_list
+
                 sub_blocks[full_block.header_hash] = sub_block_record
                 height_to_hash[uint32(full_block.height)] = full_block.header_hash
                 latest_sub_block = sub_blocks[full_block.header_hash]
@@ -490,6 +491,8 @@ class BlockTools:
             same_slot_as_last = False
             sub_slot_start_total_iters += sub_slot_iters
             sub_slot_iters = calculate_sub_slot_iters(constants, ips)
+            if num_blocks < prev_num_of_blocks:
+                num_empty_slots_added += 1
 
     def create_unfinished_block(
         self,
