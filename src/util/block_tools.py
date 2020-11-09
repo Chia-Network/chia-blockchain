@@ -223,7 +223,7 @@ class BlockTools:
         overflow_count: uint8 = uint8(0)
         curr_sub_epoch = 0
         curr_epoch = 0
-        sub_epoch_summery: Optional[SubEpochSummary] = None
+        sub_epoch_summary: Optional[SubEpochSummary] = None
 
         if timestamp is None:
             timestamp = time.time()
@@ -374,7 +374,8 @@ class BlockTools:
                         latest_sub_block = sub_blocks[full_block.header_hash]
                         finished_sub_slots = []
                         print(
-                            f"Created block {full_block.height} is block: {full_block.is_block()}: {full_block.total_iters}"
+                            f"Created block {full_block.height} is block: {full_block.is_block()}: "
+                            f"{full_block.total_iters}"
                         )
 
                 # Finish the end of sub-slot and try again next sub-slot
@@ -410,7 +411,7 @@ class BlockTools:
                     latest_sub_block,
                     sub_blocks,
                     sub_slot_start_total_iters,
-                    latest_sub_block.deficit,  # todo not sure this is correct
+                    latest_sub_block.deficit,
                 )
                 # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
                 # in order for light clients to validate.
@@ -456,18 +457,18 @@ class BlockTools:
                         SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
                     )
                 )
-                sub_epoch_summery = handle_end_of_sub_epoch(
+                sub_epoch_summary = handle_end_of_sub_epoch(
                     constants,
                     latest_sub_block,
                     sub_blocks,
-                    sub_epoch_summery,
+                    sub_epoch_summary,
                     overflow_count,
                     difficulty,
                     ips,
                     curr_sub_epoch,
                 )
 
-                if sub_epoch_summery is not None:
+                if sub_epoch_summary is not None:
                     curr_sub_epoch = curr_sub_epoch + 1
 
                 ips, difficulty, new_epoch = handle_end_of_epoch(
@@ -1237,15 +1238,15 @@ def handle_end_of_sub_epoch(
     curr_sub_epoch: int,
 ):
     if len(sub_blocks.keys()) == constants.SUB_EPOCH_SUB_BLOCKS * (curr_sub_epoch + 1):
-        # update sub_epoch_summery
-        sub_epoch_summery = SubEpochSummary(
+        # update sub_epoch_summary
+        sub_epoch_summary = SubEpochSummary(
             prev_subepoch_summary_hash,
             prev_block.reward_chain_sub_block.get_hash(),
             overflow_count,
             difficulty,
             ips,
         )
-        return std_hash(sub_epoch_summery)
+        return std_hash(sub_epoch_summary)
 
 
 def get_prev_block(
