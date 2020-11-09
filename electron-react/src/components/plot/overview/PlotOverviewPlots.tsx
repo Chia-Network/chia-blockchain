@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { sumBy } from 'lodash';
 import Grid from '@material-ui/core/Grid';
 import { Trans } from '@lingui/macro';
+import { Block, Flex, Table } from '@chia/core';
 import { useSelector, useDispatch } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
 import {
@@ -12,11 +14,6 @@ import {
   Tooltip,
 } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableContainer from '@material-ui/core/TableContainer';
-import TableHead from '@material-ui/core/TableHead';
 import DeleteForeverIcon from '@material-ui/icons/DeleteForever';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import IconButton from '@material-ui/core/IconButton';
@@ -35,22 +32,66 @@ import {
 import AddPlotDialog from './AddPlotDialog';
 import { RootState } from '../../../modules/rootReducer';
 import type Plot from '../../../types/Plot';
+import { FormatBytes } from '@chia/core';
+import plotSizes from '../../../constants/plotSizes';
+import PlotStatus from '../PlotStatus';
+
+const cols = [{
+  field: ({ file_size, size }: Plot) => {
+    const plotSize = plotSizes.filter(item => item.value === size);
+    return (
+      <>
+        {`K-${size}, `}
+        <FormatBytes value={file_size} />
+      </>
+    );
+  },
+  title: <Trans id="PlotOverviewPlots.size">K-Size</Trans>,
+}, {
+  field: 'local_sk',
+  tooltip: 'local_sk',
+  title: <Trans id="PlotOverviewPlots.plotName">Plot Name</Trans>,
+}, {
+  field: 'farmer_public_key',
+  tooltip: 'farmer_public_key',
+  title: <Trans id="PlotOverviewPlots.harversterId">Harvester ID</Trans>,
+}, {
+  field: 'plot-seed',
+  tooltip: 'plot-seed',
+  title: <Trans id="PlotOverviewPlots.plotSeed">Plot Seed</Trans>,
+}, {
+  field: 'plot_public_key',
+  tooltip: 'plot_public_key',
+  title: <Trans id="PlotOverviewPlots.plotKey">Plot Key</Trans>,
+}, {
+  field: 'pool_public_key',
+  tooltip: 'pool_public_key',
+  title: <Trans id="PlotOverviewPlots.poolKey">Pool Key</Trans>,
+}, {
+  field: (plot: Plot) => <PlotStatus plot={plot} />,
+  title: <Trans id="PlotOverviewPlots.status">Status</Trans>,
+}];
 
 export default function PlotOverviewPlots() {
   const dispatch = useDispatch();
   const plots = useSelector(
-    (state: RootState) => state.farming_state.harvester.plots,
+    (state: RootState) => state.farming_state.harvester.plots ?? [],
   );
-  const not_found_filenames = useSelector(
+  const notFoundFilenames = useSelector(
     (state: RootState) => state.farming_state.harvester.not_found_filenames,
   );
-  const failed_to_open_filenames = useSelector(
+  const failedToOpenFilenames = useSelector(
     (state: RootState) =>
       state.farming_state.harvester.failed_to_open_filenames,
   );
-  if (plots) {
-    plots.sort((a, b) => b.size - a.size);
-  }
+
+  const sortedPlots = useMemo(() => {
+    return [...plots].sort((a, b) => b.size - a.size);
+  }, [plots]);
+
+  const totalPlotsSize = useMemo(() => {
+    return sumBy(plots, (plot) => plot.file_size);
+  }, [plots]);
 
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
@@ -89,6 +130,43 @@ export default function PlotOverviewPlots() {
   };
 
   return (
+    <Block>
+      <Flex flexDirection="column" gap={2}>
+        <Typography variant="h5">
+          <Trans id="PlotOverviewPlots.title">
+            Local Harvester Plots
+          </Trans>
+        </Typography>
+
+        <Flex gap={2}>
+          <Flex flexGrow={1}>
+            <Typography variant="body2">
+              <Trans id="PlotOverviewPlots.description">
+                Want to earn more Chia? Add more plots to your farm.
+              </Trans>
+            </Typography>
+          </Flex>
+
+          <Typography variant="body2">
+            <Trans id="PlotOverviewPlots.description">
+              Total Plot Size:
+            </Trans>
+            {' '}
+            <strong>
+              <FormatBytes value={totalPlotsSize} precision={3} />
+            </strong>
+          </Typography>
+        </Flex>
+
+        <Table cols={cols} rows={sortedPlots}>
+          {}
+        </Table>
+      </Flex>
+    </Block>
+  );
+}
+
+ /**
     <Paper>
       <Grid container spacing={0}>
         <Grid item xs={12}>
@@ -316,5 +394,4 @@ export default function PlotOverviewPlots() {
         </DialogActions>
       </Dialog>
     </Paper>
-  );
-}
+     */

@@ -1,13 +1,11 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
-import { useSelector } from 'react-redux';
 import { Flex } from '@chia/core';
 import { FiberManualRecord as FiberManualRecordIcon } from '@material-ui/icons';
-import type { RootState } from '../../modules/rootReducer';
 import FarmerStatus from '../../constants/FarmerStatus';
 import StateColor from '../../constants/StateColor';
-
+import useFarmerStatus from '../../hooks/useFarmerStatus';
 
 const Color = {
   [FarmerStatus.FARMING]: StateColor.SUCCESS,
@@ -34,17 +32,7 @@ function getFarmerStatus(connected: boolean, running: boolean, blockchainSynchin
 }
 
 export default function FarmerStatusComponent() {
-  const blockchainSynching = useSelector(
-    (state: RootState) => !!state.full_node_state.blockchain_state?.sync?.sync_mode,
-  );
-  const connected = useSelector(
-    (state: RootState) => state.daemon_state.farmer_connected,
-  );
-  const running = useSelector(
-    (state: RootState) => state.daemon_state.farmer_running,
-  );
-
-  const farmerStatus = getFarmerStatus(connected, running, blockchainSynching);
+  const farmerStatus = useFarmerStatus();
   const color = Color[farmerStatus];
 
   return (
