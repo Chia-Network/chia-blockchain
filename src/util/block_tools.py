@@ -275,7 +275,7 @@ class BlockTools:
                     difficulty,
                     ips,
                 )
-                overflow_sub_blocks: List[Tuple[uint64, UnfinishedBlock]] = []
+                overflow_pos = []
 
                 for required_iters, proof_of_space in sorted(proofs_of_space, key=lambda t: t[0]):
                     if same_slot_as_last and required_iters <= latest_sub_block.required_iters:
@@ -286,7 +286,9 @@ class BlockTools:
                     is_overflow_block = sp_iters > ip_iters
                     if force_overflow and not is_overflow_block:
                         continue
-
+                    if is_overflow_block:
+                        overflow_pos.append((required_iters, proof_of_space))
+                        continue
                     assert latest_sub_block.header_hash in sub_blocks
                     unfinished_block = self.create_unfinished_block(
                         constants,
@@ -311,9 +313,6 @@ class BlockTools:
                     )
 
                     if unfinished_block is None:
-                        continue
-                    if is_overflow_block:
-                        overflow_sub_blocks.append((required_iters, unfinished_block))
                         continue
 
                     full_block, sub_block_record = finish_sub_block(
@@ -440,15 +439,39 @@ class BlockTools:
                 )
                 overflow_cc_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
                 overflow_rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
-                for required_iters, unfinished_sub_block in overflow_sub_blocks:
+                for required_iters, proof_of_space in overflow_pos:
+                    sp_iters = calculate_sp_iters(constants, ips, required_iters)
                     ip_iters = calculate_ip_iters(constants, ips, required_iters)
+                    unfinished_block = self.create_unfinished_block(
+                        constants,
+                        sub_slot_start_total_iters,
+                        sp_iters,
+                        ip_iters,
+                        proof_of_space,
+                        slot_cc_challenge,
+                        slot_rc_challenge,
+                        difficulty,
+                        farmer_reward_puzzle_hash,
+                        pool_reward_puzzle_hash,
+                        fees,
+                        uint64(
+                            start_timestamp + int((latest_sub_block.height + 1 - start_height) * time_per_sub_block)
+                        ),
+                        seed,
+                        transaction_data_at_height.get(latest_sub_block.height + 1, None),
+                        latest_sub_block,
+                        sub_blocks,
+                        finished_sub_slots,
+                    )
+                    if unfinished_block is None:
+                        continue
                     full_block, sub_block_record = finish_sub_block(
                         constants,
                         sub_blocks,
                         height_to_hash,
                         finished_sub_slots,
                         sub_slot_start_total_iters,
-                        unfinished_sub_block,
+                        unfinished_block,
                         required_iters,
                         ip_iters,
                         overflow_cc_challenge,
@@ -548,8 +571,6 @@ class BlockTools:
                     )
                 else:
                     assert False
-                if overflow:
-                    total_iters_sp -= prev_sub_slot_iters
 
                 next_sb: SubBlockRecord = prev_sub_block
                 curr: SubBlockRecord = next_sb
