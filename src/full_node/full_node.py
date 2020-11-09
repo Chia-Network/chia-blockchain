@@ -868,8 +868,12 @@ class FullNode:
             )
         overflow = is_overflow_sub_block(self.constants, ips, required_iters)
         deficit = calculate_deficit(self.constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
-        finishes_se = finishes_sub_epoch(self.constants, block.height, deficit, False)
-        finishes_epoch: bool = finishes_sub_epoch(self.constants, block.height, deficit, True)
+        finishes_se = finishes_sub_epoch(
+            self.constants, block.height, deficit, False, self.blockchain.sub_blocks, prev_sb.header_hash
+        )
+        finishes_epoch: bool = finishes_sub_epoch(
+            self.constants, block.height, deficit, True, self.blockchain.sub_blocks, prev_sb.header_hash
+        )
 
         if finishes_se:
             assert prev_sb is not None

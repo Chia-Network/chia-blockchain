@@ -36,8 +36,10 @@ from src.consensus.pot_iterations import (
 from src.full_node.difficulty_adjustment import (
     get_next_difficulty,
     get_next_ips,
+    finishes_sub_epoch,
 )
 from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
+from src.full_node.make_sub_epoch_summary import make_sub_epoch_summary
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.full_node.sub_block_record import SubBlockRecord
 from src.plotting.plot_tools import load_plots, PlotInfo
@@ -218,13 +220,6 @@ class BlockTools:
     ) -> List[FullBlock]:
         if transaction_data_at_height is None:
             transaction_data_at_height = {}
-
-        # todo init correctly
-        overflow_count: uint8 = uint8(0)
-        curr_sub_epoch = 0
-        curr_epoch = 0
-        sub_epoch_summary: Optional[SubEpochSummary] = None
-
         if timestamp is None:
             timestamp = time.time()
         if block_list is None or len(block_list) == 0:
@@ -418,6 +413,23 @@ class BlockTools:
                 cc_vdf = VDFInfo(
                     cc_vdf.challenge_hash, ClassgroupElement.get_default_element(), sub_slot_iters, cc_vdf.output
                 )
+
+                sub_epoch_summary: Optional[SubEpochSummary] = handle_end_of_sub_epoch(
+                    constants,
+                    latest_sub_block,
+                    sub_blocks,
+                    height_to_hash,
+                )
+                if sub_epoch_summary is not None:
+                    print(f"Height, {latest_sub_block.height} ses: {sub_epoch_summary}")
+                    ses_hash = sub_epoch_summary.get_hash()
+                    new_ips: Optional[uint64] = sub_epoch_summary.new_ips
+                    new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
+                else:
+                    ses_hash = None
+                    new_ips = None
+                    new_difficulty = None
+
                 if icc_ip_vdf is not None:
                     if len(finished_sub_slots) == 0:
                         curr = latest_sub_block
@@ -437,10 +449,10 @@ class BlockTools:
                     )
                     icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_ip_vdf)
                     icc_sub_slot_hash = icc_sub_slot.get_hash() if latest_sub_block.deficit == 0 else None
-                    cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_sub_slot_hash, None, None, None)
+                    cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_sub_slot_hash, ses_hash, new_ips, new_difficulty)
                 else:
                     icc_sub_slot = None
-                    cc_sub_slot = ChallengeChainSubSlot(cc_vdf, None, None, None, None)
+                    cc_sub_slot = ChallengeChainSubSlot(cc_vdf, None, ses_hash, new_ips, new_difficulty)
 
                 finished_sub_slots.append(
                     EndOfSubSlotBundle(
@@ -457,35 +469,6 @@ class BlockTools:
                         SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
                     )
                 )
-                sub_epoch_summary = handle_end_of_sub_epoch(
-                    constants,
-                    latest_sub_block,
-                    sub_blocks,
-                    sub_epoch_summary,
-                    overflow_count,
-                    difficulty,
-                    ips,
-                    curr_sub_epoch,
-                )
-
-                if sub_epoch_summary is not None:
-                    curr_sub_epoch = curr_sub_epoch + 1
-
-                ips, difficulty, new_epoch = handle_end_of_epoch(
-                    constants,
-                    True,
-                    difficulty,
-                    latest_sub_block.deficit,
-                    ips,
-                    sp_iters,
-                    sub_blocks,
-                    latest_sub_block,
-                    height_to_hash,
-                    curr_epoch,
-                )
-                if new_epoch:
-                    curr_epoch = curr_epoch + 1
-                overflow_count = uint8(0)
 
             num_empty_slots_added += 1
             same_slot_as_last = False
@@ -1183,70 +1166,55 @@ def get_icc(
     )
 
 
-def handle_end_of_epoch(
-    constants: ConsensusConstants,
-    new_slot: bool,
-    difficulty: uint64,
-    deficit: uint8,
-    ips: uint64,
-    sp_iters: uint128,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
-    prev_block: SubBlockRecord,
-    height_to_hash: Dict[uint32, bytes32],
-    curr_epoch: int,
-):
-    new_epoch = False
-    if len(sub_blocks.keys()) == constants.EPOCH_SUB_BLOCKS * (curr_epoch + 1):
-        new_epoch = True
-        # new difficulty
-        difficulty = get_next_difficulty(
-            constants,
-            sub_blocks,
-            height_to_hash,
-            prev_block.header_hash,
-            prev_block.height,
-            deficit,
-            difficulty,
-            new_slot,
-            sp_iters,
-        )
-
-        # new iterations per slot
-        ips = get_next_ips(
-            constants,
-            height_to_hash,
-            sub_blocks,
-            prev_block.header_hash,
-            prev_block.height,
-            deficit,
-            ips,
-            new_slot,
-            sp_iters,
-        )
-
-    return ips, difficulty, new_epoch
-
-
 def handle_end_of_sub_epoch(
     constants: ConsensusConstants,
-    prev_block: SubBlockRecord,
+    last_block: SubBlockRecord,
     sub_blocks: Dict[bytes32, SubBlockRecord],
-    prev_subepoch_summary_hash: bytes32,
-    overflow_count: uint8,
-    difficulty: uint64,
-    ips: uint64,
-    curr_sub_epoch: int,
-):
-    if len(sub_blocks.keys()) == constants.SUB_EPOCH_SUB_BLOCKS * (curr_sub_epoch + 1):
-        # update sub_epoch_summary
-        sub_epoch_summary = SubEpochSummary(
-            prev_subepoch_summary_hash,
-            prev_block.reward_chain_sub_block.get_hash(),
-            overflow_count,
-            difficulty,
-            ips,
+    height_to_hash: Dict[uint32, bytes32],
+) -> Optional[SubEpochSummary]:
+    fs = finishes_sub_epoch(constants, last_block.height, last_block.deficit, False, sub_blocks, last_block.prev_hash)
+    fe = finishes_sub_epoch(constants, last_block.height, last_block.deficit, True, sub_blocks, last_block.prev_hash)
+
+    if not fs:  # Does not finish sub-epoch
+        return None
+
+    if not fe:
+        # Does not finish epoch
+        new_difficulty: Optional[uint64] = None
+        new_ips: Optional[uint64] = None
+    else:
+        ip_iters = calculate_ip_iters(constants, last_block.ips, last_block.required_iters)
+        sp_iters = calculate_sp_iters(constants, last_block.ips, last_block.required_iters)
+        new_difficulty = get_next_difficulty(
+            constants,
+            sub_blocks,
+            height_to_hash,
+            last_block.header_hash,
+            last_block.height,
+            last_block.deficit,
+            uint64(last_block.weight - sub_blocks[last_block.prev_hash].weight),
+            True,
+            uint128(last_block.total_iters - ip_iters + sp_iters),
         )
-        return std_hash(sub_epoch_summary)
+        new_ips = get_next_ips(
+            constants,
+            sub_blocks,
+            height_to_hash,
+            last_block.header_hash,
+            last_block.height,
+            last_block.deficit,
+            last_block.ips,
+            True,
+            uint128(last_block.total_iters - ip_iters + sp_iters),
+        )
+    return make_sub_epoch_summary(
+        constants,
+        sub_blocks,
+        last_block.height + 1,
+        last_block,
+        new_difficulty,
+        new_ips,
+    )
 
 
 def get_prev_block(
