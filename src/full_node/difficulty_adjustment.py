@@ -49,8 +49,10 @@ def _get_last_block_in_previous_epoch(
 
     # The sub-blocks selected for the timestamps are the last sub-block which is also a block, and which is infused
     # before the final sub-block in the epoch. Block at height 0 is an exception.
-    height_epoch_surpass: uint32 = next_height % constants.EPOCH_SUB_BLOCKS
-    if height_epoch_surpass > constants.MAX_SLOT_SUB_BLOCKS:
+    # TODO: check edge cases here
+    height_epoch_surpass: uint32 = next_height - (next_height % constants.EPOCH_SUB_BLOCKS)
+    height_prev_epoch_surpass: uint32 = height_epoch_surpass - constants.EPOCH_SUB_BLOCKS
+    if (next_height - height_epoch_surpass) > constants.MAX_SLOT_SUB_BLOCKS:
         raise ValueError(f"Height at {next_height} should not create a new slot, it is far past the epoch barrier")
 
     # If the prev slot is the first slot, the iterations start at 0
@@ -59,24 +61,27 @@ def _get_last_block_in_previous_epoch(
     prev_slot_start_iters: uint128
     prev_slot_time_start: uint64
 
-    if height_epoch_surpass == 0:
-        # The genesis block is an edge case, where we measure from the first block in epoch, as opposed to the last
-        # block in the previous epoch
-        return _get_blocks_at_height(height_to_hash, sub_blocks, prev_sb, uint32(0))[1]
+    if height_prev_epoch_surpass == 0:
+        # The genesis block is an edge case, where we measure from the first block in epoch (height 0), as opposed to
+        # the last sub-block in the previous epoch, which would be height -1
+        return _get_blocks_at_height(height_to_hash, sub_blocks, prev_sb, uint32(0))[0]
     else:
         fetched_blocks = _get_blocks_at_height(
             height_to_hash,
             sub_blocks,
             prev_sb,
-            uint32(height_epoch_surpass - constants.EPOCH_SUB_BLOCKS - constants.MAX_SLOT_SUB_BLOCKS - 1),
+            uint32(height_prev_epoch_surpass - constants.MAX_SLOT_SUB_BLOCKS - 1),
             uint32(2 * constants.MAX_SLOT_SUB_BLOCKS + 1),
         )
         # This is the last sb in the slot at which we surpass the height. The last block in epoch will be before this.
-        last_sb_in_slot: SubBlockRecord = fetched_blocks[constants.MAX_SLOT_SUB_BLOCKS]
-        fetched_index: int = constants.MAX_SLOT_SUB_BLOCKS + 1
+        fetched_index: int = constants.MAX_SLOT_SUB_BLOCKS
+        last_sb_in_slot: SubBlockRecord = fetched_blocks[fetched_index]
+        fetched_index += 1
+        assert last_sb_in_slot.height == height_prev_epoch_surpass - 1
         curr: SubBlockRecord = fetched_blocks[fetched_index]
         # Wait until the slot finishes with a challenge chain infusion at start of slot
-        while not curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+        # Note that there are no overflow blocks at the start of new epochs
+        while not curr.is_challenge_sub_block(constants):
             last_sb_in_slot = curr
             curr = fetched_blocks[fetched_index]
             fetched_index += 1
@@ -130,7 +135,7 @@ def finishes_sub_epoch(
 
     # For checking new epoch, make sure the epoch sub blocks are aligned
     if also_finishes_epoch:
-        if height + 1 % constants.EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
+        if (height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
             return False
 
     return True
@@ -138,8 +143,8 @@ def finishes_sub_epoch(
 
 def get_next_ips(
     constants: ConsensusConstants,
-    height_to_hash: Dict[uint32, bytes32],
     sub_blocks: Dict[bytes32, SubBlockRecord],
+    height_to_hash: Dict[uint32, bytes32],
     prev_header_hash: bytes32,
     height: uint32,
     deficit: uint8,
@@ -200,21 +205,6 @@ def get_next_ips(
         return max([uint64(1), new_ips, min_ips])
 
 
-def get_difficulty(
-    constants: ConsensusConstants,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
-    header_hash: bytes32,
-) -> uint64:
-    """
-    Returns the difficulty of the sub-block referred to by header_hash
-    """
-    sub_block = sub_blocks[header_hash]
-
-    if sub_block.height == 0:
-        return uint64(constants.DIFFICULTY_STARTING)
-    return uint64(sub_block.weight - sub_blocks[sub_block.prev_hash].weight)
-
-
 def get_next_difficulty(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
@@ -256,7 +246,7 @@ def get_next_difficulty(
         last_block_curr = sub_blocks[last_block_curr.prev_hash]
 
     actual_epoch_time = last_block_curr.timestamp - last_block_prev.timestamp
-    old_difficulty = get_difficulty(constants, sub_blocks, last_block_curr)
+    old_difficulty = uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight)
 
     # Terms are rearranged so there is only one division.
     new_difficulty_precise = (
