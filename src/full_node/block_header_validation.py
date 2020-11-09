@@ -308,7 +308,7 @@ async def validate_unfinished_header_block(
                 else:
                     # Otherwise, deficit stays the same at the slot ends, cannot reset until 0
                     if sub_slot.reward_chain.deficit != prev_sb.deficit:
-                        print(
+                        log.error(
                             header_block.log_string,
                             "failed validation, deficit is wrong at slot end ",
                             constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
@@ -510,12 +510,14 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.reward_chain_sp_vdf,
             target_vdf_info,
         ):
+            log.error(header_block.log_string, "failed rc vdf validation ")
             return None, Err.INVALID_RC_SP_VDF
         rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.output.get_hash()
     else:
         # Edge case of first sp (start of slot), where sp_iters == 0
         assert overflow is not None
         if header_block.reward_chain_sub_block.reward_chain_sp_vdf is not None:
+            log.error(header_block.log_string, "failed rc vdf validation ")
             return None, Err.INVALID_RC_SP_VDF
         if new_sub_slot:
             rc_sp_hash = header_block.finished_sub_slots[-1].reward_chain.get_hash()
@@ -534,6 +536,12 @@ async def validate_unfinished_header_block(
         rc_sp_hash,
         header_block.reward_chain_sub_block.reward_chain_sp_signature,
     ):
+        log.error(
+            "block %s height: %s failed rc sp sig validation sp hash was %s, ",
+            str(header_block.header_hash),
+            str(height),
+            rc_sp_hash,
+        )
         return None, Err.INVALID_RC_SIGNATURE
 
     # 10. Check cc sp
@@ -549,10 +557,12 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.challenge_chain_sp_vdf,
             target_vdf_info,
         ):
+            log.error(header_block.log_string, "failed cc vdf validation ")
             return None, Err.INVALID_CC_SP_VDF
     else:
         assert overflow is not None
         if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is not None:
+            log.error(header_block.log_string, "failed cc vdf validation ")
             return None, Err.INVALID_CC_SP_VDF
 
     # 11. Check cc sp sig
@@ -821,7 +831,7 @@ async def validate_finished_header_block(
         if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:
             # If we don't have an ICC chain, deficit must be 4 or 5
             if deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
-                print(
+                log.error(
                     header_block.log_string,
                     "failed validation no icc vdf and deficit is lower than ",
                     constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1,
@@ -830,7 +840,7 @@ async def validate_finished_header_block(
         else:
             # If we have an ICC chain, deficit must be 0, 1, 2 or 3
             if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
-                print(
+                log.error(
                     header_block.log_string,
                     "failed validation icc vdf and deficit is bigger or equal to",
                     constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1,
@@ -867,7 +877,7 @@ async def validate_finished_header_block(
                 header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf,
                 icc_target_vdf_info,
             ):
-                print(header_block.log_string, "failed validation invalid icc proof")
+                log.error(header_block.log_string, "failed validation invalid icc proof")
                 return None, Err.INVALID_ICC_VDF
     else:
         if header_block.infused_challenge_chain_ip_proof is not None:
