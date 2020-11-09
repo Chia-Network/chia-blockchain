@@ -676,8 +676,8 @@ class FullNode:
             )
 
             difficulty = self.blockchain.get_next_difficulty(self.blockchain.get_peak(), False)
-            slot_iters = self.blockchain.get_next_slot_iters(self.blockchain.get_peak(), False)
-            self.log.info(f"Difficulty {difficulty} slot iterations {slot_iters}")
+            sub_slot_iters = self.blockchain.get_next_slot_iters(self.blockchain.get_peak(), False)
+            self.log.info(f"Difficulty {difficulty} slot iterations {sub_slot_iters}")
 
             for sub_slot in respond_sub_block.sub_block.finished_sub_slots:
                 # Removes the slots that we have finished from the full node cache

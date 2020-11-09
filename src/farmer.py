@@ -170,13 +170,13 @@ class Farmer:
             log.warning(f"Received response for challenge {challenge_response.challenge_hash} with no sp data")
             return
 
-        slot_iters = self.sps[challenge_response.proof.challenge_hash][0].slot_iterations
+        sub_slot_iters = self.sps[challenge_response.proof.challenge_hash][0].slot_iterations
 
         # Double check that the iters are good
-        if required_iters < slot_iters or required_iters < self.config["pool_share_threshold"]:
+        if required_iters < sub_slot_iters or required_iters < self.config["pool_share_threshold"]:
             self.number_of_responses[challenge_response.proof.challenge_hash] += 1
             self._state_changed("challenge")
-            ips = slot_iters // self.constants.SLOT_TIME_TARGET
+            ips = sub_slot_iters // self.constants.SLOT_TIME_TARGET
             # This is the sp which this proof of space is assigned to
             target_sp_index: uint8 = calculate_sp_index(self.constants, ips, required_iters)
 
@@ -215,7 +215,7 @@ class Farmer:
                 challenge_response.proof.challenge_hash,
             )
         else:
-            log.warning(f"Required_iters: {required_iters}, too high. Must be < slot_iters={slot_iters}")
+            log.warning(f"Required_iters: {required_iters}, too high. Must be < sub_slot_iters={sub_slot_iters}")
 
     @api_request
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures):
