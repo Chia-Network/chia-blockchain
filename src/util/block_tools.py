@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Optional, Union
 import blspy
 from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
 from chiabip158 import PyBIP158
-from chiavdf import prove, create_discriminant
+from chiavdf import prove
 from src.full_node.deficit import calculate_deficit
 
 from src.cmds.init import create_default_chia_config, initialize_ssl
@@ -260,8 +260,6 @@ class BlockTools:
         # Start at the last block in block list
         # Get the challenge for that slot
         while True:
-            print("Starting new slot at iters", sub_slot_start_total_iters)
-
             # If did not reach empty slot counts, continue
             if num_empty_slots_added >= force_empty_slots:
                 slot_cc_challenge, slot_rc_challenge = get_challenges(
@@ -281,14 +279,12 @@ class BlockTools:
                     if same_slot_as_last and required_iters <= latest_sub_block.required_iters:
                         # Ignore this sub-block because it's in the past
                         continue
-                    print(f"Looking at Pospace with ri: {required_iters}")
                     sp_iters: uint64 = calculate_sp_iters(constants, uint64(constants.IPS_STARTING), required_iters)
                     ip_iters = calculate_ip_iters(constants, uint64(constants.IPS_STARTING), required_iters)
                     is_overflow_block = sp_iters > ip_iters
                     if force_overflow and not is_overflow_block:
                         continue
 
-                    print("create unfinished block at height ", latest_sub_block.height + 1)
                     unfinished_block = self.create_unfinished_block(
                         constants,
                         sub_slot_start_total_iters,
@@ -332,7 +328,6 @@ class BlockTools:
                             new_ip_iters,
                         )
 
-                        print(f"Creating IP challenge for sub block {unfinished_block.total_iters} output {cc_ip_vdf}")
                         deficit = calculate_deficit(
                             constants, latest_sub_block.height + 1, latest_sub_block, False, len(finished_sub_slots) > 0
                         )
@@ -380,7 +375,7 @@ class BlockTools:
                         latest_sub_block = sub_blocks[full_block.header_hash]
                         finished_sub_slots = []
                         print(
-                            f"Created block {full_block.height} is block: {full_block.is_block()} at posace {proof_of_space} RI: {required_iters} iters {full_block.total_iters}"
+                            f"Created block {full_block.height} is block: {full_block.is_block()}: {full_block.total_iters}"
                         )
 
                 # Finish the end of sub-slot and try again next sub-slot
@@ -546,14 +541,15 @@ class BlockTools:
                 cc_vdf_challenge, rc_vdf_challenge = get_genesis_challenges(constants, finished_sub_slots)
                 sp_vdf_iters = sp_iters
             elif new_sub_slot and not overflow:
-                # Start from start of this slot. Case of no overflow slots. Also includes genesis block after empty slot(s),
-                # but not overflowing
+                # Start from start of this slot. Case of no overflow slots. Also includes genesis block after
+                # empty slot (but not overflowing)
                 rc_vdf_challenge: bytes32 = finished_sub_slots[-1].reward_chain.get_hash()
                 cc_vdf_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
                 sp_vdf_iters = sp_iters
                 cc_vdf_input = ClassgroupElement.get_default_element()
             elif new_sub_slot and overflow and len(finished_sub_slots) > 1:
-                # Start from start of prev slot. Rare case of empty prev slot. Includes genesis block after 2 empty slots
+                # Start from start of prev slot. Rare case of empty prev slot.
+                # Includes genesis block after 2 empty slots
                 rc_vdf_challenge = finished_sub_slots[-2].reward_chain.get_hash()
                 cc_vdf_challenge = finished_sub_slots[-2].challenge_chain.get_hash()
                 sp_vdf_iters = sp_iters
@@ -693,7 +689,6 @@ class BlockTools:
         # Keep trying until we get a good proof of space that also passes sp filter
         while True:
             cc_challenge, rc_challenge = get_genesis_challenges(constants, finished_sub_slots)
-            print("cc challenge", cc_challenge)
             proofs_of_space: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
                 constants,
                 cc_challenge,
@@ -1040,15 +1035,6 @@ def get_vdf_info_and_proof(
     number_iters: uint64,
 ) -> Tuple[VDFInfo, VDFProof]:
     int_size = (constants.DISCRIMINANT_SIZE_BITS + 16) >> 4
-
-    disc: int = int(
-        create_discriminant(challenge_hash, constants.DISCRIMINANT_SIZE_BITS),
-        16,
-    )
-    print("Disc", disc)
-    print("vdf", vdf_input)
-    print("iters", number_iters)
-
     result: bytes = prove(
         challenge_hash, str(vdf_input.a), str(vdf_input.b), constants.DISCRIMINANT_SIZE_BITS, number_iters
     )
@@ -1069,7 +1055,6 @@ def get_vdf_info_and_proof(
             )
         ),
     )
-    # print("Output:", output)
     proof_bytes = result[2 * int_size : 4 * int_size]
     return VDFInfo(challenge_hash, vdf_input, number_iters, output), VDFProof(uint8(0), proof_bytes)
 
