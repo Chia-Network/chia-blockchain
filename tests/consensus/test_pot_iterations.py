@@ -1,7 +1,7 @@
 from src.consensus.pot_iterations import (
     calculate_iterations_quality,
     is_overflow_sub_block,
-    calculate_slot_iters,
+    calculate_sub_slot_iters,
     calculate_sp_iters,
     calculate_ip_iters,
 )
@@ -21,9 +21,9 @@ test_constants = DEFAULT_CONSTANTS.replace(
 
 
 class TestPotIterations:
-    def test_calculate_slot_iters(self):
+    def test_calculate_sub_slot_iters(self):
         ips: uint64 = uint64(100001)
-        assert calculate_slot_iters(test_constants, ips) == test_constants.SLOT_TIME_TARGET * ips
+        assert calculate_sub_slot_iters(test_constants, ips) == test_constants.SLOT_TIME_TARGET * ips
 
     def test_is_overflow_sub_block(self):
         ips: uint64 = uint64(100001)
@@ -111,7 +111,7 @@ class TestPotIterations:
         percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
         total_slots = 500
-        slot_iters = uint64(100000000)
+        sub_slot_iters = uint64(100000000)
         difficulty = uint64(500000000000)
 
         for slot_index in range(total_slots):
@@ -124,7 +124,7 @@ class TestPotIterations:
                         k,
                         difficulty,
                     )
-                    if required_iters < slot_iters:
+                    if required_iters < sub_slot_iters:
                         wins[k] += 1
                         total_wins_in_slot += 1
 
