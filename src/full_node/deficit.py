@@ -26,7 +26,10 @@ def calculate_deficit(
                 return uint8(prev_deficit - 1)
         elif prev_deficit == 0:
             if passed_slot_barrier:
-                return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK)
+                if overflow:
+                    return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK)
+                else:
+                    return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1)
             else:
                 return uint8(0)
         else:
