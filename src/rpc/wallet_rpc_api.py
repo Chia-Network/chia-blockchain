@@ -78,6 +78,7 @@ class WalletRpcApi:
             "/did_get_pubkey": self.did_get_pubkey,
             "/did_get_did": self.did_get_did,
             "/did_recovery_spend": self.did_recovery_spend,
+            "/did_get_recovery_list": self.did_get_recovery_list,
             "/did_create_attest": self.did_create_attest,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
@@ -579,7 +580,7 @@ class WalletRpcApi:
         return {}
 
     ##########################################################################################
-    # Coloured Coins and Trading
+    # Distributed Identities
     ##########################################################################################
 
     async def did_update_recovery_ids(self, request):
@@ -694,6 +695,10 @@ class WalletRpcApi:
             }
         else:
             return {"success": False}
+
+    ##########################################################################################
+    # Coloured Coins and Trading
+    ##########################################################################################
 
     async def cc_set_name(self, request):
         assert self.service.wallet_state_manager is not None
