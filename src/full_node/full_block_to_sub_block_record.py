@@ -88,7 +88,6 @@ def full_block_to_sub_block_record(
         icc_output = block.reward_chain_sub_block.infused_challenge_chain_ip_vdf.output
     else:
         icc_output = None
-    print("Creating SBR: with output ", block.reward_chain_sub_block.challenge_chain_ip_vdf.output)
     return SubBlockRecord(
         block.header_hash,
         block.prev_header_hash,

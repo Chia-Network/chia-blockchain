@@ -532,7 +532,7 @@ async def validate_unfinished_header_block(
             rc_sp_hash = header_block.finished_sub_slots[-1].reward_chain.get_hash()
         else:
             curr = prev_sb
-            while not curr.first_in_sub_slot():
+            while not curr.first_in_sub_slot:
                 curr = sub_blocks[curr.prev_hash]
             rc_sp_hash = curr.finished_reward_slot_hashes[-1]
 
