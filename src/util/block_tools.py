@@ -436,7 +436,8 @@ class BlockTools:
                         icc_ip_vdf.output,
                     )
                     icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_ip_vdf)
-                    cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_sub_slot.get_hash(), None, None, None)
+                    icc_sub_slot_hash = icc_sub_slot.get_hash() if latest_sub_block.deficit == 0 else None
+                    cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_sub_slot_hash, None, None, None)
                 else:
                     icc_sub_slot = None
                     cc_sub_slot = ChallengeChainSubSlot(cc_vdf, None, None, None, None)
@@ -996,6 +997,7 @@ class BlockTools:
                             proof_xs,
                         )
                         found_proofs.append((required_iters, proof_of_space))
+        print(f"Plots: {len(plots)}, passed plot filter: {passed_plot_filter}, proofs: {len(found_proofs)}")
         return found_proofs
 
 

@@ -125,37 +125,36 @@ async def validate_unfinished_header_block(
                 if sub_slot.infused_challenge_chain is not None:
                     return None, Err.SHOULD_NOT_HAVE_ICC
             else:
-                curr: SubBlockRecord = prev_sb
                 icc_iters_committed: Optional[uint64] = None
                 icc_iters_proof: Optional[uint64] = None
-                if curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                if prev_sb.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                    # There should be no ICC chain if the last sub block's deficit is 5
                     icc_challenge_hash: Optional[bytes32] = None
+                    icc_vdf_input = None
                 else:
                     if finished_sub_slot_n == 0:
-                        while (
-                            curr.deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
-                            and not curr.first_in_sub_slot
-                        ):
+                        curr: SubBlockRecord = prev_sb
+                        while not curr.is_challenge_sub_block(constants) and not curr.first_in_sub_slot:
                             curr = sub_blocks[curr.prev_hash]
-                        if curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+                        if curr.is_challenge_sub_block(constants):
                             icc_challenge_hash = curr.challenge_block_info_hash
-                            ip_iters_prev = calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
                             ip_iters_challenge_block = calculate_ip_iters(constants, curr.ips, curr.required_iters)
-                            icc_iters_proof: uint64 = calculate_slot_iters(constants, prev_sb.ips) - ip_iters_prev
                             icc_iters_committed: uint64 = (
                                 calculate_slot_iters(constants, prev_sb.ips) - ip_iters_challenge_block
                             )
-
                         else:
                             icc_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
                             icc_iters_committed = calculate_slot_iters(constants, prev_sb.ips)
-                            icc_iters_proof = icc_iters_committed
+                        ip_iters_prev = calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
+                        icc_iters_proof: uint64 = calculate_slot_iters(constants, prev_sb.ips) - ip_iters_prev
+                        icc_vdf_input = prev_sb.infused_challenge_vdf_output
                     else:
                         icc_challenge_hash = header_block.finished_sub_slots[
                             finished_sub_slot_n - 1
                         ].infused_challenge_chain.get_hash()
                         icc_iters_committed = calculate_slot_iters(constants, prev_sb.ips)
                         icc_iters_proof = icc_iters_committed
+                        icc_vdf_input = ClassgroupElement.get_default_element()
 
                 assert (sub_slot.infused_challenge_chain is None) == (icc_challenge_hash is None)
                 if sub_slot.infused_challenge_chain is not None:
@@ -163,7 +162,7 @@ async def validate_unfinished_header_block(
                     # Only validate from prev_sb to optimize
                     target_vdf_info = VDFInfo(
                         icc_challenge_hash,
-                        prev_sb.infused_challenge_vdf_output,
+                        icc_vdf_input,
                         icc_iters_proof,
                         sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.output,
                     )
