@@ -586,7 +586,8 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = request["new_list"]
-        await wallet.update_recovery_list(recovery_list)
+        new_amount_verifications_required = uint64(request["num_verifications_required"])
+        await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
         # Update coin with new ID info
         updated_puz = await wallet.get_new_puzzle()
         spend_bundle = await wallet.create_spend(updated_puz.get_tree_hash())
