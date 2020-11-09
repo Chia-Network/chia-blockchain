@@ -857,8 +857,8 @@ class FullNode:
             prev_sp_iters = calculate_sp_iters(self.constants, prev_sb.ips, prev_sb.required_iters)
             ips = get_next_ips(
                 self.constants,
-                self.blockchain.height_to_hash,
                 self.blockchain.sub_blocks,
+                self.blockchain.height_to_hash,
                 block.prev_header_hash,
                 prev_sb.height,
                 prev_sb.deficit,
