@@ -380,6 +380,7 @@ async def validate_unfinished_header_block(
 
     # 5. Check no overflows in new sub-epoch
     if overflow and ses_hash is not None:
+        log.error("block %s failed validation at step %d overflow block with no ses hash", header_block.header_hash, 5)
         return None, Err.NO_OVERFLOWS_IN_NEW_SUBEPOCH
 
     # If sub_block state is correct, we should always find a challenge here
@@ -510,14 +511,14 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.reward_chain_sp_vdf,
             target_vdf_info,
         ):
-            log.error(header_block.log_string, "failed rc vdf validation ")
+            log.error("block %s failed validation at step %d invalid rc vdf ", header_block.header_hash, 8)
             return None, Err.INVALID_RC_SP_VDF
         rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.output.get_hash()
     else:
         # Edge case of first sp (start of slot), where sp_iters == 0
         assert overflow is not None
         if header_block.reward_chain_sub_block.reward_chain_sp_vdf is not None:
-            log.error(header_block.log_string, "failed rc vdf validation ")
+            log.error("block %s failed validation at step %d rc vdf is not None ", header_block.header_hash, 8)
             return None, Err.INVALID_RC_SP_VDF
         if new_sub_slot:
             rc_sp_hash = header_block.finished_sub_slots[-1].reward_chain.get_hash()
@@ -536,12 +537,7 @@ async def validate_unfinished_header_block(
         rc_sp_hash,
         header_block.reward_chain_sub_block.reward_chain_sp_signature,
     ):
-        log.error(
-            "block %s height: %s failed rc sp sig validation sp hash was %s, ",
-            str(header_block.header_hash),
-            str(height),
-            rc_sp_hash,
-        )
+        log.error("block %s failed at step %d rc sp sig validation %s, ", header_block.header_hash, 9)
         return None, Err.INVALID_RC_SIGNATURE
 
     # 10. Check cc sp
@@ -557,12 +553,13 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.challenge_chain_sp_vdf,
             target_vdf_info,
         ):
-            log.error(header_block.log_string, "failed cc vdf validation ")
+            log.error("block %s failed at step %d invalid cc vdf, ", header_block.header_hash, 9)
+
             return None, Err.INVALID_CC_SP_VDF
     else:
         assert overflow is not None
         if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is not None:
-            log.error(header_block.log_string, "failed cc vdf validation ")
+            log.error("block %s failed at step %d overflow should not include cc vdf, ", header_block.header_hash, 9)
             return None, Err.INVALID_CC_SP_VDF
 
     # 11. Check cc sp sig
@@ -571,11 +568,13 @@ async def validate_unfinished_header_block(
         cc_sp_hash,
         header_block.reward_chain_sub_block.challenge_chain_sp_signature,
     ):
+        log.error("block %s failed at step %d invalid cc sp sig, ", header_block.header_hash, 11)
         return None, Err.INVALID_CC_SIGNATURE
 
     # 12. Check is_block
     if genesis_block:
         if header_block.foliage_sub_block.foliage_block_hash is None:
+            log.error("block %s failed at step %d invalid genesis, ", header_block.header_hash, 12)
             return None, Err.INVALID_IS_BLOCK
     else:
         # Finds the previous block
@@ -589,6 +588,7 @@ async def validate_unfinished_header_block(
         else:
             our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters)
         if (our_sp_total_iters > curr.total_iters) != (header_block.foliage_sub_block.foliage_block_hash is not None):
+            log.error("block %s failed at step %d is block:%s, has foliage block:, ", header_block.header_hash, 12)
             return None, Err.INVALID_IS_BLOCK
 
     # 13. Check foliage sub block signature by plot key
