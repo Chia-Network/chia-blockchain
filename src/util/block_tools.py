@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 import random
 import shutil
@@ -298,7 +299,6 @@ class BlockTools:
                         proof_of_space,
                         slot_cc_challenge,
                         slot_rc_challenge,
-                        difficulty,
                         farmer_reward_puzzle_hash,
                         pool_reward_puzzle_hash,
                         fees,
@@ -450,7 +450,6 @@ class BlockTools:
                         proof_of_space,
                         slot_cc_challenge,
                         slot_rc_challenge,
-                        difficulty,
                         farmer_reward_puzzle_hash,
                         pool_reward_puzzle_hash,
                         fees,
@@ -502,7 +501,6 @@ class BlockTools:
         proof_of_space: ProofOfSpace,
         slot_cc_challenge: bytes32,
         slot_rc_challenge: bytes32,
-        difficulty: uint64,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
         fees: uint64 = uint64(0),
@@ -533,8 +531,8 @@ class BlockTools:
         cc_sp_proof: Optional[VDFProof] = None
         rc_sp_vdf: Optional[VDFInfo] = None
         rc_sp_proof: Optional[VDFProof] = None
-        to_sign_cc: Optional[bytes32] = slot_cc_challenge
-        to_sign_rc: Optional[bytes32] = slot_rc_challenge
+        cc_sp_hash: Optional[bytes32] = slot_cc_challenge
+        rc_sp_hash: Optional[bytes32] = slot_rc_challenge
         if sp_iters != 0:
             if is_genesis:
                 cc_vdf_input = ClassgroupElement.get_default_element()
@@ -612,17 +610,28 @@ class BlockTools:
                 sp_vdf_iters,
             )
 
-            to_sign_cc = cc_sp_vdf.output.get_hash()
-            to_sign_rc = rc_sp_vdf.output.get_hash()
+            cc_sp_hash = cc_sp_vdf.output.get_hash()
+            rc_sp_hash = rc_sp_vdf.output.get_hash()
+        else:
+            if new_sub_slot:
+                rc_sp_hash = finished_sub_slots[-1].reward_chain.get_hash()
+            else:
+                if is_genesis:
+                    rc_sp_hash = constants.FIRST_RC_CHALLENGE
+                else:
+                    curr = prev_sub_block
+                    while not curr.first_in_sub_slot:
+                        curr = sub_blocks[curr.prev_hash]
+                    rc_sp_hash = curr.finished_reward_slot_hashes[-1]
 
-        cc_sp_signature: Optional[G2Element] = self.get_plot_signature(to_sign_cc, proof_of_space.plot_public_key)
-        rc_sp_signature: Optional[G2Element] = self.get_plot_signature(to_sign_rc, proof_of_space.plot_public_key)
-        assert blspy.AugSchemeMPL.verify(proof_of_space.plot_public_key, to_sign_cc, cc_sp_signature)
+        cc_sp_signature: Optional[G2Element] = self.get_plot_signature(cc_sp_hash, proof_of_space.plot_public_key)
+        rc_sp_signature: Optional[G2Element] = self.get_plot_signature(rc_sp_hash, proof_of_space.plot_public_key)
+        assert blspy.AugSchemeMPL.verify(proof_of_space.plot_public_key, cc_sp_hash, cc_sp_signature)
 
         # Checks sp filter
         plot_id = proof_of_space.get_plot_id()
         if not ProofOfSpace.can_create_proof(
-            constants, plot_id, proof_of_space.challenge_hash, to_sign_cc, cc_sp_signature
+            constants, plot_id, proof_of_space.challenge_hash, cc_sp_hash, cc_sp_signature
         ):
             return None
         total_iters = uint128(sub_slot_start_total_iters + ip_iters + (prev_sub_slot_iters if overflow else 0))
@@ -712,7 +721,6 @@ class BlockTools:
                     proof_of_space,
                     cc_challenge,
                     rc_challenge,
-                    uint64(constants.DIFFICULTY_STARTING),
                     farmer_reward_puzzle_hash,
                     constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
                     fees,
