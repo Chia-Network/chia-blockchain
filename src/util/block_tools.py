@@ -31,7 +31,7 @@ from src.consensus.pot_iterations import (
     calculate_infusion_point_iters,
     calculate_iterations_quality,
     calculate_sp_iters,
-    calculate_slot_iters,
+    calculate_sub_slot_iters,
 )
 from src.full_node.difficulty_adjustment import (
     get_next_difficulty,
@@ -248,13 +248,12 @@ class BlockTools:
         curr = latest_sub_block
         while not curr.first_in_sub_slot:
             curr = sub_blocks[curr.prev_hash]
-        # curr_challenge: bytes32 = curr.finished_challenge_slot_hashes[-1]
 
         finished_sub_slots: List[EndOfSubSlotBundle] = []  # Sub-slots since last sub block
         ips: uint64 = latest_sub_block.ips
-        slot_iters: uint64 = calculate_slot_iters(constants, ips)
-        num_empty_slots_added = 0
-        same_slot_as_last = True
+        sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)  # The number of iterations in one sub-slot
+        num_empty_slots_added = 0  # Allows forcing empty slots in the beginning, for testing purposes
+        same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
         sub_slot_start_total_iters: uint128 = uint128(0)
 
         # Start at the last block in block list
@@ -288,7 +287,7 @@ class BlockTools:
                     unfinished_block = self.create_unfinished_block(
                         constants,
                         sub_slot_start_total_iters,
-                        slot_iters,
+                        sub_slot_iters,
                         sp_iters,
                         ip_iters,
                         proof_of_space,
@@ -382,12 +381,12 @@ class BlockTools:
                 # End of sub-slot logic
                 if len(finished_sub_slots) == 0:
                     # Sub block has been created within this sub-slot
-                    eos_iters = slot_iters - (latest_sub_block.total_iters - sub_slot_start_total_iters)
+                    eos_iters = sub_slot_iters - (latest_sub_block.total_iters - sub_slot_start_total_iters)
                     cc_input = latest_sub_block.challenge_vdf_output
                     rc_challenge = latest_sub_block.reward_infusion_new_challenge
                 else:
                     # No sub-blocks were successfully created within this sub-slot
-                    eos_iters = slot_iters
+                    eos_iters = sub_slot_iters
                     cc_input = ClassgroupElement.get_default_element()
                     rc_challenge = slot_rc_challenge
 
@@ -406,7 +405,7 @@ class BlockTools:
 
                 icc_ip_vdf, icc_ip_proof = get_icc(
                     constants,
-                    sub_slot_start_total_iters + slot_iters,
+                    sub_slot_start_total_iters + sub_slot_iters,
                     finished_sub_slots,
                     latest_sub_block,
                     sub_blocks,
@@ -416,7 +415,7 @@ class BlockTools:
                 # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
                 # in order for light clients to validate.
                 cc_vdf = VDFInfo(
-                    cc_vdf.challenge_hash, ClassgroupElement.get_default_element(), slot_iters, cc_vdf.output
+                    cc_vdf.challenge_hash, ClassgroupElement.get_default_element(), sub_slot_iters, cc_vdf.output
                 )
                 if icc_ip_vdf is not None:
                     if len(finished_sub_slots) == 0:
@@ -424,11 +423,11 @@ class BlockTools:
                         while not curr.is_challenge_sub_block(constants) and not curr.first_in_sub_slot:
                             curr = sub_blocks[curr.prev_hash]
                         if curr.is_challenge_sub_block(constants):
-                            icc_eos_iters = sub_slot_start_total_iters + slot_iters - curr.total_iters
+                            icc_eos_iters = sub_slot_start_total_iters + sub_slot_iters - curr.total_iters
                         else:
-                            icc_eos_iters = slot_iters
+                            icc_eos_iters = sub_slot_iters
                     else:
-                        icc_eos_iters = slot_iters
+                        icc_eos_iters = sub_slot_iters
                     icc_ip_vdf = VDFInfo(
                         icc_ip_vdf.challenge_hash,
                         ClassgroupElement.get_default_element(),
@@ -489,13 +488,13 @@ class BlockTools:
 
             num_empty_slots_added += 1
             same_slot_as_last = False
-            sub_slot_start_total_iters += slot_iters
+            sub_slot_start_total_iters += sub_slot_iters
 
     def create_unfinished_block(
         self,
         constants: ConsensusConstants,
         sub_slot_start_total_iters: uint128,
-        slot_iters: uint64,
+        sub_slot_iters: uint64,
         sp_iters: uint64,
         ip_iters: uint64,
         proof_of_space: ProofOfSpace,
@@ -573,7 +572,7 @@ class BlockTools:
                 else:
                     assert False
                 if overflow:
-                    total_iters_sp -= slot_iters
+                    total_iters_sp -= sub_slot_iters
 
                 curr: SubBlockRecord = prev_sub_block
                 # Finds a sub-block which is BEFORE our signage point, otherwise goes back to the end of sub-slot
@@ -627,7 +626,7 @@ class BlockTools:
         ):
             return None
 
-        total_iters = uint128(sub_slot_start_total_iters + ip_iters + (slot_iters if overflow else 0))
+        total_iters = uint128(sub_slot_start_total_iters + ip_iters + (sub_slot_iters if overflow else 0))
 
         rc_sub_block = RewardChainSubBlockUnfinished(
             weight,
@@ -682,7 +681,7 @@ class BlockTools:
         if timestamp is None:
             timestamp = time.time()
         finished_sub_slots: List[EndOfSubSlotBundle] = []
-        slot_iters: uint64 = uint64(constants.IPS_STARTING * constants.SLOT_TIME_TARGET)
+        sub_slot_iters: uint64 = uint64(constants.IPS_STARTING * constants.SLOT_TIME_TARGET)
         unfinished_block: Optional[UnfinishedBlock] = None
         ip_iters: uint64 = uint64(0)
         sub_slot_total_iters: uint128 = uint128(0)
@@ -711,7 +710,7 @@ class BlockTools:
                 unfinished_block = self.create_unfinished_block(
                     constants,
                     sub_slot_total_iters,
-                    slot_iters,
+                    sub_slot_iters,
                     sp_iters,
                     ip_iters,
                     proof_of_space,
@@ -758,13 +757,13 @@ class BlockTools:
                 constants,
                 ClassgroupElement.get_default_element(),
                 cc_challenge,
-                slot_iters,
+                sub_slot_iters,
             )
             rc_vdf, rc_proof = get_vdf_info_and_proof(
                 constants,
                 ClassgroupElement.get_default_element(),
                 rc_challenge,
-                slot_iters,
+                sub_slot_iters,
             )
             cc_slot = ChallengeChainSubSlot(cc_vdf, None, None, None, None)
             finished_sub_slots.append(
@@ -804,7 +803,7 @@ class BlockTools:
                     None,
                     finished_sub_slots,
                 )
-            sub_slot_total_iters += slot_iters
+            sub_slot_total_iters += sub_slot_iters
 
     def create_foliage(
         self,
@@ -968,20 +967,20 @@ class BlockTools:
         random.seed(seed)
         passed_plot_filter = 0
         # Use the seed to select a random number of plots, so we generate different chains
-        for plot_info in random.sample(plots, len(plots) // 2):
+        for plot_info in plots:
             # Allow passing in seed, to create reorgs and different chains
             plot_id = plot_info.prover.get_id()
             if ProofOfSpace.can_create_proof(constants, plot_id, challenge_hash, None, None):
                 passed_plot_filter += 1
                 qualities = plot_info.prover.get_qualities_for_challenge(challenge_hash)
                 for proof_index, quality_str in enumerate(qualities):
-                    slot_iters = calculate_slot_iters(constants, ips)
+                    sub_slot_iters = calculate_sub_slot_iters(constants, ips)
                     required_iters: uint64 = calculate_iterations_quality(
                         quality_str,
                         plot_info.prover.get_size(),
                         difficulty,
                     )
-                    if required_iters < slot_iters:
+                    if required_iters < sub_slot_iters:
                         proof_xs: bytes = plot_info.prover.get_full_proof(challenge_hash, proof_index)
 
                         plot_pk = ProofOfSpace.generate_plot_public_key(
@@ -997,8 +996,15 @@ class BlockTools:
                             proof_xs,
                         )
                         found_proofs.append((required_iters, proof_of_space))
-        print(f"Plots: {len(plots)}, passed plot filter: {passed_plot_filter}, proofs: {len(found_proofs)}")
-        return found_proofs
+        if len(found_proofs) >= 2:
+            random_sample = random.sample(found_proofs, len(found_proofs) - 1)
+        else:
+            random_sample = found_proofs
+        print(
+            f"Plots: {len(plots)}, passed plot filter: {passed_plot_filter}, proofs: {len(found_proofs)}, "
+            f"returning random sample: {len(random_sample)}"
+        )
+        return random_sample
 
 
 def get_challenges(

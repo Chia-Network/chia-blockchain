@@ -185,7 +185,7 @@ class Harvester:
         1. Checks the plot filter to see which plots can qualify for this slot (1/16 on average)
         2. Looks up the quality for these plots, approximately 7 reads per plot which qualifies. Note that each plot
         may have 0, 1, 2, etc qualities for that challenge: but on average it will have 1.
-        3. Checks the required_iters for each quality to see which are eligible for inclusion (< slot_iters)
+        3. Checks the required_iters for each quality to see which are eligible for inclusion (< sub_slot_iters)
         4. Looks up the full proof of space in the plot for each quality, approximately 64 reads per quality
         5. Returns the proof of space to the farmer
         """
