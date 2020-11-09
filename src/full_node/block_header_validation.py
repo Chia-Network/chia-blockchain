@@ -340,17 +340,15 @@ async def validate_unfinished_header_block(
             )
             if expected_sub_epoch_summary.get_hash() != ses_hash:
                 return None, Err.INVALID_SUB_EPOCH_SUMMARY
+            print(f"Verified sub epoch: {expected_sub_epoch_summary}")
         else:
             # 3d. Check that we don't have to include a sub-epoch summary
             if new_sub_slot and not genesis_block:
-                print("New sub slot")
                 finishes = finishes_sub_epoch(
                     constants, prev_sb.height, prev_sb.deficit, False, sub_blocks, prev_sb.prev_hash
                 )
                 if finishes:
                     return None, Err.INVALID_SUB_EPOCH_SUMMARY
-            else:
-                print("Not new sub-slot")
 
     # 4. Check proof of space
     if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
@@ -680,7 +678,7 @@ async def validate_unfinished_header_block(
                 # For blocks 1 to 10, average timestamps of all previous blocks
                 assert curr_sb.height == 0
             prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
-            if header_block.foliage_block.timestamp < prev_time:
+            if header_block.foliage_block.timestamp <= prev_time:
                 return None, Err.TIMESTAMP_TOO_FAR_IN_PAST
             if header_block.foliage_block.timestamp > int(time.time() + constants.MAX_FUTURE_TIME):
                 return None, Err.TIMESTAMP_TOO_FAR_IN_FUTURE

@@ -214,14 +214,14 @@ class BlockTools:
         fees: uint64 = uint64(0),
         transaction_data_at_height: Dict[int, Tuple[Program, G2Element]] = None,
         seed: bytes = b"",
-        timestamp: Optional[uint64] = None,
+        time_per_sub_block: Optional[float] = None,
         force_overflow: bool = False,
         force_empty_slots: uint32 = uint32(0),  # Force at least this number of empty slots before the first SB
     ) -> List[FullBlock]:
         if transaction_data_at_height is None:
             transaction_data_at_height = {}
-        if timestamp is None:
-            timestamp = time.time()
+        if time_per_sub_block is None:
+            time_per_sub_block = constants.SLOT_TIME_TARGET / constants.SLOT_SUB_BLOCKS_TARGET
         if block_list is None or len(block_list) == 0:
             genesis = self.create_genesis_block(
                 constants,
@@ -229,6 +229,7 @@ class BlockTools:
                 seed,
                 force_overflow=force_overflow,
                 force_empty_slots=force_empty_slots,
+                timestamp=uint64(int(time.time())),
             )
             block_list = [genesis]
             num_blocks -= 1
@@ -239,6 +240,11 @@ class BlockTools:
         height_to_hash, difficulty, sub_blocks = load_block_list(block_list, constants)
 
         latest_sub_block: SubBlockRecord = sub_blocks[block_list[-1].header_hash]
+        curr = latest_sub_block
+        while not curr.is_block:
+            curr = sub_blocks[curr.prev_hash]
+        start_timestamp = curr.timestamp
+        start_height = curr.height
 
         curr = latest_sub_block
         while not curr.first_in_sub_slot:
@@ -279,6 +285,7 @@ class BlockTools:
                     if force_overflow and not is_overflow_block:
                         continue
 
+                    assert latest_sub_block.header_hash in sub_blocks
                     unfinished_block = self.create_unfinished_block(
                         constants,
                         sub_slot_start_total_iters,
@@ -292,7 +299,9 @@ class BlockTools:
                         farmer_reward_puzzle_hash,
                         pool_reward_puzzle_hash,
                         fees,
-                        timestamp,
+                        uint64(
+                            start_timestamp + int((latest_sub_block.height + 1 - start_height) * time_per_sub_block)
+                        ),
                         seed,
                         transaction_data_at_height.get(latest_sub_block.height + 1, None),
                         latest_sub_block,
