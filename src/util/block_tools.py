@@ -263,231 +263,229 @@ class BlockTools:
         # Get the challenge for that slot
         while True:
             # If did not reach empty slot counts, continue
-            if num_empty_slots_added >= force_empty_slots:
-                slot_cc_challenge, slot_rc_challenge = get_challenges(
-                    sub_blocks, finished_sub_slots, latest_sub_block.header_hash
-                )
+            if num_empty_slots_added < force_empty_slots:
+                num_empty_slots_added += 1
+                continue
 
-                # Get all proofs of space for challenge.
-                proofs_of_space: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
+            slot_cc_challenge, slot_rc_challenge = get_challenges(
+                sub_blocks, finished_sub_slots, latest_sub_block.header_hash
+            )
+
+            # Get all proofs of space for challenge.
+            proofs_of_space: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
+                constants,
+                slot_cc_challenge,
+                seed,
+                difficulty,
+                ips,
+            )
+            overflow_pos = []
+
+            for required_iters, proof_of_space in sorted(proofs_of_space, key=lambda t: t[0]):
+                if same_slot_as_last and required_iters <= latest_sub_block.required_iters:
+                    # Ignore this sub-block because it's in the past
+                    continue
+                sp_iters: uint64 = calculate_sp_iters(constants, ips, required_iters)
+                ip_iters = calculate_ip_iters(constants, ips, required_iters)
+                is_overflow_block = sp_iters > ip_iters
+                if force_overflow and not is_overflow_block:
+                    continue
+                if is_overflow_block:
+                    overflow_pos.append((required_iters, proof_of_space))
+                    continue
+                assert latest_sub_block.header_hash in sub_blocks
+                unfinished_block = self.create_unfinished_block(
                     constants,
+                    sub_slot_start_total_iters,
+                    sp_iters,
+                    ip_iters,
+                    proof_of_space,
                     slot_cc_challenge,
+                    slot_rc_challenge,
+                    farmer_reward_puzzle_hash,
+                    pool_reward_puzzle_hash,
+                    fees,
+                    uint64(start_timestamp + int((latest_sub_block.height + 1 - start_height) * time_per_sub_block)),
                     seed,
-                    difficulty,
-                    ips,
-                )
-                overflow_pos = []
-
-                for required_iters, proof_of_space in sorted(proofs_of_space, key=lambda t: t[0]):
-                    if same_slot_as_last and required_iters <= latest_sub_block.required_iters:
-                        # Ignore this sub-block because it's in the past
-                        continue
-                    sp_iters: uint64 = calculate_sp_iters(constants, ips, required_iters)
-                    ip_iters = calculate_ip_iters(constants, ips, required_iters)
-                    is_overflow_block = sp_iters > ip_iters
-                    if force_overflow and not is_overflow_block:
-                        continue
-                    if is_overflow_block:
-                        overflow_pos.append((required_iters, proof_of_space))
-                        continue
-                    assert latest_sub_block.header_hash in sub_blocks
-                    unfinished_block = self.create_unfinished_block(
-                        constants,
-                        sub_slot_start_total_iters,
-                        sp_iters,
-                        ip_iters,
-                        proof_of_space,
-                        slot_cc_challenge,
-                        slot_rc_challenge,
-                        farmer_reward_puzzle_hash,
-                        pool_reward_puzzle_hash,
-                        fees,
-                        uint64(
-                            start_timestamp + int((latest_sub_block.height + 1 - start_height) * time_per_sub_block)
-                        ),
-                        seed,
-                        transaction_data_at_height.get(latest_sub_block.height + 1, None),
-                        latest_sub_block,
-                        sub_blocks,
-                        finished_sub_slots,
-                    )
-
-                    if unfinished_block is None:
-                        continue
-
-                    full_block, sub_block_record = finish_sub_block(
-                        constants,
-                        sub_blocks,
-                        height_to_hash,
-                        finished_sub_slots,
-                        sub_slot_start_total_iters,
-                        unfinished_block,
-                        required_iters,
-                        ip_iters,
-                        slot_cc_challenge,
-                        slot_rc_challenge,
-                        latest_sub_block,
-                        difficulty,
-                    )
-                    block_list.append(full_block)
-                    num_blocks -= 1
-                    if num_blocks == 0:
-                        return block_list
-                    sub_blocks[full_block.header_hash] = sub_block_record
-                    height_to_hash[uint32(full_block.height)] = full_block.header_hash
-                    latest_sub_block = sub_blocks[full_block.header_hash]
-                    finished_sub_slots = []
-
-                # Finish the end of sub-slot and try again next sub-slot
-                # End of sub-slot logic
-                if len(finished_sub_slots) == 0:
-                    # Sub block has been created within this sub-slot
-                    eos_iters = sub_slot_iters - (latest_sub_block.total_iters - sub_slot_start_total_iters)
-                    cc_input = latest_sub_block.challenge_vdf_output
-                    rc_challenge = latest_sub_block.reward_infusion_new_challenge
-                else:
-                    # No sub-blocks were successfully created within this sub-slot
-                    eos_iters = sub_slot_iters
-                    cc_input = ClassgroupElement.get_default_element()
-                    rc_challenge = slot_rc_challenge
-
-                cc_vdf, cc_proof = get_vdf_info_and_proof(
-                    constants,
-                    cc_input,
-                    slot_cc_challenge,
-                    eos_iters,
-                )
-                rc_vdf, rc_proof = get_vdf_info_and_proof(
-                    constants,
-                    ClassgroupElement.get_default_element(),
-                    rc_challenge,
-                    eos_iters,
-                )
-
-                icc_ip_vdf, icc_ip_proof = get_icc(
-                    constants,
-                    sub_slot_start_total_iters + sub_slot_iters,
-                    finished_sub_slots,
+                    transaction_data_at_height.get(latest_sub_block.height + 1, None),
                     latest_sub_block,
                     sub_blocks,
-                    sub_slot_start_total_iters,
-                    latest_sub_block.deficit,
-                )
-                # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
-                # in order for light clients to validate.
-                cc_vdf = VDFInfo(
-                    cc_vdf.challenge_hash, ClassgroupElement.get_default_element(), sub_slot_iters, cc_vdf.output
+                    finished_sub_slots,
                 )
 
-                sub_epoch_summary: Optional[SubEpochSummary] = handle_end_of_sub_epoch(
+                if unfinished_block is None:
+                    continue
+
+                full_block, sub_block_record = finish_sub_block(
                     constants,
-                    latest_sub_block,
                     sub_blocks,
                     height_to_hash,
+                    finished_sub_slots,
+                    sub_slot_start_total_iters,
+                    unfinished_block,
+                    required_iters,
+                    ip_iters,
+                    slot_cc_challenge,
+                    slot_rc_challenge,
+                    latest_sub_block,
+                    difficulty,
                 )
-                if sub_epoch_summary is not None:
-                    ses_hash = sub_epoch_summary.get_hash()
-                    new_ips: Optional[uint64] = sub_epoch_summary.new_ips
-                    new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
-                    if new_ips is not None:
-                        ips = new_ips
-                        difficulty = new_difficulty
-                        overflow_sub_blocks = []  # No overflow blocks on new difficulty
-                else:
-                    ses_hash = None
-                    new_ips = None
-                    new_difficulty = None
+                block_list.append(full_block)
+                num_blocks -= 1
+                if num_blocks == 0:
+                    return block_list
+                sub_blocks[full_block.header_hash] = sub_block_record
+                height_to_hash[uint32(full_block.height)] = full_block.header_hash
+                latest_sub_block = sub_blocks[full_block.header_hash]
+                finished_sub_slots = []
 
-                if icc_ip_vdf is not None:
-                    if len(finished_sub_slots) == 0:
-                        curr = latest_sub_block
-                        while not curr.is_challenge_sub_block(constants) and not curr.first_in_sub_slot:
-                            curr = sub_blocks[curr.prev_hash]
-                        if curr.is_challenge_sub_block(constants):
-                            icc_eos_iters = sub_slot_start_total_iters + sub_slot_iters - curr.total_iters
-                        else:
-                            icc_eos_iters = sub_slot_iters
+            # Finish the end of sub-slot and try again next sub-slot
+            # End of sub-slot logic
+            if len(finished_sub_slots) == 0:
+                # Sub block has been created within this sub-slot
+                eos_iters = sub_slot_iters - (latest_sub_block.total_iters - sub_slot_start_total_iters)
+                cc_input = latest_sub_block.challenge_vdf_output
+                rc_challenge = latest_sub_block.reward_infusion_new_challenge
+            else:
+                # No sub-blocks were successfully created within this sub-slot
+                eos_iters = sub_slot_iters
+                cc_input = ClassgroupElement.get_default_element()
+                rc_challenge = slot_rc_challenge
+
+            cc_vdf, cc_proof = get_vdf_info_and_proof(
+                constants,
+                cc_input,
+                slot_cc_challenge,
+                eos_iters,
+            )
+            rc_vdf, rc_proof = get_vdf_info_and_proof(
+                constants,
+                ClassgroupElement.get_default_element(),
+                rc_challenge,
+                eos_iters,
+            )
+
+            icc_ip_vdf, icc_ip_proof = get_icc(
+                constants,
+                sub_slot_start_total_iters + sub_slot_iters,
+                finished_sub_slots,
+                latest_sub_block,
+                sub_blocks,
+                sub_slot_start_total_iters,
+                latest_sub_block.deficit,
+            )
+            # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
+            # in order for light clients to validate.
+            cc_vdf = VDFInfo(
+                cc_vdf.challenge_hash, ClassgroupElement.get_default_element(), sub_slot_iters, cc_vdf.output
+            )
+
+            sub_epoch_summary: Optional[SubEpochSummary] = handle_end_of_sub_epoch(
+                constants,
+                latest_sub_block,
+                sub_blocks,
+                height_to_hash,
+            )
+            if sub_epoch_summary is not None:
+                ses_hash = sub_epoch_summary.get_hash()
+                new_ips: Optional[uint64] = sub_epoch_summary.new_ips
+                new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
+                if new_ips is not None:
+                    ips = new_ips
+                    difficulty = new_difficulty
+                    overflow_sub_blocks = []  # No overflow blocks on new difficulty
+            else:
+                ses_hash = None
+                new_ips = None
+                new_difficulty = None
+
+            if icc_ip_vdf is not None:
+                if len(finished_sub_slots) == 0:
+                    curr = latest_sub_block
+                    while not curr.is_challenge_sub_block(constants) and not curr.first_in_sub_slot:
+                        curr = sub_blocks[curr.prev_hash]
+                    if curr.is_challenge_sub_block(constants):
+                        icc_eos_iters = sub_slot_start_total_iters + sub_slot_iters - curr.total_iters
                     else:
                         icc_eos_iters = sub_slot_iters
-                    icc_ip_vdf = VDFInfo(
-                        icc_ip_vdf.challenge_hash,
-                        ClassgroupElement.get_default_element(),
-                        icc_eos_iters,
-                        icc_ip_vdf.output,
-                    )
-                    icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_ip_vdf)
-                    icc_sub_slot_hash = icc_sub_slot.get_hash() if latest_sub_block.deficit == 0 else None
-                    cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_sub_slot_hash, ses_hash, new_ips, new_difficulty)
                 else:
-                    icc_sub_slot = None
-                    cc_sub_slot = ChallengeChainSubSlot(cc_vdf, None, ses_hash, new_ips, new_difficulty)
-
-                finished_sub_slots.append(
-                    EndOfSubSlotBundle(
-                        cc_sub_slot,
-                        icc_sub_slot,
-                        RewardChainSubSlot(
-                            rc_vdf,
-                            cc_sub_slot.get_hash(),
-                            icc_sub_slot.get_hash() if icc_sub_slot is not None else None,
-                            latest_sub_block.deficit
-                            if latest_sub_block.deficit > 0
-                            else constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
-                        ),
-                        SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
-                    )
+                    icc_eos_iters = sub_slot_iters
+                icc_ip_vdf = VDFInfo(
+                    icc_ip_vdf.challenge_hash,
+                    ClassgroupElement.get_default_element(),
+                    icc_eos_iters,
+                    icc_ip_vdf.output,
                 )
-                overflow_cc_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
-                overflow_rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
-                for required_iters, proof_of_space in overflow_pos:
-                    sp_iters = calculate_sp_iters(constants, ips, required_iters)
-                    ip_iters = calculate_ip_iters(constants, ips, required_iters)
-                    unfinished_block = self.create_unfinished_block(
-                        constants,
-                        sub_slot_start_total_iters,
-                        sp_iters,
-                        ip_iters,
-                        proof_of_space,
-                        slot_cc_challenge,
-                        slot_rc_challenge,
-                        farmer_reward_puzzle_hash,
-                        pool_reward_puzzle_hash,
-                        fees,
-                        uint64(
-                            start_timestamp + int((latest_sub_block.height + 1 - start_height) * time_per_sub_block)
-                        ),
-                        seed,
-                        transaction_data_at_height.get(latest_sub_block.height + 1, None),
-                        latest_sub_block,
-                        sub_blocks,
-                        finished_sub_slots,
-                    )
-                    if unfinished_block is None:
-                        continue
-                    full_block, sub_block_record = finish_sub_block(
-                        constants,
-                        sub_blocks,
-                        height_to_hash,
-                        finished_sub_slots,
-                        sub_slot_start_total_iters,
-                        unfinished_block,
-                        required_iters,
-                        ip_iters,
-                        overflow_cc_challenge,
-                        overflow_rc_challenge,
-                        latest_sub_block,
-                        difficulty,
-                    )
-                    block_list.append(full_block)
-                    num_blocks -= 1
-                    if num_blocks == 0:
-                        return block_list
-                    sub_blocks[full_block.header_hash] = sub_block_record
-                    height_to_hash[uint32(full_block.height)] = full_block.header_hash
-                    latest_sub_block = sub_blocks[full_block.header_hash]
-                    finished_sub_slots = []
+                icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_ip_vdf)
+                icc_sub_slot_hash = icc_sub_slot.get_hash() if latest_sub_block.deficit == 0 else None
+                cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_sub_slot_hash, ses_hash, new_ips, new_difficulty)
+            else:
+                icc_sub_slot = None
+                cc_sub_slot = ChallengeChainSubSlot(cc_vdf, None, ses_hash, new_ips, new_difficulty)
 
-            num_empty_slots_added += 1
+            finished_sub_slots.append(
+                EndOfSubSlotBundle(
+                    cc_sub_slot,
+                    icc_sub_slot,
+                    RewardChainSubSlot(
+                        rc_vdf,
+                        cc_sub_slot.get_hash(),
+                        icc_sub_slot.get_hash() if icc_sub_slot is not None else None,
+                        latest_sub_block.deficit
+                        if latest_sub_block.deficit > 0
+                        else constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
+                    ),
+                    SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
+                )
+            )
+            overflow_cc_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
+            overflow_rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
+            for required_iters, proof_of_space in overflow_pos:
+                sp_iters = calculate_sp_iters(constants, ips, required_iters)
+                ip_iters = calculate_ip_iters(constants, ips, required_iters)
+                unfinished_block = self.create_unfinished_block(
+                    constants,
+                    sub_slot_start_total_iters,
+                    sp_iters,
+                    ip_iters,
+                    proof_of_space,
+                    slot_cc_challenge,
+                    slot_rc_challenge,
+                    farmer_reward_puzzle_hash,
+                    pool_reward_puzzle_hash,
+                    fees,
+                    uint64(start_timestamp + int((latest_sub_block.height + 1 - start_height) * time_per_sub_block)),
+                    seed,
+                    transaction_data_at_height.get(latest_sub_block.height + 1, None),
+                    latest_sub_block,
+                    sub_blocks,
+                    finished_sub_slots,
+                )
+                if unfinished_block is None:
+                    continue
+                full_block, sub_block_record = finish_sub_block(
+                    constants,
+                    sub_blocks,
+                    height_to_hash,
+                    finished_sub_slots,
+                    sub_slot_start_total_iters,
+                    unfinished_block,
+                    required_iters,
+                    ip_iters,
+                    overflow_cc_challenge,
+                    overflow_rc_challenge,
+                    latest_sub_block,
+                    difficulty,
+                )
+                block_list.append(full_block)
+                num_blocks -= 1
+                if num_blocks == 0:
+                    return block_list
+                sub_blocks[full_block.header_hash] = sub_block_record
+                height_to_hash[uint32(full_block.height)] = full_block.header_hash
+                latest_sub_block = sub_blocks[full_block.header_hash]
+                finished_sub_slots = []
+
             same_slot_as_last = False
             sub_slot_start_total_iters += sub_slot_iters
             sub_slot_iters = calculate_sub_slot_iters(constants, ips)
