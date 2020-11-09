@@ -97,6 +97,7 @@ class TestAddingMoreBlocks:
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
+            print(f"Added block {block.height}")
         assert empty_blockchain.get_peak().height == len(blocks) - 1
 
 
