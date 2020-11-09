@@ -10,7 +10,7 @@ from src.consensus.pot_iterations import (
     is_overflow_sub_block,
     calculate_ip_iters,
     calculate_sp_iters,
-    calculate_slot_iters,
+    calculate_sub_slot_iters,
     calculate_iterations_quality,
 )
 from src.full_node.deficit import calculate_deficit
@@ -140,19 +140,19 @@ async def validate_unfinished_header_block(
                             icc_challenge_hash = curr.challenge_block_info_hash
                             ip_iters_challenge_block = calculate_ip_iters(constants, curr.ips, curr.required_iters)
                             icc_iters_committed: uint64 = (
-                                calculate_slot_iters(constants, prev_sb.ips) - ip_iters_challenge_block
+                                calculate_sub_slot_iters(constants, prev_sb.ips) - ip_iters_challenge_block
                             )
                         else:
                             icc_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
-                            icc_iters_committed = calculate_slot_iters(constants, prev_sb.ips)
+                            icc_iters_committed = calculate_sub_slot_iters(constants, prev_sb.ips)
                         ip_iters_prev = calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
-                        icc_iters_proof: uint64 = calculate_slot_iters(constants, prev_sb.ips) - ip_iters_prev
+                        icc_iters_proof: uint64 = calculate_sub_slot_iters(constants, prev_sb.ips) - ip_iters_prev
                         icc_vdf_input = prev_sb.infused_challenge_vdf_output
                     else:
                         icc_challenge_hash = header_block.finished_sub_slots[
                             finished_sub_slot_n - 1
                         ].infused_challenge_chain.get_hash()
-                        icc_iters_committed = calculate_slot_iters(constants, prev_sb.ips)
+                        icc_iters_committed = calculate_sub_slot_iters(constants, prev_sb.ips)
                         icc_iters_proof = icc_iters_committed
                         icc_vdf_input = ClassgroupElement.get_default_element()
 
@@ -228,8 +228,8 @@ async def validate_unfinished_header_block(
 
             # 2i. Check challenge chain sub-slot VDF
             # 2j. Check end of reward slot VDF
-            slot_iters = calculate_slot_iters(constants, ips)
-            eos_vdf_iters: uint64 = slot_iters
+            sub_slot_iters = calculate_sub_slot_iters(constants, ips)
+            eos_vdf_iters: uint64 = sub_slot_iters
             cc_start_element: ClassgroupElement = ClassgroupElement.get_default_element()
             cc_eos_vdf_challenge: bytes32 = challenge_hash
             if genesis_block:
@@ -247,8 +247,8 @@ async def validate_unfinished_header_block(
                     # No empty slots, so the starting point of VDF is the last reward block. Uses
                     # the same IPS as the previous block, since it's the same slot
                     rc_eos_vdf_challenge: bytes32 = prev_sb.reward_infusion_new_challenge
-                    slot_iters = calculate_slot_iters(constants, prev_sb.ips)
-                    eos_vdf_iters = slot_iters - calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
+                    sub_slot_iters = calculate_sub_slot_iters(constants, prev_sb.ips)
+                    eos_vdf_iters = sub_slot_iters - calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
                     cc_start_element: ClassgroupElement = prev_sb.challenge_vdf_output
                 else:
                     # At least one empty slot, so use previous slot hash. IPS might change because it's a new slot
@@ -275,7 +275,7 @@ async def validate_unfinished_header_block(
             )
             # Check that the modified data is correct
             if sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf != dataclasses.replace(
-                partial_cc_vdf_info, input=ClassgroupElement.get_default_element(), number_of_iterations=slot_iters
+                partial_cc_vdf_info, input=ClassgroupElement.get_default_element(), number_of_iterations=sub_slot_iters
             ):
                 return None, Err.INVALID_CC_EOS_VDF
 
@@ -367,7 +367,7 @@ async def validate_unfinished_header_block(
 
     sp_iters: uint64 = calculate_sp_iters(constants, ips, required_iters)
     ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
-    slot_iters: uint64 = calculate_slot_iters(constants, ips)
+    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
     overflow = is_overflow_sub_block(constants, ips, required_iters)
 
     if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
@@ -435,11 +435,11 @@ async def validate_unfinished_header_block(
         prev_sb_iters = calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
         if new_sub_slot:
             total_iters: uint128 = prev_sb.total_iters
-            prev_sb_slot_iters = calculate_slot_iters(constants, prev_sb.ips)
+            prev_sb_slot_iters = calculate_sub_slot_iters(constants, prev_sb.ips)
             # Add the rest of the slot of prev_sb
             total_iters += prev_sb_slot_iters - prev_sb_iters
             # Add other empty slots
-            total_iters += slot_iters * (len(header_block.finished_sub_slots) - 1)
+            total_iters += sub_slot_iters * (len(header_block.finished_sub_slots) - 1)
         else:
             # Slot iters is guaranteed to be the same for header_block and prev_sb
             # This takes the beginning of the slot, and adds ip_iters
@@ -478,7 +478,7 @@ async def validate_unfinished_header_block(
             assert False
         sp_total_iters = total_iters - ip_iters + sp_iters
         if overflow:
-            sp_total_iters -= slot_iters
+            sp_total_iters -= sub_slot_iters
 
         curr: SubBlockRecord = prev_sb
         # Finds a sub-block which is BEFORE our signage point, otherwise goes back to the end of sub-slot
@@ -518,22 +518,23 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.reward_chain_sp_vdf,
             target_vdf_info,
         ):
-            print(header_block.log_string, "failed rc vdf validation ")
             return None, Err.INVALID_RC_SP_VDF
         rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.output.get_hash()
     else:
         # Edge case of first sp (start of slot), where sp_iters == 0
         assert overflow is not None
         if header_block.reward_chain_sub_block.reward_chain_sp_vdf is not None:
-            print(header_block.log_string, "failed rc vdf validation ")
             return None, Err.INVALID_RC_SP_VDF
         if new_sub_slot:
             rc_sp_hash = header_block.finished_sub_slots[-1].reward_chain.get_hash()
         else:
-            curr = prev_sb
-            while not curr.first_in_sub_slot:
-                curr = sub_blocks[curr.prev_hash]
-            rc_sp_hash = curr.finished_reward_slot_hashes[-1]
+            if genesis_block:
+                rc_sp_hash = constants.FIRST_RC_CHALLENGE
+            else:
+                curr = prev_sb
+                while not curr.first_in_sub_slot:
+                    curr = sub_blocks[curr.prev_hash]
+                rc_sp_hash = curr.finished_reward_slot_hashes[-1]
 
     # 11. Check reward chain sp signature
     if not AugSchemeMPL.verify(
@@ -556,12 +557,10 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.challenge_chain_sp_vdf,
             target_vdf_info,
         ):
-            print(header_block.log_string, "failed cc vdf validation ")
             return None, Err.INVALID_CC_SP_VDF
     else:
         assert overflow is not None
         if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is not None:
-            print(header_block.log_string, "failed cc vdf validation ")
             return None, Err.INVALID_CC_SP_VDF
 
     # 13. Check cc sp sig
@@ -584,7 +583,7 @@ async def validate_unfinished_header_block(
 
         # The first sub-block to have an sp > the last block's infusion iters, is a block
         if overflow:
-            our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - slot_iters)
+            our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - sub_slot_iters)
         else:
             our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters)
         if (our_sp_total_iters > curr.total_iters) != (header_block.foliage_sub_block.foliage_block_hash is not None):

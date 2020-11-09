@@ -6,26 +6,26 @@ from src.consensus.constants import ConsensusConstants
 
 
 def is_overflow_sub_block(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> bool:
-    slot_iters: uint64 = calculate_slot_iters(constants, ips)
-    if required_iters >= slot_iters:
+    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
+    if required_iters >= sub_slot_iters:
         raise ValueError(f"Required iters {required_iters} is not below the slot iterations")
     extra_iters: uint64 = uint64(int(float(ips) * constants.EXTRA_ITERS_TIME_TARGET))
-    return required_iters + extra_iters >= slot_iters
+    return required_iters + extra_iters >= sub_slot_iters
 
 
-def calculate_slot_iters(constants: ConsensusConstants, ips: uint64) -> uint64:
+def calculate_sub_slot_iters(constants: ConsensusConstants, ips: uint64) -> uint64:
     return ips * constants.SLOT_TIME_TARGET
 
 
 def calculate_sp_iters(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint64:
-    slot_iters: uint64 = calculate_slot_iters(constants, ips)
-    if required_iters >= slot_iters:
+    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
+    if required_iters >= sub_slot_iters:
         raise ValueError(f"Required iters {required_iters} is not below the slot iterations")
-    checkpoint_size: uint64 = uint64(slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
+    checkpoint_size: uint64 = uint64(sub_slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
     checkpoint_index: int = required_iters // checkpoint_size
 
     if checkpoint_index >= constants.NUM_CHECKPOINTS_PER_SLOT:
-        # Checkpoints don't divide slot_iters cleanly, so we return the last checkpoint
+        # Checkpoints don't divide sub_slot_iters cleanly, so we return the last checkpoint
         return required_iters - required_iters % checkpoint_size - checkpoint_size
     else:
         return required_iters - required_iters % checkpoint_size
@@ -33,8 +33,8 @@ def calculate_sp_iters(constants: ConsensusConstants, ips: uint64, required_iter
 
 def calculate_sp_index(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint8:
     sp_iters = calculate_sp_iters(constants, ips, required_iters)
-    slot_iters: uint64 = calculate_slot_iters(constants, ips)
-    checkpoint_size: uint64 = uint64(slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
+    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
+    checkpoint_size: uint64 = uint64(sub_slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
     assert sp_iters % checkpoint_size == 0
     target_index = sp_iters // checkpoint_size
     return uint8(target_index)
@@ -42,11 +42,11 @@ def calculate_sp_index(constants: ConsensusConstants, ips: uint64, required_iter
 
 def calculate_ip_iters(constants: ConsensusConstants, ips: uint64, required_iters: uint64) -> uint64:
     # Note that the IPS is for the block passed in, which might be in the previous epoch
-    slot_iters: uint64 = calculate_slot_iters(constants, ips)
-    if required_iters >= slot_iters:
+    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
+    if required_iters >= sub_slot_iters:
         raise ValueError(f"Required iters {required_iters} is not below the slot iterations")
     extra_iters: uint64 = uint64(int(float(ips) * constants.EXTRA_ITERS_TIME_TARGET))
-    return (required_iters + extra_iters) % slot_iters
+    return (required_iters + extra_iters) % sub_slot_iters
 
 
 def calculate_iterations_quality(
