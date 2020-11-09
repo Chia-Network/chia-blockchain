@@ -13,7 +13,7 @@ dependencies = [
     "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@28cb5754deec562ac931da8fca799fb82df97a12#egg=aiosqlite",
     # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
-    "cbor2==5.1.2",  # Used for network wire format
+    "cbor2==5.2.0",  # Used for network wire format
     "colorlog==4.6.2",  # Adds color to logs
     "concurrent-log-handler==0.9.17",  # Concurrently log and rotate logs
     "cryptography==3.2.1",  # Python cryptography library for TLS
