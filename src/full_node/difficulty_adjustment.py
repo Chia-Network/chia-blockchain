@@ -98,31 +98,42 @@ def finishes_sub_epoch(
     height: uint32,
     deficit: uint8,
     also_finishes_epoch: bool,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    prev_header_hash: bytes32,
 ) -> bool:
     """
-    Returns true if the next block after header_hash can start a new challenge_slot or not.
+    Returns true if the next sub-slot after height will form part of a new sub-epoch (or epoch if also_finished_epoch
+    is set to True)
     """
-    next_height: uint32 = uint32(height + 1)
+    if height < constants.SUB_EPOCH_SUB_BLOCKS - 1:
+        return False
 
     # If last slot does not have enough blocks for a new challenge chain infusion, return same difficulty
     if deficit > 0:
         return False
 
-    # If we have not crossed the (sub)epoch barrier in this slot, cannot start new (sub)epoch
+    # Disqualify blocks which are too far past in height
+    # The maximum possible height which includes sub epoch summary
+    if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
+        return False
+
+    already_included_ses = False
+    curr: SubBlockRecord = sub_blocks[prev_header_hash]
+    while curr.height % constants.SUB_EPOCH_SUB_BLOCKS > 0:
+        if curr.sub_epoch_summary_included is not None:
+            already_included_ses = True
+            break
+        curr = sub_blocks[curr.prev_hash]
+
+    if already_included_ses or (curr.sub_epoch_summary_included is not None):
+        return False
+
+    # For checking new epoch, make sure the epoch sub blocks are aligned
     if also_finishes_epoch:
-        if (
-            cur.height // constants.EPOCH_SUB_BLOCKS
-            == next_height // constants.EPOCH_SUB_BLOCKS
-        ):
-            return False
-    else:
-        if (
-            cur.height // constants.SUB_EPOCH_SUB_BLOCKS
-            == next_height // constants.SUB_EPOCH_SUB_BLOCKS
-        ):
+        if height + 1 % constants.EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
             return False
 
-    return height // constants.SUB_EPOCH_SUB_BLOCKS != next_height // constants.SUB_EPOCH_SUB_BLOCKS
+    return True
 
 
 def get_next_ips(
@@ -151,7 +162,7 @@ def get_next_ips(
     prev_sb: SubBlockRecord = sub_blocks[prev_header_hash]
 
     # If we are in the same epoch, return same ips
-    if not new_slot or not finishes_sub_epoch(constants, height, deficit, True):
+    if not new_slot or not finishes_sub_epoch(constants, height, deficit, True, sub_blocks, prev_header_hash):
         return ips
 
     last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(
@@ -229,11 +240,11 @@ def get_next_difficulty(
     if prev_header_hash not in sub_blocks:
         raise ValueError(f"Header hash {prev_header_hash} not in sub blocks")
 
-    # If we are in the same slot as previous sub-block, return same difficulty
-    if not new_slot or not finishes_sub_epoch(constants, height, deficit, True):
-        return current_difficulty
-
     prev_sb: SubBlockRecord = sub_blocks[prev_header_hash]
+
+    # If we are in the same slot as previous sub-block, return same difficulty
+    if not new_slot or not finishes_sub_epoch(constants, height, deficit, True, sub_blocks, prev_header_hash):
+        return current_difficulty
 
     last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(
         constants, next_height, height_to_hash, sub_blocks, prev_sb

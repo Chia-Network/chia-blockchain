@@ -60,8 +60,12 @@ async def validate_unfinished_header_block(
             return None, Err.DOES_NOT_EXTEND
 
         # If the previous sub block finishes a sub-epoch, that means that this sub-block should have an updated diff
-        finishes_se = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, False)
-        finishes_epoch: bool = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, True)
+        finishes_se = finishes_sub_epoch(
+            constants, prev_sb.height, prev_sb.deficit, False, sub_blocks, prev_sb.prev_hash
+        )
+        finishes_epoch: bool = finishes_sub_epoch(
+            constants, prev_sb.height, prev_sb.deficit, True, sub_blocks, prev_sb.prev_hash
+        )
 
         if prev_sb.height != 0:
             prev_difficulty: uint64 = uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight)
@@ -329,7 +333,7 @@ async def validate_unfinished_header_block(
             expected_sub_epoch_summary = make_sub_epoch_summary(
                 constants,
                 sub_blocks,
-                header_block.height - 1,
+                header_block.height,
                 prev_sb,
                 difficulty if finishes_epoch else None,
                 ips if finishes_epoch else None,
@@ -339,9 +343,14 @@ async def validate_unfinished_header_block(
         else:
             # 3d. Check that we don't have to include a sub-epoch summary
             if new_sub_slot and not genesis_block:
-                finishes = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, False)
+                print("New sub slot")
+                finishes = finishes_sub_epoch(
+                    constants, prev_sb.height, prev_sb.deficit, False, sub_blocks, prev_sb.prev_hash
+                )
                 if finishes:
                     return None, Err.INVALID_SUB_EPOCH_SUMMARY
+            else:
+                print("Not new sub-slot")
 
     # 4. Check proof of space
     if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:

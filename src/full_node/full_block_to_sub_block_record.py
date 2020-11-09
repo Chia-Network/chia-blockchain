@@ -73,7 +73,7 @@ def full_block_to_sub_block_record(
             block.height,
             prev_sb,
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
-            block.finished_sub_slots[0].challenge_chain.new_difficulty,
+            block.finished_sub_slots[0].challenge_chain.new_ips,
         )
         assert ses.get_hash() == found_ses_hash
 

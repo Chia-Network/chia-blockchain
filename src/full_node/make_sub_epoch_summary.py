@@ -15,8 +15,14 @@ def make_sub_epoch_summary(
     new_difficulty: Optional[uint64],
     new_ips: Optional[uint64],
 ) -> SubEpochSummary:
+    """
+    Creates a sub-epoch-summary object, assuming that the first sub-block in the new sub-epoch is at height
+    "blocks_included_height". Prev_sb is the last sub block in the previous sub-epoch. On a new epoch,
+    new_difficulty and new_ips are also added.
+    """
+    assert prev_sb.height == blocks_included_height - 1
     if blocks_included_height // constants.SUB_EPOCH_SUB_BLOCKS == 1:
-        ses = SubEpochSummary(constants.GENESIS_SES_HASH, constants.FIRST_RC_CHALLENGE, uint8(0), None, None).get_hash()
+        ses = SubEpochSummary(constants.GENESIS_SES_HASH, constants.FIRST_RC_CHALLENGE, uint8(0), None, None)
     else:
         curr = prev_sb
         while curr.sub_epoch_summary_included is None:
