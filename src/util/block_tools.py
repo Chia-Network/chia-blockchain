@@ -453,7 +453,9 @@ class BlockTools:
                             rc_vdf,
                             cc_sub_slot.get_hash(),
                             icc_sub_slot.get_hash() if icc_sub_slot is not None else None,
-                            uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK),
+                            latest_sub_block.deficit
+                            if latest_sub_block.deficit > 0
+                            else constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
                         ),
                         SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
                     )
