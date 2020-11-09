@@ -34,6 +34,8 @@ test_constants = constants.replace(
         "IPS_STARTING": 10 * 1,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "NUMBER_ZERO_BITS_SP_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
+        "MAX_FUTURE_TIME": 3600
+        * 24,  # Allows creating blockchains with timestamps up to 1 day in the future, for testing
     }
 )
 bt = BlockTools()
@@ -277,7 +279,7 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
     fn1, s1 = await node_iters[0].__anext__()
     fn2, s2 = await node_iters[1].__anext__()
 
-    yield (fn1, fn2, s1, s2)
+    yield fn1, fn2, s1, s2
 
     await _teardown_nodes(node_iters)
 
@@ -291,7 +293,7 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
     full_node, s1 = await node_iters[0].__anext__()
     wallet, s2 = await node_iters[1].__anext__()
 
-    yield (full_node, wallet, s1, s2)
+    yield full_node, wallet, s1, s2
 
     await _teardown_nodes(node_iters)
 
@@ -327,7 +329,7 @@ async def setup_simulators_and_wallets(
         wallets.append(await wlt.__anext__())
         node_iters.append(wlt)
 
-    yield (simulators, wallets)
+    yield simulators, wallets
 
     await _teardown_nodes(node_iters)
 
@@ -341,7 +343,7 @@ async def setup_farmer_harvester(consensus_constants: ConsensusConstants):
     harvester, harvester_server = await node_iters[0].__anext__()
     farmer, farmer_server = await node_iters[1].__anext__()
 
-    yield (harvester, farmer)
+    yield harvester, farmer
 
     await _teardown_nodes(node_iters)
 
