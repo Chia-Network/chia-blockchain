@@ -45,7 +45,7 @@ steps:
       python -m pip install --upgrade pip
       pip install wheel pep517 setuptools_scm
       node -v
-      pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.0
+      pip install -i https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.2.0
     displayName: "Install dependencies"
 
   - script: |
