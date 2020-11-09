@@ -289,7 +289,6 @@ class BlockTools:
                     unfinished_block = self.create_unfinished_block(
                         constants,
                         sub_slot_start_total_iters,
-                        sub_slot_iters,
                         sp_iters,
                         ip_iters,
                         proof_of_space,
@@ -430,7 +429,6 @@ class BlockTools:
                     height_to_hash,
                 )
                 if sub_epoch_summary is not None:
-                    print(f"Height, {latest_sub_block.height} ses: {sub_epoch_summary}")
                     ses_hash = sub_epoch_summary.get_hash()
                     new_ips: Optional[uint64] = sub_epoch_summary.new_ips
                     new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
@@ -485,12 +483,12 @@ class BlockTools:
             num_empty_slots_added += 1
             same_slot_as_last = False
             sub_slot_start_total_iters += sub_slot_iters
+            sub_slot_iters = calculate_sub_slot_iters(constants, ips)
 
     def create_unfinished_block(
         self,
         constants: ConsensusConstants,
         sub_slot_start_total_iters: uint128,
-        sub_slot_iters: uint64,
         sp_iters: uint64,
         ip_iters: uint64,
         proof_of_space: ProofOfSpace,
@@ -516,12 +514,14 @@ class BlockTools:
             weight: uint128 = uint128(prev_sub_block.weight + difficulty)
             curr = prev_sub_block
             is_block, prev_block = get_prev_block(curr, prev_block, sub_blocks, total_iters_sp)
+            prev_sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, prev_sub_block.ips)
         else:
             # Genesis is a block
             is_genesis = True
             is_block = True
             height = uint32(0)
             weight: uint128 = uint128(constants.DIFFICULTY_STARTING)
+            prev_sub_slot_iters = calculate_sub_slot_iters(constants, constants.IPS_STARTING)
 
         new_sub_slot: bool = len(finished_sub_slots) > 0
 
@@ -568,12 +568,14 @@ class BlockTools:
                 else:
                     assert False
                 if overflow:
-                    total_iters_sp -= sub_slot_iters
+                    total_iters_sp -= prev_sub_slot_iters
 
-                curr: SubBlockRecord = prev_sub_block
+                next_sb: SubBlockRecord = prev_sub_block
+                curr: SubBlockRecord = next_sb
                 # Finds a sub-block which is BEFORE our signage point, otherwise goes back to the end of sub-slot
                 # Note that for overflow sub-blocks, we are looking at the end of the previous sub-slot
                 while num_sub_slots_to_look_for > 0:
+                    next_sb = curr
                     if curr.first_in_sub_slot:
                         num_sub_slots_to_look_for -= 1
                     if curr.total_iters < total_iters_sp:
@@ -589,7 +591,7 @@ class BlockTools:
                 else:
                     sp_vdf_iters = sp_iters
                     cc_vdf_input = ClassgroupElement.get_default_element()
-                    rc_vdf_challenge = curr.finished_reward_slot_hashes[-1]
+                    rc_vdf_challenge = next_sb.finished_reward_slot_hashes[-1]
 
                 while not curr.first_in_sub_slot:
                     curr = sub_blocks[curr.prev_hash]
@@ -621,8 +623,7 @@ class BlockTools:
             constants, plot_id, proof_of_space.challenge_hash, to_sign_cc, cc_sp_signature
         ):
             return None
-
-        total_iters = uint128(sub_slot_start_total_iters + ip_iters + (sub_slot_iters if overflow else 0))
+        total_iters = uint128(sub_slot_start_total_iters + ip_iters + (prev_sub_slot_iters if overflow else 0))
 
         rc_sub_block = RewardChainSubBlockUnfinished(
             weight,
@@ -706,7 +707,6 @@ class BlockTools:
                 unfinished_block = self.create_unfinished_block(
                     constants,
                     sub_slot_total_iters,
-                    sub_slot_iters,
                     sp_iters,
                     ip_iters,
                     proof_of_space,
