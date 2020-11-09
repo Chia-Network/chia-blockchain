@@ -122,7 +122,7 @@ class BlockTools:
             # Can't go much lower than 18, since plots start having no solutions
             args.size = 18
             # Uses many plots for testing, in order to guarantee proofs of space at every height
-            args.num = 80
+            args.num = 160
             args.buffer = 100
             args.farmer_public_key = bytes(self.farmer_pk).hex()
             args.pool_public_key = bytes(self.pool_pk).hex()
@@ -279,8 +279,8 @@ class BlockTools:
                     if same_slot_as_last and required_iters <= latest_sub_block.required_iters:
                         # Ignore this sub-block because it's in the past
                         continue
-                    sp_iters: uint64 = calculate_sp_iters(constants, uint64(constants.IPS_STARTING), required_iters)
-                    ip_iters = calculate_ip_iters(constants, uint64(constants.IPS_STARTING), required_iters)
+                    sp_iters: uint64 = calculate_sp_iters(constants, ips, required_iters)
+                    ip_iters = calculate_ip_iters(constants, ips, required_iters)
                     is_overflow_block = sp_iters > ip_iters
                     if force_overflow and not is_overflow_block:
                         continue
@@ -434,6 +434,9 @@ class BlockTools:
                     ses_hash = sub_epoch_summary.get_hash()
                     new_ips: Optional[uint64] = sub_epoch_summary.new_ips
                     new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
+                    if new_ips is not None:
+                        ips = new_ips
+                        difficulty = new_difficulty
                 else:
                     ses_hash = None
                     new_ips = None

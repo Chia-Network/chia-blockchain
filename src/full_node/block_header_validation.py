@@ -727,11 +727,11 @@ async def validate_finished_header_block(
             constants,
             sub_blocks,
             height_to_hash,
-            header_block.prev_header_hash,
+            prev_sb.prev_hash,
             prev_sb.height,
             prev_sb.deficit,
             prev_sb.ips,
-            True,
+            len(header_block.finished_sub_slots) > 0,
             prev_sb.total_iters,
         )
     ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
