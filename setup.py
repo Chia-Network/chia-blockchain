@@ -3,7 +3,7 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.2.4",  # Signature library
+    "blspy==0.2.7",  # Signature library
     "chiavdf==0.12.26",  # timelord and vdf verification
     "chiabip158==0.16",  # bip158-style wallet filters
     "chiapos==0.12.33",  # proof of space
