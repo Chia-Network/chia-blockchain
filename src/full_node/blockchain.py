@@ -217,7 +217,7 @@ class Blockchain:
             block.foliage_block,
             b"",  # No filter
         )
-        required_iters, error_code = await validate_finished_header_block(
+        required_iters, error = await validate_finished_header_block(
             self.constants,
             self.sub_blocks,
             self.height_to_hash,
@@ -225,8 +225,9 @@ class Blockchain:
             False,
         )
 
-        if error_code is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, error_code, None
+        if error is not None:
+            log.warning(f"block {curr_header_block.header_hash} failed validation " + error.error_msg)
+            return ReceiveBlockResult.INVALID_BLOCK, error.code, None
 
         error_code = await self.validate_block_body(block)
 
