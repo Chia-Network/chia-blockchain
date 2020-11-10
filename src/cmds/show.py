@@ -158,9 +158,7 @@ async def show_async(args, parser):
                 if max_block not in added_blocks:
                     added_blocks.append(max_block)
                 heads.remove(max_block)
-                prev: Optional[HeaderBlock] = await client.get_header(
-                    max_block.prev_header_hash
-                )
+                prev: Optional[HeaderBlock] = await client.get_header(max_block.prev_header_hash)
                 if prev is not None:
                     heads.append(prev)
 
@@ -215,9 +213,7 @@ async def show_async(args, parser):
             print(node_stop, "Node stopped.")
         if args.add_connection:
             if ":" not in args.add_connection:
-                print(
-                    "Enter a valid IP and port in the following format: 10.5.4.3:8000"
-                )
+                print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
             else:
                 ip, port = (
                     ":".join(args.add_connection.split(":")[:-1]),
@@ -237,15 +233,11 @@ async def show_async(args, parser):
                 connections = await client.get_connections()
                 for con in connections:
                     if args.remove_connection == con["node_id"].hex()[:10]:
-                        print(
-                            "Attempting to disconnect", "NodeID", args.remove_connection
-                        )
+                        print("Attempting to disconnect", "NodeID", args.remove_connection)
                         try:
                             await client.close_connection(con["node_id"])
                         except Exception:
-                            result_txt = (
-                                f"Failed to disconnect NodeID {args.remove_connection}"
-                            )
+                            result_txt = f"Failed to disconnect NodeID {args.remove_connection}"
                         else:
                             result_txt = f"NodeID {args.remove_connection}... {NodeType(con['type']).name} "
                             f"{con['peer_host']} disconnected."
@@ -253,22 +245,18 @@ async def show_async(args, parser):
                         result_txt = f"NodeID {args.remove_connection}... not found."
             print(result_txt)
         if args.block_header_hash_by_height != "":
-            block_header = await client.get_header_by_height(
-                args.block_header_hash_by_height
-            )
+            block_header = await client.get_header_by_height(args.block_header_hash_by_height)
             if block_header is not None:
                 block_header_string = str(block_header.get_hash())
-                print(
-                    f"Header hash of block {args.block_header_hash_by_height}: {block_header_string}"
-                )
+                print(f"Header hash of block {args.block_header_hash_by_height}: {block_header_string}")
             else:
                 print("Block height", args.block_header_hash_by_height, "not found.")
         if args.block_by_header_hash != "":
-            block = await client.get_block(hexstr_to_bytes(args.block_by_header_hash))
+            block = await client.get_full_block(hexstr_to_bytes(args.block_by_header_hash))
             # Would like to have a verbose flag for this
             if block is not None:
                 prev_block_header_hash = block.header.data.prev_header_hash
-                prev_block_header = await client.get_block(prev_block_header_hash)
+                prev_block_header = await client.get_full_block(prev_block_header_hash)
                 block_time = struct_time(localtime(block.header.data.timestamp))
                 block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
                 if block.header.data.aggregated_signature is None:
