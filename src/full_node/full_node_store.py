@@ -123,29 +123,30 @@ class FullNodeStore:
         return False
 
     def get_sub_slot(self, challenge_hash: bytes32) -> Optional[EndOfSubSlotBundle]:
-        for sub_slot, sps in self.finished_sub_slots:
+        for sub_slot, _, _ in self.finished_sub_slots:
             if sub_slot.challenge_chain.get_hash() == challenge_hash:
                 return sub_slot
         return None
-
-    def get_sub_slot(self, challenge_hash: bytes32) -> Optional[EndOfSubSlotBundle]:
-        pass
 
     def new_finished_sub_slot(self, eos: EndOfSubSlotBundle):
         """
         Returns true if finished slot successfully added
         """
         # First one is the challenge itself and will stay as None
-        sps = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
+        sps_cc = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
+        sps_rc = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
         if len(self.finished_sub_slots) == 0:
-            self.finished_sub_slots.append((eos, sps))
+            self.finished_sub_slots.append((eos, sps_cc, sps_rc))
             return True
         if eos.challenge_chain.proof_of_space.challenge_hash != self.finished_sub_slots[-1][0].get_hash():
             # This slot does not append to our next slot
             # This prevent other peers from appending fake VDFs to our cache
             return False
-        self.finished_sub_slots.append((eos, sps))
+        self.finished_sub_slots.append((eos, sps_cc, sps_rc))
         return True
+
+    def get_signage_point(self, challenge_hash: bytes32, signage_point: bytes32):
+        pass
 
     def new_signage_point(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof) -> bool:
         """
