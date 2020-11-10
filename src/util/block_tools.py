@@ -270,7 +270,7 @@ class BlockTools:
             slot_cc_challenge, slot_rc_challenge = get_challenges(
                 sub_blocks, finished_sub_slots, latest_sub_block.header_hash
             )
-            print(f"Starting slot cc: {slot_cc_challenge}")
+            print(f"Starting slot cc: {slot_cc_challenge} iters: {sub_slot_start_total_iters}")
 
             # Get all proofs of space for challenge.
             proofs_of_space: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
@@ -302,7 +302,6 @@ class BlockTools:
                     ip_iters,
                     proof_of_space,
                     slot_cc_challenge,
-                    slot_rc_challenge,
                     farmer_reward_puzzle_hash,
                     pool_reward_puzzle_hash,
                     fees,
@@ -335,6 +334,7 @@ class BlockTools:
                 num_blocks -= 1
                 if num_blocks == 0:
                     return block_list
+                print(f"Added block {full_block.height} {full_block.total_iters}, not overflow")
                 sub_blocks[full_block.header_hash] = sub_block_record
                 height_to_hash[uint32(full_block.height)] = full_block.header_hash
                 latest_sub_block = sub_blocks[full_block.header_hash]
@@ -391,6 +391,7 @@ class BlockTools:
                 ses_hash = sub_epoch_summary.get_hash()
                 new_ips: Optional[uint64] = sub_epoch_summary.new_ips
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
+                print(f"Sub epoch summary: {sub_epoch_summary}")
                 if new_ips is not None:
                     ips = new_ips
                     difficulty = new_difficulty
@@ -451,7 +452,6 @@ class BlockTools:
                     ip_iters,
                     proof_of_space,
                     slot_cc_challenge,
-                    slot_rc_challenge,
                     farmer_reward_puzzle_hash,
                     pool_reward_puzzle_hash,
                     fees,
@@ -482,6 +482,7 @@ class BlockTools:
                 num_blocks -= 1
                 if num_blocks == 0:
                     return block_list
+                print(f"Added block {full_block.height} {full_block.total_iters}, overflow")
 
                 sub_blocks[full_block.header_hash] = sub_block_record
                 height_to_hash[uint32(full_block.height)] = full_block.header_hash
@@ -502,7 +503,6 @@ class BlockTools:
         ip_iters: uint64,
         proof_of_space: ProofOfSpace,
         slot_cc_challenge: bytes32,
-        slot_rc_challenge: bytes32,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
         fees: uint64 = uint64(0),
@@ -721,7 +721,6 @@ class BlockTools:
                     ip_iters,
                     proof_of_space,
                     cc_challenge,
-                    rc_challenge,
                     farmer_reward_puzzle_hash,
                     constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
                     fees,

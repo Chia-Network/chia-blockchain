@@ -108,7 +108,7 @@ def finishes_sub_epoch(
 ) -> bool:
     """
     Returns true if the next sub-slot after height will form part of a new sub-epoch (or epoch if also_finished_epoch
-    is set to True)
+    is set to True). Warning: This assumes the previous sub-block did not finish a sub-epoch. TODO: check
     """
     if height < constants.SUB_EPOCH_SUB_BLOCKS - 1:
         return False
@@ -122,16 +122,18 @@ def finishes_sub_epoch(
     if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
         return False
 
-    already_included_ses = False
-    curr: SubBlockRecord = sub_blocks[prev_header_hash]
-    while curr.height % constants.SUB_EPOCH_SUB_BLOCKS > 0:
-        if curr.sub_epoch_summary_included is not None:
-            already_included_ses = True
-            break
-        curr = sub_blocks[curr.prev_hash]
+    # For sub-blocks which equal 0 or 1, we assume that the sub-epoch has not been finished yet
+    if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > 1:
+        already_included_ses = False
+        curr: SubBlockRecord = sub_blocks[prev_header_hash]
+        while curr.height % constants.SUB_EPOCH_SUB_BLOCKS > 0:
+            if curr.sub_epoch_summary_included is not None:
+                already_included_ses = True
+                break
+            curr = sub_blocks[curr.prev_hash]
 
-    if already_included_ses or (curr.sub_epoch_summary_included is not None):
-        return False
+        if already_included_ses or (curr.sub_epoch_summary_included is not None):
+            return False
 
     # For checking new epoch, make sure the epoch sub blocks are aligned
     if also_finishes_epoch:
