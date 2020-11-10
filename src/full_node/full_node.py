@@ -9,7 +9,12 @@ from chiapos import Verifier
 import dataclasses
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_sp_iters, calculate_ip_iters, is_overflow_sub_block
+from src.consensus.pot_iterations import (
+    calculate_sp_iters,
+    calculate_ip_iters,
+    is_overflow_sub_block,
+    calculate_iterations_quality,
+)
 from src.full_node.block_store import BlockStore
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
@@ -42,6 +47,7 @@ from src.types.spend_bundle import SpendBundle
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request
+from src.util.block_creation import create_unfinished_block
 from src.util.errors import ConsensusError, Err
 from src.util.ints import uint32, uint64, uint128, int32
 from src.util.merkle_set import MerkleSet
@@ -985,7 +991,40 @@ class FullNode:
                 spend_bundle: Optional[SpendBundle] = await self.mempool_manager.create_bundle_from_mempool(
                     peak.header_hash
                 )
-        # TODO(mariano): make block
+        prev_sb: SubBlockRecord = self.blockchain.get_peak()
+        new_slot = None
+        finishes_epoch: bool = finishes_sub_epoch(
+            self.constants, block.height, deficit, True, self.blockchain.sub_blocks, prev_sb.header_hash
+        )
+
+        required_iters: uint64 = calculate_iterations_quality(
+            quality_string,
+            request.proof_of_space.size,
+            difficulty,
+        )
+        unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(self.constants)
+        # constants: ConsensusConstants,
+        # sub_slot_start_total_iters: uint128,
+        # sp_iters: uint64,
+        # ip_iters: uint64,
+        # proof_of_space: ProofOfSpace,
+        # slot_cc_challenge: bytes32,
+        # farmer_reward_puzzle_hash: bytes32,
+        # pool_reward_puzzle_hash: bytes32,
+        # get_plot_signature: Callable[[bytes32, G1Element], G2Element],
+        # get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
+        # fees: uint64 = uint64(0),
+        # timestamp: Optional[uint64] = None,
+        # seed: bytes32 = b"",
+        # transactions: Optional[Program] = None,
+        # prev_sub_block: Optional[SubBlockRecord] = None,
+        # sub_blocks=None,
+        # finished_sub_slots=None,
+        # cc_sp_vdf: Optional[VDFInfo] = None,
+        # cc_sp_proof: Optional[VDFProof] = None,
+        # rc_sp_vdf: Optional[VDFInfo] = None,
+        # rc_sp_proof: Optional[VDFProof] = None,
+        # # TODO(mariano): make block
         foliage_sub_block_hash = bytes32(bytes([0] * 32))
         foliage_block_hash = bytes32(bytes([0] * 32))
         message = farmer_protocol.RequestSignedValues(
