@@ -1,6 +1,7 @@
 from .coin import Coin
 from src.types.program import Program
 
+
 class CoinWithPuzzle(Coin):
     """
     This is a coin with its puzzle hash resolved.
@@ -9,6 +10,6 @@ class CoinWithPuzzle(Coin):
     """
     puzzle: Program
 
-    def __init__(self, coin: Coin, puzzle:Program):
+    def __init__(self, coin: Coin, puzzle: Program):
         self.puzzle = puzzle
         super(Coin, self).__init__(coin)

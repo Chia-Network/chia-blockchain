@@ -1,18 +1,15 @@
 
 # tx command imports
-from src.util.config import load_config
-from src.types.coin import Coin
 import json
 from src.util.byte_types import hexstr_to_bytes
 
 # transaction imports
-from src.types.coinwithpuzzle import CoinWithPuzzle
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.coin_solution import CoinSolution
 from src.types.coin import Coin
 from src.util.ints import uint64
-from typing import Dict, List, Set, Any
+from typing import List, Set
 
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_my_coin_id_condition,
@@ -25,6 +22,7 @@ from src.wallet.puzzles.p2_delegated_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
+
 
 # TODO: From wallet/wallet.py: refactor
 def make_solution(primaries=None, min_time=0, me=None, consumed=None, fee=0):
@@ -47,16 +45,19 @@ def make_solution(primaries=None, min_time=0, me=None, consumed=None, fee=0):
     print(condition_list)
     return solution_for_conditions(condition_list)
 
+
 class SpendRequest():
     puzzle_hash: bytes32
     amount: uint64
+
     def __init__(self, ph, amt):
         self.puzzle_hash = ph
         self.amount = amt
 
+
 def create_unsigned_transaction(
     pubkey: bytes32,
-    coins: Set[Coin] = None, #Set[CoinWithPuzzle] = None,
+    coins: Set[Coin] = None,  # Set[CoinWithPuzzle] = None,
     spend_requests: Set[SpendRequest] = None,
     validate=True
 ) -> List[CoinSolution]:
@@ -100,31 +101,33 @@ def create_unsigned_transaction(
         puzzle_solution_pair = Program.to([coin.puzzle, solution])
         spends.append(CoinSolution(coin, puzzle_solution_pair))
 
-    print(f"spends: {spends}")
     return spends
+
 
 def create_unsigned_tx_from_json(json_tx):
     j = json.loads(json_tx)
     pubkey_json = j["pubkey"]
-    input_coins_json= j["input_coins"]
-    spend_requests_json = j["spend_requests"] # Output addresses and amounts
+    input_coins_json = j["input_coins"]
+    spend_requests_json = j["spend_requests"]  # Output addresses and amounts
 
     pubkey = hexstr_to_bytes(pubkey_json)
-    input_coins = [ Coin(hexstr_to_bytes(c["parent_id"]),
-                         hexstr_to_bytes(c["puzzle_hash"]),
-                   c["amount"]) for c in input_coins_json ]
-    spend_requests = [ SpendRequest(hexstr_to_bytes(s["puzzle_hash"]),
-                                    s["amount"]) for s in spend_requests_json ]
+    input_coins = [Coin(hexstr_to_bytes(c["parent_id"]),
+                        hexstr_to_bytes(c["puzzle_hash"]),
+                        c["amount"]) for c in input_coins_json]
+    spend_requests = [SpendRequest(hexstr_to_bytes(s["puzzle_hash"]),
+                                   s["amount"]) for s in spend_requests_json]
 
     print(pubkey, input_coins, spend_requests)
 
     spends = create_unsigned_transaction(pubkey, input_coins, spend_requests)
-    output = { "spends": spends }
+    print(spends)
+    # output = { "spends": spends }
 
     # TODO: Object of type CoinSolution is not JSON serializable
-    #print(json.dumps(output))
+    # print(json.dumps(output))
 
-### Command line handling
+
+# Command line handling
 
 command_list = [
     "create",
@@ -134,11 +137,12 @@ command_list = [
     "decode",
 ]
 
+
 def help_message():
-    print("usage: chia tx command\n" +
-          f"command can be any of {command_list}\n" +
-          "\n" +
-          "chia tx create amount puzzle_hash fee origin_id [coins]\n" )
+    print("usage: chia tx command\n"
+          + f"command can be any of {command_list}\n"
+          + "\n"
+          + "chia tx create amount puzzle_hash fee origin_id [coins]\n")
 
 
 def make_parser(parser):
@@ -156,6 +160,7 @@ def make_parser(parser):
     )
     parser.set_defaults(function=handler)
     parser.print_help = lambda self=parser: help_message()
+
 
 def handler(args, parser):
     if args.command is None or len(args.command) < 1:
