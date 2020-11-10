@@ -23,13 +23,9 @@ class TestRpc:
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         for i in range(1, num_blocks):
-            async for _ in full_node_1.respond_unfinished_block(
-                full_node_protocol.RespondUnfinishedBlock(blocks[i])
-            ):
+            async for _ in full_node_1.respond_unfinished_block(full_node_protocol.RespondUnfinishedBlock(blocks[i])):
                 pass
-            async for _ in full_node_1.respond_block(
-                full_node_protocol.RespondBlock(blocks[i])
-            ):
+            async for _ in full_node_1.respond_block(full_node_protocol.RespondBlock(blocks[i])):
                 pass
 
         def stop_node_cb():
@@ -61,9 +57,9 @@ class TestRpc:
             assert state["ips"] > 0
             assert state["min_iters"] > 0
 
-            block = await client.get_block(state["lca"].header_hash)
+            block = await client.get_full_block(state["lca"].header_hash)
             assert block == blocks[2]
-            assert (await client.get_block(bytes([1] * 32))) is None
+            assert (await client.get_full_block(bytes([1] * 32))) is None
 
             unf_block_headers = await client.get_unfinished_block_headers(4)
             assert len(unf_block_headers) == 1
@@ -76,13 +72,9 @@ class TestRpc:
 
             assert (await client.get_header_by_height(100)) is None
 
-            coins = await client.get_unspent_coins(
-                blocks[-1].get_coinbase().puzzle_hash, blocks[-1].header_hash
-            )
+            coins = await client.get_unspent_coins(blocks[-1].get_coinbase().puzzle_hash, blocks[-1].header_hash)
             assert len(coins) == 3
-            coins_lca = await client.get_unspent_coins(
-                blocks[-1].get_coinbase().puzzle_hash
-            )
+            coins_lca = await client.get_unspent_coins(blocks[-1].get_coinbase().puzzle_hash)
             assert len(coins_lca) == 3
 
             assert len(await client.get_connections()) == 0

@@ -128,7 +128,7 @@ class Blockchain:
         """
         Initializes the state of the Blockchain class from the database.
         """
-        self.sub_blocks, peak = await self.block_store.get_sub_blocks()
+        self.sub_blocks, peak = await self.block_store.get_sub_block_records()
         self.height_to_hash = {}
         self.sub_epoch_summaries = {}
 
@@ -164,7 +164,7 @@ class Blockchain:
         if self.peak_height is None:
             return None
         """ Return list of FullBlocks that are peaks"""
-        block = await self.block_store.get_block(self.height_to_hash[self.peak_height])
+        block = await self.block_store.get_full_block(self.height_to_hash[self.peak_height])
         assert block is not None
         return block
 
@@ -176,12 +176,15 @@ class Blockchain:
             return False
         return block.prev_header_hash == self.get_peak().header_hash
 
-    def contains_block(self, header_hash: bytes32) -> bool:
+    def contains_sub_block(self, header_hash: bytes32) -> bool:
         """
         True if we have already added this block to the chain. This may return false for orphan sub-blocks
         that we have added but no longer keep in memory.
         """
         return header_hash in self.sub_blocks
+
+    async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
+        return await self.block_store.get_full_block(header_hash)
 
     async def receive_block(
         self,
@@ -239,7 +242,7 @@ class Blockchain:
         )
 
         # Always add the block to the database
-        await self.block_store.add_block(block, sub_block)
+        await self.block_store.add_full_block(block, sub_block)
 
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
@@ -257,9 +260,7 @@ class Blockchain:
         None if there was no update to the heaviest chain.
         """
         if genesis:
-            block: Optional[FullBlock] = await self.block_store.get_block(
-                sub_block.header_hash
-            )
+            block: Optional[FullBlock] = await self.block_store.get_full_block(sub_block.header_hash)
             assert block is not None
             await self.coin_store.new_block(block)
             self.height_to_hash[uint32(0)] = block.header_hash
@@ -287,12 +288,8 @@ class Blockchain:
             blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
             curr = sub_block.header_hash
             while fork_h < 0 or curr != self.height_to_hash[uint32(fork_h)]:
-                fetched_block: Optional[FullBlock] = await self.block_store.get_block(
-                    curr
-                )
-                fetched_sub_block: Optional[
-                    SubBlockRecord
-                ] = await self.block_store.get_sub_block(curr)
+                fetched_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
+                fetched_sub_block: Optional[SubBlockRecord] = await self.block_store.get_sub_block_record(curr)
                 assert fetched_block is not None
                 assert fetched_sub_block is not None
                 blocks_to_add.append((fetched_block, fetched_sub_block))
@@ -576,7 +573,7 @@ class Blockchain:
         coinbases_since_fork: Dict[bytes32, uint32] = {}
 
         if block.height > 0:
-            curr: Optional[FullBlock] = await self.block_store.get_block(block.prev_header_hash)
+            curr: Optional[FullBlock] = await self.block_store.get_full_block(block.prev_header_hash)
             assert curr is not None
 
             while curr.height > fork_h:
@@ -588,7 +585,7 @@ class Blockchain:
 
                 for coinbase_coin in curr.get_included_reward_coins():
                     coinbases_since_fork[coinbase_coin.name()] = curr.height
-                curr = await self.block_store.get_block(curr.prev_header_hash)
+                curr = await self.block_store.get_full_block(curr.prev_header_hash)
                 assert curr is not None
 
         removal_coin_records: Dict[bytes32, CoinRecord] = {}

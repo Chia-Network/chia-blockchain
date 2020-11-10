@@ -2,12 +2,14 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
+from src.consensus.pot_iterations import calculate_ip_iters, calculate_sub_slot_iters
+from src.full_node.sub_block_record import SubBlockRecord
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFProof, VDFInfo
-from src.util.ints import uint32, uint8
+from src.util.ints import uint32, uint8, uint64, uint128
 
 log = logging.getLogger(__name__)
 
@@ -15,9 +17,6 @@ SPs = List[Optional[Tuple[VDFInfo, VDFProof]]]
 
 
 class FullNodeStore:
-    # TODO(mariano): replace
-    # Proof of time heights
-    # proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
     constants: ConsensusConstants
     # Blocks which we have created, but don't have plot signatures yet
     candidate_blocks: Dict[bytes32, UnfinishedBlock]
@@ -30,7 +29,8 @@ class FullNodeStore:
 
     # Finished slots and sps from the peak's slot onwards
     # We store all 32 SPs for each slot, starting as 32 Nones and filling them as we go
-    finished_sub_slots: List[Tuple[EndOfSubSlotBundle, SPs, SPs]]
+    # Also stores the total iters at the end of slot
+    finished_sub_slots: List[Tuple[EndOfSubSlotBundle, SPs, SPs, uint128]]
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):
@@ -115,20 +115,20 @@ class FullNodeStore:
         self.finished_sub_slots.clear()
 
     def have_sub_slot(self, challenge_hash: bytes32, index: uint8) -> bool:
-        for sub_slot, sps in self.finished_sub_slots:
-            if sub_slot.challenge_chain.get_hash() == challenge_hash:
+        for sub_slot, sps_cc, sps_rc, _ in self.finished_sub_slots:
+            if sub_slot.challenge_chain_hash == challenge_hash:
                 if index == 0:
                     return True
-                return sps[index] is not None
+                return sps_cc[index] is not None and sps_rc[index] is not None
         return False
 
-    def get_sub_slot(self, challenge_hash: bytes32) -> Optional[EndOfSubSlotBundle]:
-        for sub_slot, _, _ in self.finished_sub_slots:
+    def get_sub_slot(self, challenge_hash: bytes32) -> Optional[Tuple[EndOfSubSlotBundle, int, uint128]]:
+        for index, (sub_slot, _, _, total_iters) in enumerate(self.finished_sub_slots):
             if sub_slot.challenge_chain.get_hash() == challenge_hash:
-                return sub_slot
+                return sub_slot, index, total_iters
         return None
 
-    def new_finished_sub_slot(self, eos: EndOfSubSlotBundle):
+    def new_finished_sub_slot(self, eos: EndOfSubSlotBundle, total_iters: uint128):
         """
         Returns true if finished slot successfully added
         """
@@ -136,53 +136,121 @@ class FullNodeStore:
         sps_cc = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
         sps_rc = [None] * self.constants.NUM_CHECKPOINTS_PER_SLOT
         if len(self.finished_sub_slots) == 0:
-            self.finished_sub_slots.append((eos, sps_cc, sps_rc))
+            self.finished_sub_slots.append((eos, sps_cc, sps_rc, total_iters))
             return True
-        if eos.challenge_chain.proof_of_space.challenge_hash != self.finished_sub_slots[-1][0].get_hash():
+        if (
+            eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
+            != self.finished_sub_slots[-1][0].challenge_chain.get_hash()
+        ):
             # This slot does not append to our next slot
             # This prevent other peers from appending fake VDFs to our cache
             return False
-        self.finished_sub_slots.append((eos, sps_cc, sps_rc))
+        self.finished_sub_slots.append((eos, sps_cc, sps_rc, total_iters))
         return True
 
     def get_signage_point(self, challenge_hash: bytes32, signage_point: bytes32):
         pass
 
-    def new_signage_point(self, challenge_hash: bytes32, index: uint8, vdf_info: VDFInfo, proof: VDFProof) -> bool:
+    def new_signage_point(
+        self,
+        challenge_hash: bytes32,
+        index: uint8,
+        vdf_info_cc: VDFInfo,
+        proof_cc: VDFProof,
+        vdf_info_rc: VDFInfo,
+        proof_rc: VDFProof,
+    ) -> bool:
         """
         Returns true if sp successfully added
         """
         assert 0 < index < self.constants.NUM_CHECKPOINTS_PER_SLOT
-        for sub_slot, sps in self.finished_sub_slots:
+        for sub_slot, sps_cc, sps_rc, _ in self.finished_sub_slots:
             if sub_slot.challenge_chain.get_hash() == challenge_hash:
-                sps[index] = (vdf_info, proof)
+                sps_cc[index] = (vdf_info_cc, proof_cc)
+                sps_rc[index] = (vdf_info_rc, proof_rc)
                 return True
         return False
 
     def remove_sub_slot(self, old_challenge_hash: bytes32):
         new_sub_slots = []
-        for index, (sub_slot, sps) in enumerate(self.finished_sub_slots):
+        for index, (sub_slot, sps_cc, sps_rc, total_iters) in enumerate(self.finished_sub_slots):
             if sub_slot.challenge_chain.get_hash() != old_challenge_hash:
-                new_sub_slots.append((sub_slot, sps))
+                new_sub_slots.append((sub_slot, sps_cc, sps_rc, total_iters))
             else:
                 # Force removal from the front, to ensure we are always clearing the cache
                 assert index == 0
         self.finished_sub_slots = new_sub_slots
 
-    # TODO(mariano)
-    # def add_proof_of_time_heights(self, challenge_iters: Tuple[bytes32, uint64], height: uint32) -> None:
-    #     self.proof_of_time_heights[challenge_iters] = height
-    #
-    # def get_proof_of_time_heights(self, challenge_iters: Tuple[bytes32, uint64]) -> Optional[uint32]:
-    #     return self.proof_of_time_heights.get(challenge_iters, None)
-    #
-    # def clear_proof_of_time_heights_below(self, height: uint32) -> None:
-    #     del_keys: List = []
-    #     for key, value in self.proof_of_time_heights.items():
-    #         if value < height:
-    #             del_keys.append(key)
-    #     for key in del_keys:
-    #         try:
-    #             del self.proof_of_time_heights[key]
-    #         except KeyError:
-    #             pass
+    def new_peak(
+        self,
+        peak: SubBlockRecord,
+        peak_sub_slot: EndOfSubSlotBundle,
+        total_iters: uint128,
+        prev_sub_slot: Optional[EndOfSubSlotBundle],
+        prev_sub_slot_total_iters: Optional[uint128],
+        reorg: bool,
+    ):
+        """
+        If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
+        the prev sub-slot (since we still might get more sub-blocks with an sp in the previous sub-slot)
+        """
+        if not reorg:
+            # This is a new peak that adds to the last peak. We should clear any data that comes after the infusion
+            # of this peak. We can also clear data in old sub-slots.
+            sub_slot_iters: uint64 = calculate_sub_slot_iters(self.constants, peak.ips)
+            checkpoint_size: uint64 = uint64(sub_slot_iters // self.constants.NUM_CHECKPOINTS_PER_SLOT)
+            ip_iters = calculate_ip_iters(self.constants, peak.ips, peak.required_iters)
+            sps_to_keep = ip_iters // checkpoint_size + 1
+            new_finished_sub_slots = []
+            for index, (sub_slot, sps_cc, sps_rc, total_iters) in enumerate(self.finished_sub_slots):
+                if (prev_sub_slot is not None) and sub_slot == prev_sub_slot:
+                    # In the case of a peak overflow sub-block, the previous sub-slot is added
+                    new_finished_sub_slots.append((sub_slot, sps_cc, sps_rc, total_iters))
+
+                if sub_slot == peak_sub_slot:
+                    # Only saves signage points up to the peak, since the infusion changes future points
+                    new_sps_cc = sps_cc[:sps_to_keep] + [None] * (self.constants.NUM_CHECKPOINTS_PER_SLOT - sps_to_keep)
+                    new_sps_rc = sps_rc[:sps_to_keep] + [None] * (self.constants.NUM_CHECKPOINTS_PER_SLOT - sps_to_keep)
+                    new_finished_sub_slots.append([(sub_slot, new_sps_cc, new_sps_rc, total_iters)])
+                    self.finished_sub_slots = new_finished_sub_slots
+
+        # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current cache
+        # delete the entire cache and add this sub slot.
+        self.clear_slots()
+        if prev_sub_slot is not None:
+            assert prev_sub_slot_total_iters is not None
+            self.new_finished_sub_slot(prev_sub_slot, prev_sub_slot_total_iters)
+        self.new_finished_sub_slot(peak_sub_slot, total_iters)
+
+    def get_finished_sub_slots(
+        self,
+        peak: SubBlockRecord,
+        sub_block_records: Dict[bytes32, SubBlockRecord],
+        pos_challenge_hash: bytes32,
+        is_overflow: bool,
+    ) -> List[EndOfSubSlotBundle]:
+        """
+        Returns all sub slots that have been completed between the current peak and the new block we will create,
+        which is denoted from the pos_challenge hash, and is_overflow. In the case of the overflow, we have to add the
+        new slot as well.
+        """
+        curr: SubBlockRecord = peak
+        while not curr.first_in_sub_slot:
+            curr = sub_block_records[curr.prev_hash]
+        final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
+        pos_index: Optional[int] = None
+        final_index: Optional[int] = None
+        for index, (sub_slot, sps_cc, sps_rc, total_iters) in enumerate(self.finished_sub_slots):
+            if sub_slot.challenge_chain.get_hash() == pos_challenge_hash:
+                pos_index = index
+            if sub_slot.challenge_chain.get_hash() == final_sub_slot_in_chain:
+                final_index = index
+
+        if pos_index is None or final_index is None:
+            raise ValueError(f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index}")
+
+        if is_overflow:
+            new_final_index = pos_index + 1
+        else:
+            new_final_index = pos_index
+        return [sub_slot for sub_slot, _, _, _ in self.finished_sub_slots[final_index + 1 : new_final_index + 1]]
