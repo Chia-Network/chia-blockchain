@@ -337,7 +337,6 @@ async def validate_unfinished_header_block(
             )
             if expected_sub_epoch_summary.get_hash() != ses_hash:
                 return None, Err.INVALID_SUB_EPOCH_SUMMARY
-            print(f"Verified sub epoch: {expected_sub_epoch_summary}")
         else:
             # 3d. Check that we don't have to include a sub-epoch summary
             if new_sub_slot and not genesis_block:
@@ -378,10 +377,9 @@ async def validate_unfinished_header_block(
         # Blocks with very low required iters are not overflow blocks
         assert not overflow
 
-    # 5. Check no overflows in new sub-epoch
-    if overflow and ses_hash is not None:
-        log.error("block %s failed validation at step %d overflow block with no ses hash", header_block.header_hash, 5)
-        return None, Err.NO_OVERFLOWS_IN_NEW_SUBEPOCH
+    # 5. Check no overflows in the first sub-slot of a new epoch (although they are OK in the second sub-slot)
+    if overflow and finishes_epoch and len(header_block.finished_sub_slots) < 2:
+        return None, Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH
 
     # If sub_block state is correct, we should always find a challenge here
     # This computes what the challenge should be for this sub-block
@@ -411,12 +409,11 @@ async def validate_unfinished_header_block(
                 if curr.height == 0:
                     break
                 curr = sub_blocks[curr.prev_hash]
-            challenge = reversed_challenge_hashes[-challenges_to_look_for]
+            challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
     assert challenge is not None
 
     # 6. Check challenge in proof of space is valid
     if challenge != header_block.reward_chain_sub_block.proof_of_space.challenge_hash:
-        print("Challenge", challenge, header_block.reward_chain_sub_block.proof_of_space, header_block.total_iters)
         return None, Err.INVALID_POSPACE_CHALLENGE
 
     # 7. Check total iters
