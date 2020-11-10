@@ -1,4 +1,3 @@
-
 # tx command imports
 import json
 from src.util.byte_types import hexstr_to_bytes
@@ -46,7 +45,7 @@ def make_solution(primaries=None, min_time=0, me=None, consumed=None, fee=0):
     return solution_for_conditions(condition_list)
 
 
-class SpendRequest():
+class SpendRequest:
     puzzle_hash: bytes32
     amount: uint64
 
@@ -59,21 +58,24 @@ def create_unsigned_transaction(
     pubkey: bytes32,
     coins: Set[Coin] = None,  # Set[CoinWithPuzzle] = None,
     spend_requests: Set[SpendRequest] = None,
-    validate=True
+    validate=True,
 ) -> List[CoinSolution]:
     """
     Generates a unsigned transaction in form of List(Puzzle, Solutions)
     """
 
     if coins is None or len(coins) < 1:
-        raise(ValueError("tx create requires one or more input_coins"))
+        raise (ValueError("tx create requires one or more input_coins"))
     assert len(coins) > 0
 
     input_value = sum([coin.amount for coin in coins])
     sent_value = sum([req.amount for req in spend_requests])
     if validate and sent_value != input_value:
-        raise(ValueError(
-            f"input amounts ({input_value}) do not equal outputs ({sent_value})"))
+        raise (
+            ValueError(
+                f"input amounts ({input_value}) do not equal outputs ({sent_value})"
+            )
+        )
 
     spends: List[CoinSolution] = []
 
@@ -111,11 +113,18 @@ def create_unsigned_tx_from_json(json_tx):
     spend_requests_json = j["spend_requests"]  # Output addresses and amounts
 
     pubkey = hexstr_to_bytes(pubkey_json)
-    input_coins = [Coin(hexstr_to_bytes(c["parent_id"]),
-                        hexstr_to_bytes(c["puzzle_hash"]),
-                        c["amount"]) for c in input_coins_json]
-    spend_requests = [SpendRequest(hexstr_to_bytes(s["puzzle_hash"]),
-                                   s["amount"]) for s in spend_requests_json]
+    input_coins = [
+        Coin(
+            hexstr_to_bytes(c["parent_id"]),
+            hexstr_to_bytes(c["puzzle_hash"]),
+            c["amount"],
+        )
+        for c in input_coins_json
+    ]
+    spend_requests = [
+        SpendRequest(hexstr_to_bytes(s["puzzle_hash"]), s["amount"])
+        for s in spend_requests_json
+    ]
 
     print(pubkey, input_coins, spend_requests)
 
@@ -139,10 +148,12 @@ command_list = [
 
 
 def help_message():
-    print("usage: chia tx command\n"
-          + f"command can be any of {command_list}\n"
-          + "\n"
-          + "chia tx create amount puzzle_hash fee origin_id [coins]\n")
+    print(
+        "usage: chia tx command\n"
+        + f"command can be any of {command_list}\n"
+        + "\n"
+        + "chia tx create amount puzzle_hash fee origin_id [coins]\n"
+    )
 
 
 def make_parser(parser):
@@ -153,11 +164,7 @@ def make_parser(parser):
         nargs="?",
     )
 
-    parser.add_argument(
-        "json_tx",
-        help=f"json encoded transaction",
-        type=str
-    )
+    parser.add_argument("json_tx", help="json encoded transaction", type=str)
     parser.set_defaults(function=handler)
     parser.print_help = lambda self=parser: help_message()
 
