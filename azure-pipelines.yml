@@ -52,7 +52,8 @@ steps:
       . ./activate
       clang --version
       pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
-    displayName: "Build wheels"
+      pip install --no-index --find-links=./wheels/ chia-blockchain
+    displayName: "Build and install wheels"
 
   - task: NodeTool@0
     inputs:
@@ -64,15 +65,7 @@ steps:
       cd ./electron-react
       npm install
       npm audit fix
-    displayName: "Build Electron UI"
-
-  #  Using wheels and release style install so no sh install.sh
-  - script: |
-      . ./activate
-      pip install --no-index --find-links=./wheels/ miniupnpc
-      pip install --no-index --find-links=./wheels/ setproctitle
-      pip install --no-index --find-links=./wheels/ chia-blockchain
-    displayName: "Install wheels"
+    displayName: "Build Electron/React UI"
 
 #  install-timelord.sh in venv
 #  - script: |
