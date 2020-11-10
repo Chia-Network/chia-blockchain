@@ -270,6 +270,7 @@ class BlockTools:
             slot_cc_challenge, slot_rc_challenge = get_challenges(
                 sub_blocks, finished_sub_slots, latest_sub_block.header_hash
             )
+            print(f"Starting slot cc: {slot_cc_challenge}")
 
             # Get all proofs of space for challenge.
             proofs_of_space: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
@@ -393,7 +394,7 @@ class BlockTools:
                 if new_ips is not None:
                     ips = new_ips
                     difficulty = new_difficulty
-                    overflow_sub_blocks = []  # No overflow blocks on new difficulty
+                    overflow_pos = []  # No overflow blocks on new difficulty
             else:
                 ses_hash = None
                 new_ips = None
@@ -533,7 +534,6 @@ class BlockTools:
         rc_sp_vdf: Optional[VDFInfo] = None
         rc_sp_proof: Optional[VDFProof] = None
         cc_sp_hash: Optional[bytes32] = slot_cc_challenge
-        rc_sp_hash: Optional[bytes32] = slot_rc_challenge
         if sp_iters != 0:
             if is_genesis:
                 cc_vdf_input = ClassgroupElement.get_default_element()
@@ -1007,8 +1007,8 @@ class BlockTools:
                             proof_xs,
                         )
                         found_proofs.append((required_iters, proof_of_space))
-        if len(found_proofs) >= 2:
-            random_sample = random.sample(found_proofs, len(found_proofs) - 1)
+        if len(found_proofs) >= 4:
+            random_sample = random.sample(found_proofs, len(found_proofs) - 3)
         else:
             random_sample = found_proofs
         print(
