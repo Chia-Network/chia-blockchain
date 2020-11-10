@@ -51,7 +51,7 @@ steps:
   - script: |
       . ./activate
       clang --version
-      pip install --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
+      pip install  . --extra-index-url https://download.chia.net/simple/
     displayName: "Build and install wheels"
 
   - task: NodeTool@0
