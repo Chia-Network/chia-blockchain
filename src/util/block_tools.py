@@ -38,7 +38,6 @@ from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.pool_target import PoolTarget
-from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
 from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.sized_bytes import bytes32
@@ -48,6 +47,7 @@ from src.types.slots import (
     RewardChainSubSlot,
     SubSlotProofs,
 )
+from src.types.spend_bundle import SpendBundle
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFInfo, VDFProof
@@ -197,8 +197,7 @@ class BlockTools:
         block_list: List[FullBlock] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
-        fees: uint64 = uint64(0),
-        transaction_data_at_height: Dict[int, Tuple[Program, G2Element]] = None,
+        transaction_data_at_height: Dict[int, SpendBundle] = None,
         seed: bytes = b"",
         time_per_sub_block: Optional[float] = None,
         force_overflow: bool = False,
@@ -213,11 +212,11 @@ class BlockTools:
             farmer_reward_puzzle_hash = self.farmer_ph
         if pool_reward_puzzle_hash is None:
             pool_reward_puzzle_hash = self.pool_ph
+        pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
 
         if block_list is None or len(block_list) == 0:
             genesis = self.create_genesis_block(
                 constants,
-                fees,
                 seed,
                 force_overflow=force_overflow,
                 force_empty_slots=force_empty_slots,
@@ -293,10 +292,9 @@ class BlockTools:
                     proof_of_space,
                     slot_cc_challenge,
                     farmer_reward_puzzle_hash,
-                    pool_reward_puzzle_hash,
+                    pool_target,
                     self.get_plot_signature,
                     self.get_pool_key_signature,
-                    fees,
                     uint64(start_timestamp + int((latest_sub_block.height + 1 - start_height) * time_per_sub_block)),
                     seed,
                     transaction_data_at_height.get(latest_sub_block.height + 1, None),
@@ -445,10 +443,9 @@ class BlockTools:
                     proof_of_space,
                     slot_cc_challenge,
                     farmer_reward_puzzle_hash,
-                    pool_reward_puzzle_hash,
+                    pool_target,
                     self.get_plot_signature,
                     self.get_pool_key_signature,
-                    fees,
                     uint64(start_timestamp + int((latest_sub_block.height + 1 - start_height) * time_per_sub_block)),
                     seed,
                     transaction_data_at_height.get(latest_sub_block.height + 1, None),
@@ -492,7 +489,6 @@ class BlockTools:
     def create_genesis_block(
         self,
         constants: ConsensusConstants,
-        fees: uint64 = 0,
         seed: bytes32 = b"",
         timestamp: Optional[uint64] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
@@ -539,10 +535,9 @@ class BlockTools:
                     proof_of_space,
                     cc_challenge,
                     farmer_reward_puzzle_hash,
-                    constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
+                    PoolTarget(constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0)),
                     self.get_plot_signature,
                     self.get_pool_key_signature,
-                    fees,
                     timestamp,
                     seed,
                     finished_sub_slots=finished_sub_slots,

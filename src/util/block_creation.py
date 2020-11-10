@@ -9,6 +9,8 @@ from src.consensus.block_rewards import calculate_pool_reward, calculate_base_fa
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_sub_slot_iters
+from src.full_node.bundle_tools import best_solution_program
+from src.full_node.cost_calculator import calculate_cost_of_program
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.full_node.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
@@ -20,6 +22,7 @@ from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
 from src.types.reward_chain_sub_block import RewardChainSubBlockUnfinished, RewardChainSubBlock
 from src.types.sized_bytes import bytes32
+from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFProof, VDFInfo
 from src.util.hash import std_hash
@@ -32,20 +35,18 @@ from src.util.vdf_prover import get_vdf_info_and_proof
 def create_foliage(
     constants: ConsensusConstants,
     reward_sub_block: Union[RewardChainSubBlock, RewardChainSubBlockUnfinished],
-    fees: uint64,
-    aggsig: Optional[G2Element],
-    transactions: Optional[Program],
+    spend_bundle: Optional[SpendBundle],
     prev_sub_block: Optional[SubBlockRecord],
     prev_block: Optional[SubBlockRecord],
     sub_blocks: Dict[bytes32, SubBlockRecord],
     is_block: bool,
     timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
-    pool_reward_puzzlehash: bytes32,
+    pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
     seed: bytes32 = b"",
-) -> (FoliageSubBlock, Optional[FoliageBlock], Optional[TransactionsInfo]):
+) -> (FoliageSubBlock, Optional[FoliageBlock], Optional[TransactionsInfo], Optional[Program]):
     # Use the extension data to create different blocks based on header hash
     random.seed(seed)
     extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
@@ -53,14 +54,12 @@ def create_foliage(
         height: uint32 = uint32(0)
     else:
         height = uint32(prev_sub_block.height + 1)
-    cost: uint64 = uint64(0)
 
     # Create filter
     byte_array_tx: List[bytes32] = []
     tx_additions: List[Coin] = []
     tx_removals: List[bytes32] = []
 
-    pool_target = PoolTarget(pool_reward_puzzlehash, uint32(height))
     pool_target_signature: Optional[G2Element] = get_pool_signature(
         pool_target, reward_sub_block.proof_of_space.pool_public_key
     )
@@ -82,11 +81,22 @@ def create_foliage(
     if height != 0:
         prev_sub_block_hash = prev_sub_block.header_hash
 
+    solution_program: Optional[Program] = None
     if is_block:
-        if aggsig is None:
-            aggsig = G2Element.infinity()
+        spend_bundle_fees: int = 0
+        aggregate_sig: G2Element = G2Element.infinity()
+        cost = uint64(0)
+
+        if spend_bundle is not None:
+            solution_program = best_solution_program(spend_bundle)
+            spend_bundle_fees = spend_bundle.fees()
+            aggregate_sig = spend_bundle.aggregated_signature
+
+        # Calculate the cost of transactions
+        if solution_program is not None:
+            _, _, cost = calculate_cost_of_program(solution_program, constants.CLVM_COST_RATIO_CONSTANT)
         # TODO: prev generators root
-        pool_coin = create_pool_coin(height, pool_reward_puzzlehash, calculate_pool_reward(height))
+        pool_coin = create_pool_coin(height, pool_target.puzzle_hash, calculate_pool_reward(height))
         farmer_coin = create_farmer_coin(
             uint32(height), farmer_reward_puzzlehash, calculate_base_farmer_reward(uint32(height))
         )
@@ -102,8 +112,8 @@ def create_foliage(
                 curr = sub_blocks[curr.prev_hash]
         additions: List[Coin] = reward_claims_incorporated
         npc_list = []
-        if transactions is not None:
-            error, npc_list, _ = get_name_puzzle_conditions(transactions)
+        if solution_program is not None:
+            error, npc_list, _ = get_name_puzzle_conditions(solution_program)
             additions += additions_for_npc(npc_list)
         for coin in additions:
             tx_additions.append(coin)
@@ -113,7 +123,7 @@ def create_foliage(
             byte_array_tx.append(bytearray(npc.coin_name))
 
         byte_array_tx.append(bytearray(farmer_reward_puzzlehash))
-        byte_array_tx.append(bytearray(pool_reward_puzzlehash))
+        byte_array_tx.append(bytearray(pool_target.puzzle_hash))
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
 
@@ -141,11 +151,11 @@ def create_foliage(
         additions_root = addition_merkle_set.get_root()
         removals_root = removal_merkle_set.get_root()
 
-        generator_hash = transactions.get_tree_hash() if transactions is not None else bytes32([0] * 32)
+        generator_hash = solution_program.get_tree_hash() if solution_program is not None else bytes32([0] * 32)
         filter_hash: bytes32 = std_hash(encoded)
 
         transactions_info = TransactionsInfo(
-            bytes([0] * 32), generator_hash, aggsig, fees, cost, reward_claims_incorporated
+            bytes([0] * 32), generator_hash, aggregate_sig, uint64(spend_bundle_fees), cost, reward_claims_incorporated
         )
         if prev_block is None:
             prev_block_hash: bytes32 = constants.GENESIS_PREV_HASH
@@ -180,7 +190,7 @@ def create_foliage(
         foliage_block_signature,
     )
 
-    return foliage_sub_block, foliage_block, transactions_info
+    return foliage_sub_block, foliage_block, transactions_info, solution_program
 
 
 def create_unfinished_block(
@@ -191,13 +201,12 @@ def create_unfinished_block(
     proof_of_space: ProofOfSpace,
     slot_cc_challenge: bytes32,
     farmer_reward_puzzle_hash: bytes32,
-    pool_reward_puzzle_hash: bytes32,
+    pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
-    fees: uint64 = uint64(0),
     timestamp: Optional[uint64] = None,
     seed: bytes32 = b"",
-    transactions: Optional[Program] = None,
+    spend_bundle: Optional[SpendBundle] = None,
     prev_sub_block: Optional[SubBlockRecord] = None,
     sub_blocks=None,
     finished_sub_slots=None,
@@ -342,19 +351,17 @@ def create_unfinished_block(
         rc_sp_signature,
     )
 
-    foliage_sub_block, foliage_block, transactions_info = create_foliage(
+    foliage_sub_block, foliage_block, transactions_info, solution_program = create_foliage(
         constants,
         rc_sub_block,
-        fees,
-        None,
-        None,
+        spend_bundle,
         prev_sub_block,
         prev_block,
         sub_blocks,
         is_block,
         timestamp,
         farmer_reward_puzzle_hash,
-        pool_reward_puzzle_hash,
+        pool_target,
         get_plot_signature,
         get_pool_signature,
         seed,
@@ -368,5 +375,5 @@ def create_unfinished_block(
         foliage_sub_block,
         foliage_block,
         transactions_info,
-        transactions,
+        solution_program,
     )

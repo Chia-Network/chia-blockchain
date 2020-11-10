@@ -1,9 +1,11 @@
 import asyncio
 import logging
 import traceback
+import time
 from pathlib import Path
-from typing import AsyncGenerator, Dict, List, Optional, Tuple, Callable
+from typing import AsyncGenerator, Dict, Optional, Callable, Tuple, List
 import aiosqlite
+from blspy import G2Element
 from chiabip158 import PyBIP158
 from chiapos import Verifier
 import dataclasses
@@ -33,13 +35,11 @@ from src.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
-from src.protocols.wallet_protocol import GeneratorResponse
 from src.server.connection import PeerConnections
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
-from src.types.coin import Coin, hash_coin_list
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
 from src.types.sized_bytes import bytes32
@@ -48,9 +48,8 @@ from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request
 from src.util.block_creation import create_unfinished_block
-from src.util.errors import ConsensusError, Err
+from src.util.errors import ConsensusError
 from src.util.ints import uint32, uint64, uint128, int32
-from src.util.merkle_set import MerkleSet
 from src.util.path import mkdir, path_from_root
 from src.server.node_discovery import FullNodePeers
 from src.types.peer_info import PeerInfo
@@ -476,7 +475,7 @@ class FullNode:
         we can ask for it.
         """
         # Check if we have this block in the blockchain
-        if self.blockchain.contains_block(request.header_hash):
+        if self.blockchain.contains_sub_block(request.header_hash):
             return
 
         # TODO: potential optimization, don't request blocks that we have already sent out
@@ -577,7 +576,7 @@ class FullNode:
     async def request_sub_block(self, request_block: full_node_protocol.RequestSubBlock) -> OutboundMessageGenerator:
         if request_block.height not in self.blockchain.height_to_hash:
             return
-        block: Optional[FullBlock] = await self.block_store.get_block(
+        block: Optional[FullBlock] = await self.block_store.get_full_block(
             self.blockchain.height_to_hash[request_block.height]
         )
         if block is not None:
@@ -611,9 +610,8 @@ class FullNode:
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
         header_hash = respond_sub_block.sub_block.header.get_hash()
-        if self.blockchain.contains_block(header_hash):
+        if self.blockchain.contains_sub_block(header_hash):
             return
-        fork_height: Optional[uint32] = None
         async with self.blockchain.lock:
             # Tries to add the block to the blockchain
             added, error_code, fork_height = await self.blockchain.receive_block(respond_sub_block.sub_block, False)
@@ -676,21 +674,38 @@ class FullNode:
             return
         elif added == ReceiveBlockResult.NEW_PEAK:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
-            self.log.info(
-                f"Updated peak to {self.blockchain.get_peak()} at height {self.blockchain.get_peak().height}, "
-                f"forked at {fork_height}"
-            )
+            new_peak: SubBlockRecord = self.blockchain.get_peak()
+            self.log.info(f"Updated peak to {new_peak} at height {new_peak.height}, " f"forked at {fork_height}")
 
-            difficulty = self.blockchain.get_next_difficulty(self.blockchain.get_peak(), False)
-            sub_slot_iters = self.blockchain.get_next_slot_iters(self.blockchain.get_peak(), False)
+            difficulty = self.blockchain.get_next_difficulty(new_peak, False)
+            sub_slot_iters = self.blockchain.get_next_slot_iters(new_peak, False)
             self.log.info(f"Difficulty {difficulty} slot iterations {sub_slot_iters}")
 
-            for sub_slot in respond_sub_block.sub_block.finished_sub_slots:
-                # Removes the slots that we have finished from the full node cache
-                self.full_node_store.remove_sub_slot(
-                    sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
-                )
-            if self.blockchain.get_peak().height % 1000 == 0:
+            # Find the sub slot of the peak
+            curr = respond_sub_block.sub_block
+            while len(curr.finished_sub_slots) == 0:
+                curr = await self.blockchain.get_full_block(curr.prev_header_hash)
+                assert curr is not None
+            peak_sub_slot = curr.finished_sub_slots[-1]
+            is_overflow: bool = is_overflow_sub_block(self.constants, new_peak.ips, new_peak.required_iters)
+            if is_overflow:
+                # Find the previous sub-slots end of slot
+                if len(curr.finished_sub_slots) >= 2:
+                    prev_sub_slot = curr.finished_sub_slots[-2]
+                else:
+                    curr = await self.blockchain.get_full_block(curr.prev_header_hash)
+                    while len(curr.finished_sub_slots) == 0:
+                        curr = await self.blockchain.get_full_block(curr.prev_header_hash)
+                        assert curr is not None
+                    prev_sub_slot = curr.finished_sub_slots[-1]
+            else:
+                prev_sub_slot = None
+
+            self.full_node_store.new_peak(
+                new_peak, peak_sub_slot, prev_sub_slot, fork_height != respond_sub_block.sub_block.height - 1
+            )
+
+            if new_peak.height % 1000 == 0:
                 # Occasionally clear the seen list to keep it small
                 self.full_node_store.clear_seen_unfinished_blocks()
 
@@ -805,9 +820,12 @@ class FullNode:
         if self.full_node_store.seen_unfinished_block(block.header_hash):
             return
 
-        if block.height > 0 and not self.blockchain.contains_block(
-            block.prev_header_hash
-        ):
+        # This searched for the trunk hash (unfinished reward hash). If we have already added a block with the same
+        # hash, return
+        if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
+            return
+
+        if block.height > 0 and not self.blockchain.contains_sub_block(block.prev_header_hash):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
             self.log.info(f"Received a disconnected unfinished block at height {block.height}")
             return
@@ -961,6 +979,22 @@ class FullNode:
     ) -> OutboundMessageGenerator:
         pass
 
+    @api_request
+    async def request_mempool_transactions(
+        self, request: full_node_protocol.RequestMempoolTransactions
+    ) -> OutboundMessageGenerator:
+        received_filter = PyBIP158(bytearray(request.filter))
+
+        items: List[MempoolItem] = await self.mempool_manager.get_items_not_in_filter(received_filter)
+
+        for item in items:
+            transaction = full_node_protocol.RespondTransaction(item.spend_bundle)
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("respond_transaction", transaction),
+                Delivery.RESPOND,
+            )
+
     # FARMER PROTOCOL
     @api_request
     async def declare_proof_of_space(self, request: farmer_protocol.DeclareProofOfSpace) -> OutboundMessageGenerator:
@@ -972,6 +1006,20 @@ class FullNode:
             raise ValueError("Adaptable pool protocol not yet available.")
 
         plot_id: bytes32 = request.proof_of_space.get_plot_id()
+
+        # Checks that the proof of space is a response to a recent challenge
+        pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int]] = self.full_node_store.get_sub_slot(
+            request.proof_of_space.challenge_hash
+        )
+
+        if pos_sub_slot is None:
+            self.log.warning(f"Received proof of space for an unknown challenge: {request.proof_of_space}")
+            return
+
+        # Now we know that the proof of space has a signage point either:
+        # 1. In the previous sub-slot of the peak (overflow)
+        # 2. In the same sub-slot as the peak
+        # 3. In a future sub-slot that we already know of
 
         # Checks that the proof of space is valid
         quality_string: bytes = Verifier().validate_proof(
@@ -991,46 +1039,57 @@ class FullNode:
                 spend_bundle: Optional[SpendBundle] = await self.mempool_manager.create_bundle_from_mempool(
                     peak.header_hash
                 )
-        prev_sb: SubBlockRecord = self.blockchain.get_peak()
-        new_slot = None
-        finishes_epoch: bool = finishes_sub_epoch(
-            self.constants, block.height, deficit, True, self.blockchain.sub_blocks, prev_sb.header_hash
-        )
+        if pos_sub_slot[0].challenge_chain.new_difficulty is not None:
+            difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
+            ips = pos_sub_slot[0].challenge_chain.new_ips
+        else:
+            if peak.height == 0:
+                difficulty = self.constants.DIFFICULTY_STARTING
+                ips = self.constants.IPS_STARTING
+            else:
+                difficulty = uint64(peak.weight - self.blockchain.sub_blocks[peak.prev_hash].weight)
+                ips = peak.ips
 
         required_iters: uint64 = calculate_iterations_quality(
             quality_string,
             request.proof_of_space.size,
             difficulty,
         )
-        unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(self.constants)
-        # constants: ConsensusConstants,
-        # sub_slot_start_total_iters: uint128,
-        # sp_iters: uint64,
-        # ip_iters: uint64,
-        # proof_of_space: ProofOfSpace,
-        # slot_cc_challenge: bytes32,
-        # farmer_reward_puzzle_hash: bytes32,
-        # pool_reward_puzzle_hash: bytes32,
-        # get_plot_signature: Callable[[bytes32, G1Element], G2Element],
-        # get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
-        # fees: uint64 = uint64(0),
-        # timestamp: Optional[uint64] = None,
-        # seed: bytes32 = b"",
-        # transactions: Optional[Program] = None,
-        # prev_sub_block: Optional[SubBlockRecord] = None,
-        # sub_blocks=None,
-        # finished_sub_slots=None,
-        # cc_sp_vdf: Optional[VDFInfo] = None,
-        # cc_sp_proof: Optional[VDFProof] = None,
-        # rc_sp_vdf: Optional[VDFInfo] = None,
-        # rc_sp_proof: Optional[VDFProof] = None,
-        # # TODO(mariano): make block
-        foliage_sub_block_hash = bytes32(bytes([0] * 32))
-        foliage_block_hash = bytes32(bytes([0] * 32))
+        sp_iters: uint64 = calculate_sp_iters(self.constants, ips, required_iters)
+        ip_iters: uint64 = calculate_ip_iters(self.constants, ips, required_iters)
+        is_overflow: bool = is_overflow_sub_block(self.constants, ips, required_iters)
+        total_iters_pos_slot: uint128 = pos_sub_slot[2]
+
+        def get_empty_sig(a, b) -> G2Element:
+            return G2Element.infinity()
+
+        finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node_store.get_finished_sub_slots(
+            peak, self.blockchain.sub_blocks, request.proof_of_space.challenge_hash, is_overflow
+        )
+
+        unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(
+            self.constants,
+            total_iters_pos_slot,
+            sp_iters,
+            ip_iters,
+            request.proof_of_space,
+            pos_sub_slot[0].challenge_chain.get_hash(),
+            request.farmer_puzzle_hash,
+            request.pool_target,
+            get_empty_sig,
+            get_empty_sig,
+            uint64(int(time.time())),
+            b"",
+            spend_bundle,
+            peak,
+            self.blockchain.sub_blocks,
+            finished_sub_slots,
+        )
+
         message = farmer_protocol.RequestSignedValues(
             quality_string,
-            foliage_sub_block_hash,
-            foliage_block_hash,
+            unfinished_block.foliage_sub_block.get_hash(),
+            unfinished_block.foliage_block.get_hash(),
         )
         yield OutboundMessage(NodeType.FARMER, Message("request_signed_values", message), Delivery.RESPOND)
 
@@ -1096,21 +1155,6 @@ class FullNode:
     #         async for msg in self.respond_block(full_node_protocol.RespondBlock(new_full_block)):
     #             yield msg
     #
-    # @api_request
-    # async def request_mempool_transactions(
-    #     self, request: full_node_protocol.RequestMempoolTransactions
-    # ) -> OutboundMessageGenerator:
-    #     received_filter = PyBIP158(bytearray(request.filter))
-    #
-    #     items: List[MempoolItem] = await self.mempool_manager.get_items_not_in_filter(received_filter)
-    #
-    #     for item in items:
-    #         transaction = full_node_protocol.RespondTransaction(item.spend_bundle)
-    #         yield OutboundMessage(
-    #             NodeType.FULL_NODE,
-    #             Message("respond_transaction", transaction),
-    #             Delivery.RESPOND,
-    #         )
 
     # WALLET PROTOCOL
     # @api_request
