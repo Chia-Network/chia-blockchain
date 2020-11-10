@@ -13,4 +13,4 @@ class CoinWithPuzzle(Coin):
 
     def __init__(self, coin: Coin, puzzle: Program):
         self.puzzle = puzzle
-        super().__init__(coin)
+        super(Coin, self).__init__(coin)
