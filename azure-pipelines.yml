@@ -97,11 +97,11 @@ steps:
       ls -l final_installer
     displayName: "Build DMG with build_scripts/build_macos.sh"
 
-  - task: PublishPipelineArtifact@1
-    inputs:
-      targetPath: $(System.DefaultWorkingDirectory)/wheels
-      artifactName: MacOS-wheels
-    displayName: "Upload MacOS wheels"
+#  - task: PublishPipelineArtifact@1
+#    inputs:
+#      targetPath: $(System.DefaultWorkingDirectory)/wheels
+#      artifactName: MacOS-wheels
+#    displayName: "Upload MacOS wheels"
 
   - task: PublishPipelineArtifact@1
     inputs:
