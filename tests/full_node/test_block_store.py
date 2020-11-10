@@ -1,15 +1,11 @@
 import asyncio
 from pathlib import Path
 import sqlite3
-import random
 
 import aiosqlite
 import pytest
 from src.full_node.block_store import BlockStore
-from src.full_node.coin_store import CoinStore
-from src.full_node.blockchain import Blockchain
 from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
-from src.types.full_block import FullBlock
 from tests.setup_nodes import test_constants, bt
 
 
@@ -50,21 +46,21 @@ class TestBlockStore:
         try:
             # Save/get block
             for block in blocks:
-                sub_block = full_block_to_sub_block_record(block, 0, 0, 5)
+                sub_block = full_block_to_sub_block_record(test_constants, {}, {}, block, 100)
                 sub_block_hh = sub_block.header_hash
-                await db.add_block(block, sub_block)
-                await db.add_block(block, sub_block)
-                assert block == await db.get_block(block.header_hash)
-                assert block == await db.get_block(block.header_hash)
-                assert sub_block == (await db.get_sub_block(sub_block_hh))
+                await db.add_full_block(block, sub_block)
+                await db.add_full_block(block, sub_block)
+                assert block == await db.get_full_block(block.header_hash)
+                assert block == await db.get_full_block(block.header_hash)
+                assert sub_block == (await db.get_sub_block_record(sub_block_hh))
                 await db.set_peak(sub_block.header_hash)
                 await db.set_peak(sub_block.header_hash)
 
-            assert len(await db.get_blocks_at([1])) == 0
-            assert len(await db.get_blocks_at([0])) == 3
+            assert len(await db.get_full_blocks_at([1])) == 0
+            assert len(await db.get_full_blocks_at([0])) == 3
 
             # Get sub blocks
-            assert len((await db.get_sub_blocks())[0]) == len(blocks)
+            assert len((await db.get_sub_block_records())[0]) == len(blocks)
 
             # TODO
             # for block in blocks:
