@@ -11,10 +11,9 @@ from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import is_overflow_sub_block, calculate_ip_iters, calculate_sp_iters
+from src.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from src.full_node.deficit import calculate_deficit
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_ips
 from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.types.coin import Coin
