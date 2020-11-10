@@ -8,7 +8,7 @@ import time
 from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Callable
 
 from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
 from src.full_node.deficit import calculate_deficit
@@ -38,6 +38,7 @@ from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.pool_target import PoolTarget
+from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
 from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.sized_bytes import bytes32
@@ -284,42 +285,34 @@ class BlockTools:
                     overflow_pos.append((required_iters, proof_of_space))
                     continue
                 assert latest_sub_block.header_hash in sub_blocks
-                unfinished_block = create_unfinished_block(
+
+                full_block, sub_block_record = get_full_block_and_sub_record(
                     constants,
                     sub_slot_start_total_iters,
-                    sp_iters,
-                    ip_iters,
                     proof_of_space,
                     slot_cc_challenge,
+                    slot_rc_challenge,
                     farmer_reward_puzzle_hash,
                     pool_target,
+                    start_timestamp,
+                    start_height,
+                    time_per_sub_block,
+                    transaction_data_at_height.get(latest_sub_block.height + 1, None),
+                    height_to_hash,
+                    difficulty,
+                    required_iters,
+                    ips,
                     self.get_plot_signature,
                     self.get_pool_key_signature,
-                    uint64(start_timestamp + int((latest_sub_block.height + 1 - start_height) * time_per_sub_block)),
+                    finished_sub_slots,
                     seed,
-                    transaction_data_at_height.get(latest_sub_block.height + 1, None),
                     latest_sub_block,
                     sub_blocks,
-                    finished_sub_slots,
                 )
 
-                if unfinished_block is None:
+                if full_block is None:
                     continue
 
-                full_block, sub_block_record = finish_sub_block(
-                    constants,
-                    sub_blocks,
-                    height_to_hash,
-                    finished_sub_slots,
-                    sub_slot_start_total_iters,
-                    unfinished_block,
-                    required_iters,
-                    ip_iters,
-                    slot_cc_challenge,
-                    slot_rc_challenge,
-                    latest_sub_block,
-                    difficulty,
-                )
                 block_list.append(full_block)
                 num_blocks -= 1
                 if num_blocks == 0:
@@ -433,42 +426,35 @@ class BlockTools:
             overflow_cc_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
             overflow_rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
             for required_iters, proof_of_space in overflow_pos:
-                sp_iters = calculate_sp_iters(constants, ips, required_iters)
-                ip_iters = calculate_ip_iters(constants, ips, required_iters)
-                unfinished_block = create_unfinished_block(
+                full_block, sub_block_record = get_full_block_and_sub_record(
                     constants,
                     sub_slot_start_total_iters,
-                    sp_iters,
-                    ip_iters,
                     proof_of_space,
                     slot_cc_challenge,
+                    slot_rc_challenge,
                     farmer_reward_puzzle_hash,
                     pool_target,
+                    start_timestamp,
+                    start_height,
+                    time_per_sub_block,
+                    transaction_data_at_height.get(latest_sub_block.height + 1, None),
+                    height_to_hash,
+                    difficulty,
+                    required_iters,
+                    ips,
                     self.get_plot_signature,
                     self.get_pool_key_signature,
-                    uint64(start_timestamp + int((latest_sub_block.height + 1 - start_height) * time_per_sub_block)),
+                    finished_sub_slots,
                     seed,
-                    transaction_data_at_height.get(latest_sub_block.height + 1, None),
                     latest_sub_block,
                     sub_blocks,
-                    finished_sub_slots,
+                    overflow_cc_challenge=overflow_cc_challenge,
+                    overflow_rc_challenge=overflow_rc_challenge,
                 )
-                if unfinished_block is None:
+
+                if full_block is None:
                     continue
-                full_block, sub_block_record = finish_sub_block(
-                    constants,
-                    sub_blocks,
-                    height_to_hash,
-                    finished_sub_slots,
-                    sub_slot_start_total_iters,
-                    unfinished_block,
-                    required_iters,
-                    ip_iters,
-                    overflow_cc_challenge,
-                    overflow_rc_challenge,
-                    latest_sub_block,
-                    difficulty,
-                )
+
                 block_list.append(full_block)
                 num_blocks -= 1
                 if num_blocks == 0:
@@ -954,3 +940,74 @@ def handle_end_of_sub_epoch(
         new_difficulty,
         new_ips,
     )
+
+
+def get_full_block_and_sub_record(
+    constants: ConsensusConstants,
+    sub_slot_start_total_iters: uint128,
+    proof_of_space: ProofOfSpace,
+    slot_cc_challenge: bytes32,
+    slot_rc_challenge: bytes32,
+    farmer_reward_puzzle_hash: bytes32,
+    pool_target: PoolTarget,
+    start_timestamp: uint64,
+    start_height: uint32,
+    time_per_sub_block: Optional[float],
+    transaction_data_at_height: Optional[SpendBundle],
+    height_to_hash: Dict[uint32, bytes32],
+    difficulty: uint64,
+    required_iters: uint64,
+    ips: uint64,
+    get_plot_signature: Callable[[bytes32, G1Element], G2Element],
+    get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
+    finished_sub_slots: List[EndOfSubSlotBundle],
+    seed: bytes = b"",
+    prev_sub_block: Optional[SubBlockRecord] = None,
+    sub_blocks: Dict[uint32, SubBlockRecord] = None,
+    overflow_cc_challenge: bytes32 = None,
+    overflow_rc_challenge: bytes32 = None,
+):
+
+    sp_iters = calculate_sp_iters(constants, ips, required_iters)
+    ip_iters = calculate_ip_iters(constants, ips, required_iters)
+
+    unfinished_block = create_unfinished_block(
+        constants,
+        sub_slot_start_total_iters,
+        sp_iters,
+        ip_iters,
+        proof_of_space,
+        slot_cc_challenge,
+        farmer_reward_puzzle_hash,
+        pool_target,
+        get_plot_signature,
+        get_pool_signature,
+        uint64(start_timestamp + int((prev_sub_block.height + 1 - start_height) * time_per_sub_block)),
+        seed,
+        transaction_data_at_height,
+        prev_sub_block,
+        sub_blocks,
+        finished_sub_slots,
+    )
+    if unfinished_block is None:
+        return None, None
+
+    if (overflow_cc_challenge is not None) and (overflow_rc_challenge is not None):
+        slot_cc_challenge = overflow_cc_challenge
+        slot_rc_challenge = overflow_rc_challenge
+
+    full_block, sub_block_record = finish_sub_block(
+        constants,
+        sub_blocks,
+        height_to_hash,
+        finished_sub_slots,
+        sub_slot_start_total_iters,
+        unfinished_block,
+        required_iters,
+        ip_iters,
+        slot_cc_challenge,
+        slot_rc_challenge,
+        prev_sub_block,
+        difficulty,
+    )
+    return full_block, sub_block_record
