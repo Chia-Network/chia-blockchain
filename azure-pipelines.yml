@@ -51,8 +51,8 @@ steps:
   - script: |
       . ./activate
       clang --version
-      pip install  . --extra-index-url https://download.chia.net/simple/
-    displayName: "Build and install wheels"
+      pip wheel --use-pep517 --only-binary cbor2 --extra-index-url https://download.chia.net/simple/ --wheel-dir=wheels .
+    displayName: "Build wheels"
 
   - task: NodeTool@0
     inputs:
@@ -67,10 +67,12 @@ steps:
     displayName: "Build Electron UI"
 
   #  Using wheels and release style install so no sh install.sh
-#  - script: |
-#      . ./activate
-#      pip install .
-#    displayName: "Install wheels"
+  - script: |
+      . ./activate
+      pip install --no-index --find-links=./wheels/ miniupnpc
+      pip install --no-index --find-links=./wheels/ setproctitle
+      pip install --no-index --find-links=./wheels/ chia-blockchain
+    displayName: "Install wheels"
 
 #  install-timelord.sh in venv
 #  - script: |
@@ -97,11 +99,11 @@ steps:
       ls -l final_installer
     displayName: "Build DMG with build_scripts/build_macos.sh"
 
-#  - task: PublishPipelineArtifact@1
-#    inputs:
-#      targetPath: $(System.DefaultWorkingDirectory)/wheels
-#      artifactName: MacOS-wheels
-#    displayName: "Upload MacOS wheels"
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: $(System.DefaultWorkingDirectory)/wheels
+      artifactName: MacOS-wheels
+    displayName: "Upload MacOS wheels"
 
   - task: PublishPipelineArtifact@1
     inputs:
