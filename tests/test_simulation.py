@@ -45,8 +45,8 @@ class TestSimulation:
 
         async def has_compact(node1, node2, max_height):
             for h in range(1, max_height):
-                blocks_1: List[FullBlock] = await node1.block_store.get_blocks_at([uint32(h)])
-                blocks_2: List[FullBlock] = await node2.block_store.get_blocks_at([uint32(h)])
+                blocks_1: List[FullBlock] = await node1.block_store.get_full_blocks_at([uint32(h)])
+                blocks_2: List[FullBlock] = await node2.block_store.get_full_blocks_at([uint32(h)])
                 has_compact_1 = False
                 has_compact_2 = False
                 for block in blocks_1:
