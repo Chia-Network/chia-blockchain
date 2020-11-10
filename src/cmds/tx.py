@@ -2,10 +2,14 @@
 import json
 from src.util.byte_types import hexstr_to_bytes
 
+# blspy
+from blspy import G1Element, G2Element, AugSchemeMPL
+
 # transaction imports
 from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.coin_solution import CoinSolution
+from src.types.spend_bundle import SpendBundle
 from src.types.coin import Coin
 from src.util.ints import uint64
 from typing import List, Set
@@ -21,6 +25,8 @@ from src.wallet.puzzles.p2_delegated_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
+
+from src.util.debug_spend_bundle import debug_spend_bundle
 
 
 # TODO: From wallet/wallet.py: refactor
@@ -88,6 +94,8 @@ def create_unsigned_transaction(
     # input to create_unsigned_transaction (viaCoinWithPuzzle).
     # For now, we specify a pubkey, and use the "standard transaction"
     puzzle = puzzle_for_pk(pubkey)
+    for coin in coins:
+        assert puzzle.get_tree_hash() == coin.puzzle_hash
 
     for request in spend_requests:
         outputs.append({"puzzlehash": request.puzzle_hash, "amount": request.amount})
@@ -111,8 +119,7 @@ def create_unsigned_tx_from_json(json_tx):
     pubkey_json = j["pubkey"]
     input_coins_json = j["input_coins"]
     spend_requests_json = j["spend_requests"]  # Output addresses and amounts
-
-    pubkey = hexstr_to_bytes(pubkey_json)
+    pubkey = G1Element.from_bytes(hexstr_to_bytes(pubkey_json))
     input_coins = [
         Coin(
             hexstr_to_bytes(c["parent_id"]),
@@ -129,7 +136,8 @@ def create_unsigned_tx_from_json(json_tx):
     print(pubkey, input_coins, spend_requests)
 
     spends = create_unsigned_transaction(pubkey, input_coins, spend_requests)
-    print(spends)
+    spend_bundle = SpendBundle(spends, G2Element.infinity())
+    debug_spend_bundle(spend_bundle)
     # output = { "spends": spends }
 
     # TODO: Object of type CoinSolution is not JSON serializable
@@ -144,6 +152,7 @@ command_list = [
     "sign",
     "encode",
     "decode",
+    "view-coins",
 ]
 
 
@@ -185,6 +194,20 @@ def handler(args, parser):
             help_message()
             parser.exit(1)
         create_unsigned_tx_from_json(args.json_tx)
+    elif command == "verify":
+        print()
+    elif command == "sign":
+        print()
+    elif command == "encode":
+        print()
+    elif command == "decode":
+        print()
+    elif command == "view-coins":
+        # check if wallet process is running
+        # connect to wallet process
+        # poll wallet for available coins
+        # return list of available coins
+        print()
     else:
-        print(f"command '{command}' is unimplemented")
+        print(f"command '{command}' is not recognised")
         parser.exit(1)
