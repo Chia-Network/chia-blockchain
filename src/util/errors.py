@@ -126,6 +126,12 @@ class Err(Enum):
     INVALID_ICC_EOS_VDF = 100
 
 
+class ValidationError(Exception):
+    def __init__(self, code: Err, error_msg: str = ""):
+        self.code = code
+        self.error_msg = error_msg
+
+
 class ConsensusError(Exception):
     def __init__(self, code: Err, errors: List[Any] = []):
         super(ConsensusError, self).__init__(f"Error code: {code.name}")
