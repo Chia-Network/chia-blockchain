@@ -42,7 +42,7 @@ class Farmer:
         self.latest_challenge: bytes32 = None
 
         # Keep track of all sps for each challenge
-        self.sps: Dict[bytes32, List[farmer_protocol.SignagePoint]] = {}
+        self.sps: Dict[bytes32, List[farmer_protocol.NewSignagePoint]] = {}
 
         # Keep track of harvester plot identifier (str), target sp index, and PoSpace for each challenge
         self.proofs_of_space: Dict[bytes32, List[Tuple[str, uint8, ProofOfSpace]]] = {}
@@ -273,6 +273,7 @@ class Farmer:
                         )
                         request = farmer_protocol.DeclareProofOfSpace(
                             challenge_chain_sp,
+                            reward_chain_sp,
                             pospace,
                             agg_sig_cc_sp,
                             agg_sig_rc_sp,
@@ -333,7 +334,7 @@ class Farmer:
     """
 
     @api_request
-    async def signage_point(self, signage_point: farmer_protocol.SignagePoint):
+    async def signage_point(self, signage_point: farmer_protocol.NewSignagePoint):
         if signage_point.challenge_hash not in self.seen_challenges:
             message = harvester_protocol.NewChallenge(
                 signage_point.challenge_hash,
