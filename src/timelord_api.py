@@ -1,7 +1,6 @@
 from typing import Callable
 
 from src.protocols import timelord_protocol
-from src.server.ws_connection import WSChiaConnection
 from src.timelord import Timelord
 from src.util.api_decorators import api_request
 

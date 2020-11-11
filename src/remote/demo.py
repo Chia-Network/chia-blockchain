@@ -21,13 +21,17 @@ SERVER:
 
 ipython
 
-import asyncio; from src.remote.demo import DemoAPI; from src.remote.websocket_server import simple_server; d = DemoAPI(100); await asyncio.Task(simple_server(12345, d))
+import asyncio; from src.remote.demo import DemoAPI;
+from src.remote.websocket_server import simple_server;
+d = DemoAPI(100); await asyncio.Task(simple_server(12345, d))
 
 
 CLIENT:
 
 ipython
-from src.remote.demo import DemoAPI; from src.remote.websocket_client import connect_to_remote_api; demo = await connect_to_remote_api("ws://127.0.0.1:12345/ws/", DemoAPI)
+from src.remote.demo import DemoAPI;
+from src.remote.websocket_client import connect_to_remote_api;
+demo = await connect_to_remote_api("ws://127.0.0.1:12345/ws/", DemoAPI)
 print(await demo.add(100))
 print(await demo.inc())
 
@@ -38,11 +42,11 @@ TO LOG THE JSON, apply this patch:
 --- a/src/remote/JSONMessage.py
 +++ b/src/remote/JSONMessage.py
 @@ -14,6 +14,7 @@ class JSONMessage:
- 
+
      @classmethod
      def deserialize_text(cls, text):
 +        print(text)
          return cls(json.loads(text))
- 
+
      def serialize(self):
 """
