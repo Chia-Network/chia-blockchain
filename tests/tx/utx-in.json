@@ -1,7 +1,7 @@
 {
-    "pubkey": "b8250e03370173410e406a227e4ae0987c5d3d1bd1ede7d9c38aa118c5f81fdaa84622180b6519c1cce2a247e4c604cb",
     "input_coins": [
         {
+            "pubkey": "b8250e03370173410e406a227e4ae0987c5d3d1bd1ede7d9c38aa118c5f81fdaa84622180b6519c1cce2a247e4c604cb",
             "parent_id": "61f3b7016bf1ecc3987b8805207e79362e4de8026682e149107999b779426e3a",
             "puzzle_hash": "f6579bfc8c3a1bf65591a3128e3231d24a73a1daa055190b5953db783f3cb1bc",
             "amount": 9

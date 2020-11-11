@@ -11,6 +11,7 @@ from src.types.sized_bytes import bytes32
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
 from src.types.coin import Coin
+from src.types.coinwithpubkey import CoinWithPubkey
 from src.util.ints import uint64
 from typing import List, Set
 
@@ -61,8 +62,7 @@ class SpendRequest:
 
 
 def create_unsigned_transaction(
-    pubkey: bytes32,
-    coins: Set[Coin] = None,  # Set[CoinWithPuzzle] = None,
+    coins: Set[CoinWithPubkey] = None,  # Set[CoinWithPuzzle] = None,
     spend_requests: Set[SpendRequest] = None,
     validate=True,
 ) -> List[CoinSolution]:
@@ -93,22 +93,24 @@ def create_unsigned_transaction(
     # Eventually, we will support specifying the puzzle directly in the
     # input to create_unsigned_transaction (viaCoinWithPuzzle).
     # For now, we specify a pubkey, and use the "standard transaction"
-    puzzle = puzzle_for_pk(pubkey)
+    origin_puzzle = puzzle_for_pk(origin.pubkey)
     for coin in coins:
+        puzzle = puzzle_for_pk(coin.pubkey)
         assert puzzle.get_tree_hash() == coin.puzzle_hash
 
     for request in spend_requests:
         outputs.append({"puzzlehash": request.puzzle_hash, "amount": request.amount})
 
     solution = make_solution(primaries=outputs, fee=0)
-    puzzle_solution_pair = Program.to([puzzle, solution])
+    puzzle_solution_pair = Program.to([origin_puzzle, solution])
     spends.append(CoinSolution(origin, puzzle_solution_pair))
 
     # Create nil solutions for the other input coins
     for coin in coins[1:]:
         print(f"processing coin {coin}")
         solution = make_solution()
-        puzzle_solution_pair = Program.to([coin.puzzle, solution])
+        puzzle = puzzle_for_pk(coin.pubkey)
+        puzzle_solution_pair = Program.to([puzzle, solution])
         spends.append(CoinSolution(coin, puzzle_solution_pair))
 
     return spends
@@ -116,15 +118,18 @@ def create_unsigned_transaction(
 
 def create_unsigned_tx_from_json(json_tx):
     j = json.loads(json_tx)
-    pubkey_json = j["pubkey"]
     input_coins_json = j["input_coins"]
     spend_requests_json = j["spend_requests"]  # Output addresses and amounts
-    pubkey = G1Element.from_bytes(hexstr_to_bytes(pubkey_json))
+    pubkey = G1Element.from_bytes(hexstr_to_bytes(input_coins_json[0]["pubkey"]))
+    print("PUB", type(pubkey), pubkey)
     input_coins = [
-        Coin(
-            hexstr_to_bytes(c["parent_id"]),
-            hexstr_to_bytes(c["puzzle_hash"]),
-            c["amount"],
+        CoinWithPubkey(
+            Coin(
+                hexstr_to_bytes(c["parent_id"]),
+                hexstr_to_bytes(c["puzzle_hash"]),
+                c["amount"],
+            ),
+            G1Element.from_bytes(hexstr_to_bytes(c["pubkey"]))
         )
         for c in input_coins_json
     ]
@@ -133,9 +138,9 @@ def create_unsigned_tx_from_json(json_tx):
         for s in spend_requests_json
     ]
 
-    print(pubkey, input_coins, spend_requests)
+    print(input_coins, spend_requests)
 
-    spends = create_unsigned_transaction(pubkey, input_coins, spend_requests)
+    spends = create_unsigned_transaction(input_coins, spend_requests)
     spend_bundle = SpendBundle(spends, G2Element.infinity())
     debug_spend_bundle(spend_bundle)
     # output = { "spends": spends }
