@@ -4,7 +4,7 @@ import time
 import pytest
 
 from src.protocols import full_node_protocol
-from src.server.outbound_message import Delivery, Message, OutboundMessage, NodeType
+from src.server.outbound_message import Message, NodeType
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
