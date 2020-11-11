@@ -42,9 +42,13 @@ def recast_arguments(
         for v, t in zip(args, annotations.values())
     ]
 
-    cast_kwargs = {
-        k: recast_to_type(kwargs[k], annotations.get(k), cast_simple_type)
-        for k, t in kwargs.items()
-    }
+    cast_kwargs = {}
+
+    for k, t in kwargs.items():
+        kw = kwargs[k]
+        annotation = annotations.get(k)
+        if annotation is None:
+            raise ValueError("Annotation is None")
+        cast_kwargs[k] = recast_to_type(kw, annotation, cast_simple_type)
 
     return cast_args, cast_kwargs

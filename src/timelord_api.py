@@ -13,7 +13,7 @@ class TimelordAPI:
         self.timelord = timelord
 
     def _set_state_changed_callback(self, callback: Callable):
-        self.timelord.state_changed_callback = callback
+        pass
 
     @api_request
     async def challenge_start(self, challenge_start: timelord_protocol.ChallengeStart):
