@@ -14,7 +14,7 @@ from src.consensus.pot_iterations import (
     calculate_iterations_quality,
 )
 from src.full_node.deficit import calculate_deficit
-from src.full_node.difficulty_adjustment import finishes_sub_epoch
+from src.full_node.difficulty_adjustment import finishes_sub_epoch, get_ips_and_difficulty
 from src.full_node.difficulty_adjustment import get_next_ips, get_next_difficulty
 from src.full_node.make_sub_epoch_summary import make_sub_epoch_summary
 from src.full_node.sub_block_record import SubBlockRecord
@@ -46,18 +46,17 @@ async def validate_unfinished_header_block(
     new_sub_slot: bool = len(header_block.finished_sub_slots) > 0
     prev_sb = sub_blocks.get(header_block.prev_header_hash, None)
     genesis_block = prev_sb is None
-    if genesis_block:
-        finishes_se = False
-        finishes_epoch = False
-        difficulty: uint64 = uint64(constants.DIFFICULTY_STARTING)
-        ips: uint64 = uint64(constants.IPS_STARTING)
-        if header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
-            return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
-        height: uint32 = uint32(0)
-    else:
-        difficulty, finishes_epoch, finishes_se, height, ips = get_validation_params(
-            constants, header_block, height_to_hash, new_sub_slot, prev_sb, sub_blocks
-        )
+    height: uint32 = uint32(0)
+    if genesis_block and header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
+        return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
+
+    if not genesis_block:
+        height: uint32 = uint32(prev_sb.height + 1)
+
+    finishes_se = finishes_sub_epoch(constants, prev_sb, False, sub_blocks)
+    finishes_epoch: bool = finishes_sub_epoch(constants, prev_sb, True, sub_blocks)
+
+    ips, difficulty = get_ips_and_difficulty(constants, header_block, height_to_hash, prev_sb, sub_blocks)
 
     # 2. Check finished slots that have been crossed since prev_sb
     ses_hash: Optional[bytes32] = None
@@ -307,7 +306,7 @@ async def validate_unfinished_header_block(
                 )
         elif new_sub_slot and not genesis_block:
             # 3d. Check that we don't have to include a sub-epoch summary
-            if finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, False, sub_blocks, prev_sb.prev_hash):
+            if finishes_sub_epoch(constants, prev_sb, False, sub_blocks):
                 return None, ValidationError(
                     Err.INVALID_SUB_EPOCH_SUMMARY, "block finishes sub-epoch but ses-hash is None"
                 )
@@ -640,54 +639,6 @@ async def validate_unfinished_header_block(
     return required_iters, None  # Valid unfinished header block
 
 
-def get_validation_params(
-    constants: ConsensusConstants,
-    header_block: UnfinishedHeaderBlock,
-    height_to_hash: Dict[uint32, bytes32],
-    new_sub_slot: bool,
-    prev_sb: SubBlockRecord,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
-) -> (uint64, bool, bool, uint32, uint64):
-    """
-    get difficulty, finishes_epoch, finishes_se, height, ips for new unfinished block
-    """
-    # If the previous sub block finishes a sub-epoch, that means that this sub-block should have an updated diff
-    finishes_se = finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, False, sub_blocks, prev_sb.prev_hash)
-    finishes_epoch: bool = finishes_sub_epoch(
-        constants, prev_sb.height, prev_sb.deficit, True, sub_blocks, prev_sb.prev_hash
-    )
-
-    if prev_sb.height != 0:
-        prev_difficulty: uint64 = uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight)
-    else:
-        # prev block is genesis
-        prev_difficulty: uint64 = uint64(prev_sb.weight)
-    difficulty: uint64 = get_next_difficulty(
-        constants,
-        sub_blocks,
-        height_to_hash,
-        header_block.prev_header_hash,
-        prev_sb.height,
-        prev_sb.deficit,
-        prev_difficulty,
-        new_sub_slot,
-        prev_sb.total_iters,
-    )
-    ips: uint64 = get_next_ips(
-        constants,
-        sub_blocks,
-        height_to_hash,
-        header_block.prev_header_hash,
-        prev_sb.height,
-        prev_sb.deficit,
-        prev_sb.ips,
-        new_sub_slot,
-        prev_sb.total_iters,
-    )
-    height: uint32 = uint32(prev_sb.height + 1)
-    return difficulty, finishes_epoch, finishes_se, height, ips
-
-
 async def validate_finished_header_block(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
@@ -722,35 +673,7 @@ async def validate_finished_header_block(
     else:
         prev_sb: Optional[SubBlockRecord] = sub_blocks[header_block.prev_header_hash]
     new_sub_slot: bool = len(header_block.finished_sub_slots) > 0
-    if genesis_block:
-        ips = constants.IPS_STARTING
-        difficulty = constants.DIFFICULTY_STARTING
-    else:
-        ips: uint64 = get_next_ips(
-            constants,
-            sub_blocks,
-            height_to_hash,
-            prev_sb.prev_hash,
-            prev_sb.height,
-            prev_sb.deficit,
-            prev_sb.ips,
-            len(header_block.finished_sub_slots) > 0,
-            prev_sb.total_iters,
-        )
-        if prev_sb.height < 1:
-            difficulty = constants.DIFFICULTY_STARTING
-        else:
-            difficulty: uint64 = get_next_difficulty(
-                constants,
-                sub_blocks,
-                height_to_hash,
-                prev_sb.prev_hash,
-                prev_sb.height,
-                prev_sb.deficit,
-                uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight),
-                len(header_block.finished_sub_slots) > 0,
-                prev_sb.total_iters,
-            )
+    ips, difficulty = get_ips_and_difficulty(constants, unfinished_header_block, height_to_hash, prev_sb, sub_blocks)
     ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
 
     if not genesis_block:
