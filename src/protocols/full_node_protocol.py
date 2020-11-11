@@ -108,9 +108,7 @@ class RequestSignagePointOrEndOfSubSlot:
 @dataclass(frozen=True)
 @cbor_message
 class RespondSignagePoint:
-    challenge_hash: bytes32
     index_from_challenge: uint8
-    last_rc_infusion: bytes32
     challenge_chain_vdf: VDFInfo
     challenge_chain_proof: VDFProof
     reward_chain_vdf: VDFInfo
@@ -119,7 +117,7 @@ class RespondSignagePoint:
 
 @dataclass(frozen=True)
 @cbor_message
-class RespondEndOfSlot:
+class RespondEndOfSubSlot:
     end_of_slot_bundle: EndOfSubSlotBundle
 
 
