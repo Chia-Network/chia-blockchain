@@ -9,6 +9,7 @@ import {
   get_connection_info,
   get_colour_info,
   get_colour_name,
+  did_get_recovery_list,
   pingWallet
 } from "../modules/message";
 
@@ -52,7 +53,8 @@ import { get_all_trades } from "../modules/trade_messages";
 import {
   COLOURED_COIN,
   STANDARD_WALLET,
-  RATE_LIMITED
+  RATE_LIMITED,
+  DISTRIBUTED_ID
 } from "../util/wallet_types";
 
 function sleep(ms) {
@@ -220,6 +222,9 @@ export const handle_message = (store, payload) => {
         if (wallet.type === COLOURED_COIN) {
           store.dispatch(get_colour_name(wallet.id));
           store.dispatch(get_colour_info(wallet.id));
+        }
+        if (wallet.type === DISTRIBUTED_ID) {
+          store.dispatch(did_get_recovery_list(wallet.id));
         }
       }
     }

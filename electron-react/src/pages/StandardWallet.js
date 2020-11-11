@@ -16,7 +16,6 @@ import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import {
   get_address,
-  get_puzzle_hash,
   send_transaction,
   farm_block
 } from "../modules/message";

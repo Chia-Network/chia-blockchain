@@ -13,6 +13,8 @@ export const Wallet = (id, name, type, data) => ({
   transactions: [],
   address: "",
   colour: "",
+  mydid: "",
+  backup_dids: [],
   sending_transaction: false,
   send_transaction_result: ""
 });
@@ -247,6 +249,27 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
           return state;
         }
         wallet.name = name;
+        return { ...state };
+      } else if (command === "did_get_did") {
+        console.log("get id: ", data)
+        id = data.wallet_id;
+        const mydid = data.my_did;
+        wallets = state.wallets;
+        wallet = wallets[parseInt(id)];
+        if (!wallet) {
+          return state;
+        }
+        wallet.mydid = mydid;
+        return { ...state };
+      } else if (command === "did_get_recovery_list") {
+        id = data.wallet_id;
+        const dids = data.recover_list;
+        wallets = state.wallets;
+        wallet = wallets[parseInt(id)];
+        if (!wallet) {
+          return state;
+        }
+        wallet.backup_dids = dids;
         return { ...state };
       }
       if (command === "state_changed" && data.state === "tx_update") {

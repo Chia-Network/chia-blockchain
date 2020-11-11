@@ -594,7 +594,8 @@ class WalletRpcApi:
         recover_hex_list = []
         for _ in recovery_list:
             recover_hex_list.append(_.hex())
-        return {"success": True, "recover_list": recover_hex_list}
+        # logging.exception(recover_hex_list)
+        return {"success": True, "wallet_id": wallet_id, "recover_list": recover_hex_list}
 
     async def did_recovery_spend(self, request):
         wallet_id = int(request["wallet_id"])
