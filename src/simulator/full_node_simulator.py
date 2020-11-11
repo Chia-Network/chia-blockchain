@@ -1,6 +1,5 @@
 from secrets import token_bytes
 
-from src.full_node.full_node import FullNode
 from typing import AsyncGenerator, List, Optional
 
 from src.full_node.full_node_api import FullNodeAPI
