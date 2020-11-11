@@ -19,22 +19,22 @@ class TestRpc:
     async def test1(self, two_nodes):
         num_blocks = 5
         test_rpc_port = uint16(21522)
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         for i in range(1, num_blocks):
-            await full_node_1.respond_unfinished_block(
+            await full_node_api_1.respond_unfinished_block(
                 full_node_protocol.RespondUnfinishedBlock(blocks[i])
             )
-            await full_node_1.full_node._respond_block(
+            await full_node_api_1.full_node._respond_block(
                 full_node_protocol.RespondBlock(blocks[i])
             )
 
         def stop_node_cb():
-            full_node_1._close()
+            full_node_api_1._close()
             server_1.close_all()
 
-        full_node_rpc_api = FullNodeRpcApi(full_node_1)
+        full_node_rpc_api = FullNodeRpcApi(full_node_api_1.full_node)
 
         config = bt.config
         hostname = config["self_hostname"]

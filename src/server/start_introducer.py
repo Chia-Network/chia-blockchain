@@ -25,11 +25,6 @@ def service_kwargs_for_introducer(
     )
     node__api = IntroducerAPI(introducer)
 
-    async def start_callback():
-        await introducer._start()
-
-    def stop_callback():
-        introducer._close()
     kwargs = dict(
         root_path=root_path,
         node=introducer,
