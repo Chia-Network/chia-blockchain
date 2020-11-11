@@ -1,4 +1,3 @@
-import asyncio
 from typing import Optional, Callable
 
 from blspy import AugSchemeMPL, G2Element
@@ -7,7 +6,6 @@ from src.consensus.pot_iterations import calculate_iterations_quality
 from src.farmer import Farmer
 from src.protocols import harvester_protocol, farmer_protocol
 from src.server.outbound_message import Message, NodeType
-from src.server.ws_connection import WSChiaConnection
 from src.types.pool_target import PoolTarget
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32

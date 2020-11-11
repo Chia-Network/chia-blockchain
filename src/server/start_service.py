@@ -21,7 +21,6 @@ from src.util.setproctitle import setproctitle
 from src.rpc.rpc_server import start_rpc_server
 
 from .reconnect_task import start_reconnect_task
-from .ssl_context import load_ssl_paths
 
 
 class Service:

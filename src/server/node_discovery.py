@@ -13,7 +13,6 @@ from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.util.path import path_from_root, mkdir
 from src.server.outbound_message import (
-    Delivery,
     OutboundMessage,
     Message,
     NodeType,

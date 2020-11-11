@@ -1,8 +1,7 @@
-import asyncio
 import logging
 from typing import Dict, List, Optional, Callable, Set, Tuple
 
-from blspy import G1Element, G2Element, AugSchemeMPL
+from blspy import G1Element
 
 from src.server.server import ChiaServer
 from src.server.ws_connection import WSChiaConnection
@@ -14,7 +13,7 @@ from src.consensus.pot_iterations import (
     calculate_sp_interval_iters,
 )
 from src.protocols import farmer_protocol, harvester_protocol
-from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+from src.server.outbound_message import Message, NodeType
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
