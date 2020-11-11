@@ -30,6 +30,7 @@ from src.wallet.trade_manager import TradeManager
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.block_record import BlockRecord
 from src.wallet.util.backup_utils import open_backup_file
+from src.wallet.util.transaction_type import TransactionType
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_action_store import WalletActionStore
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -556,18 +557,22 @@ class WalletStateManager:
                 trade_adds.append(coin)
 
             is_coinbase = False
-
-            if (
-                bytes32((height).to_bytes(32, "big")) == coin.parent_coin_info
-                or std_hash(std_hash(height)) == coin.parent_coin_info
-            ):
+            is_fee_reward = False
+            if bytes32((height).to_bytes(32, "big")) == coin.parent_coin_info:
                 is_coinbase = True
+            if std_hash(std_hash(height)) == coin.parent_coin_info:
+                is_fee_reward = True
 
             info = await self.puzzle_store.wallet_info_for_puzzle_hash(coin.puzzle_hash)
             if info is not None:
                 wallet_id, wallet_type = info
                 await self.coin_added(
-                    coin, height, is_coinbase, uint32(wallet_id), wallet_type
+                    coin,
+                    height,
+                    is_coinbase,
+                    is_fee_reward,
+                    uint32(wallet_id),
+                    wallet_type,
                 )
 
         return trade_adds
@@ -618,21 +623,28 @@ class WalletStateManager:
         coin: Coin,
         index: uint32,
         coinbase: bool,
+        fee_reward: bool,
         wallet_id: uint32,
         wallet_type: WalletType,
     ):
         """
         Adding coin to DB
         """
-        if coinbase:
+
+        farm_reward = False
+        if coinbase or fee_reward:
+            farm_reward = True
             now = uint64(int(time.time()))
+            if coinbase:
+                type = TransactionType.COINBASE_REWARD.value
+            else:
+                type = TransactionType.FEE_REWARD.value
             tx_record = TransactionRecord(
                 confirmed_at_index=uint32(index),
                 created_at_time=now,
                 to_puzzle_hash=coin.puzzle_hash,
                 amount=coin.amount,
                 fee_amount=uint64(0),
-                incoming=True,
                 confirmed=True,
                 sent=uint32(0),
                 spend_bundle=None,
@@ -641,6 +653,7 @@ class WalletStateManager:
                 wallet_id=wallet_id,
                 sent_to=[],
                 trade_id=None,
+                type=uint32(type),
             )
             await self.tx_store.add_transaction_record(tx_record)
         else:
@@ -659,7 +672,6 @@ class WalletStateManager:
                     to_puzzle_hash=coin.puzzle_hash,
                     amount=coin.amount,
                     fee_amount=uint64(0),
-                    incoming=True,
                     confirmed=True,
                     sent=uint32(0),
                     spend_bundle=None,
@@ -668,12 +680,13 @@ class WalletStateManager:
                     wallet_id=wallet_id,
                     sent_to=[],
                     trade_id=None,
+                    type=uint32(TransactionType.INCOMING_TX.value),
                 )
                 if coin.amount > 0:
                     await self.tx_store.add_transaction_record(tx_record)
 
         coin_record: WalletCoinRecord = WalletCoinRecord(
-            coin, index, uint32(0), False, coinbase, wallet_type, wallet_id
+            coin, index, uint32(0), False, farm_reward, wallet_type, wallet_id
         )
         await self.wallet_store.add_coin_record(coin_record)
 

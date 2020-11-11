@@ -34,6 +34,7 @@ from src.wallet.cc_wallet.cc_utils import (
     spend_bundle_for_spendable_ccs,
     CC_MOD,
 )
+from src.wallet.util.transaction_type import TransactionType
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 
@@ -642,7 +643,6 @@ class TradeManager:
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(chia_discrepancy)),
                     fee_amount=uint64(0),
-                    incoming=False,
                     confirmed=False,
                     sent=uint32(10),
                     spend_bundle=chia_spend_bundle,
@@ -651,6 +651,7 @@ class TradeManager:
                     wallet_id=uint32(1),
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
+                    type=uint32(TransactionType.OUTGOING_TRADE.value),
                 )
             else:
                 tx_record = TransactionRecord(
@@ -659,7 +660,6 @@ class TradeManager:
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(chia_discrepancy)),
                     fee_amount=uint64(0),
-                    incoming=True,
                     confirmed=False,
                     sent=uint32(10),
                     spend_bundle=chia_spend_bundle,
@@ -668,6 +668,7 @@ class TradeManager:
                     wallet_id=uint32(1),
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
+                    type=uint32(TransactionType.INCOMING_TRADE.value),
                 )
             my_tx_records.append(tx_record)
 
@@ -680,7 +681,6 @@ class TradeManager:
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(amount)),
                     fee_amount=uint64(0),
-                    incoming=False,
                     confirmed=False,
                     sent=uint32(10),
                     spend_bundle=spend_bundle,
@@ -689,6 +689,7 @@ class TradeManager:
                     wallet_id=wallet.id(),
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
+                    type=uint32(TransactionType.OUTGOING_TRADE.value),
                 )
             else:
                 tx_record = TransactionRecord(
@@ -697,7 +698,6 @@ class TradeManager:
                     to_puzzle_hash=token_bytes(),
                     amount=uint64(abs(amount)),
                     fee_amount=uint64(0),
-                    incoming=True,
                     confirmed=False,
                     sent=uint32(10),
                     spend_bundle=spend_bundle,
@@ -706,6 +706,7 @@ class TradeManager:
                     wallet_id=wallet.id(),
                     sent_to=[],
                     trade_id=std_hash(spend_bundle.name() + bytes(now)),
+                    type=uint32(TransactionType.INCOMING_TRADE.value),
                 )
             my_tx_records.append(tx_record)
 
@@ -715,7 +716,6 @@ class TradeManager:
             to_puzzle_hash=token_bytes(),
             amount=uint64(0),
             fee_amount=uint64(0),
-            incoming=False,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
@@ -724,6 +724,7 @@ class TradeManager:
             wallet_id=uint32(0),
             sent_to=[],
             trade_id=std_hash(spend_bundle.name() + bytes(now)),
+            type=uint32(TransactionType.OUTGOING_TRADE.value),
         )
 
         now = uint64(int(time.time()))

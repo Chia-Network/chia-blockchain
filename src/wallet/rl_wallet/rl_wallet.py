@@ -24,6 +24,7 @@ from src.wallet.rl_wallet.rl_wallet_puzzles import (
     solution_for_rl,
 )
 from src.wallet.transaction_record import TransactionRecord
+from src.wallet.util.transaction_type import TransactionType
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -336,7 +337,6 @@ class RLWallet:
             to_puzzle_hash=puzzle_hash,
             amount=uint64(0),
             fee_amount=uint64(0),
-            incoming=False,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
@@ -345,6 +345,7 @@ class RLWallet:
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
         )
 
         await self.push_transaction(tx_record)
@@ -577,7 +578,6 @@ class RLWallet:
             to_puzzle_hash=to_puzzle_hash,
             amount=uint64(amount),
             fee_amount=uint64(0),
-            incoming=False,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
@@ -586,6 +586,7 @@ class RLWallet:
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
         )
 
     async def rl_sign_transaction(
@@ -680,7 +681,6 @@ class RLWallet:
             to_puzzle_hash=to_puzzle_hash,
             amount=uint64(0),
             fee_amount=fee,
-            incoming=False,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
@@ -689,6 +689,7 @@ class RLWallet:
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
         )
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2

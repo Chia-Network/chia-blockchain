@@ -20,6 +20,7 @@ from src.util.ints import uint8, uint64, uint32
 from src.wallet.block_record import BlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
 from src.wallet.transaction_record import TransactionRecord
+from src.wallet.util.transaction_type import TransactionType
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
 from src.wallet.wallet_coin_record import WalletCoinRecord
@@ -104,7 +105,6 @@ class CCWallet:
             to_puzzle_hash=cc_coin.puzzle_hash,
             amount=uint64(cc_coin.amount),
             fee_amount=uint64(0),
-            incoming=False,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
@@ -113,6 +113,7 @@ class CCWallet:
             wallet_id=self.wallet_state_manager.main_wallet.id(),
             sent_to=[],
             trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
         )
         cc_record = TransactionRecord(
             confirmed_at_index=uint32(0),
@@ -120,7 +121,6 @@ class CCWallet:
             to_puzzle_hash=cc_coin.puzzle_hash,
             amount=uint64(cc_coin.amount),
             fee_amount=uint64(0),
-            incoming=True,
             confirmed=False,
             sent=uint32(10),
             spend_bundle=None,
@@ -129,6 +129,7 @@ class CCWallet:
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
+            type=uint32(TransactionType.INCOMING_TX.value),
         )
         await self.standard_wallet.push_transaction(regular_record)
         await self.standard_wallet.push_transaction(cc_record)
@@ -214,7 +215,7 @@ class CCWallet:
         removal_amount = 0
 
         for record in unconfirmed_tx:
-            if record.incoming:
+            if record.type is TransactionType.INCOMING_TX:
                 addition_amount += record.amount
             else:
                 removal_amount += record.amount
@@ -440,7 +441,6 @@ class CCWallet:
                 to_puzzle_hash=cc_puzzle_hash,
                 amount=uint64(0),
                 fee_amount=uint64(0),
-                incoming=False,
                 confirmed=False,
                 sent=uint32(10),
                 spend_bundle=full_spend,
@@ -449,6 +449,7 @@ class CCWallet:
                 wallet_id=uint32(1),
                 sent_to=[],
                 trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
             )
             cc_record = TransactionRecord(
                 confirmed_at_index=uint32(0),
@@ -456,7 +457,6 @@ class CCWallet:
                 to_puzzle_hash=cc_puzzle_hash,
                 amount=uint64(0),
                 fee_amount=uint64(0),
-                incoming=True,
                 confirmed=False,
                 sent=uint32(0),
                 spend_bundle=full_spend,
@@ -465,6 +465,7 @@ class CCWallet:
                 wallet_id=self.id(),
                 sent_to=[],
                 trade_id=None,
+                type=uint32(TransactionType.INCOMING_TX.value),
             )
             await self.wallet_state_manager.add_transaction(regular_record)
             await self.wallet_state_manager.add_pending_transaction(cc_record)
@@ -668,7 +669,6 @@ class CCWallet:
             to_puzzle_hash=puzzle_hashes[0],
             amount=uint64(outgoing_amount),
             fee_amount=uint64(0),
-            incoming=False,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
@@ -677,6 +677,7 @@ class CCWallet:
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
         )
 
     async def add_lineage(self, name: bytes32, lineage: Optional[Program]):
