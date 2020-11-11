@@ -35,7 +35,8 @@ test_constants = constants.replace(
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "NUMBER_ZERO_BITS_SP_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "MAX_FUTURE_TIME": 3600
-        * 24,  # Allows creating blockchains with timestamps up to 1 day in the future, for testing
+        * 24
+        * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
     }
 )
 bt = BlockTools()
