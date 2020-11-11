@@ -8,12 +8,14 @@ for setuptools_scm/PEP 440 reasons.
 
 ## Unreleased
 
-# Added
+### Added
+
 - F1 generation in the plotter is now fully parallel for a small speedup.
 - We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in [PR 120](https://github.com/Chia-Network/chiapos/pull/120)
 - You can now specify which private key to use for `chia plots create`. After obtaining the fingerprint from `chia keys show`, try `chia plots create -a FINGERPRINT`. Thanks to @eFishCent for this pull request!
 
-# Changed
+### Changed
+
 - We have moved from using gulrak/filesystem across all platforms to only using it on MacOS. It's required on MacOS as we are still targeting Mojave compatibility. This should resolve Windows path issues.
 - The rate limited wallet was updated and re-factored.
 - All appropriate Chialisp smart transactions have been updated to use aggsig_me.
@@ -21,16 +23,19 @@ for setuptools_scm/PEP 440 reasons.
 - Peer disconnect messages are now set to log level INFO down from WARNING.
 - aiohttp, cbor2, clvm-tools, cryptography, and sortedcontainers have been upgraded to their current versions.
 
-# Fixed
+### Fixed
+
 - A segfault caused by memory leaks in bls-library has been fixed. This should end the random farmer and harvester crashes over time as outlined in [Issue 500](https://github.com/Chia-Network/chia-blockchain/issues/500).
 - Starting with recent setuptools fixes, we can no longer pass an empty string to the linker on Windows when building binary wheels in the sub repos. Thanks @jaraco for tracking this down.
 
 ## [1.0beta17] aka Beta 1.17 - 2020-10-22
 
 ### Changed
+
 - Bumped aiohttp to 3.6.3
 
 ### Fixed
+
 - In the GUI there was [a regression](https://github.com/Chia-Network/chia-blockchain/issues/484) that removed the scroll bar on the Plot page. The scroll bar has returned!
 - In Dark Mode you couldn't read the white on white plotting log text.
 - To fix a bug in Beta 15's plotter we introduced a fixed that slowed plotting by as much as 25%.
@@ -40,12 +45,14 @@ for setuptools_scm/PEP 440 reasons.
 ## [1.0beta16] aka Beta 1.16 - 2020-10-20
 
 ### Added
+
 - The Chia GUI now supports dark and light mode.
 - The GUI now supports translations and localizations. If you'd like to add your language you can see the examples in [the locales directory](https://github.com/Chia-Network/chia-blockchain/tree/dev/electron-react/src/locales) of the chia-blockchain repository.
 - `chia check plots` now takes a `-g` option that allows you to specify a matching path string to only check a single plot file, a wild card list of plot files, or all plots in a single directory instead of the default behavior of checking every directory listed in your config.yaml. A big thank you to @eFishCent for this pull request!
 - Better documentation of the various timelord options in the default config.yaml.
 
 ### Changed
+
 - The entire GUI has been refactored for code quality and performance.
 - Updated to chiapos 0.12.32. This update significantly speeds up the F1/first table plot generation. It also now can log disk usage while plotting and generate graphs. More details in the [chiapos release notes](https://github.com/Chia-Network/chiapos/releases/tag/0.12.32).
 - Node losing or not connecting to another peer node (which is entirely normal behaviour) is now logged at INFO and not WARNING. Your logs will be quieter.
@@ -56,31 +63,37 @@ for setuptools_scm/PEP 440 reasons.
 - Deprecated pep517.build for the new standard `python -m build --sdist --outdir dist .`
 
 ### Fixed
+
 - A bug in bls-singatures/blspy could cause a stack overflow if too many signatures were verified at once. This caused the block of death at 11997 of the Beta 15 chain. Updated to 0.2.4 to address the issue.
 - GUI Wallet now correctly updates around reorgs.
 - chiapos 0.12.32 fixed a an out of bounds read that could crash the plotter. It also contains a fix to better handle the case of drive letters on Windows.
 - Node would fail to start on Windows Server 2016 with lots of cores. This [python issue explains]( https://bugs.python.org/issue26903) the problem.
 
 ### Known Issues
+
 - On NTFS, plotting and farming can't use a path that includes a non root mountpoint. This is fixed in an upcoming version but did not have enough testing time for this release.
 
 ## [1.0beta15] aka Beta 1.15 - 2020-10-07
 
 ### Added
+
 - Choosing a larger k size in the GUI also increases the default memory buffer.
 
 ### Changed
+
 - The development tool WalletTool was refactored out.
 - Update to clvm 0.5.3.
 - As k=30 and k=31 are now ruled out for mainnet, the GUI defaults to a plot size of k=32.
 
 ### Fixed
+
 - Over time the new peer gossip protocol could slowly disconnect all peers and take your node offline.
 - Sometimes on restart the peer connections database could cause fullnode to crash.
 
 ## [1.0beta14] aka Beta 1.14 - 2020-10-01
 
 ### Added
+
 - Node peers are now gossiped between nodes with logic to keep connected nodes on disparate internet networks to partially protect from eclipse attacks. This is the second to last step to remove our temporary introducer and migrate to DNS introducers with peer gossip modeled directly off of Bitcoin. This adds a new database of valid peer nodes that will persist across node restarts. This also makes changes to config.yaml's contents.
 - For 'git clone' installs there is now a separate install-gui.sh which speeds up running install.sh for those who wish to run headless and makes docker and other automation simpler.
 - The rate limited wallet library now supports coin aggregation for adding additional funds after the time of creation.
@@ -89,6 +102,7 @@ for setuptools_scm/PEP 440 reasons.
 - chiavdf now has full IFMA optimizations for processors that support it.
 
 ### Changed
+
 - Multithreading support in chiapos, as well as a new algorithm which is faster and does 70% less IO. This is a significant improvement in speed, much lower total writing, and configurability for different hardware environments.
 - Default -b changed to 3072 to improve performance
 - The correct amount of memory is used for plotting
@@ -100,6 +114,7 @@ for setuptools_scm/PEP 440 reasons.
 - All vestigial references to plots.yaml have been removed.
 
 ### Fixed
+
 - Temporary space required for each k size was updated with more accurate estimates.
 - Tables in the README.MD were not rendering correctly on Pypi. Thanks again @altendky.
 - Chiapos issue where memory was spiking and increasing
@@ -112,22 +127,26 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 
 ### Changed
+
 - Long_description_content_type is now set to improve chia-blockchian's Pypi entry. Thanks to @altendky for this pull request.
 - A minor edit was made to clarify that excessive was only related to trolling in the Code of Conduct document.
 
 ### Fixed
+
 - When starting the GUI from an installer or the command line on Linux, if you had not previously generated a key on your machine, the generate new key GUI would not launch and you would be stuck with a spinner.
 - Farmer display now correctly displays balance.
 
 ## [1.0beta12] aka Beta 1.12 - 2020-09-14
 
 ### Added
+
 - Rate limited wallets can now have unspent and un-spendable funds clawed back by the Admin wallet.
 - You can now backup your wallet related metadata in an encrypted and signed file to a free service from Chia Network at backup.chia.net. Simply having a backup of your private key will allow you to fully restore the state of your wallet including coloured coins, rate limited wallets, distributed identity wallets and many more. Your private key is used to automatically restore the last backup you saved to the Chia backup cloud service. This service is open source and ultimately you will be able to configure your backups to go to backup.chia.net, your own installation, or a third party's version of it.
 - Added a Code of Conduct in CODE_OF_CONDUCT.md.
 - Added a bug report template in `.github/ISSUE_TEMPLATE/bug_report.md`.
 
 ### Changed
+
 - This is a new blockchain as we changed how the default puzzle hashes are generated and previous coins would not be easy to spend. Plots made with Beta 8 and newer continue to work, but all previous test chia are left on the old chain and do not migrate over. Configuration data like plot directories automatically migrate in your `~/.chia` directory.
 - Proof of Space now requires significantly less temp space to generate a new plot. A k=32 that used to require 524GiB now requires only 313GiB - generally a 40% decrease across all k sizes.
 - When plotting, instead of 1 monolithic temp file, there are now 8 files - one for each of the 7 tables and one for sorting plot data. These files are deleted as the `-2` or `-d` final file is written so the final file can fit within the footprint of the temporary files on the same filesystem.
@@ -140,6 +159,7 @@ for setuptools_scm/PEP 440 reasons.
 - `chia init` now automatically discovers previous releases in each new release.
 
 ### Fixed
+
 - `chia show -w` should now more reliably work. Wallet balances should be more often correct.
 - View -> Developer -> Developer Tools now correctly opens the developer tools. Thank you to @roxaaams for this pull request!
 - Fixed 'Receive Address' typo in Wallet. Thanks @meurtn on Keybase.
@@ -149,15 +169,18 @@ for setuptools_scm/PEP 440 reasons.
 ## [1.0beta11] aka Beta 1.11 - 2020-08-24
 
 ### Added
+
 - The Chia UI now has a proper About menu entry that gives the various component versions and directs people to submit issues on GitHub. Thank you to @freddiecoleman for this pull request!
 - Ability to run only the farmer, wallet, or timelord services, for more advanced configurations (chia run farmer-only, wallet-only, timelord-only)
 
 ### Changed
+
 - To complement the new About menu, we have revamped all Electron menus and made them OS native. There are now direct links to the Wiki, Keybase, and FAQ in the Help menu.
 - There are minor improvements to how working space is calculated and displayed by the plotter. The plotter also has additional debugging information in its output.
 - Successful plots only have an atomic rename.
 
 ### Fixed
+
 - kOffsetSize should have been 10 bits and not 9. This was causing plots, especially larger plots, to fail with "Error 0". This bug was introduced in Beta 8 with the new plot file format.
 - A bug in aiosqlite was causing tests to hang - especially on the ci. This may also have been causing wallet database corruption.
 - `chia show -w` now correctly outputs all wallet types and balances from the local wallet.
@@ -165,6 +188,7 @@ for setuptools_scm/PEP 440 reasons.
 ## [1.0beta10] aka Beta 1.10 - 2020-08-18
 
 ### Added
+
 - Meet our new Rate Limited wallet. You can now fund a wallet from an Admin wallet that will set how many coins can be spent over a given range of blocks for a given User wallet. Once combined with on chain wallet recovery, this makes it much easier to secure your "spending money" wallet so that if it is compromised you have time to get most of the funds back before an attacker can steal them all. This wallet should be considered alpha in this release as additional fixes and functionality will be coming in subsequent releases.
 - We've added unhardened HD keys to bls-signatures for the smart wallets that need them. We've added significant cross project testing to our BLS implementation.
 - The python implementation of bls-signatures is now current to the new specification.
@@ -172,6 +196,7 @@ for setuptools_scm/PEP 440 reasons.
 - Added cbor2 binary wheels for ARM64 to the Chia simple site. Raspberry Pi should be just a little easier to install.
 
 ### Changed
+
 - Wallet addresses and other key related elements are now expressed in Chech32 which is the Chia implementation of [Bech32](https://github.com/bitcoin/bips/blob/master/bip-0173.mediawiki). All of your old wallet addresses will be replaced with the new Chech32 addresses. The only thing you can't do is send test chia between 1.8/1.9 and 1.10 software. Anyone who upgrades to 1.10 will keep their transactions and balances of test chia from the earlier two releases however.
 - We added a first few enhancements to plotting speed. For a k=30 on a ramdisk with `-b 64 GiB` it results in an 11% speedup in overall plotting speed and a 23% improvement in phase 1 speed. Many more significant increases in plotting speed are in the works.
 - The proof of space document in chiapos has been updated to the new format and edited for clarity. Additionally GitHub actions now has the on demand ability to create the PDF version.
@@ -180,6 +205,7 @@ for setuptools_scm/PEP 440 reasons.
 - Smart wallet backup was upgraded to encrypt and sign the contents of the backup.
 
 ### Fixed
+
 - Proof of space plotting now correctly calculates the total working space used in the `-t` directory.
 - `chia show -w` now displays a message when balances cannot be displayed instead of throwing an error. Thanks to @freddiecoleman for this fix!
 - Fix issue with shutting down full node (full node processes remained open, and caused a spinner when launching Chia)
@@ -191,6 +217,7 @@ for setuptools_scm/PEP 440 reasons.
 ## [1.0beta9] aka Beta 1.9 - 2020-07-27
 
 ### Added
+
 - See wallet balances in command line: `chia show -w`
 - Retry opening invalid plots every 20 minutes (so you can copy a large plot into a plot directory.)
 - We've added `chia keys sign` and `chia keys verify` to allow farmers to certify their ownership of keys.
@@ -202,11 +229,13 @@ for setuptools_scm/PEP 440 reasons.
 - Optimized MPIR for Sandybridge and Ivybridge CPUs under Windows
 
 ### Changed
+
 - `chia start wallet-server` changed to `chia start wallet`, for consistency.
 - All data size units are clarified to displayed in GiB instead of GB (powers of 1024 instead of 1000.)
 - Better error messages for restoring wallet from mnemonic.
 
 ### Fixed
+
 - Fixed open_connection not being cancelled when node exits.
 - Increase the robustness of node and wallet shutdown.
 - Handle disconnection and reconnection of hard drives properly.
@@ -220,6 +249,7 @@ the blspy/bls-signatures library.
 - Fixed timeout exception inheritance changes under python 3.8 (pull 13528)
 
 ### Deprecated
+
 - Removed legacy scripts such as chia-stop-server, chia-restart-harvester, etc.
 
 ## [1.0beta8] aka Beta 1.8 - 2020-07-16
@@ -269,6 +299,7 @@ in Windows or
 `/Applications/Chia.app/Contents/Resources/app.asar.unpacked/daemon` on MacOS.
 
 ### Changed
+
 - Minor changes have been made across the repositories to better support
 compiling on OpenBSD. HT @n1000.
 - Changed XCH units to TXCH units for testnet.
@@ -301,6 +332,7 @@ other chains.
 - Linux builds of chiavdf and blspy now use a fresh build of gmp 6.2.1.
 
 ### Fixed
+
 - uPnP now works on Windows.
 - Log rotation should now properly rotate every 20MB and keep 7 historical logs.
 - Node had a significant memory leak under load due to an extraneous fork
@@ -315,11 +347,13 @@ versions after a release tag.
 - Daemon was crashing when websocket gets improperly closed
 
 ### Deprecated
+
 - All keys generated before Beta 1.8 are of an old format and no longer useful.
 - All plots generated before Beta 1.8 are no longer compatible with testnet and
 should be deleted.
 
 ### Known Issues
+
 - For Windows users on pre Haswell CPUs there is a known issue that causes
 "Given G1 element failed g1_is_valid check" when attempting to generate
 keys. This is a regression from our previous fix when it was upstreamed into
@@ -328,6 +362,7 @@ relic. We will make a patch available for these systems shortly.
 ## [1.0beta7] aka Beta 1.7 - 2020-06-08
 
 ### Added
+
 - Added ability to add plot from filesystem (you will need pool_pk and sk from plots.yaml.)
 - Added ability to import private keys in the UI.
 - Added ability to see private keys and mnemonic seeds in the keys menu
@@ -335,6 +370,7 @@ relic. We will make a patch available for these systems shortly.
 - The Windows installer is now signed by a Chia Network certificate. It may take some time to develop enough reputation to not warn multiple times during install.
 
 ### Changed
+
 - Plots are now refreshed in the UI after each plot instead of at the end of plotting.
 - We have made performance improvements to plotting speed on all platforms.
 - The command line plotter now supports specifying it's memory buffer size.
@@ -347,6 +383,7 @@ relic. We will make a patch available for these systems shortly.
 - We now codesign the Apple .dmg installer with the Chia Network developer ID on both GitHub Actions and Azure Pipelines. We will be notarizing and distributing the Azure Pipelines version as it's built on MacOS Mojave (10.14.6) for stronger cross version support.
 
 ### Fixed
+
 - Having spaces in the path to a plot or temporary directory caused plotting to fail.
 - Changing keys will no longer interrupt plotting log.
 - 1.6 introduced a bug where certain very many core machines would sync the blockchain very slowly.
