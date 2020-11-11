@@ -7,14 +7,13 @@ import time
 import concurrent
 import dataclasses
 
-from blspy import G1Element, G2Element, AugSchemeMPL
+from blspy import G1Element
 
 from chiapos import DiskProver
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from src.protocols import harvester_protocol
-from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
-from src.server.ws_connection import WSChiaConnection
+from src.server.outbound_message import Message
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request

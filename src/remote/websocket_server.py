@@ -45,7 +45,7 @@ def ws_callback_for_api(api_list):
     async def ws_callback(ws):
         rpc_stream = rpc_stream_for_websocket_aiohttp(ws)
         for api in api_list:
-            index = rpc_stream.register_local_obj(api)
+            _ = rpc_stream.register_local_obj(api)
         rpc_stream.start()
         await rpc_stream.await_closed()
 

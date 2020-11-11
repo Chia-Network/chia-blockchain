@@ -17,7 +17,7 @@ from src.util.path import path_from_root
 from src.util.ws_message import create_payload
 
 from src.cmds.init import check_keys
-from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
+from src.server.outbound_message import NodeType, Message
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
 from src.types.sized_bytes import bytes32
