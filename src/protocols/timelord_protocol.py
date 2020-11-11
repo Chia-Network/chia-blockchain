@@ -10,7 +10,6 @@ from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.vdf import VDFInfo, VDFProof
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint64
 
 
 """

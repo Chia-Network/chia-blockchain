@@ -25,6 +25,7 @@ from src.full_node.difficulty_adjustment import finishes_sub_epoch, get_next_ips
 from src.full_node.full_node_store import FullNodeStore
 from src.full_node.make_sub_epoch_summary import make_sub_epoch_summary
 from src.full_node.mempool_manager import MempoolManager
+from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
@@ -49,7 +50,7 @@ from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request
 from src.util.block_creation import create_unfinished_block
 from src.util.errors import ConsensusError
-from src.util.ints import uint32, uint64, uint128, int32
+from src.util.ints import uint32, uint64, uint128, int32, uint8
 from src.util.path import mkdir, path_from_root
 from src.server.node_discovery import FullNodePeers
 from src.types.peer_info import PeerInfo
@@ -687,6 +688,9 @@ class FullNode:
                 curr = await self.blockchain.get_full_block(curr.prev_header_hash)
                 assert curr is not None
             peak_sub_slot = curr.finished_sub_slots[-1]
+            peak_sub_slot_iters = new_peak.total_iters - calculate_ip_iters(
+                self.constants, new_peak.ips, new_peak.required_iters
+            )
             is_overflow: bool = is_overflow_sub_block(self.constants, new_peak.ips, new_peak.required_iters)
             if is_overflow:
                 # Find the previous sub-slots end of slot
@@ -698,12 +702,34 @@ class FullNode:
                         curr = await self.blockchain.get_full_block(curr.prev_header_hash)
                         assert curr is not None
                     prev_sub_slot = curr.finished_sub_slots[-1]
+
+                # If overflow, guaranteed to have the same slot iters for previous slot
+                prev_sub_slot_iters = peak_sub_slot_iters - sub_slot_iters
             else:
                 prev_sub_slot = None
+                prev_sub_slot_iters = None
 
-            self.full_node_store.new_peak(
-                new_peak, peak_sub_slot, prev_sub_slot, fork_height != respond_sub_block.sub_block.height - 1
+            added_eos: Optional[EndOfSubSlotBundle] = self.full_node_store.new_peak(
+                new_peak,
+                peak_sub_slot,
+                peak_sub_slot_iters,
+                prev_sub_slot,
+                prev_sub_slot_iters,
+                fork_height != respond_sub_block.sub_block.height - 1,
+                self.blockchain.sub_blocks,
             )
+            # If there were pending end of slots that happen after this peak, broadcast them if they are added
+            if added_eos is not None:
+                broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
+                    added_eos.challenge_chain.get_hash(),
+                    uint8(0),
+                    added_eos.reward_chain.end_of_slot_vdf.challenge_hash,
+                )
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("new_signage_point_or_end_of_sub_slot", broadcast),
+                    Delivery.BROADCAST,
+                )
 
             if new_peak.height % 1000 == 0:
                 # Occasionally clear the seen list to keep it small
@@ -961,11 +987,16 @@ class FullNode:
     async def new_signage_point_or_end_of_sub_slot(
         self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot
     ) -> OutboundMessageGenerator:
-        if self.full_node_store.have_sub_slot(new_sp.challenge_hash, new_sp.index_from_challenge):
+        if (
+            self.full_node_store.get_signage_point_by_index(
+                new_sp.challenge_hash, new_sp.index_from_challenge, new_sp.last_rc_infusion
+            )
+            is not None
+        ):
             return
 
         full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
-            new_sp.challenge_hash, int32(new_sp.index_from_challenge)
+            new_sp.challenge_hash, new_sp.index_from_challenge, new_sp.last_rc_infusion
         )
         yield OutboundMessage(
             NodeType.FULL_NODE,
@@ -977,7 +1008,60 @@ class FullNode:
     async def request_signage_point_or_end_of_sub_slot(
         self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
     ) -> OutboundMessageGenerator:
+        if request.index_from_challenge == 0:
+            sub_slot: Optional[Tuple[EndOfSubSlotBundle, int]] = self.full_node_store.get_sub_slot(
+                request.challenge_hash
+            )
+            if sub_slot is not None:
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("respond_end_of_slot", full_node_protocol.RespondEndOfSlot(sub_slot[0])),
+                    Delivery.RESPOND,
+                )
+            else:
+                self.log.warning("")
+        else:
+            sp: Optional[SignagePoint] = self.full_node_store.get_signage_point_by_index(
+                request.challenge_hash, request.index_from_challenge, request.last_rc_infusion
+            )
+            if sp is not None:
+                full_node_response = full_node_protocol.RespondSignagePoint(
+                    request.challenge_hash,
+                    request.index_from_challenge,
+                    request.last_rc_infusion,
+                    sp.cc_vdf,
+                    sp.cc_proof,
+                    sp.rc_vdf,
+                    sp.rc_proof,
+                )
+                yield OutboundMessage(
+                    NodeType.FULL_NODE,
+                    Message("respond_signage_point", full_node_response),
+                    Delivery.RESPOND,
+                )
+
+    @api_request
+    async def respond_signage_point(self, request: full_node_protocol.RespondSignagePoint) -> OutboundMessageGenerator:
         pass
+
+    @api_request
+    async def respond_end_of_slot(self, request: full_node_protocol.RespondEndOfSlot) -> OutboundMessageGenerator:
+
+        added = self.full_node_store.new_finished_sub_slot(
+            request.end_of_slot_bundle, self.blockchain.sub_blocks, self.blockchain.get_peak()
+        )
+
+        if added:
+            broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
+                request.end_of_slot_bundle.challenge_chain.get_hash(),
+                uint8(0),
+                request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge_hash,
+            )
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("new_signage_point_or_end_of_sub_slot", broadcast),
+                Delivery.BROADCAST_TO_OTHERS,
+            )
 
     @api_request
     async def request_mempool_transactions(
@@ -1005,15 +1089,14 @@ class FullNode:
         if request.pool_target is None or request.pool_signature is None:
             raise ValueError("Adaptable pool protocol not yet available.")
 
-        plot_id: bytes32 = request.proof_of_space.get_plot_id()
-
-        # Checks that the proof of space is a response to a recent challenge
+        # Checks that the proof of space is a response to a recent challenge and valid SP
         pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int]] = self.full_node_store.get_sub_slot(
             request.proof_of_space.challenge_hash
         )
+        sp_vdfs: Optional[SignagePoint] = self.full_node_store.get_signage_point(request.challenge_chain_sp)
 
-        if pos_sub_slot is None:
-            self.log.warning(f"Received proof of space for an unknown challenge: {request.proof_of_space}")
+        if sp_vdfs is None or pos_sub_slot is None:
+            self.log.warning(f"Received proof of space for an unknown signage point: {request}")
             return
 
         # Now we know that the proof of space has a signage point either:
@@ -1022,11 +1105,8 @@ class FullNode:
         # 3. In a future sub-slot that we already know of
 
         # Checks that the proof of space is valid
-        quality_string: bytes = Verifier().validate_proof(
-            plot_id,
-            request.proof_of_space.size,
-            request.challenge_hash,
-            bytes(request.proof_of_space.proof),
+        quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
+            self.constants, request.challenge_chain_sp, request.challenge_chain_sp_signature
         )
         assert len(quality_string) == 32
 
@@ -1060,7 +1140,11 @@ class FullNode:
         is_overflow: bool = is_overflow_sub_block(self.constants, ips, required_iters)
         total_iters_pos_slot: uint128 = pos_sub_slot[2]
 
-        def get_empty_sig(a, b) -> G2Element:
+        def get_plot_sig(to_sign, _) -> G2Element:
+            if to_sign == request.challenge_chain_sp:
+                return request.challenge_chain_sp_signature
+            if to_sign == request.reward_chain_sp:
+                return request.reward_chain_sp_signature
             return G2Element.infinity()
 
         finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node_store.get_finished_sub_slots(
@@ -1076,14 +1160,15 @@ class FullNode:
             pos_sub_slot[0].challenge_chain.get_hash(),
             request.farmer_puzzle_hash,
             request.pool_target,
-            get_empty_sig,
-            get_empty_sig,
+            get_plot_sig,
+            get_plot_sig,
             uint64(int(time.time())),
             b"",
             spend_bundle,
             peak,
             self.blockchain.sub_blocks,
             finished_sub_slots,
+            sp_vdfs,
         )
 
         message = farmer_protocol.RequestSignedValues(

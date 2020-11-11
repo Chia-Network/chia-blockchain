@@ -15,7 +15,7 @@ Protocol between farmer and full node.
 
 @dataclass(frozen=True)
 @cbor_message
-class SignagePoint:
+class NewSignagePoint:
     challenge_hash: bytes32
     challenge_chain_sp: bytes32
     reward_chain_sp: bytes32
@@ -28,6 +28,7 @@ class SignagePoint:
 @cbor_message
 class DeclareProofOfSpace:
     challenge_chain_sp: bytes32
+    reward_chain_sp: bytes32
     proof_of_space: ProofOfSpace
     challenge_chain_sp_signature: G2Element
     reward_chain_sp_signature: G2Element

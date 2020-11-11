@@ -12,6 +12,7 @@ from src.consensus.pot_iterations import calculate_sub_slot_iters
 from src.full_node.bundle_tools import best_solution_program
 from src.full_node.cost_calculator import calculate_cost_of_program
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
 from src.types.coin import Coin, hash_coin_list
@@ -210,10 +211,7 @@ def create_unfinished_block(
     prev_sub_block: Optional[SubBlockRecord] = None,
     sub_blocks=None,
     finished_sub_slots=None,
-    cc_sp_vdf: Optional[VDFInfo] = None,
-    cc_sp_proof: Optional[VDFProof] = None,
-    rc_sp_vdf: Optional[VDFInfo] = None,
-    rc_sp_proof: Optional[VDFProof] = None,
+    signage_point: Optional[SignagePoint] = None,
 ) -> Optional[UnfinishedBlock]:
     overflow = sp_iters > ip_iters
     total_iters_sp = sub_slot_start_total_iters + sp_iters
@@ -234,7 +232,7 @@ def create_unfinished_block(
     cc_sp_hash: Optional[bytes32] = slot_cc_challenge
 
     # Only enters this if statement if we are in testing mode (making VDF proofs here)
-    if sp_iters != 0 and cc_sp_vdf is None:
+    if sp_iters != 0 and signage_point is None:
         if is_genesis:
             cc_vdf_input = ClassgroupElement.get_default_element()
             if len(finished_sub_slots) == 0:
@@ -316,6 +314,7 @@ def create_unfinished_block(
 
         cc_sp_hash = cc_sp_vdf.output.get_hash()
         rc_sp_hash = rc_sp_vdf.output.get_hash()
+        signage_point = SignagePoint(cc_sp_vdf, cc_sp_proof, rc_sp_vdf, rc_sp_proof)
     else:
         if new_sub_slot:
             rc_sp_hash = finished_sub_slots[-1].reward_chain.get_hash()
@@ -327,6 +326,7 @@ def create_unfinished_block(
                 while not curr.first_in_sub_slot:
                     curr = sub_blocks[curr.prev_hash]
                 rc_sp_hash = curr.finished_reward_slot_hashes[-1]
+        signage_point = SignagePoint(None, None, None, None)
 
     cc_sp_signature: Optional[G2Element] = get_plot_signature(cc_sp_hash, proof_of_space.plot_public_key)
     rc_sp_signature: Optional[G2Element] = get_plot_signature(rc_sp_hash, proof_of_space.plot_public_key)
@@ -345,9 +345,9 @@ def create_unfinished_block(
     rc_sub_block = RewardChainSubBlockUnfinished(
         total_iters,
         proof_of_space,
-        cc_sp_vdf,
+        signage_point.cc_vdf,
         cc_sp_signature,
-        rc_sp_vdf,
+        signage_point.rc_vdf,
         rc_sp_signature,
     )
 
@@ -370,8 +370,8 @@ def create_unfinished_block(
     return UnfinishedBlock(
         [],
         rc_sub_block,
-        cc_sp_proof,
-        rc_sp_proof,
+        signage_point.cc_proof,
+        signage_point.rc_proof,
         foliage_sub_block,
         foliage_block,
         transactions_info,

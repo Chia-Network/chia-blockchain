@@ -652,6 +652,7 @@ class BlockTools:
                         )
                         found_proofs.append((required_iters, proof_of_space))
         if len(found_proofs) >= 4:
+            # Removes some proofs of space to create "random" chains, based on the seed
             random_sample = random.sample(found_proofs, len(found_proofs) - 3)
         else:
             random_sample = found_proofs
