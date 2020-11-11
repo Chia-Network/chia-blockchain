@@ -17,7 +17,7 @@ import hashlib
 
 from typing import Union
 
-from blspy import G1Element
+from blspy import G1Element, PrivateKey
 
 from clvm.casts import int_from_bytes
 
@@ -57,6 +57,16 @@ def calculate_synthetic_public_key(
 ) -> G1Element:
     r = SYNTHETIC_MOD.run([bytes(public_key), hidden_puzzle_hash])
     return G1Element.from_bytes(r.as_atom())
+
+
+def calculate_synthetic_secret_key(secret_key: PrivateKey, hidden_puzzle_hash: bytes32):
+    secret_exponent = int.from_bytes(bytes(secret_key), "big")
+    public_key = secret_key.get_g1()
+    synthetic_offset = calculate_synthetic_offset(public_key, hidden_puzzle_hash)
+    synthetic_secret_exponent = (secret_exponent + synthetic_offset) % GROUP_ORDER
+    blob = synthetic_secret_exponent.to_bytes(32, "big")
+    synthetic_secret_key = PrivateKey.from_bytes(blob)
+    return synthetic_secret_key
 
 
 def puzzle_for_synthetic_public_key(synthetic_public_key: G1Element) -> Program:

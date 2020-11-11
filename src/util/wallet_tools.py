@@ -15,7 +15,7 @@ from src.util.condition_tools import (
     conditions_for_solution,
 )
 from src.util.ints import uint32, uint64
-from src.wallet.puzzles.p2_delegated_puzzle import (
+from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )

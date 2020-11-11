@@ -1,16 +1,20 @@
+import logging
 import time
 from typing import Dict, List, Set, Any
-import logging
+
 from blspy import G1Element
+
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
 from src.types.program import Program
-from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
+from src.types.spend_bundle import SpendBundle
 from src.util.ints import uint8, uint64, uint32
-from src.wallet.puzzles.p2_delegated_puzzle import (
+from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
+    DEFAULT_HIDDEN_PUZZLE_HASH,
     solution_for_conditions,
+    calculate_synthetic_secret_key,
 )
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_my_coin_id_condition,
@@ -120,7 +124,11 @@ class Wallet:
         public_key, secret_key = maybe
 
         # HACK
-        self.secret_key_store.save_secret_key(secret_key)
+        synthetic_secret_key = calculate_synthetic_secret_key(
+            secret_key, DEFAULT_HIDDEN_PUZZLE_HASH
+        )
+        self.secret_key_store.save_secret_key(synthetic_secret_key)
+
         return public_key
 
     async def hack_populate_secret_keys_for_coin_solutions(
