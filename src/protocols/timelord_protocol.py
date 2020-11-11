@@ -11,7 +11,7 @@ from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.vdf import VDFInfo, VDFProof
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint8
+from src.util.ints import uint8, uint64
 
 """
 Protocol between timelord and full node.
@@ -23,7 +23,8 @@ Protocol between timelord and full node.
 class NewPeak:
     reward_chain_sub_block: RewardChainSubBlock
     deficit: uint8
-    sub_epoch_summary: Optional[SubEpochSummary]
+    ips: uint64  # IPS in the slot where NewPeak has been infused
+    sub_epoch_summary: Optional[SubEpochSummary]  # If NewPeak is the last sub-block, the next slot should include this
 
 
 @dataclass(frozen=True)
@@ -33,7 +34,7 @@ class NewUnfinishedSubBlock:
     challenge_chain_sp_proof: VDFProof
     reward_chain_sp_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
-    sub_epoch_summary: Optional[SubEpochSummary]
+    sub_epoch_summary: Optional[SubEpochSummary]  # If this is the last sub-block, the next slot should include this
 
 
 @dataclass(frozen=True)
