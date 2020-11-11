@@ -7,7 +7,6 @@ from typing import AsyncGenerator, Dict, Optional, Callable, Tuple, List
 import aiosqlite
 from blspy import G2Element
 from chiabip158 import PyBIP158
-from chiapos import Verifier
 import dataclasses
 
 from src.consensus.constants import ConsensusConstants
@@ -48,9 +47,9 @@ from src.types.spend_bundle import SpendBundle
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request
-from src.util.block_creation import create_unfinished_block
+from src.full_node.block_creation import create_unfinished_block
 from src.util.errors import ConsensusError
-from src.util.ints import uint32, uint64, uint128, int32, uint8
+from src.util.ints import uint32, uint64, uint128, uint8
 from src.util.path import mkdir, path_from_root
 from src.server.node_discovery import FullNodePeers
 from src.types.peer_info import PeerInfo
@@ -736,7 +735,7 @@ class FullNode:
                 self.full_node_store.clear_seen_unfinished_blocks()
 
             timelord_new_peak: timelord_protocol.NewPeak = timelord_protocol.NewPeak(
-                respond_sub_block.sub_block.reward_chain_sub_block
+                respond_sub_block.sub_block.reward_chain_sub_block, new_peak.deficit
             )
 
             # Tell timelord about the new peak
@@ -1015,7 +1014,7 @@ class FullNode:
             if sub_slot is not None:
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
-                    Message("respond_end_of_slot", full_node_protocol.RespondEndOfSlot(sub_slot[0])),
+                    Message("respond_end_of_slot", full_node_protocol.RespondEndOfSubSlot(sub_slot[0])),
                     Delivery.RESPOND,
                 )
             else:
@@ -1026,9 +1025,7 @@ class FullNode:
             )
             if sp is not None:
                 full_node_response = full_node_protocol.RespondSignagePoint(
-                    request.challenge_hash,
                     request.index_from_challenge,
-                    request.last_rc_infusion,
                     sp.cc_vdf,
                     sp.cc_proof,
                     sp.rc_vdf,
@@ -1042,10 +1039,14 @@ class FullNode:
 
     @api_request
     async def respond_signage_point(self, request: full_node_protocol.RespondSignagePoint) -> OutboundMessageGenerator:
-        pass
+        # TODO
+        async for _ in []:
+            yield _
 
     @api_request
-    async def respond_end_of_slot(self, request: full_node_protocol.RespondEndOfSlot) -> OutboundMessageGenerator:
+    async def respond_end_of_sub_slot(
+        self, request: full_node_protocol.RespondEndOfSubSlot
+    ) -> OutboundMessageGenerator:
 
         added = self.full_node_store.new_finished_sub_slot(
             request.end_of_slot_bundle, self.blockchain.sub_blocks, self.blockchain.get_peak()
@@ -1170,6 +1171,7 @@ class FullNode:
             finished_sub_slots,
             sp_vdfs,
         )
+        self.full_node_store.add_candidate_block(quality_string, unfinished_block)
 
         message = farmer_protocol.RequestSignedValues(
             quality_string,
@@ -1204,42 +1206,66 @@ class FullNode:
             # Yield all new messages (propagation to peers)
             yield m
 
-    # # TIMELORD PROTOCOL
-    # @api_request
-    # async def proof_of_time_finished(self, request: timelord_protocol.ProofOfTimeFinished) -> OutboundMessageGenerator:
-    #     """
-    #     A proof of time, received by a peer timelord. We can use this to complete a block,
-    #     and call the block routine (which handles propagation and verification of blocks).
-    #     """
-    #     if request.proof.witness_type == 0:
-    #         async for msg in self._respond_compact_proof_of_time(request.proof):
-    #             yield msg
-    #
-    #     dict_key = (
-    #         request.proof.challenge_hash,
-    #         request.proof.number_of_iterations,
-    #     )
-    #
-    #     unfinished_block_obj: Optional[FullBlock] = await self.full_node_store.get_unfinished_block(dict_key)
-    #     if not unfinished_block_obj:
-    #         if request.proof.witness_type > 0:
-    #             self.log.warning(f"Received a proof of time that we cannot use to complete a block {dict_key}")
-    #         return
-    #
-    #     new_full_block: FullBlock = FullBlock(
-    #         unfinished_block_obj.proof_of_space,
-    #         request.proof,
-    #         unfinished_block_obj.header,
-    #         unfinished_block_obj.transactions_generator,
-    #         unfinished_block_obj.transactions_filter,
-    #     )
-    #
-    #     if self.sync_store.get_sync_mode():
-    #         self.sync_store.add_potential_future_block(new_full_block)
-    #     else:
-    #         async for msg in self.respond_block(full_node_protocol.RespondBlock(new_full_block)):
-    #             yield msg
-    #
+    # TIMELORD PROTOCOL
+    @api_request
+    async def new_infusion_point_vdf(self, request: timelord_protocol.NewInfusionPointVDF) -> OutboundMessageGenerator:
+        # Lookup unfinished blocks
+        unfinished_block: Optional[UnfinishedBlock] = self.full_node_store.get_unfinished_block(
+            request.unfinished_reward_hash
+        )
+
+        if unfinished_block is None:
+            self.log.warning(
+                f"Do not have unfinished reward chain block {request.unfinished_reward_hash}, cannot finish."
+            )
+
+        prev_sb: Optional[SubBlockRecord] = None
+        if request.reward_chain_ip_vdf.challenge_hash == self.constants.FIRST_RC_CHALLENGE:
+            # Genesis
+            assert unfinished_block.height == 0
+
+        else:
+            # Find the prev block
+            curr: Optional[SubBlockRecord] = self.blockchain.get_peak()
+            if curr is None:
+                self.log.warning(f"Have no blocks in chain, so can not complete block {unfinished_block.height}")
+                return
+            num_sb_checked = 0
+            while num_sb_checked < 10:
+                if curr.reward_infusion_new_challenge == request.reward_chain_ip_vdf.challenge_hash:
+                    # Found our prev block
+                    prev_sb = curr
+                    break
+                curr = self.blockchain.sub_blocks.get(curr.prev_hash, None)
+                if curr is None:
+                    return
+                num_sb_checked += 1
+
+            # If not found, cache keyed on prev block
+
+        # Finish the blocks
+
+        # Broadcast the new IP vdf
+        pass
+
+    @api_request
+    async def new_signage_point_vdf(self, request: timelord_protocol.NewSignagePointVDF) -> OutboundMessageGenerator:
+        full_node_message = full_node_protocol.RespondSignagePoint(
+            request.index_from_challenge,
+            request.challenge_chain_sp_vdf,
+            request.challenge_chain_sp_proof,
+            request.reward_chain_sp_vdf,
+            request.reward_chain_sp_proof,
+        )
+        async for msg in self.respond_signage_point(full_node_message):
+            yield msg
+
+    @api_request
+    async def new_end_of_sub_slot_vdf(self, request: timelord_protocol.NewEndOfSubSlotVDF) -> OutboundMessageGenerator:
+        # Calls our own internal message to handle the end of sub slot, and potentially broadcasts to other peers.
+        full_node_message = full_node_protocol.RespondEndOfSubSlot(request.end_of_sub_slot_bundle)
+        async for msg in self.respond_end_of_sub_slot(full_node_message):
+            yield msg
 
     # WALLET PROTOCOL
     # @api_request

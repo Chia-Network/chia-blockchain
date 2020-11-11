@@ -114,7 +114,11 @@ async def validate_unfinished_header_block(
                             icc_iters_committed = calculate_sub_slot_iters(constants, prev_sb.ips)
                         ip_iters_prev = calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
                         icc_iters_proof: uint64 = calculate_sub_slot_iters(constants, prev_sb.ips) - ip_iters_prev
-                        icc_vdf_input = prev_sb.infused_challenge_vdf_output
+
+                        if prev_sb.is_challenge_sub_block(constants):
+                            icc_vdf_input = ClassgroupElement.get_default_element()
+                        else:
+                            icc_vdf_input = prev_sb.infused_challenge_vdf_output
                     else:
                         icc_challenge_hash = header_block.finished_sub_slots[
                             finished_sub_slot_n - 1
