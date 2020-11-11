@@ -3,6 +3,7 @@ import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
+import { AlertDialog } from '@chia/core';
 import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import {
@@ -493,9 +494,11 @@ function SendCard(props: SendCardProps) {
       return;
     }
     if (syncing) {
-      dispatch(openDialog({
-        title: 'Please finish syncing before making a transaction',
-      }));
+      dispatch(openDialog(
+        <AlertDialog>
+          Please finish syncing before making a transaction
+        </AlertDialog>
+      ));
       return;
     }
     let address = address_input.value.trim();
@@ -505,15 +508,19 @@ function SendCard(props: SendCardProps) {
       !Number(amount_input.value) ||
       isNaN(Number(amount_input.value))
     ) {
-      dispatch(openDialog({
-        title: 'Please enter a valid numeric amount',
-      }));
+      dispatch(openDialog(
+        <AlertDialog>
+          Please enter a valid numeric amount
+        </AlertDialog>
+      ));
       return;
     }
     if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
-      dispatch(openDialog({
-        title: 'Please enter a valid numeric fee',
-      }));
+      dispatch(openDialog(
+        <AlertDialog>
+          Please enter a valid numeric fee
+        </AlertDialog>
+      ));
       return;
     }
 
@@ -522,9 +529,11 @@ function SendCard(props: SendCardProps) {
 
     if (address.includes('chia_addr') || address.includes('colour_desc')) {
       dispatch(
-        openDialog({
-          title: 'Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address',
-        }),
+        openDialog(
+          <AlertDialog>
+            Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address
+          </AlertDialog>
+        ),
       );
       return;
     }
@@ -533,9 +542,11 @@ function SendCard(props: SendCardProps) {
       address = address.slice(79);
       if (colour_id !== colour) {
         dispatch(
-          openDialog({
-            title: 'Error the entered address appears to be for a different colour.',
-          }),
+          openDialog(
+            <AlertDialog>
+              Error the entered address appears to be for a different colour.
+            </AlertDialog>
+          ),
         );
         return;
       }
@@ -550,9 +561,11 @@ function SendCard(props: SendCardProps) {
 
     if (fee_value !== 0) {
       dispatch(
-        openDialog({
-          title: 'Please enter 0 fee. Positive fees not supported yet for coloured coins.',
-        }),
+        openDialog(
+          <AlertDialog>
+            Please enter 0 fee. Positive fees not supported yet for coloured coins.
+          </AlertDialog>
+        ),
       );
       return;
     }

@@ -1,6 +1,7 @@
 import React from 'react';
 import isElectron from 'is-electron';
 import { Trans } from '@lingui/macro';
+import { AlertDialog } from '@chia/core';
 import useOpenDialog from './useOpenDialog';
 
 export default function useSelectFile(): () => Promise<string | undefined> {
@@ -13,16 +14,14 @@ export default function useSelectFile(): () => Promise<string | undefined> {
       const { filePath } = result;
 
       return filePath;
-    } 
-      openDialog({
-        body: (
+    }
+      openDialog((
+        <AlertDialog>
           <Trans id="useSelectFile.availableOnlyFromElectron">
             This feature is available only from electron app
           </Trans>
-        ),
-      });
-      
-    
+        </AlertDialog>
+      ));
   }
 
   return handleSelect;

@@ -181,6 +181,7 @@ export default function incomingReducer(
             return state;
           }
           wallet.transactions = transactions.reverse();
+          console.log('wallet', wallet);
           return { ...state };
         }
       } else if (command === 'get_next_address') {

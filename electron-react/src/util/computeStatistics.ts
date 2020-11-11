@@ -1,3 +1,4 @@
+import TransactionType from '../constants/TransactionType';
 import type Wallet from '../types/Wallet';
 import { big_int_to_array, arr_to_hex, sha256 } from './utils';
 
@@ -6,13 +7,13 @@ export default async function computeStatistics(
 ): Promise<{
   totalChia: BigInt;
   biggestHeight: number;
-  farmingRewards: BigInt;
-  feesCollected: BigInt;
+  coinbaseRewards: BigInt;
+  feesReward: BigInt;
 }> {
   let totalChia = BigInt(0);
   let biggestHeight = 0;
-  const farmingRewards = BigInt(0);
-  const feesCollected = BigInt(0);
+  let coinbaseRewards = BigInt(0);
+  let feesReward = BigInt(0);
 
   for (const wallet of wallets) {
     if (!wallet) {
@@ -42,19 +43,19 @@ export default async function computeStatistics(
         hexHeightDoubleHash === tx.additions[0].parent_coin_info.slice(2)
       ) {
         totalChia += BigInt(tx.amount);
+
+        switch(tx.type) {
+          case TransactionType.COINBASE_REWARD:
+            coinbaseRewards += BigInt(tx.amount);
+            break;
+          case TransactionType.FEE_REWARD:
+            feesReward += BigInt(tx.amount);
+            break;
+        }
+
         if (tx.confirmed_at_index > biggestHeight) {
           biggestHeight = tx.confirmed_at_index;
         }
-
-        /*
-        if (tx.coinbase) {
-          if (tx.type === 'REWARD') {
-            farmingRewards += BigInt(tx.amount);
-          } else {
-            feesCollected += BigInt(tx.amount);
-          }
-        }
-        */
       }
     }
   }
@@ -62,7 +63,7 @@ export default async function computeStatistics(
   return {
     totalChia,
     biggestHeight,
-    farmingRewards,
-    feesCollected,
+    coinbaseRewards,
+    feesReward,
   };
 }

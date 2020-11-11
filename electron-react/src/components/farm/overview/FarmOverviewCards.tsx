@@ -6,8 +6,8 @@ import FarmCardLastHeightFarmed from '../card/FarmCardLastHeightFarmed';
 import FarmCardTotalSizeOfPlots from '../card/FarmCardTotalSizeOfPlots';
 import FarmCardTotalNetworkSpace from '../card/FarmCardTotalNetworkSpace';
 import FarmCardPlotCount from '../card/FarmCardPlotCount';
-import FarmCardFarmingRewards from '../card/FarmCardFarmingRewards';
-import FarmCardFeesCollected from '../card/FarmCardFeesCollected';
+import FarmCardCoinbaseRewards from '../card/FarmCardCoinbaseRewards';
+import FarmCardFeesReward from '../card/FarmCardFeesReward';
 import FarmCardExpectedTimeToWin from '../card/FarmCardExpectedTimeToWin';
 
 export default function FarmOverviewCards() {
@@ -21,10 +21,10 @@ export default function FarmOverviewCards() {
           <FarmCardTotalChiaFarmed />
         </Grid>
         <Grid xs={12} sm={6} md={4} item>
-          <FarmCardFarmingRewards />
+          <FarmCardCoinbaseRewards />
         </Grid>
         <Grid xs={12} sm={6} md={4} item>
-          <FarmCardFeesCollected />
+          <FarmCardFeesReward />
         </Grid>
         <Grid xs={12} sm={6} md={4} item>
           <FarmCardLastHeightFarmed />

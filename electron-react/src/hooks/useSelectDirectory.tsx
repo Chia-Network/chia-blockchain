@@ -1,32 +1,38 @@
 import React from 'react';
 import isElectron from 'is-electron';
 import { Trans } from '@lingui/macro';
+import { AlertDialog } from '@chia/core';
 import useOpenDialog from './useOpenDialog';
 
-export default function useSelectDirectory(): () => Promise<
+type Options = {
+  buttonLabel?: string,
+};
+
+export default function useSelectDirectory(defaultOptions?: Options): (options?: Options) => Promise<
   string | undefined
 > {
   const openDialog = useOpenDialog();
 
-  async function handleSelect(): Promise<string | undefined> {
+  async function handleSelect(options?: Options): Promise<string | undefined> {
     if (isElectron()) {
       // @ts-ignore
       const result = await window.remote.dialog.showOpenDialog({
         properties: ['openDirectory', 'showHiddenFiles'],
+        ...defaultOptions,
+        ...options,
       });
       const filePath = result.filePaths[0];
 
       return filePath;
-    } 
-      openDialog({
-        body: (
-          <Trans id="useSelectDirectory.availableOnlyFromElectron">
-            This feature is available only from electron app
-          </Trans>
-        ),
-      });
-      
-    
+    }
+
+    openDialog((
+      <AlertDialog>
+        <Trans id="useSelectDirectory.availableOnlyFromElectron">
+          This feature is available only from electron app
+        </Trans>
+      </AlertDialog>
+    ));
   }
 
   return handleSelect;

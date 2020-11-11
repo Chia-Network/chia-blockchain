@@ -22,7 +22,7 @@ import InputAdornment from '@material-ui/core/InputAdornment';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import isElectron from 'is-electron';
 import Input from '@material-ui/core/Input';
-import { Flex, Log } from '@chia/core';
+import { AlertDialog, Flex, Log } from '@chia/core';
 import { openDialog } from '../../modules/dialog';
 import {
   workspaceSelected,
@@ -220,10 +220,11 @@ const WorkLocation = () => {
     } else {
       dispatch(
         openDialog(
-          '',
-          <Trans id="PlotterWorkLocation.availableOnlyFromElectron">
-            This feature is available only from electron app
-          </Trans>,
+          <AlertDialog>
+            <Trans id="PlotterWorkLocation.availableOnlyFromElectron">
+              This feature is available only from electron app
+            </Trans>
+          </AlertDialog>
         ),
       );
     }
@@ -272,10 +273,11 @@ const FinalLocation = () => {
     } else {
       dispatch(
         openDialog(
-          '',
-          <Trans id="PlotterFinalLocation.availableOnlyFromElectron">
-            This feature is available only from electron app
-          </Trans>,
+          <AlertDialog>
+            <Trans id="PlotterFinalLocation.availableOnlyFromElectron">
+              This feature is available only from electron app
+            </Trans>
+          </AlertDialog>
         ),
       );
     }
@@ -351,9 +353,11 @@ function CreatePlot() {
     if (!work_location || !final_location) {
       dispatch(
         openDialog(
-          <Trans id="CreatePlot.specifyFinalDirectory">
-            Please specify a temporary and final directory
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreatePlot.specifyFinalDirectory">
+              Please specify a temporary and final directory
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;

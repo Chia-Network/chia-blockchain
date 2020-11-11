@@ -1,23 +1,19 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector, useDispatch } from 'react-redux';
 import styled from 'styled-components';
+import { ConfirmDialog } from '@chia/core';
 import {
   Card,
   Typography,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Tooltip,
   List,
   ListItem,
   ListItemText,
+  ListItemSecondaryAction,
   IconButton,
 } from '@material-ui/core';
-import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
@@ -34,6 +30,7 @@ import {
 import { resetMnemonic } from '../../modules/mnemonic';
 import type { RootState } from '../../modules/rootReducer';
 import type Fingerprint from '../../types/Fingerprint';
+import useOpenDialog from '../../hooks/useOpenDialog';
 
 const StyledFingerprintListItem = styled(ListItem)`
   padding-right: ${({ theme }) => `${theme.spacing(11)}px`};
@@ -41,7 +38,7 @@ const StyledFingerprintListItem = styled(ListItem)`
 
 export default function SelectKey() {
   const dispatch = useDispatch();
-  const [open, setOpen] = useState<boolean>(false);
+  const openDialog = useOpenDialog();
   const publicKeyFingerprints = useSelector(
     (state: RootState) => state.wallet_state.public_key_fingerprints,
   );
@@ -54,25 +51,51 @@ export default function SelectKey() {
     dispatch(login_action(fingerprint));
   }
 
-  function handleClickOpen() {
-    setOpen(true);
-  }
-
-  function handleClose() {
-    setOpen(false);
-  }
-
-  function handleCloseDelete() {
-    handleClose();
-    dispatch(delete_all_keys());
-  }
-
   function handleShowKey(fingerprint: Fingerprint) {
     dispatch(get_private_key(fingerprint));
   }
 
-  function handleDelete(fingerprint: Fingerprint) {
-    dispatch(delete_key(fingerprint));
+  async function handleDeletePrivateKey(fingerprint: Fingerprint) {
+    const deletePrivateKey = await openDialog((
+      <ConfirmDialog
+        title={<Trans id="DeleteKey.title">Delete key</Trans>}
+        confirmTitle={<Trans id="DeleteKey.delete">Delete</Trans>}
+        cancelTitle={<Trans id="DeleteKey.back">Back</Trans>}
+        confirmColor="default"
+      >
+        <Trans id="DeleteKey.description">
+          Deleting the key will permanently remove the key from your computer,
+          make sure you have backups. Are you sure you want to continue?
+        </Trans>
+      </ConfirmDialog>
+    ));
+
+    // @ts-ignore
+    if (deletePrivateKey) {
+      dispatch(delete_key(fingerprint));
+    }
+  }
+
+  async function handleDeleteAllKeys() {
+    const deleteAllKeys = await openDialog((
+      <ConfirmDialog
+        title={<Trans id="DeleteAllKeys.title">Delete all keys</Trans>}
+        confirmTitle={<Trans id="DeleteAllKeys.delete">Delete</Trans>}
+        cancelTitle={<Trans id="DeleteAllKeys.back">Back</Trans>}
+        confirmColor="default"
+      >
+        <Trans id="DeleteAllKeys.description">
+          Deleting all keys will permanatly remove the keys from your
+          computer, make sure you have backups. Are you sure you want to
+          continue?
+        </Trans>
+      </ConfirmDialog>
+    ));
+
+    // @ts-ignore
+    if (deleteAllKeys) {
+      dispatch(delete_all_keys());
+    }
   }
 
   return (
@@ -138,7 +161,7 @@ export default function SelectKey() {
                           <IconButton
                             edge="end"
                             aria-label="delete"
-                            onClick={() => handleDelete(fingerprint)}
+                            onClick={() => handleDeletePrivateKey(fingerprint)}
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -170,7 +193,7 @@ export default function SelectKey() {
               </Button>
             </Link>
             <Button
-              onClick={handleClickOpen}
+              onClick={handleDeleteAllKeys}
               type="submit"
               variant="contained"
               color="danger"
@@ -182,33 +205,6 @@ export default function SelectKey() {
           </Flex>
         </Flex>
       </Container>
-      <Dialog
-        open={open}
-        onClose={handleClose}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-      >
-        <DialogTitle id="alert-dialog-title">
-          <Trans id="DeleteAllKeys.title">Delete all keys</Trans>
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="alert-dialog-description">
-            <Trans id="DeleteAllKeys.description">
-              Deleting all keys will permanatly remove the keys from your
-              computer, make sure you have backups. Are you sure you want to
-              continue?
-            </Trans>
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="secondary" autoFocus>
-            <Trans id="DeleteAllKeys.back">Back</Trans>
-          </Button>
-          <Button onClick={handleCloseDelete} color="secondary">
-            <Trans id="DeleteAllKeys.delete">Delete</Trans>
-          </Button>
-        </DialogActions>
-      </Dialog>
     </LayoutHero>
   );
 }

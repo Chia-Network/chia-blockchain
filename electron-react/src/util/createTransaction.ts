@@ -1,6 +1,7 @@
 import type SpendBundle from '../types/SpendBundle';
 import type Coin from '../types/Coin';
 import type Transaction from '../types/Transaction';
+import type TransactionType from '../constants/TransactionType';
 
 export default function createTransaction(
   confirmed_at_index: number,
@@ -15,6 +16,7 @@ export default function createTransaction(
   additions: Coin[],
   removals: Coin[],
   wallet_id: number,
+  type: TransactionType,
 ): Transaction {
   return {
     confirmed_at_index,
@@ -29,5 +31,6 @@ export default function createTransaction(
     additions,
     removals,
     wallet_id,
+    type,
   };
 }

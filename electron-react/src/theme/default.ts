@@ -15,6 +15,5 @@ export default {
   },
   drawer: {
     width: '100px',
-    zIndex: 1301,
   },
 };

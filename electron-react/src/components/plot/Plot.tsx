@@ -13,7 +13,7 @@ export default function Plot() {
   return (
     <LayoutMain title={<Trans id="Plot.title">Plot</Trans>}>
       <Flex flexDirection="column" gap={2}>
-        <PlotHeader />
+        {/* <PlotHeader /> */}
         <Switch>
           <Route path={path} exact>
             <PlotOverview />

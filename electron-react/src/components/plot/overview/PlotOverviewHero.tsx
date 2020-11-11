@@ -1,15 +1,24 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router-dom';
-import { Button, Grid, Typography, Link } from '@material-ui/core';
+import { Button, Grid, Typography, Link, Divider } from '@material-ui/core';
 import { CardHero } from '@chia/core';
 import { PlotHero as PlotHeroIcon } from '@chia/icons';
+import PlotAddDirectoryDialog from '../PlotAddDirectoryDialog';
+import useOpenDialog from '../../../hooks/useOpenDialog';
 
 export default function PlotOverviewHero() {
   const history = useHistory();
+  const openDialog = useOpenDialog();
 
   function handleAddPlot() {
     history.push('/dashboard/plot/add');
+  }
+
+  function handleAddPlotDirectory() {
+    openDialog((
+      <PlotAddDirectoryDialog />
+    ));
   }
 
   return (
@@ -30,6 +39,16 @@ export default function PlotOverviewHero() {
           >
             <Trans id="PlotHero.addAPlot">Add a Plot</Trans>
           </Button>
+
+          <Divider />
+
+          <Typography variant="body1">
+            <Trans id="PlotHero.description">
+              {'Do you have existing plots on this machine? '}
+
+              <Link onClick={handleAddPlotDirectory}>Add Plot Directory</Link>
+            </Trans>
+          </Typography>
         </CardHero>
       </Grid>
     </Grid>

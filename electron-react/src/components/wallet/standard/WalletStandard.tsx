@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import Grid from '@material-ui/core/Grid';
+import { AlertDialog } from '@chia/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -423,13 +424,13 @@ function SendCard(props: SendCardProps) {
     }
     if (syncing) {
       dispatch(
-        openDialog({
-          title: (
+        openDialog(
+          <AlertDialog>
             <Trans id="SendCard.finishSyncingBeforeTransaction">
               Please finish syncing before making a transaction
             </Trans>
-          ),
-        }),
+          </AlertDialog>
+        ),
       );
       return;
     }
@@ -442,25 +443,25 @@ function SendCard(props: SendCardProps) {
       isNaN(Number(amount_input.value))
     ) {
       dispatch(
-        openDialog({
-          title: (
+        openDialog(
+          <AlertDialog>
             <Trans id="SendCard.enterValidAmount">
               Please enter a valid numeric amount
             </Trans>
-          ),
-        }),
+          </AlertDialog>
+        ),
       );
       return;
     }
     if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
       dispatch(
-        openDialog({
-          title: (
+        openDialog(
+          <AlertDialog>
             <Trans id="SendCard.enterValidFee">
               Please enter a valid numeric fee
             </Trans>
-          ),
-        }),
+          </AlertDialog>
+        ),
       );
       return;
     }
@@ -469,14 +470,14 @@ function SendCard(props: SendCardProps) {
 
     if (address.includes('colour')) {
       dispatch(
-        openDialog({
-          title: (
+        openDialog(
+          <AlertDialog>
             <Trans id="SendCard.enterValidAddress">
               Error: Cannot send chia to coloured address. Please enter a chia
               address.
             </Trans>
-          ),
-        }),
+          </AlertDialog>
+        ),
       );
       return;
     }

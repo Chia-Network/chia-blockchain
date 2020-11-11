@@ -25,6 +25,7 @@ import {
 import { openDialog } from '../../modules/dialog';
 import { create_trade_action } from '../../modules/trade_messages';
 import { COLOURED_COIN } from '../../util/wallet_types';
+import { AlertDialog } from '@chia/core';
 
 const useStyles = makeStyles((theme) => ({
   toolbar: {
@@ -195,10 +196,11 @@ export default function CreateOffer() {
     if (!wallet_id.value) {
       dispatch(
         openDialog(
-          '',
-          <Trans id="CreateOffer.selectCoinType">
-            Please select coin type
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateOffer.selectCoinType">
+              Please select coin type
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -206,8 +208,9 @@ export default function CreateOffer() {
     if (amount_input.value === '') {
       dispatch(
         openDialog(
-          '',
-          <Trans id="CreateOffer.selectAmount">Please select amount</Trans>,
+          <AlertDialog>
+            <Trans id="CreateOffer.selectAmount">Please select amount</Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -215,10 +218,11 @@ export default function CreateOffer() {
     if (!buy_or_sell.value) {
       dispatch(
         openDialog(
-          '',
-          <Trans id="CreateOffer.selectBuyOrSell">
-            Please select buy or sell
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateOffer.selectBuyOrSell">
+              Please select buy or sell
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -236,8 +240,9 @@ export default function CreateOffer() {
     if (trades.length === 0) {
       dispatch(
         openDialog(
-          '',
-          <Trans id="CreateOffer.addTradePair">Please add trade pair</Trans>,
+          <AlertDialog>
+            <Trans id="CreateOffer.addTradePair">Please add trade pair</Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -258,10 +263,11 @@ export default function CreateOffer() {
     } else {
       dispatch(
         openDialog(
-          '',
-          <Trans id="CreateOffer.availableOnlyFromElectron">
-            This feature is available only from electron app
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateOffer.availableOnlyFromElectron">
+              This feature is available only from electron app
+            </Trans>
+          </AlertDialog>
         ),
       );
     }

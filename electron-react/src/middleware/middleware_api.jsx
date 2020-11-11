@@ -1,4 +1,6 @@
+import React from 'react';
 import { push } from 'connected-react-router';
+import { AlertDialog } from '@chia/core';
 import isElectron from 'is-electron';
 import {
   get_address,
@@ -15,7 +17,7 @@ import {
 } from '../modules/message';
 
 import { offerParsed, resetTrades } from '../modules/trade';
-import { openDialog } from '../modules/dialog';
+import { openDialog, openErrorDialog } from '../modules/dialog';
 import {
   service_wallet,
   service_full_node,
@@ -151,6 +153,8 @@ export const refreshAllState = (dispatch) => {
   dispatch(getPlotDirectories());
   dispatch(isServiceRunning(service_plotter));
   dispatch(get_all_trades());
+
+  console.log('get_plots was called');
 };
 
 export const handle_message = (store, payload) => {
@@ -193,7 +197,11 @@ export const handle_message = (store, payload) => {
           : 'No 24 word seed, since this key is imported.'
       }`;
     store.dispatch(
-      openDialog(`Private key ${payload.data.private_key.fingerprint}`, text),
+      openDialog((
+        <AlertDialog title={`Private key ${payload.data.private_key.fingerprint}`}>
+          text
+        </AlertDialog>
+      )),
     );
   } else if (payload.command === 'delete_plot') {
     store.dispatch(refreshPlots());
@@ -246,7 +254,11 @@ export const handle_message = (store, payload) => {
     }
   } else if (payload.command === 'respond_to_offer') {
     if (payload.data.success) {
-      store.dispatch(openDialog('Success!', 'Offer accepted'));
+      store.dispatch(openDialog((
+        <AlertDialog title="Success!">
+          Offer accepted
+        </AlertDialog>
+      )));
     }
     store.dispatch(resetTrades());
   } else if (payload.command === 'get_discrepancies_for_offer') {
@@ -312,7 +324,7 @@ export const handle_message = (store, payload) => {
       return;
     }
     if (payload.data.error) {
-      store.dispatch(openDialog('Error: ', payload.data.error));
+      store.dispatch(openErrorDialog(payload.data.error));
     }
   }
 };

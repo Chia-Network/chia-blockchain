@@ -29,7 +29,6 @@ import {
   deletePlot,
   getPlotDirectories,
 } from '../../../modules/harvesterMessages';
-import AddPlotDialog from './AddPlotDialog';
 import { RootState } from '../../../modules/rootReducer';
 import type Plot from '../../../types/Plot';
 import { FormatBytes } from '@chia/core';

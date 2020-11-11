@@ -7,19 +7,20 @@ import FarmCard from './FarmCard';
 import computeStatistics from '../../../util/computeStatistics';
 import { mojo_to_chia } from '../../../util/chia';
 
-export default function FarmCardFeesCollected() {
+export default function FarmCardCoinbaseRewards() {
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const { loading, value } = useAsync(() => computeStatistics(wallets), [
     wallets,
   ]);
 
-  const feesCollected = useMemo((): number => mojo_to_chia(value?.feesCollected), [value?.feesCollected]);
-
+  const coinbaseRewards = useMemo((): number => mojo_to_chia(value?.coinbaseRewards), [value?.coinbaseRewards]);
 
   return (
     <FarmCard
-      title={<Trans id="FarmCardFeesCollected.title">XCH Fees Collected</Trans>}
-      value={feesCollected}
+      title={
+        <Trans id="FarmCardCoinbaseRewards.title">XCH Framing Rewards</Trans>
+      }
+      value={coinbaseRewards}
       loading={loading}
     />
   );
