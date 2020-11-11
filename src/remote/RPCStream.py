@@ -28,8 +28,12 @@ class RPCStream:
         self._bad_channel_callback = bad_channel_callback
         self._next_channel: int = 0
         self._inputs_task: Optional[Awaitable] = None
-        self._local_objects_by_channel: Dict[int, Any] = weakref.WeakValueDictionary()
-        self._remote_channels_by_proxy: Dict[Proxy, int] = weakref.WeakKeyDictionary()
+        self._local_objects_by_channel: Any = (
+            weakref.WeakValueDictionary()
+        )  # Type  Dict[int, Any]
+        self._remote_channels_by_proxy: Any = (
+            weakref.WeakKeyDictionary()
+        )  # Type : Dict[Proxy, int]
 
     def next_channel(self) -> int:
         channel = self._next_channel
@@ -119,9 +123,9 @@ class RPCStream:
 
         # it's a response, and obj is a Response
         return_type = obj.return_type
-        ex = msg.exception()
-        if ex:
-            obj.future.set_exception(ex)
+        exception = msg.exception()
+        if exception:
+            obj.future.set_exception(exception)
         else:
             final_r = recast_to_type(
                 msg.response(), return_type, msg.from_simple_types, self
@@ -198,9 +202,12 @@ def recast_arguments(
         for v, t in zip(args, annotations.values())
     ]
 
-    cast_kwargs = {
-        k: recast_to_type(t, annotations.get(k), cast_simple_type, rpc_stream)
-        for k, t in kwargs.items()
-    }
+    cast_kwargs = {}
+
+    for k, t in kwargs.items():
+        annotation = annotations.get(k)
+        if annotation is None:
+            raise ValueError("Annotation is None")
+        cast_kwargs[k] = recast_to_type(t, annotation, cast_simple_type, rpc_stream)
 
     return cast_args, cast_kwargs

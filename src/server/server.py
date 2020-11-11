@@ -7,6 +7,8 @@ from typing import Any, List, Dict, Tuple, Callable, Optional
 
 import aiohttp
 from aiohttp import web
+from aiohttp.web_app import Application
+from aiohttp.web_runner import TCPSite
 
 from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload
@@ -64,7 +66,7 @@ class ChiaServer:
     ):
         # Keeps track of all connections to and from this node.
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
-        self.full_nodes: Dict[str, WSChiaConnection] = {}
+        self.full_nodes: Dict[bytes32, WSChiaConnection] = {}
 
         self.connection_by_type: Dict[NodeType, Dict[str, WSChiaConnection]] = {}
         self._port = port  # TCP port to identify our node
@@ -103,8 +105,8 @@ class ChiaServer:
         self._private_key_path = key_path
 
         self.incoming_task = asyncio.create_task(self.incoming_api_task())
-        self.app = None
-        self.site = None
+        self.app: Optional[Application] = None
+        self.site: Optional[TCPSite] = None
 
     async def start_server(self, on_connect: Callable = None):
         self.app = web.Application()
@@ -280,7 +282,7 @@ class ChiaServer:
                             full_message.data, connection
                         )
                     else:
-                        response: Optional[Message] = await f(full_message.data)
+                        response = await f(full_message.data)
 
                     if response is not None:
                         id = payload.id
@@ -304,7 +306,7 @@ class ChiaServer:
                 continue
             if connection.connection_type is type:
                 for message in messages:
-                    await connection.outgoing_queue.put(message)
+                    await connection.send_message(message)
 
     async def send_to_all(self, messages: List[Message], type: NodeType):
         for id, connection in self.all_connections.items():

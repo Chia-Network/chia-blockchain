@@ -16,7 +16,7 @@ class IntroducerAPI:
         self.introducer = introducer
 
     def _set_state_changed_callback(self, callback: Callable):
-        self.introducer.state_changed_callback = callback
+        pass
 
     @peer_required
     @api_request
