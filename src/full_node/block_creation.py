@@ -25,7 +25,6 @@ from src.types.reward_chain_sub_block import RewardChainSubBlockUnfinished, Rewa
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.vdf import VDFProof, VDFInfo
 from src.util.hash import std_hash
 from src.util.ints import uint128, uint64, uint32
 from src.util.merkle_set import MerkleSet

@@ -23,6 +23,7 @@ Protocol between timelord and full node.
 class NewPeak:
     reward_chain_sub_block: RewardChainSubBlock
     deficit: uint8
+    sub_epoch_summary: Optional[SubEpochSummary]
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,7 @@ class NewInfusionPointVDF:
 @dataclass(frozen=True)
 @cbor_message
 class NewSignagePointVDF:
+    index_from_challenge: uint8
     challenge_chain_sp_vdf: VDFInfo
     challenge_chain_sp_proof: VDFProof
     reward_chain_sp_vdf: VDFInfo
@@ -58,5 +60,5 @@ class NewSignagePointVDF:
 
 @dataclass(frozen=True)
 @cbor_message
-class NewEndOfSubSlot:
+class NewEndOfSubSlotVDF:
     end_of_sub_slot_bundle: EndOfSubSlotBundle
