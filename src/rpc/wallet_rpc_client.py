@@ -146,5 +146,11 @@ class WalletRpcClient(RpcClient):
             "create_backup", {"file_path": str(file_path.resolve())}
         )
 
+    async def get_spendable_coins(self, wallet_id):
+        return (await self.fetch(
+            "get_spendable_coins",
+            {"wallet_id": wallet_id}
+        ))["coins"]
+
 
 # TODO: add APIs for coloured coins and RL wallet

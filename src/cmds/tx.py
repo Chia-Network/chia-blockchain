@@ -1,5 +1,6 @@
 # tx command imports
 import json
+import asyncio
 from src.util.byte_types import hexstr_to_bytes
 
 # blspy
@@ -28,6 +29,9 @@ from src.wallet.puzzles.p2_delegated_puzzle import (
 )
 
 from src.util.debug_spend_bundle import debug_spend_bundle
+
+# Connect to actual wallet
+from src.rpc.wallet_rpc_client import WalletRpcClient
 
 
 # TODO: From wallet/wallet.py: refactor
@@ -155,6 +159,7 @@ command_list = [
     "create",
     "verify",
     "sign",
+    "push",
     "encode",
     "decode",
     "view-coins",
@@ -183,10 +188,23 @@ def make_parser(parser):
     parser.print_help = lambda self=parser: help_message()
 
 
+async def push_tx(args, parser):
+    print()
+    return
+
+
+async def view_coins(args, parser):
+    wrpc = await WalletRpcClient.create("127.0.0.1", 9256)
+    coins = await wrpc.get_spendable_coins(1)
+    print(coins)
+    wrpc.close()
+    return
+
+
 def handler(args, parser):
-    if args.command is None or len(args.command) < 1:
-        help_message()
-        parser.exit(1)
+    # if args.command is None or len(args.command) < 1:
+    #     help_message()
+    #     parser.exit(1)
 
     command = args.command
     if command not in command_list:
@@ -203,15 +221,15 @@ def handler(args, parser):
         print()
     elif command == "sign":
         print()
+    elif command == "push":
+        return asyncio.get_event_loop().run_until_complete(push_tx(args, parser))
+        print()
     elif command == "encode":
         print()
     elif command == "decode":
         print()
     elif command == "view-coins":
-        # check if wallet process is running
-        # connect to wallet process
-        # poll wallet for available coins
-        # return list of available coins
+        return asyncio.get_event_loop().run_until_complete(view_coins(args, parser))
         print()
     else:
         print(f"command '{command}' is not recognised")

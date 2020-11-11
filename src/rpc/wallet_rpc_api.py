@@ -67,6 +67,7 @@ class WalletRpcApi:
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
             "/create_backup": self.create_backup,
+            "/get_spendable_coins": self.get_spendable_coins,
             # Coloured coins and trading
             "/cc_set_name": self.cc_set_name,
             "/cc_get_name": self.cc_get_name,
@@ -505,6 +506,13 @@ class WalletRpcApi:
         file_path = Path(request["file_path"])
         await self.service.wallet_state_manager.create_wallet_backup(file_path)
         return {}
+
+    async def get_spendable_coins(self, request):
+        wallet_id = int(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        spendable_balance = await wallet.get_spendable_balance()
+        coins = await wallet.select_coins(spendable_balance)
+        return {"success": True, "coins": list(coins)}
 
     ##########################################################################################
     # Coloured Coins and Trading
