@@ -34,8 +34,6 @@ def service_kwargs_for_farmer(
     if fnp is not None:
         connect_peers.append(PeerInfo(fnp["host"], fnp["port"]))
 
-    # TOD: Remove once we have pool server
-    config_pool = load_config_cli(root_path, "config.yaml", "pool")
     farmer = Farmer(config, config_pool, keychain, consensus_constants)
     peer_api = FarmerAPI(farmer)
 

@@ -58,8 +58,8 @@ class ChiaServer:
         local_type: NodeType,
         ping_interval: int,
         network_id: str,
-        private_cert_path: Path,
-        private_key_path: Path,
+        root_path: Path,
+        config: Dict,
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
@@ -119,11 +119,15 @@ class ChiaServer:
         ssl_context = ssl_context_for_server(
             self._private_cert_path, self._private_key_path, require_cert
         )
-        self.site = web.TCPSite(
-            self.runner, port=self._port, shutdown_timeout=3, ssl_context=ssl_context
-        )
-        await self.site.start()
-        self.log.info(f"Started listening on port: {self._port}")
+        if self._local_type not in [NodeType.WALLET, NodeType.HARVESTER]:
+            self.site = web.TCPSite(
+                self.runner,
+                port=self._port,
+                shutdown_timeout=3,
+                ssl_context=ssl_context,
+            )
+            await self.site.start()
+            self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
         ws = web.WebSocketResponse()

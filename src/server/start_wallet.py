@@ -15,6 +15,8 @@ from src.util.keychain import Keychain
 from src.types.peer_info import PeerInfo
 
 # See: https://bugs.python.org/issue29288
+from src.wallet.wallet_node_api import WalletNodeAPI
+
 "".encode("idna")
 
 SERVICE_NAME = "wallet"
@@ -26,10 +28,10 @@ def service_kwargs_for_wallet(
     consensus_constants: ConsensusConstants,
     keychain: Keychain,
 ) -> Dict:
-
-    api = WalletNode(
+    node = WalletNode(
         config, keychain, root_path, consensus_constants=consensus_constants
     )
+    peer_api = WalletNodeAPI(node)
 
     fnp = config.get("full_node_peer")
     if fnp:
@@ -39,10 +41,11 @@ def service_kwargs_for_wallet(
 
     kwargs = dict(
         root_path=root_path,
-        api=api,
+        node=node,
+        peer_api=peer_api,
         node_type=NodeType.WALLET,
         service_name=SERVICE_NAME,
-        on_connect_callback=api._on_connect,
+        on_connect_callback=node._on_connect,
         connect_peers=connect_peers,
         auth_connect_peers=False,
     )

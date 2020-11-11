@@ -29,17 +29,8 @@ def service_kwargs_for_harvester(
         PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])
     ]
 
-    harvester = Harvester(root_path, constants: ConsensusConstants=)
+    harvester = Harvester(root_path, consensus_constants)
     peer_api = HarvesterAPI(harvester)
-
-    async def start_callback():
-        await harvester._start()
-
-    def stop_callback():
-        harvester._close()
-
-    async def await_closed_callback():
-        await harvester._await_closed()
 
     kwargs = dict(
         root_path=root_path,

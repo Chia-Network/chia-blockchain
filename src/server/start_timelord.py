@@ -5,6 +5,7 @@ from typing import Dict
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.timelord import Timelord
 from src.server.outbound_message import NodeType
+from src.timelord_api import TimelordAPI
 from src.types.peer_info import PeerInfo
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -25,11 +26,13 @@ def service_kwargs_for_timelord(
         PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])
     ]
 
-    api = Timelord(config, discriminant_size_bits)
+    node = Timelord(config, discriminant_size_bits)
+    peer_api = TimelordAPI(node)
 
     kwargs = dict(
         root_path=root_path,
-        api=api,
+        peer_api=peer_api,
+        node=node,
         node_type=NodeType.TIMELORD,
         advertised_port=config["port"],
         service_name=SERVICE_NAME,
