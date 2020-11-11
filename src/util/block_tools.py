@@ -260,7 +260,6 @@ class BlockTools:
             slot_cc_challenge, slot_rc_challenge = get_challenges(
                 sub_blocks, finished_sub_slots, latest_sub_block.header_hash
             )
-            print(f"Starting slot cc: {slot_cc_challenge} iters: {sub_slot_start_total_iters}")
 
             # Get all proofs of space for challenge.
             proofs_of_space: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
@@ -317,7 +316,7 @@ class BlockTools:
                 num_blocks -= 1
                 if num_blocks == 0:
                     return block_list
-                print(f"Added block {full_block.height} {full_block.total_iters}, not overflow")
+                print(f"Block tools: created block {full_block.height} {full_block.total_iters}, not overflow")
                 sub_blocks[full_block.header_hash] = sub_block_record
                 height_to_hash[uint32(full_block.height)] = full_block.header_hash
                 latest_sub_block = sub_blocks[full_block.header_hash]
@@ -374,7 +373,7 @@ class BlockTools:
                 ses_hash = sub_epoch_summary.get_hash()
                 new_ips: Optional[uint64] = sub_epoch_summary.new_ips
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
-                print(f"Sub epoch summary: {sub_epoch_summary}")
+                print(f"Block tools: sub epoch summary: {sub_epoch_summary}")
                 if new_ips is not None:
                     ips = new_ips
                     difficulty = new_difficulty
@@ -459,7 +458,7 @@ class BlockTools:
                 num_blocks -= 1
                 if num_blocks == 0:
                     return block_list
-                print(f"Added block {full_block.height} {full_block.total_iters}, overflow")
+                print(f"Block tools: created block {full_block.height} {full_block.total_iters}, overflow")
 
                 sub_blocks[full_block.header_hash] = sub_block_record
                 height_to_hash[uint32(full_block.height)] = full_block.header_hash
@@ -675,10 +674,12 @@ def finish_sub_block(
     slot_cc_challenge: bytes32,
     slot_rc_challenge: bytes32,
     latest_sub_block: SubBlockRecord,
-    difficulty,
+    ips: uint64,
+    difficulty: uint64,
 ):
     is_overflow = required_iters > ip_iters
     cc_vdf_challenge = slot_cc_challenge
+    slot_iters = calculate_sub_slot_iters(constants, ips)
     if len(finished_sub_slots) == 0:
         new_ip_iters = unfinished_block.total_iters - latest_sub_block.total_iters
         cc_vdf_input = latest_sub_block.challenge_vdf_output
@@ -704,7 +705,7 @@ def finish_sub_block(
         finished_sub_slots,
         latest_sub_block,
         sub_blocks,
-        sub_slot_start_total_iters,
+        (sub_slot_start_total_iters + slot_iters) if is_overflow else sub_slot_start_total_iters,
         deficit,
     )
 
@@ -1009,6 +1010,7 @@ def get_full_block_and_sub_record(
         slot_cc_challenge,
         slot_rc_challenge,
         prev_sub_block,
+        ips,
         difficulty,
     )
     return full_block, sub_block_record
