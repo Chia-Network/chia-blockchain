@@ -94,20 +94,23 @@ class RespondUnfinishedSubBlock:
 class NewSignagePointOrEndOfSubSlot:
     challenge_hash: uint32
     index_from_challenge: uint8
+    last_rc_infusion: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
 class RequestSignagePointOrEndOfSubSlot:
     challenge_hash: uint32
-    index_from_challenge: int32
+    index_from_challenge: uint8
+    last_rc_infusion: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
 class RespondSignagePoint:
     challenge_hash: bytes32
-    index: uint8
+    index_from_challenge: uint8
+    last_rc_infusion: bytes32
     challenge_chain_vdf: VDFInfo
     challenge_chain_proof: VDFProof
     reward_chain_vdf: VDFInfo
