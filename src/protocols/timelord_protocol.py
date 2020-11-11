@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.foliage import FoliageSubBlock
 from src.types.reward_chain_sub_block import (
     RewardChainSubBlock,
@@ -25,14 +26,24 @@ class NewPeak:
 
 @dataclass(frozen=True)
 @cbor_message
+class NewUnfinishedSubBlock:
+    reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
+    challenge_chain_sp_proof: VDFProof
+    reward_chain_sp_proof: VDFProof
+    foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
+    sub_epoch_summary: Optional[SubEpochSummary]
+
+
+@dataclass(frozen=True)
+@cbor_message
 class NewInfusionPointVDF:
     unfinished_reward_hash: bytes32
     challenge_chain_ip_vdf: VDFInfo
     challenge_chain_ip_proof: VDFProof
     reward_chain_ip_vdf: VDFInfo
     reward_chain_ip_proof: VDFProof
-    infused_challenge_chain_ip_vdf: VDFInfo
-    infused_challenge_chain_ip_proof: VDFProof
+    infused_challenge_chain_ip_vdf: Optional[VDFInfo]
+    infused_challenge_chain_ip_proof: Optional[VDFProof]
 
 
 @dataclass(frozen=True)
@@ -46,9 +57,5 @@ class NewSignagePointVDF:
 
 @dataclass(frozen=True)
 @cbor_message
-class NewUnfinishedSubBlock:
-    reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
-    challenge_chain_sp_proof: VDFProof
-    reward_chain_sp_proof: VDFProof
-    foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
-    sub_epoch_summary: Optional[SubEpochSummary]
+class NewEndOfSubSlot:
+    end_of_sub_slot_bundle: EndOfSubSlotBundle
