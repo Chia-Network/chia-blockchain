@@ -63,6 +63,8 @@ class FullNodeAPI:
     async def request_peers(
         self, request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection
     ):
+        if peer.peer_server_port is None:
+            return None
         peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
         msg = await self.full_node.full_node_peers.request_peers(peer_info)
         return msg
