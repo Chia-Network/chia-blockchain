@@ -175,8 +175,9 @@ class FullNodeDiscovery:
 
                 # Only connect out to one peer per network group (/16 for IPv4).
                 groups = []
-                connected = self.global_connections.get_full_node_peerinfos()
-                for conn in self.global_connections.get_outbound_connections():
+                full_node_connected = self.server.get_full_node_connections()
+                connected = [c.get_peer_info() for c in full_node_connected]
+                for conn in full_node_connected:
                     peer = conn.get_peer_info()
                     group = peer.get_group()
                     if group not in groups:
@@ -254,9 +255,7 @@ class FullNodeDiscovery:
                         time.time() - last_timestamp_local_info > 1800
                         or local_peerinfo is None
                     ):
-                        local_peerinfo = (
-                            await self.global_connections.get_local_peerinfo()
-                        )
+                        local_peerinfo = await self.server.get_peer_info()
                         last_timestamp_local_info = uint64(int(time.time()))
                     if local_peerinfo is not None and addr == local_peerinfo:
                         continue
@@ -272,7 +271,7 @@ class FullNodeDiscovery:
                 if addr is not None and initiate_connection:
                     asyncio.create_task(
                         self.server.start_client(
-                            addr, None, None, disconnect_after_handshake
+                            addr, is_feeler=disconnect_after_handshake
                         )
                     )
                 sleep_interval = 1 + len(groups) * 0.5
