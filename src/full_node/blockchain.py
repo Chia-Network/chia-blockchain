@@ -226,7 +226,7 @@ class Blockchain:
         )
 
         if error is not None:
-            log.warning(f"block {curr_header_block.header_hash} failed validation " + error.error_msg)
+            log.error(f"block {curr_header_block.header_hash} failed validation " + error.error_msg)
             return ReceiveBlockResult.INVALID_BLOCK, error.code, None
 
         error_code = await self.validate_block_body(block)
