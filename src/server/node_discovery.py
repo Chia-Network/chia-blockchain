@@ -1,6 +1,7 @@
 import asyncio
 import time
 import math
+from asyncio import Queue
 from pathlib import Path
 
 import aiosqlite
@@ -25,7 +26,7 @@ from src.protocols import (
 )
 from secrets import randbits
 from src.util.hash import std_hash
-from typing import Dict, Optional, AsyncGenerator
+from typing import Dict, Optional, AsyncGenerator, Tuple, Any
 from src.util.ints import uint64
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -43,17 +44,16 @@ class FullNodeDiscovery:
         log,
     ):
         self.server: ChiaServer = server
-        self.message_queue = asyncio.Queue()
+        self.message_queue: Queue[Tuple[str, Any]] = asyncio.Queue()
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
         self.peer_db_path = path_from_root(root_path, peer_db_path)
         if introducer_info is not None:
             self.introducer_info = PeerInfo(
-                introducer_info["host"],
-                introducer_info["port"],
+                introducer_info.host,
+                introducer_info.port,
             )
-        else:
-            self.introducer_info = None
+
         self.peer_connect_interval = peer_connect_interval
         self.log = log
         self.relay_queue = None

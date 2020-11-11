@@ -59,7 +59,7 @@ class WSChiaConnection:
         )
 
         self.peer_port = connection_port
-        self.peer_server_port: Optional[int] = None
+        self.peer_server_port: Optional[uint16] = None
         self.peer_node_id = None
 
         self.log = log
@@ -282,7 +282,7 @@ class WSChiaConnection:
         await self.ws.send_bytes(encoded)
         self.bytes_written += size
 
-    async def _read_one_message(self) -> Payload:
+    async def _read_one_message(self) -> Optional[Payload]:
         try:
             # Need timeout here in case connection is closed, this allows GC to clean up
             message: WSMessage = await self.ws.receive()
@@ -300,6 +300,7 @@ class WSChiaConnection:
                 await self.close()
         except asyncio.TimeoutError:
             raise TimeoutError("self.reader.readexactly(full_message_length)")
+        return None
 
     def get_peer_info(self):
         connection_host, connection_port = self.ws._writer.transport.get_extra_info(
