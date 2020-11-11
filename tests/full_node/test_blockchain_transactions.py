@@ -10,7 +10,6 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.header import HeaderData, Header
 from src.types.sized_bytes import bytes32
 from src.full_node.bundle_tools import best_solution_program
-from src.server.outbound_message import OutboundMessage
 from src.protocols import full_node_protocol
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
@@ -57,7 +56,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -125,7 +123,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -161,7 +158,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -197,7 +193,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -323,7 +318,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -425,7 +419,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -485,7 +478,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes_standard_freeze
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -533,7 +525,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -582,7 +573,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -652,7 +642,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -727,7 +716,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -786,7 +774,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -846,7 +833,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -907,7 +893,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
@@ -986,7 +971,6 @@ class TestBlockchainTransactions:
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
         full_node_1 = full_node_api_1.full_node
-        full_node_2 = full_node_api_2.full_node
 
         for block in blocks:
             await full_node_api_1.respond_block(full_node_protocol.RespondBlock(block))
