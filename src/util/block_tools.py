@@ -898,8 +898,8 @@ def handle_end_of_sub_epoch(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
 ) -> Optional[SubEpochSummary]:
-    fs = finishes_sub_epoch(constants, last_block.height, last_block.deficit, False, sub_blocks, last_block.prev_hash)
-    fe = finishes_sub_epoch(constants, last_block.height, last_block.deficit, True, sub_blocks, last_block.prev_hash)
+    fs = finishes_sub_epoch(constants, last_block, False, sub_blocks)
+    fe = finishes_sub_epoch(constants, last_block, True, sub_blocks)
 
     if not fs:  # Does not finish sub-epoch
         return None
