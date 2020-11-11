@@ -176,7 +176,7 @@ export const add_and_skip_backup = (mnemonic) => {
             dispatch(push('/wallet/import'));
           }
           const { error } = response.data;
-          dispatch(openErrorDialog( error));
+          dispatch(openErrorDialog(error));
         }
       },
     );

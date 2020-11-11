@@ -13,7 +13,9 @@ export function closeDialog(id: number) {
   };
 }
 
-export function openDialog(element: ReactNode): ThunkAction<any, RootState, unknown, Action<Object>> {
+export function openDialog(
+  element: ReactNode,
+): ThunkAction<any, RootState, unknown, Action<Object>> {
   return (dispatch) => {
     const id = nextId++;
 
@@ -39,13 +41,11 @@ export function openDialog(element: ReactNode): ThunkAction<any, RootState, unkn
   };
 }
 
-export function openErrorDialog(error: string): ThunkAction<any, RootState, unknown, Action<Object>> {
+export function openErrorDialog(
+  error: string,
+): ThunkAction<any, RootState, unknown, Action<Object>> {
   return (dispatch) => {
-    return dispatch(openDialog((
-      <AlertDialog>
-        {error}
-      </AlertDialog>
-    )));
+    return dispatch(openDialog(<AlertDialog>{error}</AlertDialog>));
   };
 }
 

@@ -15,13 +15,13 @@ export default function useSelectFile(): () => Promise<string | undefined> {
 
       return filePath;
     }
-      openDialog((
-        <AlertDialog>
-          <Trans id="useSelectFile.availableOnlyFromElectron">
-            This feature is available only from electron app
-          </Trans>
-        </AlertDialog>
-      ));
+    openDialog(
+      <AlertDialog>
+        <Trans id="useSelectFile.availableOnlyFromElectron">
+          This feature is available only from electron app
+        </Trans>
+      </AlertDialog>,
+    );
   }
 
   return handleSelect;

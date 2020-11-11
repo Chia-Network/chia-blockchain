@@ -197,11 +197,13 @@ export const handle_message = (store, payload) => {
           : 'No 24 word seed, since this key is imported.'
       }`;
     store.dispatch(
-      openDialog((
-        <AlertDialog title={`Private key ${payload.data.private_key.fingerprint}`}>
+      openDialog(
+        <AlertDialog
+          title={`Private key ${payload.data.private_key.fingerprint}`}
+        >
           text
-        </AlertDialog>
-      )),
+        </AlertDialog>,
+      ),
     );
   } else if (payload.command === 'delete_plot') {
     store.dispatch(refreshPlots());
@@ -254,11 +256,9 @@ export const handle_message = (store, payload) => {
     }
   } else if (payload.command === 'respond_to_offer') {
     if (payload.data.success) {
-      store.dispatch(openDialog((
-        <AlertDialog title="Success!">
-          Offer accepted
-        </AlertDialog>
-      )));
+      store.dispatch(
+        openDialog(<AlertDialog title="Success!">Offer accepted</AlertDialog>),
+      );
     }
     store.dispatch(resetTrades());
   } else if (payload.command === 'get_discrepancies_for_offer') {

@@ -2,10 +2,14 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../modules/rootReducer';
 import FarmerStatus from '../constants/FarmerStatus';
 
-function getFarmerStatus(connected: boolean, running: boolean, blockchainSynching: boolean): FarmerStatus {
+function getFarmerStatus(
+  connected: boolean,
+  running: boolean,
+  blockchainSynching: boolean,
+): FarmerStatus {
   if (blockchainSynching) {
     return FarmerStatus.SYNCHING;
-  } else if (connected && running) {
+  } if (connected && running) {
     return FarmerStatus.FARMING;
   }
 
@@ -14,7 +18,8 @@ function getFarmerStatus(connected: boolean, running: boolean, blockchainSynchin
 
 export default function useFarmerStatus(): FarmerStatus {
   const blockchainSynching = useSelector(
-    (state: RootState) => !!state.full_node_state.blockchain_state?.sync?.sync_mode,
+    (state: RootState) =>
+      !!state.full_node_state.blockchain_state?.sync?.sync_mode,
   );
   const connected = useSelector(
     (state: RootState) => state.daemon_state.farmer_connected,

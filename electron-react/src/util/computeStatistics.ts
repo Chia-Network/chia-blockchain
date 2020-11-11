@@ -44,7 +44,7 @@ export default async function computeStatistics(
       ) {
         totalChia += BigInt(tx.amount);
 
-        switch(tx.type) {
+        switch (tx.type) {
           case TransactionType.COINBASE_REWARD:
             coinbaseRewards += BigInt(tx.amount);
             break;

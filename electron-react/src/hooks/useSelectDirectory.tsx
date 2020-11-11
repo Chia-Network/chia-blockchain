@@ -5,12 +5,12 @@ import { AlertDialog } from '@chia/core';
 import useOpenDialog from './useOpenDialog';
 
 type Options = {
-  buttonLabel?: string,
+  buttonLabel?: string;
 };
 
-export default function useSelectDirectory(defaultOptions?: Options): (options?: Options) => Promise<
-  string | undefined
-> {
+export default function useSelectDirectory(
+  defaultOptions?: Options,
+): (options?: Options) => Promise<string | undefined> {
   const openDialog = useOpenDialog();
 
   async function handleSelect(options?: Options): Promise<string | undefined> {
@@ -26,13 +26,13 @@ export default function useSelectDirectory(defaultOptions?: Options): (options?:
       return filePath;
     }
 
-    openDialog((
+    openDialog(
       <AlertDialog>
         <Trans id="useSelectDirectory.availableOnlyFromElectron">
           This feature is available only from electron app
         </Trans>
-      </AlertDialog>
-    ));
+      </AlertDialog>,
+    );
   }
 
   return handleSelect;
