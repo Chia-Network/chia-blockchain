@@ -104,7 +104,7 @@ export default function TradeManager() {
           <Divider />
         </List>
       </Drawer>
-      <Flex flexDirection="column" flexGrow={1} height="100%" overflow="auto">
+      <Flex flexDirection="column" flexGrow={1} height="100%" width="100%" overflow="auto">
         <Container maxWidth="lg">
           <Grid container spacing={3}>
             {/* Chart */}

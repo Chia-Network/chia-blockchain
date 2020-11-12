@@ -76,8 +76,8 @@ export default function Dashboard() {
         <Divider />
         <DashboardSideBar />
       </StyledDrawer>
-      <Flex flexGrow={1} flexDirection="column">
-        <StyledBody flexGrow={1} flexDirection="column" overflow="auto">
+      <Flex flexGrow={1} flexDirection="column" width="100%" overflow="auto">
+        <StyledBody flexGrow={1} flexDirection="column" height="100%">
           <ToolbarSpacing />
           <Flex flexGrow={1} overflow="hidden">
             <Switch>

@@ -24,6 +24,7 @@ export default function LayoutMain(props: Props): JSX.Element {
         flexDirection="column"
         flexGrow={1}
         height="100%"
+        width="100%"
         overflow="auto"
         alignItems="center"
       >

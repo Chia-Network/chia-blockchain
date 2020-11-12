@@ -44,7 +44,7 @@ export default function AlertDialog(props: Props) {
       )}
 
       <DialogActions>
-        <Button onClick={handleClose} color="primary" autoFocus>
+        <Button onClick={handleClose} autoFocus>
           Ok
         </Button>
       </DialogActions>
