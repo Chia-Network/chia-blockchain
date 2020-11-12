@@ -5,7 +5,7 @@ from src.util.byte_types import hexstr_to_bytes
 from clvm_tools import binutils
 
 # blspy
-from blspy import G1Element, G2Element, AugSchemeMPL
+from blspy import G1Element, G2Element
 
 # transaction imports
 from src.types.program import Program
@@ -128,7 +128,7 @@ def create_unsigned_tx_from_json(json_tx):
         if "spend_requests" in s:
             input_coins_json = s["input_coins"]
             spend_requests_json = s["spend_requests"]  # Output addresses and amounts
-            pubkey = G1Element.from_bytes(hexstr_to_bytes(input_coins_json[0]["pubkey"]))
+            G1Element.from_bytes(hexstr_to_bytes(input_coins_json[0]["pubkey"]))
             #print("PUB", type(pubkey), pubkey)
             input_coins = [
                 CoinWithPubkey(
@@ -236,14 +236,12 @@ def handler(args, parser):
         print()
     elif command == "push":
         return asyncio.get_event_loop().run_until_complete(push_tx(args, parser))
-        print()
     elif command == "encode":
         print()
     elif command == "decode":
         print()
     elif command == "view-coins":
         return asyncio.get_event_loop().run_until_complete(view_coins(args, parser))
-        print()
     else:
         print(f"command '{command}' is not recognised")
         parser.exit(1)
