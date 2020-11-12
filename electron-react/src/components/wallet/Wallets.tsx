@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
+import styled from 'styled-components';
 import {
   Box,
   Grid,
@@ -29,6 +30,10 @@ import ColouredWallet from './coloured/WalletColoured';
 import RateLimitedWallet from './rateLimited/WalletRateLimited';
 import type { RootState } from '../../modules/rootReducer';
 import WalletType from '../../constants/WalletType';
+
+const StyledList = styled(List)`
+  width: 100%;
+`;
 
 const drawerWidth = 180;
 
@@ -84,11 +89,6 @@ const useStyles = makeStyles((theme) => ({
   balancePaper: {
     height: 200,
     marginTop: theme.spacing(2),
-  },
-  bottomOptions: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
   },
 }));
 
@@ -153,7 +153,7 @@ const CreateWallet = () => {
   }
 
   return (
-    <div className={classes.bottomOptions}>
+    <div>
       <Divider />
       <ListItem button onClick={presentCreateWallet}>
         <ListItemText
@@ -231,18 +231,22 @@ export default function Wallets() {
         }}
         open={open}
       >
-        <Divider />
-        <StatusCard />
-        <Divider />
-        <List disablePadding>
-          {wallets.map((wallet) => (
-            <span key={wallet.id}>
-              <WalletItem wallet_id={wallet.id} key={wallet.id} />
-              <Divider />
-            </span>
-          ))}
-        </List>
-        <CreateWallet />
+        <Flex flexDirection="column" height="100%">
+          <Divider />
+          <StatusCard />
+          <Divider />
+          <Flex flexGrow={1} overflow="auto">
+            <StyledList disablePadding>
+              {wallets.map((wallet) => (
+                <span key={wallet.id}>
+                  <WalletItem wallet_id={wallet.id} key={wallet.id} />
+                  <Divider />
+                </span>
+              ))}
+            </StyledList>
+          </Flex>
+          <CreateWallet />
+        </Flex>
       </Drawer>
       <Flex flexDirection="column" flexGrow={1} height="100%" overflow="auto">
         <Container maxWidth="lg">
