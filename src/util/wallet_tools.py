@@ -18,6 +18,8 @@ from src.util.ints import uint32, uint64
 from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
+    calculate_synthetic_secret_key,
+    DEFAULT_HIDDEN_PUZZLE_HASH,
 )
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_coin_consumed_condition,
@@ -170,6 +172,9 @@ class WalletTool:
             secretkey = self.get_private_key_for_puzzle_hash(
                 coin_solution.coin.puzzle_hash
             )
+            synthetic_secret_key = calculate_synthetic_secret_key(
+                secretkey, DEFAULT_HIDDEN_PUZZLE_HASH
+            )
             err, con, cost = conditions_for_solution(coin_solution.solution)
             if not con:
                 raise ValueError(err)
@@ -178,7 +183,7 @@ class WalletTool:
             for _, msg in pkm_pairs_for_conditions_dict(
                 conditions_dict, bytes(coin_solution.coin.name())
             ):
-                signature = AugSchemeMPL.sign(secretkey, msg)
+                signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 sigs.append(signature)
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(coin_solutions, aggsig)
