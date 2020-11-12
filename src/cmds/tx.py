@@ -5,7 +5,7 @@ from src.util.byte_types import hexstr_to_bytes
 from clvm_tools import binutils
 
 # blspy
-from blspy import G1Element, G2Element, AugSchemeMPL
+from blspy import G1Element, G2Element
 
 # transaction imports
 from src.types.program import Program
@@ -68,7 +68,7 @@ class SpendRequest:
 
 def create_unsigned_transaction(
     coins: Set[CoinWithPubkey] = None,  # Set[CoinWithPuzzle] = None,
-    spend_requests: Set[SpendRequest] = None,
+    spend_requests: List[SpendRequest] = None,
     validate=True,
 ) -> List[CoinSolution]:
     """
@@ -78,9 +78,16 @@ def create_unsigned_transaction(
     if coins is None or len(coins) < 1:
         raise (ValueError("tx create requires one or more input_coins"))
     assert len(coins) > 0
-
+    # We treat the first coin as the origin
+    # For simplicity, only the origin coin creates outputs
+    origin = coins.pop()
+    outputs = []
     input_value = sum([coin.amount for coin in coins])
-    sent_value = sum([req.amount for req in spend_requests])
+    sent_value = 0
+    if spend_requests is not None:
+        sent_value = sum([req.amount for req in spend_requests])
+        for request in spend_requests:
+            outputs.append({"puzzlehash": request.puzzle_hash, "amount": request.amount})
     if validate and sent_value != input_value:
         raise (
             ValueError(
@@ -90,28 +97,17 @@ def create_unsigned_transaction(
 
     spends: List[CoinSolution] = []
 
-    # We treat the first coin as the origin
-    # For simplicity, only the origin coin creates outputs
-    origin = coins[0]
-    outputs = []
-
     # Eventually, we will support specifying the puzzle directly in the
     # input to create_unsigned_transaction (viaCoinWithPuzzle).
     # For now, we specify a pubkey, and use the "standard transaction"
     origin_puzzle = puzzle_for_pk(origin.pubkey)
-    for coin in coins:
-        puzzle = puzzle_for_pk(coin.pubkey)
-        assert puzzle.get_tree_hash() == coin.puzzle_hash
-
-    for request in spend_requests:
-        outputs.append({"puzzlehash": request.puzzle_hash, "amount": request.amount})
+    assert origin_puzzle.get_tree_hash() == origin.puzzle_hash
 
     solution = make_solution(primaries=outputs, fee=0)
     puzzle_solution_pair = Program.to([origin_puzzle, solution])
     spends.append(CoinSolution(origin, puzzle_solution_pair))
 
-    # Create nil solutions for the other input coins
-    for coin in coins[1:]:
+    for coin in coins:
         print(f"processing coin {coin}")
         solution = make_solution()
         puzzle = puzzle_for_pk(coin.pubkey)
@@ -129,7 +125,7 @@ def create_unsigned_tx_from_json(json_tx):
             input_coins_json = s["input_coins"]
             spend_requests_json = s["spend_requests"]  # Output addresses and amounts
             pubkey = G1Element.from_bytes(hexstr_to_bytes(input_coins_json[0]["pubkey"]))
-            #print("PUB", type(pubkey), pubkey)
+            print("PUB", type(pubkey), pubkey)
             input_coins = [
                 CoinWithPubkey(
                     Coin(
@@ -137,7 +133,7 @@ def create_unsigned_tx_from_json(json_tx):
                         hexstr_to_bytes(c["puzzle_hash"]),
                         c["amount"],
                     ),
-                    G1Element.from_bytes(hexstr_to_bytes(c["pubkey"]))
+                    pubkey
                 )
                 for c in input_coins_json
             ]
@@ -145,7 +141,7 @@ def create_unsigned_tx_from_json(json_tx):
                 SpendRequest(hexstr_to_bytes(s["puzzle_hash"]), s["amount"])
                 for s in spend_requests_json
             ]
-            #print(input_coins, spend_requests)
+            print(input_coins, spend_requests)
             spends.extend(create_unsigned_transaction(input_coins, spend_requests))
         elif "solution" in s:
             input_coin = Coin(
