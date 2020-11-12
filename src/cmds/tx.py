@@ -2,6 +2,7 @@
 import json
 import asyncio
 from src.util.byte_types import hexstr_to_bytes
+from clvm_tools import binutils
 
 # blspy
 from blspy import G1Element, G2Element, AugSchemeMPL
@@ -122,29 +123,41 @@ def create_unsigned_transaction(
 
 def create_unsigned_tx_from_json(json_tx):
     j = json.loads(json_tx)
-    input_coins_json = j["input_coins"]
-    spend_requests_json = j["spend_requests"]  # Output addresses and amounts
-    pubkey = G1Element.from_bytes(hexstr_to_bytes(input_coins_json[0]["pubkey"]))
-    print("PUB", type(pubkey), pubkey)
-    input_coins = [
-        CoinWithPubkey(
-            Coin(
-                hexstr_to_bytes(c["parent_id"]),
-                hexstr_to_bytes(c["puzzle_hash"]),
-                c["amount"],
-            ),
-            G1Element.from_bytes(hexstr_to_bytes(c["pubkey"]))
-        )
-        for c in input_coins_json
-    ]
-    spend_requests = [
-        SpendRequest(hexstr_to_bytes(s["puzzle_hash"]), s["amount"])
-        for s in spend_requests_json
-    ]
+    spends = []
+    for s in j["spends"]:
+        if "spend_requests" in s:
+            input_coins_json = s["input_coins"]
+            spend_requests_json = s["spend_requests"]  # Output addresses and amounts
+            pubkey = G1Element.from_bytes(hexstr_to_bytes(input_coins_json[0]["pubkey"]))
+            #print("PUB", type(pubkey), pubkey)
+            input_coins = [
+                CoinWithPubkey(
+                    Coin(
+                        hexstr_to_bytes(c["parent_id"]),
+                        hexstr_to_bytes(c["puzzle_hash"]),
+                        c["amount"],
+                    ),
+                    G1Element.from_bytes(hexstr_to_bytes(c["pubkey"]))
+                )
+                for c in input_coins_json
+            ]
+            spend_requests = [
+                SpendRequest(hexstr_to_bytes(s["puzzle_hash"]), s["amount"])
+                for s in spend_requests_json
+            ]
+            #print(input_coins, spend_requests)
+            spends.extend(create_unsigned_transaction(input_coins, spend_requests))
+        elif "solution" in s:
+            input_coin = Coin(
+                hexstr_to_bytes(s["input_coin"]["parent_id"]),
+                hexstr_to_bytes(s["input_coin"]["puzzle_hash"]),
+                uint64(s["input_coin"]["amount"]),
+            )
+            puzzle_reveal = Program(binutils.assemble(s["puzzle_reveal"]))
+            assert puzzle_reveal.get_tree_hash() == input_coin.puzzle_hash
+            solution = Program(binutils.assemble(s["solution"]))
+            spends.append(CoinSolution(input_coin, Program.to([puzzle_reveal, solution])))
 
-    print(input_coins, spend_requests)
-
-    spends = create_unsigned_transaction(input_coins, spend_requests)
     spend_bundle = SpendBundle(spends, G2Element.infinity())
     debug_spend_bundle(spend_bundle)
     # output = { "spends": spends }

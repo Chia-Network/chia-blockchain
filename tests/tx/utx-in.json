@@ -1,20 +1,35 @@
 {
-    "input_coins": [
-        {
-            "pubkey": "b8250e03370173410e406a227e4ae0987c5d3d1bd1ede7d9c38aa118c5f81fdaa84622180b6519c1cce2a247e4c604cb",
-            "parent_id": "61f3b7016bf1ecc3987b8805207e79362e4de8026682e149107999b779426e3a",
-            "puzzle_hash": "f6579bfc8c3a1bf65591a3128e3231d24a73a1daa055190b5953db783f3cb1bc",
-            "amount": 9
-        }
-    ],
-    "spend_requests": [
-        {
-            "puzzle_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-            "amount": 4
-        },
-        {
-            "puzzle_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-            "amount": 5
-        }
-    ]
+  "spends":
+  [
+      {
+        "input_coins": [
+            {
+                "pubkey": "b8250e03370173410e406a227e4ae0987c5d3d1bd1ede7d9c38aa118c5f81fdaa84622180b6519c1cce2a247e4c604cb",
+                "parent_id": "61f3b7016bf1ecc3987b8805207e79362e4de8026682e149107999b779426e3a",
+                "puzzle_hash": "f6579bfc8c3a1bf65591a3128e3231d24a73a1daa055190b5953db783f3cb1bc",
+                "amount": 9
+            }
+        ],
+        "spend_requests": [
+            {
+                "puzzle_hash": "3766a7e30d9db8bfc53e57a18e7b903877fd5f00c08e728de1abcd997de4cb87",
+                "amount": 4
+            },
+            {
+                "puzzle_hash": "f6579bfc8c3a1bf65591a3128e3231d24a73a1daa055190b5953db783f3cb1bc",
+                "amount": 5
+            }
+        ]
+    },
+    {
+      "input_coin": {
+          "parent_id": "de33fafebc3251e4919b8d6ae120f1d271af1ac5155ba6afa674f9af4767a42f",
+          "puzzle_hash": "3766a7e30d9db8bfc53e57a18e7b903877fd5f00c08e728de1abcd997de4cb87",
+          "amount": 4
+      },
+      "puzzle_reveal": "((c (i (= (sha256 2) (q 0x2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824)) (q (c (c (q 51) (c 5 (c (q 100) (q ())))) (q ()))) (q (x 'wrong password'))) 1))",
+      "solution": "('hello' 0xc4841b0e3c08faf750ee5d0024be40484b082eb5ff6c484312c5431bf1dc2785)"
+    }
+  ]
+
 }
