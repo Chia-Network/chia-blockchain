@@ -150,6 +150,17 @@ class TestAddingMoreBlocks:
             assert result == ReceiveBlockResult.NEW_PEAK
         assert blockchain.get_peak().height == num_blocks - 1
 
+    @pytest.mark.asyncio
+    async def test_one_sb_per_two_slots(self, empty_blockchain):
+        blockchain = empty_blockchain
+        num_blocks = 20
+        blocks = []
+        for i in range(num_blocks):  # Same thing, but 2 sub-slots per sub-block
+            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=2)
+            result, err, _ = await blockchain.receive_block(blocks[-1])
+            assert result == ReceiveBlockResult.NEW_PEAK
+        assert blockchain.get_peak().height == num_blocks - 1
+
 
 #
 # # class TestBlockValidation:
