@@ -68,14 +68,14 @@ class TestGenesisBlock:
 
     @pytest.mark.asyncio
     async def test_genesis_empty_slots(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, force_empty_slots=9)[0]
+        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=9)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_overflow_genesis_empty_slots(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=True, force_empty_slots=10)[0]
+        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=True, skip_slots=10)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
@@ -91,8 +91,8 @@ class TestGenesisBlock:
 
 class TestAddingMoreBlocks:
     @pytest.mark.asyncio
-    async def test_non_genesis(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(test_constants, 20000, force_overflow=False, force_empty_slots=0)
+    async def test_basic_chain(self, empty_blockchain):
+        blocks = bt.get_consecutive_blocks(test_constants, 200)
         for block in blocks:
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
@@ -101,6 +101,54 @@ class TestAddingMoreBlocks:
                 f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
             )
         assert empty_blockchain.get_peak().height == len(blocks) - 1
+
+    @pytest.mark.asyncio
+    async def test_multiple_times(self, empty_blockchain):
+        blockchain = empty_blockchain
+        blocks = bt.get_consecutive_blocks(test_constants, 10)
+        for block in blocks:
+            result, err, _ = await blockchain.receive_block(block)
+            assert result == ReceiveBlockResult.NEW_PEAK
+
+        blocks = bt.get_consecutive_blocks(test_constants, 10, block_list=blocks)
+        assert len(blocks) == 20
+        for block in blocks[10:]:
+            result, err, _ = await blockchain.receive_block(block)
+            assert result == ReceiveBlockResult.NEW_PEAK
+        assert blockchain.get_peak().height == 19
+
+    @pytest.mark.asyncio
+    async def test_empty_genesis(self, empty_blockchain):
+        blockchain = empty_blockchain
+        blocks = bt.get_consecutive_blocks(test_constants, 10, skip_slots=10)
+        for block in blocks:
+            result, err, _ = await blockchain.receive_block(block)
+            assert result == ReceiveBlockResult.NEW_PEAK
+
+    @pytest.mark.asyncio
+    async def test_empty_slots_non_genesis(self, empty_blockchain):
+        blockchain = empty_blockchain
+        blocks = bt.get_consecutive_blocks(test_constants, 10)
+        for block in blocks:
+            result, err, _ = await blockchain.receive_block(block)
+            assert result == ReceiveBlockResult.NEW_PEAK
+
+        blocks = bt.get_consecutive_blocks(test_constants, 10, skip_slots=10, block_list=blocks)
+        for block in blocks[10:]:
+            result, err, _ = await blockchain.receive_block(block)
+            assert result == ReceiveBlockResult.NEW_PEAK
+        assert blockchain.get_peak().height == 19
+
+    @pytest.mark.asyncio
+    async def test_one_sb_per_slot(self, empty_blockchain):
+        blockchain = empty_blockchain
+        num_blocks = 20
+        blocks = []
+        for i in range(num_blocks):
+            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=1)
+            result, err, _ = await blockchain.receive_block(blocks[-1])
+            assert result == ReceiveBlockResult.NEW_PEAK
+        assert blockchain.get_peak().height == num_blocks - 1
 
 
 #
