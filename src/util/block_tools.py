@@ -201,7 +201,7 @@ class BlockTools:
         seed: bytes = b"",
         time_per_sub_block: Optional[float] = None,
         force_overflow: bool = False,
-        force_empty_slots: uint32 = uint32(0),  # Force at least this number of empty slots before the first SB
+        skip_slots: uint32 = uint32(0),  # Force at least this number of empty slots before the first SB
     ) -> List[FullBlock]:
         if transaction_data_at_height is None:
             transaction_data_at_height = {}
@@ -219,11 +219,14 @@ class BlockTools:
                 constants,
                 seed,
                 force_overflow=force_overflow,
-                force_empty_slots=force_empty_slots,
+                skip_slots=skip_slots,
                 timestamp=uint64(int(time.time())),
             )
+            num_empty_slots_added = skip_slots
             block_list = [genesis]
             num_blocks -= 1
+        else:
+            num_empty_slots_added = 0  # Allows forcing empty slots in the beginning, for testing purposes
 
         if num_blocks == 0:
             return block_list
@@ -244,30 +247,34 @@ class BlockTools:
         finished_sub_slots: List[EndOfSubSlotBundle] = []  # Sub-slots since last sub block
         ips: uint64 = latest_sub_block.ips
         sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)  # The number of iterations in one sub-slot
-        num_empty_slots_added = 0  # Allows forcing empty slots in the beginning, for testing purposes
         same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
-        sub_slot_start_total_iters: uint128 = uint128(0)
+        sub_slot_start_total_iters: uint128 = latest_sub_block.total_iters - calculate_ip_iters(
+            constants, latest_sub_block.ips, latest_sub_block.required_iters
+        )
 
         # Start at the last block in block list
         # Get the challenge for that slot
         while True:
-            # If did not reach empty slot counts, continue
-            if num_empty_slots_added < force_empty_slots:
-                num_empty_slots_added += 1
-                continue
-
+            print(
+                "Sub_slot_start_total_iters",
+            )
             slot_cc_challenge, slot_rc_challenge = get_challenges(
                 sub_blocks, finished_sub_slots, latest_sub_block.header_hash
             )
 
-            # Get all proofs of space for challenge.
-            proofs_of_space: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
-                constants,
-                slot_cc_challenge,
-                seed,
-                difficulty,
-                ips,
-            )
+            # If did not reach the target slots to skip, don't make any proofs for this sub-slot
+            if num_empty_slots_added < skip_slots:
+                num_empty_slots_added += 1
+                proofs_of_space = []
+            else:
+                # Get all proofs of space for challenge.
+                proofs_of_space: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
+                    constants,
+                    slot_cc_challenge,
+                    seed,
+                    difficulty,
+                    ips,
+                )
             overflow_pos = []
             prev_num_of_blocks = num_blocks
             for required_iters, proof_of_space in sorted(proofs_of_space, key=lambda t: t[0]):
@@ -324,6 +331,9 @@ class BlockTools:
             # Finish the end of sub-slot and try again next sub-slot
             # End of sub-slot logic
             if len(finished_sub_slots) == 0:
+                print(
+                    f"finished sub slots is 0. ssi: {sub_slot_iters} {latest_sub_block.total_iters} {sub_slot_start_total_iters}"
+                )
                 # Sub block has been created within this sub-slot
                 eos_iters = sub_slot_iters - (latest_sub_block.total_iters - sub_slot_start_total_iters)
                 cc_input = latest_sub_block.challenge_vdf_output
@@ -355,6 +365,7 @@ class BlockTools:
                 sub_blocks,
                 sub_slot_start_total_iters,
                 latest_sub_block.deficit,
+                True,
             )
             # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
             # in order for light clients to validate.
@@ -477,7 +488,7 @@ class BlockTools:
         timestamp: Optional[uint64] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         force_overflow: bool = False,
-        force_empty_slots: uint32 = uint32(0),
+        skip_slots: uint32 = uint32(0),
     ) -> FullBlock:
         if timestamp is None:
             timestamp = time.time()
@@ -508,7 +519,7 @@ class BlockTools:
                 is_overflow_block = sp_iters > ip_iters
                 if force_overflow and not is_overflow_block:
                     continue
-                if len(finished_sub_slots) < force_empty_slots:
+                if len(finished_sub_slots) < skip_slots:
                     continue
 
                 unfinished_block = create_unfinished_block(
@@ -706,6 +717,7 @@ def finish_sub_block(
         sub_blocks,
         (sub_slot_start_total_iters + slot_iters) if is_overflow else sub_slot_start_total_iters,
         deficit,
+        False,
     )
 
     rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
@@ -857,12 +869,19 @@ def get_icc(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     sub_slot_start_total_iters: uint128,
     deficit: uint8,
+    is_sub_slot: bool,
 ) -> Tuple[Optional[VDFInfo], Optional[VDFProof]]:
-    if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
-        # Curr block has deficit either 4 or 5 so no need for ICC vdfs
-        return None, None
+    if is_sub_slot:
+        if deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+            # Only deficit 5 sub slots should have no icc
+            return None, None
+    else:
+        if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+            # Curr block has deficit either 4 or 5 so no need for ICC vdfs
+            return None, None
 
     if len(finished_sub_slots) != 0:
+        assert finished_sub_slots[-1].reward_chain.deficit <= (constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1)
         return get_vdf_info_and_proof(
             constants,
             ClassgroupElement.get_default_element(),

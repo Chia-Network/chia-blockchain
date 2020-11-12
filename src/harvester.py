@@ -62,7 +62,6 @@ class Harvester:
         self.server = None
         self.constants = constants
         self.cached_challenges = []
-        self.pool_share_threshold = uint64(0)
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -163,7 +162,6 @@ class Harvester:
         """
         self.farmer_public_keys = harvester_handshake.farmer_public_keys
         self.pool_public_keys = harvester_handshake.pool_public_keys
-        self.pool_share_threshold = harvester_handshake.pool_share_threshold
 
         await self._refresh_plots()
 
@@ -201,7 +199,6 @@ class Harvester:
         await self._refresh_plots()
 
         loop = asyncio.get_running_loop()
-        pool_share_threshold: uint64 = self.pool_share_threshold
 
         def blocking_lookup(filename: Path, plot_info: PlotInfo, prover: DiskProver) -> List[ProofOfSpace]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
@@ -222,7 +219,7 @@ class Harvester:
                         prover.get_size(),
                         new_challenge.difficulty,
                     )
-                    if required_iters < new_challenge.slot_iterations or required_iters < pool_share_threshold:
+                    if required_iters < new_challenge.slot_iterations:
                         # Found a very good proof of space! will fetch the whole proof from disk, then send to farmer
                         try:
                             proof_xs = prover.get_full_proof(new_challenge.challenge_hash, index)
