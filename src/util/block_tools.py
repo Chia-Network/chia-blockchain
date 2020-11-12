@@ -357,6 +357,11 @@ class BlockTools:
                 eos_iters,
             )
 
+            eos_deficit: uint8 = (
+                latest_sub_block.deficit
+                if latest_sub_block.deficit > 0
+                else constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+            )
             icc_ip_vdf, icc_ip_proof = get_icc(
                 constants,
                 sub_slot_start_total_iters + sub_slot_iters,
@@ -364,7 +369,7 @@ class BlockTools:
                 latest_sub_block,
                 sub_blocks,
                 sub_slot_start_total_iters,
-                latest_sub_block.deficit,
+                eos_deficit,
                 True,
             )
             # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
@@ -425,9 +430,7 @@ class BlockTools:
                         rc_vdf,
                         cc_sub_slot.get_hash(),
                         icc_sub_slot.get_hash() if icc_sub_slot is not None else None,
-                        latest_sub_block.deficit
-                        if latest_sub_block.deficit > 0
-                        else constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
+                        eos_deficit,
                     ),
                     SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
                 )
@@ -872,8 +875,8 @@ def get_icc(
     is_sub_slot: bool,
 ) -> Tuple[Optional[VDFInfo], Optional[VDFProof]]:
     if is_sub_slot:
-        if deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-            # Only deficit 5 sub slots should have no icc
+        if deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK and len(finished_sub_slots) > 0:
+            # Only deficit 5 empty sub slots should have no icc
             return None, None
     else:
         if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
@@ -881,6 +884,8 @@ def get_icc(
             return None, None
 
     if len(finished_sub_slots) != 0:
+        print(finished_sub_slots[-1])
+        print(deficit)
         assert finished_sub_slots[-1].reward_chain.deficit <= (constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1)
         return get_vdf_info_and_proof(
             constants,

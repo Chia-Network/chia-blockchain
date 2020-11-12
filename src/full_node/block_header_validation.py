@@ -93,12 +93,13 @@ async def validate_unfinished_header_block(
             else:
                 icc_iters_committed: Optional[uint64] = None
                 icc_iters_proof: Optional[uint64] = None
-                if prev_sb.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                icc_challenge_hash: Optional[bytes32] = None
+                icc_vdf_input = None
+                if prev_sb.deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                     # There should be no ICC chain if the last sub block's deficit is 5
-                    icc_challenge_hash: Optional[bytes32] = None
-                    icc_vdf_input = None
-                else:
+                    # Prev sb's deficit is 0, 1, 2, 3, or 4
                     if finished_sub_slot_n == 0:
+                        # This is the first sub slot after the last sb, which must have deficit 1-4, and thus an ICC
                         curr: SubBlockRecord = prev_sb
                         while not curr.is_challenge_sub_block(constants) and not curr.first_in_sub_slot:
                             curr = sub_blocks[curr.prev_hash]
@@ -118,15 +119,22 @@ async def validate_unfinished_header_block(
                         else:
                             icc_vdf_input = prev_sb.infused_challenge_vdf_output
                     else:
-                        icc_challenge_hash = header_block.finished_sub_slots[
-                            finished_sub_slot_n - 1
-                        ].infused_challenge_chain.get_hash()
-                        icc_iters_committed = calculate_sub_slot_iters(constants, prev_sb.ips)
-                        icc_iters_proof = icc_iters_committed
-                        icc_vdf_input = ClassgroupElement.get_default_element()
+                        # This is not the first sub slot after the last sub block, so we might not have an ICC
+                        if (
+                            header_block.finished_sub_slots[finished_sub_slot_n - 1].reward_chain.deficit
+                            < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+                        ):
+                            # Only sets the icc iff the previous sub slots deficit is 4 or less
+                            icc_challenge_hash = header_block.finished_sub_slots[
+                                finished_sub_slot_n - 1
+                            ].infused_challenge_chain.get_hash()
+                            icc_iters_committed = calculate_sub_slot_iters(constants, prev_sb.ips)
+                            icc_iters_proof = icc_iters_committed
+                            icc_vdf_input = ClassgroupElement.get_default_element()
 
                 assert (sub_slot.infused_challenge_chain is None) == (icc_challenge_hash is None)
                 if sub_slot.infused_challenge_chain is not None:
+                    assert icc_vdf_input is not None
                     # 2c. Check infused challenge chain sub-slot VDF
                     # Only validate from prev_sb to optimize
                     target_vdf_info = VDFInfo(
