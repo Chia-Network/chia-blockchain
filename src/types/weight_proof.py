@@ -1,17 +1,14 @@
+from dataclasses import dataclass
 from typing import List, Optional
 
-from attr import dataclass
 from blspy import G2Element
 
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
-from src.types.vdf import VDFProof
-
 from src.types.sized_bytes import bytes32
-
-from src.util import streamable
-from src.util.ints import uint64, uint32, uint8
-from src.util.streamable import Streamable
+from src.util.ints import uint8, uint64, uint32
+from src.util.streamable import Streamable, streamable
+from src.types.vdf import VDFProof
 
 
 @dataclass(frozen=True)
@@ -39,7 +36,6 @@ class SubepochChallengeSegment(Streamable):
     infusion_point_vdf: Optional[VDFProof]  # if infused
     # VDF from infusion point to end of subslot
     infusion_to_slot_end_vdf: Optional[VDFProof]  # if infused
-
     # VDF from beginning to end of subslot
     slot_vdf: Optional[VDFProof]  # if not infused
 
@@ -48,7 +44,5 @@ class SubepochChallengeSegment(Streamable):
 @streamable
 class WeightProof(Streamable):
     sub_epoch_data: List[SubEpochData]
-
     sub_epoch_segments: List[SubepochChallengeSegment]
-    # Recent reward chain
     header_block: List[HeaderBlock]
