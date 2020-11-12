@@ -16,7 +16,7 @@ from src.consensus.constants import ConsensusConstants
 @streamable
 class ProofOfSpace(Streamable):
     challenge_hash: bytes32
-    pool_public_key: Optional[G1Element]
+    pool_public_key: Optional[G1Element]  # Only one of these two should be present
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
     size: uint8
