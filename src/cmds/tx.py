@@ -129,7 +129,7 @@ def create_unsigned_tx_from_json(json_tx):
             input_coins_json = s["input_coins"]
             spend_requests_json = s["spend_requests"]  # Output addresses and amounts
             G1Element.from_bytes(hexstr_to_bytes(input_coins_json[0]["pubkey"]))
-            #print("PUB", type(pubkey), pubkey)
+            # print("PUB", type(pubkey), pubkey)
             input_coins = [
                 CoinWithPubkey(
                     Coin(
@@ -137,7 +137,7 @@ def create_unsigned_tx_from_json(json_tx):
                         hexstr_to_bytes(c["puzzle_hash"]),
                         c["amount"],
                     ),
-                    G1Element.from_bytes(hexstr_to_bytes(c["pubkey"]))
+                    G1Element.from_bytes(hexstr_to_bytes(c["pubkey"])),
                 )
                 for c in input_coins_json
             ]
@@ -145,7 +145,7 @@ def create_unsigned_tx_from_json(json_tx):
                 SpendRequest(hexstr_to_bytes(s["puzzle_hash"]), s["amount"])
                 for s in spend_requests_json
             ]
-            #print(input_coins, spend_requests)
+            # print(input_coins, spend_requests)
             spends.extend(create_unsigned_transaction(input_coins, spend_requests))
         elif "solution" in s:
             input_coin = Coin(
@@ -156,7 +156,9 @@ def create_unsigned_tx_from_json(json_tx):
             puzzle_reveal = Program(binutils.assemble(s["puzzle_reveal"]))
             assert puzzle_reveal.get_tree_hash() == input_coin.puzzle_hash
             solution = Program(binutils.assemble(s["solution"]))
-            spends.append(CoinSolution(input_coin, Program.to([puzzle_reveal, solution])))
+            spends.append(
+                CoinSolution(input_coin, Program.to([puzzle_reveal, solution]))
+            )
 
     spend_bundle = SpendBundle(spends, G2Element.infinity())
     debug_spend_bundle(spend_bundle)
