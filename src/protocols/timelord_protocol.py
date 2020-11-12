@@ -22,6 +22,7 @@ Protocol between timelord and full node.
 @cbor_message
 class NewPeak:
     reward_chain_sub_block: RewardChainSubBlock
+    difficulty: uint64
     deficit: uint8
     ips: uint64  # IPS in the slot where NewPeak has been infused
     sub_epoch_summary: Optional[SubEpochSummary]  # If NewPeak is the last sub-block, the next slot should include this

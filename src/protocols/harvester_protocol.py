@@ -18,7 +18,6 @@ Protocol between harvester and farmer.
 class HarvesterHandshake:
     farmer_public_keys: List[G1Element]
     pool_public_keys: List[G1Element]
-    pool_share_threshold: uint64
 
 
 @dataclass(frozen=True)

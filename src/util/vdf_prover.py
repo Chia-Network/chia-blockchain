@@ -17,7 +17,7 @@ def get_vdf_info_and_proof(
 ) -> Tuple[VDFInfo, VDFProof]:
     int_size = (constants.DISCRIMINANT_SIZE_BITS + 16) >> 4
     result: bytes = prove(
-        challenge_hash, str(vdf_input.a), str(vdf_input.b), constants.DISCRIMINANT_SIZE_BITS, number_iters
+        bytes(challenge_hash), str(vdf_input.a), str(vdf_input.b), constants.DISCRIMINANT_SIZE_BITS, number_iters
     )
 
     output = ClassgroupElement(
