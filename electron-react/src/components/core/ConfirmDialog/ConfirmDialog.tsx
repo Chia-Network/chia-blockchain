@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Button, ButtonProps, Dialog, DialogProps, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@material-ui/core';
+import { Button, ButtonProps, Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText } from '@material-ui/core';
 
 type Props = {
   title?: ReactNode,

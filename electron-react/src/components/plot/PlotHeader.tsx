@@ -4,7 +4,7 @@ import { Flex } from '@chia/core';
 import { useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { Button } from '@material-ui/core';
-import { NavigateNext as NavigateNextIcon, Add as AddIcon } from '@material-ui/icons';
+import { Add as AddIcon } from '@material-ui/icons';
 import RefreshIcon from '@material-ui/icons/Refresh';
 import {
   refreshPlots,

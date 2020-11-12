@@ -14,14 +14,6 @@ import {
 import { Flex, SideBarItem } from '@chia/core';
 import { logOut } from '../../modules/message';
 
-const StyledHomeIcon = styled(HomeIcon)`
-  path {
-    stroke: ${({ theme }) =>
-      theme.palette.type === 'dark' ? 'white' : '#757575'};
-    stroke-width: 1;
-  }
-`;
-
 const StyledRoot = styled(Flex)`
   height: 100%;
   overflow-y: auto;

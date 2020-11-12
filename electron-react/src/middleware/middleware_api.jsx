@@ -1,5 +1,5 @@
 import React from 'react';
-import { push } from 'connected-react-router';
+// import { push } from 'connected-react-router';
 import { AlertDialog } from '@chia/core';
 import isElectron from 'is-electron';
 import {
@@ -199,7 +199,7 @@ export const handle_message = (store, payload) => {
         <AlertDialog
           title={`Private key ${payload.data.private_key.fingerprint}`}
         >
-          text
+          {text}
         </AlertDialog>,
       ),
     );

@@ -21,16 +21,6 @@ const StyledFlexContainer = styled(({ color: Color, ...rest }) => <Flex {...rest
   color: ${({ color }) => color};
 `;
 
-function getFarmerStatus(connected: boolean, running: boolean, blockchainSynching: boolean): FarmerStatus {
-  if (blockchainSynching) {
-    return FarmerStatus.SYNCHING;
-  } else if (connected && running) {
-    return FarmerStatus.FARMING;
-  }
-
-  return FarmerStatus.ERROR;
-}
-
 export default function FarmerStatusComponent() {
   const farmerStatus = useFarmerStatus();
   const color = Color[farmerStatus];

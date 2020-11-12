@@ -7,7 +7,7 @@ type Props = {
 };
 
 export default function ModalDialogs(props: Props): JSX.Element {
-  const { dialogs, onClose } = props;
+  const { dialogs } = props;
 
   function handleClose(value: any, dialog: Dialog) {
     const { resolve, reject } = dialog;

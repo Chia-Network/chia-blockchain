@@ -8,7 +8,6 @@ import {
   DeleteForever as DeleteForeverIcon,
 } from '@material-ui/icons';
 import {
-  refreshPlots,
   deletePlot,
 } from '../../modules/harvesterMessages';
 import type Plot from '../../types/Plot';
@@ -45,10 +44,6 @@ export default function PlotAction(props: Props) {
     if (canDelete) {
       dispatch(deletePlot(filename));
     }
-  }
-
-  function handleOpenMenu() {
-
   }
 
   return (

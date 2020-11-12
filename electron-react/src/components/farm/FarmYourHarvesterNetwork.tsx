@@ -3,8 +3,6 @@ import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import { useSelector } from 'react-redux';
 import {
-  Card,
-  CardContent,
   Typography,
   Tooltip,
   IconButton,

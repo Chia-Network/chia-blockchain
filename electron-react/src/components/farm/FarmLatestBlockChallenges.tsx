@@ -3,8 +3,6 @@ import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import moment from 'moment';
 import {
-  Card,
-  CardContent,
   Typography,
   Link,
   Tooltip,

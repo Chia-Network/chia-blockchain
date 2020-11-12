@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { AdvancedOptions, CardStep, Select, TextField } from '@chia/core';
-import { Grid, Link, FormControl, Typography, InputLabel, MenuItem, InputAdornment, FormHelperText } from '@material-ui/core';
+import { Grid, FormControl, InputLabel, MenuItem, InputAdornment } from '@material-ui/core';
 
 const plotCountOptions: number[] = [];
 
