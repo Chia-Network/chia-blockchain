@@ -370,7 +370,6 @@ class BlockTools:
                 sub_blocks,
                 sub_slot_start_total_iters,
                 eos_deficit,
-                True,
             )
             # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
             # in order for light clients to validate.
@@ -720,7 +719,6 @@ def finish_sub_block(
         sub_blocks,
         (sub_slot_start_total_iters + slot_iters) if is_overflow else sub_slot_start_total_iters,
         deficit,
-        False,
     )
 
     rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
@@ -872,20 +870,21 @@ def get_icc(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     sub_slot_start_total_iters: uint128,
     deficit: uint8,
-    is_sub_slot: bool,
 ) -> Tuple[Optional[VDFInfo], Optional[VDFProof]]:
-    if is_sub_slot:
-        if deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK and len(finished_sub_slots) > 0:
-            # Only deficit 5 empty sub slots should have no icc
-            return None, None
+    if len(finished_sub_slots) == 0:
+        prev_deficit = latest_sub_block.deficit
     else:
-        if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
-            # Curr block has deficit either 4 or 5 so no need for ICC vdfs
-            return None, None
+        prev_deficit = finished_sub_slots[-1].reward_chain.deficit
+
+    if deficit == prev_deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+        # new slot / overflow sb to new slot / overflow sb
+        return None, None
+
+    if deficit == (prev_deficit - 1) == (constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1):
+        # new slot / overflow sb to challenge sb
+        return None, None
 
     if len(finished_sub_slots) != 0:
-        print(finished_sub_slots[-1])
-        print(deficit)
         assert finished_sub_slots[-1].reward_chain.deficit <= (constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1)
         return get_vdf_info_and_proof(
             constants,
@@ -907,7 +906,8 @@ def get_icc(
     else:
         # First sub block in sub slot has deficit 0,1,2 or 3
         icc_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
-
+    if icc_input is None:
+        print(deficit, icc_input, latest_sub_block, finished_sub_slots)
     return get_vdf_info_and_proof(
         constants,
         icc_input,
