@@ -152,7 +152,9 @@ def create_unsigned_tx_from_json(json_tx):
             puzzle_reveal = Program(binutils.assemble(s["puzzle_reveal"]))
             assert puzzle_reveal.get_tree_hash() == input_coin.puzzle_hash
             solution = Program(binutils.assemble(s["solution"]))
-            spends.append(CoinSolution(input_coin, Program.to([puzzle_reveal, solution])))
+            spends.append(
+                CoinSolution(input_coin, Program.to([puzzle_reveal, solution]))
+            )
 
     spend_bundle = SpendBundle(spends, G2Element.infinity())
     debug_spend_bundle(spend_bundle)
@@ -232,14 +234,12 @@ def handler(args, parser):
         print()
     elif command == "push":
         return asyncio.get_event_loop().run_until_complete(push_tx(args, parser))
-        print()
     elif command == "encode":
         print()
     elif command == "decode":
         print()
     elif command == "view-coins":
         return asyncio.get_event_loop().run_until_complete(view_coins(args, parser))
-        print()
     else:
         print(f"command '{command}' is not recognised")
         parser.exit(1)
