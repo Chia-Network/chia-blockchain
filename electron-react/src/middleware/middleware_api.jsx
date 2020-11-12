@@ -153,8 +153,6 @@ export const refreshAllState = (dispatch) => {
   dispatch(getPlotDirectories());
   dispatch(isServiceRunning(service_plotter));
   dispatch(get_all_trades());
-
-  console.log('get_plots was called');
 };
 
 export const handle_message = (store, payload) => {

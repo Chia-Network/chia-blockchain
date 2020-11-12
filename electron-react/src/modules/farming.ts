@@ -99,7 +99,6 @@ export default function farmingReducer(
 
       // Harvester API
       if (command === 'get_plots') {
-        console.log('get plots', data);
         if (data.success !== true) {
           return state;
         }

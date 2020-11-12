@@ -21,7 +21,6 @@ export const startPlotting = (k, n, t, t2, d, b, u, r, s) => {
     s,
   };
 
-  console.log('action', action);
   return action;
 };
 

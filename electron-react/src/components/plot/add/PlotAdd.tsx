@@ -3,9 +3,10 @@ import { useHistory } from 'react-router';
 import { useDispatch } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { Button } from '@material-ui/core';
+import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { Flex, Form } from '@chia/core';
-import { PlotHeaderSource } from '../PlotHeader';
+import { PlotHeaderSource } from '../Plot';
 import PlotAddChooseSize from './PlotAddChooseSize';
 import PlotAddNumberOfPlots from './PlotAddNumberOfPlots';
 import PlotAddSelectTemporaryDirectory from './PlotAddSelectTemporaryDirectory';
@@ -44,7 +45,6 @@ export default function PlotAdd(): JSX.Element {
   });
 
   const handleSubmit: SubmitHandler<FormData> = (data) => {
-    console.log('data', data);
     const {
       plotSize,
       plotCount,
@@ -77,9 +77,12 @@ export default function PlotAdd(): JSX.Element {
       methods={methods}
       onSubmit={handleSubmit}>
       <PlotHeaderSource>
-        <Trans id="PlotAdd.title">
-          Add a Plot
-        </Trans>
+        <Flex alignItems="center">
+          <ChevronRightIcon color="secondary" />
+          <Trans id="PlotAdd.title">
+            Add a Plot
+          </Trans>
+        </Flex>
       </PlotHeaderSource>
       <Flex flexDirection="column" gap={3}>
         <PlotAddChooseSize />

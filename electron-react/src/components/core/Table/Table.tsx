@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import {
   TableContainer,
@@ -9,6 +9,7 @@ import {
   TableCell,
   Paper,
   Tooltip,
+  TablePagination,
 } from '@material-ui/core';
 
 const StyledTableHead = styled(TableHead)`
@@ -53,10 +54,37 @@ type Props = {
   }[];
   rows: Row[];
   children?: ReactNode,
+  pages?: boolean,
+  rowsPerPageOptions?: number[],
+  rowsPerPage: number,
 };
 
 export default function Table(props: Props) {
-  const { cols, rows, children } = props;
+  const { cols, rows, children, pages, rowsPerPageOptions, rowsPerPage: defaultRowsPerPage } = props;
+  const [page, setPage] = useState<number>(0);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(defaultRowsPerPage);
+
+  function handleChangePage(
+    event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null,
+    newPage: number,
+  ) {
+    setPage(newPage);
+  }
+
+  function handleChangeRowsPerPage (
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) {
+    setRowsPerPage(+event.target.value);
+    setPage(0);
+  }
+
+  const currentRows = useMemo(() => {
+    if (!pages) {
+      return rows;
+    }
+
+    return rows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }, [rows, pages, page, rowsPerPage]);
 
   return (
     <TableContainer component={Paper}>
@@ -79,7 +107,7 @@ export default function Table(props: Props) {
         </StyledTableHead>
         <TableBody>
           {children}
-          {rows.map((row, rowIndex) => (
+          {currentRows.map((row, rowIndex) => (
             <StyledTableRow key={`${row.id}-${rowIndex}`}>
               {cols.map((col, colIndex) => {
                 const { field, tooltip } = col;
@@ -122,6 +150,23 @@ export default function Table(props: Props) {
           ))}
         </TableBody>
       </TableBase>
+      {pages && (
+        <TablePagination
+          rowsPerPageOptions={rowsPerPageOptions}
+          component="div"
+          count={rows.length ?? 0}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onChangePage={handleChangePage}
+          onChangeRowsPerPage={handleChangeRowsPerPage}
+        />
+      )}
     </TableContainer>
   );
 }
+
+Table.defaultProps = {
+  pages: false,
+  rowsPerPageOptions: [10, 25, 100],
+  rowsPerPage: 10,
+};

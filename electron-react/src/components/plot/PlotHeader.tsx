@@ -1,17 +1,22 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Flex, Link } from '@chia/core';
+import { Flex } from '@chia/core';
+import { useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
-import { createTeleporter } from 'react-teleporter';
-import { Button, Breadcrumbs, Divider, Grid, Typography } from '@material-ui/core';
-import { NavigateNext as NavigateNextIcon } from '@material-ui/icons';
-
-const PlotHeaderTeleporter = createTeleporter();
-
-export const PlotHeaderSource = PlotHeaderTeleporter.Source;
+import { Button } from '@material-ui/core';
+import { NavigateNext as NavigateNextIcon, Add as AddIcon } from '@material-ui/icons';
+import RefreshIcon from '@material-ui/icons/Refresh';
+import {
+  refreshPlots,
+} from '../../modules/harvesterMessages';
 
 export default function PlotHeader() {
   const history = useHistory();
+  const dispatch = useDispatch();
+
+  function handleRefreshPlots() {
+    dispatch(refreshPlots());
+  }
 
   function handleAddPlot() {
     history.push('/dashboard/plot/add');
@@ -21,20 +26,21 @@ export default function PlotHeader() {
     <div>
       <Flex alignItems="center">
         <Flex flexGrow={1}>
-          <Breadcrumbs separator={<NavigateNextIcon fontSize="small" />}>
-            <Link to="/dashboard/plot">
-              <Typography color="textPrimary">
-                <Trans id="PlotHeader.title">Plot</Trans>
-              </Typography>
-            </Link>
-            <PlotHeaderTeleporter.Target />
-          </Breadcrumbs>
         </Flex>
-        <Button color="primary" onClick={handleAddPlot}>
-          <Trans id="PlotHeader.addAPlot">+ Add a Plot</Trans>
-        </Button>
+        <div>
+          <Button
+            color="secondary"
+            onClick={handleRefreshPlots}
+            startIcon={<RefreshIcon />}
+          >
+            <Trans id="PlotHeader.refreshPlots">Refresh Plots</Trans>
+          </Button>
+          {' '}
+          <Button color="primary" onClick={handleAddPlot} startIcon={<AddIcon />}>
+            <Trans id="PlotHeader.addAPlot">Add a Plot</Trans>
+          </Button>
+        </div>
       </Flex>
-      <Divider />
     </div>
   );
 }

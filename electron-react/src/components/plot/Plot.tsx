@@ -1,19 +1,31 @@
 import React from 'react';
-import { Flex } from '@chia/core';
+import { Flex, Link } from '@chia/core';
 import { Trans } from '@lingui/macro';
+import { createTeleporter } from 'react-teleporter';
 import { Route, Switch, useRouteMatch } from 'react-router-dom';
 import LayoutMain from '../layout/LayoutMain';
 import PlotOverview from './overview/PlotOverview';
-import PlotHeader from './PlotHeader';
 import PlotAdd from './add/PlotAdd';
+
+const PlotHeaderTeleporter = createTeleporter();
+
+export const PlotHeaderSource = PlotHeaderTeleporter.Source;
 
 export default function Plot() {
   const { path } = useRouteMatch();
 
   return (
-    <LayoutMain title={<Trans id="Plot.title">Plot</Trans>}>
+    <LayoutMain
+      title={(
+        <>
+          <Link to="/dashboard/plot" color="textPrimary">
+            <Trans id="Plot.title">Plot</Trans>
+          </Link>
+          <PlotHeaderTeleporter.Target />
+        </>
+      )
+       }>
       <Flex flexDirection="column" gap={2}>
-        {/* <PlotHeader /> */}
         <Switch>
           <Route path={path} exact>
             <PlotOverview />
