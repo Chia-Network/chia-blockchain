@@ -161,6 +161,36 @@ class TestAddingMoreBlocks:
             assert result == ReceiveBlockResult.NEW_PEAK
         assert blockchain.get_peak().height == num_blocks - 1
 
+    @pytest.mark.asyncio
+    async def test_one_sb_per_five_slots(self, empty_blockchain):
+        blockchain = empty_blockchain
+        num_blocks = 10
+        blocks = []
+        for i in range(num_blocks):  # Same thing, but 5 sub-slots per sub-block
+            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=5)
+            result, err, _ = await blockchain.receive_block(blocks[-1])
+            assert result == ReceiveBlockResult.NEW_PEAK
+        assert blockchain.get_peak().height == num_blocks - 1
+
+    @pytest.mark.asyncio
+    async def test_basic_chain_overflow(self, empty_blockchain):
+        blocks = bt.get_consecutive_blocks(test_constants, 30, force_overflow=True)
+        for block in blocks:
+            result, err, _ = await empty_blockchain.receive_block(block)
+            assert err is None
+            assert result == ReceiveBlockResult.NEW_PEAK
+        assert empty_blockchain.get_peak().height == len(blocks) - 1
+
+    @pytest.mark.asyncio
+    async def test_one_sb_per_two_slots_force_overflow(self, empty_blockchain):
+        blockchain = empty_blockchain
+        num_blocks = 10
+        blocks = []
+        for i in range(num_blocks):
+            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=2, force_overflow=True)
+            result, err, _ = await blockchain.receive_block(blocks[-1])
+            assert result == ReceiveBlockResult.NEW_PEAK
+        assert blockchain.get_peak().height == num_blocks - 1
 
 #
 # # class TestBlockValidation:
