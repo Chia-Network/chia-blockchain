@@ -9,7 +9,7 @@ function getFarmerStatus(
 ): FarmerStatus {
   if (blockchainSynching) {
     return FarmerStatus.SYNCHING;
-  } if (connected && running) {
+  } else if (connected && running) {
     return FarmerStatus.FARMING;
   }
 
