@@ -179,7 +179,10 @@ def help_message():
         "usage: chia tx command\n"
         + f"command can be any of {command_list}\n"
         + "\n"
-        + "chia tx create amount puzzle_hash fee origin_id [coins]\n"
+        + "Examples:\n"
+        + "    chia tx create json_transaction_specification\n"
+        + "    chia tx push json_transaction\n"
+        + "    chia tx view-coins\n"
     )
 
 
@@ -187,21 +190,23 @@ def make_parser(parser):
     parser.add_argument(
         "command",
         help=f"Command can be any one of {command_list}",
-        type=str,
-        nargs="?",
+        type=str
+    )
+    parser.add_argument(
+        "cmd_args",
+        nargs="*"
     )
 
-    parser.add_argument("json_tx", help="json encoded transaction", type=str)
     parser.set_defaults(function=handler)
     parser.print_help = lambda self=parser: help_message()
 
 
-async def push_tx(args, parser):
-    print("push_tx", args, parser)
+async def push_tx(args):
+    print("push_tx", args)
     return
 
 
-async def view_coins(args, parser):
+async def view_coins(args):
     wrpc = await WalletRpcClient.create("127.0.0.1", 9256)
     coins = await wrpc.get_spendable_coins(1)
     print(coins)
@@ -209,34 +214,40 @@ async def view_coins(args, parser):
     return
 
 
+def fail_cmd(parser, msg):
+            print(f"\n{msg}")
+            help_message()
+            parser.exit(1)
+
+
 def handler(args, parser):
-    # if args.command is None or len(args.command) < 1:
-    #     help_message()
-    #     parser.exit(1)
 
     command = args.command
     if command not in command_list:
         help_message()
         parser.exit(1)
 
+    if args.cmd_args is None or len(args.cmd_args) < 1:
+        fail_cmd(parser, f"Too few arguments to command 'chia tx {command}'")
+    if len(args.cmd_args) > 1:
+        fail_cmd(parser, f"Too many arguments to command 'chia tx {command}'")
+
     if command == "create":
-        if args.json_tx is None:
-            print("create command is missing json_tx")
-            help_message()
-            parser.exit(1)
-        create_unsigned_tx_from_json(args.json_tx)
+        json_tx = args.cmd_args[0]
+        create_unsigned_tx_from_json(json_tx)
     elif command == "verify":
         print()
     elif command == "sign":
         print()
     elif command == "push":
-        parser.exit(asyncio.get_event_loop().run_until_complete(push_tx(args, parser)))
+        json_tx = args.cmd_args[0]
+        parser.exit(asyncio.get_event_loop().run_until_complete(push_tx(json_tx)))
     elif command == "encode":
         print()
     elif command == "decode":
         print()
     elif command == "view-coins":
-        parser.exit(asyncio.get_event_loop().run_until_complete(view_coins(args, parser)))
+        parser.exit(asyncio.get_event_loop().run_until_complete(view_coins(args.cmd_args)))
     else:
         print(f"command '{command}' is not recognised")
         parser.exit(1)
