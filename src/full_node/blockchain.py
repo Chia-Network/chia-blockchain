@@ -12,8 +12,7 @@ from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_ips
 from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
-from src.types.condition_var_pair import ConditionVarPair
-from src.types.full_block import FullBlock, additions_for_npc
+from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.full_node.sub_block_record import SubBlockRecord
@@ -297,8 +296,8 @@ class Blockchain:
             self.height_to_hash,
             header_hash,
             curr.height,
-            curr.deficit,
             uint64(curr.weight - self.sub_blocks[curr.prev_hash].weight),
+            curr.deficit,
             new_slot,
             uint128(curr.total_iters - ip_iters + sp_iters),
         )
@@ -316,8 +315,8 @@ class Blockchain:
                 self.height_to_hash,
                 header_hash,
                 curr.height,
-                curr.deficit,
                 curr.ips,
+                curr.deficit,
                 new_slot,
                 uint128(curr.total_iters - ip_iters + sp_iters),
             )

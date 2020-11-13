@@ -6,7 +6,6 @@ import sys
 import tempfile
 import time
 from argparse import Namespace
-from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Callable
 
@@ -39,7 +38,6 @@ from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.pool_target import PoolTarget
 from src.types.proof_of_space import ProofOfSpace
-from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.sized_bytes import bytes32
 from src.types.slots import (
     InfusedChallengeChainSubSlot,
@@ -51,7 +49,7 @@ from src.types.spend_bundle import SpendBundle
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFInfo, VDFProof
-from src.full_node.block_creation import create_unfinished_block
+from src.full_node.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from src.util.config import load_config
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8
@@ -64,7 +62,6 @@ from src.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from tests.recursive_replace import recursive_replace
 
 
 class BlockTools:
@@ -331,9 +328,6 @@ class BlockTools:
             # Finish the end of sub-slot and try again next sub-slot
             # End of sub-slot logic
             if len(finished_sub_slots) == 0:
-                print(
-                    f"finished sub slots is 0. ssi: {sub_slot_iters} {latest_sub_block.total_iters} {sub_slot_start_total_iters}"
-                )
                 # Sub block has been created within this sub-slot
                 eos_iters = sub_slot_iters - (latest_sub_block.total_iters - sub_slot_start_total_iters)
                 cc_input = latest_sub_block.challenge_vdf_output
@@ -784,58 +778,6 @@ def get_plot_dir():
     return cache_path
 
 
-def unfinished_block_to_full_block(
-    unfinished_block: UnfinishedBlock,
-    cc_ip_vdf: VDFInfo,
-    cc_ip_proof: VDFProof,
-    rc_ip_vdf: VDFInfo,
-    rc_ip_proof: VDFProof,
-    icc_ip_vdf: Optional[VDFInfo],
-    icc_ip_proof: Optional[VDFProof],
-    finished_sub_slots: List[EndOfSubSlotBundle],
-    prev_sub_block: Optional[SubBlockRecord],
-    difficulty: uint64,
-):
-    # Replace things that need to be replaced, since foliage blocks did not necessarily have the latest information
-    if prev_sub_block is None:
-        new_weight = uint128(difficulty)
-        new_height = uint32(0)
-        new_foliage_sub_block = unfinished_block.foliage_sub_block
-    else:
-        new_weight = uint128(prev_sub_block.weight + difficulty)
-        new_height = uint32(prev_sub_block.height + 1)
-        new_foliage_sub_block = replace(
-            unfinished_block.foliage_sub_block, prev_sub_block_hash=prev_sub_block.header_hash
-        )
-    ret = FullBlock(
-        finished_sub_slots,
-        RewardChainSubBlock(
-            new_weight,
-            new_height,
-            unfinished_block.reward_chain_sub_block.total_iters,
-            unfinished_block.reward_chain_sub_block.proof_of_space,
-            unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf,
-            unfinished_block.reward_chain_sub_block.challenge_chain_sp_signature,
-            cc_ip_vdf,
-            unfinished_block.reward_chain_sub_block.reward_chain_sp_vdf,
-            unfinished_block.reward_chain_sub_block.reward_chain_sp_signature,
-            rc_ip_vdf,
-            icc_ip_vdf,
-            unfinished_block.foliage_block is not None,
-        ),
-        unfinished_block.challenge_chain_sp_proof,
-        cc_ip_proof,
-        unfinished_block.reward_chain_sp_proof,
-        rc_ip_proof,
-        icc_ip_proof,
-        new_foliage_sub_block,
-        unfinished_block.foliage_block,
-        unfinished_block.transactions_info,
-        unfinished_block.transactions_generator,
-    )
-    return recursive_replace(ret, "foliage_sub_block.reward_block_hash", ret.reward_chain_sub_block.get_hash())
-
-
 def load_block_list(block_list, constants) -> (Dict[uint32, bytes32], uint64, Dict[uint32, SubBlockRecord]):
     difficulty = 0
     height_to_hash: Dict[uint32, bytes32] = {}
@@ -922,8 +864,8 @@ def handle_end_of_sub_epoch(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
 ) -> Optional[SubEpochSummary]:
-    fs = finishes_sub_epoch(constants, last_block, False, sub_blocks)
-    fe = finishes_sub_epoch(constants, last_block, True, sub_blocks)
+    fs = finishes_sub_epoch(constants, last_block.height, last_block.deficit, False, sub_blocks, last_block.prev_hash)
+    fe = finishes_sub_epoch(constants, last_block.height, last_block.deficit, True, sub_blocks, last_block.prev_hash)
 
     if not fs:  # Does not finish sub-epoch
         return None
@@ -941,8 +883,8 @@ def handle_end_of_sub_epoch(
             height_to_hash,
             last_block.header_hash,
             last_block.height,
-            last_block.deficit,
             uint64(last_block.weight - sub_blocks[last_block.prev_hash].weight),
+            last_block.deficit,
             True,
             uint128(last_block.total_iters - ip_iters + sp_iters),
         )
@@ -952,8 +894,8 @@ def handle_end_of_sub_epoch(
             height_to_hash,
             last_block.header_hash,
             last_block.height,
-            last_block.deficit,
             last_block.ips,
+            last_block.deficit,
             True,
             uint128(last_block.total_iters - ip_iters + sp_iters),
         )
