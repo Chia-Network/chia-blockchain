@@ -1,8 +1,10 @@
+from typing import List, Set
+
 # tx command imports
 import json
 import asyncio
-from src.util.byte_types import hexstr_to_bytes
 from clvm_tools import binutils
+from src.util.byte_types import hexstr_to_bytes
 
 # blspy
 from blspy import G1Element, G2Element
@@ -15,8 +17,6 @@ from src.types.spend_bundle import SpendBundle
 from src.types.coin import Coin
 from src.types.coinwithpubkey import CoinWithPubkey
 from src.util.ints import uint64
-from typing import List, Set
-
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_my_coin_id_condition,
     make_assert_time_exceeds_condition,
@@ -28,7 +28,6 @@ from src.wallet.puzzles.p2_delegated_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
 )
-
 from src.util.debug_spend_bundle import debug_spend_bundle
 
 # Connect to actual wallet
@@ -76,7 +75,7 @@ def create_unsigned_transaction(
     """
 
     if coins is None or len(coins) < 1:
-        raise (ValueError("tx create requires one or more input_coins"))
+        raise ValueError("tx create requires one or more input_coins")
     assert len(coins) > 0
     # We treat the first coin as the origin
     # For simplicity, only the origin coin creates outputs
@@ -198,7 +197,7 @@ def make_parser(parser):
 
 
 async def push_tx(args, parser):
-    print()
+    print("push_tx", args, parser)
     return
 
 
@@ -231,13 +230,13 @@ def handler(args, parser):
     elif command == "sign":
         print()
     elif command == "push":
-        return asyncio.get_event_loop().run_until_complete(push_tx(args, parser))
+        parser.exit(asyncio.get_event_loop().run_until_complete(push_tx(args, parser)))
     elif command == "encode":
         print()
     elif command == "decode":
         print()
     elif command == "view-coins":
-        return asyncio.get_event_loop().run_until_complete(view_coins(args, parser))
+        parser.exit(asyncio.get_event_loop().run_until_complete(view_coins(args, parser)))
     else:
         print(f"command '{command}' is not recognised")
         parser.exit(1)
