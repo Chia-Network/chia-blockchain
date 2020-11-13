@@ -1,5 +1,8 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 
+from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
+from src.types.unfinished_block import UnfinishedBlock
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 from src.consensus.constants import ConsensusConstants
@@ -102,35 +105,33 @@ def _get_last_block_in_previous_epoch(
 
 def finishes_sub_epoch(
     constants: ConsensusConstants,
-    perv_sb: SubBlockRecord,
+    height: uint32,
+    deficit: uint8,
     also_finishes_epoch: bool,
     sub_blocks: Dict[bytes32, SubBlockRecord],
+    prev_header_hash: bytes32,
 ) -> bool:
     """
     Returns true if the next sub-slot after height will form part of a new sub-epoch (or epoch if also_finished_epoch
     is set to True). Warning: This assumes the previous sub-block did not finish a sub-epoch. TODO: check
     """
 
-    # if genesis
-    if perv_sb is None:
-        return False
-
-    if perv_sb.height < constants.SUB_EPOCH_SUB_BLOCKS - 1:
+    if height < constants.SUB_EPOCH_SUB_BLOCKS - 1:
         return False
 
     # If last slot does not have enough blocks for a new challenge chain infusion, return same difficulty
-    if perv_sb.deficit > 0:
+    if deficit > 0:
         return False
 
     # Disqualify blocks which are too far past in height
     # The maximum possible height which includes sub epoch summary
-    if (perv_sb.height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
+    if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
         return False
 
     # For sub-blocks which equal 0 or 1, we assume that the sub-epoch has not been finished yet
-    if (perv_sb.height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > 1:
+    if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > 1:
         already_included_ses = False
-        curr: SubBlockRecord = sub_blocks[perv_sb.header_hash]
+        curr: SubBlockRecord = sub_blocks[prev_header_hash]
         while curr.height % constants.SUB_EPOCH_SUB_BLOCKS > 0:
             if curr.sub_epoch_summary_included is not None:
                 already_included_ses = True
@@ -142,7 +143,7 @@ def finishes_sub_epoch(
 
     # For checking new epoch, make sure the epoch sub blocks are aligned
     if also_finishes_epoch:
-        if (perv_sb.height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
+        if (height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
             return False
 
     return True
@@ -154,8 +155,8 @@ def get_next_ips(
     height_to_hash: Dict[uint32, bytes32],
     prev_header_hash: bytes32,
     height: uint32,
-    deficit: uint8,
     ips: uint64,
+    deficit: uint8,
     new_slot: bool,
     signage_point_total_iters: uint128,
 ) -> uint64:
@@ -174,7 +175,7 @@ def get_next_ips(
     prev_sb: SubBlockRecord = sub_blocks[prev_header_hash]
 
     # If we are in the same epoch, return same ips
-    if not new_slot or not finishes_sub_epoch(constants, prev_sb, True, sub_blocks):
+    if not new_slot or not finishes_sub_epoch(constants, height, deficit, True, sub_blocks, prev_header_hash):
         return ips
 
     last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(
@@ -218,8 +219,8 @@ def get_next_difficulty(
     height_to_hash: Dict[uint32, bytes32],
     prev_header_hash: bytes32,
     height: uint32,
-    deficit: uint8,
     current_difficulty: uint64,
+    deficit: uint8,
     new_slot: bool,
     signage_point_total_iters: uint128,
 ) -> uint64:
@@ -240,7 +241,7 @@ def get_next_difficulty(
     prev_sb: SubBlockRecord = sub_blocks[prev_header_hash]
 
     # If we are in the same slot as previous sub-block, return same difficulty
-    if not new_slot or not finishes_sub_epoch(constants, prev_sb, True, sub_blocks):
+    if not new_slot or not finishes_sub_epoch(constants, height, deficit, True, sub_blocks, prev_header_hash):
         return current_difficulty
 
     last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(
@@ -288,14 +289,14 @@ def get_next_difficulty(
 
 def get_ips_and_difficulty(
     constants: ConsensusConstants,
-    header_block: UnfinishedHeaderBlock,
+    header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
     height_to_hash: Dict[uint32, bytes32],
     prev_sb: SubBlockRecord,
     sub_blocks: Dict[bytes32, SubBlockRecord],
 ) -> (uint64, uint64):
 
     # genesis
-    if prev_sb == None:
+    if prev_sb is None:
         return constants.IPS_STARTING, constants.DIFFICULTY_STARTING
 
     if prev_sb.height != 0:
@@ -311,8 +312,8 @@ def get_ips_and_difficulty(
         height_to_hash,
         header_block.prev_header_hash,
         prev_sb.height,
-        prev_sb.deficit,
         prev_difficulty,
+        prev_sb.deficit,
         new_sub_slot,
         prev_sb.total_iters,
     )
@@ -322,8 +323,8 @@ def get_ips_and_difficulty(
         height_to_hash,
         header_block.prev_header_hash,
         prev_sb.height,
-        prev_sb.deficit,
         prev_sb.ips,
+        prev_sb.deficit,
         new_sub_slot,
         prev_sb.total_iters,
     )
