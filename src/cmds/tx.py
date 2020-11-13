@@ -82,7 +82,7 @@ def create_unsigned_transaction(
     # For simplicity, only the origin coin creates outputs
     origin = coins.pop()
     outputs = []
-    input_value = sum([coin.amount for coin in coins])
+    input_value = sum([coin.amount for coin in coins]) + origin.amount
     sent_value = 0
     if spend_requests is not None:
         sent_value = sum([req.amount for req in spend_requests])
