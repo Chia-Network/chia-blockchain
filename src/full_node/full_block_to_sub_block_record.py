@@ -31,8 +31,8 @@ def full_block_to_sub_block_record(
             height_to_hash,
             prev_sb.prev_hash,
             prev_sb.height,
-            prev_sb.deficit,
             prev_sb.ips,
+            prev_sb.deficit,
             len(block.finished_sub_slots) > 0,
             prev_sb.total_iters,
         )

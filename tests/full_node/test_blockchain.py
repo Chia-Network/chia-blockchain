@@ -192,6 +192,17 @@ class TestAddingMoreBlocks:
             assert result == ReceiveBlockResult.NEW_PEAK
         assert blockchain.get_peak().height == num_blocks - 1
 
+    @pytest.mark.asyncio
+    async def test_invalid_prev_1(self, empty_blockchain):
+        blocks = bt.get_consecutive_blocks(test_constants, 2, force_overflow=False)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        block_1_bad = recursive_replace(blocks[-1], "foliage_sub_block.prev_sub_block_hash", bytes([0] * 32))
+        print(block_1_bad)
+
+        result, err, _ = await empty_blockchain.receive_block(block_1_bad)
+        assert result == ReceiveBlockResult.DISCONNECTED_BLOCK
+
+
 #
 # # class TestBlockValidation:
 #     @pytest.fixture(scope="module")
