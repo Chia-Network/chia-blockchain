@@ -37,26 +37,64 @@ async def validate_unfinished_header_block(
     height_to_hash: Dict[uint32, bytes32],
     header_block: UnfinishedHeaderBlock,
     check_filter: bool,
+    skip_overflow_last_ss_validation: bool = False,
 ) -> Tuple[Optional[uint64], Optional[ValidationError]]:
     """
     Validates an unfinished header block. This is a block without the infusion VDFs (unfinished)
     and without transactions and transaction info (header). Returns (required_iters, error).
+    TODO: handle unfinished overflow block with no end of slot
     """
     # 1. Check that the previous block exists in the blockchain, or that it is correct
     new_sub_slot: bool = len(header_block.finished_sub_slots) > 0
     prev_sb = sub_blocks.get(header_block.prev_header_hash, None)
     genesis_block = prev_sb is None
-    height: uint32 = uint32(0)
+
     if genesis_block and header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
         return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
 
-    if not genesis_block:
+    if genesis_block:
+        height: uint32 = uint32(0)
+        ips = constants.IPS_STARTING
+        difficulty = constants.DIFFICULTY_STARTING
+        finishes_se: bool = False
+        finishes_epoch: bool = False
+    else:
         height: uint32 = uint32(prev_sb.height + 1)
+        finishes_se: bool = finishes_sub_epoch(
+            constants, prev_sb.height, prev_sb.deficit, False, sub_blocks, prev_sb.prev_hash
+        )
+        finishes_epoch: bool = finishes_sub_epoch(
+            constants, prev_sb.height, prev_sb.deficit, True, sub_blocks, prev_sb.prev_hash
+        )
 
-    finishes_se = finishes_sub_epoch(constants, prev_sb, False, sub_blocks)
-    finishes_epoch: bool = finishes_sub_epoch(constants, prev_sb, True, sub_blocks)
+        ips, difficulty = get_ips_and_difficulty(constants, header_block, height_to_hash, prev_sb, sub_blocks)
 
-    ips, difficulty = get_ips_and_difficulty(constants, header_block, height_to_hash, prev_sb, sub_blocks)
+    # 4. Check proof of space
+    if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
+        # Edge case of first sp (start of slot), where sp_iters == 0
+        cc_sp_hash: bytes32 = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
+    else:
+        cc_sp_hash = header_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
+
+    q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
+        constants,
+        cc_sp_hash,
+        header_block.reward_chain_sub_block.challenge_chain_sp_signature,
+    )
+    if q_str is None:
+        return None, ValidationError(Err.INVALID_POSPACE)
+
+    # Note that required iters might be from the previous slot (if we are in an overflow sub-block)
+    required_iters: uint64 = calculate_iterations_quality(
+        q_str,
+        header_block.reward_chain_sub_block.proof_of_space.size,
+        difficulty,
+    )
+
+    sp_iters: uint64 = calculate_sp_iters(constants, ips, required_iters)
+    ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
+    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
+    overflow = is_overflow_sub_block(constants, ips, required_iters)
 
     # 2. Check finished slots that have been crossed since prev_sb
     ses_hash: Optional[bytes32] = None
@@ -314,37 +352,11 @@ async def validate_unfinished_header_block(
                 )
         elif new_sub_slot and not genesis_block:
             # 3d. Check that we don't have to include a sub-epoch summary
-            if finishes_sub_epoch(constants, prev_sb, False, sub_blocks):
+            if finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, False, sub_blocks, prev_sb.prev_hash):
                 return None, ValidationError(
                     Err.INVALID_SUB_EPOCH_SUMMARY, "block finishes sub-epoch but ses-hash is None"
                 )
 
-    # 4. Check proof of space
-    if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
-        # Edge case of first sp (start of slot), where sp_iters == 0
-        cc_sp_hash: bytes32 = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
-    else:
-        cc_sp_hash = header_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
-
-    q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
-        constants,
-        cc_sp_hash,
-        header_block.reward_chain_sub_block.challenge_chain_sp_signature,
-    )
-    if q_str is None:
-        return None, ValidationError(Err.INVALID_POSPACE)
-
-    # Note that required iters might be from the previous slot (if we are in an overflow sub-block)
-    required_iters: uint64 = calculate_iterations_quality(
-        q_str,
-        header_block.reward_chain_sub_block.proof_of_space.size,
-        difficulty,
-    )
-
-    sp_iters: uint64 = calculate_sp_iters(constants, ips, required_iters)
-    ip_iters: uint64 = calculate_ip_iters(constants, ips, required_iters)
-    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
-    overflow = is_overflow_sub_block(constants, ips, required_iters)
     if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
         # Blocks with very low required iters are not overflow blocks
         assert not overflow
@@ -693,6 +705,8 @@ async def validate_finished_header_block(
         if header_block.weight != prev_sb.weight + difficulty:
             return None, ValidationError(Err.INVALID_WEIGHT)
     else:
+        if header_block.height != uint32(0):
+            return None, ValidationError(Err.INVALID_HEIGHT)
         if header_block.weight != constants.DIFFICULTY_STARTING:
             return None, ValidationError(Err.INVALID_WEIGHT)
 

@@ -24,6 +24,7 @@ class NewPeak:
     sub_block_height: uint32
     weight: uint128
     fork_point_with_previous_peak: bytes32
+    unfinished_reward_block_hash: bytes32
 
 
 @dataclass(frozen=True)
@@ -63,6 +64,7 @@ class RespondProofOfWeight:
 @cbor_message
 class RequestSubBlock:
     height: uint32
+    include_transaction_block: bool
 
 
 @dataclass(frozen=True)

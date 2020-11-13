@@ -1,4 +1,5 @@
 import random
+from dataclasses import replace
 from typing import Optional, Callable, Union, Dict, List
 
 import blspy
@@ -16,8 +17,9 @@ from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
 from src.types.coin import Coin, hash_coin_list
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo, FoliageSubBlockData
-from src.types.full_block import additions_for_npc
+from src.types.full_block import additions_for_npc, FullBlock
 from src.types.pool_target import PoolTarget
 from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
@@ -25,11 +27,13 @@ from src.types.reward_chain_sub_block import RewardChainSubBlockUnfinished, Rewa
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
+from src.types.vdf import VDFInfo, VDFProof
 from src.util.hash import std_hash
 from src.util.ints import uint128, uint64, uint32
 from src.util.merkle_set import MerkleSet
 from src.util.prev_block import get_prev_block
 from src.util.vdf_prover import get_vdf_info_and_proof
+from tests.recursive_replace import recursive_replace
 
 
 def create_foliage(
@@ -376,3 +380,55 @@ def create_unfinished_block(
         transactions_info,
         solution_program,
     )
+
+
+def unfinished_block_to_full_block(
+    unfinished_block: UnfinishedBlock,
+    cc_ip_vdf: VDFInfo,
+    cc_ip_proof: VDFProof,
+    rc_ip_vdf: VDFInfo,
+    rc_ip_proof: VDFProof,
+    icc_ip_vdf: Optional[VDFInfo],
+    icc_ip_proof: Optional[VDFProof],
+    finished_sub_slots: List[EndOfSubSlotBundle],
+    prev_sub_block: Optional[SubBlockRecord],
+    difficulty: uint64,
+):
+    # Replace things that need to be replaced, since foliage blocks did not necessarily have the latest information
+    if prev_sub_block is None:
+        new_weight = uint128(difficulty)
+        new_height = uint32(0)
+        new_foliage_sub_block = unfinished_block.foliage_sub_block
+    else:
+        new_weight = uint128(prev_sub_block.weight + difficulty)
+        new_height = uint32(prev_sub_block.height + 1)
+        new_foliage_sub_block = replace(
+            unfinished_block.foliage_sub_block, prev_sub_block_hash=prev_sub_block.header_hash
+        )
+    ret = FullBlock(
+        finished_sub_slots,
+        RewardChainSubBlock(
+            new_weight,
+            new_height,
+            unfinished_block.reward_chain_sub_block.total_iters,
+            unfinished_block.reward_chain_sub_block.proof_of_space,
+            unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf,
+            unfinished_block.reward_chain_sub_block.challenge_chain_sp_signature,
+            cc_ip_vdf,
+            unfinished_block.reward_chain_sub_block.reward_chain_sp_vdf,
+            unfinished_block.reward_chain_sub_block.reward_chain_sp_signature,
+            rc_ip_vdf,
+            icc_ip_vdf,
+            unfinished_block.foliage_block is not None,
+        ),
+        unfinished_block.challenge_chain_sp_proof,
+        cc_ip_proof,
+        unfinished_block.reward_chain_sp_proof,
+        rc_ip_proof,
+        icc_ip_proof,
+        new_foliage_sub_block,
+        unfinished_block.foliage_block,
+        unfinished_block.transactions_info,
+        unfinished_block.transactions_generator,
+    )
+    return recursive_replace(ret, "foliage_sub_block.reward_block_hash", ret.reward_chain_sub_block.get_hash())
