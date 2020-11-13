@@ -128,11 +128,9 @@ def create_unsigned_tx_from_json(json_tx):
             print("PUB", type(pubkey), pubkey)
             input_coins = [
                 CoinWithPubkey(
-                    Coin(
-                        hexstr_to_bytes(c["parent_id"]),
-                        hexstr_to_bytes(c["puzzle_hash"]),
-                        c["amount"],
-                    ),
+                    hexstr_to_bytes(c["parent_id"]),
+                    hexstr_to_bytes(c["puzzle_hash"]),
+                    c["amount"],
                     pubkey
                 )
                 for c in input_coins_json

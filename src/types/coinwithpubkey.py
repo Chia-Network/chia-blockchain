@@ -1,7 +1,9 @@
 from .coin import Coin
 from blspy import G1Element
+from dataclasses import dataclass
 
 
+@dataclass(frozen=True)
 class CoinWithPubkey(Coin):
     """
     This is a coin with information needed by the standard transaction.
@@ -10,9 +12,3 @@ class CoinWithPubkey(Coin):
     """
 
     pubkey: G1Element
-
-    def __init__(self, coin: Coin, pubkey: G1Element):
-        self.pubkey = pubkey
-        super(CoinWithPubkey, self).__init__(
-            coin.parent_coin_info, coin.puzzle_hash, coin.amount
-        )
