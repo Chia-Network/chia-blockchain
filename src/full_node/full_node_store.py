@@ -5,6 +5,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_ip_iters, calculate_sub_slot_iters
 from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
+from src.protocols import timelord_protocol
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
@@ -31,11 +32,20 @@ class FullNodeStore:
     # Also stores the total iters at the end of slot
     finished_sub_slots: List[Tuple[EndOfSubSlotBundle, Dict[uint8, List[SignagePoint]], uint128]]
 
+    # These caches maintain objects which depend on infused sub-blocks in the reward chain, that we
+    # might receive before the sub-blocks themselves.
+
     # End of slots which depend on infusions that we don't have
     future_eos_cache: Dict[bytes32, List[EndOfSubSlotBundle]] = {}
 
     # Signage points which depend on infusions that we don't have
     future_sp_cache: Dict[bytes32, List[SignagePoint]] = {}
+
+    # Infusion point VDFs which depend on infusions that we don't have
+    future_ip_cache: Dict[bytes32, List[timelord_protocol.NewInfusionPointVDF]] = {}
+
+    # Future sub-block cache:
+    future_sb_cache: Dict[bytes32, List[FullBlock]] = {}
 
     @classmethod
     async def create(cls, constants: ConsensusConstants):
@@ -112,6 +122,24 @@ class FullNodeStore:
     def remove_unfinished_block(self, partial_reward_hash: bytes32):
         if partial_reward_hash in self.unfinished_blocks:
             del self.unfinished_blocks[partial_reward_hash]
+
+    def add_to_future_ip(self, infusion_point: timelord_protocol.NewInfusionPointVDF):
+        ch: bytes32 = infusion_point.reward_chain_ip_vdf.challenge_hash
+        if ch not in self.future_ip_cache:
+            self.future_ip_cache[ch] = []
+        self.future_ip_cache[ch].append(infusion_point)
+
+    def get_future_ip(self, rc_challenge_hash: bytes32) -> List[timelord_protocol.NewInfusionPointVDF]:
+        return self.future_ip_cache.get(rc_challenge_hash, [])
+
+    def add_to_future_sb(self, sub_block: FullBlock):
+        ch: bytes32 = sub_block.reward_chain_sub_block.reward_chain_ip_vdf.challenge_hash
+        if ch not in self.future_sb_cache:
+            self.future_sb_cache[ch] = []
+        self.future_sb_cache[ch].append(sub_block)
+
+    def get_future_sb(self, rc_challenge_hash: bytes32) -> List[FullBlock]:
+        return self.future_sb_cache.get(rc_challenge_hash, [])
 
     def clear_slots(self):
         self.finished_sub_slots.clear()
@@ -291,20 +319,24 @@ class FullNodeStore:
 
     def get_finished_sub_slots(
         self,
-        peak: SubBlockRecord,
+        prev_sb: SubBlockRecord,
         sub_block_records: Dict[bytes32, SubBlockRecord],
         pos_challenge_hash: bytes32,
-        is_overflow: bool,
+        extra_sub_slot: bool = False,
     ) -> List[EndOfSubSlotBundle]:
         """
-        Returns all sub slots that have been completed between the current peak and the new block we will create,
-        which is denoted from the pos_challenge hash, and is_overflow. In the case of the overflow, we have to add the
-        new slot as well.
+        Returns all sub slots that have been completed between the prev sb and the new block we will create,
+        which is denoted from the pos_challenge hash, and extra_sub_slot.
+        NOTE: In the case of the overflow, passing in extra_sub_slot=True will add the necessary sub-slot. This might
+        not be available until later though.
         """
-        curr: SubBlockRecord = peak
-        while not curr.first_in_sub_slot:
-            curr = sub_block_records[curr.prev_hash]
-        final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
+        if prev_sb is not None:
+            curr: SubBlockRecord = prev_sb
+            while not curr.first_in_sub_slot:
+                curr = sub_block_records[curr.prev_hash]
+            final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
+        else:
+            final_sub_slot_in_chain: bytes32 = self.constants.FIRST_CC_CHALLENGE
         pos_index: Optional[int] = None
         final_index: Optional[int] = None
         for index, (sub_slot, sps_cc, sps_rc, total_iters) in enumerate(self.finished_sub_slots):
@@ -316,8 +348,9 @@ class FullNodeStore:
         if pos_index is None or final_index is None:
             raise ValueError(f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index}")
 
-        if is_overflow:
+        if extra_sub_slot:
             new_final_index = pos_index + 1
         else:
             new_final_index = pos_index
+
         return [sub_slot for sub_slot, _, _, _ in self.finished_sub_slots[final_index + 1 : new_final_index + 1]]
