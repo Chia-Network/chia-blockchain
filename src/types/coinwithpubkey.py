@@ -1,7 +1,8 @@
-from .coin import Coin
-from blspy import G1Element
-from dataclasses import dataclass
+"""CoinWithPubkey is a coin assumed to be using the standard puzzle, and its pubkey"""
 
+from dataclasses import dataclass
+from blspy import G1Element
+from .coin import Coin
 
 @dataclass(frozen=True)
 class CoinWithPubkey(Coin):

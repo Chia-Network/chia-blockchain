@@ -1,3 +1,4 @@
+"""CoinWithPuzzle is a coin that also coins its revealed puzzle"""
 from src.types.program import Program
 from .coin import Coin
 

@@ -1,3 +1,9 @@
+"""
+The tx command is a tool to create "raw" transactions
+
+create_unsigned_transaction - take a list of transaction creation descriptions, and produce their SpendBundles, optionally verifying them.
+
+"""
 from typing import List, Set
 
 # tx command imports
