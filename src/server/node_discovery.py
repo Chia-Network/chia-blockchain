@@ -25,7 +25,7 @@ from src.protocols import (
 )
 from secrets import randbits
 from src.util.hash import std_hash
-from typing import Dict, Optional, AsyncGenerator, Tuple, Any
+from typing import Dict, Optional, AsyncGenerator
 from src.util.ints import uint64
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -43,7 +43,7 @@ class FullNodeDiscovery:
         log,
     ):
         self.server: ChiaServer = server
-        self.message_queue: Queue[Tuple[str, Any]] = asyncio.Queue()
+        self.message_queue: Queue = asyncio.Queue()
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
         self.peer_db_path = path_from_root(root_path, peer_db_path)
