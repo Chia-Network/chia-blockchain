@@ -25,13 +25,17 @@ def service_kwargs_for_full_node(
 
     api = FullNode(config, root_path=root_path, consensus_constants=consensus_constants)
 
+    upnp_list = []
+    if config["enable_upnp"]:
+        upnp_list = [config["port"]]
+
     kwargs = dict(
         root_path=root_path,
         api=api,
         node_type=NodeType.FULL_NODE,
         advertised_port=config["port"],
         service_name=SERVICE_NAME,
-        upnp_ports=[config["port"]],
+        upnp_ports=upnp_list,
         server_listen_ports=[config["port"]],
         on_connect_callback=api._on_connect,
     )
