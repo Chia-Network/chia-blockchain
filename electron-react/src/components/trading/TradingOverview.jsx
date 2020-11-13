@@ -25,15 +25,6 @@ import {
 } from '../../modules/trade_messages';
 
 const useStyles = makeStyles((theme) => ({
-  root: {
-    display: 'flex',
-    paddingLeft: '0px',
-  },
-  content: {
-    flexGrow: 1,
-    height: 'calc(100vh - 64px)',
-    overflowX: 'hidden',
-  },
   paper: {
     padding: theme.spacing(0),
     display: 'flex',
@@ -465,19 +456,13 @@ export const TradingOverview = () => {
 
   if (showing_trade === true) {
     return (
-      <div className={classes.root}>
-        <main className={classes.content}>
-          <TradeDetail />
-        </main>
-      </div>
+      <TradeDetail />
     );
   }
   return (
-    <div className={classes.root}>
-      <main className={classes.content}>
+    <>
         <PendingTrades />
         <TradingHistory />
-      </main>
-    </div>
+    </>
   );
 };

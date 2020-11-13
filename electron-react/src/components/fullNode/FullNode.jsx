@@ -21,6 +21,7 @@ import {
   getHeader,
 } from '../../modules/fullnodeMessages';
 import DashboardTitle from '../dashboard/DashboardTitle';
+import LayoutMain from '../layout/LayoutMain';
 
 /* global BigInt */
 
@@ -540,45 +541,34 @@ export default function FullNode() {
   };
 
   return (
-    <>
-      <DashboardTitle>
-        <Trans id="FullNode.title">Full Node</Trans>
-      </DashboardTitle>
-      <Flex
-        flexDirection="column"
-        flexGrow={1}
-        height="100%"
-        overflow="auto"
-        alignItems="center"
-      >
-        <Container maxWidth="lg">
-          <Grid container spacing={3}>
-            {block != null ? (
-              <Block block={block} prevHeader={header} />
-            ) : (
-              <>
-                <Grid item xs={12}>
-                  <FullNodeStatus />
-                </Grid>
-                <Grid item xs={12}>
-                  <BlocksCard />
-                </Grid>
-                <Grid item xs={12}>
-                  <FullNodeConnections
-                    connections={connections}
-                    connectionError={connectionError}
-                    openConnection={openConnectionCallback}
-                    closeConnection={closeConnectionCallback}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <SearchBlock />
-                </Grid>
-              </>
-            )}
-          </Grid>
-        </Container>
-      </Flex>
-    </>
+    <LayoutMain
+      title={<Trans id="FullNode.title">Full Node</Trans>}
+    >
+      <Grid container spacing={3}>
+        {block != null ? (
+          <Block block={block} prevHeader={header} />
+        ) : (
+          <>
+            <Grid item xs={12}>
+              <FullNodeStatus />
+            </Grid>
+            <Grid item xs={12}>
+              <BlocksCard />
+            </Grid>
+            <Grid item xs={12}>
+              <FullNodeConnections
+                connections={connections}
+                connectionError={connectionError}
+                openConnection={openConnectionCallback}
+                closeConnection={closeConnectionCallback}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <SearchBlock />
+            </Grid>
+          </>
+        )}
+      </Grid>
+    </LayoutMain>
   );
 }

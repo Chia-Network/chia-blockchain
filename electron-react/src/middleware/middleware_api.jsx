@@ -136,6 +136,7 @@ async function track_progress(store, location) {
 }
 
 export const refreshAllState = (dispatch) => {
+  console.log('calling get plots because refreshAllState');
   dispatch(format_message('get_wallets', {}));
   const start_farmer = startService(service_farmer);
   const start_harvester = startService(service_harvester);

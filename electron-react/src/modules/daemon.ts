@@ -88,6 +88,7 @@ export default function daemonReducer(
           return { ...state, farmer_connected: true };
         }
         if (origin === service_harvester) {
+          console.log('harvester connected');
           return { ...state, harvester_connected: true };
         }
       } else if (command === 'is_running') {
@@ -106,6 +107,7 @@ export default function daemonReducer(
             return { ...state, farmer_running: data.is_running };
           }
           if (service === service_harvester) {
+            console.log('harvester isRunning',data.is_running );
             return { ...state, harvester_running: data.is_running };
           }
         }

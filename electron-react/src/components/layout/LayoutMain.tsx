@@ -5,8 +5,8 @@ import { Flex } from '@chia/core';
 import DashboardTitle from '../dashboard/DashboardTitle';
 
 const StyledContainer = styled(Container)`
-  padding-top: ${({ theme }) => `${theme.spacing(4)}px`};
-  padding-bottom: ${({ theme }) => `${theme.spacing(4)}px`};
+  padding-top: ${({ theme }) => `${theme.spacing(2)}px`};
+  padding-bottom: ${({ theme }) => `${theme.spacing(2)}px`};
 `;
 
 type Props = {
@@ -20,16 +20,8 @@ export default function LayoutMain(props: Props): JSX.Element {
   return (
     <>
       <DashboardTitle>{title}</DashboardTitle>
-      <Flex
-        flexDirection="column"
-        flexGrow={1}
-        height="100%"
-        width="100%"
-        overflow="auto"
-        alignItems="center"
-      >
-        <StyledContainer maxWidth="lg">{children}</StyledContainer>
-      </Flex>
+
+      <StyledContainer maxWidth="lg">{children}</StyledContainer>
     </>
   );
 }
