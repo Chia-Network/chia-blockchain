@@ -27,6 +27,7 @@ cd electron-react || exit
 
 echo "npm build"
 npm install
+npm run build
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "npm run build failed!"
