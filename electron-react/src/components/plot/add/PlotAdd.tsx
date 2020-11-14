@@ -12,18 +12,9 @@ import PlotAddNumberOfPlots from './PlotAddNumberOfPlots';
 import PlotAddSelectTemporaryDirectory from './PlotAddSelectTemporaryDirectory';
 import PlotAddSelectFinalDirectory from './PlotAddSelectFinalDirectory';
 import { startPlotting } from '../../../modules/plotter_messages';
+import PlotAddConfig from '../../../types/PlotAdd';
 
-type FormData = {
-  plotSize: number;
-  plotCount: number;
-  maxRam: number;
-  numThreads: number;
-  numBuckets: number,
-  stripeSize: number,
-  finalLocation: string;
-  workspaceLocation: string;
-  workspaceLocation2: string;
-};
+type FormData = PlotAddConfig;
 
 export default function PlotAdd(): JSX.Element {
   const history = useHistory();
@@ -41,6 +32,8 @@ export default function PlotAdd(): JSX.Element {
       finalLocation: '',
       workspaceLocation: '',
       workspaceLocation2: '',
+      delay: 0,
+      parallel: false,
     },
   });
 

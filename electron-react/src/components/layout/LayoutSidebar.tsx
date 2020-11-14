@@ -13,18 +13,12 @@ const StyledSidebar = styled(Drawer)`
   > div {
     left: 100px;
     width: 180px;
+    box-shadow: inset 6px 0 8px -8px rgba(0,0,0,0.2);
   }
-/*
-  width: 100%;
-  overflow: auto;
-  height: 100%;
-  position: fixed;
-  left: 100px;
+`;
 
-  > div {
-    // position: relative;
-  }
-  */
+const StyledBody = styled(Box)`
+  box-shadow: inset 6px 0 8px -8px rgba(0,0,0,0.2);
 `;
 
 const StyledContainer = styled(Container)`
@@ -54,9 +48,9 @@ export default function LayoutSidebar(props: Props): JSX.Element {
             {sidebar}
           </StyledSidebar>
         </StyledSideBarContainer>
-        <Box flexGrow={1}>
+        <StyledBody flexGrow={1}>
           <StyledContainer maxWidth="lg">{children}</StyledContainer>
-        </Box>
+        </StyledBody>
       </Flex>
     </>
   );

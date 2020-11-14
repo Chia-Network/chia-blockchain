@@ -33,7 +33,7 @@ const StyledAppBar = styled(AppBar)`
 `;
 
 const StyledDrawer = styled(Drawer)`
-  z-index: ${({ theme }) => theme.drawer.zIndex};
+  z-index: ${({ theme}) => theme.zIndex.drawer + 2};
   width: ${({ theme }) => theme.drawer.width};
   flex-shrink: 0;
 

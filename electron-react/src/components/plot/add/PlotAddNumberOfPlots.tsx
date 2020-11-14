@@ -1,7 +1,8 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { AdvancedOptions, CardStep, Select, TextField } from '@chia/core';
-import { Grid, FormControl, InputLabel, MenuItem, InputAdornment } from '@material-ui/core';
+import { AdvancedOptions, CardStep, Select, TextField, RadioGroup, Flex } from '@chia/core';
+import { Grid, FormControl, InputLabel, MenuItem, InputAdornment, Typography, FormControlLabel, Radio } from '@material-ui/core';
+import { useFormContext } from 'react-hook-form';
 
 const plotCountOptions: number[] = [];
 
@@ -10,6 +11,9 @@ for (let i = 1; i < 30; i++) {
 }
 
 export default function PlotAddNumberOfPlots() {
+  const { watch } = useFormContext();
+  const parallel = watch('parallel');
+
   return (
     <CardStep
       step="2"
@@ -17,8 +21,8 @@ export default function PlotAddNumberOfPlots() {
         <Trans id="PlotAddNumberOfPlots.title">Choose Number of Plots</Trans>
       )}
     >
-      <Grid container>
-        <Grid xs={12} sm={10} md={8} lg={6} item>
+      <Grid spacing={2} direction="column" container>
+        <Grid xs={12} md={8} lg={6} item>
           <FormControl
             variant="filled"
             fullWidth
@@ -35,6 +39,70 @@ export default function PlotAddNumberOfPlots() {
             </Select>
           </FormControl>
         </Grid>
+
+        <Grid xs={12} md={8} lg={6} item>
+          <Typography variant="body1">
+            <Trans id="PlotAddNumberOfPlots.parallelTitle">
+              Does your machine support parellel plotting?
+            </Trans>
+          </Typography>
+          <Typography variant="body2">
+            <Trans id="PlotAddNumberOfPlots.parallelTitle">
+              Plotting in parallel can save time. Otherwise, add plot(s) to the queue.
+            </Trans>
+          </Typography>
+
+          <FormControl
+            variant="filled"
+            fullWidth
+          >
+            <RadioGroup name="parallel" boolean>
+              <Flex gap={2} flexWrap="wrap">
+                <FormControlLabel
+                  value={true}
+                  control={<Radio />}
+                  label="Plot in Parallel"
+                  disabled
+                />
+                <FormControlLabel
+                  value={false}
+                  control={<Radio />}
+                  label="Add Plot to Queue"
+                />
+              </Flex>
+            </RadioGroup>
+          </FormControl>
+        </Grid>
+
+        {parallel && (
+          <Grid xs={12} md={8} lg={6} item>
+            <FormControl
+              variant="filled"
+            >
+              <Typography variant="subtitle1">
+                <Trans id="PlotAddNumberOfPlots.delayTitle">
+                  Want to have a delay before the next plot starts?
+                </Trans>
+              </Typography>
+              <TextField
+                name="delay"
+                type="number"
+                variant="filled"
+                label={<Trans id="PlotAddNumberOfPlots.delay">Delay</Trans>}
+                InputProps={{
+                  inputProps: { min: 0 },
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Trans id="CreatePlot.delayDescription">
+                        Minutes
+                      </Trans>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </FormControl>
+          </Grid>
+        )}
       </Grid>
 
       <AdvancedOptions>
@@ -54,6 +122,7 @@ export default function PlotAddNumberOfPlots() {
                   </Trans>
                 )}
                 InputProps={{
+                  inputProps: { min: 0 },
                   endAdornment: <InputAdornment position="end">MiB</InputAdornment>,
                 }}
               />
@@ -73,6 +142,9 @@ export default function PlotAddNumberOfPlots() {
                     Number of threads
                   </Trans>
                 )}
+                InputProps={{
+                  inputProps: { min: 0 },
+                }}
               />
             </FormControl>
           </Grid>
@@ -96,6 +168,9 @@ export default function PlotAddNumberOfPlots() {
                     0 automatically chooses bucket count
                   </Trans>
                 )}
+                InputProps={{
+                  inputProps: { min: 0 },
+                }}
               />
             </FormControl>
           </Grid>
@@ -110,6 +185,9 @@ export default function PlotAddNumberOfPlots() {
                 variant="filled"
                 placeholder="65536"
                 label={<Trans id="CreatePlot.stripeSize">Stripe Size</Trans>}
+                InputProps={{
+                  inputProps: { min: 0 },
+                }}
               />
             </FormControl>
           </Grid>
