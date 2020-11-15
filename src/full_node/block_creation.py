@@ -393,7 +393,7 @@ def unfinished_block_to_full_block(
     finished_sub_slots: List[EndOfSubSlotBundle],
     prev_sub_block: Optional[SubBlockRecord],
     difficulty: uint64,
-):
+) -> FullBlock:
     # Replace things that need to be replaced, since foliage blocks did not necessarily have the latest information
     if prev_sub_block is None:
         new_weight = uint128(difficulty)
