@@ -76,7 +76,9 @@ def create_sub_epoch_segment(block: HeaderBlock, sub_epoch_n: uint32) -> Subepoc
     )
 
 
-def get_sub_epoch_block_num(block: SubBlockRecord, sub_blocks: Dict[bytes32, SubBlockRecord]) -> uint32:
+def get_sub_epoch_block_num(
+    constants: ConsensusConstants, block: SubBlockRecord, sub_blocks: Dict[bytes32, SubBlockRecord]
+) -> uint32:
     """
     returns the number of blocks in a sub epoch
     ending with" "block""
@@ -85,8 +87,8 @@ def get_sub_epoch_block_num(block: SubBlockRecord, sub_blocks: Dict[bytes32, Sub
     count: uint32 = uint32(0)
     while not curr.sub_epoch_summary_included:
         # skip overflows
-        if curr.deficit == 5:
-            continue
+        if curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+            break
 
         curr = sub_blocks[curr.prev_hash]
         count += 1
@@ -117,7 +119,7 @@ def create_sub_epoch_segments(
     block_store: BlockStore,
 ) -> List[SubepochChallengeSegment]:
     """
-    Creates List[SubepochChallengeSegment] for a sub_epoch
+    received the last block in sub epoch and creates List[SubepochChallengeSegment] for that sub_epoch
     """
 
     segments: List[SubepochChallengeSegment] = []
@@ -126,6 +128,11 @@ def create_sub_epoch_segments(
     count = sub_epoch_blocks_n
     while not count == 0:
         curr = sub_blocks[curr.prev_hash]
+
+        # skip overflows
+        if curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+            break
+
         if not curr.is_challenge_sub_block(constants):
             continue
 
@@ -197,3 +204,8 @@ def make_weight_proof(
         total_number_of_blocks -= 1
 
     return WeightProof(sub_epoch_data, sub_epoch_segments, proof_blocks)
+
+
+def validate_weight_proof(proof: WeightProof) -> bool:
+    # todo
+    return False
