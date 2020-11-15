@@ -62,18 +62,3 @@ class SubBlockRecord(Streamable):
 
     def is_challenge_sub_block(self, constants: ConsensusConstants):
         return self.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
-
-    def get_header(self) -> HeaderBlock:
-        header_block = HeaderBlock(
-            self.finished_sub_slots,
-            self.reward_chain_sub_block,
-            self.challenge_chain_sp_proof,
-            self.challenge_chain_ip_proof,
-            self.reward_chain_sp_proof,
-            self.reward_chain_ip_proof,
-            self.infused_challenge_chain_ip_proof,
-            self.foliage_sub_block,
-            self.foliage_block,
-            b"",  # No filter
-        )
-        return header_block
