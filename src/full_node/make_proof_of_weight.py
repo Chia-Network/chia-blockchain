@@ -1,6 +1,7 @@
 from typing import Dict, Optional, List
 
 from blspy import G2Element
+from src.types.reward_chain_sub_block import RewardChainSubBlock
 
 from src.consensus.constants import ConsensusConstants
 from src.full_node.block_store import BlockStore
@@ -96,7 +97,7 @@ def get_sub_epoch_block_num(
     return count
 
 
-def choose_sub_epoch(sub_epoch_blocks_N: uint32, total_number_of_blocks: uint64) -> bool:
+def choose_sub_epoch(sub_epoch_blocks_N: uint32, rc_sub_block_hash: bytes32, total_number_of_blocks: uint64) -> bool:
     # todo
     return True
 
@@ -176,26 +177,28 @@ def make_weight_proof(
     """
     sub_epoch_data: List[SubEpochData] = []
     sub_epoch_segments: List[SubepochChallengeSegment] = []
-    proof_blocks: List[HeaderBlock] = []
+    proof_blocks: List[RewardChainSubBlock] = []
     curr: SubBlockRecord = sub_blocks[tip]
     sub_epoch_n = uint32(0)
     while not total_number_of_blocks == 0:
         # next sub block
         curr = sub_blocks[curr.prev_header_hash]
+        full_block = await block_store.get_full_block(curr.header_hash)
         # for each sub-epoch
         if curr.sub_epoch_summary_included is not None:
             sub_epoch_data.append(make_sub_epoch_data(curr.sub_epoch_summary_included))
             # get sub_epoch_blocks_n in sub_epoch
             sub_epoch_blocks_n = get_sub_epoch_block_num(constants, curr, sub_blocks)
             #   sample sub epoch
-            if choose_sub_epoch(sub_epoch_blocks_n, total_number_of_blocks):
+            if choose_sub_epoch(
+                sub_epoch_blocks_n, full_block.reward_chain_sub_block.get_hash(), total_number_of_blocks
+            ):
                 create_sub_epoch_segments(constants, curr, sub_epoch_blocks_n, sub_blocks, sub_epoch_n, block_store)
             sub_epoch_n += 1
 
         if recent_blocks_n > 0:
             # add to needed reward chain recent blocks
-            full_block = await block_store.get_full_block(curr.prev_hash)
-            proof_blocks.append(full_block_to_header(full_block))
+            proof_blocks.append(full_block.reward_chain_sub_block)
             recent_blocks_n -= 1
 
         total_number_of_blocks -= 1

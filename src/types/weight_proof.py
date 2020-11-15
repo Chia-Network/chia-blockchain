@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from blspy import G2Element
+from src.types.reward_chain_sub_block import RewardChainSubBlock
 
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
@@ -45,4 +46,4 @@ class SubepochChallengeSegment(Streamable):
 class WeightProof(Streamable):
     sub_epoch_data: List[SubEpochData]
     sub_epoch_segments: List[SubepochChallengeSegment]
-    header_block: List[HeaderBlock]
+    recent_reward_chain: List[RewardChainSubBlock]
