@@ -87,9 +87,7 @@ def get_sub_epoch_block_num(
     curr = block
     count: uint32 = uint32(0)
     while not curr.sub_epoch_summary_included:
-        # skip overflows
-        if curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-            break
+        # todo skip overflows from last sub epoch
 
         curr = sub_blocks[curr.prev_hash]
         count += 1
@@ -129,9 +127,7 @@ def create_sub_epoch_segments(
     while not count == 0:
         curr = sub_blocks[curr.prev_hash]
 
-        # skip overflows
-        if curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-            break
+        # todo skip overflows from last sub epoch
 
         if not curr.is_challenge_sub_block(constants):
             continue
