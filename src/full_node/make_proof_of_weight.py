@@ -1,6 +1,10 @@
 from typing import Dict, Optional, List
 
+from Crypto.Random import random
 from blspy import G2Element
+from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
+
+from src.consensus.constants import ConsensusConstants
 from src.types.sub_epoch_summary import SubEpochSummary
 
 
@@ -65,11 +69,31 @@ def make_sub_epoch_segments(block: HeaderBlock, sub_epoch_n: uint32) -> Subepoch
 
 
 # todo finish (almog)
+def get_epoch_block_num() -> uint32:
+    # todo
+    return uint32(0)
+
+
+def choose_sub_epoch(sub_epoch_blocks_N: uint32, total_number_of_blocks: uint64) -> bool:
+    #   sample with chance sub_epoch_blocks_N / total_number_of_blocks X sub_epoch_blocks_N
+    # todo
+    return True
+
+
+def prepere_sub_epoch_segments(
+    block_header: SubBlockRecord, sub_epoch_blocks_n: uint32
+) -> List[SubepochChallengeSegment]:
+    #     for each challenge_block ?
+    #       sub_epoch_segments.append(make_sub_epoch_segments(block, sub_epoch_n))
+    # todo
+    return None
+
+
 def make_weight_proof(
-    sub_epoch_n: int,
-    block_header: HeaderBlock,
+    recent_blocks_n: uint32,
+    tip: bytes32,
     sub_blocks: Dict[bytes32, SubBlockRecord],
-    total_number_of_blocks,
+    total_number_of_blocks: uint64,
 ) -> WeightProof:
     """
     Creates a weight proof object
@@ -77,19 +101,25 @@ def make_weight_proof(
     sub_epoch_data: List[SubEpochData] = []
     sub_epoch_segments: List[SubepochChallengeSegment] = []
     proof_blocks: List[HeaderBlock] = []
-    curr = block_header
-
-    while not sub_epoch_n == 0:
+    curr: SubBlockRecord = sub_blocks[tip]
+    sub_epoch_n = 0
+    while not total_number_of_blocks == 0:
+        # next sub block
         curr = sub_blocks[curr.prev_header_hash]
         # for each sub-epoch
         if curr.sub_epoch_summary_included is not None:
             sub_epoch_data.append(make_sub_epoch_data(curr.sub_epoch_summary_included))
-            # get sub_epoch_blocks_N in sub_epoch
+            # get sub_epoch_blocks_n in sub_epoch
+            sub_epoch_blocks_n = get_epoch_block_num()
             #   sample sub epoch
-            #   sample with chance sub_epoch_blocks_N / total_number_of_blocks X sub_epoch_blocks_N
-            #   if sample is not None
-            #     for each challenge_block ?
-            #       sub_epoch_segments.append(make_sub_epoch_segments(block, sub_epoch_n))
-            #       proof_blocks.append(challenge_block)
-        sub_epoch_n = sub_epoch_n - 1
+            if choose_sub_epoch(sub_epoch_blocks_n, total_number_of_blocks):
+                prepere_sub_epoch_segments(curr, sub_epoch_blocks_n)
+            sub_epoch_n += 1
+        total_number_of_blocks -= 1
+
+        if recent_blocks_n > 0:
+            # add to needed reward chain recent blocks
+            proof_blocks.append(curr.get_header())
+            recent_blocks_n -= 1
+
     return WeightProof(sub_epoch_data, sub_epoch_segments, proof_blocks)
