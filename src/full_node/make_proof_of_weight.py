@@ -5,6 +5,7 @@ from blspy import G2Element
 from src.consensus.constants import ConsensusConstants
 from src.full_node.block_store import BlockStore
 from src.full_node.sub_block_record import SubBlockRecord
+from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
@@ -14,7 +15,7 @@ from src.types.weight_proof import WeightProof, SubEpochData, SubepochChallengeS
 from src.util.ints import uint32, uint64, uint8
 
 
-def full_block_to_header(block: SubBlockRecord) -> HeaderBlock:
+def full_block_to_header(block: FullBlock) -> HeaderBlock:
     return HeaderBlock(
         block.finished_sub_slots,
         block.reward_chain_sub_block,
@@ -102,12 +103,11 @@ def choose_sub_epoch(sub_epoch_blocks_N: uint32, total_number_of_blocks: uint64)
     return True
 
 
-def get_header_block(header_hash: bytes32, block_store: BlockStore) -> HeaderBlock:
-    block_store.get_full_block(header_hash)
+async def get_header_block(header_hash: bytes32, block_store: BlockStore) -> HeaderBlock:
     # todo avoid this db call, add needed fields to sub_blocks / build header cache
     block = await block_store.get_full_block(header_hash)
     assert block is not None
-    return block.get_header()
+    return full_block_to_header(block)
 
 
 def create_sub_epoch_segments(
@@ -136,7 +136,7 @@ def create_sub_epoch_segments(
         if not curr.is_challenge_sub_block(constants):
             continue
 
-        header_block = get_header_block(curr, block_store)
+        header_block = await get_header_block(curr, block_store)
         proof_of_space: Optional[ProofOfSpace] = None
         signage_point_vdf: Optional[VDFProof] = None
         signage_point_sig: Optional[G2Element] = None
@@ -182,7 +182,7 @@ def make_weight_proof(
     sub_epoch_segments: List[SubepochChallengeSegment] = []
     proof_blocks: List[HeaderBlock] = []
     curr: SubBlockRecord = sub_blocks[tip]
-    sub_epoch_n = 0
+    sub_epoch_n = uint32(0)
     while not total_number_of_blocks == 0:
         # next sub block
         curr = sub_blocks[curr.prev_header_hash]
@@ -190,15 +190,16 @@ def make_weight_proof(
         if curr.sub_epoch_summary_included is not None:
             sub_epoch_data.append(make_sub_epoch_data(curr.sub_epoch_summary_included))
             # get sub_epoch_blocks_n in sub_epoch
-            sub_epoch_blocks_n = get_sub_epoch_block_num(curr, sub_blocks)
+            sub_epoch_blocks_n = get_sub_epoch_block_num(constants, curr, sub_blocks)
             #   sample sub epoch
             if choose_sub_epoch(sub_epoch_blocks_n, total_number_of_blocks):
-                create_sub_epoch_segments(constants, curr, sub_epoch_blocks_n, sub_blocks, block_store)
+                create_sub_epoch_segments(constants, curr, sub_epoch_blocks_n, sub_blocks, sub_epoch_n, block_store)
             sub_epoch_n += 1
 
         if recent_blocks_n > 0:
             # add to needed reward chain recent blocks
-            proof_blocks.append(full_block_to_header(curr))
+            full_block = await block_store.get_full_block(curr.prev_hash)
+            proof_blocks.append(full_block_to_header(full_block))
             recent_blocks_n -= 1
 
         total_number_of_blocks -= 1
