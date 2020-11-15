@@ -1,22 +1,14 @@
 from typing import Dict, Optional, List
 
-from Crypto.Random import random
 from blspy import G2Element
-from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
 
 from src.consensus.constants import ConsensusConstants
-from src.types.sub_epoch_summary import SubEpochSummary
-
-
-from src.types.proof_of_space import ProofOfSpace
-from src.types.vdf import VDFProof
-
-
 from src.full_node.sub_block_record import SubBlockRecord
-
-
 from src.types.header_block import HeaderBlock
+from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.types.sub_epoch_summary import SubEpochSummary
+from src.types.vdf import VDFProof
 from src.types.weight_proof import WeightProof, SubEpochData, SubepochChallengeSegment
 from src.util.ints import uint32, uint64, uint8
 
@@ -68,10 +60,16 @@ def make_sub_epoch_segments(block: HeaderBlock, sub_epoch_n: uint32) -> Subepoch
     )
 
 
-# todo finish (almog)
-def get_epoch_block_num() -> uint32:
-    # todo
-    return uint32(0)
+def get_epoch_block_num(block: SubBlockRecord, sub_blocks: Dict[bytes32, SubBlockRecord]) -> uint32:
+    curr = block
+    count: uint32 = uint32(0)
+    # todo need to handle overflows
+    while not curr.sub_epoch_summary_included:
+        curr = sub_blocks[curr.prev_hash]
+        count += 1
+
+    count += 1
+    return count
 
 
 def choose_sub_epoch(sub_epoch_blocks_N: uint32, total_number_of_blocks: uint64) -> bool:
@@ -80,13 +78,54 @@ def choose_sub_epoch(sub_epoch_blocks_N: uint32, total_number_of_blocks: uint64)
     return True
 
 
-def prepere_sub_epoch_segments(
-    block_header: SubBlockRecord, sub_epoch_blocks_n: uint32
-) -> List[SubepochChallengeSegment]:
-    #     for each challenge_block ?
-    #       sub_epoch_segments.append(make_sub_epoch_segments(block, sub_epoch_n))
-    # todo
+def get_header_block(curr) -> HeaderBlock:
     return None
+
+
+def prepere_sub_epoch_segments(
+    constants: ConsensusConstants,
+    block: SubBlockRecord,
+    sub_epoch_blocks_n: uint32,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    sub_epoch_n: uint32,
+) -> List[SubepochChallengeSegment]:
+    segments: List[SubepochChallengeSegment] = []
+    curr = block
+
+    count = sub_epoch_blocks_n
+    while not count == 0:
+        curr = sub_blocks[curr.prev_hash]
+        if not curr.is_challenge_sub_block(constants):
+            continue
+
+        header_block = get_header_block(curr)
+        proof_of_space: Optional[ProofOfSpace] = None
+        signage_point_vdf: Optional[VDFProof] = None
+        signage_point_sig: Optional[G2Element] = None
+        infusion_point_vdf: Optional[VDFProof] = None
+        infusion_to_slot_end_vdf: Optional[VDFProof] = None
+        slot_vdf: Optional[VDFProof] = None
+
+        if curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
+            proof_of_space = header_block.reward_chain_sub_block.proof_of_space
+            signage_point_vdf = header_block.challenge_chain_sp_proof
+            signage_point_sig = header_block.reward_chain_sub_block.challenge_chain_sp_signature
+            infusion_point_vdf = header_block.challenge_chain_ip_proof
+            infusion_to_slot_end_vdf = header_block.finished_sub_slots[-1].proofs.infused_challenge_chain_slot_proof
+        else:
+            slot_vdf = header_block.finished_sub_slots[-1].proofs.challenge_chain_slot_proof
+        segment = SubepochChallengeSegment(
+            sub_epoch_n,
+            proof_of_space,
+            signage_point_vdf,
+            signage_point_sig,
+            infusion_point_vdf,
+            infusion_to_slot_end_vdf,
+            slot_vdf,
+        )
+        segments.append(segment)
+        count -= 1
+    return segments
 
 
 def make_weight_proof(
@@ -110,16 +149,17 @@ def make_weight_proof(
         if curr.sub_epoch_summary_included is not None:
             sub_epoch_data.append(make_sub_epoch_data(curr.sub_epoch_summary_included))
             # get sub_epoch_blocks_n in sub_epoch
-            sub_epoch_blocks_n = get_epoch_block_num()
+            sub_epoch_blocks_n = get_epoch_block_num(curr, sub_blocks)
             #   sample sub epoch
             if choose_sub_epoch(sub_epoch_blocks_n, total_number_of_blocks):
                 prepere_sub_epoch_segments(curr, sub_epoch_blocks_n)
             sub_epoch_n += 1
-        total_number_of_blocks -= 1
 
         if recent_blocks_n > 0:
             # add to needed reward chain recent blocks
             proof_blocks.append(curr.get_header())
             recent_blocks_n -= 1
+
+        total_number_of_blocks -= 1
 
     return WeightProof(sub_epoch_data, sub_epoch_segments, proof_blocks)
