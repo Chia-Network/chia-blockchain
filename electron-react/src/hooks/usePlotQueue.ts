@@ -8,8 +8,6 @@ type QueueItem = {
   config: PlotAdd;
   status: PlotStatus;
   added: number, // timestamp when added
-  parallel?: boolean,
-  delay?: number,
 };
 
 type Queue = QueueItem[];
@@ -17,12 +15,12 @@ type Queue = QueueItem[];
 const LOCAL_STORAGE_NAME = 'plotQueue';
 
 export default function usePlotQueue(): {
-  add: (config: PlotAdd, parallel?: boolean, delay?: number) => void,
+  add: (config: PlotAdd) => void,
   remove: (id: number) => void,
 } {
   const [queue] = useLocalStorage<Queue>(LOCAL_STORAGE_NAME, []);
 
-  function handleAdd(config: PlotAdd, parallel?: boolean, delay?: number) {
+  function handleAdd(config: PlotAdd) {
     const lastId = last(queue)?.id ?? 1;
 
     writeStorage(LOCAL_STORAGE_NAME, [
@@ -32,8 +30,6 @@ export default function usePlotQueue(): {
         config,
         status: PlotStatus.WAITING,
         added: new Date().getTime(),
-        parallel,
-        delay,
       }
     ]);
   }
