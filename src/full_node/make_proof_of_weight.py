@@ -99,9 +99,9 @@ def get_sub_epoch_block_num(
     return count
 
 
-def choose_sub_epoch(sub_epoch_blocks_n: uint32, rng: random.Random, total_number_of_blocks: uint64) -> bool:
-    prob = sub_epoch_blocks_n / total_number_of_blocks
-    for i in range(sub_epoch_blocks_n):
+def choose_sub_epoch(sub_epoch_blocks_N: uint32, rng: random.Random, total_number_of_blocks: uint64) -> bool:
+    prob = sub_epoch_blocks_N / total_number_of_blocks
+    for i in range(sub_epoch_blocks_N):
         if rng.random() < prob:
             return True
     return False
@@ -126,7 +126,7 @@ def create_sub_epoch_segments(
     while not count == 0:
         curr = sub_blocks[curr.prev_hash]
         header_block = header_cache[curr.header_hash]
-        # todo skip overflows from prev sub epoch
+        # todo skip overflows from last sub epoch
 
         if not curr.is_challenge_sub_block(constants):
             continue
