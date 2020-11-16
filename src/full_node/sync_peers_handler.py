@@ -26,9 +26,9 @@ class SyncPeersHandler:
     BlockProcessor and added to the chain.
     """
 
-    # Node id -> (block_hash -> time). For each node, the blocks that have been requested,
+    # Node id -> (block_height -> time). For each node, the blocks that have been requested,
     # and the time the request was sent.
-    current_outbound_sets: Dict[bytes32, Dict[bytes32, uint64]]
+    current_outbound_sets: Dict[bytes32, Dict[uint32, uint64]]
     sync_store: SyncStore
     fully_validated_up_to: uint32
     potential_blocks_received: Dict[uint32, asyncio.Event]
@@ -40,13 +40,14 @@ class SyncPeersHandler:
         peers: List[bytes32],
         fork_height: uint32,
         blockchain: Blockchain,
+        peak_height: uint32,
     ):
         self.sync_store = sync_store
         # Set of outbound requests for every full_node peer, and time sent
         self.current_outbound_sets = {}
         self.blockchain = blockchain
-        self.header_hashes = self.sync_store.get_potential_hashes()
         self.fully_validated_up_to = fork_height
+        self.peak_height = peak_height
         # Only request this height greater than our current validation
         self.MAX_GAP = 100
         # Only request this many simultaneous blocks per peer
@@ -61,14 +62,14 @@ class SyncPeersHandler:
         self.potential_blocks = self.sync_store.potential_blocks
 
         # No blocks received yet
-        for height in range(self.fully_validated_up_to + 1, len(self.header_hashes)):
+        for height in range(self.fully_validated_up_to + 1, peak_height + 1):
             self.potential_blocks_received[uint32(height)] = asyncio.Event()
 
     def done(self) -> bool:
         """
         Returns True iff all required blocks have been downloaded.
         """
-        for height in range(self.fully_validated_up_to + 1, len(self.header_hashes)):
+        for height in range(self.fully_validated_up_to + 1, self.peak_height + 1):
             if not self.potential_blocks_received[uint32(height)].is_set():
                 # Some blocks have not been received yet
                 return False
@@ -84,19 +85,15 @@ class SyncPeersHandler:
         remove_node_ids = []
         for node_id, outbound_set in self.current_outbound_sets.items():
             for _, time_requested in outbound_set.items():
-                if current_time - time_requested > self.BLOCK_RESPONSE_TIMEOUT:
+                if current_time - float(time_requested) > self.BLOCK_RESPONSE_TIMEOUT:
                     remove_node_ids.append(node_id)
-        for rnid in remove_node_ids:
-            if rnid in self.current_outbound_sets:
-                log.warning(
-                    f"Timeout receiving block, closing connection with node {rnid}"
-                )
-                self.current_outbound_sets.pop(rnid, None)
-                yield OutboundMessage(
-                    NodeType.FULL_NODE, Message("", None), Delivery.CLOSE, rnid
-                )
+        for rn_id in remove_node_ids:
+            if rn_id in self.current_outbound_sets:
+                log.warning(f"Timeout receiving block, closing connection with node {rn_id}")
+                self.current_outbound_sets.pop(rn_id, None)
+                yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE, rn_id)
 
-    async def _add_to_request_sets(self) -> OutboundMessageGenerator:
+    async def add_to_request_sets(self) -> OutboundMessageGenerator:
         """
         Refreshes the pointers of how far we validated and how far we downloaded. Then goes through
         all peers and sends requests to peers for the blocks we have not requested yet, or have
@@ -105,7 +102,7 @@ class SyncPeersHandler:
         if not self.sync_store.get_sync_mode():
             return
 
-        #     fork       fully validated                           MAX_GAP   target
+        #     fork       fully validated                           MAX_GAP   target (peak)
         # $$$$$X$$$$$$$$$$$$$$$X================----==---=--====---=--X------->
         #      $
         #      $
@@ -113,9 +110,8 @@ class SyncPeersHandler:
         #                         prev tip
 
         # Refresh the fully_validated_up_to pointer
-        target_height = len(self.header_hashes) - 1
-        for height in range(self.fully_validated_up_to + 1, target_height + 1):
-            if self.header_hashes[height] in self.blockchain.headers:
+        for height in range(self.fully_validated_up_to + 1, self.peak_height + 1):
+            if self.sync_store.get_header_hashes_added(uint32(height)) is not None:
                 self.fully_validated_up_to = uint32(height)
             else:
                 break
@@ -129,13 +125,12 @@ class SyncPeersHandler:
         # Finds a block height
         for height in range(
             self.fully_validated_up_to + 1,
-            min(self.fully_validated_up_to + self.MAX_GAP + 1, target_height + 1),
+            min(self.fully_validated_up_to + self.MAX_GAP + 1, self.peak_height + 1),
         ):
             if len(to_send) == free_slots:
                 # No more slots to send to any peers
                 break
-            header_hash = self.header_hashes[uint32(height)]
-            if header_hash in self.blockchain.headers:
+            if self.sync_store.get_header_hashes_added(uint32(height)) in self.blockchain.sub_blocks:
                 # Avoids downloading blocks and headers that we already have
                 continue
 
@@ -144,7 +139,7 @@ class SyncPeersHandler:
             already_requested = False
             # If we have asked for this block to some peer, we don't want to ask for it again yet.
             for node_id_2, request_set_2 in self.current_outbound_sets.items():
-                if self.header_hashes[height] in request_set_2:
+                if height in request_set_2:
                     already_requested = True
                     break
             if already_requested:
@@ -157,23 +152,19 @@ class SyncPeersHandler:
         outbound_sets_list.sort(key=lambda x: len(x[1]))
         index = 0
         to_yield: List[Any] = []
+        node_id = None
         for height in to_send:
             # Find a the next peer with an empty slot. There must be an empty slot: to_send
             # includes up to free_slots things, and current_outbound sets cannot change since there is
             # no await from when free_slots is computed (and thus no context switch).
-            while (
-                len(outbound_sets_list[index % len(outbound_sets_list)][1])
-                == self.MAX_REQUESTS_PER_PEER
-            ):
+            while len(outbound_sets_list[index % len(outbound_sets_list)][1]) == self.MAX_REQUESTS_PER_PEER:
                 index += 1
 
             # Add to peer request
             node_id, request_set = outbound_sets_list[index % len(outbound_sets_list)]
-            request_set[self.header_hashes[height]] = uint64(int(time.time()))
+            request_set[uint32(height)] = uint64(int(time.time()))
 
-            to_yield.append(
-                full_node_protocol.RequestBlock(height, self.header_hashes[height])
-            )
+            to_yield.append(full_node_protocol.RequestSubBlock(height, True))
 
         for request in to_yield:
             yield OutboundMessage(
@@ -183,23 +174,16 @@ class SyncPeersHandler:
                 node_id,
             )
 
-    async def new_block(
-        self, block: Union[FullBlock, HeaderBlock]
-    ) -> OutboundMessageGenerator:
+    async def new_block(self, block: Union[FullBlock, HeaderBlock]) -> OutboundMessageGenerator:
         """
         A new block was received from a peer.
         """
         header_hash: bytes32 = block.header_hash
         if not isinstance(block, FullBlock):
             return
-        if (
-            block.height >= len(self.header_hashes)
-            or self.header_hashes[block.height] != header_hash
-        ):
+        if block.height >= self.peak_height:
             # This block is wrong, so ignore
-            log.info(
-                f"Received header hash that is not in sync path {header_hash} at height {block.height}"
-            )
+            log.info(f"Received header hash that is not in sync path {header_hash} at height {block.height}")
             return
 
         # save block to DB
@@ -216,19 +200,8 @@ class SyncPeersHandler:
             request_set.pop(header_hash, None)
 
         # add to request sets
-        async for msg in self._add_to_request_sets():
+        async for msg in self.add_to_request_sets():
             yield msg
-
-    async def reject_block(
-        self, header_hash: bytes32, node_id: bytes32
-    ) -> OutboundMessageGenerator:
-        """
-        A rejection was received from a peer, so we remove this peer and close the connection,
-        since we assume this peer cannot help us sync up. All blocks are removed from the
-        request set.
-        """
-        self.current_outbound_sets.pop(node_id, None)
-        yield OutboundMessage(NodeType.FULL_NODE, Message("", None), Delivery.CLOSE)
 
     def new_node_connected(self, node_id: bytes32):
         """
