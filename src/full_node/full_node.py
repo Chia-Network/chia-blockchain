@@ -993,15 +993,27 @@ class FullNode:
 
     @api_request
     async def respond_signage_point(self, request: full_node_protocol.RespondSignagePoint) -> OutboundMessageGenerator:
+        peak = self.blockchain.get_peak()
+        next_sub_slot_iters = self.blockchain.get_next_slot_iters(peak.get_hash(), True)
+
         added = self.full_node_store.new_signage_point(
-            request.end_of_slot_bundle, self.blockchain.sub_blocks, self.blockchain.get_peak()
+            request.index_from_challenge,
+            self.blockchain.sub_blocks,
+            self.blockchain.get_peak(),
+            next_sub_slot_iters,
+            SignagePoint(
+                request.challenge_chain_vdf,
+                request.challenge_chain_proof,
+                request.reward_chain_vdf,
+                request.reward_chain_proof,
+            ),
         )
 
         if added:
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
-                request.end_of_slot_bundle.challenge_chain.get_hash(),
-                uint8(0),
-                request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge_hash,
+                request.challenge_chain_vdf.challenge_hash,
+                request.index_from_challenge,
+                request.reward_chain_vdf.challenge_hash,
             )
             yield OutboundMessage(
                 NodeType.FULL_NODE,
