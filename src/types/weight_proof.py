@@ -42,15 +42,15 @@ class SubepochChallengeSegment(Streamable):
     # Proof of space
     proof_of_space: Optional[ProofOfSpace]  # if infused
     # VDF to signage point
-    signage_point_vdf: Optional[List[VDFProof]]  # if infused
+    cc_signage_point_vdf: Optional[VDFProof]  # if infused
     # Signature of signage point
-    signage_point_sig: Optional[G2Element]  # if infused
+    cc_signage_point_sig: Optional[G2Element]  # if infused
     # VDF to infusion point
     infusion_point_vdf: Optional[List[VDFProof]]  # if infused
     # VDF from infusion point to end of subslot
     infusion_to_slot_end_vdf: Optional[List[VDFProof]]  # if infused
     # VDF from beginning to end of subslot
-    sub_slot_vdf: Optional[List[VDFProof]]  # if not infused
+    sub_slot_vdf: Optional[VDFProof]  # if not infused
 
 
 @dataclass(frozen=True)
