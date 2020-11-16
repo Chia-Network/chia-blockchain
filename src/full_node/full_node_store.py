@@ -3,14 +3,16 @@ from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_ip_iters, calculate_sub_slot_iters
+from src.full_node.difficulty_adjustment import get_next_difficulty
 from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
 from src.protocols import timelord_protocol
+from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.vdf import VDFProof, VDFInfo
+from src.types.vdf import VDFInfo
 from src.util.ints import uint32, uint8, uint64, uint128
 
 log = logging.getLogger(__name__)
@@ -150,6 +152,10 @@ class FullNodeStore:
                 return sub_slot, index, total_iters
         return None
 
+    def initialize_genesis_sub_slot(self):
+        self.clear_slots()
+        self.finished_sub_slots = [(None, {}, uint128(0))]
+
     def new_finished_sub_slot(
         self, eos: EndOfSubSlotBundle, sub_blocks: Dict[bytes32, SubBlockRecord], peak: SubBlockRecord
     ):
@@ -228,17 +234,92 @@ class FullNodeStore:
     def new_signage_point(
         self,
         index: uint8,
+        sub_blocks: Dict[bytes32, SubBlockRecord],
+        peak: Optional[SubBlockRecord],
+        next_sub_slot_iters: uint64,
         signage_point: SignagePoint,
     ) -> bool:
         """
         Returns true if sp successfully added
         """
-        challenge_hash: bytes32 = signage_point.cc_vdf.challenge_hash
+
+        if peak is None or peak.height < 2:
+            sub_slot_iters = calculate_sub_slot_iters(self.constants, self.constants.IPS_STARTING)
+        else:
+            sub_slot_iters = calculate_sub_slot_iters(self.constants, peak.ips)
+
+        # If we don't have this slot, return False
         assert 0 < index < self.constants.NUM_CHECKPOINTS_PER_SLOT
-        for sub_slot, sps_cc, sps_rc, _ in self.finished_sub_slots:
-            if sub_slot.challenge_chain.get_hash() == challenge_hash:
-                sps_cc[index] = (vdf_info_cc, proof_cc)
-                sps_rc[index] = (vdf_info_rc, proof_rc)
+        for sub_slot, sp_dict, start_ss_total_iters in self.finished_sub_slots:
+            if sub_slot is None and start_ss_total_iters == 0:
+                ss_challenge_hash = self.constants.FIRST_CC_CHALLENGE
+                ss_reward_hash = self.constants.FIRST_RC_CHALLENGE
+            else:
+                ss_challenge_hash = sub_slot.challenge_chain.get_hash()
+                ss_reward_hash = sub_slot.reward_chain.get_hash()
+            if ss_challenge_hash == signage_point.cc_vdf.challenge_hash:
+                # If we do have this slot, find the Prev sub-block from SP and validate SP
+                if peak is not None and start_ss_total_iters > peak.total_iters:
+                    # We are in a future sub slot from the peak, so maybe there is a new IPS
+                    checkpoint_size: uint64 = uint64(next_sub_slot_iters // self.constants.NUM_CHECKPOINTS_PER_SLOT)
+                    delta_iters = checkpoint_size * index
+                else:
+                    # We are not in a future sub slot from the peak, so there is no new IPS
+                    checkpoint_size: uint64 = uint64(sub_slot_iters // self.constants.NUM_CHECKPOINTS_PER_SLOT)
+                    delta_iters = checkpoint_size * index
+                sp_total_iters = start_ss_total_iters + delta_iters
+
+                curr = peak
+                if peak is None:
+                    check_from_start_of_ss = True
+                else:
+                    check_from_start_of_ss = False
+                    while curr.total_iters > start_ss_total_iters and curr.total_iters > sp_total_iters:
+                        if curr.first_in_sub_slot:
+                            # Did not find a sub-block where it's iters are before our sp_total_iters, in this ss
+                            check_from_start_of_ss = True
+                            break
+                        curr = sub_blocks[curr.prev_hash]
+
+                if check_from_start_of_ss:
+                    # Check VDFs from start of sub slot
+                    cc_vdf_info_expected = VDFInfo(
+                        ss_challenge_hash,
+                        ClassgroupElement.get_default_element(),
+                        delta_iters,
+                        signage_point.cc_vdf.output,
+                    )
+
+                    rc_vdf_info_expected = VDFInfo(
+                        ss_reward_hash,
+                        ClassgroupElement.get_default_element(),
+                        delta_iters,
+                        signage_point.rc_vdf.output,
+                    )
+                else:
+                    # Check VDFs from curr
+                    assert curr is not None
+                    cc_vdf_info_expected = VDFInfo(
+                        ss_challenge_hash,
+                        curr.challenge_vdf_output,
+                        uint64(sp_total_iters - curr.total_iters),
+                        signage_point.cc_vdf.output,
+                    )
+                    rc_vdf_info_expected = VDFInfo(
+                        curr.reward_infusion_new_challenge,
+                        ClassgroupElement.get_default_element(),
+                        uint64(sp_total_iters - curr.total_iters),
+                        signage_point.rc_vdf.output,
+                    )
+                if not signage_point.cc_proof.is_valid(self.constants, signage_point.cc_vdf, cc_vdf_info_expected):
+                    return False
+                if not signage_point.rc_proof.is_valid(self.constants, signage_point.rc_vdf, rc_vdf_info_expected):
+                    return False
+
+                if index not in sp_dict:
+                    sp_dict[index] = [signage_point]
+                else:
+                    sp_dict[index].append(signage_point)
                 return True
         return False
 
