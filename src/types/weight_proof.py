@@ -38,7 +38,7 @@ class SubepochChallengeSegment(Streamable):
     # VDF from infusion point to end of subslot
     infusion_to_slot_end_vdf: Optional[VDFProof]  # if infused
     # VDF from beginning to end of subslot
-    slot_vdf: Optional[VDFProof]  # if not infused
+    sub_slot_vdf: Optional[List[VDFProof]]  # if not infused
 
 
 @dataclass(frozen=True)
