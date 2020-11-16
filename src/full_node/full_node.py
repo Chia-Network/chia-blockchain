@@ -1102,7 +1102,7 @@ class FullNode:
             difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
             ips = pos_sub_slot[0].challenge_chain.new_ips
         else:
-            if peak.height == 0:
+            if peak is None or peak.height == 0:
                 difficulty = self.constants.DIFFICULTY_STARTING
                 ips = self.constants.IPS_STARTING
             else:
