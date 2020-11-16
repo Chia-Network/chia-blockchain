@@ -1,18 +1,18 @@
-name: Build Ubuntu on Python 3.7, 3.8, and 3.9
+name: Build Ubuntu on Python 3.7, 3.8
 
 
 on: [push, pull_request]
 
 jobs:
   build:
-    name: Ubuntu-latest on Python 3.7, 3.8 and 3.9
+    name: Ubuntu-latest on Python 3.7, 3.8
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8]
         os: [ubuntu-latest]
 
     steps:
@@ -57,7 +57,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-        sudo apt-get install nodejs-dev node-gyp
 
     - name: Run install script
       env:
