@@ -19,15 +19,11 @@ from src.consensus.pot_iterations import (
 from src.full_node.block_store import BlockStore
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
-from src.full_node.deficit import calculate_deficit
 from src.full_node.difficulty_adjustment import (
-    finishes_sub_epoch,
-    get_next_ips,
-    get_next_difficulty,
     get_ips_and_difficulty,
 )
 from src.full_node.full_node_store import FullNodeStore
-from src.full_node.make_sub_epoch_summary import make_sub_epoch_summary
+from src.full_node.make_sub_epoch_summary import next_sub_epoch_summary
 from src.full_node.mempool_manager import MempoolManager
 from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
@@ -752,8 +748,11 @@ class FullNode:
                 # Occasionally clear the seen list to keep it small
                 self.full_node_store.clear_seen_unfinished_blocks()
 
+            ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
+                self.constants, self.blockchain.sub_blocks, self.blockchain.height_to_hash, new_peak.ips, sub_block
+            )
             timelord_new_peak: timelord_protocol.NewPeak = timelord_protocol.NewPeak(
-                sub_block.reward_chain_sub_block, difficulty, new_peak.deficit, new_peak.ips, 123123
+                sub_block.reward_chain_sub_block, difficulty, new_peak.deficit, new_peak.ips, ses
             )
 
             # Tell timelord about the new peak
@@ -801,8 +800,6 @@ class FullNode:
 
         # This code path is reached if added == ADDED_AS_ORPHAN or NEW_TIP
         next_block: Optional[FullBlock] = self.full_node_store.get_disconnected_block_by_prev(sub_block.header_hash)
-
-        # TODO: revisit full node store cache to see if other things can be added
 
         # Recursively process the next block if we have it
         if next_block is not None:
@@ -920,7 +917,9 @@ class FullNode:
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,
             block.foliage_sub_block,
-            ses,
+            next_sub_epoch_summary(
+                self.constants, self.blockchain.sub_blocks, self.blockchain.height_to_hash, required_iters, block
+            ),
         )
 
         yield OutboundMessage(
@@ -994,9 +993,21 @@ class FullNode:
 
     @api_request
     async def respond_signage_point(self, request: full_node_protocol.RespondSignagePoint) -> OutboundMessageGenerator:
-        # TODO
-        async for _ in []:
-            yield _
+        added = self.full_node_store.new_signage_point(
+            request.end_of_slot_bundle, self.blockchain.sub_blocks, self.blockchain.get_peak()
+        )
+
+        if added:
+            broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
+                request.end_of_slot_bundle.challenge_chain.get_hash(),
+                uint8(0),
+                request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge_hash,
+            )
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("new_signage_point_or_end_of_sub_slot", broadcast),
+                Delivery.BROADCAST_TO_OTHERS,
+            )
 
     @api_request
     async def respond_end_of_sub_slot(
