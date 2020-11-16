@@ -368,9 +368,9 @@ class FullNodeStore:
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
         the prev sub-slot (since we still might get more sub-blocks with an sp in the previous sub-slot)
         """
+        new_finished_sub_slots = []
         if not reorg:
             # This is a new peak that adds to the last peak. We can clear data in old sub-slots. (and new ones)
-            new_finished_sub_slots = []
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                 if prev_sub_slot_total_iters is not None:
                     if sub_slot == prev_sub_slot:
@@ -381,18 +381,17 @@ class FullNodeStore:
                 if sub_slot == peak_sub_slot:
                     new_finished_sub_slots.append([(sub_slot, sps, total_iters)])
                     self.finished_sub_slots = new_finished_sub_slots
-                    return
-
-        # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current cache
-        # delete the entire cache and add this sub slot.
-        self.clear_slots()
-        if prev_sub_slot_total_iters is not None:
-            self.finished_sub_slots = [(prev_sub_slot, {}, prev_sub_slot_total_iters)]
-        self.finished_sub_slots.append((peak_sub_slot, {}, total_iters))
+        if reorg or len(new_finished_sub_slots) == 0:
+            # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current
+            # cache, delete the entire cache and add this sub slot.
+            self.clear_slots()
+            if prev_sub_slot_total_iters is not None:
+                self.finished_sub_slots = [(prev_sub_slot, {}, prev_sub_slot_total_iters)]
+            self.finished_sub_slots.append((peak_sub_slot, {}, total_iters))
 
         for eos in self.future_eos_cache.get(peak.reward_infusion_new_challenge, []):
             if self.new_finished_sub_slot(eos, sub_blocks, peak):
-                return eos
+                return eos  # Return new sub slot, if added
         # TODO: handle other caches
         return None
 

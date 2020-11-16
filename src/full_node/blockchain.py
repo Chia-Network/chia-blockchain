@@ -337,7 +337,7 @@ class Blockchain:
     async def pre_validate_blocks_mulpeakrocessing(
         self, blocks: List[FullBlock]
     ) -> List[Tuple[bool, Optional[bytes32]]]:
-        # TODO(mariano): review
+        # TODO(mariano): re-write
         # futures = []
         # # Pool of workers to validate blocks concurrently
         # for block in blocks:
