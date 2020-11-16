@@ -227,16 +227,13 @@ class FullNodeStore:
 
     def new_signage_point(
         self,
-        challenge_hash: bytes32,
         index: uint8,
-        vdf_info_cc: VDFInfo,
-        proof_cc: VDFProof,
-        vdf_info_rc: VDFInfo,
-        proof_rc: VDFProof,
+        signage_point: SignagePoint,
     ) -> bool:
         """
         Returns true if sp successfully added
         """
+        challenge_hash: bytes32 = signage_point.cc_vdf.challenge_hash
         assert 0 < index < self.constants.NUM_CHECKPOINTS_PER_SLOT
         for sub_slot, sps_cc, sps_rc, _ in self.finished_sub_slots:
             if sub_slot.challenge_chain.get_hash() == challenge_hash:
@@ -315,6 +312,7 @@ class FullNodeStore:
         for eos in self.future_eos_cache.get(peak.reward_infusion_new_challenge, []):
             if self.new_finished_sub_slot(eos, sub_blocks, peak):
                 return eos
+        # TODO: handle other caches
         return None
 
     def get_finished_sub_slots(
