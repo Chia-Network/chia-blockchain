@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 
 from src.consensus.constants import ConsensusConstants
+from src.types.header_block import HeaderBlock
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
