@@ -51,11 +51,11 @@ def create_sub_epoch_segment(block: HeaderBlock, sub_epoch_n: uint32) -> Subepoc
     # Proof of space
     proof_of_space = block.reward_chain_sub_block.proof_of_space  # if infused
     # Signature of signage point
-    signage_point_sig = block.reward_chain_sub_block.challenge_chain_sp_signature  # if infused)
+    cc_signage_point_sig = block.reward_chain_sub_block.challenge_chain_sp_signature  # if infused)
 
     # VDF to signage point
     # todo this should be the combined challenge_chain_sp_proofs
-    signage_point_vdf = block.challenge_chain_sp_proof  # if infused
+    cc_signage_point_vdf = block.challenge_chain_sp_proof  # if infused
 
     # VDF to infusion point
     # todo this should be the combined challenge_chain_ip_proofs
@@ -72,8 +72,8 @@ def create_sub_epoch_segment(block: HeaderBlock, sub_epoch_n: uint32) -> Subepoc
     return SubepochChallengeSegment(
         sub_epoch_n,
         proof_of_space,
-        signage_point_vdf,
-        signage_point_sig,
+        cc_signage_point_vdf,
+        cc_signage_point_sig,
         infusion_point_vdf,
         slot_end_vdf,
         combine_proofs(vdfs),
