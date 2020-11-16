@@ -31,6 +31,10 @@ def full_block_to_header(block: FullBlock) -> HeaderBlock:
     )
 
 
+def combine_proofs(proofs: List[VDFProof]) -> VDFProof:
+    return None
+
+
 def make_sub_epoch_data(
     sub_epoch_summary: SubEpochSummary,
 ) -> SubEpochData:
@@ -44,28 +48,28 @@ def make_sub_epoch_data(
 
 
 def create_sub_epoch_segment(block: HeaderBlock, sub_epoch_n: uint32) -> SubepochChallengeSegment:
-    slot_vdf: Optional[List[VDFProof]] = None
-    proof_of_space: Optional[List[ProofOfSpace]] = None
-    signage_point_vdf: Optional[List[VDFProof]] = None
-    signage_point_sig: Optional[List[G2Element]] = None
-    infusion_point_vdf: Optional[List[VDFProof]] = None
-    slot_end_vdf: Optional[List[VDFProof]] = None
 
-    for sub_slot in block.finished_sub_slots:
-        if sub_slot.proofs.infused_challenge_chain_slot_proof is None:
-            # Proof of space
-            proof_of_space.append(HeaderBlock.reward_chain_sub_block.proof_of_space)  # if infused
-            # VDF to signage point
-            signage_point_vdf.append(block.reward_chain_sp_proof)  # if infused
-            # Signature of signage point
-            signage_point_sig.append(block.reward_chain_sub_block.challenge_chain_sp_signature)  # if infused)
-            # VDF to infusion point
-            infusion_point_vdf.append(block.challenge_chain_ip_proof)  # if infused
-            # VDF from infusion point to end of subslot
-            slot_end_vdf.append(sub_slot.proofs.challenge_chain_slot_proof)  # if infused
-            # VDF from beginning to end of subslot
-        else:
-            slot_vdf.append(sub_slot.proofs.infused_challenge_chain_slot_proof)
+    sub_slot = block.finished_sub_slots[-1]
+    # Proof of space
+    proof_of_space = block.reward_chain_sub_block.proof_of_space  # if infused
+    # Signature of signage point
+    signage_point_sig = block.reward_chain_sub_block.challenge_chain_sp_signature  # if infused)
+
+    # VDF to signage point
+    # todo this should be the combined challenge_chain_sp_proofs
+    signage_point_vdf = block.challenge_chain_sp_proof  # if infused
+
+    # VDF to infusion point
+    # todo this should be the combined challenge_chain_ip_proofs
+    infusion_point_vdf = block.challenge_chain_ip_proof  # if infused
+
+    # VDF from infusion point to end of subslot
+    slot_end_vdf = sub_slot.proofs.challenge_chain_slot_proof  # if infused
+
+    # VDF from beginning to end of subslot
+    vdfs: List[VDFProof] = []
+    for sub_slot in block.finished_sub_slots[1:]:
+        vdfs.append(sub_slot.proofs.infused_challenge_chain_slot_proof)
 
     return SubepochChallengeSegment(
         sub_epoch_n,
@@ -74,7 +78,7 @@ def create_sub_epoch_segment(block: HeaderBlock, sub_epoch_n: uint32) -> Subepoc
         signage_point_sig,
         infusion_point_vdf,
         slot_end_vdf,
-        slot_vdf,
+        combine_proofs(vdfs),
     )
 
 
