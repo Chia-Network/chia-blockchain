@@ -44,28 +44,28 @@ def make_sub_epoch_data(
 
 
 def create_sub_epoch_segment(block: HeaderBlock, sub_epoch_n: uint32) -> SubepochChallengeSegment:
-    slot_vdf: Optional[VDFProof] = None
-    proof_of_space: Optional[ProofOfSpace] = None
-    signage_point_vdf: Optional[VDFProof] = None
-    signage_point_sig: Optional[G2Element] = None
-    infusion_point_vdf: Optional[VDFProof] = None
-    slot_end_vdf: Optional[VDFProof] = None
+    slot_vdf: Optional[List[VDFProof]] = None
+    proof_of_space: Optional[List[ProofOfSpace]] = None
+    signage_point_vdf: Optional[List[VDFProof]] = None
+    signage_point_sig: Optional[List[G2Element]] = None
+    infusion_point_vdf: Optional[List[VDFProof]] = None
+    slot_end_vdf: Optional[List[VDFProof]] = None
 
-    proofs = block.finished_sub_slots[-1].proofs
-    if proofs.infused_challenge_chain_slot_proof is None:
-        # Proof of space
-        proof_of_space: Optional[ProofOfSpace] = HeaderBlock.reward_chain_sub_block.proof_of_space  # if infused
-        # VDF to signage point
-        signage_point_vdf: Optional[VDFProof] = block.reward_chain_sp_proof  # if infused
-        # Signature of signage point
-        signage_point_sig: Optional[G2Element] = block.reward_chain_sub_block.challenge_chain_sp_signature  # if infused
-        # VDF to infusion point
-        infusion_point_vdf: Optional[VDFProof] = block.challenge_chain_ip_proof  # if infused
-        # VDF from infusion point to end of subslot
-        slot_end_vdf: Optional[VDFProof] = proofs.challenge_chain_slot_proof  # if infused
-        # VDF from beginning to end of subslot
-    else:
-        slot_vdf = proofs.infused_challenge_chain_slot_proof
+    for sub_slot in block.finished_sub_slots:
+        if sub_slot.proofs.infused_challenge_chain_slot_proof is None:
+            # Proof of space
+            proof_of_space.append(HeaderBlock.reward_chain_sub_block.proof_of_space)  # if infused
+            # VDF to signage point
+            signage_point_vdf.append(block.reward_chain_sp_proof)  # if infused
+            # Signature of signage point
+            signage_point_sig.append(block.reward_chain_sub_block.challenge_chain_sp_signature)  # if infused)
+            # VDF to infusion point
+            infusion_point_vdf.append(block.challenge_chain_ip_proof)  # if infused
+            # VDF from infusion point to end of subslot
+            slot_end_vdf.append(sub_slot.proofs.challenge_chain_slot_proof)  # if infused
+            # VDF from beginning to end of subslot
+        else:
+            slot_vdf.append(sub_slot.proofs.infused_challenge_chain_slot_proof)
 
     return SubepochChallengeSegment(
         sub_epoch_n,
@@ -134,30 +134,8 @@ def create_sub_epoch_segments(
             continue
 
         header_block = await get_header_block(curr, block_store)
-        proof_of_space: Optional[ProofOfSpace] = None
-        signage_point_vdf: Optional[VDFProof] = None
-        signage_point_sig: Optional[G2Element] = None
-        infusion_point_vdf: Optional[VDFProof] = None
-        infusion_to_slot_end_vdf: Optional[VDFProof] = None
-        slot_vdf: Optional[VDFProof] = None
 
-        if curr.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
-            proof_of_space = header_block.reward_chain_sub_block.proof_of_space
-            signage_point_vdf = header_block.challenge_chain_sp_proof
-            signage_point_sig = header_block.reward_chain_sub_block.challenge_chain_sp_signature
-            infusion_point_vdf = header_block.challenge_chain_ip_proof
-            infusion_to_slot_end_vdf = header_block.finished_sub_slots[-1].proofs.infused_challenge_chain_slot_proof
-        else:
-            slot_vdf = header_block.finished_sub_slots[-1].proofs.challenge_chain_slot_proof
-        segment = SubepochChallengeSegment(
-            sub_epoch_n,
-            proof_of_space,
-            signage_point_vdf,
-            signage_point_sig,
-            infusion_point_vdf,
-            infusion_to_slot_end_vdf,
-            slot_vdf,
-        )
+        segment = create_sub_epoch_segment(header_block, sub_epoch_n)
         segments.append(segment)
         count -= 1
 
