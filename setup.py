@@ -3,10 +3,10 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.2.7",  # Signature library
-    "chiavdf==0.12.26",  # timelord and vdf verification
-    "chiabip158==0.16",  # bip158-style wallet filters
-    "chiapos==0.12.35",  # proof of space
+    "blspy==0.2.8",  # Signature library
+    "chiavdf==0.12.28",  # timelord and vdf verification
+    "chiabip158==0.17",  # bip158-style wallet filters
+    "chiapos==0.12.36",  # proof of space
     "clvm==0.5.3",
     "clvm_tools==0.1.7",
     "aiohttp==3.7.2",  # HTTP server for full node rpc
