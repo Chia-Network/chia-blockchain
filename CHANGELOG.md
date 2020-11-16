@@ -11,8 +11,9 @@ for setuptools_scm/PEP 440 reasons.
 ### Added
 
 - F1 generation in the plotter is now fully parallel for a small speedup.
-- We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in [PR 120](https://github.com/Chia-Network/chiapos/pull/120)
+- We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in [PR 120](https://github.com/Chia-Network/chiapos/pull/120). Note that some sorts in phase 2 and phase 3 will now appear "out of order" and that is now expected behavior.
 - You can now specify which private key to use for `chia plots create`. After obtaining the fingerprint from `chia keys show`, try `chia plots create -a FINGERPRINT`. Thanks to @eFishCent for this pull request!
+- We now fully support Python 3.9.
 
 ### Changed
 
@@ -21,11 +22,13 @@ for setuptools_scm/PEP 440 reasons.
 - All appropriate Chialisp smart transactions have been updated to use aggsig_me.
 - Full node should be more aggressive about finding other peers.
 - Peer disconnect messages are now set to log level INFO down from WARNING.
+- chiavdf now allows passing in input to a VDF for new consensus.
 - aiohttp, cbor2, clvm-tools, cryptography, and sortedcontainers have been upgraded to their current versions.
 
 ### Fixed
 
 - A segfault caused by memory leaks in bls-library has been fixed. This should end the random farmer and harvester crashes over time as outlined in [Issue 500](https://github.com/Chia-Network/chia-blockchain/issues/500).
+- CPU utilization as reported in the plotter is now accurate for Windows.
 - Starting with recent setuptools fixes, we can no longer pass an empty string to the linker on Windows when building binary wheels in the sub repos. Thanks @jaraco for tracking this down.
 
 ## [1.0beta17] aka Beta 1.17 - 2020-10-22
