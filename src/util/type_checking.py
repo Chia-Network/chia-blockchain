@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, List, Type, Union, get_type_hints
+from typing import Any, List, Type, Union, get_type_hints, get_args
 
 
 def is_type_List(f_type: Type) -> bool:
@@ -15,7 +15,7 @@ def is_type_SpecificOptional(f_type) -> bool:
     return (
         hasattr(f_type, "__origin__")
         and f_type.__origin__ == Union
-        and f_type.__args__[1]() is None
+        and get_args(f_type)[1]() is None
     )
 
 
@@ -37,8 +37,8 @@ def strictdataclass(cls: Any):
         def parse_item(self, item: Any, f_name: str, f_type: Type) -> Any:
             if is_type_List(f_type):
                 collected_list: List = []
-                inner_type: Type = f_type.__args__[0]
-                # wjb assert inner_type != List.__args__[0]  # type: ignore
+                inner_type: Type = get_args(f_type)[0]
+                assert inner_type != get_args(List)[0]  # type: ignore
                 if not is_type_List(type(item)):
                     raise ValueError(f"Wrong type for {f_name}, need a list.")
                 for el in item:
@@ -48,16 +48,16 @@ def strictdataclass(cls: Any):
                 if item is None:
                     return None
                 else:
-                    inner_type: Type = f_type.__args__[0]  # type: ignore
+                    inner_type: Type = get_args(f_type)[0]  # type: ignore
                     return self.parse_item(item, f_name, inner_type)
             if is_type_Tuple(f_type):
                 collected_list = []
                 if not is_type_Tuple(type(item)) and not is_type_List(type(item)):
                     raise ValueError(f"Wrong type for {f_name}, need a tuple.")
-                if len(item) != len(f_type.__args__):
+                if len(item) != len(get_args(f_type)):
                     raise ValueError(f"Wrong number of elements in tuple {f_name}.")
                 for i in range(len(item)):
-                    inner_type = f_type.__args__[i]
+                    inner_type = get_args(f_type)[i]
                     tuple_item = item[i]
                     collected_list.append(
                         self.parse_item(tuple_item, f_name, inner_type)
