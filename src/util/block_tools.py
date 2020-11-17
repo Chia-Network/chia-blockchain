@@ -194,14 +194,13 @@ class BlockTools:
         block_list: List[FullBlock] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
-        transaction_data_at_height: Dict[int, SpendBundle] = None,
+        transaction_data: Optional[SpendBundle] = None,
         seed: bytes = b"",
         time_per_sub_block: Optional[float] = None,
         force_overflow: bool = False,
         skip_slots: uint32 = uint32(0),  # Force at least this number of empty slots before the first SB
     ) -> List[FullBlock]:
-        if transaction_data_at_height is None:
-            transaction_data_at_height = {}
+        transaction_data_included = False
         if time_per_sub_block is None:
             time_per_sub_block = constants.SLOT_TIME_TARGET / constants.SLOT_SUB_BLOCKS_TARGET
 
@@ -218,6 +217,7 @@ class BlockTools:
                 force_overflow=force_overflow,
                 skip_slots=skip_slots,
                 timestamp=uint64(int(time.time())),
+                farmer_reward_puzzle_hash=farmer_reward_puzzle_hash,
             )
             num_empty_slots_added = skip_slots
             block_list = [genesis]
@@ -287,7 +287,8 @@ class BlockTools:
                     overflow_pos.append((required_iters, proof_of_space))
                     continue
                 assert latest_sub_block.header_hash in sub_blocks
-
+                if transaction_data_included:
+                    transaction_data = None
                 full_block, sub_block_record = get_full_block_and_sub_record(
                     constants,
                     sub_slot_start_total_iters,
@@ -299,7 +300,7 @@ class BlockTools:
                     start_timestamp,
                     start_height,
                     time_per_sub_block,
-                    transaction_data_at_height.get(latest_sub_block.height + 1, None),
+                    transaction_data,
                     height_to_hash,
                     difficulty,
                     required_iters,
@@ -314,6 +315,8 @@ class BlockTools:
 
                 if full_block is None:
                     continue
+                if sub_block_record.is_block:
+                    transaction_data_included = True
 
                 block_list.append(full_block)
                 num_blocks -= 1
@@ -430,6 +433,9 @@ class BlockTools:
             )
             overflow_cc_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
             overflow_rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
+
+            if transaction_data_included:
+                transaction_data = None
             for required_iters, proof_of_space in overflow_pos:
                 full_block, sub_block_record = get_full_block_and_sub_record(
                     constants,
@@ -442,7 +448,7 @@ class BlockTools:
                     start_timestamp,
                     start_height,
                     time_per_sub_block,
-                    transaction_data_at_height.get(latest_sub_block.height + 1, None),
+                    transaction_data,
                     height_to_hash,
                     difficulty,
                     required_iters,
@@ -459,6 +465,8 @@ class BlockTools:
 
                 if full_block is None:
                     continue
+                if sub_block_record.is_block:
+                    transaction_data_included = True
 
                 block_list.append(full_block)
                 num_blocks -= 1
@@ -920,7 +928,7 @@ def get_full_block_and_sub_record(
     start_timestamp: uint64,
     start_height: uint32,
     time_per_sub_block: Optional[float],
-    transaction_data_at_height: Optional[SpendBundle],
+    transaction_data: Optional[SpendBundle],
     height_to_hash: Dict[uint32, bytes32],
     difficulty: uint64,
     required_iters: uint64,
@@ -933,8 +941,7 @@ def get_full_block_and_sub_record(
     sub_blocks: Dict[uint32, SubBlockRecord] = None,
     overflow_cc_challenge: bytes32 = None,
     overflow_rc_challenge: bytes32 = None,
-):
-
+) -> Tuple[FullBlock, SubBlockRecord]:
     sp_iters = calculate_sp_iters(constants, ips, required_iters)
     ip_iters = calculate_ip_iters(constants, ips, required_iters)
 
@@ -951,7 +958,7 @@ def get_full_block_and_sub_record(
         get_pool_signature,
         uint64(start_timestamp + int((prev_sub_block.height + 1 - start_height) * time_per_sub_block)),
         seed,
-        transaction_data_at_height,
+        transaction_data,
         prev_sub_block,
         sub_blocks,
         finished_sub_slots,
