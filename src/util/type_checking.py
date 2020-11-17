@@ -4,12 +4,15 @@ from typing import Any, List, Type, Union, get_type_hints, Tuple, Optional
 
 
 if sys.version_info < (3, 8):
+
     def get_args(t: Type[Any]) -> Tuple[Any, ...]:
-        return getattr(t, '__args__', ())
+        return getattr(t, "__args__", ())
 
     def get_origin(t: Type[Any]) -> Optional[Type[Any]]:
-        return getattr(t, '__origin__', None)
+        return getattr(t, "__origin__", None)
 else:
+
+
     from typing import get_args, get_origin
 
 
