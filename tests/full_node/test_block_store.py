@@ -114,5 +114,6 @@ class TestBlockStore:
                 tasks.append(asyncio.create_task(store.get_full_block(blocks[rand_i].header_hash)))
         await asyncio.gather(*tasks)
         await connection.close()
+        await connection_2.close()
         db_filename.unlink()
         db_filename_2.unlink()

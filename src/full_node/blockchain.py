@@ -223,6 +223,7 @@ class Blockchain:
 
         # Always add the block to the database
         await self.block_store.add_full_block(block, sub_block)
+        self.sub_blocks[sub_block.header_hash] = sub_block
 
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
         if fork_height is not None:
@@ -244,7 +245,6 @@ class Blockchain:
             assert block is not None
             await self.coin_store.new_block(block)
             self.height_to_hash[uint32(0)] = block.header_hash
-            self.sub_blocks[block.header_hash] = sub_block
             self.peak_height = uint32(0)
             return uint32(0)
 
@@ -279,11 +279,9 @@ class Blockchain:
                 curr = fetched_sub_block.prev_hash
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
-                self.height_to_hash[
-                    fetched_sub_block.height
-                ] = fetched_sub_block.header_hash
-                self.sub_blocks[fetched_sub_block.header_hash] = fetched_sub_block
-                await self.coin_store.new_block(fetched_block)
+                self.height_to_hash[fetched_sub_block.height] = fetched_sub_block.header_hash
+                if fetched_sub_block.is_block:
+                    await self.coin_store.new_block(fetched_block)
                 if fetched_sub_block.sub_epoch_summary_included is not None:
                     self.sub_epoch_summaries[fetched_sub_block.height] = fetched_sub_block.sub_epoch_summary_included
 
