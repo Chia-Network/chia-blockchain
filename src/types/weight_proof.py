@@ -14,8 +14,9 @@ from src.types.vdf import VDFProof
 @dataclass(frozen=True)
 @streamable
 class SubEpochData(Streamable):
-    reward_chain_hash: bytes32  # hash of reward chain at end of last segment
-    # Number of subblocks overflow in previous subepoch
+    prev_ses: bytes32
+    # hash of reward chain at end of last segment
+    reward_chain_hash: bytes32
     previous_sub_epoch_overflows: uint8
     # (at end of epoch) New work difficulty and iterations per subslot
     sub_slot_iters: Optional[uint64]
