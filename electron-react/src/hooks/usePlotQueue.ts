@@ -4,10 +4,10 @@ import PlotStatus from '../constants/PlotStatus';
 import type PlotAdd from '../types/PlotAdd';
 
 type QueueItem = {
-  id: number,
+  id: number;
   config: PlotAdd;
   status: PlotStatus;
-  added: number, // timestamp when added
+  added: number; // timestamp when added
 };
 
 type Queue = QueueItem[];
@@ -15,8 +15,8 @@ type Queue = QueueItem[];
 const LOCAL_STORAGE_NAME = 'plotQueue';
 
 export default function usePlotQueue(): {
-  add: (config: PlotAdd) => void,
-  remove: (id: number) => void,
+  add: (config: PlotAdd) => void;
+  remove: (id: number) => void;
 } {
   const [queue] = useLocalStorage<Queue>(LOCAL_STORAGE_NAME, []);
 
@@ -30,12 +30,15 @@ export default function usePlotQueue(): {
         config,
         status: PlotStatus.WAITING,
         added: new Date().getTime(),
-      }
+      },
     ]);
   }
 
   function handleRemove(id: number) {
-    writeStorage(LOCAL_STORAGE_NAME, queue.filter(queueItem => queueItem.id !== id));
+    writeStorage(
+      LOCAL_STORAGE_NAME,
+      queue.filter((queueItem) => queueItem.id !== id),
+    );
   }
 
   return {

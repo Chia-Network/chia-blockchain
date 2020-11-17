@@ -58,6 +58,7 @@ const cols = [
     title: <Trans id="FarmFullNodeConnections.upDown">Up/Down</Trans>,
   },
   {
+    width: '100px',
     title: <Trans id="FarmFullNodeConnections.actions">Actions</Trans>,
     field(row: Connection) {
       return (

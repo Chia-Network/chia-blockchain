@@ -2,11 +2,10 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
-import Container from '@material-ui/core/Container';
 import { useSelector, useDispatch } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
-import { Paper, Tooltip } from '@material-ui/core';
+import { Tooltip } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import HelpIcon from '@material-ui/icons/Help';
@@ -20,7 +19,6 @@ import {
   getBlock,
   getHeader,
 } from '../../modules/fullnodeMessages';
-import DashboardTitle from '../dashboard/DashboardTitle';
 import LayoutMain from '../layout/LayoutMain';
 
 /* global BigInt */
@@ -327,7 +325,6 @@ const getStatusItems = (state, connected) => {
 };
 
 const StatusCell = (props) => {
-  const classes = useStyles();
   const { item } = props;
   const { label } = item;
   const { value } = item;
@@ -361,7 +358,6 @@ const FullNodeStatus = (props) => {
   );
   const statusItems = getStatusItems(blockchain_state, connected);
 
-  const classes = useStyles();
   return (
     <Card
       title={<Trans id="FullNodeStatus.title">Full Node Status</Trans>}
@@ -455,7 +451,6 @@ const BlocksCard = () => {
 };
 
 const SearchBlock = (props) => {
-  const classes = useStyles();
   const dispatch = useDispatch();
   const [searchHash, setSearchHash] = React.useState('');
   const handleChangeSearchHash = (event) => {
@@ -469,29 +464,24 @@ const SearchBlock = (props) => {
     <Card
       title={<Trans id="SearchBlock.title">Search block by header hash</Trans>}
     >
-      <div className={classes.cardSubSection}>
-        <Box display="flex">
-          <Box flexGrow={1}>
-            <TextField
-              fullWidth
-              label={<Trans id="SearchBlock.blockHash">Block hash</Trans>}
-              value={searchHash}
-              onChange={handleChangeSearchHash}
-              variant="outlined"
-            />
-          </Box>
-          <Box>
-            <Button
-              onClick={clickSearch}
-              className={classes.searchHashButton}
-              color="secondary"
-              disableElevation
-            >
-              <Trans id="SearchBlock.search">Search</Trans>
-            </Button>
-          </Box>
+      <Flex alignItems="stretch">
+        <Box flexGrow={1}>
+          <TextField
+            fullWidth
+            label={<Trans id="SearchBlock.blockHash">Block hash</Trans>}
+            value={searchHash}
+            onChange={handleChangeSearchHash}
+            variant="outlined"
+          />
         </Box>
-      </div>
+        <Button
+          onClick={clickSearch}
+          variant="contained"
+          disableElevation
+        >
+          <Trans id="SearchBlock.search">Search</Trans>
+        </Button>
+      </Flex>
     </Card>
   );
 };

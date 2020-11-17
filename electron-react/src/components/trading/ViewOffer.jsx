@@ -253,7 +253,7 @@ export const OfferView = () => {
         </>
       )}
     >
-      <TradesTable trades={trades} />
+      <TradesTable rows={trades} />
     </Card>
   );
 };

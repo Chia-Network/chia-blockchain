@@ -1,7 +1,7 @@
 enum PlotStatus {
   WAITING,
   IN_PROGRESS,
-  DONE
-};
+  DONE,
+}
 
 export default PlotStatus;

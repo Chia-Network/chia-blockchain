@@ -218,6 +218,7 @@ export default function CreateOffer() {
               <Button
                 onClick={handleAdd}
                 variant="contained"
+                disableElevation
               >
                 <Trans id="CreateOffer.add">Add</Trans>
               </Button>

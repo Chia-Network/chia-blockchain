@@ -136,12 +136,12 @@ async function track_progress(store, location) {
 }
 
 export const refreshAllState = (dispatch) => {
-  console.log('calling get plots because refreshAllState');
   dispatch(format_message('get_wallets', {}));
   const start_farmer = startService(service_farmer);
   const start_harvester = startService(service_harvester);
   dispatch(start_farmer);
   dispatch(start_harvester);
+  // TODO add await here
   dispatch(get_height_info());
   dispatch(get_sync_status());
   dispatch(get_connection_info());
@@ -170,6 +170,14 @@ export const handle_message = (store, payload) => {
       store.dispatch(getLatestChallenges());
       store.dispatch(getFarmerConnections());
     } else if (payload.origin === service_harvester) {
+      // get plots is working only when harcester is connected
+      const state = store.getState();
+      if (!state.farming_state.harvester?.plots) {
+        store.dispatch(getPlots());
+      }
+      if (!state.farming_state.harvester?.plot_directories) {
+        store.dispatch(getPlotDirectories());
+      }
     }
   } else if (payload.command === 'delete_key') {
     if (payload.data.success) {
