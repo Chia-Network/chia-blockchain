@@ -54,6 +54,9 @@ class CoinStore:
         return self
 
     async def new_block(self, block: FullBlock):
+        """
+        Only called for sub-blocks which are blocks (and thus have rewards and transactions)
+        """
         removals, additions = await block.tx_removals_and_additions()
 
         for coin in additions:
@@ -63,13 +66,12 @@ class CoinStore:
         for coin_name in removals:
             await self._set_spent(coin_name, block.height)
 
-        pool_coin, farmer_coin = block.get_future_reward_coins()
+        included_reward_coins = block.get_included_reward_coins()
+        assert len(included_reward_coins) >= 2
 
-        pool_coin_r: CoinRecord = CoinRecord(pool_coin, block.height, uint32(0), False, True)
-        farmer_coin_r: CoinRecord = CoinRecord(farmer_coin, block.height, uint32(0), False, True)
-
-        await self._add_coin_record(pool_coin_r)
-        await self._add_coin_record(farmer_coin_r)
+        for coin in included_reward_coins:
+            reward_coin_r: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, True)
+            await self._add_coin_record(reward_coin_r)
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Set
 
 from src.types.name_puzzle_condition import NPC
 from src.types.coin import Coin
@@ -76,10 +76,10 @@ class FullBlock(Streamable):
         )
         return pool_coin, farmer_coin
 
-    def get_included_reward_coins(self) -> List[Coin]:
+    def get_included_reward_coins(self) -> Set[Coin]:
         if not self.is_block():
-            return []
-        return self.transactions_info.reward_claims_incorporated
+            return set()
+        return set(self.transactions_info.reward_claims_incorporated)
 
     def additions(self) -> List[Coin]:
         additions: List[Coin] = []

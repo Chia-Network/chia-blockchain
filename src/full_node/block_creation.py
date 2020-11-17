@@ -114,7 +114,7 @@ def create_foliage(
                 )
                 reward_claims_incorporated += [pool_coin, farmer_coin]
                 curr = sub_blocks[curr.prev_hash]
-        additions: List[Coin] = reward_claims_incorporated
+        additions: List[Coin] = reward_claims_incorporated.copy()
         npc_list = []
         if solution_program is not None:
             error, npc_list, _ = get_name_puzzle_conditions(solution_program)
