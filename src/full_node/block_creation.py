@@ -259,12 +259,6 @@ def create_unfinished_block(
             cc_vdf_challenge = finished_sub_slots[-2].challenge_chain.get_hash()
             sp_vdf_iters = sp_iters
             cc_vdf_input = ClassgroupElement.get_default_element()
-        elif is_genesis:
-            # Genesis block case, first challenge
-            rc_vdf_challenge = constants.FIRST_RC_CHALLENGE
-            cc_vdf_challenge = constants.FIRST_CC_CHALLENGE
-            sp_vdf_iters = sp_iters
-            cc_vdf_input = ClassgroupElement.get_default_element()
         else:
             if new_sub_slot and overflow:
                 num_sub_slots_to_look_for = 1  # Starting at prev will skip 1 sub-slot

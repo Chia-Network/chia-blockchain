@@ -8,7 +8,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint8, uint64, uint32
 from src.util.streamable import Streamable, streamable
-from src.types.vdf import VDFProof
+from src.types.vdf import VDFProof, VDFInfo
 
 
 @dataclass(frozen=True)
@@ -42,17 +42,16 @@ class SubepochChallengeSegment(Streamable):
     # Proof of space
     proof_of_space: Optional[ProofOfSpace]  # if infused
     # VDF to signage point
-    signage_point_vdf: Optional[List[VDFProof]]  # if infused
+    cc_signage_point_vdf: Optional[VDFProof]  # if infused
     # Signature of signage point
-    signage_point_sig: Optional[G2Element]  # if infused
+    cc_signage_point_sig: Optional[G2Element]  # if infused
     # VDF to infusion point
     infusion_point_vdf: Optional[List[VDFProof]]  # if infused
-    # VDF from infusion point to end of subslot
+    # VDF from infusion point to end of sub-slot
     infusion_to_slot_end_vdf: Optional[List[VDFProof]]  # if infused
-    # VDF from beginning to end of subslot
+    # VDF from beginning to end of sub-slot
     slot_vdf: Optional[List[VDFProof]]  # if not infused
-
-    last_reward_chain_vdf_info: VdfInfo
+    last_reward_chain_vdf_info: VDFInfo
 
 
 @dataclass(frozen=True)
