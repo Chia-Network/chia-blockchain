@@ -45,41 +45,6 @@ def make_sub_epoch_data(
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
 
-def create_sub_epoch_segment(block: HeaderBlock, sub_epoch_n: uint32) -> SubepochChallengeSegment:
-
-    sub_slot = block.finished_sub_slots[-1]
-    # Proof of space
-    proof_of_space = block.reward_chain_sub_block.proof_of_space  # if infused
-    # Signature of signage point
-    cc_signage_point_sig = block.reward_chain_sub_block.challenge_chain_sp_signature  # if infused)
-
-    # VDF to signage point
-    # todo this should be the combined challenge_chain_sp_proofs
-    cc_signage_point_vdf = block.challenge_chain_sp_proof  # if infused
-
-    # VDF to infusion point
-    # todo this should be the combined challenge_chain_ip_proofs
-    infusion_point_vdf = block.challenge_chain_ip_proof  # if infused
-
-    # VDF from infusion point to end of subslot
-    slot_end_vdf = sub_slot.proofs.challenge_chain_slot_proof  # if infused
-
-    # VDF from beginning to end of subslot
-    vdfs: List[VDFProof] = []
-    for sub_slot in block.finished_sub_slots[1:]:
-        vdfs.append(sub_slot.proofs.infused_challenge_chain_slot_proof)
-
-    return SubepochChallengeSegment(
-        sub_epoch_n,
-        proof_of_space,
-        cc_signage_point_vdf,
-        cc_signage_point_sig,
-        infusion_point_vdf,
-        slot_end_vdf,
-        combine_proofs(vdfs),
-    )
-
-
 def get_sub_epoch_block_num(
     constants: ConsensusConstants, block: SubBlockRecord, sub_blocks: Dict[bytes32, SubBlockRecord]
 ) -> uint32:
@@ -107,6 +72,109 @@ def choose_sub_epoch(sub_epoch_blocks_N: uint32, rng: random.Random, total_numbe
     return False
 
 
+# returns a challenge chain vdf from slot start to signage point
+def get_cc_combined_signage_vdf(block: HeaderBlock, header_cache: Dict[bytes32, SubBlockRecord]) -> VDFProof:
+    # combine cc vdfs of all reward blocks from the start of the slot
+    # blocks  = get all reward blocks from the start of the slot to sp
+    proofs: List[VDFProof] = []
+    curr = block
+
+    # get all cc_vdfs from start of sub slot until challenge block
+    while not len(curr.finished_sub_slots) > 0:
+        proofs.append(curr.challenge_chain_sp_proof)
+        proofs.append(curr.challenge_chain_ip_proof)
+        # prev
+        curr = header_cache[curr.prev_hash]
+
+    # handle empty sub_slots
+    for sub_slot in curr.finished_sub_slots:
+        proofs.append(sub_slot.proofs.challenge_chain_slot_proof)
+
+    return combine_proofs(proofs)
+
+
+# returns a challenge chain vdf from infusion point to end of slot
+def get_cc_combined_ip_to_slot_end_vdf(
+    constants: ConsensusConstants,
+    block: HeaderBlock,
+    height_to_hash: Dict[uint32, bytes32],
+    header_cache: Dict[bytes32, SubBlockRecord],
+) -> VDFProof:
+    # combine cc vdfs of all reward blocks from block to the end of the slot
+    # blocks = reward blocks from block to the end of the slot
+    proofs: List[VDFProof] = []
+    curr = block
+    # get all cc vdfs from ip to end of  slot
+
+    while not curr.deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+
+        for sub_slot in curr.finished_sub_slots:
+            proofs.append(sub_slot.proofs.infused_challenge_chain_slot_proof)
+
+        proofs.append(curr.challenge_chain_sp_proof)
+        proofs.append(curr.challenge_chain_ip_proof)
+        # next
+        curr = header_cache[height_to_hash[curr.height + 1]]
+
+    return combine_proofs(proofs)
+
+
+# returns an infused challenge chain vdf for the challenge slot
+def get_icc_combined_slot_vdf(
+    constants: ConsensusConstants,
+    block: HeaderBlock,
+    height_to_hash: Dict[uint32, bytes32],
+    header_cache: Dict[bytes32, SubBlockRecord],
+) -> VDFProof:
+    # combine icc vdfs of all reward blocks from block to the end of the slot
+    # blocks = reward blocks from block to the end of the slot
+    proofs: List[VDFProof] = []
+    curr = block
+    while not curr.deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+        proofs.append(curr.infused_challenge_chain_ip_proof)
+        curr = header_cache[height_to_hash[curr.height + 1]]
+    return combine_proofs(proofs)
+
+
+def handle_challenge_segment(
+    constants: ConsensusConstants,
+    block: HeaderBlock,
+    sub_epoch_n: uint32,
+    height_to_hash: Dict[uint32, bytes32],
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+) -> SubepochChallengeSegment:
+
+    # Proof of space
+    proof_of_space = block.reward_chain_sub_block.proof_of_space  # if infused
+    # Signature of signage point
+    cc_signage_point_sig = block.reward_chain_sub_block.challenge_chain_sp_signature  # if infused)
+
+    # VDF from slot start to signage point
+    # needs all reward blocks from sub slot start to sp
+    cc_signage_point_vdf = get_cc_combined_signage_vdf(block, sub_blocks)  # if infused
+
+    # VDF from signage to infusion point
+    infusion_point_vdf = block.challenge_chain_ip_proof  # if infused
+
+    # VDF from infusion point to end of slot
+    # needs all reward blocks from sp to end of sub slot
+    slot_end_vdf = get_cc_combined_ip_to_slot_end_vdf(constants, block, height_to_hash, sub_blocks)  # if infused
+
+    # VDF from beginning to end of slot
+    icc_challenge_slot_vdf = get_icc_combined_slot_vdf(constants, block, height_to_hash, sub_blocks)
+
+    return SubepochChallengeSegment(
+        sub_epoch_n,
+        proof_of_space,
+        cc_signage_point_sig,
+        cc_signage_point_vdf,
+        infusion_point_vdf,
+        icc_challenge_slot_vdf,
+        slot_end_vdf,
+        block.reward_chain_sub_block.reward_chain_ip_vdf,
+    )
+
+
 def create_sub_epoch_segments(
     constants: ConsensusConstants,
     block: SubBlockRecord,
@@ -114,6 +182,7 @@ def create_sub_epoch_segments(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     sub_epoch_n: uint32,
     header_cache: Dict[bytes32, HeaderBlock],
+    height_to_hash: Dict[uint32, bytes32],
 ) -> List[SubepochChallengeSegment]:
     """
     received the last block in sub epoch and creates List[SubepochChallengeSegment] for that sub_epoch
@@ -125,15 +194,19 @@ def create_sub_epoch_segments(
     count = sub_epoch_blocks_n
     while not count == 0:
         curr = sub_blocks[curr.prev_hash]
-        header_block = header_cache[curr.header_hash]
-        # todo skip overflows from last sub epoch
-
         if not curr.is_challenge_sub_block(constants):
             continue
-        else:
-            segment = create_sub_epoch_segment(header_block, sub_epoch_n)
-            segments.append(segment)
-            count -= 1
+
+        header_block = header_cache[curr.header_hash]
+        segment = handle_challenge_segment(
+            constants,
+            header_block,
+            sub_epoch_n,
+            height_to_hash,
+            sub_blocks,
+        )
+        segments.append(segment)
+        count -= 1
 
     return segments
 
@@ -145,6 +218,7 @@ def make_weight_proof(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     total_number_of_blocks: uint64,
     header_cache: Dict[bytes32, HeaderBlock],
+    height_to_hash: Dict[uint32, bytes32],
 ) -> WeightProof:
     """
     Creates a weight proof object
@@ -166,7 +240,9 @@ def make_weight_proof(
             sub_epoch_blocks_n = get_sub_epoch_block_num(constants, curr, sub_blocks)
             #   sample sub epoch
             if choose_sub_epoch(sub_epoch_blocks_n, rng, total_number_of_blocks):
-                create_sub_epoch_segments(constants, curr, sub_epoch_blocks_n, sub_blocks, sub_epoch_n, header_cache)
+                sub_epoch_segments = create_sub_epoch_segments(
+                    constants, curr, sub_epoch_blocks_n, sub_blocks, sub_epoch_n, header_cache, height_to_hash
+                )
             sub_epoch_n += 1
 
         if recent_blocks_n > 0:
@@ -183,6 +259,7 @@ def validate_weight_proof(proof: WeightProof) -> bool:
     # todo
     # sub epoch summaries
     #   validate hashes
+    #
     # Calculate weight make sure equals to peak
     #
     # samples
