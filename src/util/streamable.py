@@ -27,6 +27,8 @@ if sys.version_info < (3, 8):
 
     def get_args(t: Type[Any]) -> Tuple[Any, ...]:
         return getattr(t, "__args__", ())
+
+
 else:
 
     from typing import get_args
