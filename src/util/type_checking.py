@@ -1,6 +1,6 @@
 import sys
 import dataclasses
-from typing import Any, List, Type, Union, get_type_hints
+from typing import Any, List, Type, Union, get_type_hints, Tuple, Optional
 
 
 if sys.version_info < (3, 8):

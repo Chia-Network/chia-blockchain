@@ -6,7 +6,7 @@ import dataclasses
 import io
 import pprint
 from enum import Enum
-from typing import Any, BinaryIO, List, Type, get_type_hints, Dict
+from typing import Any, BinaryIO, List, Type, get_type_hints, Dict, Tuple
 from src.util.byte_types import hexstr_to_bytes
 from src.types.program import Program
 from src.util.hash import std_hash
