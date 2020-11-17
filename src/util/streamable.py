@@ -29,7 +29,6 @@ if sys.version_info < (3, 8):
         return getattr(t, "__args__", ())
 else:
 
-
     from typing import get_args
 
 
