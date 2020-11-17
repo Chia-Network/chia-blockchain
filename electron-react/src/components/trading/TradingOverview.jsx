@@ -11,7 +11,7 @@ import {
   Box,
   Typography,
 } from '@material-ui/core';
-
+import { Card, Flex } from '@chia/core';
 import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
 import Grid from '@material-ui/core/Grid';
 import HelpIcon from '@material-ui/icons/Help';
@@ -421,14 +421,11 @@ export const PendingTrades = () => {
   const classes = useStyles();
   const trades = useSelector((state) => state.trade_state.pending_trades);
   return (
-    <Paper className={classes.paper}>
-      <div className={classes.pending_trades}>
-        <Typography component="h6" variant="h6">
-          <Trans id="PendingTrades.title">Offers Created</Trans>
-        </Typography>
-        <TradeTable trades={trades} />
-      </div>
-    </Paper>
+    <Card
+      title={<Trans id="PendingTrades.title">Offers Created</Trans>}
+    >
+      <TradeTable trades={trades} />
+    </Card>
   );
 };
 
@@ -436,33 +433,30 @@ export const TradingHistory = () => {
   const classes = useStyles();
   const trades = useSelector((state) => state.trade_state.trade_history);
   return (
-    <Paper className={classes.paper}>
-      <div className={classes.pending_trades}>
-        <Typography component="h6" variant="h6">
-          <Trans id="TradingHistory.title">Trading History</Trans>
-        </Typography>
-        <TradeTable trades={trades} />
-      </div>
-    </Paper>
+    <Card
+      title={<Trans id="TradingHistory.title">Trading History</Trans>}
+    >
+      <TradeTable trades={trades} />
+    </Card>
   );
 };
 
 export const TradingOverview = () => {
   const classes = useStyles();
-  const showing_trade = useSelector((state) => state.trade_state.showing_trade);
+  const showingTrade = useSelector((state) => state.trade_state.showing_trade);
   const dispatch = useDispatch();
 
   dispatch(get_all_trades());
 
-  if (showing_trade === true) {
+  if (showingTrade === true) {
     return (
       <TradeDetail />
     );
   }
   return (
-    <>
-        <PendingTrades />
-        <TradingHistory />
-    </>
+    <Flex flexDirection="column" gap={3}>
+      <PendingTrades />
+      <TradingHistory />
+    </Flex>
   );
 };

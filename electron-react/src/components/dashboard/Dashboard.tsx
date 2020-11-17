@@ -43,7 +43,7 @@ const StyledDrawer = styled(Drawer)`
 `;
 
 const StyledBody = styled(Box)`
-  box-shadow: inset 6px 0 8px -8px rgba(0, 0, 0, 0.2);
+  min-width: 0;
 `;
 
 const StyledBrandWrapper = styled(Flex)`

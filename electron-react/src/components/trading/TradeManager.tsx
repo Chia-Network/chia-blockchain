@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Route, Switch, useRouteMatch, useHistory } from 'react-router';
+import { Route, Switch, useLocation, useHistory, useRouteMatch } from 'react-router';
 import {
   Grid,
   List,
@@ -16,6 +16,7 @@ import LayoutSidebar from '../layout/LayoutSidebar';
 export default function TradeManager() {
   const { path, url } = useRouteMatch();
   const history = useHistory();
+  const { pathname } = useLocation();
 
   return (
     <LayoutSidebar
@@ -24,7 +25,11 @@ export default function TradeManager() {
         <List disablePadding>
           <Divider />
           <span key="trade_overview">
-            <ListItem button onClick={() => history.push(url)}>
+            <ListItem 
+              onClick={() => history.push(url)}
+              selected={pathname === '/dashboard/trade'}
+              button
+            >
               <ListItemText
                 primary={
                   <Trans id="TradeManager.tradeOverview">Trade Overview</Trans>
@@ -34,7 +39,11 @@ export default function TradeManager() {
             </ListItem>
           </span>
           <Divider />
-          <ListItem button onClick={() => history.push(`${url}/create`)}>
+          <ListItem
+            selected={pathname === '/dashboard/trade/create'} 
+            onClick={() => history.push(`${url}/create`)}
+            button
+          >
             <ListItemText
               primary={
                 <Trans id="TradeManager.createTrade">Create Trade</Trans>
@@ -44,9 +53,13 @@ export default function TradeManager() {
           </ListItem>
           <Divider />
 
-          <ListItem button onClick={() => history.push(`${url}/offer`)}>
+          <ListItem
+            onClick={() => history.push(`${url}/offer`)}
+            selected={pathname === '/dashboard/trade/offer'} 
+            button
+          >
             <ListItemText
-              primary={<Trans id="TradeManager.viewTrade">View Trade</Trans>}
+              primary={<Trans id="TradeManager.viewOffer">View Offer</Trans>}
               secondary=""
             />
           </ListItem>

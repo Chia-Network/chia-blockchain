@@ -14,7 +14,7 @@ import {
   TooltipIcon,
   FormatBytes,
   FormatConnectionStatus,
-  Block,
+  Card,
 } from '@chia/core';
 import Connection from '../../types/Connection';
 import type { RootState } from '../../modules/rootReducer';
@@ -89,35 +89,32 @@ export default function FarmYourHarvesterNetwork() {
   );
 
   return (
-    <Block>
-      <Flex flexDirection="column" gap={2}>
-        <Flex alignItems="center" gap={1}>
-          <Typography variant="h5" gutterBottom>
-            <Trans id="FarmYourHarvesterNetwork.title">
-              Your Harvester Network
-            </Trans>
-          </Typography>
-          <TooltipIcon interactive>
-            <Trans id="FarmFullNodeConnections.description">
-              A harvester is a service running on a machine where plot(s) are
-              actually stored. View your network of connected harvesters below
-              Learn more
-            </Trans>
-          </TooltipIcon>
-        </Flex>
-        <Flex flexDirection="column" gap={1}>
-          <Flex justifyContent="flex-end" gap={1}>
-            <Typography variant="caption" color="textSecondary">
-              <Trans id="FarmFullNodeConnections.connectionStatus">
-                Connection Status:
-              </Trans>
-            </Typography>
-            <FormatConnectionStatus connected={connected} />
-          </Flex>
-
-          <Table cols={cols} rows={connections} />
-        </Flex>
+    <Card
+      gap={1}
+      title={(
+        <Trans id="FarmYourHarvesterNetwork.title">
+          Your Harvester Network
+        </Trans>
+      )}
+      tooltip={(
+        <Trans id="FarmFullNodeConnections.description">
+          A harvester is a service running on a machine where plot(s) are
+          actually stored. View your network of connected harvesters below
+          Learn more
+        </Trans>
+      )}
+      interactive
+    >
+      <Flex justifyContent="flex-end" gap={1}>
+        <Typography variant="caption" color="textSecondary">
+          <Trans id="FarmFullNodeConnections.connectionStatus">
+            Connection Status:
+          </Trans>
+        </Typography>
+        <FormatConnectionStatus connected={connected} />
       </Flex>
-    </Block>
+
+      <Table cols={cols} rows={connections} />
+    </Card>
   );
 }

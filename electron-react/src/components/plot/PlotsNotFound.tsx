@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import { Block, Flex, Table } from '@chia/core';
+import { Card, Flex, Table } from '@chia/core';
 import { Typography } from '@material-ui/core';
 import type { RootState } from '../../modules/rootReducer';
 import PlotAction from './PlotAction';
@@ -31,21 +31,17 @@ export default function PlotsNotFound() {
   }));
 
   return (
-    <Block>
-      <Flex flexDirection="column" gap={2}>
-        <Typography variant="h5">
-          <Trans id="PlotsNotFound.title">Not found Plots</Trans>
-        </Typography>
+    <Card
+      title={<Trans id="PlotsNotFound.title">Not found Plots</Trans>}
+    >
+      <Typography component="h6" variant="body2">
+        <Trans id="PlotsNotFound.description">
+          Caution, deleting these plots will delete them forever. Check
+          that the storage devices are properly connected.
+        </Trans>
+      </Typography>
 
-        <Typography component="h6" variant="body2">
-          <Trans id="PlotsNotFound.description">
-            Caution, deleting these plots will delete them forever. Check
-            that the storage devices are properly connected.
-          </Trans>
-        </Typography>
-
-        <Table cols={cols} rows={filenameObjects} pages />
-      </Flex>
-    </Block>
+      <Table cols={cols} rows={filenameObjects} pages />
+    </Card>
   );
 }

@@ -14,7 +14,7 @@ export default function Farm(): JSX.Element {
 
   return (
     <LayoutMain title={<Trans id="Farmer.title">Farming</Trans>}>
-      <Flex flexDirection="column" gap={4}>
+      <Flex flexDirection="column" gap={3}>
         <FarmOverview />
 
         <FarmLatestBlockChallenges />
@@ -23,7 +23,7 @@ export default function Farm(): JSX.Element {
           <>
             <FarmLastAttemptedProof />
             <AdvancedOptions>
-              <Flex flexDirection="column" gap={4}>
+              <Flex flexDirection="column" gap={3}>
                 <FarmFullNodeConnections />
                 <FarmYourHarvesterNetwork />
               </Flex>

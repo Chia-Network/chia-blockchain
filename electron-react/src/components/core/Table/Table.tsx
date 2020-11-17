@@ -53,14 +53,15 @@ type Props = {
     tooltip?: ReactNode | ((row: Row) => ReactNode);
   }[];
   rows: Row[];
-  children?: ReactNode,
-  pages?: boolean,
-  rowsPerPageOptions?: number[],
-  rowsPerPage: number,
+  children?: ReactNode;
+  pages?: boolean;
+  rowsPerPageOptions?: number[];
+  rowsPerPage: number;
+  hideHeader?: boolean;
 };
 
 export default function Table(props: Props) {
-  const { cols, rows, children, pages, rowsPerPageOptions, rowsPerPage: defaultRowsPerPage } = props;
+  const { cols, rows, children, pages, rowsPerPageOptions, rowsPerPage: defaultRowsPerPage, hideHeader } = props;
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(defaultRowsPerPage);
 
@@ -89,22 +90,24 @@ export default function Table(props: Props) {
   return (
     <TableContainer component={Paper}>
       <TableBase>
-        <StyledTableHead>
-          <TableRow>
-            {cols.map((col, colIndex) => (
-              <StyledTableCell
-                key={`${col.field}-${colIndex}`}
-                minWidth={col.minWidth}
-                maxWidth={col.maxWidth}
-                width={col.width}
-              >
-                <StyledTableCellContent>
-                  {col.title}
-                </StyledTableCellContent>
-              </StyledTableCell>
-            ))}
-          </TableRow>
-        </StyledTableHead>
+        {!hideHeader && (
+          <StyledTableHead>
+            <TableRow>
+              {cols.map((col, colIndex) => (
+                <StyledTableCell
+                  key={`${col.field}-${colIndex}`}
+                  minWidth={col.minWidth}
+                  maxWidth={col.maxWidth}
+                  width={col.width}
+                >
+                  <StyledTableCellContent>
+                    {col.title}
+                  </StyledTableCellContent>
+                </StyledTableCell>
+              ))}
+            </TableRow>
+          </StyledTableHead>
+        )}
         <TableBody>
           {children}
           {currentRows.map((row, rowIndex) => (
@@ -169,4 +172,5 @@ Table.defaultProps = {
   pages: false,
   rowsPerPageOptions: [10, 25, 100],
   rowsPerPage: 10,
+  hideHeader: false,
 };

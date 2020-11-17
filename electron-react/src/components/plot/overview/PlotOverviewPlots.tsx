@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { sumBy } from 'lodash';
 import { Trans } from '@lingui/macro';
-import { Block, Flex, Table } from '@chia/core';
+import { Card, Flex, Table } from '@chia/core';
 import { useSelector } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
 import { RootState } from '../../../modules/rootReducer';
@@ -63,42 +63,37 @@ export default function PlotOverviewPlots() {
   return (
     <>
     <PlotHeader />
-    <Block>
-      <Flex flexDirection="column" gap={2}>
-        <Flex>
-          <Flex flexGrow={1}>
-            <Typography variant="h5">
-              <Trans id="PlotOverviewPlots.title">
-                Local Harvester Plots
-              </Trans>
-            </Typography>
-          </Flex>
-        </Flex>
-        <Flex gap={2}>
-          <Flex flexGrow={1}>
-            <Typography variant="body2">
-              <Trans id="PlotOverviewPlots.description">
-                Want to earn more Chia? Add more plots to your farm.
-              </Trans>
-            </Typography>
-          </Flex>
-
+    <Card
+      title={(
+        <Trans id="PlotOverviewPlots.title">
+          Local Harvester Plots
+        </Trans>
+      )}
+    >
+      <Flex gap={1}>
+        <Flex flexGrow={1}>
           <Typography variant="body2">
             <Trans id="PlotOverviewPlots.description">
-              Total Plot Size:
+              Want to earn more Chia? Add more plots to your farm.
             </Trans>
-            {' '}
-            <strong>
-              <FormatBytes value={totalPlotsSize} precision={3} />
-            </strong>
           </Typography>
         </Flex>
 
-        <Table cols={cols} rows={sortedPlots} pages>
-          {}
-        </Table>
+        <Typography variant="body2">
+          <Trans id="PlotOverviewPlots.description">
+            Total Plot Size:
+          </Trans>
+          {' '}
+          <strong>
+            <FormatBytes value={totalPlotsSize} precision={3} />
+          </strong>
+        </Typography>
       </Flex>
-    </Block>
+
+      <Table cols={cols} rows={sortedPlots} pages>
+        {}
+      </Table>
+    </Card>
     </>
   );
 }

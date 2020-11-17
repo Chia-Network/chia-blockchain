@@ -10,7 +10,7 @@ import { Paper, Tooltip } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import HelpIcon from '@material-ui/icons/Help';
-import { Flex } from '@chia/core';
+import { Flex, Card } from '@chia/core';
 import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
 import Block from '../block/Block';
@@ -335,25 +335,19 @@ const StatusCell = (props) => {
   const { colour } = item;
   return (
     <Grid item xs={6}>
-      <div className={classes.cardSubSection}>
-        <Box display="flex">
-          <Box display="flex" flexGrow={1}>
-            <Typography variant="subtitle1">{label}</Typography>
-            {tooltip ? (
-              <Tooltip title={tooltip}>
-                <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
-              </Tooltip>
-            ) : (
-              ''
-            )}
-          </Box>
-          <Box>
-            <Typography variant="subtitle1">
-              <span style={colour ? { color: colour } : {}}>{value}</span>
-            </Typography>
-          </Box>
-        </Box>
-      </div>
+      <Flex>
+        <Flex flexGrow={1}>
+          <Typography variant="subtitle1">{label}</Typography>
+          {tooltip && (
+            <Tooltip title={tooltip}>
+              <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
+            </Tooltip>
+          )}
+        </Flex>
+        <Typography variant="subtitle1">
+          <span style={colour ? { color: colour } : {}}>{value}</span>
+        </Typography>
+      </Flex>
     </Grid>
   );
 };
@@ -369,20 +363,15 @@ const FullNodeStatus = (props) => {
 
   const classes = useStyles();
   return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="FullNodeStatus.title">Full Node Status</Trans>
-            </Typography>
-          </div>
-        </Grid>
+    <Card
+      title={<Trans id="FullNodeStatus.title">Full Node Status</Trans>}
+    >
+      <Grid spacing={3} container>
         {statusItems.map((item) => (
           <StatusCell item={item} key={item.label.props.id} />
         ))}
       </Grid>
-    </Paper>
+    </Card>
   );
 };
 
@@ -400,15 +389,9 @@ const BlocksCard = () => {
   }
   const classes = useStyles();
   return (
-    <Paper className={classes.balancePaper}>
-      <Grid item xs={12}>
-        <div className={classes.cardTitle}>
-          <Typography component="h6" variant="h6">
-            <Trans id="BlocksCard.title">Blocks</Trans>
-          </Typography>
-        </div>
-      </Grid>
-      <Grid item xs={12}>
+    <Card
+      title={<Trans id="BlocksCard.title">Blocks</Trans>}
+    >
         <Box
           className={classes.block_header}
           display="flex"
@@ -467,8 +450,7 @@ const BlocksCard = () => {
             </Box>
           </Box>
         ))}
-      </Grid>
-    </Paper>
+    </Card>
   );
 };
 
@@ -484,42 +466,33 @@ const SearchBlock = (props) => {
     dispatch(getBlock(searchHash));
   };
   return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="SearchBlock.title">Search block by header hash</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  fullWidth
-                  label={<Trans id="SearchBlock.blockHash">Block hash</Trans>}
-                  value={searchHash}
-                  onChange={handleChangeSearchHash}
-                  variant="outlined"
-                />
-              </Box>
-              <Box>
-                <Button
-                  onClick={clickSearch}
-                  className={classes.searchHashButton}
-                  color="secondary"
-                  disableElevation
-                >
-                  <Trans id="SearchBlock.search">Search</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-      </Grid>
-    </Paper>
+    <Card
+      title={<Trans id="SearchBlock.title">Search block by header hash</Trans>}
+    >
+      <div className={classes.cardSubSection}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <TextField
+              fullWidth
+              label={<Trans id="SearchBlock.blockHash">Block hash</Trans>}
+              value={searchHash}
+              onChange={handleChangeSearchHash}
+              variant="outlined"
+            />
+          </Box>
+          <Box>
+            <Button
+              onClick={clickSearch}
+              className={classes.searchHashButton}
+              color="secondary"
+              disableElevation
+            >
+              <Trans id="SearchBlock.search">Search</Trans>
+            </Button>
+          </Box>
+        </Box>
+      </div>
+    </Card>
   );
 };
 
@@ -544,31 +517,23 @@ export default function FullNode() {
     <LayoutMain
       title={<Trans id="FullNode.title">Full Node</Trans>}
     >
-      <Grid container spacing={3}>
+      <Flex flexDirection="column" gap={3}>
         {block != null ? (
           <Block block={block} prevHeader={header} />
         ) : (
           <>
-            <Grid item xs={12}>
-              <FullNodeStatus />
-            </Grid>
-            <Grid item xs={12}>
-              <BlocksCard />
-            </Grid>
-            <Grid item xs={12}>
-              <FullNodeConnections
-                connections={connections}
-                connectionError={connectionError}
-                openConnection={openConnectionCallback}
-                closeConnection={closeConnectionCallback}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <SearchBlock />
-            </Grid>
+            <FullNodeStatus />
+            <BlocksCard />
+            <FullNodeConnections
+              connections={connections}
+              connectionError={connectionError}
+              openConnection={openConnectionCallback}
+              closeConnection={closeConnectionCallback}
+            />
+            <SearchBlock />
           </>
         )}
-      </Grid>
+      </Flex>
     </LayoutMain>
   );
 }

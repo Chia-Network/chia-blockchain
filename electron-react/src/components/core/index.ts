@@ -1,7 +1,6 @@
 export { default as Accordion } from './Accordion';
 export { default as AdvancedOptions } from './AdvancedOptions';
 export { default as AlertDialog } from './AlertDialog';
-export { default as Block } from './Block';
 export { default as Button } from './Button';
 export { default as ButtonSelected } from './ButtonSelected';
 export { default as Card } from './Card';

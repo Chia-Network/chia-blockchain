@@ -25,7 +25,7 @@ export default function Plot() {
         </>
       )
        }>
-      <Flex flexDirection="column" gap={2}>
+      <Flex flexDirection="column" gap={3}>
         <Switch>
           <Route path={path} exact>
             <PlotOverview />

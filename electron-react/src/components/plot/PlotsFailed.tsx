@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import { Block, Flex, Table } from '@chia/core';
+import { Card, Flex, Table } from '@chia/core';
 import { Typography } from '@material-ui/core';
 import type { RootState } from '../../modules/rootReducer';
 import PlotAction from './PlotAction';
@@ -31,20 +31,16 @@ export default function PlotsFailed() {
   }));
 
   return (
-    <Block>
-      <Flex flexDirection="column" gap={2}>
-        <Typography variant="h5">
-          <Trans id="PlotsFailed.title">Failed to open (invalid plots)</Trans>
-        </Typography>
+    <Card
+      title={<Trans id="PlotsFailed.title">Failed to open (invalid plots)</Trans>}
+    >
+      <Typography component="h6" variant="body2">
+        <Trans id="PlotsFailed.description">
+          These plots are invalid, you might want to delete them forever.
+        </Trans>
+      </Typography>
 
-        <Typography component="h6" variant="body2">
-          <Trans id="PlotsFailed.description">
-            These plots are invalid, you might want to delete them forever.
-          </Trans>
-        </Typography>
-
-        <Table cols={cols} rows={filenameObjects} pages />
-      </Flex>
-    </Block>
+      <Table cols={cols} rows={filenameObjects} pages />
+    </Card>
   );
 }

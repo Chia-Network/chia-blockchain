@@ -7,7 +7,7 @@ import { Delete as DeleteIcon } from '@material-ui/icons';
 import {
   Flex,
   Table,
-  Block,
+  Card,
   TooltipIcon,
   FormatBytes,
   FormatConnectionStatus,
@@ -85,35 +85,31 @@ export default function FarmFullNodeConnections() {
   );
 
   return (
-    <Block>
-      <Flex flexDirection="column" gap={2}>
-        <Flex alignItems="center" gap={1}>
-          <Typography variant="h5" gutterBottom>
-            <Trans id="FarmFullNodeConnections.title">
-              Your Full Node Connnection
-            </Trans>
-          </Typography>
-          <TooltipIcon interactive>
-            <Trans id="FarmFullNodeConnections.description">
-              {'The full node that your farmer is connected to is below. '}
-              <Link target="_blank" href="https://github.com/Chia-Network/chia-blockchain/wiki/Network-Architecture">
-                Learn more
-              </Link>
-            </Trans>
-          </TooltipIcon>
-        </Flex>
-        <Flex flexDirection="column" gap={1}>
-          <Flex justifyContent="flex-end" gap={1}>
-            <Typography variant="caption" color="textSecondary">
-              <Trans id="FarmFullNodeConnections.connectionStatus">
-                Connection Status:
-              </Trans>
-            </Typography>
-            <FormatConnectionStatus connected={connected} />
-          </Flex>
-          <Table cols={cols} rows={connections} />
-        </Flex>
+    <Card 
+      title={(
+        <Trans id="FarmFullNodeConnections.title">
+          Your Full Node Connnection
+        </Trans>
+      )}
+      tooltip={(
+        <Trans id="FarmFullNodeConnections.description">
+          {'The full node that your farmer is connected to is below. '}
+          <Link target="_blank" href="https://github.com/Chia-Network/chia-blockchain/wiki/Network-Architecture">
+            Learn more
+          </Link>
+        </Trans>
+      )}
+      interactive
+    >
+      <Flex justifyContent="flex-end" gap={1}>
+        <Typography variant="caption" color="textSecondary">
+          <Trans id="FarmFullNodeConnections.connectionStatus">
+            Connection Status:
+          </Trans>
+        </Typography>
+        <FormatConnectionStatus connected={connected} />
       </Flex>
-    </Block>
+      <Table cols={cols} rows={connections} />
+    </Card>
   );
 }

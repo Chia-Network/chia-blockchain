@@ -7,7 +7,7 @@ import {
   Link,
   Tooltip,
 } from '@material-ui/core';
-import { Flex, Table, TooltipIcon, Block } from '@chia/core';
+import { Flex, Table, TooltipIcon, Card } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 import type { Row } from '../core/Table/Table';
 
@@ -80,48 +80,43 @@ export default function FarmLatestBlockChallenges() {
   const reducedLatestChallenges = latestChallenges.slice(0, 5);
 
   return (
-    <Block>
-      <Flex flexDirection="column" gap={3}>
-        <Flex alignItems="center" gap={1}>
-          <Typography variant="h5" gutterBottom>
-            <Trans id="FarmLatestBlockChallenges.title">
-              Latest Block Challenges
-            </Trans>
-          </Typography>
-          {hasPlots && (
-            <TooltipIcon>
-              <Trans id="FarmLatestBlockChallenges.description">
-                Below are the current block challenges. You may or may not have
-                a proof of space for these challenges. These blocks do not
-                currently contain a proof of time.
-              </Trans>
-            </TooltipIcon>
-          )}
-        </Flex>
-        {!hasPlots && (
-          <Typography variant="body2">
-            <Trans id="FarmLatestBlockChallenges.description">
-              Below are the current block challenges. You may or may not have a
-              proof of space for these challenges. These blocks do not currently
-              contain a proof of time.
-            </Trans>
-          </Typography>
-        )}
-        <Table cols={cols} rows={reducedLatestChallenges} />
-        <Typography variant="caption">
-          <Trans id="FarmLatestBlockChallenges.subDescription">
-            *Want to explore Chia’s blocks further? Check out{' '}
-            <Link
-              color="primary"
-              href="https://www.chiaexplorer.com/"
-              target="_blank"
-            >
-              Chia Explorer
-            </Link>{' '}
-            built by an open source developer.
+    <Card
+      title={(
+        <Trans id="FarmLatestBlockChallenges.title">
+          Latest Block Challenges
+        </Trans>
+      )}
+      tooltip={hasPlots ? (
+        <Trans id="FarmLatestBlockChallenges.description">
+          Below are the current block challenges. You may or may not have
+          a proof of space for these challenges. These blocks do not
+          currently contain a proof of time.
+        </Trans>
+      ): undefined}
+    >
+      {!hasPlots && (
+        <Typography variant="body2">
+          <Trans id="FarmLatestBlockChallenges.description">
+            Below are the current block challenges. You may or may not have a
+            proof of space for these challenges. These blocks do not currently
+            contain a proof of time.
           </Trans>
         </Typography>
-      </Flex>
-    </Block>
+      )}
+      <Table cols={cols} rows={reducedLatestChallenges} />
+      <Typography variant="caption">
+        <Trans id="FarmLatestBlockChallenges.subDescription">
+          *Want to explore Chia’s blocks further? Check out{' '}
+          <Link
+            color="primary"
+            href="https://www.chiaexplorer.com/"
+            target="_blank"
+          >
+            Chia Explorer
+          </Link>{' '}
+          built by an open source developer.
+        </Trans>
+      </Typography>
+    </Card>
   );
 }
