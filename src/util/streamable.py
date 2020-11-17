@@ -1,6 +1,7 @@
 # flake8: noqa
 from __future__ import annotations
 
+import sys
 import dataclasses
 import io
 import pprint
