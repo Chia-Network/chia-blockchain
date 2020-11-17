@@ -5,7 +5,7 @@ import dataclasses
 import io
 import pprint
 from enum import Enum
-from typing import Any, BinaryIO, List, Type, get_type_hints, Dict, get_args
+from typing import Any, BinaryIO, List, Type, get_type_hints, Dict
 from src.util.byte_types import hexstr_to_bytes
 from src.types.program import Program
 from src.util.hash import std_hash
@@ -20,6 +20,14 @@ from src.util.type_checking import (
     is_type_SpecificOptional,
     strictdataclass,
 )
+
+
+if sys.version_info < (3, 8):
+    def get_args(t: Type[Any]) -> Tuple[Any, ...]:
+        return getattr(t, '__args__', ())
+else:
+    from typing import get_args
+
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 

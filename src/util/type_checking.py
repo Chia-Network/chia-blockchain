@@ -1,10 +1,20 @@
 import dataclasses
-from typing import Any, List, Type, Union, get_type_hints, get_args
+from typing import Any, List, Type, Union, get_type_hints
+
+
+if sys.version_info < (3, 8):
+    def get_args(t: Type[Any]) -> Tuple[Any, ...]:
+        return getattr(t, '__args__', ())
+
+    def get_origin(t: Type[Any]) -> Optional[Type[Any]]:
+        return getattr(t, '__origin__', None)
+else:
+    from typing import get_args, get_origin
 
 
 def is_type_List(f_type: Type) -> bool:
     return (
-        hasattr(f_type, "__origin__") and f_type.__origin__ == list
+        get_origin(f_type) and get_origin(f_type) == list
     ) or f_type == list
 
 
@@ -13,7 +23,7 @@ def is_type_SpecificOptional(f_type) -> bool:
     Returns true for types such as Optional[T], but not Optional, or T.
     """
     return (
-        hasattr(f_type, "__origin__")
+        get_origin(f_type)
         and f_type.__origin__ == Union
         and get_args(f_type)[1]() is None
     )
@@ -21,7 +31,7 @@ def is_type_SpecificOptional(f_type) -> bool:
 
 def is_type_Tuple(f_type: Type) -> bool:
     return (
-        hasattr(f_type, "__origin__") and f_type.__origin__ == tuple
+        get_origin(f_type) and get_origin(f_type) == tuple
     ) or f_type == tuple
 
 
