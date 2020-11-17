@@ -10,6 +10,7 @@ from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.vdf import VDFProof
 from src.types.weight_proof import WeightProof, SubEpochData, SubepochChallengeSegment
+from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint8
 
 
@@ -45,18 +46,14 @@ def make_sub_epoch_data(
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
 
-def get_sub_epoch_block_num(
-    constants: ConsensusConstants, block: SubBlockRecord, sub_blocks: Dict[bytes32, SubBlockRecord]
-) -> uint32:
+def get_sub_epoch_block_num(block: SubBlockRecord, sub_blocks: Dict[bytes32, SubBlockRecord]) -> uint32:
     """
-    returns the number of blocks in a sub epoch
-    ending with" "block""
+    returns the number of blocks in a sub epoch ending with
     """
     curr = block
     count: uint32 = uint32(0)
     while not curr.sub_epoch_summary_included:
         # todo skip overflows from last sub epoch
-
         curr = sub_blocks[curr.prev_hash]
         count += 1
 
@@ -255,13 +252,24 @@ def make_weight_proof(
     return WeightProof(sub_epoch_data, sub_epoch_segments, proof_blocks)
 
 
-def validate_weight_proof(proof: WeightProof) -> bool:
-    # todo
-    # sub epoch summaries
-    #   validate hashes
-    #
-    # Calculate weight make sure equals to peak
-    #
+def validate_weight_proof(weight_proof: WeightProof, fork_point_weight: uint64) -> bool:
+
+    # sub epoch summaries validate hashes
+    ses_hash = std_hash(weight_proof.sub_epoch_data[0])
+    for sub_epoch_data in weight_proof.sub_epoch_data[:1]:
+        if sub_epoch_data.prev_ses != ses_hash:
+            return False
+        ses_hash = std_hash(sub_epoch_data)
+
+    # Calculate weight make sure equals to weight of peak
+    weight_to_prove = uint64(0)
+    for sub_epoch_data in weight_proof.sub_epoch_data:
+        weight_to_prove += sub_epoch_data.new_difficulty
+
+    peak = weight_proof.recent_reward_chain[-1].weight
+    if peak != weight_to_prove + fork_point_weight:
+        return False
+
     # samples
     #   validate first sub slot -> validate all the sub slots in the way -> validate challenge chain end of slot
 
