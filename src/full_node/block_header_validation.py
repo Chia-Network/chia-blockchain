@@ -69,7 +69,7 @@ async def validate_unfinished_header_block(
 
         ips, difficulty = get_ips_and_difficulty(constants, header_block, height_to_hash, prev_sb, sub_blocks)
 
-    # 4. Check proof of space
+    # 2. Check proof of space
     if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
         # Edge case of first sp (start of slot), where sp_iters == 0
         cc_sp_hash: bytes32 = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
@@ -96,7 +96,7 @@ async def validate_unfinished_header_block(
     sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
     overflow = is_overflow_sub_block(constants, ips, required_iters)
 
-    # 2. Check finished slots that have been crossed since prev_sb
+    # 3. Check finished slots that have been crossed since prev_sb
     ses_hash: Optional[bytes32] = None
     if new_sub_slot:
         # Finished a slot(s) since previous block. The first sub-slot must have at least one sub-block, and all
@@ -105,9 +105,9 @@ async def validate_unfinished_header_block(
             # Start of slot challenge is fetched from SP
             challenge_hash: bytes32 = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
 
-            # 2a. check sub-slot challenge hash
             if finished_sub_slot_n == 0:
                 if genesis_block:
+                    # 3a. check sub-slot challenge hash for genesis block
                     if challenge_hash != constants.FIRST_CC_CHALLENGE:
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
                 else:
@@ -115,17 +115,19 @@ async def validate_unfinished_header_block(
                     while not curr.first_in_sub_slot:
                         curr = sub_blocks[curr.prev_hash]
 
+                    # 3b. check sub-slot challenge hash for non-genesis block
                     if not curr.finished_challenge_slot_hashes[-1] == challenge_hash:
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
             else:
+                # 3c. check sub-slot challenge hash for empty slot
                 if (
                     not header_block.finished_sub_slots[finished_sub_slot_n - 1].challenge_chain.get_hash()
                     == challenge_hash
                 ):
                     return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
 
-            # 2b. Validate the infusion challenge chain VDF
             if genesis_block:
+                # 3d. Validate that genesis block has no ICC
                 if sub_slot.infused_challenge_chain is not None:
                     return None, ValidationError(Err.SHOULD_NOT_HAVE_ICC)
             else:
@@ -170,6 +172,7 @@ async def validate_unfinished_header_block(
                             icc_iters_proof = icc_iters_committed
                             icc_vdf_input = ClassgroupElement.get_default_element()
 
+                # 3e. Validate that there is not icc iff icc_challenge hash is None
                 assert (sub_slot.infused_challenge_chain is None) == (icc_challenge_hash is None)
                 if sub_slot.infused_challenge_chain is not None:
                     assert icc_vdf_input is not None
