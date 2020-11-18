@@ -15,7 +15,7 @@ dependencies = [
     "bitstring==3.1.7",  # Binary data management library
     "cbor2==5.2.0",  # Used for network wire format
     "colorlog==4.6.2",  # Adds color to logs
-    "concurrent-log-handler==0.9.17",  # Concurrently log and rotate logs
+    "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     "cryptography==3.2.1",  # Python cryptography library for TLS
     "keyring==21.4.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
