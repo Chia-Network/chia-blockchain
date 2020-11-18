@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 from blspy import G2Element
+
+from src.types.header_block import HeaderBlock
 from src.types.reward_chain_sub_block import RewardChainSubBlock
 
 from src.types.proof_of_space import ProofOfSpace
@@ -14,16 +16,11 @@ from src.types.vdf import VDFProof
 @dataclass(frozen=True)
 @streamable
 class SubEpochData(Streamable):
-    prev_ses: bytes32
-    # hash of reward chain at end of last segment
     reward_chain_hash: bytes32
-    previous_sub_epoch_overflows: uint8
-    # (at end of epoch) New work difficulty and iterations per subslot
-    sub_slot_iters: Optional[uint64]
+    num_sub_blocks_overflow: uint8
+    new_ips: Optional[uint64]
     new_difficulty: Optional[uint64]
 
-
-#  384-384+64
 
 # number of challenge blocks
 # Average iters for challenge blocks
@@ -53,13 +50,14 @@ class SubepochChallengeSegment(Streamable):
     icc_slot_vdf: Optional[VDFProof]
     # VDF from beginning to end of slot
     slot_vdf: Optional[VDFProof]  # if not infused
-    # todo why is this needed ?
+
     last_reward_chain_vdf_info: VDFInfo
 
 
 @dataclass(frozen=True)
 @streamable
 class WeightProof(Streamable):
-    sub_epoch_data: List[SubEpochData]
+    prev_ses_hash: bytes32  # only first in a SubEpochData list should have this
+    sub_epochs: List[SubEpochData]
     sub_epoch_segments: List[SubepochChallengeSegment]
     recent_reward_chain: List[RewardChainSubBlock]
