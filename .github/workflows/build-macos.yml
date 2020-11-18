@@ -79,8 +79,9 @@ jobs:
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: N
+        BUILD_VDF_CLIENT: "N"
       run: |
+        echo "BUILD_VDF_CLIENT is $BUILD_VDF_CLIENT"
         brew install boost
         sh install.sh
 
