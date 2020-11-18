@@ -26,21 +26,23 @@ def make_sub_epoch_summary(
     new_difficulty and new_ips are also added.
     """
     assert prev_sb.height == blocks_included_height - 1
+    # if first sub_epoch
     if blocks_included_height // constants.SUB_EPOCH_SUB_BLOCKS == 1:
-        ses = SubEpochSummary(constants.GENESIS_SES_HASH, constants.FIRST_RC_CHALLENGE, uint8(0), None, None)
-    else:
-        curr = prev_sb
-        while curr.sub_epoch_summary_included is None:
-            curr = sub_blocks[curr.prev_hash]
-        assert curr.sub_epoch_summary_included is not None
-        prev_ses = curr.sub_epoch_summary_included.get_hash()
-        ses = SubEpochSummary(
-            prev_ses,
-            curr.finished_reward_slot_hashes[-1],
-            curr.height % constants.SUB_EPOCH_SUB_BLOCKS,
-            new_difficulty,
-            new_ips,
-        )
+        return SubEpochSummary(constants.GENESIS_SES_HASH, constants.FIRST_RC_CHALLENGE, uint8(0), None, None)
+
+    curr = prev_sb
+    while curr.sub_epoch_summary_included is None:
+        curr = sub_blocks[curr.prev_hash]
+    assert curr.sub_epoch_summary_included is not None
+    prev_ses = curr.sub_epoch_summary_included.get_hash()
+    ses = SubEpochSummary(
+        prev_ses,
+        curr.finished_reward_slot_hashes[-1],
+        curr.height % constants.SUB_EPOCH_SUB_BLOCKS,
+        new_difficulty,
+        new_ips,
+    )
+
     assert ses is not None
     return ses
 
