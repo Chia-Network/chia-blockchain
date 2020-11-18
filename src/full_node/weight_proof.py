@@ -74,22 +74,25 @@ def choose_sub_epoch(sub_epoch_blocks_N: uint32, rng: random.Random, total_numbe
 
 
 # returns a challenge chain vdf from slot start to signage point
-def get_cc_combined_signage_vdf(block: HeaderBlock, header_cache: Dict[bytes32, SubBlockRecord]) -> VDFProof:
+def get_cc_combined_signage_vdf(block: HeaderBlock, header_cache: Dict[bytes32, HeaderBlock]) -> VDFProof:
     # combine cc vdfs of all reward blocks from the start of the slot
     # blocks  = get all reward blocks from the start of the slot to sp
     proofs: List[VDFProof] = []
     curr = block
 
-    # get all cc_vdfs from start of sub slot until challenge block
-    while not len(curr.finished_sub_slots) > 0:
+    # get all cc_vdfs from start of slot until challenge block
+    while curr.height != 0:
         proofs.append(curr.challenge_chain_sp_proof)
         proofs.append(curr.challenge_chain_ip_proof)
-        # prev
-        curr = header_cache[curr.prev_hash]
+        if curr.finished_sub_slots is not None and len(curr.finished_sub_slots) > 0:
+            for sub_slot in reversed(curr.finished_sub_slots):
+                if sub_slot.reward_chain.deficit == 0:
+                    # slot start
+                    break
+                proofs.append(sub_slot.proofs.challenge_chain_slot_proof)
 
-    # handle empty sub_slots
-    for sub_slot in curr.finished_sub_slots:
-        proofs.append(sub_slot.proofs.challenge_chain_slot_proof)
+        # prev
+        curr = header_cache[curr.prev_header_hash]
 
     return combine_proofs(proofs)
 
@@ -99,7 +102,7 @@ def get_cc_combined_ip_to_slot_end_vdf(
     constants: ConsensusConstants,
     block: HeaderBlock,
     height_to_hash: Dict[uint32, bytes32],
-    header_cache: Dict[bytes32, SubBlockRecord],
+    header_cache: Dict[bytes32, HeaderBlock],
 ) -> VDFProof:
     # combine cc vdfs of all reward blocks from block to the end of the slot
     # blocks = reward blocks from block to the end of the slot
@@ -107,14 +110,19 @@ def get_cc_combined_ip_to_slot_end_vdf(
     curr = block
     # get all cc vdfs from ip to end of  slot
 
-    while not curr.deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+    # go until first overflow
+    # todo make sure we handle overflows correctly
+    while curr is not None:
+        if curr.finished_sub_slots is not None and len(curr.finished_sub_slots) > 0:
+            for sub_slot in curr.finished_sub_slots:
+                if sub_slot.reward_chain.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                    # end of slot
+                    break
 
-        for sub_slot in curr.finished_sub_slots:
-            proofs.append(sub_slot.proofs.infused_challenge_chain_slot_proof)
+                proofs.append(sub_slot.proofs.infused_challenge_chain_slot_proof)
 
         proofs.append(curr.challenge_chain_sp_proof)
         proofs.append(curr.challenge_chain_ip_proof)
-        # next
         curr = header_cache[height_to_hash[curr.height + 1]]
 
     return combine_proofs(proofs)
@@ -125,15 +133,23 @@ def get_icc_combined_slot_vdf(
     constants: ConsensusConstants,
     block: HeaderBlock,
     height_to_hash: Dict[uint32, bytes32],
-    header_cache: Dict[bytes32, SubBlockRecord],
+    header_cache: Dict[bytes32, HeaderBlock],
 ) -> VDFProof:
     # combine icc vdfs of all reward blocks from block to the end of the slot
-    # blocks = reward blocks from block to the end of the slot
     proofs: List[VDFProof] = []
     curr = block
-    while not curr.deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+    # go until first overflow
+    # todo make sure we handle overflows correctly
+    while curr is not None:
+        if curr.finished_sub_slots is not None and len(curr.finished_sub_slots) > 0:
+            for sub_slot in curr.finished_sub_slots:
+                if sub_slot.reward_chain.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                    break
+                proofs.append(sub_slot.proofs.infused_challenge_chain_slot_proof)
+
         proofs.append(curr.infused_challenge_chain_ip_proof)
         curr = header_cache[height_to_hash[curr.height + 1]]
+
     return combine_proofs(proofs)
 
 
@@ -142,35 +158,35 @@ def handle_challenge_segment(
     block: HeaderBlock,
     sub_epoch_n: uint32,
     height_to_hash: Dict[uint32, bytes32],
-    sub_blocks: Dict[bytes32, SubBlockRecord],
+    header_cache: Dict[bytes32, HeaderBlock],
 ) -> SubepochChallengeSegment:
     # Proof of space
-    proof_of_space = block.reward_chain_sub_block.proof_of_space  # if infused
+    proof_of_space = block.reward_chain_sub_block.proof_of_space
     # Signature of signage point
-    cc_signage_point_sig = block.reward_chain_sub_block.challenge_chain_sp_signature  # if infused)
+    cc_signage_point_sig = block.reward_chain_sub_block.challenge_chain_sp_signature
 
     # VDF from slot start to signage point
     # needs all reward blocks from sub slot start to sp
-    cc_signage_point_vdf = get_cc_combined_signage_vdf(block, sub_blocks)  # if infused
+    cc_signage_point_vdf = get_cc_combined_signage_vdf(block, header_cache)
 
     # VDF from signage to infusion point
-    infusion_point_vdf = block.challenge_chain_ip_proof  # if infused
+    cc_infusion_point_vdf = block.challenge_chain_ip_proof
 
     # VDF from infusion point to end of slot
     # needs all reward blocks from sp to end of sub slot
-    slot_end_vdf = get_cc_combined_ip_to_slot_end_vdf(constants, block, height_to_hash, sub_blocks)  # if infused
+    cc_slot_end_vdf = get_cc_combined_ip_to_slot_end_vdf(constants, block, height_to_hash, header_cache)  # if infused
 
     # VDF from beginning to end of slot
-    icc_challenge_slot_vdf = get_icc_combined_slot_vdf(constants, block, height_to_hash, sub_blocks)
+    icc_challenge_slot_vdf = get_icc_combined_slot_vdf(constants, block, height_to_hash, header_cache)
 
     return SubepochChallengeSegment(
         sub_epoch_n,
         proof_of_space,
         cc_signage_point_sig,
         cc_signage_point_vdf,
-        infusion_point_vdf,
+        cc_infusion_point_vdf,
+        cc_slot_end_vdf,
         icc_challenge_slot_vdf,
-        slot_end_vdf,
         block.reward_chain_sub_block.reward_chain_ip_vdf,
     )
 
@@ -198,13 +214,7 @@ def create_sub_epoch_segments(
             continue
 
         header_block = header_cache[curr.header_hash]
-        segment = handle_challenge_segment(
-            constants,
-            header_block,
-            sub_epoch_n,
-            height_to_hash,
-            sub_blocks,
-        )
+        segment = handle_challenge_segment(constants, header_block, sub_epoch_n, height_to_hash, header_cache)
         segments.append(segment)
         count -= 1
 
