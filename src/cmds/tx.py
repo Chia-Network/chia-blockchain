@@ -21,7 +21,6 @@ from src.types.sized_bytes import bytes32
 from src.types.coin_solution import CoinSolution
 from src.types.spend_bundle import SpendBundle
 from src.types.coin import Coin
-from src.types.coinwithpubkey import CoinWithPubkey
 from src.util.ints import uint64
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_my_coin_id_condition,
@@ -72,7 +71,7 @@ class SpendRequest:
 
 
 def create_unsigned_transaction(
-    coins: Set[CoinWithPubkey] = None,  # Set[CoinWithPuzzle] = None,
+    inputs: List[dict] = None,
     spend_requests: List[SpendRequest] = None,
     validate=True,
 ) -> List[CoinSolution]:
@@ -80,14 +79,14 @@ def create_unsigned_transaction(
     Generates a unsigned transaction in form of List(Puzzle, Solutions)
     """
 
-    if coins is None or len(coins) < 1:
+    if inputs is None or len(inputs) < 1:
         raise ValueError("tx create requires one or more input_coins")
-    assert len(coins) > 0
+    assert len(inputs) > 0
     # We treat the first coin as the origin
     # For simplicity, only the origin coin creates outputs
-    origin = coins.pop()
+    origin = inputs.pop()
     outputs = []
-    input_value = sum([coin.amount for coin in coins]) + origin.amount
+    input_value = sum([i["coin"].amount for i in inputs]) + origin["coin"].amount
     sent_value = 0
     if spend_requests is not None:
         sent_value = sum([req.amount for req in spend_requests])
@@ -105,14 +104,15 @@ def create_unsigned_transaction(
     # Eventually, we will support specifying the puzzle directly in the
     # input to create_unsigned_transaction (viaCoinWithPuzzle).
     # For now, we specify a pubkey, and use the "standard transaction"
-    origin_puzzle = puzzle_for_pk(origin.pubkey)
-    assert origin_puzzle.get_tree_hash() == origin.puzzle_hash
+    origin_puzzle = puzzle_for_pk(origin["pubkey"])
+    assert origin_puzzle.get_tree_hash() == origin["coin"].puzzle_hash
 
     solution = make_solution(primaries=outputs, fee=0)
     puzzle_solution_pair = Program.to([origin_puzzle, solution])
-    spends.append(CoinSolution(origin, puzzle_solution_pair))
+    spends.append(CoinSolution(origin["coin"], puzzle_solution_pair))
 
-    for coin in coins:
+    for i in inputs:
+        coin = i["coin"]
         print(f"processing coin {coin}")
         solution = make_solution()
         puzzle = puzzle_for_pk(coin.pubkey)
@@ -129,16 +129,16 @@ def create_unsigned_tx_from_json(json_tx):
         if "spend_requests" in s:
             input_coins_json = s["input_coins"]
             spend_requests_json = s["spend_requests"]  # Output addresses and amounts
-            pubkey = G1Element.from_bytes(hexstr_to_bytes(input_coins_json[0]["pubkey"]))
-            print("PUB", type(pubkey), pubkey)
             input_coins = [
-                CoinWithPubkey(
-                    hexstr_to_bytes(c["parent_id"]),
-                    hexstr_to_bytes(c["puzzle_hash"]),
-                    c["amount"],
-                    pubkey
-                )
-                for c in input_coins_json
+                {
+                    "coin": Coin(
+                        hexstr_to_bytes(i["coin"]["parent_id"]),
+                        hexstr_to_bytes(i["coin"]["puzzle_hash"]),
+                        i["coin"]["amount"]
+                    ),
+                    "pubkey": G1Element.from_bytes(hexstr_to_bytes(i["pubkey"]))
+                }
+                for i in input_coins_json
             ]
             spend_requests = [
                 SpendRequest(hexstr_to_bytes(s["puzzle_hash"]), s["amount"])
