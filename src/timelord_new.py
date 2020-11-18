@@ -2,25 +2,56 @@ import asyncio
 import io
 import logging
 import time
-import socket
 from typing import Dict, List, Optional, Tuple
+
+from chiavdf import create_discriminant
+
 from src.consensus.constants import ConsensusConstants
+from src.consensus.pot_iterations import (
+    calculate_iterations_quality,
+    calculate_sp_iters,
+    calculate_ip_iters,
+    calculate_sub_slot_iters,
+)
+from src.protocols import timelord_protocol
+from src.server.outbound_message import OutboundMessage, NodeType, Message, Delivery
+from src.server.server import ChiaServer
+from src.types.classgroup import ClassgroupElement
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.proof_of_space import ProofOfSpace
+from src.types.sized_bytes import bytes32
+from src.types.slots import ChallengeChainSubSlot, InfusedChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
+from src.types.vdf import VDFInfo, VDFProof
+from src.util.api_decorators import api_request
+from src.util.ints import uint64, uint8, int512
 
 log = logging.getLogger(__name__)
 
 
+def iters_from_proof_of_space(constants, pos: ProofOfSpace, ips, difficulty) -> Tuple[uint64, uint64]:
+    quality = pos.verify_and_get_quality_string()
+    required_iters = calculate_iterations_quality(
+        quality,
+        pos.size,
+        difficulty,
+    )
+    return (
+        calculate_sp_iters(constants, ips, required_iters),
+        calculate_ip_iters(constants, ips, required_iters),
+    )
+
+
 class Timelord:
-    def __init__(self, config: Dict, discriminant_size_bits: int):
-        self.free_clients: List[
-            Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]
-        ] = []
+    def __init__(self, config: Dict, constants: ConsensusConstants):
+        self.config = config
+        self.constants = constants
+        self._is_stopped = False
+        self.free_clients: List[Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = []
         self.lock: asyncio.Lock = asyncio.Lock()
         self.potential_free_clients: List = []
         self.ip_whitelist = self.config["vdf_clients"]["ip"]
         self.server: Optional[ChiaServer] = None
-        self.chain_type_to_stream: Dict[
-            str, Tuple[ip, asyncio.StreamReader, asyncio.StreamWriter]
-        ] = {}
+        self.chain_type_to_stream: Dict[str, Tuple[ip, asyncio.StreamReader, asyncio.StreamWriter]] = {}
         # Chains that currently don't have a vdf_client.
         self.unspawned_chains: List[str] = ["cc", "rc", "icc"]
         # Chains that currently accept iterations.
@@ -28,12 +59,10 @@ class Timelord:
         # Last peak received, None if it's already processed.
         self.last_peak: Optional[timelord_protocol.NewPeak] = None
         # Unfinished block info, iters adjusted to the last peak.
-        self.unfinished_blocks: List[
-            Tuple[timelord_protocol.NewUnfinishedSubBlock]
-        ] = []
+        self.unfinished_blocks: List[timelord_protocol.NewUnfinishedSubBlock] = []
         # Signage points iters, adjusted to the last peak.
         self.signage_points_iters: List[uint64] = []
-        # Left subslot iters, adjusted to the last peak.
+        # Left sub-slot iters, adjusted to the last peak.
         self.left_subslot_iters = 0
         # Infusion point of the peak.
         self.last_ip_iters = 0
@@ -50,10 +79,8 @@ class Timelord:
         self.new_subslot = False
         self.finished_sp = 0
         self.cached_peak = None
-        self.overflow_bloks: List[
-            Tuple[timelord_protocol.NewUnfinishedSubBlock]
-        ] = []
-    
+        self.overflow_blocks: List[Tuple[timelord_protocol.NewUnfinishedSubBlock]] = []
+
     def _set_server(self, server: ChiaServer):
         self.server = server
 
@@ -66,7 +93,7 @@ class Timelord:
     @api_request
     async def new_unfinished_subblock(self, new_unfinished_subblock: timelord_protocol.NewUnfinishedSubBlock):
         async with self.lock:
-            sp_iters, ip_iters = self.iters_from_proof_of_space(
+            sp_iters, ip_iters = iters_from_proof_of_space(
                 new_unfinished_subblock.reward_chain_sub_block.proof_of_space,
                 self.cached_peak.ips,
                 self.cached_peak.difficulty,
@@ -76,24 +103,10 @@ class Timelord:
             elif ip_iters > self.last_ip_iters:
                 self.unfinished_blocks.append(new_unfinished_subblock)
                 for chain in ["cc", "icc", "rc"]:
-                    self.iters_to_submit[chain] = ip_iters - self.last_ip_iters
+                    self.iters_to_submit[chain] = uint64(ip_iters - self.last_ip_iters)
                 self.iteration_to_proof_type[ip_iters - self.last_ip_iters] = "ip"
 
-    def iters_from_proof_of_space(self, constants, pos: ProofOfSpace, ips, difficulty):
-        quality = pos.verify_and_get_quality_string()
-        required_iters = calculate_iterations_quality(
-            quality,
-            pos.size,
-            difficulty,
-        )
-        return (
-            calculate_sp_iters(constants, ips, required_iters),
-            calculate_ip_iters(constants, ips, required_iters),
-        )
-
-    async def _handle_client(
-        self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
-    ):
+    async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         async with self.lock:
             client_ip = writer.get_extra_info("peername")[0]
             log.info(f"New timelord connection from client: {client_ip}.")
@@ -138,27 +151,26 @@ class Timelord:
             self.initial_form_to_submit["rc"] = ClassgroupElement.get_default_element()
         # Retrieve the iterations of this peak.
         if not self.new_subslot:
-            _, ip_iters = self.iters_from_proof_of_space(
-                constants, self.sub_block.proof_of_space, self.last_peak.ips, self.last_peak.difficulty
+            _, ip_iters = iters_from_proof_of_space(
+                self.constants, self.sub_block.proof_of_space, self.last_peak.ips, self.last_peak.difficulty
             )
         else:
             ip_iters = 0
             self.new_subslot = False
-        
-        sub_slot_iters = calculate_sub_slot_iters(constants, self.last_peak.ips)
+
+        sub_slot_iters = calculate_sub_slot_iters(self.constants, self.last_peak.ips)
         # Adjust all signage points iterations to the peak.
-        iters_per_signage = uint64(sub_slot_iters // constants.NUM_CHECKPOINTS_PER_SLOT)
+        iters_per_signage = uint64(sub_slot_iters // self.constants.NUM_CHECKPOINTS_PER_SLOT)
         self.signage_point_iters = [
             k * iters_per_signage - ip_iters
-            for k in range(1, constants.NUM_CHECKPOINTS_PER_SLOT + 1)
-            if k * iters_per_signage - ip_iters > 0
-            and k * iters_per_signage <= sub_slot_iters
+            for k in range(1, self.constants.NUM_CHECKPOINTS_PER_SLOT + 1)
+            if k * iters_per_signage - ip_iters > 0 and k * iters_per_signage <= sub_slot_iters
         ]
         # Adjust all unfinished blocks iterations to the peak.
         new_unfinished_blocks = []
         for block in self.unfinished_blocks:
-            block_sp_iters, block_ip_iters = self.iters_from_proof_of_space(
-                constants, block.proof_of_space, self.last_peak.ips, self.last_peak.difficulty
+            block_sp_iters, block_ip_iters = iters_from_proof_of_space(
+                self.constants, block.proof_of_space, self.last_peak.ips, self.last_peak.difficulty
             )
             if block_sp_iters < block_ip_iters:
                 new_block_iters = block_ip_iters - ip_iters
@@ -172,8 +184,8 @@ class Timelord:
                 self.iteration_to_proof_type[new_block_iters] = "ip"
         new_overflow_blocks = []
         for block in self.overflow_blocks:
-            _, block_ip_iters = self.iters_from_proof_of_space(
-                constants, block.proof_of_space, self.last_peak.ips, self.last_peak.difficulty
+            _, block_ip_iters = iters_from_proof_of_space(
+                self.constants, block.proof_of_space, self.last_peak.ips, self.last_peak.difficulty
             )
             new_block_iters = block_ip_iters - ip_iters
             if new_block_iters > 0:
@@ -196,7 +208,7 @@ class Timelord:
             smallest_sp = min(self.signage_point_iters)
             for chain in ["cc", "rc"]:
                 self.iters_to_submit[chain].append(smallest_sp)
-            self.iteration_to_proof_type[smallest_sp] = "sp"                
+            self.iteration_to_proof_type[smallest_sp] = "sp"
         # TODO: handle the special case when infusion point is the end of subslot.
         for chain in ["cc", "rc", "icc"]:
             self.iters_to_submit[chain].append(self.left_subslot_iters)
@@ -214,10 +226,7 @@ class Timelord:
                     break
                 ip, reader, writer = self.free_clients[0]
                 for chain_type in self.unspawned_chains:
-                    if (
-                        chain_type in self.discriminant_to_submit
-                        and chain_type in self.initial_form_to_submit
-                    ):
+                    if chain_type in self.discriminant_to_submit and chain_type in self.initial_form_to_submit:
                         picked_chain = chain_type
                         break
                 if picked_chain is None:
@@ -232,9 +241,7 @@ class Timelord:
                 del self.initial_form_to_submit[picked_chain]
 
             asyncio.create_task(
-                self._do_process_communication(
-                    picked_chain, challenge_hash, initial_form, ip, reader, writer
-                )
+                self._do_process_communication(picked_chain, challenge_hash, initial_form, ip, reader, writer)
             )
 
     async def _submit_iterations(self):
@@ -250,17 +257,11 @@ class Timelord:
 
     def _clear_proof_list(self, iter):
         return [
-            (chain, info, proof)
-            for chain, info, proof in self.proofs_finished
-            if info.number_of_iterations != iter
+            (chain, info, proof) for chain, info, proof in self.proofs_finished if info.number_of_iterations != iter
         ]
 
     async def _check_for_new_sp(self):
-        signage_iters = [
-            iter
-            for iter, t in self.iteration_to_proof_type
-            if t == "sp"
-        ]
+        signage_iters = [iter for iter, t in self.iteration_to_proof_type if t == "sp"]
         if len(signage_iters) > 1:
             log.error("Warning: more than 1 signage iter sent.")
         if len(signage_iters) == 0:
@@ -307,22 +308,16 @@ class Timelord:
                 self.iteration_to_proof_type[next_sp] = "sp"
 
     async def _check_for_new_ip(self):
-        infusion_iters = [
-            iter
-            for iter, t in self.iteration_to_proof_type
-            if t == "ip"
-        ]
+        infusion_iters = [iter for iter, t in self.iteration_to_proof_type if t == "ip"]
         for iter in infusion_iters:
             proofs_with_iter = [
-                (chain, info, proof)
-                for chain, info, proof in self.proofs_finished
-                if info.number_of_iterations == iter
+                (chain, info, proof) for chain, info, proof in self.proofs_finished if info.number_of_iterations == iter
             ]
             chain_count = 3 if self.has_icc else 2
             if len(proofs_with_iter) == chain_count:
                 block = None
                 for unfinished_block in self.unfinished_blocks + self.overflow_blocks:
-                    _, ip_iters = self.iters_from_proof_of_space(
+                    _, ip_iters = iters_from_proof_of_space(
                         self.constants, self.cached_peak.ips, self.cached_peak.difficulty
                     )
                     if ip_iters - self.last_ip_iters == iter:
@@ -374,7 +369,12 @@ class Timelord:
         ]
         chain_count = 3 if self.has_icc else 2
         if len(chains_finished) == chain_count:
-            icc_ip_vdf, icc_ip_proof = None
+            icc_ip_vdf: Optional[VDFInfo] = None
+            icc_ip_proof: Optional[VDFProof] = None
+            cc_vdf: Optional[VDFInfo] = None
+            cc_proof: Optional[VDFProof] = None
+            rc_vdf: Optional[VDFInfo] = None
+            rc_proof: Optional[VDFProof] = None
             for chain, info, proof in chains_finished:
                 if chain == "cc":
                     cc_vdf = info
@@ -385,6 +385,8 @@ class Timelord:
                 if chain == "icc":
                     icc_ip_vdf = info
                     icc_ip_proof = proof
+            assert cc_proof is not None and rc_proof is not None and cc_vdf is not None and rc_vdf is not None
+
             icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_ip_vdf)
             icc_sub_slot_hash = icc_sub_slot.get_hash() if self.cached_peak.deficit == 0 else None
             if self.cached_peak.sub_epoch_summary is not None:
@@ -399,14 +401,14 @@ class Timelord:
             eos_deficit: uint8 = (
                 self.cached_peak.deficit
                 if self.cached_peak.deficit > 0
-                else constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+                else self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
             )
             rc_sub_slot = RewardChainSubSlot(
                 rc_vdf,
                 cc_sub_slot.get_hash(),
                 icc_sub_slot.get_hash() if icc_sub_slot is not None else None,
                 eos_deficit,
-            ),
+            )
             eos_bundle = EndOfSubSlotBundle(
                 cc_sub_slot,
                 icc_sub_slot,
@@ -415,18 +417,18 @@ class Timelord:
             self.server.push_message(
                 OutboundMessage(
                     NodeType.FULL_NODE,
-                    Message("end_of_sub_slot_bundle", response),
+                    Message("end_of_sub_slot_bundle", timelord_protocol.NewEndOfSubSlotVDF(eos_bundle)),
                     Delivery.BROADCAST,
                 )
             )
             # Calculate overflow blocks for the next subslot.
             self.overflow_blocks = []
             for unfinished_block in self.unfinished_blocks:
-                sp_iters, ip_iters = self.iters_from_proof_of_space(
+                sp_iters, ip_iters = iters_from_proof_of_space(
                     self.constants, self.cached_peak.ips, self.cached_peak.difficulty
                 )
                 if sp_iters > ip_iters:
-                    self.overflow_blocks.append(block)
+                    self.overflow_blocks.append(unfinished_block)
             self.unfinished_blocks = []
             # Create a "fake" peak, with the end of subslot info, so everything will reset.
             self.last_peak = self.cached_peak
@@ -455,10 +457,7 @@ class Timelord:
                 if self.left_subslot_iters == 0:
                     await asyncio.sleep(0.1)
                     continue
-                if (
-                    self.cached_peak is None
-                    and self.last_peak is None
-                ):
+                if self.cached_peak is None and self.last_peak is None:
                     await asyncio.sleep(0.1)
                     continue
             # Map free vdf_clients to unspawned chains.
@@ -477,11 +476,9 @@ class Timelord:
                 await self._check_for_end_of_subslot()
             await asyncio.sleep(0.1)
 
-    async def _do_process_communication(
-        self, chain, challenge_hash, initial_form, ip, reader, writer
-    ):
+    async def _do_process_communication(self, chain, challenge_hash, initial_form, ip, reader, writer):
         # TODO: Send initial_form.
-        disc: int = create_discriminant(challenge_hash, self.discriminant_size_bits)
+        disc: int = create_discriminant(challenge_hash, self.constants.DISCRIMINANT_SIZE_BITS)
         # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
         # the timelord tells the vdf_client what to execute.
         if self.config["fast_algorithm"]:
@@ -534,12 +531,10 @@ class Timelord:
                 break
             else:
                 try:
-                    # This must be a proof, 4bytes is length prefix
+                    # This must be a proof, 4 bytes is length prefix
                     length = int.from_bytes(data, "big")
                     proof = await reader.readexactly(length)
-                    stdout_bytes_io: io.BytesIO = io.BytesIO(
-                        bytes.fromhex(proof.decode())
-                    )
+                    stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(proof.decode()))
                 except (
                     asyncio.IncompleteReadError,
                     ConnectionResetError,
@@ -548,27 +543,21 @@ class Timelord:
                     log.warning(f"{type(e)} {e}")
                     break
 
-                iterations_needed = uint64(
-                    int.from_bytes(stdout_bytes_io.read(8), "big", signed=True)
-                )
+                iterations_needed = uint64(int.from_bytes(stdout_bytes_io.read(8), "big", signed=True))
 
                 y_size_bytes = stdout_bytes_io.read(8)
                 y_size = uint64(int.from_bytes(y_size_bytes, "big", signed=True))
 
                 y_bytes = stdout_bytes_io.read(y_size)
-                witness_type = uint8(
-                    int.from_bytes(stdout_bytes_io.read(1), "big", signed=True)
-                )
+                witness_type = uint8(int.from_bytes(stdout_bytes_io.read(1), "big", signed=True))
                 proof_bytes: bytes = stdout_bytes_io.read()
 
                 # Verifies our own proof just in case
                 a = int.from_bytes(y_bytes[:129], "big", signed=True)
                 b = int.from_bytes(y_bytes[129:], "big", signed=True)
                 output = ClassgroupElement(int512(a), int512(b))
-                log.info(
-                    f"Finished PoT chall:{challenge_hash[:10].hex()}.. {iterations_needed}"
-                    f" iters."
-                )
+                log.info(f"Finished PoT chall:{challenge_hash[:10].hex()}.. {iterations_needed}" f" iters.")
+
                 if not proof_of_time.is_valid(self.discriminant_size_bits):
                     log.error("Invalid proof of time")
                 # TODO: Append to proofs_finished.
