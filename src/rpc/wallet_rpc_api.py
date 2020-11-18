@@ -397,14 +397,17 @@ class WalletRpcApi:
         elif request["wallet_type"] == "did_wallet":
             if request["did_type"] == "new":
                 backup_dids = []
+                num_needed = 0
                 for d in request["backup_dids"]:
                     backup_dids.append(bytes.fromhex(d))
+                if len(backup_dids) > 0:
+                    num_needed = uint64(request["num_of_backup_ids_needed"])
                 did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                     wallet_state_manager,
                     main_wallet,
                     int(request["amount"]),
                     backup_dids,
-                    uint64(request["num_of_backup_ids_needed"]),
+                    num_needed,
                 )
                 my_did = did_wallet.get_my_DID()
                 logging.exception(self.service.wallet_state_manager.wallets)
