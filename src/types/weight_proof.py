@@ -46,11 +46,9 @@ class SubepochChallengeSegment(Streamable):
     # VDF from signage to infusion point
     infusion_point_vdf: Optional[VDFProof]  # if infused
     # # VDF from infusion point to end of slot
-    # infusion_to_slot_end_vdf: Optional[VDFProof]  # if infused
-    icc_slot_vdf: Optional[VDFProof]
+    infusion_to_slot_end_vdf: Optional[VDFProof]  # if infused
     # VDF from beginning to end of slot
-    slot_vdf: Optional[VDFProof]  # if not infused
-
+    icc_slot_vdf: Optional[VDFProof]
     last_reward_chain_vdf_info: VDFInfo
 
 
