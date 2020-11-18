@@ -8,6 +8,8 @@ from src.full_node.block_store import BlockStore
 from src.full_node.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.types.classgroup import ClassgroupElement
+from src.types.slots import InfusedChallengeChainSubSlot
+from src.types.vdf import VDFInfo
 from src.util.block_tools import get_vdf_info_and_proof
 from src.util.errors import Err
 from src.util.ints import uint64
@@ -193,7 +195,8 @@ class TestAddingMoreBlocks:
         assert blockchain.get_peak().height == num_blocks - 1
 
     @pytest.mark.asyncio
-    async def test_invalid_prev_1(self, empty_blockchain):
+    async def test_invalid_prev(self, empty_blockchain):
+        # 1
         blocks = bt.get_consecutive_blocks(test_constants, 2, force_overflow=False)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_1_bad = recursive_replace(blocks[-1], "foliage_sub_block.prev_sub_block_hash", bytes([0] * 32))
@@ -201,6 +204,96 @@ class TestAddingMoreBlocks:
 
         result, err, _ = await empty_blockchain.receive_block(block_1_bad)
         assert result == ReceiveBlockResult.DISCONNECTED_BLOCK
+
+    @pytest.mark.asyncio
+    async def test_invalid_pospace(self, empty_blockchain):
+        # 2
+        blocks = bt.get_consecutive_blocks(test_constants, 2, force_overflow=False)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        block_1_bad = recursive_replace(blocks[-1], "reward_chain_sub_block.proof_of_space.proof", bytes([0] * 32))
+
+        result, err, _ = await empty_blockchain.receive_block(block_1_bad)
+        assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert err == Err.INVALID_POSPACE
+
+    @pytest.mark.asyncio
+    async def test_invalid_sub_slot_challenge_hash_genesis(self, empty_blockchain):
+        # 3a
+        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=1)
+        new_finished_ss = recursive_replace(
+            blocks[0].finished_sub_slots[0],
+            "challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash",
+            bytes([2] * 32),
+        )
+        block_0_bad = recursive_replace(
+            blocks[0], "finished_sub_slots", [new_finished_ss] + blocks[0].finished_sub_slots[1:]
+        )
+
+        result, err, _ = await empty_blockchain.receive_block(block_0_bad)
+        assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert err == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
+
+    @pytest.mark.asyncio
+    async def test_invalid_sub_slot_challenge_hash_non_genesis(self, empty_blockchain):
+        # 3b
+        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=0)
+        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=1, block_list=blocks)
+        new_finished_ss = recursive_replace(
+            blocks[1].finished_sub_slots[0],
+            "challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash",
+            bytes([2] * 32),
+        )
+        block_1_bad = recursive_replace(
+            blocks[1], "finished_sub_slots", [new_finished_ss] + blocks[1].finished_sub_slots[1:]
+        )
+
+        _, _, _ = await empty_blockchain.receive_block(blocks[0])
+        result, err, _ = await empty_blockchain.receive_block(block_1_bad)
+        assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert err == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
+
+    @pytest.mark.asyncio
+    async def test_invalid_sub_slot_challenge_hash_empty_ss(self, empty_blockchain):
+        # 3c
+        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=0)
+        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=2, block_list=blocks)
+        new_finished_ss = recursive_replace(
+            blocks[1].finished_sub_slots[-1],
+            "challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash",
+            bytes([2] * 32),
+        )
+        block_1_bad = recursive_replace(
+            blocks[1], "finished_sub_slots", blocks[1].finished_sub_slots[:-1] + [new_finished_ss]
+        )
+
+        _, _, _ = await empty_blockchain.receive_block(blocks[0])
+        result, err, _ = await empty_blockchain.receive_block(block_1_bad)
+        assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert err == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
+
+    @pytest.mark.asyncio
+    async def test_genesis_no_icc(self, empty_blockchain):
+        # 3d
+        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=1)
+        new_finished_ss = recursive_replace(
+            blocks[0].finished_sub_slots[0],
+            "infused_challenge_chain",
+            InfusedChallengeChainSubSlot(
+                VDFInfo(
+                    bytes([0] * 32),
+                    ClassgroupElement.get_default_element(),
+                    uint64(1200),
+                    ClassgroupElement.get_default_element(),
+                )
+            ),
+        )
+        block_0_bad = recursive_replace(
+            blocks[0], "finished_sub_slots", [new_finished_ss] + blocks[0].finished_sub_slots[1:]
+        )
+
+        result, err, _ = await empty_blockchain.receive_block(block_0_bad)
+        assert result == ReceiveBlockResult.INVALID_BLOCK
+        assert err == Err.SHOULD_NOT_HAVE_ICC
 
 
 #
