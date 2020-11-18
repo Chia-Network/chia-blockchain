@@ -119,7 +119,7 @@ class Streamable:
         if is_type_List(f_type):
             inner_type = get_args(f_type)[0]
             full_list: List[inner_type] = []  # type: ignore
-            assert inner_type != get_args(List)[0]  # type: ignore
+            # wjb assert inner_type != get_args(List)[0]  # type: ignore
             list_size: uint32 = uint32(int.from_bytes(f.read(4), "big"))
             for list_index in range(list_size):
                 full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
@@ -165,7 +165,7 @@ class Streamable:
             assert is_type_List(type(item))
             f.write(uint32(len(item)).to_bytes(4, "big"))
             inner_type = get_args(f_type)[0]
-            assert inner_type != get_args(List)[0]  # type: ignore
+            # wjb assert inner_type != get_args(List)[0]  # type: ignore
             for element in item:
                 self.stream_one_item(inner_type, element, f)
         elif is_type_SpecificOptional(f_type):

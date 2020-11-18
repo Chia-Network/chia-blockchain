@@ -53,7 +53,7 @@ def strictdataclass(cls: Any):
             if is_type_List(f_type):
                 collected_list: List = []
                 inner_type: Type = get_args(f_type)[0]
-                assert inner_type != get_args(List)[0]  # type: ignore
+                # wjb assert inner_type != get_args(List)[0]  # type: ignore
                 if not is_type_List(type(item)):
                     raise ValueError(f"Wrong type for {f_name}, need a list.")
                 for el in item:
