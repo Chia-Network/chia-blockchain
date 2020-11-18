@@ -638,7 +638,7 @@ class WalletNode:
                     total_iters,
                     None,
                     uint64(0),
-                    bytes(0)
+                    bytes(0),
                 )
                 res = await self.wallet_state_manager.receive_block(block_record, None)
                 assert (
@@ -944,7 +944,7 @@ class WalletNode:
                 response.header_block.header.data.total_iters,
                 response.header_block.challenge.get_hash(),
                 response.header_block.header.data.timestamp,
-                response.transactions_filter
+                response.transactions_filter,
             )
 
             if self.wallet_state_manager.sync_mode:
@@ -1014,7 +1014,7 @@ class WalletNode:
                 block_record.total_iters,
                 block_record.new_challenge_hash,
                 block_record.timestamp,
-                response.transactions_filter
+                response.transactions_filter,
             )
             respond_header_msg: Optional[
                 wallet_protocol.RespondHeader
@@ -1025,6 +1025,19 @@ class WalletNode:
                 return
             else:
                 response = respond_header_msg
+
+    @api_request
+    async def send_additions_request(self, block, additions):
+        if len(additions) > 0:
+            request_a = wallet_protocol.RequestAdditions(
+                block.height, block.header_hash, additions
+            )
+            yield OutboundMessage(
+                NodeType.FULL_NODE,
+                Message("request_additions", request_a),
+                Delivery.RESPOND,
+            )
+            return
 
     @api_request
     async def reject_header_request(
@@ -1120,7 +1133,7 @@ class WalletNode:
             block_record.total_iters,
             header_block.challenge.get_hash(),
             header_block.header.data.timestamp,
-            block_record.transactions_filter
+            block_record.transactions_filter,
         )
         self.cached_blocks[response.header_hash] = (
             new_br,
@@ -1176,7 +1189,7 @@ class WalletNode:
                 new_br.total_iters,
                 new_br.new_challenge_hash,
                 new_br.timestamp,
-                new_br.transactions_filter
+                new_br.transactions_filter,
             )
             respond_header_msg: Optional[
                 wallet_protocol.RespondHeader
@@ -1260,7 +1273,7 @@ class WalletNode:
             block_record.total_iters,
             header_block.challenge.get_hash(),
             header_block.header.data.timestamp,
-            block_record.transactions_filter
+            block_record.transactions_filter,
         )
 
         self.cached_blocks[response.header_hash] = (

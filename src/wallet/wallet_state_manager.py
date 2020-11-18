@@ -210,7 +210,7 @@ class WalletStateManager:
                     genesis_hb.header.data.total_iters,
                     genesis_challenge.get_hash(),
                     genesis_hb.header.data.timestamp,
-                    genesis.transactions_filter
+                    genesis.transactions_filter,
                 ),
                 genesis_hb,
             )
@@ -243,6 +243,27 @@ class WalletStateManager:
                     wallet_info,
                 )
                 self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.RATE_LIMITED:
+                wallet = await RLWallet.create(self, wallet_info)
+                self.wallets[wallet_info.id] = wallet
+            elif wallet_info.type == WalletType.DISTRIBUTED_ID:
+                wallet = await DIDWallet.create(self, self.main_wallet, wallet_info)
+                self.wallets[wallet_info.id] = wallet
+
+    # search through the blockrecords and return the most recent coin to use a given puzzlehash
+    async def search_blockrecords_for_puzzlehash(self, puzzlehash):
+        header_hash_of_interest = None
+        heighest_block_height = 0
+        for header_hash in self.block_records:
+            record = self.block_records[header_hash]
+            tx_filter = PyBIP158([b for b in record.transactions_filter])
+            if (
+                tx_filter.Match(bytearray(puzzlehash))
+                and record.height > heighest_block_height
+            ):
+                header_hash_of_interest = header_hash
+                heighest_block_height = record.height
+        return heighest_block_height, header_hash_of_interest
 
     async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
         index_for_puzzlehash = await self.puzzle_store.index_for_puzzle_hash(hash)

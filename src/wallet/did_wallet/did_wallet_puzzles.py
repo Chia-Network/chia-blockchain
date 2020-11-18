@@ -15,8 +15,13 @@ DID_RECOVERY_MESSAGE_MOD = load_clvm("did_recovery_message.clvm")
 DID_GROUP_MOD = load_clvm("did_groups.clvm")
 
 
-def create_innerpuz(pubkey: bytes, identities: List[bytes]) -> Program:
-    return DID_INNERPUZ_MOD.curry(DID_CORE_MOD.get_tree_hash(), pubkey, identities)
+def create_innerpuz(
+    pubkey: bytes, identities: List[bytes], num_of_backup_ids_needed: uint64
+) -> Program:
+    backup_ids_hash = Program(Program.to(identities)).get_tree_hash()
+    return DID_INNERPUZ_MOD.curry(
+        DID_CORE_MOD.get_tree_hash(), pubkey, backup_ids_hash, num_of_backup_ids_needed
+    )
 
 
 def create_fullpuz(innerpuz, genesis_id) -> Program:
@@ -69,7 +74,7 @@ def uncurry_innerpuz(puzzle: Program) -> Optional[Tuple[Program, Program]]:
     if not is_did_innerpuz(inner_f):
         return None
 
-    core_mod, pubkey, id_list = list(args.as_iter())
+    core_mod, pubkey, id_list, num_of_backup_ids_needed = list(args.as_iter())
     return pubkey, id_list
 
 
@@ -85,6 +90,8 @@ def get_innerpuzzle_from_puzzle(puzzle: Program) -> Optional[Program]:
 
 
 def create_recovery_message_puzzle(recovering_coin, newpuz, pubkey):
+    if isinstance(pubkey, bytes):
+        pubkey = pubkey.hex()
     puzstring = f"(r (c (q 0x{recovering_coin}) (q ((50 0x{pubkey} 0x{newpuz})))))"
     puz = binutils.assemble(puzstring)
     # return DID_RECOVERY_MESSAGE_MOD.curry(recovering_coin, newpuz, pubkey)
