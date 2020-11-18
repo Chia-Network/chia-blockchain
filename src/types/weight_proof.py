@@ -14,8 +14,9 @@ from src.types.vdf import VDFProof, VDFInfo
 @dataclass(frozen=True)
 @streamable
 class SubEpochData(Streamable):
-    reward_chain_hash: bytes32  # hash of reward chain at end of last segment
-    # Number of subblocks overflow in previous subepoch
+    prev_ses: bytes32
+    # hash of reward chain at end of last segment
+    reward_chain_hash: bytes32
     previous_sub_epoch_overflows: uint8
     # (at end of epoch) New work difficulty and iterations per subslot
     sub_slot_iters: Optional[uint64]
@@ -32,7 +33,7 @@ class SubEpochData(Streamable):
 #  compute total reward chain blocks
 # |----------------------------A---------------------------------|       Attackers chain 1000
 #                            0.48
-# total number of challenge blcoks == total number of reward chain blocks
+# total number of challenge blocks == total number of reward chain blocks
 
 
 @dataclass(frozen=True)
@@ -41,16 +42,18 @@ class SubepochChallengeSegment(Streamable):
     sub_epoch_n: uint32
     # Proof of space
     proof_of_space: Optional[ProofOfSpace]  # if infused
-    # VDF to signage point
-    cc_signage_point_vdf: Optional[VDFProof]  # if infused
     # Signature of signage point
     cc_signage_point_sig: Optional[G2Element]  # if infused
-    # VDF to infusion point
-    infusion_point_vdf: Optional[List[VDFProof]]  # if infused
-    # VDF from infusion point to end of sub-slot
-    infusion_to_slot_end_vdf: Optional[List[VDFProof]]  # if infused
-    # VDF from beginning to end of sub-slot
-    slot_vdf: Optional[List[VDFProof]]  # if not infused
+    # VDF to signage point
+    cc_signage_point_vdf: Optional[VDFProof]  # if infused
+    # VDF from signage to infusion point
+    infusion_point_vdf: Optional[VDFProof]  # if infused
+    # # VDF from infusion point to end of slot
+    # infusion_to_slot_end_vdf: Optional[VDFProof]  # if infused
+    icc_slot_vdf: Optional[VDFProof]
+    # VDF from beginning to end of slot
+    slot_vdf: Optional[VDFProof]  # if not infused
+    # todo why is this needed ?
     last_reward_chain_vdf_info: VDFInfo
 
 
