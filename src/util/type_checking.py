@@ -1,10 +1,25 @@
+import sys
 import dataclasses
-from typing import Any, List, Type, Union, get_type_hints
+from typing import Any, List, Type, Union, get_type_hints, Tuple, Optional
+
+
+if sys.version_info < (3, 8):
+
+    def get_args(t: Type[Any]) -> Tuple[Any, ...]:
+        return getattr(t, "__args__", ())
+
+    def get_origin(t: Type[Any]) -> Optional[Type[Any]]:
+        return getattr(t, "__origin__", None)
+
+
+else:
+
+    from typing import get_args, get_origin
 
 
 def is_type_List(f_type: Type) -> bool:
     return (
-        hasattr(f_type, "__origin__") and f_type.__origin__ == list
+        get_origin(f_type) is not None and get_origin(f_type) == list
     ) or f_type == list
 
 
@@ -13,15 +28,15 @@ def is_type_SpecificOptional(f_type) -> bool:
     Returns true for types such as Optional[T], but not Optional, or T.
     """
     return (
-        hasattr(f_type, "__origin__")
+        get_origin(f_type) is not None
         and f_type.__origin__ == Union
-        and f_type.__args__[1]() is None
+        and get_args(f_type)[1]() is None
     )
 
 
 def is_type_Tuple(f_type: Type) -> bool:
     return (
-        hasattr(f_type, "__origin__") and f_type.__origin__ == tuple
+        get_origin(f_type) is not None and get_origin(f_type) == tuple
     ) or f_type == tuple
 
 
@@ -37,8 +52,8 @@ def strictdataclass(cls: Any):
         def parse_item(self, item: Any, f_name: str, f_type: Type) -> Any:
             if is_type_List(f_type):
                 collected_list: List = []
-                inner_type: Type = f_type.__args__[0]
-                assert inner_type != List.__args__[0]  # type: ignore
+                inner_type: Type = get_args(f_type)[0]
+                # wjb assert inner_type != get_args(List)[0]  # type: ignore
                 if not is_type_List(type(item)):
                     raise ValueError(f"Wrong type for {f_name}, need a list.")
                 for el in item:
@@ -48,16 +63,16 @@ def strictdataclass(cls: Any):
                 if item is None:
                     return None
                 else:
-                    inner_type: Type = f_type.__args__[0]  # type: ignore
+                    inner_type: Type = get_args(f_type)[0]  # type: ignore
                     return self.parse_item(item, f_name, inner_type)
             if is_type_Tuple(f_type):
                 collected_list = []
                 if not is_type_Tuple(type(item)) and not is_type_List(type(item)):
                     raise ValueError(f"Wrong type for {f_name}, need a tuple.")
-                if len(item) != len(f_type.__args__):
+                if len(item) != len(get_args(f_type)):
                     raise ValueError(f"Wrong number of elements in tuple {f_name}.")
                 for i in range(len(item)):
-                    inner_type = f_type.__args__[i]
+                    inner_type = get_args(f_type)[i]
                     tuple_item = item[i]
                     collected_list.append(
                         self.parse_item(tuple_item, f_name, inner_type)
