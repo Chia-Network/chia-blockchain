@@ -14,8 +14,14 @@ import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
+import Backdrop from "@material-ui/core/Backdrop";
+import CircularProgress from "@material-ui/core/CircularProgress";
 
-import { did_spend } from "../modules/message";
+import {
+  did_spend,
+  did_update_recovery_ids,
+  did_get_recovery_list
+} from "../modules/message";
 import {
   Accordion,
   AccordionSummary,
@@ -24,11 +30,12 @@ import {
 import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 import { Tooltip } from "@material-ui/core";
 import HelpIcon from "@material-ui/icons/Help";
-import { mojo_to_chia_string, chia_to_mojo } from "../util/chia";
+import { mojo_to_chia_string } from "../util/chia";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 
 import { unix_to_short_date } from "../util/utils";
 
-import { openDialog } from "../modules/dialogReducer";
+// import { openDialog } from "../modules/dialogReducer";
 
 const drawerWidth = 240;
 
@@ -183,6 +190,19 @@ const useStyles = makeStyles(theme => ({
     marginLeft: theme.spacing(3),
     width: 400
   },
+  updateDIDsTitle: {
+    marginTop: theme.spacing(3),
+  },
+  inputDIDs: {
+    paddingTop: theme.spacing(0),
+    marginLeft: theme.spacing(0)
+  },
+  inputDID: {
+    marginLeft: theme.spacing(0),
+    marginBottom: theme.spacing(2),
+    width: "50%",
+    height: 56
+  },
   walletContainer: {
     marginBottom: theme.spacing(5)
   },
@@ -222,8 +242,62 @@ const useStyles = makeStyles(theme => ({
     marginBottom: theme.spacing(2),
     width: 150,
     height: 50
+  },
+  ul: {
+    listStyle: "none"
+  },
+  addButton: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    height: 56,
+    width: 50
+  },
+  sideButton: {
+    marginTop: theme.spacing(0),
+    marginBottom: theme.spacing(2),
+    width: 50,
+    height: 56
   }
 }));
+
+const MyDIDCard = props => {
+  var id = props.wallet_id;
+
+  const mydid = useSelector(state => state.wallet_state.wallets[id].mydid);
+
+  const classes = useStyles();
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              My DID
+            </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1} style={{ marginBottom: 20 }}>
+                <Typography variant="subtitle1">DID:</Typography>
+              </Box>
+              <Box
+                style={{
+                  paddingLeft: 20,
+                  width: "80%",
+                  overflowWrap: "break-word"
+                }}
+              >
+                <Typography variant="subtitle1">{mydid}</Typography>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+      </Grid>
+    </Paper>
+  );
+};
 
 const BalanceCardSubSection = props => {
   const classes = useStyles();
@@ -331,6 +405,167 @@ const BalanceCard = props => {
             </Box>
           </div>
         </Grid>
+      </Grid>
+    </Paper>
+  );
+};
+
+const ViewDIDsSubsection = props => {
+  const classes = useStyles();
+  const backup_list = props.backup_dids
+  return (
+    <Grid item xs={12}>
+      <div className={classes.cardSubSection}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <Accordion className={classes.front}>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls="panel1a-content"
+                id="panel1a-header"
+              >
+                <Typography className={classes.heading}>
+                  View backup DID list
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Grid item xs={12}>
+                  <div className={classes.cardSubSection}>
+                    <Box display="flex">
+                      <Box flexGrow={1}>
+                        <Typography variant="subtitle1">
+                          {backup_list.map((object, i) => {
+                            return (
+                              <span key={i}>
+                                <Typography variant="subtitle1">
+                                  &#8226; {object}
+                                </Typography>
+                                </span>
+                            )
+                          })}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </div>
+                </Grid>
+              </AccordionDetails>
+            </Accordion>
+          </Box>
+        </Box>
+      </div>
+    </Grid>
+  )
+}
+
+const ManageDIDsCard = props => {
+  var id = props.wallet_id;
+  const classes = useStyles();
+  const dispatch = useDispatch();
+  var pending = useSelector(state => state.create_options.pending);
+  var created = useSelector(state => state.create_options.created);
+  let backup_dids = useSelector(state => state.wallet_state.wallets[id].backup_dids);
+  console.log(backup_dids)
+  const { handleSubmit, control } = useForm();
+  const { fields, append, remove } = useFieldArray(
+    {
+      control,
+      name: "new_list"
+    }
+  );
+
+  const onSubmit = (data) => {
+    const didArray = data.backup_dids?.map((item) => item.backupid) ?? [];
+    console.log(didArray)
+    console.log(id, didArray)
+    dispatch(did_update_recovery_ids(id, didArray));
+  };
+
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              Manage Recovery DIDs
+            </Typography>
+          </div>
+        </Grid>
+        <ViewDIDsSubsection
+          backup_dids={backup_dids}
+        />
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <Box display="flex">
+                <Box flexGrow={6} className={classes.updateDIDsTitle}>
+                  <Typography variant="subtitle1">
+                    Update Backup DIDs
+                  </Typography>
+                </Box>
+              </Box>
+              <Box display="flex">
+                <Box flexGrow={1}>
+                  <Button
+                    type="button"
+                    className={classes.sendButton}
+                    variant="contained"
+                    color="primary"
+                    onClick={() => {
+                      append({ backupid: "Backup ID" });
+                    }}
+                  >
+                    ADD
+                  </Button>
+                </Box>
+                <Box>
+                  <Button
+                    type="submit"
+                    className={classes.sendButton}
+                    variant="contained"
+                    color="primary"
+                  >
+                    Submit
+                  </Button>
+                </Box>
+              </Box>
+              <Box display="flex">
+                <Box flexGrow={1} className={classes.inputDIDs}>
+                  <ul>
+                    {fields.map((item, index) => {
+                      return (
+                        <li key={item.id} style={{ listStyleType: "none" }}>
+                          <Controller
+                            as={TextField}
+                            name={`new_list[${index}].backupid`}
+                            control={control}
+                            defaultValue=""
+                            label="Backup ID"
+                            variant="filled"
+                            color="secondary"
+                            className={classes.inputDID}
+                          />
+                          <Button
+                            type="button"
+                            className={classes.sideButton}
+                            variant="contained"
+                            color="secondary"
+                            disableElevation
+                            onClick={() => remove(index)}
+                          >
+                            Delete
+                          </Button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Box>
+              </Box>
+            </form>
+          </div>
+        </Grid>
+        <Backdrop className={classes.backdrop} open={pending && created}>
+          <CircularProgress color="inherit" />
+        </Backdrop>
       </Grid>
     </Paper>
   );
@@ -500,7 +735,9 @@ const DistributedIDWallet = props => {
 
   return wallets.length > props.wallet_id ? (
     <Grid className={classes.walletContainer} item xs={12}>
+      <MyDIDCard wallet_id={id}></MyDIDCard>
       <BalanceCard wallet_id={id}></BalanceCard>
+      <ManageDIDsCard wallet_id={id}></ManageDIDsCard>
       <CashoutCard wallet_id={id}></CashoutCard>
       <HistoryCard wallet_id={id}></HistoryCard>
     </Grid>

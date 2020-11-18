@@ -93,7 +93,7 @@ export const customStyles = makeStyles(theme => ({
     marginBottom: theme.spacing(2),
     width: 50,
     height: 56
-  },
+  }
 }));
 
 export const CreateDIDWallet = () => {
@@ -103,7 +103,7 @@ export const CreateDIDWallet = () => {
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
 
-  const { register, handleSubmit, control } = useForm();
+  const { handleSubmit, control } = useForm();
 
   const { fields, append, remove } = useFieldArray(
     {
@@ -113,15 +113,18 @@ export const CreateDIDWallet = () => {
   );
 
   const onSubmit = (data) => {
-    console.log("data", data)
-    if (data.backup_dids === undefined) {
-      var didArray = []
-    } else {
-      let didArray = data.backup_dids.map(({ backupid }) => backupid)
+    const didArray = data.backup_dids?.map((item) => item.backupid) ?? [];
+    if (
+      data.amount === "" ||
+      Number(data.amount) === 0 ||
+      !Number(data.amount) ||
+      isNaN(Number(data.amount))
+    ) {
+      dispatch(openDialog("Please enter a valid numeric amount"));
+      return;
     }
-    console.log(didArray)
     var amount_val = chia_to_mojo(parseInt(data.amount));
-    console.log(amount_val, didArray)
+    dispatch(createState(true, true));
     dispatch(create_did_action(amount_val, didArray));
   };
 

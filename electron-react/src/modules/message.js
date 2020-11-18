@@ -770,9 +770,9 @@ export const did_spend = (wallet_id, puzzlehash) => {
   return action;
 };
 
-export const did_get_id = (wallet_id) => {
+export const did_get_did = (wallet_id) => {
   var action = walletMessage();
-  action.message.command = "did_get_id";
+  action.message.command = "did_get_did";
   action.message.data = { wallet_id: wallet_id };
   return action;
 };
