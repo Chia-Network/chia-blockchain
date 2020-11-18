@@ -1,11 +1,12 @@
 # flake8: noqa
 from __future__ import annotations
 
+import sys
 import dataclasses
 import io
 import pprint
 from enum import Enum
-from typing import Any, BinaryIO, List, Type, get_type_hints, Dict
+from typing import Any, BinaryIO, List, Type, get_type_hints, Dict, Tuple
 from src.util.byte_types import hexstr_to_bytes
 from src.types.program import Program
 from src.util.hash import std_hash
@@ -20,6 +21,18 @@ from src.util.type_checking import (
     is_type_SpecificOptional,
     strictdataclass,
 )
+
+
+if sys.version_info < (3, 8):
+
+    def get_args(t: Type[Any]) -> Tuple[Any, ...]:
+        return getattr(t, "__args__", ())
+
+
+else:
+
+    from typing import get_args
+
 
 pp = pprint.PrettyPrinter(indent=1, width=120, compact=True)
 
@@ -48,16 +61,16 @@ def dataclass_from_dict(klass, d):
         # Type is optional, data is either None, or Any
         if not d:
             return None
-        return dataclass_from_dict(klass.__args__[0], d)
+        return dataclass_from_dict(get_args(klass)[0], d)
     elif is_type_Tuple(klass):
-        return tuple(dataclass_from_dict(klass.__args__[0], item) for item in d)
+        return tuple(dataclass_from_dict(get_args(klass)[0], item) for item in d)
     elif dataclasses.is_dataclass(klass):
         # Type is a dataclass, data is a dictionary
         fieldtypes = {f.name: f.type for f in dataclasses.fields(klass)}
         return klass(**{f: dataclass_from_dict(fieldtypes[f], d[f]) for f in d})
     elif is_type_List(klass):
         # Type is a list, data is a list
-        return [dataclass_from_dict(klass.__args__[0], item) for item in d]
+        return [dataclass_from_dict(get_args(klass)[0], item) for item in d]
     elif issubclass(klass, bytes):
         # Type is bytes, data is a hex string
         return klass(hexstr_to_bytes(d))
@@ -104,22 +117,22 @@ class Streamable:
     def parse_one_item(cls: Type[cls.__name__], f_type: Type, f: BinaryIO):  # type: ignore
         inner_type: Type
         if is_type_List(f_type):
-            inner_type = f_type.__args__[0]
+            inner_type = get_args(f_type)[0]
             full_list: List[inner_type] = []  # type: ignore
-            assert inner_type != List.__args__[0]  # type: ignore
+            # wjb assert inner_type != get_args(List)[0]  # type: ignore
             list_size: uint32 = uint32(int.from_bytes(f.read(4), "big"))
             for list_index in range(list_size):
                 full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
             return full_list
         if is_type_SpecificOptional(f_type):
-            inner_type = f_type.__args__[0]
+            inner_type = get_args(f_type)[0]
             is_present: bool = f.read(1) == bytes([1])
             if is_present:
                 return cls.parse_one_item(inner_type, f)  # type: ignore
             else:
                 return None
         if is_type_Tuple(f_type):
-            inner_types = f_type.__args__
+            inner_types = get_args(f_type)
             full_list = []
             for inner_type in inner_types:
                 full_list.append(cls.parse_one_item(inner_type, f))  # type: ignore
@@ -151,19 +164,19 @@ class Streamable:
         if is_type_List(f_type):
             assert is_type_List(type(item))
             f.write(uint32(len(item)).to_bytes(4, "big"))
-            inner_type = f_type.__args__[0]
-            assert inner_type != List.__args__[0]  # type: ignore
+            inner_type = get_args(f_type)[0]
+            # wjb assert inner_type != get_args(List)[0]  # type: ignore
             for element in item:
                 self.stream_one_item(inner_type, element, f)
         elif is_type_SpecificOptional(f_type):
-            inner_type = f_type.__args__[0]
+            inner_type = get_args(f_type)[0]
             if item is None:
                 f.write(bytes([0]))
             else:
                 f.write(bytes([1]))
                 self.stream_one_item(inner_type, item, f)
         elif is_type_Tuple(f_type):
-            inner_types = f_type.__args__
+            inner_types = get_args(f_type)
             assert len(item) == len(inner_types)
             for i in range(len(item)):
                 self.stream_one_item(inner_types[i], item[i], f)
