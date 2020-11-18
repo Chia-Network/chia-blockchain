@@ -19,7 +19,7 @@ sudo rm -rf dist
 mkdir dist
 
 echo "Create executeables with pyinstaller"
-pip install pyinstaller==4.0
+pip install pyinstaller==4.1
 sudo pyinstaller --log-level=INFO daemon.spec
 cp -r dist/daemon ../electron-react
 cd .. || exit
