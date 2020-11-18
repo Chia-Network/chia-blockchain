@@ -622,7 +622,7 @@ class WalletRpcApi:
         recovery_list = wallet.did_info.backup_ids
         recover_hex_list = []
         for _ in recovery_list:
-            recover_hex_list.append(_.hex()
+            recover_hex_list.append(_.hex())
         return {
             "success": True,
             "recover_list": recover_hex_list,
