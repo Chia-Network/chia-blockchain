@@ -190,6 +190,19 @@ const useStyles = makeStyles(theme => ({
     marginLeft: theme.spacing(3),
     width: 400
   },
+  updateDIDsTitle: {
+    marginTop: theme.spacing(3),
+  },
+  inputDIDs: {
+    paddingTop: theme.spacing(0),
+    marginLeft: theme.spacing(0)
+  },
+  inputDID: {
+    marginLeft: theme.spacing(0),
+    marginBottom: theme.spacing(2),
+    width: "50%",
+    height: 56
+  },
   walletContainer: {
     marginBottom: theme.spacing(5)
   },
@@ -397,13 +410,61 @@ const BalanceCard = props => {
   );
 };
 
+const ViewDIDsSubsection = props => {
+  const classes = useStyles();
+  const backup_list = props.backup_dids
+  return (
+    <Grid item xs={12}>
+      <div className={classes.cardSubSection}>
+        <Box display="flex">
+          <Box flexGrow={1}>
+            <Accordion className={classes.front}>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                aria-controls="panel1a-content"
+                id="panel1a-header"
+              >
+                <Typography className={classes.heading}>
+                  View backup DID list
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Grid item xs={12}>
+                  <div className={classes.cardSubSection}>
+                    <Box display="flex">
+                      <Box flexGrow={1}>
+                        <Typography variant="subtitle1">
+                          {backup_list.map((object, i) => {
+                            return (
+                              <span key={i}>
+                                <Typography variant="subtitle1">
+                                  &#8226; {object}
+                                </Typography>
+                                </span>
+                            )
+                          })}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </div>
+                </Grid>
+              </AccordionDetails>
+            </Accordion>
+          </Box>
+        </Box>
+      </div>
+    </Grid>
+  )
+}
+
 const ManageDIDsCard = props => {
   var id = props.wallet_id;
   const classes = useStyles();
   const dispatch = useDispatch();
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
-  // let backup_dids = useSelector(state => state.wallet_state.wallets[id].backup_dids);
+  let backup_dids = useSelector(state => state.wallet_state.wallets[id].backup_dids);
+  console.log(backup_dids)
   const { handleSubmit, control } = useForm();
   const { fields, append, remove } = useFieldArray(
     {
@@ -411,10 +472,6 @@ const ManageDIDsCard = props => {
       name: "new_list"
     }
   );
-
-  function viewDIDs() {
-    dispatch(did_get_recovery_list(id));
-  }
 
   const onSubmit = (data) => {
     const didArray = data.backup_dids?.map((item) => item.backupid) ?? [];
@@ -433,41 +490,21 @@ const ManageDIDsCard = props => {
             </Typography>
           </div>
         </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={6}>
-                <Typography variant="subtitle1">
-                  View Backup DIDs
-                </Typography>
-              </Box>
-            </Box>
-            <Box display="flex">
-              <Box>
-                <Button
-                  onClick={viewDIDs}
-                  className={classes.sendButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  VIEW
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
+        <ViewDIDsSubsection
+          backup_dids={backup_dids}
+        />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
             <form onSubmit={handleSubmit(onSubmit)}>
               <Box display="flex">
-                <Box flexGrow={6}>
+                <Box flexGrow={6} className={classes.updateDIDsTitle}>
                   <Typography variant="subtitle1">
                     Update Backup DIDs
                   </Typography>
                 </Box>
               </Box>
               <Box display="flex">
-                <Box flexGrow={6}>
+                <Box flexGrow={1}>
                   <Button
                     type="button"
                     className={classes.sendButton}
@@ -478,6 +515,16 @@ const ManageDIDsCard = props => {
                     }}
                   >
                     ADD
+                  </Button>
+                </Box>
+                <Box>
+                  <Button
+                    type="submit"
+                    className={classes.sendButton}
+                    variant="contained"
+                    color="primary"
+                  >
+                    Submit
                   </Button>
                 </Box>
               </Box>
