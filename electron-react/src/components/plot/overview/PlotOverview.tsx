@@ -8,7 +8,7 @@ import PlotsNotFound from '../PlotsNotFound';
 import PlotsFailed from '../PlotsFailed';
 
 export default function PlotOverview() {
-  const { loading, hasPlots } = usePlots();
+  const { loading, hasPlots, hasQueue } = usePlots();
 
   return (
     <Flex flexDirection="column" gap={3}>
@@ -18,7 +18,7 @@ export default function PlotOverview() {
 
       {!loading && (
         <>
-          {hasPlots ? (
+          {(hasPlots || hasQueue) ? (
             <PlotOverviewPlots />
           ) : (
             <Grid container spacing={3}>

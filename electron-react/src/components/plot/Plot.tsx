@@ -23,8 +23,8 @@ export default function Plot() {
           </Link>
           <PlotHeaderTeleporter.Target />
         </>
-      )
-       }>
+      )}
+    >
       <Flex flexDirection="column" gap={3}>
         <Switch>
           <Route path={path} exact>

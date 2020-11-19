@@ -6,21 +6,23 @@ import { More } from '@chia/core';
 import { Box, ListItemIcon, MenuItem, Typography } from '@material-ui/core';
 import {
   DeleteForever as DeleteForeverIcon,
+  Info as InfoIcon,
 } from '@material-ui/icons';
-import {
-  deletePlot,
-} from '../../modules/harvesterMessages';
-import type Plot from '../../types/Plot';
-import useOpenDialog from '../../hooks/useOpenDialog';
+import useOpenDialog from '../../../hooks/useOpenDialog';
+import type PlotQueueItem from '../../../types/PlotQueueItem';
+import PlotStatus from '../../../constants/PlotStatus';
+import { plotQueueDelete } from '../../../modules/plotQueue';
+import PlotQueueLogDialog from './PlotQueueLogDialog';
 
 type Props = {
-  plot: Plot;
+  queueItem: PlotQueueItem;
 };
 
-export default function PlotAction(props: Props) {
+export default function PlotQueueAction(props: Props) {
   const {
-    plot: {
-      filename,
+    queueItem: {
+      id,
+      status,
     }
   } = props;
 
@@ -42,14 +44,31 @@ export default function PlotAction(props: Props) {
 
     // @ts-ignore
     if (canDelete) {
-      dispatch(deletePlot(filename));
+      dispatch(plotQueueDelete(id));
     }
+  }
+
+  function handleViewLog() {
+    openDialog((
+      <PlotQueueLogDialog id={id} />
+    ));
   }
 
   return (
     <More>
       {({ onClose }) => (
         <Box>
+          {status === PlotStatus.IN_PROGRESS && (
+            <MenuItem onClick={() => { onClose(); handleViewLog(); }}>
+              <ListItemIcon>
+                <InfoIcon fontSize="small" />
+              </ListItemIcon>
+              <Typography variant="inherit" noWrap>
+                View Log
+              </Typography>
+            </MenuItem>
+          )}
+
           <MenuItem onClick={() => { onClose(); handleDeletePlot(); }}>
             <ListItemIcon>
               <DeleteForeverIcon fontSize="small" />

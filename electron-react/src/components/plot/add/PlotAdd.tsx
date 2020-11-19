@@ -12,6 +12,7 @@ import PlotAddNumberOfPlots from './PlotAddNumberOfPlots';
 import PlotAddSelectTemporaryDirectory from './PlotAddSelectTemporaryDirectory';
 import PlotAddSelectFinalDirectory from './PlotAddSelectFinalDirectory';
 import { startPlotting } from '../../../modules/plotter_messages';
+import { plotQueueAdd } from '../../../modules/plotQueue';
 import PlotAddConfig from '../../../types/PlotAdd';
 
 type FormData = PlotAddConfig;
@@ -38,29 +39,7 @@ export default function PlotAdd(): JSX.Element {
   });
 
   const handleSubmit: SubmitHandler<FormData> = (data) => {
-    const {
-      plotSize,
-      plotCount,
-      workspaceLocation,
-      workspaceLocation2,
-      finalLocation,
-      maxRam,
-      numBuckets,
-      numThreads,
-      stripeSize,
-    } = data;
-
-    dispatch(startPlotting(
-      plotSize,
-      plotCount,
-      workspaceLocation,
-      workspaceLocation2 || workspaceLocation,
-      finalLocation,
-      maxRam,
-      numBuckets,
-      numThreads,
-      stripeSize,
-    ));
+    dispatch(plotQueueAdd(data));
 
     history.push('/dashboard/plot');
   }

@@ -14,6 +14,7 @@ export { default as FormatBytes } from './FormatBytes';
 export { default as FormatConnectionStatus } from './FormatConnectionStatus';
 export { default as GuestRoute } from './GuestRoute';
 export { default as IconButton } from './IconButton';
+export { default as Indicator } from './Indicator';
 export { default as Link } from './Link';
 export { default as Loading } from './Loading';
 export { default as LocaleToggle } from './LocaleToggle';

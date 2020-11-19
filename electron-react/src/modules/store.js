@@ -10,14 +10,27 @@ import dev_config from '../dev_config';
 export const history = createBrowserHistory();
 
 const middlewares = [reduxThunk, wsMiddleware, routerMiddleware(history)];
-
 const rootReducer = createRootReducer(history);
+const initialState = {};
+
+try {
+  if (localStorage.getItem('plot_queue')) {
+    initialState.plot_queue = JSON.parse(localStorage.getItem('plot_queue'));
+  }
+} catch  {
+  localStorage.removeItem('plot_queue');
+}
 
 const store =
   isElectron() && !dev_config.redux_tool
-    ? createStore(rootReducer, compose(applyMiddleware(...middlewares)))
+    ? createStore(
+        rootReducer,
+        initialState,
+        compose(applyMiddleware(...middlewares)),
+      )
     : createStore(
         rootReducer,
+        initialState,
         compose(
           applyMiddleware(...middlewares) /* preloadedState, */,
           (window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ &&
@@ -25,5 +38,12 @@ const store =
             compose,
         ),
       );
+
+store.subscribe(() => {
+  const state = store.getState();
+  if (state.plot_queue) {
+    localStorage.setItem('plot_queue', JSON.stringify(state.plot_queue));
+  }
+});
 
 export default store;

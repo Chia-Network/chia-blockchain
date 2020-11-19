@@ -1,18 +1,10 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Flex } from '@chia/core';
-import styled from 'styled-components';
+import { Indicator } from '@chia/core';
 import type Plot from '../../types/Plot';
 import useFarmerStatus from '../../hooks/useFarmerStatus';
 import FarmerStatus from '../../constants/FarmerStatus';
 import StateColor from '../../constants/StateColor';
-
-const StyledIndicator = styled.div`
-  display: inline-block;
-  height: 10px;
-  width: 75px;
-  background-color: ${({ color }) => color};
-`;
 
 const Color = {
   [FarmerStatus.FARMING]: StateColor.SUCCESS,
@@ -28,10 +20,7 @@ export default function PlotStatus(props: Props) {
   const farmerStatus = useFarmerStatus();
 
   return (
-    <Flex flexDirection="column" gap={1}>
-      <StyledIndicator color={Color[farmerStatus]} />
-
-      <Flex>
+    <Indicator color={Color[farmerStatus]}>
       {farmerStatus === FarmerStatus.FARMING && (
         <Trans id="PlotStatus.farming">
           Farming
@@ -47,7 +36,6 @@ export default function PlotStatus(props: Props) {
           Error
         </Trans>
       )}
-      </Flex>
-    </Flex>
+    </Indicator>
   );
 }

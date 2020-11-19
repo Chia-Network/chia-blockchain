@@ -1,15 +1,25 @@
 import React, { useMemo } from 'react';
 import { sumBy } from 'lodash';
 import { Trans } from '@lingui/macro';
-import { Card, Flex, Table } from '@chia/core';
+import styled from 'styled-components';
+import { Card, Flex, Table, FormatBytes } from '@chia/core';
+import { TableCell, TableRow } from '@material-ui/core';
 import { useSelector } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
 import { RootState } from '../../../modules/rootReducer';
 import type Plot from '../../../types/Plot';
-import { FormatBytes } from '@chia/core';
 import PlotStatus from '../PlotStatus';
 import PlotAction from '../PlotAction';
 import PlotHeader from '../PlotHeader';
+import PlotQueueSize from '../queue/PlotQueueSize';
+import PlotQueueActions from '../queue/PlotQueueActions';
+import PlotQueueIndicator from '../queue/PlotQueueIndicator';
+
+const StyledTableRowQueue = styled(TableRow)`
+  background-color: ${({ theme }) => theme.palette.type === 'dark' 
+    ? '#FEBA2C'
+    : '#F6EEDF'};
+`;
 
 const cols = [{
   minWidth: '130px',
@@ -68,6 +78,10 @@ export default function PlotOverviewPlots() {
     return sumBy(plots, (plot) => plot.file_size);
   }, [plots]);
 
+  const plotQueue = useSelector(
+    (state: RootState) => state.plot_queue.queue ?? [],
+  );
+
   return (
     <>
     <PlotHeader />
@@ -99,7 +113,28 @@ export default function PlotOverviewPlots() {
       </Flex>
 
       <Table cols={cols} rows={sortedPlots} pages>
-        {}
+        {plotQueue.map((item) => {
+          const { id } = item;
+
+          return (
+            <StyledTableRowQueue key={id}>
+              <TableCell>
+                <PlotQueueSize queueItem={item} />
+              </TableCell>
+              <TableCell />
+              <TableCell />
+              <TableCell />
+              <TableCell />
+              <TableCell />
+              <TableCell>
+                <PlotQueueIndicator queueItem={item} />
+              </TableCell>
+              <TableCell>
+                <PlotQueueActions queueItem={item} />
+              </TableCell>
+            </StyledTableRowQueue>
+          );
+        })}
       </Table>
     </Card>
     </>

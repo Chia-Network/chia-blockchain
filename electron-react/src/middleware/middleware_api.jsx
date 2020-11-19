@@ -49,6 +49,8 @@ import {
   plottingStopped,
   plottingStarted,
 } from '../modules/plotter_messages';
+
+import { plotQueueProcess } from '../modules/plotQueue';
 import { startService, isServiceRunning } from '../modules/daemon_messages';
 import { get_all_trades } from '../modules/trade_messages';
 import {
@@ -121,10 +123,12 @@ async function track_progress(store, location) {
       global_tail.unwatch();
     }
     global_tail = new Tail(location, options);
-    global_tail.on('line', (data) => {
-      dispatch(addProgress(data));
+    global_tail.on('line', async (data) => {
+      await dispatch(addProgress(data));
       if (data.includes('Renamed final file')) {
-        dispatch(refreshPlots());
+        await dispatch(refreshPlots());
+        await dispatch(plottingStopped());
+        dispatch(plotQueueProcess());
       }
     });
     global_tail.on('error', (err) => {
@@ -156,8 +160,8 @@ export const refreshAllState = (dispatch) => {
   dispatch(get_all_trades());
 };
 
-export const handle_message = (store, payload) => {
-  store.dispatch(incomingMessage(payload));
+export const handle_message = async (store, payload) => {
+  await store.dispatch(incomingMessage(payload));
   if (payload.command === 'ping') {
     if (payload.origin === service_wallet) {
       store.dispatch(get_connection_info());
@@ -212,6 +216,8 @@ export const handle_message = (store, payload) => {
         </AlertDialog>,
       ),
     );
+  } else if (payload.command === 'get_plots') {
+    store.dispatch(plotQueueProcess());
   } else if (payload.command === 'delete_plot') {
     store.dispatch(refreshPlots());
   } else if (payload.command === 'refresh_plots') {
@@ -319,7 +325,8 @@ export const handle_message = (store, payload) => {
   } else if (payload.command === 'stop_service') {
     if (payload.data.success) {
       if (payload.data.service_name === service_plotter) {
-        store.dispatch(plottingStopped());
+        await store.dispatch(plottingStopped());
+        store.dispatch(plotQueueProcess());
       }
     }
   }

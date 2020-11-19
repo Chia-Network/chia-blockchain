@@ -60,5 +60,5 @@ ConfirmDialog.defaultProps = {
   onClose: () => {},
   cancelTitle: 'Cancel',
   confirmTitle: 'Ok',
-  confirmColor: 'primary',
+  confirmColor: 'default',
 };
