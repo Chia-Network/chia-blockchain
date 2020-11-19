@@ -3,7 +3,6 @@ from typing import List, Optional
 
 from blspy import G2Element
 
-from src.types.header_block import HeaderBlock
 from src.types.reward_chain_sub_block import RewardChainSubBlock
 
 from src.types.proof_of_space import ProofOfSpace
@@ -35,21 +34,27 @@ class SubEpochData(Streamable):
 
 @dataclass(frozen=True)
 @streamable
-class SubepochChallengeSegment(Streamable):
-    sub_epoch_n: uint32
-    # Proof of space
-    proof_of_space: Optional[ProofOfSpace]  # if infused
+class SubSlotData(Streamable):
+    proof_of_space: Optional[ProofOfSpace]
     # Signature of signage point
-    cc_signage_point_sig: Optional[G2Element]  # if infused
+    cc_signage_point_sig: Optional[G2Element]
     # VDF to signage point
-    cc_signage_point_vdf: Optional[VDFProof]  # if infused
+    cc_signage_point_vdf: Optional[VDFProof]
     # VDF from signage to infusion point
-    infusion_point_vdf: Optional[VDFProof]  # if infused
-    # # VDF from infusion point to end of slot
-    infusion_to_slot_end_vdf: Optional[VDFProof]  # if infused
+    cc_infusion_point_vdf: Optional[VDFProof]
+    # VDF from infusion point to end of slot
+    cc_infusion_to_slot_end_vdf: Optional[VDFProof]
+    icc_infusion_to_slot_end_vdf: Optional[VDFProof]
     # VDF from beginning to end of slot
-    icc_slot_vdf: Optional[VDFProof]
+    cc_slot_vdf: Optional[VDFProof]
+
+
+@dataclass(frozen=True)
+@streamable
+class SubEpochChallengeSegment(Streamable):
+    sub_epoch_n: uint32
     last_reward_chain_vdf_info: VDFInfo
+    sub_slots: List[SubSlotData]
 
 
 @dataclass(frozen=True)
@@ -57,5 +62,5 @@ class SubepochChallengeSegment(Streamable):
 class WeightProof(Streamable):
     prev_ses_hash: bytes32  # only first in a SubEpochData list should have this
     sub_epochs: List[SubEpochData]
-    sub_epoch_segments: List[SubepochChallengeSegment]
+    sub_epoch_segments: List[SubEpochChallengeSegment]
     recent_reward_chain: List[RewardChainSubBlock]
