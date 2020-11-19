@@ -80,19 +80,15 @@ class DIDWallet:
             raise ValueError("failed to generate ID for wallet")
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         # Change and actual coloured coin
-        non_ephemeral_spends: List[Coin] = spend_bundle.not_ephemeral_additions()
-        did_coin = None
-        for c in non_ephemeral_spends:
-            did_coin = c
-            break
-        if did_coin is None:
-            raise ValueError("Internal Error, unable to generate new did coin")
+        did_puzzle_hash = did_wallet_puzzles.create_fullpuz(
+            self.did_info.current_inner, self.did_info.my_did
+        ).get_tree_hash()
 
         regular_record = TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=did_coin.puzzle_hash,
-            amount=uint64(did_coin.amount),
+            to_puzzle_hash=did_puzzle_hash,
+            amount=uint64(amount),
             fee_amount=uint64(0),
             incoming=False,
             confirmed=False,
@@ -107,8 +103,8 @@ class DIDWallet:
         did_record = TransactionRecord(
             confirmed_at_index=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=did_coin.puzzle_hash,
-            amount=uint64(did_coin.amount),
+            to_puzzle_hash=did_puzzle_hash,
+            amount=uint64(amount),
             fee_amount=uint64(0),
             incoming=True,
             confirmed=False,
