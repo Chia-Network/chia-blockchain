@@ -95,6 +95,8 @@ class TestWeightProof:
         header_cache: Dict[bytes32, HeaderBlock] = {}
         blockchain = empty_blockchain
         for block in blocks:
+            if block.finished_sub_slots is not None and len(block.finished_sub_slots) > 0:
+                print("block ", block.height, "deficit ", block.finished_sub_slots[-1].reward_chain.deficit)
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
             header_cache[block.header_hash] = full_block_to_header(block)
