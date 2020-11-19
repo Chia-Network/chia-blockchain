@@ -590,7 +590,9 @@ class WalletRpcApi:
     async def did_update_recovery_ids(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        recovery_list = request["new_list"]
+        recovery_list = []
+        for _ in request["new_list"]:
+            recovery_list.append(bytes.fromhex(_))
         new_amount_verifications_required = uint64(
             request["num_verifications_required"]
         )
