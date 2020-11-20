@@ -29,13 +29,15 @@ def full_block_to_sub_block_record(
             constants,
             sub_blocks,
             height_to_hash,
-            prev_sb.prev_hash,
+            prev_sb.header_hash,
             prev_sb.height,
             prev_sb.ips,
             prev_sb.deficit,
             len(block.finished_sub_slots) > 0,
             prev_sb.total_iters,
         )
+        if block.height > 1818:
+            print(f"Here, ips height {block.height} {ips}")
     overflow = is_overflow_sub_block(constants, block.reward_chain_sub_block.signage_point_index)
     deficit = calculate_deficit(constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
     prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None

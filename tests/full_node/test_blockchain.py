@@ -70,14 +70,14 @@ class TestGenesisBlock:
 
     @pytest.mark.asyncio
     async def test_genesis_empty_slots(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=9)[0]
+        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=3)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_overflow_genesis_empty_slots(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=True, skip_slots=10)[0]
+        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=True, skip_slots=3)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
@@ -94,7 +94,7 @@ class TestGenesisBlock:
 class TestAddingMoreBlocks:
     @pytest.mark.asyncio
     async def test_basic_chain(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(test_constants, 2000)
+        blocks = bt.get_consecutive_blocks(test_constants, 20)
         for block in blocks:
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
@@ -122,7 +122,7 @@ class TestAddingMoreBlocks:
     @pytest.mark.asyncio
     async def test_empty_genesis(self, empty_blockchain):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(test_constants, 10, skip_slots=10)
+        blocks = bt.get_consecutive_blocks(test_constants, 10, skip_slots=3)
         for block in blocks:
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
@@ -135,7 +135,7 @@ class TestAddingMoreBlocks:
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
 
-        blocks = bt.get_consecutive_blocks(test_constants, 10, skip_slots=10, block_list=blocks)
+        blocks = bt.get_consecutive_blocks(test_constants, 10, skip_slots=3, block_list=blocks)
         for block in blocks[10:]:
             result, err, _ = await blockchain.receive_block(block)
             assert err is None
@@ -176,7 +176,7 @@ class TestAddingMoreBlocks:
 
     @pytest.mark.asyncio
     async def test_basic_chain_overflow(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(test_constants, 30, force_overflow=True)
+        blocks = bt.get_consecutive_blocks(test_constants, 5, force_overflow=True)
         for block in blocks:
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
@@ -239,6 +239,7 @@ class TestAddingMoreBlocks:
         # 3b
         blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=0)
         blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=1, block_list=blocks)
+        print(blocks)
         new_finished_ss = recursive_replace(
             blocks[1].finished_sub_slots[0],
             "challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash",

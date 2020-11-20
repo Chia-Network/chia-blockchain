@@ -1019,7 +1019,9 @@ class FullNode:
         # 3. In a future sub-slot that we already know of
 
         # Checks that the proof of space is valid
-        quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(self.constants)
+        quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
+            self.constants, request.challenge_chain_sp
+        )
         assert len(quality_string) == 32
 
         # Grab best transactions from Mempool for given tip target
