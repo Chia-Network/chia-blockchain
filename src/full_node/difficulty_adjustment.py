@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Optional
 
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
@@ -6,7 +6,6 @@ from src.types.unfinished_block import UnfinishedBlock
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_sp_iters, calculate_ip_iters
 from src.types.sized_bytes import bytes32
 from src.full_node.sub_block_record import SubBlockRecord
 from src.util.ints import uint32, uint64, uint128, uint8
@@ -91,13 +90,9 @@ def _get_last_block_in_previous_epoch(
             curr = fetched_blocks[fetched_index]
             fetched_index += 1
 
-        last_sb_ip_iters = calculate_ip_iters(constants, last_sb_in_slot.ips, last_sb_in_slot.required_iters)
-        last_sb_sp_iters = calculate_sp_iters(constants, last_sb_in_slot.ips, last_sb_in_slot.required_iters)
-        prev_signage_point_total_iters = last_sb_in_slot.total_iters - last_sb_ip_iters + last_sb_sp_iters
-
         # Backtrack to find the last block before the signage point
         curr = sub_blocks[last_sb_in_slot.prev_hash]
-        while curr.total_iters > prev_signage_point_total_iters or not curr.is_block:
+        while curr.total_iters > last_sb_in_slot.sp_total_iters(constants) or not curr.is_block:
             curr = sub_blocks[curr.prev_hash]
 
         return curr
@@ -109,7 +104,7 @@ def finishes_sub_epoch(
     deficit: uint8,
     also_finishes_epoch: bool,
     sub_blocks: Dict[bytes32, SubBlockRecord],
-    prev_header_hash: bytes32,
+    prev_header_hash: Optional[bytes32],
 ) -> bool:
     """
     Returns true if the next sub-slot after height will form part of a new sub-epoch (or epoch if also_finished_epoch
@@ -118,6 +113,8 @@ def finishes_sub_epoch(
 
     if height < constants.SUB_EPOCH_SUB_BLOCKS - 1:
         return False
+
+    assert prev_header_hash is not None
 
     # If last slot does not have enough blocks for a new challenge chain infusion, return same difficulty
     if deficit > 0:
@@ -192,6 +189,8 @@ def get_next_ips(
         (last_block_curr.total_iters - last_block_prev.total_iters)
         // (last_block_curr.timestamp - last_block_prev.timestamp)
     )
+    new_ips_precise = new_ips_precise - (new_ips_precise % constants.NUM_SPS_SUB_SLOT)  # Must divide the sub slot
+    new_ips = uint64(truncate_to_significant_bits(new_ips_precise, constants.SIGNIFICANT_BITS))
     assert count_significant_bits(new_ips) <= constants.SIGNIFICANT_BITS
 
     # Only change by a max factor as a sanity check
@@ -210,7 +209,7 @@ def get_next_ips(
     if new_ips >= last_block_curr.ips:
         return min(new_ips, max_ips)
     else:
-        return max([uint64(1), new_ips, min_ips])
+        return max([constants.NUM_SPS_SUB_SLOT, new_ips, min_ips])
 
 
 def get_next_difficulty(

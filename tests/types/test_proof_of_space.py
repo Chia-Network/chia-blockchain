@@ -2,7 +2,7 @@ from secrets import token_bytes
 from blspy import AugSchemeMPL
 from src.types.proof_of_space import ProofOfSpace  # pylint: disable=E0401
 
-#  from src.consensus.default_constants import DEFAULT_CONSTANTS
+ from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.types.classgroup import ClassgroupElement
 
 
@@ -13,7 +13,7 @@ class TestProofOfSpace:
         """
         num_trials = 40000
         success_count = 0
-        target_filter = (2 ** constants.NUMBER_ZERO_BITS_PLOT_FILTER) * (2 ** constants.NUMBER_ZERO_BITS_SP_FILTER)
+        target_filter = (2 ** DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_SP_FILTER) * (2 ** constants.NUMBER_ZERO_BITS_SP_FILTER)
         sk = AugSchemeMPL.key_gen(bytes([0x44] * 32))
         sig = AugSchemeMPL.sign(sk, b"")
         for _ in range(num_trials):

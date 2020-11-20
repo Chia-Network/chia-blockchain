@@ -8,7 +8,7 @@ from src.util.keychain import Keychain
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
     calculate_iterations_quality,
-    calculate_sp_index,
+    calculate_sp_interval_iters,
 )
 from src.protocols import farmer_protocol, harvester_protocol
 from src.server.connection import PeerConnections
@@ -17,7 +17,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
 from src.util.api_decorators import api_request
-from src.util.ints import uint32, uint64, uint8
+from src.util.ints import uint32, uint64
 from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from src.util.chech32 import decode_puzzle_hash
 
@@ -38,14 +38,11 @@ class Farmer:
         consensus_constants: ConsensusConstants,
     ):
         self.config = farmer_config
-        # To send to harvester on connect
-        self.latest_challenge: bytes32 = None
-
         # Keep track of all sps for each challenge
         self.sps: Dict[bytes32, List[farmer_protocol.NewSignagePoint]] = {}
 
         # Keep track of harvester plot identifier (str), target sp index, and PoSpace for each challenge
-        self.proofs_of_space: Dict[bytes32, List[Tuple[str, uint8, ProofOfSpace]]] = {}
+        self.proofs_of_space: Dict[bytes32, List[Tuple[str, ProofOfSpace]]] = {}
 
         # Quality string to plot identifier and challenge_hash, for use with harvester.RequestSignatures
         self.quality_str_to_identifiers: Dict[bytes32, Tuple[str, bytes32]] = {}
@@ -94,17 +91,8 @@ class Farmer:
         msg = harvester_protocol.HarvesterHandshake(
             self._get_public_keys(),
             self.pool_public_keys,
-            self.config["pool_share_threshold"],
         )
         yield OutboundMessage(NodeType.HARVESTER, Message("harvester_handshake", msg), Delivery.RESPOND)
-        if self.latest_challenge is not None and len(self.sps[self.latest_challenge]) > 0:
-            sp = self.sps[self.latest_challenge][0]
-            message = harvester_protocol.NewChallenge(sp.challenge_hash, sp.difficulty, sp.slot_iterations)
-            yield OutboundMessage(
-                NodeType.HARVESTER,
-                Message("new_challenge", message),
-                Delivery.BROADCAST,
-            )
 
     def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections: PeerConnections = global_connections
@@ -129,93 +117,81 @@ class Farmer:
         return [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [master_sk_to_pool_sk(sk) for sk, _ in all_sks]
 
     @api_request
-    async def challenge_response(self, challenge_response: harvester_protocol.ChallengeResponse):
+    async def new_proof_of_space(self, new_proof_of_space: harvester_protocol.NewProofOfSpace):
         """
         This is a response from the harvester, for a NewChallenge. Here we check if the proof
         of space is sufficiently good, and if so, we ask for the whole proof.
         """
-        if challenge_response.proof.challenge_hash not in self.number_of_responses:
-            self.number_of_responses[challenge_response.proof.challenge_hash] = 0
+        if new_proof_of_space.proof.challenge_hash not in self.number_of_responses:
+            self.number_of_responses[new_proof_of_space.proof.challenge_hash] = 0
 
-        if self.number_of_responses[challenge_response.proof.challenge_hash] >= 32:
+        if self.number_of_responses[new_proof_of_space.proof.challenge_hash] >= 32:
             log.warning(
                 f"Surpassed 32 PoSpace for one challenge, no longer submitting PoSpace for challenge "
-                f"{challenge_response.proof.challenge_hash}"
+                f"{new_proof_of_space.proof.challenge_hash}"
             )
             return
 
         difficulty: uint64 = uint64(0)
-        for sp in self.sps[challenge_response.proof.challenge_hash]:
-            if sp.challenge_hash == challenge_response.proof.challenge_hash:
+        for sp in self.sps[new_proof_of_space.proof.challenge_hash]:
+            if sp.challenge_hash == new_proof_of_space.proof.challenge_hash:
                 difficulty = sp.difficulty
         if difficulty == 0:
-            log.error(f"Did not find challenge {challenge_response.proof.challenge_hash}")
+            log.error(f"Did not find challenge {new_proof_of_space.proof.challenge_hash}")
             return
 
-        computed_quality_string = challenge_response.proof.verify_and_get_quality_string(self.constants, None, None)
+        computed_quality_string = new_proof_of_space.proof.verify_and_get_quality_string(self.constants)
         if computed_quality_string is None:
-            log.error(f"Invalid proof of space {challenge_response.proof}")
+            log.error(f"Invalid proof of space {new_proof_of_space.proof}")
             return
 
-        required_iters: uint64 = calculate_iterations_quality(
-            computed_quality_string,
-            challenge_response.proof.size,
-            difficulty,
-        )
-
-        if challenge_response.proof.challenge_hash not in self.sps:
-            log.warning(f"Received response for challenge that we do not have {challenge_response.challenge_hash}")
+        if new_proof_of_space.proof.challenge_hash not in self.sps:
+            log.warning(f"Received response for challenge that we do not have {new_proof_of_space.challenge_hash}")
             return
-        elif len(self.sps[challenge_response.proof.challenge_hash]) == 0:
-            log.warning(f"Received response for challenge {challenge_response.challenge_hash} with no sp data")
+        elif len(self.sps[new_proof_of_space.proof.challenge_hash]) == 0:
+            log.warning(f"Received response for challenge {new_proof_of_space.challenge_hash} with no sp data")
             return
-
-        sub_slot_iters = self.sps[challenge_response.proof.challenge_hash][0].slot_iterations
 
         # Double check that the iters are good
-        if required_iters < sub_slot_iters or required_iters < self.config["pool_share_threshold"]:
-            self.number_of_responses[challenge_response.proof.challenge_hash] += 1
-            self._state_changed("challenge")
-            ips = sub_slot_iters // self.constants.SLOT_TIME_TARGET
-            # This is the sp which this proof of space is assigned to
-            target_sp_index: uint8 = calculate_sp_index(self.constants, ips, required_iters)
+        self.number_of_responses[new_proof_of_space.proof.challenge_hash] += 1
+        self._state_changed("challenge")
+        # This is the sp which this proof of space is assigned to
 
-            # Requests signatures for the first sp (maybe the second if we were really slow at getting proofs)
-            for sp in self.sps[challenge_response.proof.challenge_hash]:
-                # If we already have the target sp, proceed at getting the signatures for this PoSpace
-                if sp.signage_point_index == target_sp_index:
-                    request = harvester_protocol.RequestSignatures(
-                        challenge_response.plot_identifier,
-                        challenge_response.proof.challenge_hash,
-                        [sp.challenge_chain_sp, sp.reward_chain_sp],
-                    )
-                    yield OutboundMessage(
-                        NodeType.HARVESTER,
-                        Message("request_signatures", request),
-                        Delivery.RESPOND,
-                    )
-            if challenge_response.proof.challenge_hash not in self.proofs_of_space:
-                self.proofs_of_space[challenge_response.proof.challenge_hash] = [
-                    (
-                        challenge_response.plot_identifier,
-                        target_sp_index,
-                        challenge_response.proof,
-                    )
-                ]
-            else:
-                self.proofs_of_space[challenge_response.proof.challenge_hash].append(
-                    (
-                        challenge_response.plot_identifier,
-                        target_sp_index,
-                        challenge_response.proof,
-                    )
-                )
-            self.quality_str_to_identifiers[computed_quality_string] = (
-                challenge_response.plot_identifier,
-                challenge_response.proof.challenge_hash,
+        # Requests signatures for the first sp (maybe the second if we were really slow at getting proofs)
+        for sp in self.sps[new_proof_of_space.proof.challenge_hash]:
+            required_iters: uint64 = calculate_iterations_quality(
+                computed_quality_string, new_proof_of_space.proof.size, difficulty, sp.challenge_hash
             )
+            assert required_iters < calculate_sp_interval_iters(sp.slot_iterations, sp.ips)
+            # If we already have the target sp, proceed at getting the signatures for this PoSpace
+            request = harvester_protocol.RequestSignatures(
+                new_proof_of_space.plot_identifier,
+                new_proof_of_space.proof.challenge_hash,
+                [sp.challenge_chain_sp, sp.reward_chain_sp],
+            )
+            yield OutboundMessage(
+                NodeType.HARVESTER,
+                Message("request_signatures", request),
+                Delivery.RESPOND,
+            )
+        if new_proof_of_space.proof.challenge_hash not in self.proofs_of_space:
+            self.proofs_of_space[new_proof_of_space.proof.challenge_hash] = [
+                (
+                    new_proof_of_space.plot_identifier,
+                    new_proof_of_space.proof,
+                )
+            ]
         else:
-            log.warning(f"Required_iters: {required_iters}, too high. Must be < sub_slot_iters={sub_slot_iters}")
+            self.proofs_of_space[new_proof_of_space.proof.challenge_hash].append(
+                (
+                    new_proof_of_space.plot_identifier,
+                    new_proof_of_space.proof,
+                )
+            )
+        self.quality_str_to_identifiers[computed_quality_string] = (
+            new_proof_of_space.plot_identifier,
+            new_proof_of_space.proof.challenge_hash,
+        )
 
     @api_request
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures):
@@ -335,17 +311,19 @@ class Farmer:
 
     @api_request
     async def signage_point(self, signage_point: farmer_protocol.NewSignagePoint):
+        message = harvester_protocol.NewSignagePoint(
+            signage_point.challenge_hash,
+            signage_point.difficulty,
+            signage_point.ips,
+            signage_point.signage_point_index,
+            signage_point.challenge_chain_sp,
+        )
+        yield OutboundMessage(
+            NodeType.HARVESTER,
+            Message("new_challenge", message),
+            Delivery.BROADCAST,
+        )
         if signage_point.challenge_hash not in self.seen_challenges:
-            message = harvester_protocol.NewChallenge(
-                signage_point.challenge_hash,
-                signage_point.difficulty,
-                signage_point.slot_iterations,
-            )
-            yield OutboundMessage(
-                NodeType.HARVESTER,
-                Message("new_challenge", message),
-                Delivery.BROADCAST,
-            )
             self.seen_challenges.add(signage_point.challenge_hash)
             # This allows time for the collection of proofs from the harvester
             self._state_changed("challenge")
@@ -355,33 +333,10 @@ class Farmer:
                 await asyncio.sleep(1)
             self._state_changed("challenge")
 
-        if self.latest_challenge != signage_point.challenge_hash:
-            self.latest_challenge = signage_point.challenge_hash
-
-        if self.latest_challenge not in self.sps:
-            self.sps[self.latest_challenge] = [signage_point]
+        if signage_point.challenge_hash not in self.sps:
+            self.sps[signage_point.challenge_hash] = [signage_point]
         else:
-            self.sps[self.latest_challenge].append(signage_point)
-
-        # We already have fetched proofs for this challenge
-        if signage_point.challenge_hash in self.proofs_of_space:
-            for plot_identifier, target_sp_index, pospace in self.proofs_of_space[signage_point.challenge_hash]:
-                if target_sp_index == signage_point.signage_point_index:
-                    # Only proceeds with proofs of space that can be infused at this infusion point
-                    request = harvester_protocol.RequestSignatures(
-                        plot_identifier,
-                        signage_point.challenge_hash,
-                        [
-                            signage_point.challenge_chain_sp,
-                            signage_point.reward_chain_sp,
-                        ],
-                    )
-
-                    yield OutboundMessage(
-                        NodeType.HARVESTER,
-                        Message("request_signatures", request),
-                        Delivery.BROADCAST,
-                    )
+            self.sps[signage_point.challenge_hash].append(signage_point)
 
     @api_request
     async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues):
