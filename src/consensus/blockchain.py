@@ -6,11 +6,11 @@ import multiprocessing
 from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
-from src.full_node.block_body_validation import validate_block_body
+from src.consensus.block_body_validation import validate_block_body
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from src.full_node.difficulty_adjustment import get_next_difficulty, get_next_ips
-from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
+from src.consensus.difficulty_adjustment import get_next_difficulty, get_next_ips
+from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.unfinished_block import UnfinishedBlock
@@ -21,7 +21,7 @@ from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import Err
 from src.util.ints import uint32, uint64
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.full_node.block_header_validation import (
+from src.consensus.block_header_validation import (
     validate_finished_header_block,
     validate_unfinished_header_block,
 )

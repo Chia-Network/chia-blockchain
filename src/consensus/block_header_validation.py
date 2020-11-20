@@ -13,11 +13,11 @@ from src.consensus.pot_iterations import (
     calculate_sub_slot_iters,
     calculate_iterations_quality,
 )
-from src.full_node.deficit import calculate_deficit
-from src.full_node.difficulty_adjustment import finishes_sub_epoch, get_ips_and_difficulty
-from src.full_node.difficulty_adjustment import get_next_ips, get_next_difficulty
-from src.full_node.make_sub_epoch_summary import make_sub_epoch_summary
+from src.consensus.deficit import calculate_deficit
+from src.consensus.difficulty_adjustment import finishes_sub_epoch, get_ips_and_difficulty
+from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.types.classgroup import ClassgroupElement
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
@@ -427,76 +427,24 @@ async def validate_unfinished_header_block(
     if total_iters != header_block.reward_chain_sub_block.total_iters:
         return None, ValidationError(Err.INVALID_TOTAL_ITERS)
 
-    if new_sub_slot and not overflow:
-        # Case 1: start from start of this slot. Case of no overflow slots. Also includes genesis block after empty
-        # slot(s), but not overflowing
-        rc_vdf_challenge: bytes32 = header_block.finished_sub_slots[-1].reward_chain.get_hash()
-        cc_vdf_challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
-        sp_vdf_iters = sp_iters
-        cc_vdf_input = ClassgroupElement.get_default_element()
-    elif new_sub_slot and overflow and len(header_block.finished_sub_slots) > 1:
-        # Case 2: start from start of prev slot. This is a rare case of empty prev slot. Includes genesis block after
-        # 2 empty slots
-        rc_vdf_challenge = header_block.finished_sub_slots[-2].reward_chain.get_hash()
-        cc_vdf_challenge = header_block.finished_sub_slots[-2].challenge_chain.get_hash()
-        sp_vdf_iters = sp_iters
-        cc_vdf_input = ClassgroupElement.get_default_element()
-    elif genesis_block:
-        # Case 3: Genesis block case, first challenge
-        rc_vdf_challenge = constants.FIRST_RC_CHALLENGE
-        cc_vdf_challenge = constants.FIRST_CC_CHALLENGE
-        sp_vdf_iters = sp_iters
-        cc_vdf_input = ClassgroupElement.get_default_element()
-    else:
-        if new_sub_slot and overflow:
-            # Case 4: Starting at prev will put us in the previous, sub-slot, since case 2 handled more empty slots
-            num_sub_slots_to_look_for = 1
-        elif not new_sub_slot and overflow:
-            # Case 5: prev is in the same sub slot and also overflow. Starting at prev does not skip any sub slots
-            num_sub_slots_to_look_for = 2
-        elif not new_sub_slot and not overflow:
-            # Case 6: prev is in the same sub slot. Starting at prev does not skip any sub slots. We do not need
-            # to go back another sub slot, because it's not overflow, so the VDF to signage point is this sub-slot.
-            num_sub_slots_to_look_for = 1
-        else:
-            assert False
-        sp_total_iters = total_iters - ip_iters + sp_iters
-        if overflow:
-            sp_total_iters -= sub_slot_iters
-
-        curr: SubBlockRecord = prev_sb
-        # Finds a sub-block which is BEFORE our signage point, otherwise goes back to the end of sub-slot
-        # Note that for overflow sub-blocks, we are looking at the end of the previous sub-slot
-        while num_sub_slots_to_look_for > 0:
-            if curr.first_in_sub_slot:
-                num_sub_slots_to_look_for -= 1
-            if num_sub_slots_to_look_for == 0:
-                break
-            if curr.total_iters < sp_total_iters:
-                break
-            if curr.height == 0:
-                break
-            curr = sub_blocks[curr.prev_hash]
-
-        if curr.total_iters < sp_total_iters:
-            sp_vdf_iters = sp_total_iters - curr.total_iters
-            cc_vdf_input = curr.challenge_vdf_output
-            rc_vdf_challenge = curr.reward_infusion_new_challenge
-        else:
-            sp_vdf_iters = sp_iters
-            cc_vdf_input = ClassgroupElement.get_default_element()
-            rc_vdf_challenge = curr.finished_reward_slot_hashes[-1]
-
-        while not curr.first_in_sub_slot:
-            curr = sub_blocks[curr.prev_hash]
-        cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
+    sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0))
+    (
+        cc_vdf_challenge,
+        rc_vdf_challenge,
+        cc_vdf_input,
+        rc_vdf_input,
+        cc_vdf_iters,
+        rc_vdf_iters,
+    ) = get_signage_point_vdf_info(
+        constants, header_block.finished_sub_slots, overflow, prev_sb, sub_blocks, sp_total_iters, sp_iters
+    )
 
     # 9. Check reward chain sp proof
     if sp_iters != 0:
         target_vdf_info = VDFInfo(
             rc_vdf_challenge,
-            ClassgroupElement.get_default_element(),
-            sp_vdf_iters,
+            rc_vdf_input,
+            rc_vdf_iters,
             header_block.reward_chain_sub_block.reward_chain_sp_vdf.output,
         )
         if not header_block.reward_chain_sp_proof.is_valid(
@@ -538,7 +486,7 @@ async def validate_unfinished_header_block(
         target_vdf_info = VDFInfo(
             cc_vdf_challenge,
             cc_vdf_input,
-            sp_vdf_iters,
+            cc_vdf_iters,
             header_block.reward_chain_sub_block.challenge_chain_sp_vdf.output,
         )
 

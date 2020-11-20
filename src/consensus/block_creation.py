@@ -11,8 +11,8 @@ from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_sub_slot_iters
 from src.full_node.bundle_tools import best_solution_program
-from src.full_node.cost_calculator import calculate_cost_of_program
-from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from src.consensus.cost_calculator import calculate_cost_of_program
+from src.consensus.mempool_check_conditions import get_name_puzzle_conditions
 from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
 from src.types.coin import Coin, hash_coin_list
@@ -256,9 +256,6 @@ def create_unfinished_block(
     assert rc_sp_signature is not None
     assert blspy.AugSchemeMPL.verify(proof_of_space.plot_public_key, cc_sp_hash, cc_sp_signature)
 
-    # print(
-    #     f"Calculating iters.. sssti {sub_slot_start_total_iters} ip iters {ip_iters} overflow {overflow} {prev_sub_slot_iters}"
-    # )
     total_iters = uint128(sub_slot_start_total_iters + ip_iters + (prev_sub_slot_iters if overflow else 0))
 
     rc_sub_block = RewardChainSubBlockUnfinished(
