@@ -247,7 +247,7 @@ class FullNodeStore:
             sub_slot_iters = calculate_sub_slot_iters(self.constants, peak.ips)
 
         # If we don't have this slot, return False
-        assert 0 < index < self.constants.NUM_CHECKPOINTS_PER_SLOT
+        assert 0 < index < self.constants.NUM_SPS_SUB_SLOT
         for sub_slot, sp_dict, start_ss_total_iters in self.finished_sub_slots:
             if sub_slot is None and start_ss_total_iters == 0:
                 ss_challenge_hash = self.constants.FIRST_CC_CHALLENGE
@@ -259,11 +259,11 @@ class FullNodeStore:
                 # If we do have this slot, find the Prev sub-block from SP and validate SP
                 if peak is not None and start_ss_total_iters > peak.total_iters:
                     # We are in a future sub slot from the peak, so maybe there is a new IPS
-                    checkpoint_size: uint64 = uint64(next_sub_slot_iters // self.constants.NUM_CHECKPOINTS_PER_SLOT)
+                    checkpoint_size: uint64 = uint64(next_sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
                     delta_iters = checkpoint_size * index
                 else:
                     # We are not in a future sub slot from the peak, so there is no new IPS
-                    checkpoint_size: uint64 = uint64(sub_slot_iters // self.constants.NUM_CHECKPOINTS_PER_SLOT)
+                    checkpoint_size: uint64 = uint64(sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
                     delta_iters = checkpoint_size * index
                 sp_total_iters = start_ss_total_iters + delta_iters
 
@@ -330,7 +330,7 @@ class FullNodeStore:
                 return SignagePoint(None, None, None, None)
             for _, sps_at_index in sps.items():
                 for sp in sps_at_index:
-                    if sp.cc_vdf.get_hash() == cc_signage_point:
+                    if sp.cc_vdf.output.get_hash() == cc_signage_point:
                         return sp
         return None
 

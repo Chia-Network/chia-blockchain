@@ -6,7 +6,6 @@ import multiprocessing
 from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters
 from src.full_node.block_body_validation import validate_block_body
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
@@ -20,7 +19,7 @@ from src.full_node.sub_block_record import SubBlockRecord
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import Err
-from src.util.ints import uint32, uint64, uint128
+from src.util.ints import uint32, uint64
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.full_node.block_header_validation import (
     validate_finished_header_block,
@@ -296,9 +295,6 @@ class Blockchain:
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert header_hash in self.sub_blocks
         curr = self.sub_blocks[header_hash]
-
-        ip_iters = calculate_ip_iters(self.constants, curr.ips, curr.required_iters)
-        sp_iters = calculate_sp_iters(self.constants, curr.ips, curr.required_iters)
         return get_next_difficulty(
             self.constants,
             self.sub_blocks,
@@ -308,15 +304,12 @@ class Blockchain:
             uint64(curr.weight - self.sub_blocks[curr.prev_hash].weight),
             curr.deficit,
             new_slot,
-            uint128(curr.total_iters - ip_iters + sp_iters),
+            curr.sp_total_iters(self.constants),
         )
 
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert header_hash in self.sub_blocks
         curr = self.sub_blocks[header_hash]
-
-        ip_iters = calculate_ip_iters(self.constants, curr.ips, curr.required_iters)
-        sp_iters = calculate_sp_iters(self.constants, curr.ips, curr.required_iters)
         return (
             get_next_ips(
                 self.constants,
@@ -327,7 +320,7 @@ class Blockchain:
                 curr.ips,
                 curr.deficit,
                 new_slot,
-                uint128(curr.total_iters - ip_iters + sp_iters),
+                curr.sp_total_iters(self.constants),
             )
             * self.constants.SLOT_TIME_TARGET
         )
