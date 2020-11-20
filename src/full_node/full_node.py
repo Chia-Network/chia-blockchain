@@ -17,13 +17,13 @@ from src.consensus.pot_iterations import (
     calculate_iterations_quality,
 )
 from src.full_node.block_store import BlockStore
-from src.full_node.blockchain import Blockchain, ReceiveBlockResult
+from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
-from src.full_node.difficulty_adjustment import (
+from src.consensus.difficulty_adjustment import (
     get_ips_and_difficulty,
 )
 from src.full_node.full_node_store import FullNodeStore
-from src.full_node.make_sub_epoch_summary import next_sub_epoch_summary
+from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.full_node.mempool_manager import MempoolManager
 from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
@@ -49,7 +49,7 @@ from src.types.spend_bundle import SpendBundle
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request
-from src.full_node.block_creation import create_unfinished_block, unfinished_block_to_full_block
+from src.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from src.util.errors import ConsensusError
 from src.util.ints import uint32, uint64, uint128, uint8
 from src.util.path import mkdir, path_from_root

@@ -4,7 +4,7 @@ import logging
 import time
 from typing import Optional
 
-from src.full_node.blockchain import Blockchain, ReceiveBlockResult
+from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.sync_store import SyncStore
 from src.types.full_block import FullBlock
 from src.util.errors import ConsensusError

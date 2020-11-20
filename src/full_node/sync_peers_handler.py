@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Any, AsyncGenerator, Dict, List, Union
 
-from src.full_node.blockchain import Blockchain
+from src.consensus.blockchain import Blockchain
 from src.full_node.sync_store import SyncStore
 from src.protocols import full_node_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
