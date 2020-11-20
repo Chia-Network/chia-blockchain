@@ -6,7 +6,7 @@ from src.types.program import Program
 from src.types.name_puzzle_condition import NPC
 from src.util.errors import Err
 from src.util.ints import uint64
-from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from src.consensus.mempool_check_conditions import get_name_puzzle_conditions
 
 
 def calculate_cost_of_program(
@@ -35,25 +35,15 @@ def calculate_cost_of_program(
             elif condition is ConditionOpcode.CREATE_COIN:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_COIN.value
             elif condition is ConditionOpcode.ASSERT_TIME_EXCEEDS:
-                total_vbyte_cost += (
-                    len(cvp_list) * ConditionCost.ASSERT_TIME_EXCEEDS.value
-                )
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_TIME_EXCEEDS.value
             elif condition is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                total_vbyte_cost += (
-                    len(cvp_list) * ConditionCost.ASSERT_BLOCK_AGE_EXCEEDS.value
-                )
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_BLOCK_AGE_EXCEEDS.value
             elif condition is ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                total_vbyte_cost += (
-                    len(cvp_list) * ConditionCost.ASSERT_BLOCK_INDEX_EXCEEDS.value
-                )
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_BLOCK_INDEX_EXCEEDS.value
             elif condition is ConditionOpcode.ASSERT_MY_COIN_ID:
-                total_vbyte_cost += (
-                    len(cvp_list) * ConditionCost.ASSERT_MY_COIN_ID.value
-                )
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_MY_COIN_ID.value
             elif condition is ConditionOpcode.ASSERT_COIN_CONSUMED:
-                total_vbyte_cost += (
-                    len(cvp_list) * ConditionCost.ASSERT_COIN_CONSUMED.value
-                )
+                total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_COIN_CONSUMED.value
             elif condition is ConditionOpcode.ASSERT_FEE:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.ASSERT_FEE.value
             else:

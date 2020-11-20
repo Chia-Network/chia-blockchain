@@ -9,11 +9,11 @@ from src.consensus.block_rewards import calculate_pool_reward, calculate_base_fa
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.full_node.block_root_validation import validate_block_merkle_roots
+from src.consensus.block_root_validation import validate_block_merkle_roots
 from src.full_node.block_store import BlockStore
-from src.full_node.blockchain_check_conditions import blockchain_check_conditions_dict
+from src.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.full_node.coin_store import CoinStore
-from src.full_node.cost_calculator import calculate_cost_of_program
+from src.consensus.cost_calculator import calculate_cost_of_program
 from src.full_node.sub_block_record import SubBlockRecord
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
