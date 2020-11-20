@@ -6,7 +6,7 @@ import sqlite3
 import aiosqlite
 import pytest
 from src.full_node.block_store import BlockStore
-from src.full_node.blockchain import Blockchain
+from src.consensus.blockchain import Blockchain
 from src.full_node.coin_store import CoinStore
 from tests.setup_nodes import test_constants, bt
 

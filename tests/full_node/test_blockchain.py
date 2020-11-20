@@ -5,7 +5,7 @@ import aiosqlite
 import pytest
 
 from src.full_node.block_store import BlockStore
-from src.full_node.blockchain import Blockchain, ReceiveBlockResult
+from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.types.classgroup import ClassgroupElement
 from src.types.slots import InfusedChallengeChainSubSlot
@@ -94,7 +94,7 @@ class TestGenesisBlock:
 class TestAddingMoreBlocks:
     @pytest.mark.asyncio
     async def test_basic_chain(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(test_constants, 20)
+        blocks = bt.get_consecutive_blocks(test_constants, 200)
         for block in blocks:
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
@@ -107,17 +107,18 @@ class TestAddingMoreBlocks:
     @pytest.mark.asyncio
     async def test_multiple_times(self, empty_blockchain):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(test_constants, 10)
+        # Calls block tools twice
+        blocks = bt.get_consecutive_blocks(test_constants, 5)
         for block in blocks:
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
 
-        blocks = bt.get_consecutive_blocks(test_constants, 10, block_list=blocks)
-        assert len(blocks) == 20
-        for block in blocks[10:]:
+        blocks = bt.get_consecutive_blocks(test_constants, 5, block_list=blocks)
+        assert len(blocks) == 10
+        for block in blocks[5:]:
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
-        assert blockchain.get_peak().height == 19
+        assert blockchain.get_peak().height == 9
 
     @pytest.mark.asyncio
     async def test_empty_genesis(self, empty_blockchain):
@@ -135,7 +136,7 @@ class TestAddingMoreBlocks:
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
 
-        blocks = bt.get_consecutive_blocks(test_constants, 10, skip_slots=3, block_list=blocks)
+        blocks = bt.get_consecutive_blocks(test_constants, 10, skip_slots=5, block_list=blocks)
         for block in blocks[10:]:
             result, err, _ = await blockchain.receive_block(block)
             assert err is None

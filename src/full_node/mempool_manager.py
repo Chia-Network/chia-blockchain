@@ -19,8 +19,8 @@ from src.types.sized_bytes import bytes32
 from src.full_node.coin_store import CoinStore
 from src.util.errors import Err
 from src.util.clvm import int_from_bytes
-from src.full_node.cost_calculator import calculate_cost_of_program
-from src.full_node.mempool_check_conditions import mempool_check_conditions_dict
+from src.consensus.cost_calculator import calculate_cost_of_program
+from src.consensus.mempool_check_conditions import mempool_check_conditions_dict
 from src.util.condition_tools import pkm_pairs_for_conditions_dict
 from src.util.ints import uint64, uint32
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -40,9 +40,7 @@ class MempoolManager:
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
         # old_mempools will contain transactions that were removed in the last 10 blocks
-        self.old_mempools: SortedDict[
-            uint32, Dict[bytes32, MempoolItem]
-        ] = SortedDict()  # pylint: disable=E1136
+        self.old_mempools: SortedDict[uint32, Dict[bytes32, MempoolItem]] = SortedDict()  # pylint: disable=E1136
         self.coin_store = coin_store
 
         tx_per_sec = self.constants.TX_PER_SEC
@@ -59,9 +57,7 @@ class MempoolManager:
         self.peak: Optional[SubBlockRecord] = None
         self.mempool: Mempool = Mempool.create(self.mempool_size)
 
-    async def create_bundle_from_mempool(
-        self, peak_header_hash: bytes32
-    ) -> Optional[SpendBundle]:
+    async def create_bundle_from_mempool(self, peak_header_hash: bytes32) -> Optional[SpendBundle]:
         """
         Returns aggregated spendbundle that can be used for creating new block
         """
@@ -100,10 +96,7 @@ class MempoolManager:
         if cost == 0:
             return False
         fees_per_cost = fees / cost
-        if (
-            not self.mempool.at_full_capacity()
-            or fees_per_cost >= self.mempool.get_min_fee_rate()
-        ):
+        if not self.mempool.at_full_capacity() or fees_per_cost >= self.mempool.get_min_fee_rate():
             return True
         return False
 
@@ -207,9 +200,7 @@ class MempoolManager:
 
         for npc in npc_list:
             if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
-                fee_list: List[ConditionVarPair] = npc.condition_dict[
-                    ConditionOpcode.ASSERT_FEE
-                ]
+                fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
                 for cvp in fee_list:
                     fee = int_from_bytes(cvp.var1)
                     assert_fee_sum = assert_fee_sum + fee
@@ -265,28 +256,19 @@ class MempoolManager:
             coin_record: CoinRecord = removal_record_dict[npc.coin_name]
             # Check that the revealed removal puzzles actually match the puzzle hash
             if npc.puzzle_hash != coin_record.coin.puzzle_hash:
-                log.warning(
-                    "Mempool rejecting transaction because of wrong puzzle_hash"
-                )
+                log.warning("Mempool rejecting transaction because of wrong puzzle_hash")
                 log.warning(f"{npc.puzzle_hash} != {coin_record.coin.puzzle_hash}")
                 return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 
-            error = mempool_check_conditions_dict(
-                coin_record, new_spend, npc.condition_dict, self.peak.height
-            )
+            error = mempool_check_conditions_dict(coin_record, new_spend, npc.condition_dict, self.peak.height)
 
             if error:
-                if (
-                    error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED
-                    or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED
-                ):
+                if error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED:
                     self.add_to_potential_tx_set(new_spend)
                     return uint64(cost), MempoolInclusionStatus.PENDING, error
                 break
 
-            for pk, message in pkm_pairs_for_conditions_dict(
-                npc.condition_dict, npc.coin_name
-            ):
+            for pk, message in pkm_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name):
                 pks.append(pk)
                 msgs.append(message)
 
@@ -294,9 +276,7 @@ class MempoolManager:
             return None, MempoolInclusionStatus.FAILED, error
 
         # Verify aggregated signature
-        validates = AugSchemeMPL.aggregate_verify(
-            pks, msgs, new_spend.aggregated_signature
-        )
+        validates = AugSchemeMPL.aggregate_verify(pks, msgs, new_spend.aggregated_signature)
         if not validates:
             return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
 
@@ -310,9 +290,7 @@ class MempoolManager:
         self.mempool.add_to_pool(new_item, additions, removal_coin_dict)
         return uint64(cost), MempoolInclusionStatus.SUCCESS, None
 
-    async def check_removals(
-        self, removals: Dict[bytes32, CoinRecord]
-    ) -> Tuple[Optional[Err], List[Coin]]:
+    async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
         """
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
@@ -330,10 +308,7 @@ class MempoolManager:
 
             # 3. Check coinbase freeze period
             if record.coinbase == 1:
-                if (
-                    self.peak.height + 1
-                    < record.confirmed_block_index + self.coinbase_freeze
-                ):
+                if self.peak.height + 1 < record.confirmed_block_index + self.coinbase_freeze:
                     return Err.COINBASE_NOT_YET_SPENDABLE, []
 
         if len(conflicts) > 0:
@@ -382,9 +357,7 @@ class MempoolManager:
         for tx in self.potential_txs.values():
             await self.add_spendbundle(tx)
 
-    async def get_items_not_in_filter(
-        self, mempool_filter: PyBIP158
-    ) -> List[MempoolItem]:
+    async def get_items_not_in_filter(self, mempool_filter: PyBIP158) -> List[MempoolItem]:
         items: List[MempoolItem] = []
         checked_items: Set[bytes32] = set()
 

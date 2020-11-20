@@ -10,9 +10,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Callable
 
-from bitstring import BitArray
 from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
-from src.full_node.deficit import calculate_deficit
+from src.consensus.deficit import calculate_deficit
 
 from src.cmds.init import create_default_chia_config, initialize_ssl
 from src.cmds.plots import create_plots
@@ -28,10 +27,11 @@ from src.consensus.pot_iterations import (
     calculate_sp_interval_iters,
     is_overflow_sub_block,
 )
-from src.full_node.full_block_to_sub_block_record import full_block_to_sub_block_record
-from src.full_node.make_sub_epoch_summary import next_sub_epoch_summary
+from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
+from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.plotting.plot_tools import load_plots, PlotInfo
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -49,7 +49,7 @@ from src.types.spend_bundle import SpendBundle
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFInfo, VDFProof
-from src.full_node.block_creation import create_unfinished_block, unfinished_block_to_full_block
+from src.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
 from src.util.config import load_config
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8
@@ -119,7 +119,7 @@ class BlockTools:
             args.num_threads = 0
             test_private_keys = [AugSchemeMPL.key_gen(std_hash(bytes([i]))) for i in range(args.num)]
             try:
-                # No datetime in the filename, to get deterministic filenames and not replot
+                # No datetime in the filename, to get deterministic filenames and not re-plot
                 create_plots(
                     args,
                     root_path,
@@ -211,6 +211,7 @@ class BlockTools:
         pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
 
         if block_list is None or len(block_list) == 0:
+            initial_block_list_len = 0
             genesis = self.create_genesis_block(
                 constants,
                 seed,
@@ -223,6 +224,7 @@ class BlockTools:
             block_list = [genesis]
             num_blocks -= 1
         else:
+            initial_block_list_len = len(block_list)
             num_empty_slots_added = 0  # Allows forcing empty slots in the beginning, for testing purposes
 
         if num_blocks == 0:
@@ -249,6 +251,10 @@ class BlockTools:
         sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)  # The number of iterations in one sub-slot
         same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
         sub_slot_start_total_iters: uint128 = latest_sub_block.infusion_sub_slot_total_iters(constants)
+        sub_slots_finished = 0
+        print(
+            f"Latest block {latest_sub_block.height} {latest_sub_block.signage_point_index} {latest_sub_block.total_iters}"
+        )
 
         # Start at the last block in block list
         # Get the challenge for that slot
@@ -257,7 +263,6 @@ class BlockTools:
                 sub_blocks, finished_sub_slots_at_sp, latest_sub_block.header_hash
             )
             prev_num_of_blocks = num_blocks
-
             if num_empty_slots_added < skip_slots:
                 # If did not reach the target slots to skip, don't make any proofs for this sub-slot
                 num_empty_slots_added += 1
@@ -348,9 +353,7 @@ class BlockTools:
                         if num_blocks == 0:
                             return block_list
                         sub_blocks[full_block.header_hash] = sub_block_record
-                        print(
-                            f"Added block {sub_block_record.height} overflow=False, iters {sub_block_record.total_iters}"
-                        )
+                        print(f"Added block {sub_block_record.height} ove=False, iters {sub_block_record.total_iters}")
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_sub_block = sub_blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
@@ -465,11 +468,17 @@ class BlockTools:
                 )
             )
             finished_sub_slots_eos = finished_sub_slots_at_ip.copy()
+            latest_sub_block_eos = latest_sub_block
             overflow_cc_challenge = finished_sub_slots_at_ip[-1].challenge_chain.get_hash()
             overflow_rc_challenge = finished_sub_slots_at_ip[-1].reward_chain.get_hash()
 
             if transaction_data_included:
                 transaction_data = None
+            sub_slots_finished += 1
+            print(
+                f"Sub slot finished. Sub-blocks included: {sub_blocks_added_this_sub_slot} sub_blocks_per_slot: "
+                f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
+            )
             sub_blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
 
             if new_ips is None and num_empty_slots_added >= skip_slots:
@@ -477,23 +486,13 @@ class BlockTools:
                 for signage_point_index in range(
                     constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA, constants.NUM_SPS_SUB_SLOT
                 ):
-                    curr = latest_sub_block
-                    while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
-                        constants, ips, uint8(signage_point_index)
-                    ):
-                        if curr.height == 0:
-                            break
-                        curr = sub_blocks[curr.prev_hash]
-                    if curr.total_iters > sub_slot_start_total_iters:
-                        finished_sub_slots_at_sp = []
-                    print("Making signage point, finished sub slots: ", len(finished_sub_slots_at_sp))
                     signage_point: SignagePoint = get_signage_point(
                         constants,
                         sub_blocks,
-                        latest_sub_block,
+                        latest_sub_block_eos,
                         sub_slot_start_total_iters,
                         uint8(signage_point_index),
-                        finished_sub_slots_at_sp,
+                        finished_sub_slots_eos,
                         ips,
                     )
                     if signage_point_index == 0:
@@ -745,14 +744,12 @@ class BlockTools:
             plot_info for _, plot_info in sorted(list(self.plots.items()), key=lambda x: str(x[0]))
         ]
         random.seed(seed)
-        passed_plot_filter = 0
         for plot_info in plots:
             plot_id = plot_info.prover.get_id()
             if ProofOfSpace.passes_plot_filter(constants, plot_id, challenge_hash, signage_point):
                 new_challenge: bytes32 = ProofOfSpace.calculate_new_challenge_hash(
                     plot_id, challenge_hash, signage_point
                 )
-                passed_plot_filter += 1
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
@@ -783,10 +780,6 @@ class BlockTools:
             if random.random() < 0.1:
                 # Removes some proofs of space to create "random" chains, based on the seed
                 random_sample = random.sample(found_proofs, len(found_proofs) - 1)
-        print(
-            f"Plots: {len(plots)}, passed plot filter: {passed_plot_filter}, proofs: {len(found_proofs)}, "
-            f"returning random sample: {len(random_sample)}"
-        )
         return random_sample
 
 
@@ -801,86 +794,31 @@ def get_signage_point(
 ) -> SignagePoint:
     if signage_point_index == 0:
         return SignagePoint(None, None, None, None)
-
-    is_genesis = latest_sub_block is None
     sp_iters = calculate_sp_iters(constants, ips, signage_point_index)
     overflow = is_overflow_sub_block(constants, signage_point_index)
-    total_iters_sp: uint128 = sub_slot_start_total_iters + calculate_sp_iters(constants, ips, signage_point_index)
-
-    new_sub_slot = len(finished_sub_slots) > 0
-
-    if is_genesis:
-        cc_vdf_input = ClassgroupElement.get_default_element()
-        if len(finished_sub_slots) == 0:
-            cc_vdf_challenge = constants.FIRST_CC_CHALLENGE
-            rc_vdf_challenge = constants.FIRST_RC_CHALLENGE
-        else:
-            cc_vdf_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
-            rc_vdf_challenge = finished_sub_slots[-1].reward_chain.get_hash()
-        sp_vdf_iters = sp_iters
-    elif new_sub_slot and not overflow:
-        # Start from start of this slot. Case of no overflow slots. Also includes genesis block after
-        # empty slot (but not overflowing)
-        rc_vdf_challenge: bytes32 = finished_sub_slots[-1].reward_chain.get_hash()
-        cc_vdf_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
-        sp_vdf_iters = sp_iters
-        cc_vdf_input = ClassgroupElement.get_default_element()
-    elif new_sub_slot and overflow and len(finished_sub_slots) > 1:
-        # Start from start of prev slot. Rare case of empty prev slot.
-        # Includes genesis block after 2 empty slots
-        rc_vdf_challenge = finished_sub_slots[-2].reward_chain.get_hash()
-        cc_vdf_challenge = finished_sub_slots[-2].challenge_chain.get_hash()
-        sp_vdf_iters = sp_iters
-        cc_vdf_input = ClassgroupElement.get_default_element()
-    else:
-        if new_sub_slot and overflow:
-            num_sub_slots_to_look_for = 1  # Starting at prev will skip 1 sub-slot
-        elif not new_sub_slot and overflow:
-            num_sub_slots_to_look_for = 2  # Starting at prev does not skip any sub slots
-        elif not new_sub_slot and not overflow:
-            num_sub_slots_to_look_for = 1  # Starting at prev does not skip any sub slots, but we should not go back
-        else:
-            assert False
-
-        next_sb: SubBlockRecord = latest_sub_block
-        curr: SubBlockRecord = next_sb
-
-        # Finds a sub-block which is BEFORE our signage point, otherwise goes back to the end of sub-slot
-        # Note that for overflow sub-blocks, we are looking at the end of the previous sub-slot
-        while num_sub_slots_to_look_for > 0:
-            next_sb = curr
-            if curr.first_in_sub_slot:
-                num_sub_slots_to_look_for -= 1
-            if curr.total_iters < total_iters_sp:
-                break
-            if curr.height == 0:
-                break
-            curr = sub_blocks[curr.prev_hash]
-
-        if curr.total_iters < total_iters_sp:
-            sp_vdf_iters = total_iters_sp - curr.total_iters
-            cc_vdf_input = curr.challenge_vdf_output
-            rc_vdf_challenge = curr.reward_infusion_new_challenge
-        else:
-            sp_vdf_iters = sp_iters
-            cc_vdf_input = ClassgroupElement.get_default_element()
-            rc_vdf_challenge = next_sb.finished_reward_slot_hashes[-1]
-
-        while not curr.first_in_sub_slot:
-            curr = sub_blocks[curr.prev_hash]
-        cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
+    sp_total_iters = sub_slot_start_total_iters + calculate_sp_iters(constants, ips, signage_point_index)
+    (
+        cc_vdf_challenge,
+        rc_vdf_challenge,
+        cc_vdf_input,
+        rc_vdf_input,
+        cc_vdf_iters,
+        rc_vdf_iters,
+    ) = get_signage_point_vdf_info(
+        constants, finished_sub_slots, overflow, latest_sub_block, sub_blocks, sp_total_iters, sp_iters
+    )
 
     cc_sp_vdf, cc_sp_proof = get_vdf_info_and_proof(
         constants,
         cc_vdf_input,
         cc_vdf_challenge,
-        sp_vdf_iters,
+        cc_vdf_iters,
     )
     rc_sp_vdf, rc_sp_proof = get_vdf_info_and_proof(
         constants,
-        ClassgroupElement.get_default_element(),
+        rc_vdf_input,
         rc_vdf_challenge,
-        sp_vdf_iters,
+        rc_vdf_iters,
     )
     cc_sp_vdf = replace(cc_sp_vdf, number_of_iterations=sp_iters, input=ClassgroupElement.get_default_element())
     return SignagePoint(cc_sp_vdf, cc_sp_proof, rc_sp_vdf, rc_sp_proof)

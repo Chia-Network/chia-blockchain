@@ -2,8 +2,8 @@ from typing import Dict, Optional, Union
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters, is_overflow_sub_block
-from src.full_node.deficit import calculate_deficit
-from src.full_node.difficulty_adjustment import get_next_ips, finishes_sub_epoch, get_next_difficulty
+from src.consensus.deficit import calculate_deficit
+from src.consensus.difficulty_adjustment import get_next_ips, finishes_sub_epoch, get_next_difficulty
 from src.full_node.sub_block_record import SubBlockRecord
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32

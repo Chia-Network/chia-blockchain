@@ -4,7 +4,7 @@ from typing import Tuple, List, Optional, Set
 from src.types.name_puzzle_condition import NPC
 from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
-from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from src.consensus.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.condition_tools import created_outputs_for_conditions_dict
 from src.util.streamable import Streamable, streamable
 from src.types.vdf import VDFProof
