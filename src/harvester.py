@@ -37,7 +37,6 @@ class Harvester:
     farmer_public_keys: List[G1Element]
     pool_public_keys: List[G1Element]
     cached_signage_points: List[harvester_protocol.NewSignagePoint]
-    cached_qualities: Dict[bytes32, bytes32]
     root_path: Path
     _is_shutdown: bool
     executor: ThreadPoolExecutor
@@ -63,7 +62,6 @@ class Harvester:
         self.server = None
         self.constants = constants
         self.cached_signage_points = []
-        self.cached_qualities = {}
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -182,16 +180,17 @@ class Harvester:
         """
         The harvester receives a new signage point from the farmer, this happens at the start of each slot.
         The harvester does a few things:
-        1. If it's the first time seeing this challenge, clears the old challenges, and gets the qualities for each plot
-        This is approximately 7 reads per plot which qualifies. Note that each plot
-        may have 0, 1, 2, etc qualities for that challenge: but on average it will have 1. If it's not the first time,
-        the qualities are fetched from the cache.
-        2. Checks the required_iters for each quality and the given signage point, to see which are eligible for
+        1. The harvester applies the plot filter for each of the plots, to select the proportion which are eligible
+        for this signage point and challenge.
+        2. The harvester gets the qualities for each plot. This is approximately 7 reads per plot which qualifies.
+        Note that each plot may have 0, 1, 2, etc qualities for that challenge: but on average it will have 1.
+        3. Checks the required_iters for each quality and the given signage point, to see which are eligible for
         inclusion (required_iters < sp_interval_iters).
-        3. Looks up the full proof of space in the plot for each quality, approximately 64 reads per quality
-        4. Returns the proof of space to the farmer
+        4. Looks up the full proof of space in the plot for each quality, approximately 64 reads per quality
+        5. Returns the proof of space to the farmer
         """
         if len(self.pool_public_keys) == 0 or len(self.farmer_public_keys) == 0:
+            # This means that we have not received the handshake yet
             self.cached_signage_points = self.cached_signage_points[:5]
             self.cached_signage_points.insert(0, new_challenge)
             return
@@ -204,26 +203,15 @@ class Harvester:
 
         loop = asyncio.get_running_loop()
 
-        # Remove old things from cache
-        if len(self.cached_qualities) != 0:
-            for key in self.cached_qualities.keys():
-                if key != new_challenge.challenge_hash:
-                    del self.cached_qualities[key]
-
-        lookup_qualities = new_challenge.challenge_hash in self.cached_qualities
-
         def blocking_lookup(filename: Path, plot_info: PlotInfo, prover: DiskProver) -> List[ProofOfSpace]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
-            if lookup_qualities:
-                try:
-                    quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
-                except Exception:
-                    log.error("Error using prover object. Reinitializing prover object.")
-                    self.provers[filename] = dataclasses.replace(plot_info, prover=DiskProver(str(filename)))
-                    return []
-            else:
-                quality_strings = self.cached_qualities[new_challenge.challenge_hash]
+            try:
+                quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
+            except Exception:
+                log.error("Error using prover object. Reinitializing prover object.")
+                self.provers[filename] = dataclasses.replace(plot_info, prover=DiskProver(str(filename)))
+                return []
 
             responses: List[ProofOfSpace] = []
             if quality_strings is not None:
@@ -271,16 +259,14 @@ class Harvester:
             return all_responses
 
         awaitables = []
-        for filename, plot_info in self.provers.items():
-            if filename.exists():
+        for try_plot_filename, try_plot_info in self.provers.items():
+            if try_plot_filename.exists():
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 if ProofOfSpace.passes_plot_filter(
-                    self.constants,
-                    plot_info.prover.get_id(),
-                    new_challenge.challenge_hash,
+                    self.constants, try_plot_info.prover.get_id(), new_challenge.challenge_hash, new_challenge.sp_hash
                 ):
-                    awaitables.append(lookup_challenge(filename, plot_info.prover))
+                    awaitables.append(lookup_challenge(try_plot_filename, try_plot_info.prover))
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0

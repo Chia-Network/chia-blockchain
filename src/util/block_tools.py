@@ -6,9 +6,11 @@ import sys
 import tempfile
 import time
 from argparse import Namespace
+from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Callable
 
+from bitstring import BitArray
 from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
 from src.full_node.deficit import calculate_deficit
 
@@ -229,7 +231,6 @@ class BlockTools:
         height_to_hash, difficulty, sub_blocks = load_block_list(block_list, constants)
 
         latest_sub_block: SubBlockRecord = sub_blocks[block_list[-1].header_hash]
-        print(f"Last sub block {latest_sub_block.height} {latest_sub_block.total_iters}")
         curr = latest_sub_block
         while not curr.is_block:
             curr = sub_blocks[curr.prev_hash]
@@ -255,111 +256,104 @@ class BlockTools:
             slot_cc_challenge, slot_rc_challenge = get_challenges(
                 sub_blocks, finished_sub_slots_at_sp, latest_sub_block.header_hash
             )
-
-            # If did not reach the target slots to skip, don't make any proofs for this sub-slot
-            if num_empty_slots_added < skip_slots:
-                num_empty_slots_added += 1
-                proofs_of_space = []
-            else:
-                # Get all proofs of space for challenge.
-                proofs_of_space: List[Tuple[str, ProofOfSpace]] = self.get_pospaces_for_challenge(
-                    constants,
-                    slot_cc_challenge,
-                    seed,
-                )
             prev_num_of_blocks = num_blocks
 
-            for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
-                curr = latest_sub_block
-                while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
-                    constants, ips, uint8(signage_point_index)
-                ):
-                    if curr.height == 0:
-                        break
-                    curr = sub_blocks[curr.prev_hash]
-                if curr.total_iters > sub_slot_start_total_iters:
-                    finished_sub_slots_at_sp = []
+            if num_empty_slots_added < skip_slots:
+                # If did not reach the target slots to skip, don't make any proofs for this sub-slot
+                num_empty_slots_added += 1
+            else:
+                for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
+                    curr = latest_sub_block
+                    while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
+                        constants, ips, uint8(signage_point_index)
+                    ):
+                        if curr.height == 0:
+                            break
+                        curr = sub_blocks[curr.prev_hash]
+                    if curr.total_iters > sub_slot_start_total_iters:
+                        finished_sub_slots_at_sp = []
 
-                signage_point: SignagePoint = get_signage_point(
-                    constants,
-                    sub_blocks,
-                    latest_sub_block,
-                    sub_slot_start_total_iters,
-                    uint8(signage_point_index),
-                    finished_sub_slots_at_sp,
-                    ips,
-                )
-                qualified_proofs: List[Tuple[uint64, ProofOfSpace]] = []
-                for quality_str, proof_of_space in proofs_of_space:
+                    signage_point: SignagePoint = get_signage_point(
+                        constants,
+                        sub_blocks,
+                        latest_sub_block,
+                        sub_slot_start_total_iters,
+                        uint8(signage_point_index),
+                        finished_sub_slots_at_sp,
+                        ips,
+                    )
                     if signage_point_index == 0:
                         cc_sp_output_hash: bytes32 = slot_cc_challenge
                     else:
                         assert signage_point is not None
                         cc_sp_output_hash: bytes32 = signage_point.cc_vdf.output.get_hash()
-                    required_iters = calculate_iterations_quality(
-                        quality_str,
-                        proof_of_space.size,
-                        difficulty,
-                        cc_sp_output_hash,
-                    )
-                    if required_iters < calculate_sp_interval_iters(constants, ips):
-                        qualified_proofs.append((required_iters, proof_of_space))
 
-                for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
-                    if sub_blocks_added_this_sub_slot == constants.MAX_SLOT_SUB_BLOCKS:  # or force_overflow:
-                        break
-                    if same_slot_as_last:
-                        if signage_point_index < latest_sub_block.signage_point_index:
-                            # Ignore this sub-block because it's in the past
-                            continue
-                        if signage_point_index == latest_sub_block.signage_point_index:
-                            # Ignore this sub-block because it's in the past
-                            if required_iters <= latest_sub_block.required_iters:
-                                continue
-                    assert latest_sub_block.header_hash in sub_blocks
-                    if transaction_data_included:
-                        transaction_data = None
-                    full_block, sub_block_record = get_full_block_and_sub_record(
+                    qualified_proofs: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
                         constants,
-                        sub_slot_start_total_iters,
-                        uint8(signage_point_index),
-                        proof_of_space,
                         slot_cc_challenge,
-                        slot_rc_challenge,
-                        farmer_reward_puzzle_hash,
-                        pool_target,
-                        start_timestamp,
-                        start_height,
-                        time_per_sub_block,
-                        transaction_data,
-                        height_to_hash,
-                        difficulty,
-                        required_iters,
-                        ips,
-                        self.get_plot_signature,
-                        self.get_pool_key_signature,
-                        finished_sub_slots_at_ip,
-                        signage_point,
+                        cc_sp_output_hash,
                         seed,
-                        latest_sub_block,
-                        sub_blocks,
+                        difficulty,
+                        ips,
                     )
 
-                    if full_block is None:
-                        continue
-                    if sub_block_record.is_block:
-                        transaction_data_included = True
+                    for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
+                        if sub_blocks_added_this_sub_slot == constants.MAX_SLOT_SUB_BLOCKS or force_overflow:
+                            break
+                        if same_slot_as_last:
+                            if signage_point_index < latest_sub_block.signage_point_index:
+                                # Ignore this sub-block because it's in the past
+                                continue
+                            if signage_point_index == latest_sub_block.signage_point_index:
+                                # Ignore this sub-block because it's in the past
+                                if required_iters <= latest_sub_block.required_iters:
+                                    continue
+                        assert latest_sub_block.header_hash in sub_blocks
+                        if transaction_data_included:
+                            transaction_data = None
+                        full_block, sub_block_record = get_full_block_and_sub_record(
+                            constants,
+                            sub_slot_start_total_iters,
+                            uint8(signage_point_index),
+                            proof_of_space,
+                            slot_cc_challenge,
+                            slot_rc_challenge,
+                            farmer_reward_puzzle_hash,
+                            pool_target,
+                            start_timestamp,
+                            start_height,
+                            time_per_sub_block,
+                            transaction_data,
+                            height_to_hash,
+                            difficulty,
+                            required_iters,
+                            ips,
+                            self.get_plot_signature,
+                            self.get_pool_key_signature,
+                            finished_sub_slots_at_ip,
+                            signage_point,
+                            seed,
+                            latest_sub_block,
+                            sub_blocks,
+                        )
 
-                    block_list.append(full_block)
-                    sub_blocks_added_this_sub_slot += 1
-                    num_blocks -= 1
-                    if num_blocks == 0:
-                        return block_list
-                    sub_blocks[full_block.header_hash] = sub_block_record
-                    print(f"Added block {sub_block_record.height} overflow=False, iters {sub_block_record.total_iters}")
-                    height_to_hash[uint32(full_block.height)] = full_block.header_hash
-                    latest_sub_block = sub_blocks[full_block.header_hash]
-                    finished_sub_slots_at_ip = []
+                        if full_block is None:
+                            continue
+                        if sub_block_record.is_block:
+                            transaction_data_included = True
+
+                        block_list.append(full_block)
+                        sub_blocks_added_this_sub_slot += 1
+                        num_blocks -= 1
+                        if num_blocks == 0:
+                            return block_list
+                        sub_blocks[full_block.header_hash] = sub_block_record
+                        print(
+                            f"Added block {sub_block_record.height} overflow=False, iters {sub_block_record.total_iters}"
+                        )
+                        height_to_hash[uint32(full_block.height)] = full_block.header_hash
+                        latest_sub_block = sub_blocks[full_block.header_hash]
+                        finished_sub_slots_at_ip = []
 
             # Finish the end of sub-slot and try again next sub-slot
             # End of sub-slot logic
@@ -478,7 +472,7 @@ class BlockTools:
                 transaction_data = None
             sub_blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
 
-            if new_ips is None:
+            if new_ips is None and num_empty_slots_added >= skip_slots:
                 # No overflows on new epoch
                 for signage_point_index in range(
                     constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA, constants.NUM_SPS_SUB_SLOT
@@ -492,6 +486,7 @@ class BlockTools:
                         curr = sub_blocks[curr.prev_hash]
                     if curr.total_iters > sub_slot_start_total_iters:
                         finished_sub_slots_at_sp = []
+                    print("Making signage point, finished sub slots: ", len(finished_sub_slots_at_sp))
                     signage_point: SignagePoint = get_signage_point(
                         constants,
                         sub_blocks,
@@ -501,21 +496,21 @@ class BlockTools:
                         finished_sub_slots_at_sp,
                         ips,
                     )
-                    qualified_proofs: List[Tuple[uint64, ProofOfSpace]] = []
-                    for quality_str, proof_of_space in proofs_of_space:
-                        if signage_point_index == 0:
-                            cc_sp_output_hash: bytes32 = slot_cc_challenge
-                        else:
-                            assert signage_point is not None
-                            cc_sp_output_hash: bytes32 = signage_point.cc_vdf.output.get_hash()
-                        required_iters = calculate_iterations_quality(
-                            quality_str,
-                            proof_of_space.size,
-                            difficulty,
-                            cc_sp_output_hash,
-                        )
-                        if required_iters < calculate_sp_interval_iters(constants, ips):
-                            qualified_proofs.append((required_iters, proof_of_space))
+                    if signage_point_index == 0:
+                        cc_sp_output_hash: bytes32 = slot_cc_challenge
+                    else:
+                        assert signage_point is not None
+                        cc_sp_output_hash: bytes32 = signage_point.cc_vdf.output.get_hash()
+
+                    # If did not reach the target slots to skip, don't make any proofs for this sub-slot
+                    qualified_proofs: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
+                        constants,
+                        slot_cc_challenge,
+                        cc_sp_output_hash,
+                        seed,
+                        difficulty,
+                        ips,
+                    )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
                         if sub_blocks_added_this_sub_slot == constants.MAX_SLOT_SUB_BLOCKS:
                             break
@@ -554,9 +549,7 @@ class BlockTools:
 
                         block_list.append(full_block)
                         sub_blocks_added_this_sub_slot += 1
-                        print(
-                            f"Added block {sub_block_record.height } overflow=True, iters {sub_block_record.total_iters}"
-                        )
+                        print(f"Added block {sub_block_record.height } ov=True, iters {sub_block_record.total_iters}")
                         num_blocks -= 1
                         if num_blocks == 0:
                             return block_list
@@ -596,11 +589,6 @@ class BlockTools:
         # Keep trying until we get a good proof of space that also passes sp filter
         while True:
             cc_challenge, rc_challenge = get_genesis_challenges(constants, finished_sub_slots)
-            proofs_of_space: List[Tuple[str, ProofOfSpace]] = self.get_pospaces_for_challenge(
-                constants,
-                cc_challenge,
-                seed,
-            )
 
             for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
@@ -612,21 +600,21 @@ class BlockTools:
                     finished_sub_slots,
                     constants.IPS_STARTING,
                 )
-                qualified_proofs: List[Tuple[uint64, ProofOfSpace]] = []
-                for quality_str, proof_of_space in proofs_of_space:
-                    if signage_point_index == 0:
-                        cc_sp_output_hash: bytes32 = cc_challenge
-                    else:
-                        assert signage_point is not None
-                        cc_sp_output_hash: bytes32 = signage_point.cc_vdf.output.get_hash()
-                    required_iters = calculate_iterations_quality(
-                        quality_str,
-                        proof_of_space.size,
-                        constants.DIFFICULTY_STARTING,
-                        cc_sp_output_hash,
-                    )
-                    if required_iters < calculate_sp_interval_iters(constants, constants.IPS_STARTING):
-                        qualified_proofs.append((required_iters, proof_of_space))
+                if signage_point_index == 0:
+                    cc_sp_output_hash: bytes32 = cc_challenge
+                else:
+                    assert signage_point is not None
+                    cc_sp_output_hash: bytes32 = signage_point.cc_vdf.output.get_hash()
+                    # If did not reach the target slots to skip, don't make any proofs for this sub-slot
+                qualified_proofs: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
+                    constants,
+                    cc_challenge,
+                    cc_sp_output_hash,
+                    seed,
+                    constants.DIFFICULTY_STARTING,
+                    constants.IPS_STARTING,
+                )
+
                 # Try each of the proofs of space
                 for required_iters, proof_of_space in qualified_proofs:
                     sp_iters: uint64 = calculate_sp_iters(
@@ -665,6 +653,9 @@ class BlockTools:
                             ClassgroupElement.get_default_element(),
                             cc_challenge,
                             ip_iters,
+                        )
+                        cc_ip_vdf = replace(
+                            cc_ip_vdf, number_of_iterations=ip_iters, input=ClassgroupElement.get_default_element()
                         )
                         rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
                             constants,
@@ -741,41 +732,57 @@ class BlockTools:
             sub_slot_total_iters += sub_slot_iters
 
     def get_pospaces_for_challenge(
-        self, constants: ConsensusConstants, challenge_hash: bytes32, seed: bytes
-    ) -> List[Tuple[str, ProofOfSpace]]:
+        self,
+        constants: ConsensusConstants,
+        challenge_hash: bytes32,
+        signage_point: bytes32,
+        seed: bytes,
+        difficulty: uint64,
+        ips: uint64,
+    ) -> List[Tuple[uint64, ProofOfSpace]]:
         found_proofs: List[(uint64, ProofOfSpace)] = []
         plots: List[PlotInfo] = [
             plot_info for _, plot_info in sorted(list(self.plots.items()), key=lambda x: str(x[0]))
         ]
         random.seed(seed)
         passed_plot_filter = 0
-        # Use the seed to select a random number of plots, so we generate different chains
         for plot_info in plots:
-            # Allow passing in seed, to create reorgs and different chains
             plot_id = plot_info.prover.get_id()
-            if ProofOfSpace.passes_plot_filter(constants, plot_id, challenge_hash):
+            if ProofOfSpace.passes_plot_filter(constants, plot_id, challenge_hash, signage_point):
+                new_challenge: bytes32 = ProofOfSpace.calculate_new_challenge_hash(
+                    plot_id, challenge_hash, signage_point
+                )
                 passed_plot_filter += 1
-                qualities = plot_info.prover.get_qualities_for_challenge(challenge_hash)
+                qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
+
                 for proof_index, quality_str in enumerate(qualities):
-                    proof_xs: bytes = plot_info.prover.get_full_proof(challenge_hash, proof_index)
-                    plot_pk = ProofOfSpace.generate_plot_public_key(
-                        plot_info.local_sk.get_g1(),
-                        plot_info.farmer_public_key,
-                    )
-                    proof_of_space: ProofOfSpace = ProofOfSpace(
-                        challenge_hash,
-                        plot_info.pool_public_key,
-                        None,
-                        plot_pk,
+
+                    required_iters = calculate_iterations_quality(
+                        quality_str,
                         plot_info.prover.get_size(),
-                        proof_xs,
+                        difficulty,
+                        signage_point,
                     )
-                    found_proofs.append((quality_str, proof_of_space))
-        if len(found_proofs) >= 4:
-            # Removes some proofs of space to create "random" chains, based on the seed
-            random_sample = random.sample(found_proofs, len(found_proofs) - 3)
-        else:
-            random_sample = found_proofs
+                    if required_iters < calculate_sp_interval_iters(constants, ips):
+                        proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
+                        plot_pk = ProofOfSpace.generate_plot_public_key(
+                            plot_info.local_sk.get_g1(),
+                            plot_info.farmer_public_key,
+                        )
+                        proof_of_space: ProofOfSpace = ProofOfSpace(
+                            new_challenge,
+                            plot_info.pool_public_key,
+                            None,
+                            plot_pk,
+                            plot_info.prover.get_size(),
+                            proof_xs,
+                        )
+                        found_proofs.append((required_iters, proof_of_space))
+        random_sample = found_proofs
+        if len(found_proofs) >= 1:
+            if random.random() < 0.1:
+                # Removes some proofs of space to create "random" chains, based on the seed
+                random_sample = random.sample(found_proofs, len(found_proofs) - 1)
         print(
             f"Plots: {len(plots)}, passed plot filter: {passed_plot_filter}, proofs: {len(found_proofs)}, "
             f"returning random sample: {len(random_sample)}"
@@ -875,6 +882,7 @@ def get_signage_point(
         rc_vdf_challenge,
         sp_vdf_iters,
     )
+    cc_sp_vdf = replace(cc_sp_vdf, number_of_iterations=sp_iters, input=ClassgroupElement.get_default_element())
     return SignagePoint(cc_sp_vdf, cc_sp_proof, rc_sp_vdf, rc_sp_proof)
 
 
@@ -905,13 +913,15 @@ def finish_sub_block(
         new_ip_iters = ip_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
         rc_vdf_challenge = slot_rc_challenge
-
+    if new_ip_iters < 0:
+        print("Bad here")
     cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
         constants,
         cc_vdf_input,
         cc_vdf_challenge,
         new_ip_iters,
     )
+    cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters, input=ClassgroupElement.get_default_element())
     deficit = calculate_deficit(
         constants, latest_sub_block.height + 1, latest_sub_block, is_overflow, len(finished_sub_slots) > 0
     )
@@ -1000,7 +1010,6 @@ def load_block_list(
             difficulty = uint64(constants.DIFFICULTY_STARTING)
         else:
             difficulty = full_block.weight - block_list[full_block.height - 1].weight
-        quality_str = full_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(constants)
         if full_block.reward_chain_sub_block.signage_point_index == 0:
             if len(full_block.finished_sub_slots) > 0:
                 sp_hash = full_block.finished_sub_slots[-1].challenge_chain.get_hash()
@@ -1012,8 +1021,13 @@ def load_block_list(
                     while not curr.first_in_sub_slot:
                         curr = sub_blocks[curr.prev_hash]
                     sp_hash = curr.finished_challenge_slot_hashes[-1]
+            challenge = sp_hash
         else:
+            challenge = full_block.reward_chain_sub_block.challenge_chain_sp_vdf.challenge_hash
             sp_hash = full_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
+        quality_str = full_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
+            constants, challenge, sp_hash
+        )
         required_iters: uint64 = calculate_iterations_quality(
             quality_str,
             full_block.reward_chain_sub_block.proof_of_space.size,

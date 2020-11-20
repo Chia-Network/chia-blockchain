@@ -69,38 +69,6 @@ async def validate_unfinished_header_block(
 
         ips, difficulty = get_ips_and_difficulty(constants, header_block, height_to_hash, prev_sb, sub_blocks)
 
-    # 2. Check proof of space
-    if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
-        # Edge case of first sp (start of slot), where sp_iters == 0
-        cc_sp_hash: bytes32 = header_block.reward_chain_sub_block.proof_of_space.challenge_hash
-    else:
-        cc_sp_hash = header_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
-
-    q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
-        constants,
-    )
-    if q_str is None:
-        return None, ValidationError(Err.INVALID_POSPACE)
-
-    # Note that required iters might be from the previous slot (if we are in an overflow sub-block)
-    required_iters: uint64 = calculate_iterations_quality(
-        q_str,
-        header_block.reward_chain_sub_block.proof_of_space.size,
-        difficulty,
-        cc_sp_hash,
-    )
-    # 3. check signage point index
-    if (
-        header_block.reward_chain_sub_block.signage_point_index < 0
-        or header_block.reward_chain_sub_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT
-    ):
-        return None, ValidationError(Err.INVALID_SP_INDEX)
-
-    sp_iters: uint64 = calculate_sp_iters(constants, ips, header_block.reward_chain_sub_block.signage_point_index)
-    ip_iters: uint64 = calculate_ip_iters(
-        constants, ips, header_block.reward_chain_sub_block.signage_point_index, required_iters
-    )
-    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
     overflow = is_overflow_sub_block(constants, header_block.reward_chain_sub_block.signage_point_index)
 
     # 4. Check finished slots that have been crossed since prev_sb
@@ -367,14 +335,6 @@ async def validate_unfinished_header_block(
                     Err.INVALID_SUB_EPOCH_SUMMARY, "block finishes sub-epoch but ses-hash is None"
                 )
 
-    if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
-        # Blocks with very low required iters are not overflow blocks
-        assert not overflow
-
-    # 6. Check no overflows in the first sub-slot of a new epoch (although they are OK in the second sub-slot)
-    if overflow and finishes_epoch and len(header_block.finished_sub_slots) < 2:
-        return None, ValidationError(Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH)
-
     # If sub_block state is correct, we should always find a challenge here
     # This computes what the challenge should be for this sub-block
     if new_sub_slot:
@@ -406,9 +366,45 @@ async def validate_unfinished_header_block(
             challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
     assert challenge is not None
 
-    # 7. Check challenge in proof of space is valid
-    if challenge != header_block.reward_chain_sub_block.proof_of_space.challenge_hash:
-        return None, ValidationError(Err.INVALID_POSPACE_CHALLENGE)
+    # 2. Check proof of space
+    if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
+        # Edge case of first sp (start of slot), where sp_iters == 0
+        cc_sp_hash: bytes32 = challenge
+    else:
+        cc_sp_hash = header_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
+
+    q_str: Optional[bytes32] = header_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
+        constants, challenge, cc_sp_hash
+    )
+    if q_str is None:
+        return None, ValidationError(Err.INVALID_POSPACE)
+
+    # Note that required iters might be from the previous slot (if we are in an overflow sub-block)
+    required_iters: uint64 = calculate_iterations_quality(
+        q_str,
+        header_block.reward_chain_sub_block.proof_of_space.size,
+        difficulty,
+        cc_sp_hash,
+    )
+    # 3. check signage point index
+    if (
+        header_block.reward_chain_sub_block.signage_point_index < 0
+        or header_block.reward_chain_sub_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT
+    ):
+        return None, ValidationError(Err.INVALID_SP_INDEX)
+
+    sp_iters: uint64 = calculate_sp_iters(constants, ips, header_block.reward_chain_sub_block.signage_point_index)
+    ip_iters: uint64 = calculate_ip_iters(
+        constants, ips, header_block.reward_chain_sub_block.signage_point_index, required_iters
+    )
+    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
+    if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
+        # Blocks with very low required iters are not overflow blocks
+        assert not overflow
+
+    # 6. Check no overflows in the first sub-slot of a new epoch (although they are OK in the second sub-slot)
+    if overflow and finishes_epoch and len(header_block.finished_sub_slots) < 2:
+        return None, ValidationError(Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH)
 
     # 8. Check total iters
     if genesis_block:
@@ -545,11 +541,14 @@ async def validate_unfinished_header_block(
             sp_vdf_iters,
             header_block.reward_chain_sub_block.challenge_chain_sp_vdf.output,
         )
-        if not header_block.challenge_chain_sp_proof.is_valid(
-            constants,
-            header_block.reward_chain_sub_block.challenge_chain_sp_vdf,
+
+        if header_block.reward_chain_sub_block.challenge_chain_sp_vdf != dataclasses.replace(
             target_vdf_info,
+            input=ClassgroupElement.get_default_element(),
+            number_of_iterations=sp_iters,
         ):
+            return None, ValidationError(Err.INVALID_CC_SP_VDF)
+        if not header_block.challenge_chain_sp_proof.is_valid(constants, target_vdf_info, None):
             log.error("block %s failed validation, invalid cc vdf, ", header_block.header_hash)
 
             return None, ValidationError(Err.INVALID_CC_SP_VDF)
@@ -770,10 +769,16 @@ async def validate_finished_header_block(
         ip_vdf_iters,
         header_block.reward_chain_sub_block.challenge_chain_ip_vdf.output,
     )
+    if header_block.reward_chain_sub_block.challenge_chain_ip_vdf != dataclasses.replace(
+        cc_target_vdf_info,
+        input=ClassgroupElement.get_default_element(),
+        number_of_iterations=ip_iters,
+    ):
+        return None, ValidationError(Err.INVALID_CC_IP_VDF)
     if not header_block.challenge_chain_ip_proof.is_valid(
         constants,
-        header_block.reward_chain_sub_block.challenge_chain_ip_vdf,
         cc_target_vdf_info,
+        None,
     ):
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
 
