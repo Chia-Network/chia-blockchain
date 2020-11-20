@@ -27,11 +27,11 @@ from tests.time_out_assert import time_out_assert
 
 test_constants = constants.replace(
     **{
-        "DIFFICULTY_STARTING": 1,
+        "DIFFICULTY_STARTING": 2 ** 8,
         "DISCRIMINANT_SIZE_BITS": 32,
         "SUB_EPOCH_SUB_BLOCKS": 70,
         "EPOCH_SUB_BLOCKS": 140,
-        "IPS_STARTING": 10 * 1,
+        "IPS_STARTING": 2 ** 9,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "NUMBER_ZERO_BITS_SP_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "MAX_FUTURE_TIME": 3600

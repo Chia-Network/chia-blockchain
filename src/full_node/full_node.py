@@ -166,7 +166,12 @@ class FullNode:
         difficulty = self.blockchain.get_next_difficulty(peak, False)
         if peak is not None:
             ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-                self.constants, self.blockchain.sub_blocks, self.blockchain.height_to_hash, peak.ips, peak_block
+                self.constants,
+                self.blockchain.sub_blocks,
+                self.blockchain.height_to_hash,
+                peak.signage_point_index,
+                peak.ips,
+                peak_block,
             )
             timelord_new_peak: timelord_protocol.NewPeak = timelord_protocol.NewPeak(
                 peak_block.reward_chain_sub_block, difficulty, peak.deficit, peak.ips, ses
@@ -638,10 +643,10 @@ class FullNode:
                 curr = await self.blockchain.get_full_block(curr.prev_header_hash)
                 assert curr is not None
             peak_sub_slot = curr.finished_sub_slots[-1]
-            peak_sub_slot_iters = new_peak.total_iters - calculate_ip_iters(
-                self.constants, new_peak.ips, new_peak.required_iters
+            peak_sub_slot_iters = new_peak.infusion_sub_slot_total_iters(self.constants)
+            is_overflow: bool = is_overflow_sub_block(
+                self.constants, sub_block.reward_chain_sub_block.signage_point_index
             )
-            is_overflow: bool = is_overflow_sub_block(self.constants, new_peak.ips, new_peak.required_iters)
             if is_overflow:
                 # Find the previous sub-slots end of slot
                 if len(curr.finished_sub_slots) >= 2:
@@ -801,10 +806,7 @@ class FullNode:
 
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
         if peak is not None:
-            peak_sp = calculate_sp_iters(self.constants, peak.ips, peak.required_iters)
-            peak_ip_iters = calculate_ip_iters(self.constants, peak.ips, peak.required_iters)
-            sp_iters = peak.total_iters - (peak_ip_iters - peak_sp)
-            if block.total_iters < sp_iters:
+            if block.total_iters < peak.sp_total_iters(self.constants):
                 # This means this unfinished block is pretty far behind, it will not add weight to our chain
                 return
 
@@ -846,7 +848,12 @@ class FullNode:
             block.reward_chain_sp_proof,
             block.foliage_sub_block,
             next_sub_epoch_summary(
-                self.constants, self.blockchain.sub_blocks, self.blockchain.height_to_hash, required_iters, block
+                self.constants,
+                self.blockchain.sub_blocks,
+                self.blockchain.height_to_hash,
+                block.reward_chain_sub_block.signage_point_index,
+                required_iters,
+                block,
             ),
         )
 
@@ -1012,9 +1019,7 @@ class FullNode:
         # 3. In a future sub-slot that we already know of
 
         # Checks that the proof of space is valid
-        quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
-            self.constants, request.challenge_chain_sp, request.challenge_chain_sp_signature
-        )
+        quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(self.constants)
         assert len(quality_string) == 32
 
         # Grab best transactions from Mempool for given tip target
@@ -1041,9 +1046,10 @@ class FullNode:
             quality_string,
             request.proof_of_space.size,
             difficulty,
+            request.challenge_chain_sp,
         )
-        sp_iters: uint64 = calculate_sp_iters(self.constants, ips, required_iters)
-        ip_iters: uint64 = calculate_ip_iters(self.constants, ips, required_iters)
+        sp_iters: uint64 = calculate_sp_iters(self.constants, ips, request.signage_point_index)
+        ip_iters: uint64 = calculate_ip_iters(self.constants, ips, request.signage_point_index, required_iters)
         total_iters_pos_slot: uint128 = pos_sub_slot[2]
 
         def get_plot_sig(to_sign, _) -> G2Element:
@@ -1060,6 +1066,7 @@ class FullNode:
         unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(
             self.constants,
             total_iters_pos_slot,
+            request.signage_point_index,
             sp_iters,
             ip_iters,
             request.proof_of_space,
@@ -1068,13 +1075,13 @@ class FullNode:
             request.pool_target,
             get_plot_sig,
             get_plot_sig,
+            sp_vdfs,
             uint64(int(time.time())),
             b"",
             spend_bundle,
             peak,
             self.blockchain.sub_blocks,
             finished_sub_slots,
-            sp_vdfs,
         )
         self.full_node_store.add_candidate_block(quality_string, unfinished_block)
 
@@ -1153,16 +1160,7 @@ class FullNode:
         ips, difficulty = get_ips_and_difficulty(
             self.constants, unfinished_block, self.blockchain.height_to_hash, prev_sb, self.blockchain.sub_blocks
         )
-        q_str: Optional[bytes32] = unfinished_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
-            self.constants,
-        )
-        assert q_str is not None  # We have previously validated this
-        required_iters: uint64 = calculate_iterations_quality(
-            q_str,
-            unfinished_block.reward_chain_sub_block.proof_of_space.size,
-            difficulty,
-        )
-        overflow = is_overflow_sub_block(self.constants, ips, required_iters)
+        overflow = is_overflow_sub_block(self.constants, unfinished_block.reward_chain_sub_block.signage_point_index)
         if overflow:
             finished_sub_slots = self.full_node_store.get_finished_sub_slots(
                 prev_sb,

@@ -15,7 +15,6 @@ from src.full_node.cost_calculator import calculate_cost_of_program
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
-from src.types.classgroup import ClassgroupElement
 from src.types.coin import Coin, hash_coin_list
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo, FoliageSubBlockData
@@ -29,10 +28,9 @@ from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFInfo, VDFProof
 from src.util.hash import std_hash
-from src.util.ints import uint128, uint64, uint32
+from src.util.ints import uint128, uint64, uint32, uint8
 from src.util.merkle_set import MerkleSet
 from src.util.prev_block import get_prev_block
-from src.util.vdf_prover import get_vdf_info_and_proof
 from tests.recursive_replace import recursive_replace
 
 
@@ -200,6 +198,7 @@ def create_foliage(
 def create_unfinished_block(
     constants: ConsensusConstants,
     sub_slot_start_total_iters: uint128,
+    signage_point_index: uint8,
     sp_iters: uint64,
     ip_iters: uint64,
     proof_of_space: ProofOfSpace,
@@ -208,14 +207,14 @@ def create_unfinished_block(
     pool_target: PoolTarget,
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
+    signage_point: SignagePoint,
     timestamp: Optional[uint64] = None,
     seed: bytes32 = b"",
     spend_bundle: Optional[SpendBundle] = None,
     prev_sub_block: Optional[SubBlockRecord] = None,
     sub_blocks=None,
     finished_sub_slots=None,
-    signage_point: Optional[SignagePoint] = None,
-) -> Optional[UnfinishedBlock]:
+) -> UnfinishedBlock:
     overflow = sp_iters > ip_iters
     total_iters_sp = sub_slot_start_total_iters + sp_iters
     prev_block: Optional[SubBlockRecord] = None  # Set this if we are a block
@@ -235,83 +234,9 @@ def create_unfinished_block(
     cc_sp_hash: Optional[bytes32] = slot_cc_challenge
 
     # Only enters this if statement if we are in testing mode (making VDF proofs here)
-    if sp_iters != 0 and signage_point is None:
-        if is_genesis:
-            cc_vdf_input = ClassgroupElement.get_default_element()
-            if len(finished_sub_slots) == 0:
-                cc_vdf_challenge = constants.FIRST_CC_CHALLENGE
-                rc_vdf_challenge = constants.FIRST_RC_CHALLENGE
-            else:
-                cc_vdf_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
-                rc_vdf_challenge = finished_sub_slots[-1].reward_chain.get_hash()
-            sp_vdf_iters = sp_iters
-        elif new_sub_slot and not overflow:
-            # Start from start of this slot. Case of no overflow slots. Also includes genesis block after
-            # empty slot (but not overflowing)
-            rc_vdf_challenge: bytes32 = finished_sub_slots[-1].reward_chain.get_hash()
-            cc_vdf_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
-            sp_vdf_iters = sp_iters
-            cc_vdf_input = ClassgroupElement.get_default_element()
-        elif new_sub_slot and overflow and len(finished_sub_slots) > 1:
-            # Start from start of prev slot. Rare case of empty prev slot.
-            # Includes genesis block after 2 empty slots
-            rc_vdf_challenge = finished_sub_slots[-2].reward_chain.get_hash()
-            cc_vdf_challenge = finished_sub_slots[-2].challenge_chain.get_hash()
-            sp_vdf_iters = sp_iters
-            cc_vdf_input = ClassgroupElement.get_default_element()
-        else:
-            if new_sub_slot and overflow:
-                num_sub_slots_to_look_for = 1  # Starting at prev will skip 1 sub-slot
-            elif not new_sub_slot and overflow:
-                num_sub_slots_to_look_for = 2  # Starting at prev does not skip any sub slots
-            elif not new_sub_slot and not overflow:
-                num_sub_slots_to_look_for = 1  # Starting at prev does not skip any sub slots, but we should not go back
-            else:
-                assert False
-
-            next_sb: SubBlockRecord = prev_sub_block
-            curr: SubBlockRecord = next_sb
-            # Finds a sub-block which is BEFORE our signage point, otherwise goes back to the end of sub-slot
-            # Note that for overflow sub-blocks, we are looking at the end of the previous sub-slot
-            while num_sub_slots_to_look_for > 0:
-                next_sb = curr
-                if curr.first_in_sub_slot:
-                    num_sub_slots_to_look_for -= 1
-                if curr.total_iters < total_iters_sp:
-                    break
-                if curr.height == 0:
-                    break
-                curr = sub_blocks[curr.prev_hash]
-
-            if curr.total_iters < total_iters_sp:
-                sp_vdf_iters = total_iters_sp - curr.total_iters
-                cc_vdf_input = curr.challenge_vdf_output
-                rc_vdf_challenge = curr.reward_infusion_new_challenge
-            else:
-                sp_vdf_iters = sp_iters
-                cc_vdf_input = ClassgroupElement.get_default_element()
-                rc_vdf_challenge = next_sb.finished_reward_slot_hashes[-1]
-
-            while not curr.first_in_sub_slot:
-                curr = sub_blocks[curr.prev_hash]
-            cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
-
-        cc_sp_vdf, cc_sp_proof = get_vdf_info_and_proof(
-            constants,
-            cc_vdf_input,
-            cc_vdf_challenge,
-            sp_vdf_iters,
-        )
-        rc_sp_vdf, rc_sp_proof = get_vdf_info_and_proof(
-            constants,
-            ClassgroupElement.get_default_element(),
-            rc_vdf_challenge,
-            sp_vdf_iters,
-        )
-
-        cc_sp_hash = cc_sp_vdf.output.get_hash()
-        rc_sp_hash = rc_sp_vdf.output.get_hash()
-        signage_point = SignagePoint(cc_sp_vdf, cc_sp_proof, rc_sp_vdf, rc_sp_proof)
+    if signage_point.cc_vdf is not None:
+        cc_sp_hash = signage_point.cc_vdf.output.get_hash()
+        rc_sp_hash = signage_point.rc_vdf.output.get_hash()
     else:
         if new_sub_slot:
             rc_sp_hash = finished_sub_slots[-1].reward_chain.get_hash()
@@ -331,16 +256,14 @@ def create_unfinished_block(
     assert rc_sp_signature is not None
     assert blspy.AugSchemeMPL.verify(proof_of_space.plot_public_key, cc_sp_hash, cc_sp_signature)
 
-    # Checks sp filter
-    plot_id = proof_of_space.get_plot_id()
-    if not ProofOfSpace.can_create_proof(
-        constants, plot_id, proof_of_space.challenge_hash, cc_sp_hash, cc_sp_signature
-    ):
-        return None
+    # print(
+    #     f"Calculating iters.. sssti {sub_slot_start_total_iters} ip iters {ip_iters} overflow {overflow} {prev_sub_slot_iters}"
+    # )
     total_iters = uint128(sub_slot_start_total_iters + ip_iters + (prev_sub_slot_iters if overflow else 0))
 
     rc_sub_block = RewardChainSubBlockUnfinished(
         total_iters,
+        signage_point_index,
         proof_of_space,
         signage_point.cc_vdf,
         cc_sp_signature,
@@ -405,6 +328,7 @@ def unfinished_block_to_full_block(
             new_weight,
             new_height,
             unfinished_block.reward_chain_sub_block.total_iters,
+            unfinished_block.reward_chain_sub_block.signage_point_index,
             unfinished_block.reward_chain_sub_block.proof_of_space,
             unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf,
             unfinished_block.reward_chain_sub_block.challenge_chain_sp_signature,
