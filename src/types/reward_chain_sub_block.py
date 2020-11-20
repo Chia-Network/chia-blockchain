@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from blspy import G2Element
 from typing import Optional
 
-from src.util.ints import uint32, uint128
+from src.util.ints import uint32, uint128, uint8
 from src.util.streamable import Streamable, streamable
 from src.types.proof_of_space import ProofOfSpace
 from src.types.vdf import VDFInfo
@@ -12,6 +12,7 @@ from src.types.vdf import VDFInfo
 @streamable
 class RewardChainSubBlockUnfinished(Streamable):
     total_iters: uint128
+    signage_point_index: uint8
     proof_of_space: ProofOfSpace
     challenge_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
     challenge_chain_sp_signature: G2Element
@@ -25,6 +26,7 @@ class RewardChainSubBlock(Streamable):
     weight: uint128
     sub_block_height: uint32
     total_iters: uint128
+    signage_point_index: uint8
     proof_of_space: ProofOfSpace
     challenge_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
     challenge_chain_sp_signature: G2Element
@@ -38,6 +40,7 @@ class RewardChainSubBlock(Streamable):
     def get_unfinished(self) -> RewardChainSubBlockUnfinished:
         return RewardChainSubBlockUnfinished(
             self.total_iters,
+            self.signage_point_index,
             self.proof_of_space,
             self.challenge_chain_sp_vdf,
             self.challenge_chain_sp_signature,

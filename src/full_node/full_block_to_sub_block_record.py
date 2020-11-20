@@ -36,7 +36,7 @@ def full_block_to_sub_block_record(
             len(block.finished_sub_slots) > 0,
             prev_sb.total_iters,
         )
-    overflow = is_overflow_sub_block(constants, ips, required_iters)
+    overflow = is_overflow_sub_block(constants, block.reward_chain_sub_block.signage_point_index)
     deficit = calculate_deficit(constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
     prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
     timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
@@ -69,7 +69,7 @@ def full_block_to_sub_block_record(
             constants,
             sub_blocks,
             block.height,
-            prev_sb,
+            sub_blocks[prev_sb.prev_hash],
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_ips,
         )
@@ -92,6 +92,7 @@ def full_block_to_sub_block_record(
         block.height,
         block.weight,
         block.total_iters,
+        block.reward_chain_sub_block.signage_point_index,
         block.reward_chain_sub_block.challenge_chain_ip_vdf.output,
         icc_output,
         block.reward_chain_sub_block.get_hash(),
@@ -101,6 +102,7 @@ def full_block_to_sub_block_record(
         block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
         required_iters,
         deficit,
+        overflow,
         timestamp,
         prev_block_hash,
         finished_challenge_slot_hashes,

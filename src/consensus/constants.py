@@ -9,7 +9,7 @@ class ConsensusConstants:
     SLOT_SUB_BLOCKS_TARGET: uint32
     MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK: uint32
     MAX_SLOT_SUB_BLOCKS: uint32
-    NUM_CHECKPOINTS_PER_SLOT: uint32
+    NUM_SPS_SUB_SLOT: uint32
     IPS_STARTING: uint64
 
     DIFFICULTY_STARTING: uint64
@@ -22,7 +22,7 @@ class ConsensusConstants:
     NUMBER_ZERO_BITS_PLOT_FILTER: int  # H(plot signature of the challenge) must start with these many zeroes
     NUMBER_ZERO_BITS_SP_FILTER: int  # H(plot signature of the sp) must start with these many zeroes
     SLOT_TIME_TARGET: int  # The target number of seconds per block
-    EXTRA_ITERS_TIME_TARGET: float
+    NUM_SP_INTERVALS_EXTRA: int
     MAX_FUTURE_TIME: int  # The next block can have a timestamp of at most these many seconds more
     NUMBER_OF_TIMESTAMPS: int  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     FIRST_CC_CHALLENGE: bytes

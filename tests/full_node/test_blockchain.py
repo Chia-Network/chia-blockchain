@@ -94,7 +94,7 @@ class TestGenesisBlock:
 class TestAddingMoreBlocks:
     @pytest.mark.asyncio
     async def test_basic_chain(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(test_constants, 200)
+        blocks = bt.get_consecutive_blocks(test_constants, 2000)
         for block in blocks:
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
@@ -138,7 +138,7 @@ class TestAddingMoreBlocks:
         blocks = bt.get_consecutive_blocks(test_constants, 10, skip_slots=10, block_list=blocks)
         for block in blocks[10:]:
             result, err, _ = await blockchain.receive_block(block)
-            assert result == ReceiveBlockResult.NEW_PEAK
+            assert err is None
         assert blockchain.get_peak().height == 19
 
     @pytest.mark.asyncio
@@ -181,6 +181,7 @@ class TestAddingMoreBlocks:
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
+            print(f"added {block.height} {block.total_iters}")
         assert empty_blockchain.get_peak().height == len(blocks) - 1
 
     @pytest.mark.asyncio
