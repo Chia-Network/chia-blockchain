@@ -2,7 +2,12 @@ from .constants import ConsensusConstants
 
 
 testnet_kwargs = {
-    "NUMBER_OF_HEADS": 3,  # The number of tips each full node keeps track of and propagates
+    # TODO(mariano): write comments here
+    "SLOT_SUB_BLOCKS_TARGET": 16,
+    "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 5,
+    "MAX_SLOT_SUB_BLOCKS": 64,
+    "NUM_SPS_SUB_SLOT": 32,
+    "IPS_STARTING": 2 ** 18,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of 2^32, to be used in the VDF iter calculation formula.
     "DIFFICULTY_STARTING": 2 ** 20,
@@ -16,7 +21,7 @@ testnet_kwargs = {
     "NUMBER_ZERO_BITS_PLOT_FILTER": 3,  # H(plot signature of the challenge) must start with these many zeroes
     "NUMBER_ZERO_BITS_SP_FILTER": 4,  # H(plot signature of the challenge) must start with these many zeroes
     "SLOT_TIME_TARGET": 300,  # The target number of seconds per slot
-    "EXTRA_ITERS_TIME_TARGET": 37.5,
+    "NUM_SP_INTERVALS_EXTRA": 3,  # The number of sp intervals to add to the signage point
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more
     "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
     "FIRST_CC_CHALLENGE": bytes([0x00] * 32),

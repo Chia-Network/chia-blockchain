@@ -16,7 +16,7 @@ def make_sub_epoch_summary(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     blocks_included_height: uint32,
-    prev_sb: SubBlockRecord,
+    prev_prev_sub_block: bytes32,
     new_difficulty: Optional[uint64],
     new_ips: Optional[uint64],
 ) -> SubEpochSummary:
@@ -25,11 +25,11 @@ def make_sub_epoch_summary(
     "blocks_included_height". Prev_sb is the last sub block in the previous sub-epoch. On a new epoch,
     new_difficulty and new_ips are also added.
     """
-    assert prev_sb.height == blocks_included_height - 1
+    assert prev_prev_sub_block.height == blocks_included_height - 2
     if blocks_included_height // constants.SUB_EPOCH_SUB_BLOCKS == 1:
         ses = SubEpochSummary(constants.GENESIS_SES_HASH, constants.FIRST_RC_CHALLENGE, uint8(0), None, None)
     else:
-        curr = prev_sb
+        curr = prev_prev_sub_block
         while curr.sub_epoch_summary_included is None:
             curr = sub_blocks[curr.prev_hash]
         assert curr.sub_epoch_summary_included is not None
@@ -37,7 +37,7 @@ def make_sub_epoch_summary(
         ses = SubEpochSummary(
             prev_ses,
             curr.finished_reward_slot_hashes[-1],
-            curr.height % constants.SUB_EPOCH_SUB_BLOCKS,
+            uint8(curr.height % constants.SUB_EPOCH_SUB_BLOCKS),
             new_difficulty,
             new_ips,
         )
@@ -49,6 +49,7 @@ def next_sub_epoch_summary(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
+    signage_point_index: uint8,
     required_iters: uint64,
     block: Union[UnfinishedBlock, FullBlock],
 ) -> Optional[SubEpochSummary]:
@@ -57,8 +58,6 @@ def next_sub_epoch_summary(
         ips = constants.IPS_STARTING
     else:
         assert prev_sb is not None
-        prev_ip_iters = calculate_ip_iters(constants, prev_sb.ips, prev_sb.required_iters)
-        prev_sp_iters = calculate_sp_iters(constants, prev_sb.ips, prev_sb.required_iters)
         ips = get_next_ips(
             constants,
             sub_blocks,
@@ -68,18 +67,22 @@ def next_sub_epoch_summary(
             prev_sb.ips,
             prev_sb.deficit,
             len(block.finished_sub_slots) > 0,
-            uint128(block.total_iters - prev_ip_iters + prev_sp_iters),
+            prev_sb.sp_total_iters(constants),
         )
-    overflow = is_overflow_sub_block(constants, ips, required_iters)
+    overflow = is_overflow_sub_block(constants, signage_point_index)
     deficit = calculate_deficit(constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
-    finishes_se = finishes_sub_epoch(constants, block.height, deficit, False, sub_blocks, prev_sb.header_hash)
-    finishes_epoch: bool = finishes_sub_epoch(constants, block.height, deficit, True, sub_blocks, prev_sb.header_hash)
+    finishes_se = finishes_sub_epoch(
+        constants, block.height, deficit, False, sub_blocks, prev_sb.header_hash if prev_sb is not None else None
+    )
+    finishes_epoch: bool = finishes_sub_epoch(
+        constants, block.height, deficit, True, sub_blocks, prev_sb.header_hash if prev_sb is not None else None
+    )
 
     if finishes_se:
         assert prev_sb is not None
         if finishes_epoch:
-            ip_iters = calculate_ip_iters(constants, ips, required_iters)
-            sp_iters = calculate_sp_iters(constants, ips, required_iters)
+            sp_iters = calculate_sp_iters(constants, ips, signage_point_index)
+            ip_iters = calculate_ip_iters(constants, ips, signage_point_index, required_iters)
             next_difficulty = get_next_difficulty(
                 constants,
                 sub_blocks,
@@ -105,5 +108,5 @@ def next_sub_epoch_summary(
         else:
             next_difficulty = None
             next_ips = None
-        return make_sub_epoch_summary(constants, sub_blocks, block.height, prev_sb, next_difficulty, next_ips)
+        return make_sub_epoch_summary(constants, sub_blocks, block.height + 1, prev_sb, next_difficulty, next_ips)
     return None

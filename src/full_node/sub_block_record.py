@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 
 from src.consensus.constants import ConsensusConstants
-from src.types.header_block import HeaderBlock
+from src.consensus.pot_iterations import calculate_sp_iters, calculate_ip_iters, calculate_sub_slot_iters
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
@@ -24,6 +24,7 @@ class SubBlockRecord(Streamable):
     sub_block_height: uint32
     weight: uint128  # Total cumulative difficulty of all ancestor blocks since genesis
     total_iters: uint128  # Total number of VDF iterations since genesis, including this sub-block
+    signage_point_index: uint8
     challenge_vdf_output: ClassgroupElement  # This is the intermediary VDF output at ip_iters in challenge chain
     infused_challenge_vdf_output: Optional[
         ClassgroupElement
@@ -35,6 +36,7 @@ class SubBlockRecord(Streamable):
     farmer_puzzle_hash: bytes32
     required_iters: uint64  # The number of iters required for this proof of space
     deficit: uint8  # A deficit of 5 is an overflow block after an infusion. Deficit of 4 is a challenge block
+    overflow: bool
 
     # Block (present iff is_block)
     timestamp: Optional[uint64]
@@ -49,16 +51,34 @@ class SubBlockRecord(Streamable):
     sub_epoch_summary_included: Optional[SubEpochSummary]
 
     @property
-    def height(self):
+    def height(self) -> uint32:
         return self.sub_block_height
 
     @property
-    def is_block(self):
+    def is_block(self) -> bool:
         return self.timestamp is not None
 
     @property
-    def first_in_sub_slot(self):
+    def first_in_sub_slot(self) -> bool:
         return self.finished_challenge_slot_hashes is not None
 
-    def is_challenge_sub_block(self, constants: ConsensusConstants):
+    def is_challenge_sub_block(self, constants: ConsensusConstants) -> bool:
         return self.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
+
+    def pos_sub_slot_total_iters(self, constants: ConsensusConstants) -> uint128:
+        if self.overflow:
+            return uint128(self.total_iters - self.ip_iters(constants) - calculate_sub_slot_iters(constants, self.ips))
+        else:
+            return uint128(self.total_iters - self.ip_iters(constants))
+
+    def infusion_sub_slot_total_iters(self, constants: ConsensusConstants) -> uint128:
+        return self.total_iters - self.ip_iters(constants)
+
+    def sp_iters(self, constants: ConsensusConstants) -> uint64:
+        return calculate_sp_iters(constants, self.ips, self.signage_point_index)
+
+    def ip_iters(self, constants: ConsensusConstants) -> uint64:
+        return calculate_ip_iters(constants, self.ips, self.signage_point_index, self.required_iters)
+
+    def sp_total_iters(self, constants: ConsensusConstants):
+        return self.pos_sub_slot_total_iters(constants) + self.sp_iters(constants)
