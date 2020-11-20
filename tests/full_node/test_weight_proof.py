@@ -6,7 +6,7 @@ import aiosqlite
 import pytest
 
 from src.full_node.block_store import BlockStore
-from src.full_node.blockchain import Blockchain, ReceiveBlockResult
+from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.full_node.weight_proof import create_sub_epoch_segments, get_sub_epoch_block_num, full_block_to_header
 from src.types.header_block import HeaderBlock

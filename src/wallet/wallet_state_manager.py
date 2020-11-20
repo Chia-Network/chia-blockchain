@@ -17,7 +17,6 @@ from src.consensus.constants import ConsensusConstants
 from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
@@ -37,9 +36,6 @@ from src.wallet.wallet_info import WalletInfo, WalletInfoBackup
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
-from src.full_node.blockchain import ReceiveBlockResult
-from src.consensus.pot_iterations import calculate_iterations_quality
-from src.util.significant_bits import truncate_to_significant_bits
 from src.wallet.wallet_user_store import WalletUserStore
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.util.errors import Err
