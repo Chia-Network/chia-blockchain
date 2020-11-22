@@ -48,6 +48,20 @@ class SubSlotData(Streamable):
     # VDF from beginning to end of slot
     cc_slot_vdf: Optional[VDFProof]
 
+    def is_challenge(self):
+        if self.cc_slot_vdf is not None:
+            return False
+        if self.cc_signage_point_sig is None:
+            return False
+        if self.cc_signage_point_vdf is None:
+            return False
+        if self.cc_infusion_point_vdf is None:
+            return False
+        if self.icc_infusion_to_slot_end_vdf is None:
+            return False
+
+        return True
+
 
 @dataclass(frozen=True)
 @streamable
