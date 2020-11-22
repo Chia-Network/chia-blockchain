@@ -6,6 +6,9 @@ from typing import Dict, Optional, List, Tuple
 from blspy import AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
+from src.consensus.deficit import calculate_deficit
+from src.consensus.difficulty_adjustment import finishes_sub_epoch, get_ips_and_difficulty
+from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 from src.consensus.pot_iterations import (
     is_overflow_sub_block,
     calculate_ip_iters,
@@ -13,11 +16,8 @@ from src.consensus.pot_iterations import (
     calculate_sub_slot_iters,
     calculate_iterations_quality,
 )
-from src.consensus.deficit import calculate_deficit
-from src.consensus.difficulty_adjustment import finishes_sub_epoch, get_ips_and_difficulty
-from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
-from src.full_node.sub_block_record import SubBlockRecord
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
+from src.full_node.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
@@ -337,33 +337,7 @@ async def validate_unfinished_header_block(
 
     # If sub_block state is correct, we should always find a challenge here
     # This computes what the challenge should be for this sub-block
-    if new_sub_slot:
-        if overflow:
-            # New slot with overflow block
-            challenge: bytes32 = header_block.finished_sub_slots[
-                -1
-            ].challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
-        else:
-            # No overflow, new slot with a new challenge
-            challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
-    else:
-        if genesis_block:
-            challenge = constants.FIRST_CC_CHALLENGE
-        else:
-            if overflow:
-                # Overflow infusion, so get the second to last challenge
-                challenges_to_look_for = 2
-            else:
-                challenges_to_look_for = 1
-            reversed_challenge_hashes: List[bytes32] = []
-            curr: SubBlockRecord = prev_sb
-            while len(reversed_challenge_hashes) < challenges_to_look_for:
-                if curr.first_in_sub_slot:
-                    reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
-                if curr.height == 0:
-                    break
-                curr = sub_blocks[curr.prev_hash]
-            challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
+    challenge = get_block_challenge(constants, genesis_block, header_block, new_sub_slot, overflow, prev_sb, sub_blocks)
     assert challenge is not None
 
     # 4. Check proof of space
@@ -379,6 +353,12 @@ async def validate_unfinished_header_block(
     if q_str is None:
         return None, ValidationError(Err.INVALID_POSPACE)
 
+    # 3. check signage point index
+    # no need to check negative values as this is uint 8
+    if header_block.reward_chain_sub_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
+        return None, ValidationError(Err.INVALID_SP_INDEX)
+
+    sp_iters: uint64 = calculate_sp_iters(constants, ips, header_block.reward_chain_sub_block.signage_point_index)
     # Note that required iters might be from the previous slot (if we are in an overflow sub-block)
     required_iters: uint64 = calculate_iterations_quality(
         q_str,
@@ -386,24 +366,9 @@ async def validate_unfinished_header_block(
         difficulty,
         cc_sp_hash,
     )
-    # 5. check signage point index is between 0 and 31
-    if (
-        header_block.reward_chain_sub_block.signage_point_index < 0
-        or header_block.reward_chain_sub_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT
-    ):
-        return None, ValidationError(Err.INVALID_SP_INDEX)
-
-    # 6. check signage point index 0 has no sp
-    if (header_block.reward_chain_sub_block.signage_point_index == 0) != (
-        header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None
-    ):
-        return None, ValidationError(Err.INVALID_SP_INDEX)
-
-    sp_iters: uint64 = calculate_sp_iters(constants, ips, header_block.reward_chain_sub_block.signage_point_index)
     ip_iters: uint64 = calculate_ip_iters(
         constants, ips, header_block.reward_chain_sub_block.signage_point_index, required_iters
     )
-    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
     if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
         # Blocks with very low required iters are not overflow blocks
         assert not overflow
@@ -413,6 +378,7 @@ async def validate_unfinished_header_block(
         return None, ValidationError(Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH)
 
     # 8. Check total iters
+    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
     if genesis_block:
         total_iters: uint128 = uint128(
             constants.IPS_STARTING * constants.SLOT_TIME_TARGET * len(header_block.finished_sub_slots)
@@ -626,6 +592,37 @@ async def validate_unfinished_header_block(
                 return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_FUTURE)
 
     return required_iters, None  # Valid unfinished header block
+
+
+def get_block_challenge(constants, genesis_block, header_block, new_sub_slot, overflow, prev_sb, sub_blocks):
+    if new_sub_slot:
+        if overflow:
+            # New slot with overflow block
+            challenge: bytes32 = header_block.finished_sub_slots[
+                -1
+            ].challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
+        else:
+            # No overflow, new slot with a new challenge
+            challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
+    else:
+        if genesis_block:
+            challenge = constants.FIRST_CC_CHALLENGE
+        else:
+            if overflow:
+                # Overflow infusion, so get the second to last challenge
+                challenges_to_look_for = 2
+            else:
+                challenges_to_look_for = 1
+            reversed_challenge_hashes: List[bytes32] = []
+            curr: SubBlockRecord = prev_sb
+            while len(reversed_challenge_hashes) < challenges_to_look_for:
+                if curr.first_in_sub_slot:
+                    reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
+                if curr.height == 0:
+                    break
+                curr = sub_blocks[curr.prev_hash]
+            challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
+    return challenge
 
 
 async def validate_finished_header_block(
