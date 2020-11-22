@@ -594,7 +594,15 @@ async def validate_unfinished_header_block(
     return required_iters, None  # Valid unfinished header block
 
 
-def get_block_challenge(constants, genesis_block, header_block, new_sub_slot, overflow, prev_sb, sub_blocks):
+def get_block_challenge(
+    constants: ConsensusConstants,
+    genesis_block: bool,
+    header_block: UnfinishedHeaderBlock,
+    new_sub_slot: bool,
+    overflow: bool,
+    prev_sb: SubBlockRecord,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+):
     if new_sub_slot:
         if overflow:
             # New slot with overflow block
