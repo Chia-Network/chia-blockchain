@@ -152,20 +152,20 @@ def rl_puzzle_for_pk(
         equal(args(0), quote(3)), CLAWBACK, WHOLE_PUZZLE
     )
 
-    return Program(binutils.assemble(WHOLE_PUZZLE_WITH_CLAWBACK))
+    return Program.to(binutils.assemble(WHOLE_PUZZLE_WITH_CLAWBACK))
 
 
 def rl_make_aggregation_solution(myid, wallet_coin_primary_input, wallet_coin_amount):
     opcode_myid = "0x" + hexlify(myid).decode("ascii")
     primary_input = "0x" + hexlify(wallet_coin_primary_input).decode("ascii")
     sol = sexp(opcode_myid, primary_input, wallet_coin_amount)
-    return Program(binutils.assemble(sol))
+    return Program.to(binutils.assemble(sol))
 
 
 def make_clawback_solution(puzzlehash, amount, fee):
     opcode_create = hexlify(ConditionOpcode.CREATE_COIN).decode("ascii")
     solution = sexp(3, sexp("0x" + opcode_create, "0x" + str(puzzlehash), amount - fee))
-    return Program(binutils.assemble(solution))
+    return Program.to(binutils.assemble(solution))
 
 
 def rl_make_solution_mode_2(
@@ -195,7 +195,7 @@ def rl_make_solution_mode_2(
         parent_amount,
         "0x" + str(my_parent_parent_id),
     )
-    return Program(binutils.assemble(sol))
+    return Program.to(binutils.assemble(sol))
 
 
 def solution_for_rl(
@@ -229,7 +229,7 @@ def solution_for_rl(
         parent_amount,
         fee,
     )
-    return Program(binutils.assemble(solution))
+    return Program.to(binutils.assemble(solution))
 
 
 def rl_make_aggregation_puzzle(wallet_puzzle):
@@ -254,4 +254,4 @@ def rl_make_aggregation_puzzle(wallet_puzzle):
     )
     puz = make_list(me_is_my_id, input_of_lock)
 
-    return Program(binutils.assemble(puz))
+    return Program.to(binutils.assemble(puz))

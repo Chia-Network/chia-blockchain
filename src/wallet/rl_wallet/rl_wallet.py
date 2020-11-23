@@ -595,7 +595,7 @@ class RLWallet:
         for puzzle, solution in spends:
             pubkey, secretkey = await self.get_keys(solution.coin.puzzle_hash)
             signature = AugSchemeMPL.sign(
-                secretkey, Program(solution.solution).get_tree_hash()
+                secretkey, Program.to(solution.solution).get_tree_hash()
             )
             sigs.append(signature)
 
@@ -645,7 +645,7 @@ class RLWallet:
         for puzzle, solution in spends:
             pubkey, secretkey = await self.get_keys_pk(clawback_pubkey)
             signature = AugSchemeMPL.sign(
-                secretkey, Program(solution.solution).get_tree_hash()
+                secretkey, Program.to(solution.solution).get_tree_hash()
             )
             sigs.append(signature)
         aggsig = AugSchemeMPL.aggregate(sigs)
@@ -747,8 +747,8 @@ class RLWallet:
         # Spend lock
         puzstring = f"(r (c (q 0x{consolidating_coin.name().hex()}) (q ())))"
 
-        puzzle = Program(binutils.assemble(puzstring))
-        solution = Program(binutils.assemble("()"))
+        puzzle = Program.to(binutils.assemble(puzstring))
+        solution = Program.to(binutils.assemble("()"))
 
         ephemeral = CoinSolution(
             Coin(self.rl_coin_record.coin.name(), puzzle.get_tree_hash(), uint64(0)),
