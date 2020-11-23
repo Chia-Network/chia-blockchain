@@ -193,6 +193,7 @@ class TestAddingMoreBlocks:
         for i in range(num_blocks):
             blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=2, force_overflow=True)
             result, err, _ = await blockchain.receive_block(blocks[-1])
+            assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
         assert blockchain.get_peak().height == num_blocks - 1
 
