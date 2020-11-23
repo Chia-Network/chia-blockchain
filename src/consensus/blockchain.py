@@ -176,10 +176,10 @@ class Blockchain:
         genesis: bool = block.height == 0
 
         if block.header_hash in self.sub_blocks:
-            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
+            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
         if block.prev_header_hash not in self.sub_blocks and not genesis:
-            return ReceiveBlockResult.DISCONNECTED_BLOCK, None, None
+            return ReceiveBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
         curr_header_block = HeaderBlock(
             block.finished_sub_slots,

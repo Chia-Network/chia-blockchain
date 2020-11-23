@@ -15,7 +15,7 @@ class ChallengeBlockInfo(Streamable):  # The hash of this is used as the challen
     proof_of_space: ProofOfSpace
     challenge_chain_sp_vdf: Optional[VDFInfo]  # Only present if not the first sp
     challenge_chain_sp_signature: G2Element
-    challenge_chain_ip_vdf: Optional[VDFInfo]  # Iff deficit < 4
+    challenge_chain_ip_vdf: VDFInfo
 
 
 @dataclass(frozen=True)
