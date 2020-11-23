@@ -320,7 +320,7 @@ async def validate_unfinished_header_block(
             # 3b. Check that we finished a slot and we finished a sub-epoch
             if not new_sub_slot or not finishes_se:
                 return None, ValidationError(
-                    Err.INVALID_SUB_EPOCH_SUMMARY, f"new sub-slot: {new_sub_slot} finishes sub-epoch {finishes_se}"
+                    Err.INVALID_SUB_EPOCH_SUMMARY_HASH, f"new sub-slot: {new_sub_slot} finishes sub-epoch {finishes_se}"
                 )
 
             # 3c. Check the actual sub-epoch is correct
@@ -375,6 +375,27 @@ async def validate_unfinished_header_block(
         difficulty,
         cc_sp_hash,
     )
+
+    # 5. check signage point index
+    # no need to check negative values as this is uint8. (Assumes types are checked)
+    print("Signage point:", header_block.reward_chain_sub_block.signage_point_index)
+    if header_block.reward_chain_sub_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
+        return None, ValidationError(Err.INVALID_SP_INDEX)
+
+    # 6a. check signage point index 0 has no cc sp
+    if (header_block.reward_chain_sub_block.signage_point_index == 0) != (
+        header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None
+    ):
+        return None, ValidationError(Err.INVALID_SP_INDEX)
+
+    # 6b. check signage point index 0 has no rc sp
+    if (header_block.reward_chain_sub_block.signage_point_index == 0) != (
+        header_block.reward_chain_sub_block.reward_chain_sp_vdf is None
+    ):
+        return None, ValidationError(Err.INVALID_SP_INDEX)
+
+    sp_iters: uint64 = calculate_sp_iters(constants, ips, header_block.reward_chain_sub_block.signage_point_index)
+
     ip_iters: uint64 = calculate_ip_iters(
         constants, ips, header_block.reward_chain_sub_block.signage_point_index, required_iters
     )
@@ -382,7 +403,8 @@ async def validate_unfinished_header_block(
         # Blocks with very low required iters are not overflow blocks
         assert not overflow
 
-    # 7. Check no overflows in the first sub-slot of a new epoch (although they are OK in the second sub-slot)
+    # 7. Check no overflows in the first sub-slot of a new epoch
+    # (although they are OK in the second sub-slot), this is important
     if overflow and finishes_epoch and len(header_block.finished_sub_slots) < 2:
         return None, ValidationError(Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH)
 
@@ -459,10 +481,9 @@ async def validate_unfinished_header_block(
         rc_sp_hash,
         header_block.reward_chain_sub_block.reward_chain_sp_signature,
     ):
-        log.error("block %s failed validation, rc sp sig validation %s, ", header_block.header_hash)
         return None, ValidationError(Err.INVALID_RC_SIGNATURE)
 
-    # 11. Check cc sp
+    # 11. Check cc sp vdf
     if sp_iters != 0:
         target_vdf_info = VDFInfo(
             cc_vdf_challenge,
@@ -641,7 +662,7 @@ async def validate_finished_header_block(
     ip_iters: uint64 = calculate_ip_iters(
         constants, ips, header_block.reward_chain_sub_block.signage_point_index, required_iters
     )
-
+    # TODO: test is_block
     if not genesis_block:
         # 25. Check sub-block height
         if header_block.height != prev_sb.height + 1:

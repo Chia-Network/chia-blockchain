@@ -4,11 +4,14 @@ from pathlib import Path
 
 import aiosqlite
 import pytest
+from blspy import PrivateKey, AugSchemeMPL, G2Element
+from pytest import raises
 
 from src.full_node.block_store import BlockStore
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.types.classgroup import ClassgroupElement
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.slots import InfusedChallengeChainSubSlot
 from src.types.vdf import VDFInfo, VDFProof
 from src.util.block_tools import get_vdf_info_and_proof
@@ -123,6 +126,30 @@ class TestAddingMoreBlocks:
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_2)
                 assert err == Err.INVALID_NEW_DIFFICULTY
+
+                # 3c
+                new_finished_ss_3 = recursive_replace(
+                    block.finished_sub_slots[0],
+                    "challenge_chain.subepoch_summary_hash",
+                    bytes([0] * 32),
+                )
+                block_bad_3 = recursive_replace(
+                    block, "finished_sub_slots", [new_finished_ss_3] + block.finished_sub_slots[1:]
+                )
+                result, err, _ = await empty_blockchain.receive_block(block_bad_3)
+                assert err == Err.INVALID_SUB_EPOCH_SUMMARY
+
+                # 3d
+                new_finished_ss_4 = recursive_replace(
+                    block.finished_sub_slots[0],
+                    "challenge_chain.subepoch_summary_hash",
+                    None,
+                )
+                block_bad_4 = recursive_replace(
+                    block, "finished_sub_slots", [new_finished_ss_4] + block.finished_sub_slots[1:]
+                )
+                result, err, _ = await empty_blockchain.receive_block(block_bad_4)
+                assert err == Err.INVALID_SUB_EPOCH_SUMMARY
 
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
@@ -429,6 +456,7 @@ class TestAddingMoreBlocks:
     async def test_invalid_icc_into_cc(self, empty_blockchain):
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(test_constants, 1)
+        assert (await blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         case_1, case_2 = False, False
         while not case_1 or not case_2:
             blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=1)
@@ -439,7 +467,6 @@ class TestAddingMoreBlocks:
                     == test_constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
                 ):
                     # 2g
-                    print("2g test")
                     case_1 = True
                     new_finished_ss = recursive_replace(
                         block.finished_sub_slots[-1],
@@ -451,7 +478,6 @@ class TestAddingMoreBlocks:
                     )
                 else:
                     # 2h
-                    print("2h test")
                     case_2 = True
                     new_finished_ss = recursive_replace(
                         block.finished_sub_slots[-1],
@@ -521,6 +547,7 @@ class TestAddingMoreBlocks:
         # 2l
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(test_constants, 1)
+        assert (await blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=4)
 
         new_finished_ss = recursive_replace(
@@ -544,7 +571,7 @@ class TestAddingMoreBlocks:
 
         new_finished_ss = recursive_replace(
             blocks[-1].finished_sub_slots[-1],
-            "challenge_chain",
+            "reward_chain",
             replace(blocks[-1].finished_sub_slots[-1].reward_chain, challenge_chain_sub_slot_hash=bytes([3] * 32)),
         )
         block_1_bad = recursive_replace(
@@ -783,19 +810,250 @@ class TestAddingMoreBlocks:
     @pytest.mark.asyncio
     async def test_genesis_has_ses(self, empty_blockchain):
         # 3a
-        block = bt.get_consecutive_blocks(test_constants, 1, skip_slots=2)[0]
+        block = bt.get_consecutive_blocks(test_constants, 1, skip_slots=1)[0]
         new_finished_ss = recursive_replace(
             block.finished_sub_slots[0],
-            "reward_chain",
+            "challenge_chain",
             recursive_replace(
                 block.finished_sub_slots[0].challenge_chain,
                 "subepoch_summary_hash",
                 bytes([0] * 32),
             ),
         )
+
+        new_finished_ss = recursive_replace(
+            new_finished_ss,
+            "reward_chain",
+            replace(
+                new_finished_ss.reward_chain, challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash()
+            ),
+        )
         block_bad = recursive_replace(block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:])
         result, err, _ = await empty_blockchain.receive_block(block_bad)
         assert err == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
+
+    @pytest.mark.asyncio
+    async def test_no_ses_if_no_se(self, empty_blockchain):
+        # 3b
+        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        while True:
+            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            if len(blocks[-1].finished_sub_slots) > 0:
+                new_finished_ss: EndOfSubSlotBundle = recursive_replace(
+                    blocks[-1].finished_sub_slots[0],
+                    "challenge_chain",
+                    recursive_replace(
+                        blocks[-1].finished_sub_slots[0].challenge_chain,
+                        "subepoch_summary_hash",
+                        bytes([0] * 32),
+                    ),
+                )
+
+                new_finished_ss = recursive_replace(
+                    new_finished_ss,
+                    "reward_chain",
+                    replace(
+                        new_finished_ss.reward_chain,
+                        challenge_chain_sub_slot_hash=new_finished_ss.challenge_chain.get_hash(),
+                    ),
+                )
+                block_bad = recursive_replace(
+                    blocks[-1], "finished_sub_slots", [new_finished_ss] + blocks[-1].finished_sub_slots[1:]
+                )
+                result, err, _ = await empty_blockchain.receive_block(block_bad)
+                assert err == Err.INVALID_SUB_EPOCH_SUMMARY_HASH
+                return
+            await empty_blockchain.receive_block(blocks[-1])
+
+    @pytest.mark.asyncio
+    async def test_bad_pos(self, empty_blockchain):
+        # 4
+        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        block_bad = recursive_replace(blocks[-1], "reward_chain_sub_block.proof_of_space.challenge_hash", std_hash(b""))
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
+
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_sub_block.proof_of_space.pool_contract_puzzle_hash", std_hash(b"")
+        )
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
+
+        block_bad = recursive_replace(blocks[-1], "reward_chain_sub_block.proof_of_space.pool_public_key", None)
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
+
+        block_bad = recursive_replace(
+            blocks[-1],
+            "reward_chain_sub_block.proof_of_space.plot_public_key",
+            AugSchemeMPL.key_gen(std_hash(b"1231n")).get_g1(),
+        )
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
+        block_bad = recursive_replace(
+            blocks[-1],
+            "reward_chain_sub_block.proof_of_space.size",
+            32,
+        )
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
+        block_bad = recursive_replace(
+            blocks[-1],
+            "reward_chain_sub_block.proof_of_space.proof",
+            bytes([1] * int(blocks[-1].reward_chain_sub_block.proof_of_space.size * 64 / 8)),
+        )
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_POSPACE
+
+        # TODO: test not passing the plot filter
+
+    @pytest.mark.asyncio
+    async def test_bad_signage_point_index(self, empty_blockchain):
+        # 5
+        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        with raises(ValueError):
+            block_bad = recursive_replace(
+                blocks[-1], "reward_chain_sub_block.signage_point_index", test_constants.NUM_SPS_SUB_SLOT
+            )
+            assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_SP_INDEX
+        with raises(ValueError):
+            block_bad = recursive_replace(
+                blocks[-1], "reward_chain_sub_block.signage_point_index", test_constants.NUM_SPS_SUB_SLOT + 1
+            )
+            assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_SP_INDEX
+
+    @pytest.mark.asyncio
+    async def test_sp_0_no_sp(self, empty_blockchain):
+        # 6
+        blocks = []
+        case_1, case_2 = False, False
+        while not case_1 or not case_2:
+            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            if blocks[-1].reward_chain_sub_block.signage_point_index == 0:
+                case_1 = True
+                block_bad = recursive_replace(blocks[-1], "reward_chain_sub_block.signage_point_index", uint8(1))
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_SP_INDEX
+            else:
+                case_2 = True
+                block_bad = recursive_replace(blocks[-1], "reward_chain_sub_block.signage_point_index", uint8(0))
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_SP_INDEX
+            assert (await empty_blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+
+    @pytest.mark.asyncio
+    async def test_epoch_overflows(self, empty_blockchain):
+        # 7. TODO. This is hard to test because it requires modifying the block tools to make these special blocks
+        pass
+
+    @pytest.mark.asyncio
+    async def test_bad_total_iters(self, empty_blockchain):
+        # 8
+        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_sub_block.total_iters", blocks[-1].reward_chain_sub_block.total_iters + 1
+        )
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_TOTAL_ITERS
+
+    @pytest.mark.asyncio
+    async def test_bad_rc_sp_vdf(self, empty_blockchain):
+        # 9
+        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        while True:
+            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            if blocks[-1].reward_chain_sub_block.signage_point_index != 0:
+                block_bad = recursive_replace(
+                    blocks[-1], "reward_chain_sub_block.reward_chain_sp_vdf.challenge_hash", std_hash(b"1")
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "reward_chain_sub_block.reward_chain_sp_vdf.input",
+                    ClassgroupElement(int512(10), int512(2)),
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "reward_chain_sub_block.reward_chain_sp_vdf.output",
+                    ClassgroupElement(int512(10), int512(2)),
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "reward_chain_sub_block.reward_chain_sp_vdf.number_of_iterations",
+                    uint64(1111111111111),
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "reward_chain_sp_proof",
+                    VDFProof(uint8(0), std_hash(b"")),
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
+                return
+            assert (await empty_blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+
+    @pytest.mark.asyncio
+    async def test_bad_rc_sp_sig(self, empty_blockchain):
+        # 10
+        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_sub_block.reward_chain_sp_signature", G2Element.generator()
+        )
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SIGNATURE
+
+    @pytest.mark.asyncio
+    async def test_bad_cc_sp_vdf(self, empty_blockchain):
+        # 11. Note: does not validate fully due to proof of space being validated first
+        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        while True:
+            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            if blocks[-1].reward_chain_sub_block.signage_point_index != 0:
+                block_bad = recursive_replace(
+                    blocks[-1], "reward_chain_sub_block.challenge_chain_sp_vdf.challenge_hash", std_hash(b"1")
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[0] == ReceiveBlockResult.INVALID_BLOCK
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "reward_chain_sub_block.challenge_chain_sp_vdf.input",
+                    ClassgroupElement(int512(10), int512(2)),
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[0] == ReceiveBlockResult.INVALID_BLOCK
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "reward_chain_sub_block.challenge_chain_sp_vdf.output",
+                    ClassgroupElement(int512(10), int512(2)),
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[0] == ReceiveBlockResult.INVALID_BLOCK
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "reward_chain_sub_block.challenge_chain_sp_vdf.number_of_iterations",
+                    uint64(1111111111111),
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[0] == ReceiveBlockResult.INVALID_BLOCK
+                block_bad = recursive_replace(
+                    blocks[-1],
+                    "challenge_chain_sp_proof",
+                    VDFProof(uint8(0), std_hash(b"")),
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_SP_VDF
+                return
+            assert (await empty_blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+
+    @pytest.mark.asyncio
+    async def test_bad_cc_sp_sig(self, empty_blockchain):
+        # 12
+        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        block_bad = recursive_replace(
+            blocks[-1], "reward_chain_sub_block.challenge_chain_sp_signature", G2Element.generator()
+        )
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_SIGNATURE
 
 
 #
