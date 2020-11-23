@@ -267,6 +267,7 @@ class BlockTools:
                 # If did not reach the target slots to skip, don't make any proofs for this sub-slot
                 num_empty_slots_added += 1
             else:
+                # Loop over every signage point (Except for the last ones, which are used for overflows)
                 for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA):
                     curr = latest_sub_block
                     while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
@@ -486,6 +487,7 @@ class BlockTools:
                 for signage_point_index in range(
                     constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA, constants.NUM_SPS_SUB_SLOT
                 ):
+                    # note that we are passing in the finished slots which include the last slot
                     signage_point: SignagePoint = get_signage_point(
                         constants,
                         sub_blocks,
@@ -588,7 +590,6 @@ class BlockTools:
         # Keep trying until we get a good proof of space that also passes sp filter
         while True:
             cc_challenge, rc_challenge = get_genesis_challenges(constants, finished_sub_slots)
-
             for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
@@ -676,58 +677,60 @@ class BlockTools:
                             constants.DIFFICULTY_STARTING,
                         )
 
-            # Finish the end of sub-slot and try again next sub-slot
-            cc_vdf, cc_proof = get_vdf_info_and_proof(
-                constants,
-                ClassgroupElement.get_default_element(),
-                cc_challenge,
-                sub_slot_iters,
-            )
-            rc_vdf, rc_proof = get_vdf_info_and_proof(
-                constants,
-                ClassgroupElement.get_default_element(),
-                rc_challenge,
-                sub_slot_iters,
-            )
-            cc_slot = ChallengeChainSubSlot(cc_vdf, None, None, None, None)
-            finished_sub_slots.append(
-                EndOfSubSlotBundle(
-                    cc_slot,
-                    None,
-                    RewardChainSubSlot(
-                        rc_vdf,
-                        cc_slot.get_hash(),
+                if signage_point_index == constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA - 1:
+                    # Finish the end of sub-slot and try again next sub-slot
+                    cc_vdf, cc_proof = get_vdf_info_and_proof(
+                        constants,
+                        ClassgroupElement.get_default_element(),
+                        cc_challenge,
+                        sub_slot_iters,
+                    )
+                    rc_vdf, rc_proof = get_vdf_info_and_proof(
+                        constants,
+                        ClassgroupElement.get_default_element(),
+                        rc_challenge,
+                        sub_slot_iters,
+                    )
+                    cc_slot = ChallengeChainSubSlot(cc_vdf, None, None, None, None)
+                    finished_sub_slots.append(
+                        EndOfSubSlotBundle(
+                            cc_slot,
+                            None,
+                            RewardChainSubSlot(
+                                rc_vdf,
+                                cc_slot.get_hash(),
+                                None,
+                                uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK),
+                            ),
+                            SubSlotProofs(cc_proof, None, rc_proof),
+                        )
+                    )
+
+                if unfinished_block is not None:
+                    cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
+                        constants,
+                        ClassgroupElement.get_default_element(),
+                        finished_sub_slots[-1].challenge_chain.get_hash(),
+                        ip_iters,
+                    )
+                    rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
+                        constants,
+                        ClassgroupElement.get_default_element(),
+                        finished_sub_slots[-1].reward_chain.get_hash(),
+                        ip_iters,
+                    )
+                    return unfinished_block_to_full_block(
+                        unfinished_block,
+                        cc_ip_vdf,
+                        cc_ip_proof,
+                        rc_ip_vdf,
+                        rc_ip_proof,
                         None,
-                        uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK),
-                    ),
-                    SubSlotProofs(cc_proof, None, rc_proof),
-                )
-            )
-            if unfinished_block is not None:
-                cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
-                    constants,
-                    ClassgroupElement.get_default_element(),
-                    finished_sub_slots[-1].challenge_chain.get_hash(),
-                    ip_iters,
-                )
-                rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
-                    constants,
-                    ClassgroupElement.get_default_element(),
-                    finished_sub_slots[-1].reward_chain.get_hash(),
-                    ip_iters,
-                )
-                return unfinished_block_to_full_block(
-                    unfinished_block,
-                    cc_ip_vdf,
-                    cc_ip_proof,
-                    rc_ip_vdf,
-                    rc_ip_proof,
-                    None,
-                    None,
-                    finished_sub_slots,
-                    None,
-                    constants.DIFFICULTY_STARTING,
-                )
+                        None,
+                        finished_sub_slots,
+                        None,
+                        constants.DIFFICULTY_STARTING,
+                    )
             sub_slot_total_iters += sub_slot_iters
 
     def get_pospaces_for_challenge(
