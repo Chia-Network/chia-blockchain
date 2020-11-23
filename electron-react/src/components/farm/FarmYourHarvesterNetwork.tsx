@@ -11,7 +11,6 @@ import { Delete as DeleteIcon } from '@material-ui/icons';
 import {
   Flex,
   Table,
-  TooltipIcon,
   FormatBytes,
   FormatConnectionStatus,
   Card,

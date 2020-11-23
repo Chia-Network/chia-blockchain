@@ -1,7 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Typography } from '@material-ui/core';
-import { Flex, Table, TooltipIcon, Card } from '@chia/core';
+import { Table, Card } from '@chia/core';
 
 const cols = [
   {

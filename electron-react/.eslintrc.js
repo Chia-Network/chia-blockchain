@@ -38,6 +38,7 @@ module.exports = {
   },
   rules: {
     "consistent-return": "off",
+    "react/no-danger": "off",
     "no-use-before-define": "off",
     "no-case-declarations": "off",
     "jsx-a11y/anchor-is-valid": "off",

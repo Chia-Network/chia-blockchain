@@ -8,7 +8,6 @@ import {
   Flex,
   Table,
   Card,
-  TooltipIcon,
   FormatBytes,
   FormatConnectionStatus,
 } from '@chia/core';

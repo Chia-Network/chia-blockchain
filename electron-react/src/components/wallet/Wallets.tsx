@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import {
@@ -154,7 +154,6 @@ export default function Wallets() {
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const id = useSelector((state: RootState) => state.wallet_menu.id);
   const wallet = wallets.find((wallet) => wallet && wallet.id === id);
-  const [open] = useState(true);
 
   return (
     <LayoutSidebar

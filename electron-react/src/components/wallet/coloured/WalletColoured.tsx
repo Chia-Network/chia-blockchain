@@ -681,31 +681,6 @@ function SendCard(props: SendCardProps) {
   );
 }
 
-type HistoryCardProps = {
-  wallet_id: number;
-};
-
-function HistoryCard(props: HistoryCardProps) {
-  const id = props.wallet_id;
-  const classes = useStyles();
-  return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="ColouredHistoryCard.title">History</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <TransactionTable wallet_id={id} />
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-}
-
 type TransactionTableProps = {
   wallet_id: number;
 };
@@ -797,6 +772,31 @@ function TransactionTable(props: TransactionTableProps) {
           ))}
         </TableBody>
       </Table>
+    </Paper>
+  );
+}
+
+type HistoryCardProps = {
+  wallet_id: number;
+};
+
+function HistoryCard(props: HistoryCardProps) {
+  const id = props.wallet_id;
+  const classes = useStyles();
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              <Trans id="ColouredHistoryCard.title">History</Trans>
+            </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <TransactionTable wallet_id={id} />
+        </Grid>
+      </Grid>
     </Paper>
   );
 }

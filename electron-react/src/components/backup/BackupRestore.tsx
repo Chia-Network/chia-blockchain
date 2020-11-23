@@ -42,6 +42,60 @@ const StyledDropPaper = styled(Paper)`
   justify-content: center;
 `;
 
+function WalletHeader() {
+  const classes = myStyle();
+
+  return (
+    <Box display="flex" style={{ minWidth: '100%' }}>
+      <Box className={classes.column_three} flexGrow={1}>
+        <Typography variant="subtitle2"> id</Typography>
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        <div className={classes.align_center}>
+          {' '}
+          <Typography variant="subtitle2"> name</Typography>
+        </div>
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        <div className={classes.align_right}>
+          {' '}
+          <Typography variant="subtitle2"> type</Typography>
+        </div>
+      </Box>
+    </Box>
+  );
+}
+
+type WalletRowProps = {
+  wallet: Wallet;
+};
+
+function WalletRow(props: WalletRowProps) {
+  const {
+    wallet: {
+      id,
+      name,
+      // @ts-ignore
+      type_name: type,
+    },
+  } = props;
+  const classes = myStyle();
+
+  return (
+    <Box display="flex" style={{ minWidth: '100%' }}>
+      <Box className={classes.column_three} flexGrow={1}>
+        {id}
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        <div className={classes.align_center}> {name}</div>
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        <div className={classes.align_right}> {type}</div>
+      </Box>
+    </Box>
+  );
+}
+
 function UIPart() {
   const dispatch = useDispatch();
   const classes = myStyle();
@@ -291,60 +345,6 @@ function BackupDetails() {
         </div>
       </Container>
     </div>
-  );
-}
-
-type WalletRowProps = {
-  wallet: Wallet;
-};
-
-function WalletRow(props: WalletRowProps) {
-  const {
-    wallet: {
-      id,
-      name,
-      // @ts-ignore
-      type_name: type,
-    },
-  } = props;
-  const classes = myStyle();
-
-  return (
-    <Box display="flex" style={{ minWidth: '100%' }}>
-      <Box className={classes.column_three} flexGrow={1}>
-        {id}
-      </Box>
-      <Box className={classes.column_three} flexGrow={1}>
-        <div className={classes.align_center}> {name}</div>
-      </Box>
-      <Box className={classes.column_three} flexGrow={1}>
-        <div className={classes.align_right}> {type}</div>
-      </Box>
-    </Box>
-  );
-}
-
-function WalletHeader() {
-  const classes = myStyle();
-
-  return (
-    <Box display="flex" style={{ minWidth: '100%' }}>
-      <Box className={classes.column_three} flexGrow={1}>
-        <Typography variant="subtitle2"> id</Typography>
-      </Box>
-      <Box className={classes.column_three} flexGrow={1}>
-        <div className={classes.align_center}>
-          {' '}
-          <Typography variant="subtitle2"> name</Typography>
-        </div>
-      </Box>
-      <Box className={classes.column_three} flexGrow={1}>
-        <div className={classes.align_right}>
-          {' '}
-          <Typography variant="subtitle2"> type</Typography>
-        </div>
-      </Box>
-    </Box>
   );
 }
 
