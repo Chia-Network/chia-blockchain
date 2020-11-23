@@ -2,7 +2,6 @@
 const setupEvents = require("./setupEvents");
 if (!setupEvents.handleSquirrelEvent()) {
   // squirrel event handled and app will exit in 1000ms, so don't do anything else
-
   const { promisify } = require("util");
   const {
     app,
@@ -22,22 +21,22 @@ if (!setupEvents.handleSquirrelEvent()) {
   var url = require("url");
   const os = require("os");
   const crypto = require("crypto");
-  
+
   global.sharedObj = { local_test: local_test };
-  
+
   /*************************************************************
    * py process
    *************************************************************/
-  
+
   const PY_MAC_DIST_FOLDER = "../../app.asar.unpacked/daemon";
   const PY_WIN_DIST_FOLDER = "../../app.asar.unpacked/daemon";
   const PY_DIST_FILE = "daemon";
   const PY_FOLDER = "../src/daemon";
   const PY_MODULE = "server"; // without .py suffix
-  
+
   let pyProc = null;
   let ws = null;
-  
+
   const guessPackaged = () => {
     let packed;
     if (process.platform === "win32") {
@@ -53,7 +52,7 @@ if (!setupEvents.handleSquirrelEvent()) {
     console.log(packed);
     return packed;
   };
-  
+
   const getScriptPath = () => {
     if (!guessPackaged()) {
       return path.join(PY_FOLDER, PY_MODULE + ".py");
@@ -63,7 +62,7 @@ if (!setupEvents.handleSquirrelEvent()) {
     }
     return path.join(__dirname, PY_MAC_DIST_FOLDER, PY_DIST_FILE);
   };
-  
+
   const createPyProc = () => {
     let script = getScriptPath();
     let processOptions = {};
@@ -82,40 +81,40 @@ if (!setupEvents.handleSquirrelEvent()) {
     } else {
       console.log("Running python script");
       console.log("Script " + script);
-  
+
       const Process = require("child_process").spawn;
       pyProc = new Process("python", [script], processOptions);
     }
     if (pyProc != null) {
       pyProc.stdout.setEncoding("utf8");
-  
+
       pyProc.stdout.on("data", function(data) {
         process.stdout.write(data.toString());
       });
-  
+
       pyProc.stderr.setEncoding("utf8");
       pyProc.stderr.on("data", function(data) {
         //Here is where the error output goes
         process.stdout.write("stderr: " + data.toString());
       });
-  
+
       pyProc.on("close", function(code) {
         //Here you can get the exit code of the script
         console.log("closing code: " + code);
       });
-  
+
       console.log("child process success");
     }
     //pyProc.unref();
   };
-  
+
   const closeDaemon = callback => {
     const timeout = setTimeout(() => callback(), 20000);
     const clearTimeoutCallback = err => {
       clearTimeout(timeout);
       callback(err);
     };
-  
+
     try {
       const request_id = crypto.randomBytes(32).toString("hex");
       ws = new WebSocket(daemon_rpc_ws, {
@@ -149,18 +148,18 @@ if (!setupEvents.handleSquirrelEvent()) {
       clearTimeoutCallback(e);
     }
   };
-  
+
   const exitPyProc = e => {};
-  
+
   app.on("will-quit", exitPyProc);
-  
+
   /*************************************************************
    * window management
    *************************************************************/
-  
+
   let mainWindow = null;
   let decidedToClose = false;
-  
+
   const createWindow = () => {
     decidedToClose = false;
     mainWindow = new BrowserWindow({
@@ -175,19 +174,19 @@ if (!setupEvents.handleSquirrelEvent()) {
         nodeIntegration: true
       }
     });
-  
+
     if (dev_config.redux_tool) {
       BrowserWindow.addDevToolsExtension(
         path.join(os.homedir(), dev_config.redux_tool)
       );
     }
-  
+
     if (dev_config.react_tool) {
       BrowserWindow.addDevToolsExtension(
         path.join(os.homedir(), dev_config.react_tool)
       );
     }
-  
+
     var startUrl =
       process.env.ELECTRON_START_URL ||
       url.format({
@@ -195,13 +194,13 @@ if (!setupEvents.handleSquirrelEvent()) {
         protocol: "file:",
         slashes: true
       });
-  
+
     mainWindow.loadURL(startUrl);
-  
+
     mainWindow.once("ready-to-show", function() {
       mainWindow.show();
     });
-  
+
     // Uncomment this to open devtools by default
     // if (!guessPackaged()) {
     //   mainWindow.webContents.openDevTools();
@@ -229,12 +228,12 @@ if (!setupEvents.handleSquirrelEvent()) {
       });
     });
   };
-  
+
   const createMenu = () => {
     const menu = Menu.buildFromTemplate(getMenuTemplate());
     return menu;
   };
-  
+
   const appReady = async () => {
     app.applicationMenu = createMenu();
     try {
@@ -242,24 +241,24 @@ if (!setupEvents.handleSquirrelEvent()) {
     } catch (e) {
       console.error("Error in websocket", e);
     }
-  
+
     createPyProc();
     ws.terminate();
     createWindow();
   };
-  
+
   app.on("ready", appReady);
-  
+
   app.on("window-all-closed", () => {
     app.quit();
   });
-  
+
   app.on("activate", () => {
     if (mainWindow === null) {
       createWindow();
     }
   });
-  
+
   ipcMain.on("load-page", (event, arg) => {
     mainWindow.loadURL(
       require("url").format({
@@ -269,7 +268,7 @@ if (!setupEvents.handleSquirrelEvent()) {
       }) + arg.query
     );
   });
-  
+
   function getMenuTemplate() {
     const template = [
       {
@@ -433,7 +432,7 @@ if (!setupEvents.handleSquirrelEvent()) {
         ]
       }
     ];
-  
+
     if (process.platform === "darwin") {
       // Chia Blockchain menu (Mac)
       template.unshift({
@@ -477,7 +476,7 @@ if (!setupEvents.handleSquirrelEvent()) {
           }
         ]
       });
-  
+
       // File menu (MacOS)
       template.splice(1, 1, {
         label: "File",
@@ -487,7 +486,7 @@ if (!setupEvents.handleSquirrelEvent()) {
           }
         ]
       });
-  
+
       // Edit menu (MacOS)
       template[2].submenu.push(
         {
@@ -505,7 +504,7 @@ if (!setupEvents.handleSquirrelEvent()) {
           ]
         }
       );
-  
+
       // Window menu (MacOS)
       template.splice(4, 1, {
         role: "window",
@@ -525,7 +524,7 @@ if (!setupEvents.handleSquirrelEvent()) {
         ]
       });
     }
-  
+
     if (process.platform === "linux" || process.platform === "win32") {
       // Help menu (Windows, Linux)
       template[4].submenu.push(
@@ -546,15 +545,15 @@ if (!setupEvents.handleSquirrelEvent()) {
         }
       );
     }
-  
+
     return template;
   }
-  
+
   /**
    * Open the given external protocol URL in the desktop’s default manner.
    */
   function openExternal(url) {
     // console.log(`openExternal: ${url}`)
     shell.openExternal(url);
-  }  
+  }
 }
