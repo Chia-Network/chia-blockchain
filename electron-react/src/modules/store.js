@@ -1,5 +1,5 @@
 import reduxThunk from 'redux-thunk';
-import { createBrowserHistory } from 'history';
+import { createHashHistory } from 'history';
 import { createStore, applyMiddleware, compose } from 'redux';
 import { routerMiddleware } from 'connected-react-router';
 import isElectron from 'is-electron';
@@ -7,7 +7,7 @@ import { createRootReducer } from './rootReducer';
 import wsMiddleware from '../middleware/middleware';
 import dev_config from '../dev_config';
 
-export const history = createBrowserHistory();
+export const history = createHashHistory();
 
 const middlewares = [reduxThunk, wsMiddleware, routerMiddleware(history)];
 const rootReducer = createRootReducer(history);

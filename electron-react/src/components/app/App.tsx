@@ -21,9 +21,6 @@ import './App.css';
 import AppModalDialogs from './AppModalDialogs';
 import AppLoading from './AppLoading';
 
-// i18n.loadLocaleData('en', { plurals: en })
-// i18n.loadLocaleData('sk', { plurals: sk })
-
 // @ts-ignore
 i18n.load('en', catalogEn.messages);
 // @ts-ignore

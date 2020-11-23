@@ -332,8 +332,8 @@ const StatusCell = (props) => {
   const { colour } = item;
   return (
     <Grid item xs={12} sm={6}>
-      <Flex>
-        <Flex flexGrow={1} gap={1}>
+      <Flex mb={-2} alignItems="center">
+        <Flex flexGrow={1} gap={1} alignItems="center">
           <Typography variant="subtitle1">{label}</Typography>
           {tooltip && (
             <Tooltip title={tooltip}>
@@ -362,7 +362,7 @@ const FullNodeStatus = (props) => {
     <Card
       title={<Trans id="FullNodeStatus.title">Full Node Status</Trans>}
     >
-      <Grid spacing={3} container>
+      <Grid spacing={4} container>
         {statusItems.map((item) => (
           <StatusCell item={item} key={item.label.props.id} />
         ))}

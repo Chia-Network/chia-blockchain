@@ -35,7 +35,7 @@
     "byte-size": "^7.0.0",
     "connected-react-router": "^6.8.0",
     "framer-motion": "^2.9.4",
-    "history": "^5.0.0",
+    "history": "^4.10.1",
     "is-electron": "^2.2.0",
     "lodash": "^4.17.20",
     "moment": "^2.29.1",

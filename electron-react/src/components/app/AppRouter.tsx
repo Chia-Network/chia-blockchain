@@ -1,5 +1,5 @@
 import React from 'react';
-import { Switch, Route } from 'react-router-dom';
+import { Switch, Route, Redirect } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { PrivateRoute } from '@chia/core';
@@ -59,6 +59,9 @@ export default function AppRouter() {
       <PrivateRoute path="/dashboard">
         <Dashboard />
       </PrivateRoute>
+      <Route path="*">
+        <Redirect to="/" />
+      </Route>
     </Switch>
   );
 }
