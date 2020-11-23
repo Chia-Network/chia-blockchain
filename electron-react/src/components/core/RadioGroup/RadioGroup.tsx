@@ -50,7 +50,7 @@ function ParseBoolean(props: RadioGroupProps) {
   return <MaterialRadioGroup onChange={handleChange} {...rest} />;
 };
 
-export default function RadioGroup(props: Props): JSX.Element {
+export default function RadioGroup(props: Props) {
   const { name, boolean, ...rest } = props;
   const { control } = useFormContext();
 

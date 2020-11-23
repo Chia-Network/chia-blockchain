@@ -2,7 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector, useDispatch } from 'react-redux';
 import styled from 'styled-components';
-import { ConfirmDialog } from '@chia/core';
+import { ConfirmDialog, Flex, Button, Link, Logo } from '@chia/core';
 import {
   Card,
   Typography,
@@ -18,7 +18,6 @@ import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
 } from '@material-ui/icons';
-import { Flex, Button, Link, Logo } from '@chia/core';
 import LayoutHero from '../layout/LayoutHero';
 import {
   login_action,

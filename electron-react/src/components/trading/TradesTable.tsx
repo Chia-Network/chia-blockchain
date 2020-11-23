@@ -54,7 +54,7 @@ export default function TradesTable(props: Props) {
         ),
       };
     });
-  }, rows);
+  }, [rows]);
 
   return (
     <Table 

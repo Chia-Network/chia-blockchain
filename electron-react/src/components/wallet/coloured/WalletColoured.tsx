@@ -506,7 +506,7 @@ function SendCard(props: SendCardProps) {
       amount_input.value === '' ||
       Number(amount_input.value) === 0 ||
       !Number(amount_input.value) ||
-      isNaN(Number(amount_input.value))
+      Number.isNaN(Number(amount_input.value))
     ) {
       dispatch(openDialog(
         <AlertDialog>
@@ -515,7 +515,7 @@ function SendCard(props: SendCardProps) {
       ));
       return;
     }
-    if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
+    if (fee_input.value === '' || Number.isNaN(Number(fee_input.value))) {
       dispatch(openDialog(
         <AlertDialog>
           Please enter a valid numeric fee

@@ -18,8 +18,10 @@ export default function ThemeProvider(props: Props) {
     <StylesProvider injectFirst>
       <StyledThemeProvider theme={theme}>
         <MaterialThemeProvider theme={theme}>
-          <CssBaseline />
-          {children}
+          <>
+            <CssBaseline />
+            {children}
+          </>
         </MaterialThemeProvider>
       </StyledThemeProvider>
     </StylesProvider>

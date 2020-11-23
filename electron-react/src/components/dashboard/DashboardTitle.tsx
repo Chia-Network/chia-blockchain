@@ -14,7 +14,7 @@ export function DashboardTitleTarget() {
 }
 
 type Props = {
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 export default function DashboardTitle(props: Props) {
@@ -28,3 +28,7 @@ export default function DashboardTitle(props: Props) {
     </DashboardTitleTeleporter.Source>
   );
 }
+
+DashboardTitle.defaultProps = {
+  children: undefined,
+};

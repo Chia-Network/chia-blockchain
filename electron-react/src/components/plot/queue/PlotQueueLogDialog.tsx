@@ -19,7 +19,7 @@ export default function PlotQueueLogDialog(props: Props) {
     if (queueItem) {
       setLog(queueItem?.log);
     }
-  }, [queueItem?.log]);
+  }, [queueItem]);
 
   function handleClose() {
     onClose();

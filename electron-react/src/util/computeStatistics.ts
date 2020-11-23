@@ -15,14 +15,14 @@ export default async function computeStatistics(
   let coinbaseRewards = BigInt(0);
   let feesReward = BigInt(0);
 
-  for (const wallet of wallets) {
+  await Promise.all(wallets.map(async (wallet) => {
     if (!wallet) {
-      continue;
+      return;
     }
 
-    for (const tx of wallet.transactions) {
+    await Promise.all(wallet.transactions.map(async (tx) => {
       if (tx.additions.length === 0) {
-        continue;
+        return;
       }
 
       // Height here is filled into the whole 256 bits (32 bytes) of the parent
@@ -44,21 +44,18 @@ export default async function computeStatistics(
       ) {
         totalChia += BigInt(tx.amount);
 
-        switch (tx.type) {
-          case TransactionType.COINBASE_REWARD:
-            coinbaseRewards += BigInt(tx.amount);
-            break;
-          case TransactionType.FEE_REWARD:
-            feesReward += BigInt(tx.amount);
-            break;
+        if (tx.type === TransactionType.COINBASE_REWARD) {
+          coinbaseRewards += BigInt(tx.amount);
+        } else if (tx.type === TransactionType.FEE_REWARD) {
+          feesReward += BigInt(tx.amount);
         }
 
         if (tx.confirmed_at_index > biggestHeight) {
           biggestHeight = tx.confirmed_at_index;
         }
       }
-    }
-  }
+    }));
+  }));
 
   return {
     totalChia,

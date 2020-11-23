@@ -52,12 +52,12 @@ function UIPart() {
     (state: RootState) => state.wallet_state.selected_fingerprint,
   );
 
-  for (const word of words) {
+  words.forEach((word) => {
     if (word === '') {
       // @ts-ignore
       words = null;
     }
-  }
+  });
 
   function handleSkip() {
     if (fingerprint !== null) {
@@ -166,12 +166,12 @@ function BackupDetails() {
     (state: RootState) => state.wallet_state.selected_fingerprint,
   );
 
-  for (const word of words) {
+  words.forEach((word) => {
     if (word === '') {
       // @ts-ignore
       words = null;
     }
-  }
+  });
 
   function handleGoBack() {
     dispatch(changeBackupView(presentMain));

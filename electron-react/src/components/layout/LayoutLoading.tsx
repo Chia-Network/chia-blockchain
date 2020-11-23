@@ -4,7 +4,7 @@ import LayoutHero from './LayoutHero';
 import Loading from '../core/Loading/Loading';
 
 type Props = {
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 export default function LayoutLoading(props: Props) {
@@ -17,3 +17,7 @@ export default function LayoutLoading(props: Props) {
     </LayoutHero>
   );
 }
+
+LayoutLoading.defaultProps = {
+  children: undefined,
+};

@@ -5,6 +5,11 @@ export const resetTrades = () => ({ type: 'RESET_TRADE' });
 export const presentTrade = (trade: any) => ({ type: 'PRESENT_TRADES', trade });
 export const presetOverview = () => ({ type: 'PRESENT_OVERVIEW' });
 
+export const parsingStateNone = 'NONE';
+export const parsingStatePending = 'PENDING';
+export const parsingStateParsed = 'PARSED';
+export const parsingStateReset = 'RESET';
+
 export const newBuy = (amount: number, id: number) => ({
   amount,
   wallet_id: id,
@@ -31,11 +36,6 @@ export const parsingStarted = () => ({
   type: 'OFFER_PARSING',
   status: parsingStatePending,
 });
-
-export const parsingStateNone = 'NONE';
-export const parsingStatePending = 'PENDING';
-export const parsingStateParsed = 'PARSED';
-export const parsingStateReset = 'RESET';
 
 type TradeState = {
   trades: any[];
@@ -81,9 +81,9 @@ export default function tradeReducer(
 
       if (command === 'get_all_trades' && success === true) {
         const all_trades = data.trades;
-        const pending_trades = [];
-        const trade_history = [];
-        for (const trade of all_trades) {
+        const pending_trades: any[] = [];
+        const trade_history: any[] = [];
+        all_trades.forEach((trade: any) => {
           const my_trade = trade.my_offer;
           const { confirmed_at_index } = trade;
           if (my_trade === true && confirmed_at_index === 0) {
@@ -91,7 +91,8 @@ export default function tradeReducer(
           } else {
             trade_history.push(trade);
           }
-        }
+        });
+
         return {
           ...state,
           trade_history,
@@ -109,7 +110,7 @@ export default function tradeReducer(
     case 'RESET_TRADE':
       return { ...initialState };
     case 'OFFER_PARSING':
-      var { status } = action;
+      const { status } = action;
       if (status === parsingStateParsed) {
         return {
           ...state,

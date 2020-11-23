@@ -6,7 +6,7 @@ import PlotStatus from '../constants/PlotStatus';
 import type PlotAdd from '../types/PlotAdd';
 import type PlotQueueItem from '../types/PlotQueueItem';
 import { startPlotting } from './plotter_messages';
-import { stopService } from "./daemon_messages";
+import { stopService } from './daemon_messages';
 import { service_plotter } from '../util/service_names';
 
 function plotNow(

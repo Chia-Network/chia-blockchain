@@ -58,6 +58,8 @@ export default function ConfirmDialog(props: Props) {
 ConfirmDialog.defaultProps = {
   open: false,
   onClose: () => {},
+  title: undefined,
+  children: undefined,
   cancelTitle: 'Cancel',
   confirmTitle: 'Ok',
   confirmColor: 'default',

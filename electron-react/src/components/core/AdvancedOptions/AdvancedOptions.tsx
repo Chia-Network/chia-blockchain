@@ -16,7 +16,7 @@ const StyledToggleAdvancedOptions = styled(({ expanded, ...rest }) => (
 `;
 
 type Props = {
-  children: ReactNode,
+  children?: ReactNode,
   expanded: boolean,
 };
 
@@ -45,7 +45,7 @@ export default function AdvancedOptions(props: Props) {
         ) : (
           <Flex alignItems="center">
             <KeyboardArrowDownIcon />
-            <Trans id="AdvancedOptions.hideAdvancedOptions">
+            <Trans id="AdvancedOptions.showAdvancedOptions">
               Show Advanced Options
             </Trans>
           </Flex>
@@ -61,4 +61,5 @@ export default function AdvancedOptions(props: Props) {
 
 AdvancedOptions.defaultProps = {
   expanded: false,
+  children: undefined,
 };

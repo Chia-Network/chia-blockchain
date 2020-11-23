@@ -13,11 +13,16 @@ const Color = {
 };
 
 type Props = {
-  plot: Plot,
+  plot?: Plot,
 };
 
 export default function PlotStatus(props: Props) {
+  const { plot } = props;
   const farmerStatus = useFarmerStatus();
+
+  if (!plot) {
+    return null;
+  }
 
   return (
     <Indicator color={Color[farmerStatus]}>
@@ -27,12 +32,12 @@ export default function PlotStatus(props: Props) {
         </Trans>
       )}
       {farmerStatus === FarmerStatus.SYNCHING && (
-        <Trans id="PlotStatus.farming">
+        <Trans id="PlotStatus.synching">
           Synching
         </Trans>
       )}
       {farmerStatus === FarmerStatus.ERROR && (
-        <Trans id="PlotStatus.farming">
+        <Trans id="PlotStatus.error">
           Error
         </Trans>
       )}

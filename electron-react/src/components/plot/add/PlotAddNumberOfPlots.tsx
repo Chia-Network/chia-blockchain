@@ -6,7 +6,7 @@ import { useFormContext } from 'react-hook-form';
 
 const plotCountOptions: number[] = [];
 
-for (let i = 1; i < 30; i++) {
+for (let i = 1; i < 30; i += 1) {
   plotCountOptions.push(i);
 }
 
@@ -47,7 +47,7 @@ export default function PlotAddNumberOfPlots() {
             </Trans>
           </Typography>
           <Typography variant="body2">
-            <Trans id="PlotAddNumberOfPlots.parallelTitle">
+            <Trans id="PlotAddNumberOfPlots.parallelDescription">
               Plotting in parallel can save time. Otherwise, add plot(s) to the queue.
             </Trans>
           </Typography>
@@ -59,9 +59,9 @@ export default function PlotAddNumberOfPlots() {
             <RadioGroup name="parallel" boolean>
               <Flex gap={2} flexWrap="wrap">
                 <FormControlLabel
-                  value={true}
                   control={<Radio />}
                   label="Plot in Parallel"
+                  value
                   disabled
                 />
                 <FormControlLabel

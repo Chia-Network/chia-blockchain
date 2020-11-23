@@ -6,18 +6,17 @@ import { Button } from '@material-ui/core';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { Flex, Form } from '@chia/core';
-import { PlotHeaderSource } from '../Plot';
+import { PlotHeaderSource } from '../PlotHeader';
 import PlotAddChooseSize from './PlotAddChooseSize';
 import PlotAddNumberOfPlots from './PlotAddNumberOfPlots';
 import PlotAddSelectTemporaryDirectory from './PlotAddSelectTemporaryDirectory';
 import PlotAddSelectFinalDirectory from './PlotAddSelectFinalDirectory';
-import { startPlotting } from '../../../modules/plotter_messages';
 import { plotQueueAdd } from '../../../modules/plotQueue';
 import PlotAddConfig from '../../../types/PlotAdd';
 
 type FormData = PlotAddConfig;
 
-export default function PlotAdd(): JSX.Element {
+export default function PlotAdd() {
   const history = useHistory();
   const dispatch = useDispatch();
 
@@ -45,7 +44,7 @@ export default function PlotAdd(): JSX.Element {
   }
 
   return (
-    <Form<FormData>
+    <Form
       methods={methods}
       onSubmit={handleSubmit}>
       <PlotHeaderSource>

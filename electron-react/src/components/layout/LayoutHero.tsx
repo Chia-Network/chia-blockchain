@@ -23,7 +23,7 @@ const StyledBody = styled(Box)`
 `;
 
 type Props = {
-  children: ReactNode;
+  children?: ReactNode;
   header?: ReactNode;
 };
 
@@ -47,4 +47,5 @@ export default function LayoutHero(props: Props) {
 
 LayoutHero.defaultProps = {
   header: undefined,
+  children: undefined,
 };

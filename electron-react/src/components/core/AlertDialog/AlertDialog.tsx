@@ -5,7 +5,7 @@ type Props = {
   title?: ReactNode,
   children?: ReactNode,
   open: boolean,
-  onClose?: (value?: any) => void,
+  onClose: (value?: any) => void,
 };
 
 export default function AlertDialog(props: Props) {
@@ -54,4 +54,7 @@ export default function AlertDialog(props: Props) {
 
 AlertDialog.defaultProps = {
   open: false,
+  title: undefined,
+  children: undefined,
+  onClose: () => {},
 };

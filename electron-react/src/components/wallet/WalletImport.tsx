@@ -54,7 +54,7 @@ function Iterator(props: any) {
 
     const id = `${e.target.id}`;
     const clean_id = id.replace('id_', '');
-    const int_val = Number.parseInt(clean_id) - 1;
+    const int_val = Number.parseInt(clean_id, 10) - 1;
     const data = {
       word: e.target.value,
       id: int_val,
@@ -62,7 +62,7 @@ function Iterator(props: any) {
     dispatch(mnemonic_word_added(data));
   }
   const indents = [];
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 24; i += 1) {
     const focus = i === 0;
     indents.push(
       <MnemonicField
@@ -98,13 +98,11 @@ export default function WalletImport() {
 
   function handleSubmit() {
     setSubmitted(true);
-    for (const element of mnemonic) {
-      if (element === '') {
-        return;
-      }
+    const hasEmptyElement = mnemonic.find((element) => element === '');
+    if (!hasEmptyElement) {
+      dispatch(unselectFingerprint());
+      history.push('/wallet/restore');
     }
-    dispatch(unselectFingerprint());
-    history.push('/wallet/restore');
   }
 
   return (

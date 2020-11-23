@@ -1,10 +1,10 @@
 import React, { ReactNode, ReactElement } from 'react';
+import { Box, Card as CardMaterial, CardContent, CardHeader, Grid } from '@material-ui/core';
 import Flex from '../Flex';
 import TooltipIcon from '../TooltipIcon';
-import { Box, Card as CardMaterial, CardContent, CardHeader, Grid } from '@material-ui/core';
 
 type Props = {
-  children: ReactNode;
+  children?: ReactNode;
   title?: ReactNode;
   tooltip?: ReactElement<any>;
   actions?: ReactNode;
@@ -12,7 +12,7 @@ type Props = {
   interactive?: boolean;
 };
 
-export default function Card(props: Props): JSX.Element {
+export default function Card(props: Props) {
   const { children, title, tooltip, actions, gap, interactive } = props;
 
   const headerTitle = tooltip ? (
@@ -51,7 +51,9 @@ export default function Card(props: Props): JSX.Element {
 
 Card.defaultProps = {
   gap: 2,
+  children: undefined,
   title: undefined,
   tooltip: undefined,
   actions: undefined,
+  interactive: false,
 };

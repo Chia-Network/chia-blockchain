@@ -23,3 +23,8 @@ export default function Accordion(props: Props) {
     </AnimatePresence>
   );
 }
+
+Accordion.defaultProps = {
+  children: undefined,
+  expanded: false,
+};

@@ -15,6 +15,7 @@ export default function useSelectFile(): () => Promise<string | undefined> {
 
       return filePath;
     }
+
     openDialog(
       <AlertDialog>
         <Trans id="useSelectFile.availableOnlyFromElectron">

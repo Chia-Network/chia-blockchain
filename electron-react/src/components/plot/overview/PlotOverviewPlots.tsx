@@ -84,59 +84,59 @@ export default function PlotOverviewPlots() {
 
   return (
     <>
-    <PlotHeader />
-    <Card
-      title={(
-        <Trans id="PlotOverviewPlots.title">
-          Local Harvester Plots
-        </Trans>
-      )}
-    >
-      <Flex gap={1}>
-        <Flex flexGrow={1}>
+      <PlotHeader />
+      <Card
+        title={(
+          <Trans id="PlotOverviewPlots.title">
+            Local Harvester Plots
+          </Trans>
+        )}
+      >
+        <Flex gap={1}>
+          <Flex flexGrow={1}>
+            <Typography variant="body2">
+              <Trans id="PlotOverviewPlots.description">
+                Want to earn more Chia? Add more plots to your farm.
+              </Trans>
+            </Typography>
+          </Flex>
+
           <Typography variant="body2">
-            <Trans id="PlotOverviewPlots.description">
-              Want to earn more Chia? Add more plots to your farm.
+            <Trans id="PlotOverviewPlots.totalPlotSize">
+              Total Plot Size:
             </Trans>
+            {' '}
+            <strong>
+              <FormatBytes value={totalPlotsSize} precision={3} />
+            </strong>
           </Typography>
         </Flex>
 
-        <Typography variant="body2">
-          <Trans id="PlotOverviewPlots.description">
-            Total Plot Size:
-          </Trans>
-          {' '}
-          <strong>
-            <FormatBytes value={totalPlotsSize} precision={3} />
-          </strong>
-        </Typography>
-      </Flex>
+        <Table cols={cols} rows={sortedPlots} pages>
+          {plotQueue.map((item) => {
+            const { id } = item;
 
-      <Table cols={cols} rows={sortedPlots} pages>
-        {plotQueue.map((item) => {
-          const { id } = item;
-
-          return (
-            <StyledTableRowQueue key={id}>
-              <TableCell>
-                <PlotQueueSize queueItem={item} />
-              </TableCell>
-              <TableCell />
-              <TableCell />
-              <TableCell />
-              <TableCell />
-              <TableCell />
-              <TableCell>
-                <PlotQueueIndicator queueItem={item} />
-              </TableCell>
-              <TableCell>
-                <PlotQueueActions queueItem={item} />
-              </TableCell>
-            </StyledTableRowQueue>
-          );
-        })}
-      </Table>
-    </Card>
+            return (
+              <StyledTableRowQueue key={id}>
+                <TableCell>
+                  <PlotQueueSize queueItem={item} />
+                </TableCell>
+                <TableCell />
+                <TableCell />
+                <TableCell />
+                <TableCell />
+                <TableCell />
+                <TableCell>
+                  <PlotQueueIndicator queueItem={item} />
+                </TableCell>
+                <TableCell>
+                  <PlotQueueActions queueItem={item} />
+                </TableCell>
+              </StyledTableRowQueue>
+            );
+          })}
+        </Table>
+      </Card>
     </>
   );
 }

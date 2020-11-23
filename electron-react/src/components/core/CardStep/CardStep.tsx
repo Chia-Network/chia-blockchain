@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import styled from 'styled-components';
-import Flex from '../Flex';
 import { Avatar, Card, CardContent, CardHeader, Divider, Grid, Typography } from '@material-ui/core';
+import Flex from '../Flex';
 
 const StyledCardContent = styled(CardContent)`
   padding-left: 72px;

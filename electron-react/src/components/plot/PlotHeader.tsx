@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Flex } from '@chia/core';
+import { createTeleporter } from 'react-teleporter';
 import { useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { Button } from '@material-ui/core';
@@ -9,6 +10,12 @@ import RefreshIcon from '@material-ui/icons/Refresh';
 import {
   refreshPlots,
 } from '../../modules/harvesterMessages';
+
+const PlotHeaderTeleporter = createTeleporter();
+
+export const PlotHeaderSource = PlotHeaderTeleporter.Source;
+
+export const PlotHeaderTarget = PlotHeaderTeleporter.Target;
 
 export default function PlotHeader() {
   const history = useHistory();
@@ -25,8 +32,7 @@ export default function PlotHeader() {
   return (
     <div>
       <Flex alignItems="center">
-        <Flex flexGrow={1}>
-        </Flex>
+        <Flex flexGrow={1} />
         <div>
           <Button
             color="secondary"

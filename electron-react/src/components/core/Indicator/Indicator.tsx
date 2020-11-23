@@ -11,7 +11,7 @@ const StyledIndicator = styled.div`
 
 type Props = {
   color: string;
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 export default function PlotStatus(props: Props) {
@@ -27,3 +27,7 @@ export default function PlotStatus(props: Props) {
     </Flex>
   );
 }
+
+PlotStatus.defaultProps = {
+  children: undefined,
+};

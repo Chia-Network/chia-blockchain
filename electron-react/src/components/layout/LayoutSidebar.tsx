@@ -24,7 +24,6 @@ const StyledBody = styled(Box)`
 const StyledContainer = styled(Container)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
   padding-bottom: ${({ theme }) => `${theme.spacing(3)}px`};
-  
 `;
 
 const StyledInnerContainer = styled(Box)`
@@ -32,12 +31,12 @@ const StyledInnerContainer = styled(Box)`
 `;
 
 type Props = {
-  children: ReactElement<any>;
+  children?: ReactElement<any>;
   sidebar: ReactNode,
   title?: ReactNode;
 };
 
-export default function LayoutSidebar(props: Props): JSX.Element {
+export default function LayoutSidebar(props: Props) {
   const { children, title, sidebar } = props;
 
   return (
@@ -55,10 +54,16 @@ export default function LayoutSidebar(props: Props): JSX.Element {
         </StyledSideBarContainer>
         <StyledBody flexGrow={1}>
           <StyledInnerContainer>
-            <StyledContainer maxWidth="lg">{children}</StyledContainer>
+            {children && (
+              <StyledContainer maxWidth="lg">{children}</StyledContainer>
+            )}
           </StyledInnerContainer>
         </StyledBody>
       </Flex>
     </>
   );
 }
+
+LayoutSidebar.defaultProps = {
+  children: undefined,
+};

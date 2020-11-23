@@ -17,7 +17,7 @@ try {
   if (localStorage.getItem('plot_queue')) {
     initialState.plot_queue = JSON.parse(localStorage.getItem('plot_queue'));
   }
-} catch  {
+} catch {
   localStorage.removeItem('plot_queue');
 }
 

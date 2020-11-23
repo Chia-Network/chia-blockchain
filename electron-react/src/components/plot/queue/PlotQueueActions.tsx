@@ -1,8 +1,7 @@
-import { ConfirmDialog } from '@chia/core';
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useDispatch } from 'react-redux';
-import { More } from '@chia/core';
+import { ConfirmDialog, More } from '@chia/core';
 import { Box, ListItemIcon, MenuItem, Typography } from '@material-ui/core';
 import {
   DeleteForever as DeleteForeverIcon,

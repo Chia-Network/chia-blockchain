@@ -1,7 +1,14 @@
 {
-   "localeDir": "src/locales/",
-   "srcPathDirs": ["src/"],
-   "format": "po",
-   "sourceLocale": "en",
-   "fallbackLocale": "en",
+  "catalogs": [{
+    "path": "<rootDir>/src/locales/{locale}/messages",
+    "include": ["<rootDir>/src"],
+    "exclude": ["**/node_modules/**"]
+  }],
+  "locales": ["en", "sk"],
+  "compileNamespace": "es",
+  "format": "po",
+  "sourceLocale": "en",
+  "fallbackLocales": {
+    default: "en"
+  }
 }

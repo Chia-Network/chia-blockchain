@@ -18,7 +18,7 @@ const StyledPaper = styled(Paper)`
 `;
 
 type Props = {
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 export default function Log(props: Props) {
@@ -30,3 +30,7 @@ export default function Log(props: Props) {
     </StyledPaper>
   );
 }
+
+Log.defaultProps = {
+  children: undefined,
+};

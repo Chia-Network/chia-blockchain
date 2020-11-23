@@ -10,12 +10,15 @@ const StyledHelpIcon = styled(HelpIcon)`
 `;
 
 type Props = {
-  children: ReactElement<any>;
+  children?: ReactElement<any>;
   interactive?: boolean;
 };
 
 export default function TooltipIcon(props: Props) {
   const { children, interactive } = props;
+  if (!children) {
+    return null;
+  }
 
   return (
     <Tooltip title={children} interactive={interactive} arrow>
@@ -23,3 +26,7 @@ export default function TooltipIcon(props: Props) {
     </Tooltip>
   );
 }
+
+TooltipIcon.defaultProps = {
+  children: undefined,
+};

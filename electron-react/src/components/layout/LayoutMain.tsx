@@ -13,11 +13,11 @@ const StyledInnerContainer = styled(Box)`
 `;
 
 type Props = {
-  children: ReactElement<any>;
+  children?: ReactElement<any>;
   title?: ReactNode;
 };
 
-export default function LayoutMain(props: Props): JSX.Element {
+export default function LayoutMain(props: Props) {
   const { children, title } = props;
 
   return (
@@ -25,8 +25,14 @@ export default function LayoutMain(props: Props): JSX.Element {
       <DashboardTitle>{title}</DashboardTitle>
 
       <StyledInnerContainer>
-        <StyledContainer maxWidth="lg">{children}</StyledContainer>
+        {children && (
+          <StyledContainer maxWidth="lg">{children}</StyledContainer>
+        )}
       </StyledInnerContainer>
     </>
   );
 }
+
+LayoutMain.defaultProps = {
+  children: undefined,
+};

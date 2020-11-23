@@ -43,7 +43,7 @@ export default function PlotOverviewHero() {
           <Divider />
 
           <Typography variant="body1">
-            <Trans id="PlotHero.description">
+            <Trans id="PlotHero.doYouHavePlot">
               {'Do you have existing plots on this machine? '}
 
               <Link onClick={handleAddPlotDirectory}>Add Plot Directory</Link>

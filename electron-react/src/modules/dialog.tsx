@@ -17,7 +17,8 @@ export function openDialog(
   element: ReactNode,
 ): ThunkAction<any, RootState, unknown, Action<Object>> {
   return (dispatch) => {
-    const id = nextId++;
+    const id = nextId;
+    nextId += 1;
 
     const promise = new Promise((resolve, reject) => {
       dispatch({
