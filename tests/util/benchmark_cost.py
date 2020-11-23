@@ -37,9 +37,9 @@ def run_and_return_cost_time(chialisp):
     " (q ()))))))) (c (q ((c (i (f (r (a))) (q (i (q 1) ((c (f (a)) (c (f (a))"
     " (c (- (f (r (a))) (q 1)) (c (f (r (r (a)))) (q ()))))))"
     " ((c (f (r (r (a)))) (q ()))))) (q (q ()))) (a)))) (a))))"
-    loop_program = Program(binutils.assemble(clvm_loop))
+    loop_program = Program.to(binutils.assemble(clvm_loop))
     clvm_loop_solution = f"(1000 {chialisp})"
-    solution_program = Program(binutils.assemble(clvm_loop_solution))
+    solution_program = Program.to(binutils.assemble(clvm_loop_solution))
 
     cost, sexp = loop_program.run_with_cost(solution_program)
 
