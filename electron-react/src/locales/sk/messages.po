@@ -31,11 +31,11 @@ msgstr "Adresa príjemcu"
 
 #: src/components/core/AdvancedOptions/AdvancedOptions.tsx:35
 msgid "AdvancedOptions.hideAdvancedOptions"
-msgstr ""
+msgstr "Skryť rozšírené možnosti"
 
 #: src/components/core/AdvancedOptions/AdvancedOptions.tsx:40
 msgid "AdvancedOptions.showAdvancedOptions"
-msgstr ""
+msgstr "Zobraziť rozšírené možnosti"
 
 #: src/components/app/AppRouter.tsx:18
 msgid "Application.closing"
@@ -143,7 +143,7 @@ msgstr "Celkové poplatky v tomto bloku idú ťažiarovi"
 
 #: src/components/block/Block.jsx:266
 msgid "Block.feesPuzzleHash"
-msgstr ""
+msgstr "Poplatky puzzle hash"
 
 #: src/components/block/Block.jsx:149
 msgid "Block.headerHash"
@@ -528,7 +528,7 @@ msgstr "Vytvorte obchodnú ponuku"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
 msgid "CreatePlot.delayDescription"
-msgstr ""
+msgstr "Minút"
 
 #: src/components/plotter/Plotter.jsx:433
 #~ msgid "CreatePlot.description"
@@ -698,39 +698,39 @@ msgstr "Zmazať všetky kľúče"
 
 #: src/components/selectKey/SelectKey.tsx:41
 msgid "DeleteKey.back"
-msgstr ""
+msgstr "Späť"
 
 #: src/components/selectKey/SelectKey.tsx:41
 msgid "DeleteKey.delete"
-msgstr ""
+msgstr "Vymazať"
 
 #: src/components/selectKey/SelectKey.tsx:42
 msgid "DeleteKey.description"
-msgstr ""
+msgstr "Odstránením kľúča natrvalo odstránite kľúč z počítača. Uistite sa, že máte zálohy. Ste si istý, že chcete pokračovať?"
 
 #: src/components/selectKey/SelectKey.tsx:41
 msgid "DeleteKey.title"
-msgstr ""
+msgstr "Odstrániť kľúč"
 
 #: src/components/farm/overview/FarmOverview.tsx:13
 msgid "Farm.title"
-msgstr ""
+msgstr "Prehľad vašej farmy"
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:14
 msgid "FarmCardCoinbaseRewards.title"
-msgstr ""
+msgstr "Odmeny za ťažbu XCH"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:18
 msgid "FarmCardExpectedTimeToWin.title"
-msgstr ""
+msgstr "Očakávaný čas na výhru"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:18
 msgid "FarmCardExpectedTimeToWin.tooltip"
-msgstr ""
+msgstr "Máte {0}% priestoru v sieti, takže ťažba bloku bude trvať {totalHours}"
 
 #: src/components/farm/card/FarmCardFeesReward.tsx:14
 msgid "FarmCardFeesReward.title"
-msgstr ""
+msgstr "Vyzbierané poplatky XCH"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
 msgid "FarmCardLastHeightFarmed.noBlocksFarmedYet"
@@ -738,54 +738,54 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
 msgid "FarmCardLastHeightFarmed.title"
-msgstr ""
+msgstr "Posledná spracovaná pozícia"
 
 #: src/components/farm/card/FarmCardPlotCount.tsx:7
 msgid "FarmCardPlotCount.title"
-msgstr ""
+msgstr "Počet polí"
 
 #: src/components/farm/card/FarmCardStatus.tsx:6
 msgid "FarmCardStatus.title"
-msgstr ""
+msgstr "Stav ťažby"
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:14
 msgid "FarmCardTotalChiaFarmed.title"
-msgstr ""
+msgstr "Celková vyťažená Chia"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "FarmCardTotalNetworkSpace.title"
-msgstr ""
+msgstr "Celková veľkosť siete"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "FarmCardTotalNetworkSpace.tooltip"
-msgstr ""
+msgstr "Najlepší odhad za poslednú 1 hodinu"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:14
 msgid "FarmCardTotalSizeOfPlots.title"
-msgstr ""
+msgstr "Celková veľkosť polí"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:47
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:47
 msgid "FarmFullNodeConnections.actions"
-msgstr ""
+msgstr "Akcie"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:70
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:69
 msgid "FarmFullNodeConnections.connectionStatus"
-msgstr ""
+msgstr "Stav pripojenia"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:11
 msgid "FarmFullNodeConnections.date"
-msgstr ""
+msgstr "Dátum"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:62
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:62
 msgid "FarmFullNodeConnections.description"
-msgstr ""
+msgstr "Kombajn je služba bežiaca na stroji, kde sú skutočne uložené polia. Nižšie si pozrite svoju sieť prepojených kombajnov. Viac informácií"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:7
 msgid "FarmFullNodeConnections.height"
-msgstr ""
+msgstr "Pozícia"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:25
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:25
@@ -800,20 +800,20 @@ msgstr ""
 #: src/components/farm/FarmFullNodeConnections.tsx:32
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:32
 msgid "FarmFullNodeConnections.port"
-msgstr ""
+msgstr "Port"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:15
 msgid "FarmFullNodeConnections.time"
-msgstr ""
+msgstr "Čas"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:60
 msgid "FarmFullNodeConnections.title"
-msgstr ""
+msgstr "Vaše pripojenie k sieti"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
 msgid "FarmFullNodeConnections.upDown"
-msgstr ""
+msgstr "Odoslané/Stiahnuté"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:21
 msgid "FarmLastAttemptedProof.title"
@@ -825,16 +825,16 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:41
 msgid "FarmLatestBlockChallenges.bestEstimate"
-msgstr ""
+msgstr "Najlepší odhad"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:46
 msgid "FarmLatestBlockChallenges.bestEstimateTooltip"
-msgstr ""
+msgstr "Najlepší odhad je, koľko sekúnd musí byť preukázaních pre vaše dôkazy."
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 #: src/components/farm/FarmLatestBlockChallenges.tsx:27
 msgid "FarmLatestBlockChallenges.challengeHash"
-msgstr ""
+msgstr "Hash"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:61
 #: src/components/farm/FarmLatestBlockChallenges.tsx:67
@@ -843,23 +843,23 @@ msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:20
 msgid "FarmLatestBlockChallenges.height"
-msgstr ""
+msgstr "Pozícia"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:75
 msgid "FarmLatestBlockChallenges.subDescription"
-msgstr ""
+msgstr "* Chcete viac preskúmať Chia bloky? Vyskúšajte aplikáciu <0>Chia Explorer</0> vytvorenú open source vývojárom."
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:59
 msgid "FarmLatestBlockChallenges.title"
-msgstr ""
+msgstr "Najnovšie blokové výzvy"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:29
 msgid "FarmOverviewHero.addAPlot"
-msgstr ""
+msgstr "Pridať pole"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:21
 msgid "FarmOverviewHero.description"
-msgstr ""
+msgstr "Ťažiari zarábajú blokové odmeny a transakčné poplatky tým, že venujú sieti voľný priestor, aby pomohli zabezpečiť transakcie. Toto je miesto, kde bude vaša farma, keď pridáte pole. <0>Ďalšie informácie</0>"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:60
 msgid "FarmYourHarvesterNetwork.title"
@@ -880,11 +880,11 @@ msgstr "Ťažba"
 
 #: src/components/farm/FarmerStatus.tsx:39
 msgid "FarmerStatus.error"
-msgstr ""
+msgstr "Chyba"
 
 #: src/components/farm/FarmerStatus.tsx:39
 msgid "FarmerStatus.farming"
-msgstr ""
+msgstr "Prebieha"
 
 #: src/components/farmer/Farmer.jsx:161
 #: src/components/farmer/Farmer.jsx:170
@@ -901,7 +901,7 @@ msgstr ""
 
 #: src/components/farm/FarmerStatus.tsx:39
 msgid "FarmerStatus.synching"
-msgstr ""
+msgstr "Synchronizácia"
 
 #: src/components/farmer/Farmer.jsx:238
 #~ msgid "FarmerStatus.title"
@@ -917,19 +917,19 @@ msgstr ""
 
 #: src/components/core/FormatConnectionStatus/FormatConnectionStatus.tsx:47
 msgid "FormatConnectionStatus.connected"
-msgstr ""
+msgstr "Pripojené"
 
 #: src/components/core/FormatConnectionStatus/FormatConnectionStatus.tsx:48
 msgid "FormatConnectionStatus.notConnected"
-msgstr ""
+msgstr "Nepripojené"
 
 #: src/components/fullNode/FullNode.jsx:508
 msgid "FullNode.title"
-msgstr "Všetky uzly"
+msgstr "Sieť"
 
 #: src/components/fullNode/FullNode.jsx:363
 msgid "FullNodeStatus.title"
-msgstr "Stav všetkých uzlov"
+msgstr "Stav siete"
 
 #: src/components/wallet/standard/WalletStandard.tsx:417
 msgid "HistoryCard.title"
@@ -994,7 +994,7 @@ msgstr "Akceptovať"
 #: src/components/trading/TradesTable.tsx:16
 #: src/components/trading/ViewOffer.jsx:209
 msgid "OfferView.amount"
-msgstr ""
+msgstr "Suma"
 
 #: src/components/trading/ViewOffer.jsx:244
 msgid "OfferView.cancel"
@@ -1008,7 +1008,7 @@ msgstr ""
 #: src/components/trading/TradesTable.tsx:13
 #: src/components/trading/ViewOffer.jsx:206
 msgid "OfferView.side"
-msgstr ""
+msgstr "Strana"
 
 #: src/components/trading/ViewOffer.jsx:231
 #~ msgid "OfferView.title"
@@ -1016,7 +1016,7 @@ msgstr ""
 
 #: src/components/trading/ViewOffer.jsx:237
 msgid "OfferView.title2"
-msgstr ""
+msgstr "Ponuka"
 
 #: src/components/trading/TradingOverview.jsx:425
 msgid "PendingTrades.title"
@@ -1024,30 +1024,30 @@ msgstr "Vytvorené ponuky"
 
 #: src/components/plot/Plot.tsx:13
 msgid "Plot.title"
-msgstr ""
+msgstr "Pole"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "PlotAction.deleteButton"
-msgstr ""
+msgstr "Vymazať"
 
 #: src/components/plot/PlotAction.tsx:25
 #: src/components/plot/queue/PlotQueueActions.tsx:27
 msgid "PlotAction.deleteDescription"
-msgstr ""
+msgstr "Naozaj chcete odstrániť pole? Pole nie je možné obnoviť."
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:26
 msgid "PlotAction.deleteTitle"
-msgstr ""
+msgstr "Zmazať pole"
 
 #: src/components/plot/add/PlotAdd.tsx:54
 msgid "PlotAdd.createPlot"
-msgstr ""
+msgstr "Vytvoriť pole"
 
 #: src/components/plot/add/PlotAdd.tsx:42
 msgid "PlotAdd.title"
-msgstr ""
+msgstr "Pridať pole"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:19
 msgid "PlotAddChooseSize.description"
@@ -1055,15 +1055,15 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:37
 msgid "PlotAddChooseSize.kLow"
-msgstr ""
+msgstr "Minimálna požadovaná veľkosť pre sieť je k = 32"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:29
 msgid "PlotAddChooseSize.plotSize"
-msgstr ""
+msgstr "Velkosť poľa"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:17
 msgid "PlotAddChooseSize.title"
-msgstr ""
+msgstr "Vyberte veľkosť poľa"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:57
 msgid "PlotAddNumberOfPlots.delay"
