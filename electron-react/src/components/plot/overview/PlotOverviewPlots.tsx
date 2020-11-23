@@ -17,7 +17,7 @@ import PlotQueueIndicator from '../queue/PlotQueueIndicator';
 
 const StyledTableRowQueue = styled(TableRow)`
   background-color: ${({ theme }) => theme.palette.type === 'dark' 
-    ? '#FEBA2C'
+    ? '#1C87FB'
     : '#F6EEDF'};
 `;
 

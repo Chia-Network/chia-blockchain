@@ -8,7 +8,7 @@ const StyledContent = styled(CardContent)`
 `;
 
 type Props = {
-  children: ReactNode,
+  children?: ReactNode,
 };
 
 export default function CardHero(props: Props) {
@@ -24,3 +24,7 @@ export default function CardHero(props: Props) {
     </Card>
   );
 }
+
+CardHero.defaultProps = {
+  children: undefined,
+};

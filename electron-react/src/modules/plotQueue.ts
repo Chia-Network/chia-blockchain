@@ -122,7 +122,7 @@ export function plotQueueAdd(
 export function plotQueueDelete(
   id: number,
 ): ThunkAction<any, RootState, unknown, Action<Object>> {
-  return async (dispatch, getState) => {
+  return (dispatch, getState) => {
     const {
       plot_queue: { queue },
     } = getState();

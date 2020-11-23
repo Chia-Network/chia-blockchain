@@ -18,7 +18,7 @@
     "styleguide:build": "styleguidist build",
     "locale:extract": "lingui extract",
     "locale:compile": "lingui compile",
-    "eslint": "eslint src/**/*.[jt]s{,x}",
+    "eslint": "eslint src/**/*.[t]s{,x}",
     "format": "prettier --write src/**/*.[jt]s{,x} && eslint --fix src/**/*.[jt]s{,x}",
     "lint": "tsc --noEmit && npm run eslint"
   },

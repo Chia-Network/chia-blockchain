@@ -44,7 +44,7 @@ export default function SelectKey() {
   const hasFingerprints =
     publicKeyFingerprints && !!publicKeyFingerprints.length;
 
-  async function handleClick(fingerprint: Fingerprint) {
+  function handleClick(fingerprint: Fingerprint) {
     dispatch(resetMnemonic());
     dispatch(selectFingerprint(fingerprint));
     dispatch(login_action(fingerprint));
