@@ -5,7 +5,6 @@
     "exclude": ["**/node_modules/**"]
   }],
   "locales": ["en", "sk"],
-  "compileNamespace": "es",
   "format": "po",
   "sourceLocale": "en",
   "fallbackLocales": {
