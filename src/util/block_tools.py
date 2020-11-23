@@ -103,7 +103,7 @@ class BlockTools:
             mkdir(temp_dir)
             args = Namespace()
             # Can't go much lower than 18, since plots start having no solutions
-            args.size = 18
+            args.size = 19
             # Uses many plots for testing, in order to guarantee proofs of space at every height
             args.num = 320
             args.buffer = 100
@@ -202,7 +202,7 @@ class BlockTools:
     ) -> List[FullBlock]:
         transaction_data_included = False
         if time_per_sub_block is None:
-            time_per_sub_block = constants.SLOT_TIME_TARGET / constants.SLOT_SUB_BLOCKS_TARGET
+            time_per_sub_block: float = float(constants.SLOT_TIME_TARGET) / float(constants.SLOT_SUB_BLOCKS_TARGET)
 
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
@@ -848,14 +848,14 @@ def finish_sub_block(
     slot_iters = calculate_sub_slot_iters(constants, ips)
     if len(finished_sub_slots) == 0:
         new_ip_iters = unfinished_block.total_iters - latest_sub_block.total_iters
+        if new_ip_iters < 0:
+            print("Here.")
         cc_vdf_input = latest_sub_block.challenge_vdf_output
         rc_vdf_challenge = latest_sub_block.reward_infusion_new_challenge
     else:
         new_ip_iters = ip_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
         rc_vdf_challenge = slot_rc_challenge
-    if new_ip_iters < 0:
-        print("Bad here")
     cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
         constants,
         cc_vdf_input,

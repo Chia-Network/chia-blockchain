@@ -19,7 +19,6 @@ testnet_kwargs = {
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_PLOT_FILTER": 3,  # H(plot signature of the challenge) must start with these many zeroes
-    "NUMBER_ZERO_BITS_SP_FILTER": 4,  # H(plot signature of the challenge) must start with these many zeroes
     "SLOT_TIME_TARGET": 300,  # The target number of seconds per slot
     "NUM_SP_INTERVALS_EXTRA": 3,  # The number of sp intervals to add to the signage point
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more

@@ -1,7 +1,12 @@
 from typing import Dict, Optional, Union
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_ip_iters, calculate_sp_iters, is_overflow_sub_block
+from src.consensus.pot_iterations import (
+    calculate_ip_iters,
+    calculate_sp_iters,
+    is_overflow_sub_block,
+    calculate_sub_slot_iters,
+)
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import get_next_ips, finishes_sub_epoch, get_next_difficulty
 from src.full_node.sub_block_record import SubBlockRecord
@@ -60,11 +65,12 @@ def next_sub_epoch_summary(
         ips = constants.IPS_STARTING
     else:
         assert prev_sb is not None
+        # This is the ips of the current block
         ips = get_next_ips(
             constants,
             sub_blocks,
             height_to_hash,
-            block.prev_header_hash,
+            prev_sb.prev_hash,
             prev_sb.height,
             prev_sb.ips,
             prev_sb.deficit,
@@ -85,28 +91,30 @@ def next_sub_epoch_summary(
         if finishes_epoch:
             sp_iters = calculate_sp_iters(constants, ips, signage_point_index)
             ip_iters = calculate_ip_iters(constants, ips, signage_point_index, required_iters)
+            sub_slot_iters = calculate_sub_slot_iters(constants, ips)
             next_difficulty = get_next_difficulty(
                 constants,
                 sub_blocks,
                 height_to_hash,
-                block.header_hash,
+                block.prev_header_hash,
                 block.height,
                 uint64(block.weight - prev_sb.weight),
                 deficit,
                 True,
-                uint128(block.total_iters - ip_iters + sp_iters),
+                uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
             )
             next_ips = get_next_ips(
                 constants,
                 sub_blocks,
                 height_to_hash,
-                block.header_hash,
+                block.prev_header_hash,
                 block.height,
                 ips,
                 deficit,
                 True,
-                uint128(block.total_iters - ip_iters + sp_iters),
+                uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
             )
+            sp_total_iters = uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0))
         else:
             next_difficulty = None
             next_ips = None
