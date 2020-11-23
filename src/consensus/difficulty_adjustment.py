@@ -286,6 +286,10 @@ def get_next_difficulty(
         return max([uint64(1), new_difficulty, min_diff])
 
 
+def cc_sp_hash(args):
+    pass
+
+
 def get_ips_and_difficulty(
     constants: ConsensusConstants,
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
@@ -304,7 +308,7 @@ def get_ips_and_difficulty(
         # prev block is genesis
         prev_difficulty: uint64 = uint64(prev_sb.weight)
 
-    new_sub_slot = len(header_block.finished_sub_slots) > 0
+    sp_total_iters = prev_sb.sp_total_iters(constants)
     difficulty: uint64 = get_next_difficulty(
         constants,
         sub_blocks,
@@ -313,8 +317,8 @@ def get_ips_and_difficulty(
         prev_sb.height,
         prev_difficulty,
         prev_sb.deficit,
-        new_sub_slot,
-        prev_sb.total_iters,
+        len(header_block.finished_sub_slots) > 0,
+        sp_total_iters,
     )
     ips: uint64 = get_next_ips(
         constants,
@@ -324,7 +328,7 @@ def get_ips_and_difficulty(
         prev_sb.height,
         prev_sb.ips,
         prev_sb.deficit,
-        new_sub_slot,
-        prev_sb.total_iters,
+        len(header_block.finished_sub_slots) > 0,
+        sp_total_iters,
     )
     return ips, difficulty
