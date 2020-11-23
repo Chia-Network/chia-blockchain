@@ -1,7 +1,8 @@
 from typing import Dict, Optional, List
 from src.types.full_block import FullBlock
-from src.types.header import Header
+from src.full_node.sub_block_record import SubBlockRecord
 from src.types.sized_bytes import bytes32
+from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.ints import uint32, uint64
 from src.types.coin_record import CoinRecord
 from src.rpc.rpc_client import RpcClient
@@ -18,38 +19,35 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_blockchain_state(self) -> Dict:
         response = await self.fetch("get_blockchain_state", {})
-        response["blockchain_state"]["tips"] = [
-            Header.from_json_dict(tip) for tip in response["blockchain_state"]["tips"]
-        ]
-        response["blockchain_state"]["lca"] = Header.from_json_dict(response["blockchain_state"]["lca"])
+        response["blockchain_state"]["peak"] = SubBlockRecord.from_json_dict(response["blockchain_state"]["peak"])
         return response["blockchain_state"]
 
-    async def get_block(self, header_hash) -> Optional[FullBlock]:
+    async def get_sub_block(self, header_hash) -> Optional[FullBlock]:
         try:
-            response = await self.fetch("get_block", {"header_hash": header_hash.hex()})
+            response = await self.fetch("get_sub_block", {"header_hash": header_hash.hex()})
         except Exception:
             return None
         return FullBlock.from_json_dict(response["sub_block"])
 
-    async def get_header_by_height(self, header_height) -> Optional[Header]:
+    async def get_sub_block_record_by_height(self, header_height) -> Optional[SubBlockRecord]:
         try:
-            response = await self.fetch("get_header_by_height", {"height": header_height})
+            response = await self.fetch("get_sub_block_record_by_height", {"height": header_height})
         except Exception:
             return None
-        return Header.from_json_dict(response["header"])
+        return SubBlockRecord.from_json_dict(response["sub_block_record"])
 
-    async def get_header(self, header_hash) -> Optional[Header]:
+    async def get_sub_block_record(self, header_hash) -> Optional[SubBlockRecord]:
         try:
-            response = await self.fetch("get_header", {"header_hash": header_hash.hex()})
-            if response["header"] is None:
+            response = await self.fetch("get_sub_block_record", {"header_hash": header_hash.hex()})
+            if response["sub_block_record"] is None:
                 return None
         except Exception:
             return None
-        return Header.from_json_dict(response["header"])
+        return SubBlockRecord.from_json_dict(response["sub_block_record"])
 
-    async def get_unfinished_block_headers(self, height: uint32) -> List[Header]:
-        response = await self.fetch("get_unfinished_block_headers", {"height": height})
-        return [Header.from_json_dict(r) for r in response["headers"]]
+    async def get_unfinished_sub_block_header_blocks(self, height: uint32) -> List[UnfinishedHeaderBlock]:
+        response = await self.fetch("get_unfinished_sub_block_header_blocks", {"height": height})
+        return [UnfinishedHeaderBlock.from_json_dict(r) for r in response["s"]]
 
     async def get_network_space(self, newer_block_header_hash: str, older_block_header_hash: str) -> Optional[uint64]:
         try:
@@ -73,6 +71,6 @@ class FullNodeRpcClient(RpcClient):
             CoinRecord.from_json_dict(coin) for coin in ((await self.fetch("get_unspent_coins", d))["coin_records"])
         ]
 
-    async def get_heaviest_block_seen(self) -> Header:
+    async def get_heaviest_block_seen(self) -> SubBlockRecord:
         response = await self.fetch("get_heaviest_block_seen", {})
-        return Header.from_json_dict(response["tip"])
+        return SubBlockRecord.from_json_dict(response["peak"])
