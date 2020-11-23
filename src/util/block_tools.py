@@ -105,7 +105,7 @@ class BlockTools:
             # Can't go much lower than 18, since plots start having no solutions
             args.size = 18
             # Uses many plots for testing, in order to guarantee proofs of space at every height
-            args.num = 160
+            args.num = 320
             args.buffer = 100
             args.farmer_public_key = bytes(self.farmer_pk).hex()
             args.pool_public_key = bytes(self.pool_pk).hex()
@@ -117,7 +117,7 @@ class BlockTools:
             args.buckets = 0
             args.stripe_size = 2000
             args.num_threads = 0
-            test_private_keys = [AugSchemeMPL.key_gen(std_hash(bytes([i]))) for i in range(args.num)]
+            test_private_keys = [AugSchemeMPL.key_gen(std_hash(i.to_bytes(4, "big"))) for i in range(args.num)]
             try:
                 # No datetime in the filename, to get deterministic filenames and not re-plot
                 create_plots(
