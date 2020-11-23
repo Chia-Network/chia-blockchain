@@ -13,7 +13,6 @@ test_constants = constants.replace(
         "DIFFICULTY_STARTING": 1000,
         "MIN_ITERS_STARTING": 100000,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,
-        "NUMBER_ZERO_BITS_SP_FILTER": 1,
     }
 )
 

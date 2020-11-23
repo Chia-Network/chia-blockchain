@@ -27,13 +27,12 @@ from tests.time_out_assert import time_out_assert
 
 test_constants = constants.replace(
     **{
-        "DIFFICULTY_STARTING": 2 ** 3,
+        "DIFFICULTY_STARTING": 2 ** 5,
         "DISCRIMINANT_SIZE_BITS": 32,
         "SUB_EPOCH_SUB_BLOCKS": 70,
         "EPOCH_SUB_BLOCKS": 140,
-        "IPS_STARTING": 2 ** 8,
+        "IPS_STARTING": 2 ** 7,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
-        "NUMBER_ZERO_BITS_SP_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "MAX_FUTURE_TIME": 3600
         * 24
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
