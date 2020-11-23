@@ -19,6 +19,10 @@ from src.util.json_util import dict_to_json_str
 from src.util.ints import uint8, uint64, uint32
 from src.wallet.block_record import BlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
+from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
+    calculate_synthetic_secret_key,
+    DEFAULT_HIDDEN_PUZZLE_HASH,
+)
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet import Wallet
@@ -576,13 +580,16 @@ class CCWallet:
     ) -> List[G2Element]:
         puzzle_hash = innerpuz.get_tree_hash()
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+        synthetic_secret_key = calculate_synthetic_secret_key(
+            private, DEFAULT_HIDDEN_PUZZLE_HASH
+        )
         sigs: List[G2Element] = []
         code_ = [innerpuz, innersol]
         sexp = Program.to(code_)
         error, conditions, cost = conditions_dict_for_solution(sexp)
         if conditions is not None:
             for _, msg in pkm_pairs_for_conditions_dict(conditions, coin_name):
-                signature = AugSchemeMPL.sign(private, msg)
+                signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 sigs.append(signature)
         return sigs
 
