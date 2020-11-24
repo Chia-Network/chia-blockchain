@@ -129,10 +129,15 @@ class TestAddingMoreBlocks:
                 assert err == Err.INVALID_NEW_DIFFICULTY
 
                 # 3c
-                new_finished_ss_3 = recursive_replace(
+                new_finished_ss_3: EndOfSubSlotBundle = recursive_replace(
                     block.finished_sub_slots[0],
                     "challenge_chain.subepoch_summary_hash",
                     bytes([0] * 32),
+                )
+                new_finished_ss_3 = recursive_replace(
+                    new_finished_ss_3,
+                    "reward_chain.challenge_chain_sub_slot_hash",
+                    new_finished_ss_3.challenge_chain.get_hash(),
                 )
                 block_bad_3 = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss_3] + block.finished_sub_slots[1:]
@@ -145,6 +150,11 @@ class TestAddingMoreBlocks:
                     block.finished_sub_slots[0],
                     "challenge_chain.subepoch_summary_hash",
                     None,
+                )
+                new_finished_ss_4 = recursive_replace(
+                    new_finished_ss_4,
+                    "reward_chain.challenge_chain_sub_slot_hash",
+                    new_finished_ss_4.challenge_chain.get_hash(),
                 )
                 block_bad_4 = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss_4] + block.finished_sub_slots[1:]

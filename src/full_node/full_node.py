@@ -812,35 +812,17 @@ class FullNode:
 
         async with self.blockchain.lock:
             # TODO: pre-validate VDFs outside of lock
-            error_code: Optional[Err] = await self.blockchain.validate_unfinished_block(
-                block
-            )
+            required_iters, error_code = await self.blockchain.validate_unfinished_block(block)
             if error_code is not None:
                 raise ConsensusError(error_code)
 
         assert required_iters is not None
 
-        if (
-            await (
-                self.full_node_store.get_unfinished_block(
-                    (challenge_hash, iterations_needed)
-                )
-            )
-            is not None
-        ):
+        # Perform another check, in case we have already concurrently added the same unfinished block
+        if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
             return
 
-        expected_time: uint64 = uint64(
-            int(
-                iterations_needed
-                / (self.full_node_store.get_proof_of_time_estimate_ips())
-            )
-        )
-
-        if expected_time > self.constants.PROPAGATION_DELAY_THRESHOLD:
-            self.log.info(f"Block is slow, expected {expected_time} seconds, waiting")
-            # If this block is slow, sleep to allow faster blocks to come out first
-            await asyncio.sleep(5)
+        self.full_node_store.add_unfinished_block(block)
 
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
             block.reward_chain_sub_block,
@@ -1020,7 +1002,7 @@ class FullNode:
 
         # Checks that the proof of space is valid
         quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
-            self.constants, request.challenge_chain_sp
+            self.constants, request.challenge_hash, request.challenge_chain_sp
         )
         assert len(quality_string) == 32
 
