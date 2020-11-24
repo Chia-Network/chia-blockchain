@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
 import { i18n } from "@lingui/core"
-// import { en, sk } from 'make-plural/plurals';
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
+import { en, sk } from 'make-plural/plurals';
 import { ConnectedRouter } from 'connected-react-router';
 import { ThemeProvider } from '@chia/core';
 import AppRouter from './AppRouter';
@@ -20,6 +20,9 @@ import useLocale from '../../hooks/useLocale';
 import './App.css';
 import AppModalDialogs from './AppModalDialogs';
 import AppLoading from './AppLoading';
+
+i18n.loadLocaleData('en', { plurals: en });
+i18n.loadLocaleData('sk', { plurals: sk });
 
 // @ts-ignore
 i18n.load('en', catalogEn.messages);
