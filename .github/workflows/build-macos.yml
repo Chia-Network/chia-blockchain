@@ -81,6 +81,7 @@ jobs:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
         BUILD_VDF_CLIENT: "N"
       run: |
+        pip uninstall chiavdf
         brew install boost
         sh install.sh
         rm -f venv/lib/python${{ matrix.python-version }}/site-packages/vdf_client
