@@ -488,7 +488,7 @@ msgstr "This feature is available only from electron app"
 
 #: src/components/trading/CreateOffer.jsx:175
 msgid "CreateOffer.buyOrSell"
-msgstr "Buy Or Sell"
+msgstr "Side"
 
 #: src/components/trading/CreateOffer.jsx:154
 msgid "CreateOffer.cancel"
@@ -718,7 +718,7 @@ msgstr "Your Farm Overview"
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:14
 msgid "FarmCardCoinbaseRewards.title"
-msgstr "XCH Framing Rewards"
+msgstr "TXCH Framing Rewards"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:18
 msgid "FarmCardExpectedTimeToWin.title"
@@ -730,7 +730,7 @@ msgstr "You have {0}% of the space on the network, so farming a block will take{
 
 #: src/components/farm/card/FarmCardFeesReward.tsx:14
 msgid "FarmCardFeesReward.title"
-msgstr "XCH Fees Collected"
+msgstr "TXCH Fees Collected"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
 msgid "FarmCardLastHeightFarmed.noBlocksFarmedYet"
