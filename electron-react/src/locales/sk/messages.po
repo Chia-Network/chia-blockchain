@@ -305,7 +305,7 @@ msgstr "Celkový zostatok"
 msgid "ColouredBalanceCard.viewPendingBalances"
 msgstr "Zobraziť nespracované zostatky ..."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:494
+#: src/components/wallet/coloured/WalletColoured.tsx:563
 msgid "ColouredHistoryCard.title"
 msgstr "História"
 
@@ -333,47 +333,47 @@ msgstr "Odoslať"
 msgid "ColouredSendCard.title"
 msgstr "Vytvoriť transakciu"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:541
+#: src/components/wallet/coloured/WalletColoured.tsx:523
 msgid "ColouredTransactionTable.amount"
 msgstr "Suma"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:522
+#: src/components/wallet/coloured/WalletColoured.tsx:504
 msgid "ColouredTransactionTable.confirmed"
 msgstr "Potvrdené"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:535
+#: src/components/wallet/coloured/WalletColoured.tsx:517
 msgid "ColouredTransactionTable.date"
 msgstr "Dátum"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:544
+#: src/components/wallet/coloured/WalletColoured.tsx:526
 msgid "ColouredTransactionTable.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:517
+#: src/components/wallet/coloured/WalletColoured.tsx:499
 msgid "ColouredTransactionTable.incoming"
 msgstr "Prichádzajúce"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:510
+#: src/components/wallet/coloured/WalletColoured.tsx:492
 msgid "ColouredTransactionTable.noPreviousTransactions"
 msgstr "Žiadne predchádzajúce transakcie"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:519
+#: src/components/wallet/coloured/WalletColoured.tsx:501
 msgid "ColouredTransactionTable.outgoing"
 msgstr "Odchádzajúce"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:522
+#: src/components/wallet/coloured/WalletColoured.tsx:504
 msgid "ColouredTransactionTable.pending"
 msgstr "Spracúva sa"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:538
+#: src/components/wallet/coloured/WalletColoured.tsx:520
 msgid "ColouredTransactionTable.status"
 msgstr "Stav"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:532
+#: src/components/wallet/coloured/WalletColoured.tsx:514
 msgid "ColouredTransactionTable.to"
 msgstr "Príjemca"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:529
+#: src/components/wallet/coloured/WalletColoured.tsx:511
 msgid "ColouredTransactionTable.type"
 msgstr "Typ"
 
@@ -680,35 +680,35 @@ msgstr "Obchod"
 msgid "DashboardSideBar.wallets"
 msgstr "Peňaženky"
 
-#: src/components/selectKey/SelectKey.tsx:55
+#: src/components/selectKey/SelectKey.tsx:53
 msgid "DeleteAllKeys.back"
 msgstr "Zrušiť"
 
-#: src/components/selectKey/SelectKey.tsx:55
+#: src/components/selectKey/SelectKey.tsx:53
 msgid "DeleteAllKeys.delete"
 msgstr "Zmazať"
 
-#: src/components/selectKey/SelectKey.tsx:56
+#: src/components/selectKey/SelectKey.tsx:54
 msgid "DeleteAllKeys.description"
 msgstr "Po stlačení tlačidla zmazať odstránite natrvalo všetký kľúče z počítača. Uistite sa, že máte zálohu. Ste si istý, že chcete pokračovať?"
 
-#: src/components/selectKey/SelectKey.tsx:55
+#: src/components/selectKey/SelectKey.tsx:53
 msgid "DeleteAllKeys.title"
 msgstr "Zmazať všetky kľúče"
 
-#: src/components/selectKey/SelectKey.tsx:41
+#: src/components/selectKey/SelectKey.tsx:39
 msgid "DeleteKey.back"
 msgstr "Späť"
 
-#: src/components/selectKey/SelectKey.tsx:41
+#: src/components/selectKey/SelectKey.tsx:39
 msgid "DeleteKey.delete"
 msgstr "Vymazať"
 
-#: src/components/selectKey/SelectKey.tsx:42
+#: src/components/selectKey/SelectKey.tsx:40
 msgid "DeleteKey.description"
 msgstr "Odstránením kľúča natrvalo odstránite kľúč z počítača. Uistite sa, že máte zálohy. Ste si istý, že chcete pokračovať?"
 
-#: src/components/selectKey/SelectKey.tsx:41
+#: src/components/selectKey/SelectKey.tsx:39
 msgid "DeleteKey.title"
 msgstr "Odstrániť kľúč"
 
@@ -718,7 +718,7 @@ msgstr "Prehľad vašej farmy"
 
 #: src/components/farm/card/FarmCardCoinbaseRewards.tsx:14
 msgid "FarmCardCoinbaseRewards.title"
-msgstr "Odmeny za ťažbu XCH"
+msgstr "Odmeny za ťažbu TXCH"
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:18
 msgid "FarmCardExpectedTimeToWin.title"
@@ -730,7 +730,7 @@ msgstr "Máte {0}% priestoru v sieti, takže ťažba bloku bude trvať {totalHou
 
 #: src/components/farm/card/FarmCardFeesReward.tsx:14
 msgid "FarmCardFeesReward.title"
-msgstr "Vyzbierané poplatky XCH"
+msgstr "Vyzbierané poplatky TXCH"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
 msgid "FarmCardLastHeightFarmed.noBlocksFarmedYet"
@@ -931,7 +931,7 @@ msgstr "Sieť"
 msgid "FullNodeStatus.title"
 msgstr "Stav siete"
 
-#: src/components/wallet/standard/WalletStandard.tsx:417
+#: src/components/wallet/standard/WalletStandard.tsx:488
 msgid "HistoryCard.title"
 msgstr "História"
 
@@ -1149,11 +1149,15 @@ msgstr ""
 msgid "PlotAddSelectTemporaryDirectory.workspaceLocation2"
 msgstr ""
 
-#: src/components/plot/PlotHeader.tsx:32
+#: src/components/plot/PlotHeader.tsx:33
 msgid "PlotHeader.addAPlot"
 msgstr ""
 
-#: src/components/plot/PlotHeader.tsx:28
+#: src/components/plot/PlotHeader.tsx:51
+msgid "PlotHeader.addPlotDirectory"
+msgstr ""
+
+#: src/components/plot/PlotHeader.tsx:43
 msgid "PlotHeader.refreshPlots"
 msgstr ""
 
@@ -1564,35 +1568,35 @@ msgstr "Vyhľadať"
 msgid "SearchBlock.title"
 msgstr "Vyhľadať blok podľa hashu"
 
-#: src/components/selectKey/SelectKey.tsx:111
+#: src/components/selectKey/SelectKey.tsx:109
 msgid "SelectKey.createNewPrivateKey"
 msgstr "Vytvoriť nový privátny kľúč"
 
-#: src/components/selectKey/SelectKey.tsx:124
+#: src/components/selectKey/SelectKey.tsx:122
 msgid "SelectKey.deleteAllKeys"
 msgstr "Zmazať všetky kľúče"
 
-#: src/components/selectKey/SelectKey.tsx:118
+#: src/components/selectKey/SelectKey.tsx:116
 msgid "SelectKey.importFromMnemonics"
 msgstr "Obnoviť z mnemotechniky (24 slov)"
 
-#: src/components/selectKey/SelectKey.tsx:89
+#: src/components/selectKey/SelectKey.tsx:87
 msgid "SelectKey.selectFingerprint"
 msgstr "Privátny kľúč s verejným odtlačkom {fingerprint}"
 
-#: src/components/selectKey/SelectKey.tsx:91
+#: src/components/selectKey/SelectKey.tsx:89
 msgid "SelectKey.selectKeyCanBeBacked"
 msgstr "Možnosť zálohovať pomocou mnemotechnickej pomôcky"
 
-#: src/components/selectKey/SelectKey.tsx:79
+#: src/components/selectKey/SelectKey.tsx:77
 msgid "SelectKey.signInDescription"
 msgstr "Vitajte v Chia. Prosím prihláste sa s existujúcim kľúčom alebo si vytvorte nový."
 
-#: src/components/selectKey/SelectKey.tsx:76
+#: src/components/selectKey/SelectKey.tsx:74
 msgid "SelectKey.signInTitle"
 msgstr "Prihlásiť sa"
 
-#: src/components/selectKey/SelectKey.tsx:73
+#: src/components/selectKey/SelectKey.tsx:71
 msgid "SelectKey.title"
 msgstr "Vyberte kľúč"
 
@@ -1890,43 +1894,43 @@ msgstr ""
 msgid "TradingHistory.title"
 msgstr "História ponúk"
 
-#: src/components/wallet/standard/WalletStandard.tsx:462
+#: src/components/wallet/standard/WalletStandard.tsx:444
 msgid "TransactionTable.amount"
 msgstr "Suma"
 
-#: src/components/wallet/standard/WalletStandard.tsx:441
+#: src/components/wallet/standard/WalletStandard.tsx:423
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "Potvrdené na pozícii {0}"
 
-#: src/components/wallet/standard/WalletStandard.tsx:456
+#: src/components/wallet/standard/WalletStandard.tsx:438
 msgid "TransactionTable.date"
 msgstr "Dátum"
 
-#: src/components/wallet/standard/WalletStandard.tsx:465
+#: src/components/wallet/standard/WalletStandard.tsx:447
 msgid "TransactionTable.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:436
+#: src/components/wallet/standard/WalletStandard.tsx:418
 msgid "TransactionTable.incoming"
 msgstr "Prichádzajúci"
 
-#: src/components/wallet/standard/WalletStandard.tsx:438
+#: src/components/wallet/standard/WalletStandard.tsx:420
 msgid "TransactionTable.outgoing"
 msgstr "Odchádzajúci"
 
-#: src/components/wallet/standard/WalletStandard.tsx:443
+#: src/components/wallet/standard/WalletStandard.tsx:425
 msgid "TransactionTable.pending"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.tsx:459
+#: src/components/wallet/standard/WalletStandard.tsx:441
 msgid "TransactionTable.status"
 msgstr "Stav"
 
-#: src/components/wallet/standard/WalletStandard.tsx:453
+#: src/components/wallet/standard/WalletStandard.tsx:435
 msgid "TransactionTable.to"
 msgstr "Príjemca"
 
-#: src/components/wallet/standard/WalletStandard.tsx:450
+#: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "TransactionTable.type"
 msgstr "Typ"
 
@@ -1990,7 +1994,7 @@ msgstr "synchronizuje sa"
 msgid "WalletStatusCard.title"
 msgstr "Stav"
 
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:112
 msgid "Wallets.title"
 msgstr "Peňaženky"
 

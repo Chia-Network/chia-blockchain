@@ -18,7 +18,7 @@ export default function FarmCardCoinbaseRewards() {
   return (
     <FarmCard
       title={
-        <Trans id="FarmCardCoinbaseRewards.title">XCH Framing Rewards</Trans>
+        <Trans id="FarmCardCoinbaseRewards.title">TXCH Framing Rewards</Trans>
       }
       value={coinbaseRewards}
       loading={loading}

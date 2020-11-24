@@ -305,7 +305,7 @@ msgstr "Total Balance"
 msgid "ColouredBalanceCard.viewPendingBalances"
 msgstr "View pending balances..."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:494
+#: src/components/wallet/coloured/WalletColoured.tsx:563
 msgid "ColouredHistoryCard.title"
 msgstr "History"
 
@@ -333,47 +333,47 @@ msgstr "Send"
 msgid "ColouredSendCard.title"
 msgstr "Create Transaction"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:541
+#: src/components/wallet/coloured/WalletColoured.tsx:523
 msgid "ColouredTransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:522
+#: src/components/wallet/coloured/WalletColoured.tsx:504
 msgid "ColouredTransactionTable.confirmed"
 msgstr "Confirmed"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:535
+#: src/components/wallet/coloured/WalletColoured.tsx:517
 msgid "ColouredTransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:544
+#: src/components/wallet/coloured/WalletColoured.tsx:526
 msgid "ColouredTransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:517
+#: src/components/wallet/coloured/WalletColoured.tsx:499
 msgid "ColouredTransactionTable.incoming"
 msgstr "Incoming"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:510
+#: src/components/wallet/coloured/WalletColoured.tsx:492
 msgid "ColouredTransactionTable.noPreviousTransactions"
 msgstr "No previous transactions"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:519
+#: src/components/wallet/coloured/WalletColoured.tsx:501
 msgid "ColouredTransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:522
+#: src/components/wallet/coloured/WalletColoured.tsx:504
 msgid "ColouredTransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:538
+#: src/components/wallet/coloured/WalletColoured.tsx:520
 msgid "ColouredTransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:532
+#: src/components/wallet/coloured/WalletColoured.tsx:514
 msgid "ColouredTransactionTable.to"
 msgstr "To"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:529
+#: src/components/wallet/coloured/WalletColoured.tsx:511
 msgid "ColouredTransactionTable.type"
 msgstr "Type"
 
@@ -680,35 +680,35 @@ msgstr "Trade"
 msgid "DashboardSideBar.wallets"
 msgstr "Wallets"
 
-#: src/components/selectKey/SelectKey.tsx:55
+#: src/components/selectKey/SelectKey.tsx:53
 msgid "DeleteAllKeys.back"
 msgstr "Back"
 
-#: src/components/selectKey/SelectKey.tsx:55
+#: src/components/selectKey/SelectKey.tsx:53
 msgid "DeleteAllKeys.delete"
 msgstr "Delete"
 
-#: src/components/selectKey/SelectKey.tsx:56
+#: src/components/selectKey/SelectKey.tsx:54
 msgid "DeleteAllKeys.description"
 msgstr "Deleting all keys will permanatly remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 
-#: src/components/selectKey/SelectKey.tsx:55
+#: src/components/selectKey/SelectKey.tsx:53
 msgid "DeleteAllKeys.title"
 msgstr "Delete all keys"
 
-#: src/components/selectKey/SelectKey.tsx:41
+#: src/components/selectKey/SelectKey.tsx:39
 msgid "DeleteKey.back"
 msgstr "Back"
 
-#: src/components/selectKey/SelectKey.tsx:41
+#: src/components/selectKey/SelectKey.tsx:39
 msgid "DeleteKey.delete"
 msgstr "Delete"
 
-#: src/components/selectKey/SelectKey.tsx:42
+#: src/components/selectKey/SelectKey.tsx:40
 msgid "DeleteKey.description"
 msgstr "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 
-#: src/components/selectKey/SelectKey.tsx:41
+#: src/components/selectKey/SelectKey.tsx:39
 msgid "DeleteKey.title"
 msgstr "Delete key"
 
@@ -931,7 +931,7 @@ msgstr "Full Node"
 msgid "FullNodeStatus.title"
 msgstr "Full Node Status"
 
-#: src/components/wallet/standard/WalletStandard.tsx:417
+#: src/components/wallet/standard/WalletStandard.tsx:488
 msgid "HistoryCard.title"
 msgstr "History"
 
@@ -1149,11 +1149,15 @@ msgstr "Temporary folder location"
 msgid "PlotAddSelectTemporaryDirectory.workspaceLocation2"
 msgstr "Second temporary folder location"
 
-#: src/components/plot/PlotHeader.tsx:32
+#: src/components/plot/PlotHeader.tsx:33
 msgid "PlotHeader.addAPlot"
 msgstr "Add a Plot"
 
-#: src/components/plot/PlotHeader.tsx:28
+#: src/components/plot/PlotHeader.tsx:51
+msgid "PlotHeader.addPlotDirectory"
+msgstr "Add Plot Directory"
+
+#: src/components/plot/PlotHeader.tsx:43
 msgid "PlotHeader.refreshPlots"
 msgstr "Refresh Plots"
 
@@ -1564,35 +1568,35 @@ msgstr "Search"
 msgid "SearchBlock.title"
 msgstr "Search block by header hash"
 
-#: src/components/selectKey/SelectKey.tsx:111
+#: src/components/selectKey/SelectKey.tsx:109
 msgid "SelectKey.createNewPrivateKey"
 msgstr "Create a new private key"
 
-#: src/components/selectKey/SelectKey.tsx:124
+#: src/components/selectKey/SelectKey.tsx:122
 msgid "SelectKey.deleteAllKeys"
 msgstr "Delete all keys"
 
-#: src/components/selectKey/SelectKey.tsx:118
+#: src/components/selectKey/SelectKey.tsx:116
 msgid "SelectKey.importFromMnemonics"
 msgstr "Import from Mnemonics (24 words)"
 
-#: src/components/selectKey/SelectKey.tsx:89
+#: src/components/selectKey/SelectKey.tsx:87
 msgid "SelectKey.selectFingerprint"
 msgstr "Private key with public fingerprint {fingerprint}"
 
-#: src/components/selectKey/SelectKey.tsx:91
+#: src/components/selectKey/SelectKey.tsx:89
 msgid "SelectKey.selectKeyCanBeBacked"
 msgstr "Can be backed up to mnemonic seed"
 
-#: src/components/selectKey/SelectKey.tsx:79
+#: src/components/selectKey/SelectKey.tsx:77
 msgid "SelectKey.signInDescription"
 msgstr "Welcome to Chia. Please log in with an existing key, or create a a new key."
 
-#: src/components/selectKey/SelectKey.tsx:76
+#: src/components/selectKey/SelectKey.tsx:74
 msgid "SelectKey.signInTitle"
 msgstr "Sign In"
 
-#: src/components/selectKey/SelectKey.tsx:73
+#: src/components/selectKey/SelectKey.tsx:71
 msgid "SelectKey.title"
 msgstr "Select Key"
 
@@ -1890,43 +1894,43 @@ msgstr "Sell"
 msgid "TradingHistory.title"
 msgstr "Trading History"
 
-#: src/components/wallet/standard/WalletStandard.tsx:462
+#: src/components/wallet/standard/WalletStandard.tsx:444
 msgid "TransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/standard/WalletStandard.tsx:441
+#: src/components/wallet/standard/WalletStandard.tsx:423
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "Confirmed at height {0}"
 
-#: src/components/wallet/standard/WalletStandard.tsx:456
+#: src/components/wallet/standard/WalletStandard.tsx:438
 msgid "TransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/standard/WalletStandard.tsx:465
+#: src/components/wallet/standard/WalletStandard.tsx:447
 msgid "TransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/standard/WalletStandard.tsx:436
+#: src/components/wallet/standard/WalletStandard.tsx:418
 msgid "TransactionTable.incoming"
 msgstr "Incoming"
 
-#: src/components/wallet/standard/WalletStandard.tsx:438
+#: src/components/wallet/standard/WalletStandard.tsx:420
 msgid "TransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/standard/WalletStandard.tsx:443
+#: src/components/wallet/standard/WalletStandard.tsx:425
 msgid "TransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/standard/WalletStandard.tsx:459
+#: src/components/wallet/standard/WalletStandard.tsx:441
 msgid "TransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/standard/WalletStandard.tsx:453
+#: src/components/wallet/standard/WalletStandard.tsx:435
 msgid "TransactionTable.to"
 msgstr "To"
 
-#: src/components/wallet/standard/WalletStandard.tsx:450
+#: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "TransactionTable.type"
 msgstr "Type"
 
@@ -1990,7 +1994,7 @@ msgstr "syncing"
 msgid "WalletStatusCard.title"
 msgstr "Status"
 
-#: src/components/wallet/Wallets.tsx:113
+#: src/components/wallet/Wallets.tsx:112
 msgid "Wallets.title"
 msgstr "Wallets"
 
