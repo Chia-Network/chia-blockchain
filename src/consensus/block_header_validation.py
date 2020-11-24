@@ -367,7 +367,6 @@ async def validate_unfinished_header_block(
     if header_block.reward_chain_sub_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
         return None, ValidationError(Err.INVALID_SP_INDEX)
 
-    sp_iters: uint64 = calculate_sp_iters(constants, ips, header_block.reward_chain_sub_block.signage_point_index)
     # Note that required iters might be from the previous slot (if we are in an overflow sub-block)
     required_iters: uint64 = calculate_iterations_quality(
         q_str,
