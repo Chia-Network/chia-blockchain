@@ -27,6 +27,7 @@ class NewSignagePoint:
 @dataclass(frozen=True)
 @cbor_message
 class DeclareProofOfSpace:
+    challenge_hash: bytes32
     challenge_chain_sp: bytes32
     signage_point_index: uint8
     reward_chain_sp: bytes32
