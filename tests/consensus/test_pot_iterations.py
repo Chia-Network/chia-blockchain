@@ -8,7 +8,7 @@ from src.consensus.pot_iterations import (
 from src.consensus.pos_quality import _expected_plot_size
 from src.util.ints import uint8, uint64
 from src.util.hash import std_hash
-from src.consensus.constants import constants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
 from pytest import raises
 
 test_constants = DEFAULT_CONSTANTS.replace(

@@ -44,6 +44,7 @@ def iters_from_sub_block(
     required_iters = calculate_iterations_quality(
         quality,
         reward_chain_sub_block.proof_of_space.size,
+        difficulty,
         cc_sp,
     )
     return (
@@ -52,7 +53,7 @@ def iters_from_sub_block(
     )
 
 class EndOfSubSlotData:
-    eos_bundle: EndOfSubSlotBundle
+    eos_bundle: EndOfSubSltBundle
     new_ips: uint64
     new_difficulty: uint64
     deficit: uint8

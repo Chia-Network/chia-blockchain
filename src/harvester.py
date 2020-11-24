@@ -36,7 +36,6 @@ class Harvester:
     no_key_filenames: Set[Path]
     farmer_public_keys: List[G1Element]
     pool_public_keys: List[G1Element]
-    cached_signage_points: List[harvester_protocol.NewSignagePoint]
     root_path: Path
     _is_shutdown: bool
     executor: ThreadPoolExecutor
@@ -61,7 +60,6 @@ class Harvester:
         self.state_changed_callback = None
         self.server = None
         self.constants = constants
-        self.cached_signage_points = []
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -169,10 +167,6 @@ class Harvester:
             log.warning("Not farming any plots on this harvester. Check your configuration.")
             return
 
-        for new_challenge in self.cached_signage_points:
-            async for msg in self.new_signage_point(new_challenge):
-                yield msg
-        self.cached_signage_points = []
         self._state_changed("plots")
 
     @api_request
@@ -191,8 +185,6 @@ class Harvester:
         """
         if len(self.pool_public_keys) == 0 or len(self.farmer_public_keys) == 0:
             # This means that we have not received the handshake yet
-            self.cached_signage_points = self.cached_signage_points[:5]
-            self.cached_signage_points.insert(0, new_challenge)
             return
 
         start = time.time()
@@ -207,7 +199,10 @@ class Harvester:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
-                quality_strings = prover.get_qualities_for_challenge(new_challenge.challenge_hash)
+                sp_challenge_hash = ProofOfSpace.calculate_new_challenge_hash(
+                    plot_info.prover.get_id(), new_challenge.challenge_hash, new_challenge.sp_hash
+                )
+                quality_strings = prover.get_qualities_for_challenge(sp_challenge_hash)
             except Exception:
                 log.error("Error using prover object. Reinitializing prover object.")
                 self.provers[filename] = dataclasses.replace(plot_info, prover=DiskProver(str(filename)))
@@ -218,13 +213,13 @@ class Harvester:
                 # Found proofs of space (on average 1 is expected per plot)
                 for index, quality_str in enumerate(quality_strings):
                     required_iters: uint64 = calculate_iterations_quality(
-                        quality_str, prover.get_size(), new_challenge.difficulty, new_challenge.challenge_hash
+                        quality_str, prover.get_size(), new_challenge.difficulty, new_challenge.sp_hash
                     )
                     sp_interval_iters = calculate_sp_interval_iters(self.constants, new_challenge.ips)
                     if required_iters < sp_interval_iters:
                         # Found a very good proof of space! will fetch the whole proof from disk, then send to farmer
                         try:
-                            proof_xs = prover.get_full_proof(new_challenge.challenge_hash, index)
+                            proof_xs = prover.get_full_proof(sp_challenge_hash, index)
                         except RuntimeError:
                             log.error(f"Exception fetching full proof for {filename}")
                             continue
@@ -234,7 +229,7 @@ class Harvester:
                         )
                         responses.append(
                             ProofOfSpace(
-                                new_challenge.challenge_hash,
+                                sp_challenge_hash,
                                 plot_info.pool_public_key,
                                 None,
                                 plot_public_key,
@@ -253,7 +248,7 @@ class Harvester:
             for proof_of_space in proofs_of_space:
                 all_responses.append(
                     harvester_protocol.NewProofOfSpace(
-                        prover.get_id(), proof_of_space, new_challenge.signage_point_index
+                        new_challenge.challenge_hash, prover.get_id(), proof_of_space, new_challenge.signage_point_index
                     )
                 )
             return all_responses
@@ -309,7 +304,7 @@ class Harvester:
 
         response: harvester_protocol.RespondSignatures = harvester_protocol.RespondSignatures(
             request.plot_identifier,
-            request.challenge_hash,
+            request.sp_hash,
             local_sk.get_g1(),
             plot_info.farmer_public_key,
             message_signatures,
