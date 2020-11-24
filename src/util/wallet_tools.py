@@ -120,7 +120,7 @@ class WalletTool:
                 if cvp.opcode == ConditionOpcode.ASSERT_FEE:
                     ret.append(make_assert_fee_condition(cvp.var1))
 
-        return solution_for_conditions(ret)
+        return solution_for_conditions(Program.to(ret))
 
     def generate_unsigned_transaction(
         self,
