@@ -20,7 +20,7 @@ from src.consensus.coinbase import (
 )
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
-    calculate_infusion_point_iters,
+    calculate_ip_iters,
     calculate_iterations_quality,
     calculate_sp_iters,
     calculate_sub_slot_iters,
@@ -252,9 +252,6 @@ class BlockTools:
         same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
         sub_slot_start_total_iters: uint128 = latest_sub_block.infusion_sub_slot_total_iters(constants)
         sub_slots_finished = 0
-        print(
-            f"Latest block {latest_sub_block.height} {latest_sub_block.signage_point_index} {latest_sub_block.total_iters}"
-        )
 
         # Start at the last block in block list
         # Get the challenge for that slot

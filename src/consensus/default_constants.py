@@ -13,9 +13,8 @@ testnet_kwargs = {
     "DIFFICULTY_STARTING": 2 ** 20,
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
-    "DIFFICULTY_EPOCH": 256,  # The number of blocks per epoch
-    "DIFFICULTY_WARP_FACTOR": 4,  # DELAY divides EPOCH in order to warp efficiently.
-    "DIFFICULTY_DELAY": 64,  # EPOCH / WARP_FACTOR
+    "SUB_EPOCH_SUB_BLOCKS": 128,  # The number of sub-blocks per sub-epoch, mainnet 284
+    "EPOCH_SUB_BLOCKS": 4096,  # The number of sub-blocks per epoch, mainnet 32256
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_PLOT_FILTER": 3,  # H(plot signature of the challenge) must start with these many zeroes
