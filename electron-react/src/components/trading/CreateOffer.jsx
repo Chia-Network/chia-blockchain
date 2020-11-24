@@ -17,7 +17,6 @@ import isElectron from 'is-electron';
 import { newBuy, newSell, addTrade, resetTrades } from '../../modules/trade';
 import {
   chia_to_mojo,
-  mojo_to_chia_string,
   colouredcoin_to_mojo,
 } from '../../util/chia';
 import { openDialog } from '../../modules/dialog';

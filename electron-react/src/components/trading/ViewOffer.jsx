@@ -1,9 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import React, { useMemo } from 'react';
-import styled from 'styled-components';
 import { Trans } from '@lingui/macro';
 import {
-  Box,
   Paper,
   Button,
   CircularProgress,
@@ -15,21 +13,15 @@ import {
   parsingStarted,
   parsingStatePending,
 } from '../../modules/trade';
-import { mojo_to_chia_string } from '../../util/chia';
 
 import {
   accept_trade_action,
   parse_trade_action,
 } from '../../modules/trade_messages';
-import { Card, Table } from '@chia/core';
+import { Card } from '@chia/core';
 import TradesTable from './TradesTable';
 
 /* global BigInt */
-
-const Amount = styled(Box)`
-  white-space: normal;
-  overflow-wrap: break-word;
-`;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -200,17 +192,6 @@ export const DropView = () => {
     </Card>
   );
 };
-
-const cols = [{
-  field: 'side',
-  title: <Trans id="OfferView.side">Side</Trans>,
-}, {
-  field: 'amount', 
-  title: <Trans id="OfferView.amount">Amount</Trans>,
-}, {
-  field: 'name',
-  title: <Trans id="OfferView.colour">Colour</Trans>,
-}];
 
 export const OfferView = () => {
   const offer = useSelector((state) => state.trade_state.parsed_offer);

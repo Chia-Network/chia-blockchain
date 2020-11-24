@@ -418,7 +418,6 @@ export const TradeDetail = () => {
 };
 
 export const PendingTrades = () => {
-  const classes = useStyles();
   const trades = useSelector((state) => state.trade_state.pending_trades);
   return (
     <Card
@@ -430,7 +429,6 @@ export const PendingTrades = () => {
 };
 
 export const TradingHistory = () => {
-  const classes = useStyles();
   const trades = useSelector((state) => state.trade_state.trade_history);
   return (
     <Card
@@ -442,7 +440,6 @@ export const TradingHistory = () => {
 };
 
 export const TradingOverview = () => {
-  const classes = useStyles();
   const showingTrade = useSelector((state) => state.trade_state.showing_trade);
   const dispatch = useDispatch();
 
