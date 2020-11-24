@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
+import { FormatBytes, Flex, Card } from '@chia/core';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import { useSelector, useDispatch } from 'react-redux';
@@ -9,7 +10,6 @@ import { Tooltip } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import HelpIcon from '@material-ui/icons/Help';
-import { Flex, Card } from '@chia/core';
 import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
 import Block from '../block/Block';
@@ -302,16 +302,13 @@ const getStatusItems = (state, connected) => {
   };
   status_items.push(min_item);
 
-  const space = `${(
-    BigInt(state.space) / BigInt(Math.pow(1024, 4))
-  ).toString()}TiB`;
   const space_item = {
     label: (
       <Trans id="StatusItem.estimatedNetworkSpace">
         Estimated network space
       </Trans>
     ),
-    value: space,
+    value: <FormatBytes value={state.space} precision={3} />,
     tooltip: (
       <Trans id="StatusItem.estimatedNetworkSpaceTooltip">
         Estimated sum of all the plotted disk space of all farmers in the
