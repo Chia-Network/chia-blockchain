@@ -815,7 +815,7 @@ class TestMempool:
 
         assert (
             pkm_pairs[0][1]
-            == solution.rest().first().get_tree_hash()
+            == solution.rest().first().get_tree_hash() + coin_solution.coin.name()
         )
 
         spend_bundle = WALLET_A.sign_transaction(unsigned)
