@@ -12,6 +12,7 @@ from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.full_block import FullBlock
 from src.types.slots import InfusedChallengeChainSubSlot
 from src.types.vdf import VDFInfo, VDFProof
 from src.util.block_tools import get_vdf_info_and_proof
@@ -1054,6 +1055,64 @@ class TestAddingMoreBlocks:
             blocks[-1], "reward_chain_sub_block.challenge_chain_sp_signature", G2Element.generator()
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_SIGNATURE
+
+    @pytest.mark.asyncio
+    async def test_is_block(self, empty_blockchain):
+        # 13: TODO
+        pass
+
+    @pytest.mark.asyncio
+    async def test_bad_foliage_sb_sig(self, empty_blockchain):
+        # 14
+        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        block_bad = recursive_replace(
+            blocks[-1], "foliage_sub_block.foliage_sub_block_signature", G2Element.generator()
+        )
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PLOT_SIGNATURE
+
+    @pytest.mark.asyncio
+    async def test_bad_foliage_block_sig(self, empty_blockchain):
+        # 15
+        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+
+        while True:
+            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            if blocks[-1].foliage_block is not None:
+                block_bad = recursive_replace(
+                    blocks[-1], "foliage_sub_block.foliage_block_signature", G2Element.generator()
+                )
+                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PLOT_SIGNATURE
+                return
+            assert (await empty_blockchain.receive_block(blocks[-1]))[0] == ReceiveBlockResult.NEW_PEAK
+
+    @pytest.mark.asyncio
+    async def test_unfinished_reward_chain_sb_hash(self, empty_blockchain):
+        # 16
+        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        block_bad: FullBlock = recursive_replace(
+            blocks[-1], "foliage_sub_block.foliage_sub_block_data.unfinished_reward_block_hash", std_hash(b"2")
+        )
+        new_m = block_bad.foliage_sub_block.foliage_sub_block_data.get_hash()
+        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_sub_block.proof_of_space.plot_public_key)
+        block_bad = recursive_replace(block_bad, "foliage_sub_block.foliage_sub_block_signature", new_fsb_sig)
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_URSB_HASH
+
+    @pytest.mark.asyncio
+    async def test_pool_target_height(self, empty_blockchain):
+        # 17
+        blocks = bt.get_consecutive_blocks(test_constants, 3)
+        assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
+        assert (await empty_blockchain.receive_block(blocks[0]))[1] == ReceiveBlockResult.NEW_PEAK
+        block_bad: FullBlock = recursive_replace(
+            blocks[-1], "foliage_sub_block.foliage_sub_block_data.pool_target.max_height", 1
+        )
+        new_m = block_bad.foliage_sub_block.foliage_sub_block_data.get_hash()
+        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_sub_block.proof_of_space.plot_public_key)
+        block_bad = recursive_replace(block_bad, "foliage_sub_block.foliage_sub_block_signature", new_fsb_sig)
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.OLD_POOL_TARGET
 
 
 #
