@@ -323,19 +323,18 @@ def validate_weight(
     summaries, sub_epoch_data_weight = map_summaries(constants, fork_point_sub_epoch_n, ses_hash, weight_proof)
 
     # last ses
-    ses = summaries[fork_point_sub_epoch_n + len(summaries)]
+    ses: SubEpochSummary = summaries[fork_point_sub_epoch_n + len(summaries)]
 
     # find first block after last sub epoch end
-    count = 0
-    block = 0
+    count, block_idx = 0, 0
     for idx, block in enumerate(weight_proof.recent_reward_chain):
         if finishes_sub_epoch(constants, weight_proof.recent_reward_chain, idx):
-            block = count
+            block_idx = count
 
         count += 1
 
     # validate weight
-    last_sub_epoch_weight = weight_proof.recent_reward_chain[block].weight - ses.new_difficulty
+    last_sub_epoch_weight = weight_proof.recent_reward_chain[block_idx].weight - ses.new_difficulty
     if last_sub_epoch_weight != sub_epoch_data_weight:
         # todo log
         return False
@@ -354,9 +353,9 @@ def validate_weight(
     # validate sub epoch samples
     for segment in weight_proof.sub_epoch_segments:
         ses = summaries[fork_point_sub_epoch_n + segment.sub_epoch_n]
-        slot_iters = calculate_sub_slot_iters(constants, ses.new_ips)
-        total_slot_iters += slot_iters
-        q_str = validate_proof_of_space(constants, segment, summaries, slot_iters)
+        ssi: uint64 = uint64(constants.SLOT_TIME_TARGET * ses.new_ips)
+        total_slot_iters += ssi
+        q_str = validate_proof_of_space(constants, segment, summaries, ssi)
         if q_str is None:
             return False
 
@@ -364,9 +363,7 @@ def validate_weight(
         challenge = ses.prev_subepoch_summary_hash
         for sub_slot in segment.sub_slots:
             total_slots += 1
-            vdf_info, _ = get_vdf_info_and_proof(
-                constants, ClassgroupElement.get_default_element(), challenge, slot_iters
-            )
+            vdf_info, _ = get_vdf_info_and_proof(constants, ClassgroupElement.get_default_element(), challenge, ssi)
             if not validate_sub_slot_vdfs(constants, sub_slot, vdf_info, sub_slot.is_challenge()):
                 # todo log
                 return False
