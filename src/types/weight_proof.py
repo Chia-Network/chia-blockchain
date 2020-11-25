@@ -9,7 +9,7 @@ from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint8, uint64, uint32
 from src.util.streamable import Streamable, streamable
-from src.types.vdf import VDFProof
+from src.types.vdf import VDFProof, VDFInfo
 
 
 @dataclass(frozen=True)
