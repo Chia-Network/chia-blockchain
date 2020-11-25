@@ -82,6 +82,7 @@ jobs:
         BUILD_VDF_CLIENT: "N"
       run: |
         brew install boost
+        echo "BUILD_VDF_CLIENT is $BUILD_VDF_CLIENT"
         sh install.sh
 
     - name: Install timelord
