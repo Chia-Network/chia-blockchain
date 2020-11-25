@@ -13,7 +13,7 @@ from pytest import raises
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "NUM_SPS_SUB_SLOT": 32,
-        "SLOT_TIME_TARGET": 300,
+        "SUB_SLOT_TIME_TARGET": 300,
     }
 )
 
