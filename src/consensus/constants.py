@@ -52,5 +52,8 @@ class ConsensusConstants:
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
     MAX_BLOCK_COST_CLVM: int
 
+    # todo dont use float
+    WEIGHT_PROOF_THRESHOLD: float
+
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
