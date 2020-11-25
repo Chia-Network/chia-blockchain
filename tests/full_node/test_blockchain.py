@@ -1,15 +1,10 @@
 import asyncio
 from dataclasses import replace
-from pathlib import Path
-
-import aiosqlite
 import pytest
 from blspy import AugSchemeMPL, G2Element
 from pytest import raises
 
-from src.full_node.block_store import BlockStore
-from src.consensus.blockchain import Blockchain, ReceiveBlockResult
-from src.full_node.coin_store import CoinStore
+from src.consensus.blockchain import ReceiveBlockResult
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
@@ -21,32 +16,14 @@ from src.util.hash import std_hash
 from src.util.ints import uint64, uint8, int512
 from tests.recursive_replace import recursive_replace
 from tests.setup_nodes import test_constants, bt
+from tests.full_node.fixtures import empty_blockchain
+from tests.full_node.fixtures import default_400_blocks as blocks
 
 
 @pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()
     yield loop
-
-
-@pytest.fixture(scope="function")
-async def empty_blockchain():
-    """
-    Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
-    """
-    db_path = Path("blockchain_test.db")
-    if db_path.exists():
-        db_path.unlink()
-    connection = await aiosqlite.connect(db_path)
-    coin_store = await CoinStore.create(connection)
-    store = await BlockStore.create(connection)
-    bc1 = await Blockchain.create(coin_store, store, test_constants)
-    assert bc1.get_peak() is None
-
-    yield bc1
-
-    await connection.close()
-    bc1.shut_down()
 
 
 class TestGenesisBlock:
@@ -99,8 +76,8 @@ class TestGenesisBlock:
 
 class TestBlockHeaderValidation:
     @pytest.mark.asyncio
-    async def test_long_chain(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(2000)
+    async def test_long_chain(self, empty_blockchain, blocks):
+        # blocks = bt.get_consecutive_blocks(400)
         for block in blocks:
             # if (
             #     len(block.finished_sub_slots) > 0
