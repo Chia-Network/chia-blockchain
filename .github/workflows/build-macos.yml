@@ -84,7 +84,7 @@ jobs:
         brew install boost
         echo "BUILD_VDF_CLIENT is $BUILD_VDF_CLIENT"
         sh install.sh
-        ls venv/lib/python${{ matrix.python-version }}/site-packages/
+        rm -f venv/lib/python${{ matrix.python-version }}/site-packages/vdf_client
 
     - name: Install timelord
       run: |
