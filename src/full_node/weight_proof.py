@@ -58,7 +58,7 @@ def make_sub_epoch_data(
     #  Number of subblocks overflow in previous slot
     previous_sub_epoch_overflows: uint8 = sub_epoch_summary.num_sub_blocks_overflow  # total in sub epoch - expected
     #  New work difficulty and iterations per subslot
-    sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_ips
+    sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
     new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
@@ -278,11 +278,13 @@ def make_weight_proof(
     sub_epoch_n = uint32(forkpoint_sub_epoch_n)
     rng: random.Random = random.Random(tip)
     # ses_hash from the latest sub epoch summary before this part of the chain
-
+    log.info(f"build weight proofs peak : {sub_blocks[tip].header_hash } num of blocks: {total_number_of_blocks}")
     assert sub_blocks[tip].height > total_number_of_blocks
     while not total_number_of_blocks == 0:
+        assert curr.height != 0
+
         # next sub block
-        curr = sub_blocks[curr.prev_header_hash]
+        curr = sub_blocks[curr.prev_hash]
         header_block = header_cache[curr.header_hash]
         # for each sub-epoch
         if curr.sub_epoch_summary_included is not None:
