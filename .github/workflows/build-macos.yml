@@ -83,6 +83,7 @@ jobs:
       run: |
         brew install boost
         sh install.sh
+        rm -f venv/lib/python${{ matrix.python-version }}/site-packages/vdf_client
 
     - name: Install timelord
       run: |
