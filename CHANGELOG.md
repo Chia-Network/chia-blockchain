@@ -12,18 +12,22 @@ for setuptools_scm/PEP 440 reasons.
 
 - F1 generation in the plotter is now fully parallel for a small speedup.
 - We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in [PR 120](https://github.com/Chia-Network/chiapos/pull/120). Note that some sorts in phase 2 and phase 3 will now appear "out of order" and that is now expected behavior.
+- The UI now warns if you attempt to create a plot smaller than k=32.
 - You can now specify which private key to use for `chia plots create`. After obtaining the fingerprint from `chia keys show`, try `chia plots create -a FINGERPRINT`. Thanks to @eFishCent for this pull request!
 - We now fully support Python 3.9.
 
 ### Changed
 
 - We have moved from using gulrak/filesystem across all platforms to only using it on MacOS. It's required on MacOS as we are still targeting Mojave compatibility. This should resolve Windows path issues.
+- There are new farming and plotting pages. The plotting flow was redesigned to streamline it and add advanced options as drop downs as appropriate. Plots are now queued into your local plot list. To see the plotting log, try the three vertical dots. Remote harvester plot display will be coming to the plot page as well.
+- Harvester and farmer will start when the GUI starts instead of waiting for key selection.
+- We have moved to taproot across all of our transactions and smart transactions. Additionally we're using aggsig_me nearly everywhere.
 - The rate limited wallet was updated and re-factored.
 - All appropriate Chialisp smart transactions have been updated to use aggsig_me.
 - Full node should be more aggressive about finding other peers.
 - Peer disconnect messages are now set to log level INFO down from WARNING.
 - chiavdf now allows passing in input to a VDF for new consensus.
-- aiohttp, cbor2, clvm-tools, cryptography, and sortedcontainers have been upgraded to their current versions.
+- aiohttp, cbor2, clvm-tools, colorlog, concurrent-log-handler, keyring, cryptography, and sortedcontainers have been upgraded to their current versions.
 
 ### Fixed
 
