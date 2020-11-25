@@ -88,7 +88,6 @@ class BlockTools:
         self,
         constants: ConsensusConstants = test_constants,
         root_path: Optional[Path] = None,
-        real_plots: bool = False,
     ):
         self._tempdir = None
         if root_path is None:
@@ -96,31 +95,17 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
-        self.real_plots = real_plots
         self.constants = constants
-        if not real_plots:
-            create_default_chia_config(root_path)
-            # No real plots supplied, so we will use the small test plots
-            self.use_any_pos = True
-            self.keychain = Keychain("testing-1.8.0", True)
-            self.keychain.delete_all_keys()
-            self.farmer_master_sk = self.keychain.add_private_key(
-                bytes_to_mnemonic(std_hash(b"block_tools farmer key")), ""
-            )
-            self.pool_master_sk = self.keychain.add_private_key(
-                bytes_to_mnemonic(std_hash(b"block_tools pool key")), ""
-            )
-            self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
-            self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
-            self.init_plots(root_path)
-
-        else:
-            self.keychain = Keychain()
-            self.use_any_pos = False
-            sk_and_ent = self.keychain.get_first_private_key()
-            assert sk_and_ent is not None
-            self.farmer_master_sk = sk_and_ent[0]
-            self.pool_master_sk = sk_and_ent[0]
+        create_default_chia_config(root_path)
+        self.keychain = Keychain("testing-1.8.0", True)
+        self.keychain.delete_all_keys()
+        self.farmer_master_sk = self.keychain.add_private_key(
+            bytes_to_mnemonic(std_hash(b"block_tools farmer key")), ""
+        )
+        self.pool_master_sk = self.keychain.add_private_key(bytes_to_mnemonic(std_hash(b"block_tools pool key")), "")
+        self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
+        self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
+        self.init_plots(root_path)
 
         initialize_ssl(root_path)
         self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
@@ -222,7 +207,7 @@ class BlockTools:
         constants = self.constants
         transaction_data_included = False
         if time_per_sub_block is None:
-            time_per_sub_block: float = float(constants.SLOT_TIME_TARGET) / float(constants.SLOT_SUB_BLOCKS_TARGET)
+            time_per_sub_block: float = float(constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_SUB_BLOCKS_TARGET)
 
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
@@ -326,7 +311,7 @@ class BlockTools:
                     )
 
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
-                        if sub_blocks_added_this_sub_slot == constants.MAX_SLOT_SUB_BLOCKS or force_overflow:
+                        if sub_blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_SUB_BLOCKS or force_overflow:
                             break
                         if same_slot_as_last:
                             if signage_point_index == latest_sub_block.signage_point_index:
@@ -536,7 +521,7 @@ class BlockTools:
                         sub_slot_iters,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
-                        if sub_blocks_added_this_sub_slot == constants.MAX_SLOT_SUB_BLOCKS:
+                        if sub_blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_SUB_BLOCKS:
                             break
                         full_block, sub_block_record = get_full_block_and_sub_record(
                             constants,
