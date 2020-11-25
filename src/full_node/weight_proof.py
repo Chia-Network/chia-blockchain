@@ -270,6 +270,9 @@ def make_weight_proof(
     """
     Creates a weight proof object
     """
+
+    # todo assert recent blocks number
+
     sub_epoch_data: List[SubEpochData] = []
     sub_epoch_segments: List[SubEpochChallengeSegment] = []
     proof_blocks: List[RewardChainSubBlock] = []
@@ -426,9 +429,10 @@ def validate_weight(
                     log.error(f"segment {segment.sub_epoch_n} failed reward_chain_hash validation")
                     return False
 
+        # todo floats
         avg_ip_iters = total_ip_iters / total_challenge_blocks
         avg_slot_iters = total_slot_iters / total_slots
-        if avg_ip_iters / avg_slot_iters > constants.WEIGHT_PROOF_THRESHOLD:
+        if avg_slot_iters / avg_ip_iters < float(constants.WEIGHT_PROOF_THRESHOLD):
             return False
 
     # validate recent reward chain
