@@ -1,9 +1,7 @@
 import React, { ReactNode } from 'react';
 import { AppBar, Toolbar, Box } from '@material-ui/core';
 import styled from 'styled-components';
-import Flex from '../flex/Flex';
-import DarkModeToggle from '../darkMode/DarkModeToggle';
-import LocaleToggle from '../locale/LocaleToggle';
+import { Flex, DarkModeToggle, LocaleToggle } from '@chia/core';
 
 const StyledWrapper = styled(Box)`
   padding-top: ${({ theme }) => `${theme.spacing(3)}px`};
@@ -25,7 +23,7 @@ const StyledBody = styled(Box)`
 `;
 
 type Props = {
-  children: ReactNode;
+  children?: ReactNode;
   header?: ReactNode;
 };
 
@@ -49,4 +47,5 @@ export default function LayoutHero(props: Props) {
 
 LayoutHero.defaultProps = {
   header: undefined,
+  children: undefined,
 };

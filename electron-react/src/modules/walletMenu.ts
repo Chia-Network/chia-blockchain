@@ -1,4 +1,4 @@
-import WalletType from '../types/WalletType';
+import WalletType from '../constants/WalletType';
 
 export const standardWallet = 'STANDARD_WALLET';
 export const createWallet = 'CREATE_WALLET';

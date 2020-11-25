@@ -3,7 +3,7 @@ import { service_wallet } from '../util/service_names';
 import { openProgress, closeProgress } from './progress';
 import { refreshAllState } from '../middleware/middleware_api';
 import { setIncorrectWord, resetMnemonic } from './mnemonic';
-import { openDialog } from './dialog';
+import { openErrorDialog } from './dialog';
 import { createState, changeCreateWallet, ALL_OPTIONS } from './createWallet';
 import {
   addPlotDirectory,
@@ -25,6 +25,7 @@ const config = require('../config/config');
 
 const { backup_host } = config;
 
+// TODO this is not doing anything because wallet id is missing
 export const clearSend = () => {
   const action = {
     type: 'CLEAR_SEND',
@@ -148,7 +149,7 @@ export const add_new_key_action = (mnemonic) => {
           dispatch(push('/wallet/import'));
         }
         const { error } = response.data;
-        dispatch(openDialog('Error', error));
+        dispatch(openErrorDialog(error));
       }
     });
   };
@@ -175,7 +176,7 @@ export const add_and_skip_backup = (mnemonic) => {
             dispatch(push('/wallet/import'));
           }
           const { error } = response.data;
-          dispatch(openDialog('Error', error));
+          dispatch(openErrorDialog(error));
         }
       },
     );
@@ -202,7 +203,7 @@ export const add_and_restore_from_backup = (mnemonic, file_path) => {
           dispatch(push('/wallet/import'));
         }
         const { error } = response.data;
-        dispatch(openDialog('Error', error));
+        dispatch(openErrorDialog(error));
       }
     });
   };
@@ -275,7 +276,7 @@ export const log_in_and_import_backup_action = (fingerprint, file_path) => {
           dispatch(push('/wallet/restore'));
           // Go to restore from backup screen
         } else {
-          dispatch(openDialog('Error', error));
+          dispatch(openErrorDialog(error));
         }
       }
     });
@@ -298,7 +299,7 @@ export const login_and_skip_action = (fingerprint) => {
             dispatch(push('/wallet/restore'));
             // Go to restore from backup screen
           } else {
-            dispatch(openDialog('Error', error));
+            dispatch(openErrorDialog(error));
           }
         }
       },
@@ -328,7 +329,7 @@ export const login_action = (fingerprint) => {
           }
           // Go to restore from backup screen
         } else {
-          dispatch(openDialog('Error', error));
+          dispatch(openErrorDialog(error));
         }
       }
     });
@@ -367,7 +368,7 @@ export const get_backup_info_action = (file_path, fingerprint, words) => {
         dispatch(changeBackupView(presentBackupInfo));
       } else {
         const { error } = response.data;
-        dispatch(openDialog('Error', error));
+        dispatch(openErrorDialog(error));
       }
     });
   };
@@ -466,7 +467,7 @@ export const create_backup_action = (file_path) => {
           dispatch(showCreateBackup(false));
         } else {
           const { error } = response.data;
-          dispatch(openDialog('Error', error));
+          dispatch(openErrorDialog(error));
         }
       },
     );
@@ -487,7 +488,7 @@ export const create_cc_action = (amount, fee) => {
           dispatch(changeCreateWallet(ALL_OPTIONS));
         } else {
           const { error } = response.data;
-          dispatch(openDialog('Error', error));
+          dispatch(openErrorDialog(error));
         }
       },
     );
@@ -507,7 +508,7 @@ export const create_cc_for_colour_action = (colour, fee) => {
           dispatch(changeCreateWallet(ALL_OPTIONS));
         } else {
           const { error } = response.data;
-          dispatch(openDialog('Error', error));
+          dispatch(openErrorDialog(error));
         }
       },
     );
@@ -586,7 +587,7 @@ export const create_rl_admin_action = (interval, limit, pubkey, amount) => {
         dispatch(changeCreateWallet(ALL_OPTIONS));
       } else {
         const { error } = response.data;
-        dispatch(openDialog('Error', error));
+        dispatch(openErrorDialog(error));
       }
     });
   };
@@ -615,7 +616,7 @@ export const create_rl_user_action = () => {
         dispatch(changeCreateWallet(ALL_OPTIONS));
       } else {
         const { error } = response.data;
-        dispatch(openDialog('Error', error));
+        dispatch(openErrorDialog(error));
       }
     });
   };
@@ -632,7 +633,7 @@ export const add_plot_directory_and_refresh = (dir) => {
         });
       }
       const { error } = response.data;
-      dispatch(openDialog('Error', error));
+      dispatch(openErrorDialog(error));
     });
   };
 };
@@ -649,7 +650,7 @@ export const remove_plot_directory_and_refresh = (dir) => {
           });
         }
         const { error } = response.data;
-        dispatch(openDialog('Error', error));
+        dispatch(openErrorDialog(error));
       },
     );
   };
@@ -696,7 +697,7 @@ export const rl_set_user_info_action = (
         dispatch(createState(true, false));
       } else {
         const { error } = response.data;
-        dispatch(openDialog('Error', error));
+        dispatch(openErrorDialog(error));
       }
     });
   };
@@ -709,7 +710,6 @@ export const clawback_rl_coin = (wallet_id) => {
 export const exit_and_close = (event) => {
   return (dispatch) => {
     return async_api(dispatch, exitDaemon(), false).then((response) => {
-      console.log('GOT RESPONSE', response);
       dispatch(wsDisconnect());
       event.sender.send('daemon-exited');
     });

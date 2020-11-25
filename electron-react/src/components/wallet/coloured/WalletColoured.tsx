@@ -3,6 +3,7 @@ import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
+import { AlertDialog } from '@chia/core';
 import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import {
@@ -493,7 +494,11 @@ function SendCard(props: SendCardProps) {
       return;
     }
     if (syncing) {
-      dispatch(openDialog('Please finish syncing before making a transaction'));
+      dispatch(openDialog(
+        <AlertDialog>
+          Please finish syncing before making a transaction
+        </AlertDialog>
+      ));
       return;
     }
     let address = address_input.value.trim();
@@ -501,13 +506,21 @@ function SendCard(props: SendCardProps) {
       amount_input.value === '' ||
       Number(amount_input.value) === 0 ||
       !Number(amount_input.value) ||
-      isNaN(Number(amount_input.value))
+      Number.isNaN(Number(amount_input.value))
     ) {
-      dispatch(openDialog('Please enter a valid numeric amount'));
+      dispatch(openDialog(
+        <AlertDialog>
+          Please enter a valid numeric amount
+        </AlertDialog>
+      ));
       return;
     }
-    if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
-      dispatch(openDialog('Please enter a valid numeric fee'));
+    if (fee_input.value === '' || Number.isNaN(Number(fee_input.value))) {
+      dispatch(openDialog(
+        <AlertDialog>
+          Please enter a valid numeric fee
+        </AlertDialog>
+      ));
       return;
     }
 
@@ -517,7 +530,9 @@ function SendCard(props: SendCardProps) {
     if (address.includes('chia_addr') || address.includes('colour_desc')) {
       dispatch(
         openDialog(
-          'Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address',
+          <AlertDialog>
+            Error: recipient address is not a coloured wallet address. Please enter a coloured wallet address
+          </AlertDialog>
         ),
       );
       return;
@@ -528,7 +543,9 @@ function SendCard(props: SendCardProps) {
       if (colour_id !== colour) {
         dispatch(
           openDialog(
-            'Error the entered address appears to be for a different colour.',
+            <AlertDialog>
+              Error the entered address appears to be for a different colour.
+            </AlertDialog>
           ),
         );
         return;
@@ -545,7 +562,9 @@ function SendCard(props: SendCardProps) {
     if (fee_value !== 0) {
       dispatch(
         openDialog(
-          'Please enter 0 fee. Positive fees not supported yet for coloured coins.',
+          <AlertDialog>
+            Please enter 0 fee. Positive fees not supported yet for coloured coins.
+          </AlertDialog>
         ),
       );
       return;
@@ -662,31 +681,6 @@ function SendCard(props: SendCardProps) {
   );
 }
 
-type HistoryCardProps = {
-  wallet_id: number;
-};
-
-function HistoryCard(props: HistoryCardProps) {
-  const id = props.wallet_id;
-  const classes = useStyles();
-  return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="ColouredHistoryCard.title">History</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <TransactionTable wallet_id={id} />
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-}
-
 type TransactionTableProps = {
   wallet_id: number;
 };
@@ -778,6 +772,31 @@ function TransactionTable(props: TransactionTableProps) {
           ))}
         </TableBody>
       </Table>
+    </Paper>
+  );
+}
+
+type HistoryCardProps = {
+  wallet_id: number;
+};
+
+function HistoryCard(props: HistoryCardProps) {
+  const id = props.wallet_id;
+  const classes = useStyles();
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              <Trans id="ColouredHistoryCard.title">History</Trans>
+            </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <TransactionTable wallet_id={id} />
+        </Grid>
+      </Grid>
     </Paper>
   );
 }

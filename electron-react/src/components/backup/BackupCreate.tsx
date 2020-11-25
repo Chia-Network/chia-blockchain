@@ -2,11 +2,10 @@ import React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import Modal from '@material-ui/core/Modal';
 import { Button } from '@material-ui/core';
-import isElectron from 'is-electron';
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState } from '../../modules/rootReducer';
 import { showCreateBackup, create_backup_action } from '../../modules/message';
-import { openDialog } from '../../modules/dialog';
+import useSelectFile from '../../hooks/useSelectFile';
 
 function getModalStyle() {
   const top = 50;
@@ -32,6 +31,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 export default function BackupCreate() {
+  const selectFile = useSelectFile();
   const showBackupModal = useSelector(
     (state: RootState) => state.wallet_state.show_create_backup,
   );
@@ -40,20 +40,13 @@ export default function BackupCreate() {
   const modalStyle = getModalStyle();
 
   function handleClose() {
-    console.log('Modal dialog closed');
     dispatch(showCreateBackup(false));
   }
 
   async function handleCreateBackup() {
-    if (isElectron()) {
-      // @ts-ignore
-      const result = await window.remote.dialog.showSaveDialog({});
-      const { filePath } = result;
+    const filePath = await selectFile();
+    if (filePath) {
       dispatch(create_backup_action(filePath));
-    } else {
-      dispatch(
-        openDialog('', 'This feature is available only from electron app'),
-      );
     }
   }
 

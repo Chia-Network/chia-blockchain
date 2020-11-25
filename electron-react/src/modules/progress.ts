@@ -7,7 +7,7 @@ export const openProgress = () => {
   };
 };
 
-export const closeProgress = (id: string) => {
+export const closeProgress = () => {
   return {
     ...progressControl(),
     open: false,

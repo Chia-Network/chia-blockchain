@@ -35,11 +35,11 @@ class WalletTransactionStore:
                 " to_puzzle_hash text,"
                 " amount bigint,"
                 " fee_amount bigint,"
-                " incoming int,"
                 " confirmed int,"
                 " sent int,"
                 " wallet_id bigint,"
-                " trade_id text)"
+                " trade_id text,"
+                " type int)"
             )
         )
 
@@ -65,7 +65,7 @@ class WalletTransactionStore:
         )
 
         await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS tx_incoming on transaction_record(incoming)"
+            "CREATE INDEX IF NOT EXISTS tx_type on transaction_record(type)"
         )
 
         await self.db_connection.execute(
@@ -103,11 +103,11 @@ class WalletTransactionStore:
                 record.to_puzzle_hash.hex(),
                 record.amount,
                 record.fee_amount,
-                int(record.incoming),
                 int(record.confirmed),
                 record.sent,
                 record.wallet_id,
                 record.trade_id,
+                record.type,
             ),
         )
         await cursor.close()
@@ -131,7 +131,6 @@ class WalletTransactionStore:
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
             fee_amount=current.fee_amount,
-            incoming=current.incoming,
             confirmed=True,
             sent=current.sent,
             spend_bundle=current.spend_bundle,
@@ -140,6 +139,7 @@ class WalletTransactionStore:
             wallet_id=current.wallet_id,
             sent_to=current.sent_to,
             trade_id=None,
+            type=current.type,
         )
         await self.add_transaction_record(tx)
 
@@ -201,7 +201,6 @@ class WalletTransactionStore:
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
             fee_amount=current.fee_amount,
-            incoming=current.incoming,
             confirmed=current.confirmed,
             sent=uint32(current.sent + 1),
             spend_bundle=current.spend_bundle,
@@ -210,6 +209,7 @@ class WalletTransactionStore:
             wallet_id=current.wallet_id,
             sent_to=sent_to,
             trade_id=None,
+            type=current.type,
         )
 
         await self.add_transaction_record(tx)
@@ -229,7 +229,6 @@ class WalletTransactionStore:
             to_puzzle_hash=current.to_puzzle_hash,
             amount=current.amount,
             fee_amount=current.fee_amount,
-            incoming=current.incoming,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=current.spend_bundle,
@@ -238,6 +237,7 @@ class WalletTransactionStore:
             wallet_id=current.wallet_id,
             sent_to=[],
             trade_id=None,
+            type=current.type,
         )
         await self.add_transaction_record(tx)
 

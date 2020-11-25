@@ -13,87 +13,95 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/wallet/standard/WalletStandard.tsx:513
+#: src/components/wallet/standard/WalletStandard.tsx:522
 msgid "AddressCard.address"
 msgstr "Adresa"
 
-#: src/components/wallet/standard/WalletStandard.tsx:517
+#: src/components/wallet/standard/WalletStandard.tsx:526
 msgid "AddressCard.copy"
 msgstr "Kopírovať"
 
-#: src/components/wallet/standard/WalletStandard.tsx:529
+#: src/components/wallet/standard/WalletStandard.tsx:538
 msgid "AddressCard.newAddress"
 msgstr "Nová adresa"
 
-#: src/components/wallet/standard/WalletStandard.tsx:505
+#: src/components/wallet/standard/WalletStandard.tsx:514
 msgid "AddressCard.title"
 msgstr "Adresa príjemcu"
 
-#: src/components/router/Router.tsx:18
+#: src/components/core/AdvancedOptions/AdvancedOptions.tsx:35
+msgid "AdvancedOptions.hideAdvancedOptions"
+msgstr "Skryť rozšírené možnosti"
+
+#: src/components/core/AdvancedOptions/AdvancedOptions.tsx:40
+msgid "AdvancedOptions.showAdvancedOptions"
+msgstr "Zobraziť rozšírené možnosti"
+
+#: src/components/app/AppRouter.tsx:18
 msgid "Application.closing"
 msgstr "Zatvára sa uzol a server"
 
-#: src/components/router/Router.tsx:23
+#: src/components/app/AppRouter.tsx:23
 msgid "Application.connectingToWallet"
 msgstr "Pripájanie k peňaženke"
 
-#: src/components/router/Router.tsx:28
+#: src/components/app/AppRouter.tsx:28
 msgid "Application.loggingIn"
 msgstr "Prihlasovanie"
 
-#: src/components/wallet/standard/WalletStandard.tsx:201
+#: src/components/wallet/standard/WalletStandard.tsx:202
 msgid "BalanceCard.balance"
 msgstr "Zostatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:238
+#: src/components/wallet/standard/WalletStandard.tsx:239
 msgid "BalanceCard.pendingBalance"
 msgstr "Nespracovaný zostatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:240
+#: src/components/wallet/standard/WalletStandard.tsx:241
 msgid "BalanceCard.pendingBalanceTooltip"
 msgstr "Toto je súčet prichádzajúcich a odchádzajúcich nespracovaných transakcií (ešte nie sú zahrnuté do blockchainu). To nezahŕňa odmeny za ťažbu."
 
-#: src/components/wallet/standard/WalletStandard.tsx:253
+#: src/components/wallet/standard/WalletStandard.tsx:254
 msgid "BalanceCard.pendingChange"
 msgstr "Nespracované zmeny"
 
-#: src/components/wallet/standard/WalletStandard.tsx:255
+#: src/components/wallet/standard/WalletStandard.tsx:256
 msgid "BalanceCard.pendingChangeTooltip"
 msgstr "Toto je nespracovaná zmena. Sú to mince, ktoré ste si poslali, ale zatiaľ neboli spracované."
 
-#: src/components/wallet/standard/WalletStandard.tsx:245
+#: src/components/wallet/standard/WalletStandard.tsx:246
 msgid "BalanceCard.pendingFarmingRewards"
 msgstr "Nespracované odmeny za ťažbu"
 
-#: src/components/wallet/standard/WalletStandard.tsx:247
+#: src/components/wallet/standard/WalletStandard.tsx:248
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
 msgstr "Toto je celková suma nedávno získaných odmien za ťažbu, ktoré boli potvrdené, ale zatiaľ nie sú vyplatiteľné. Odmeny za ťaženie sú zmrazené na 200 blokov."
 
-#: src/components/wallet/standard/WalletStandard.tsx:231
+#: src/components/wallet/standard/WalletStandard.tsx:232
 msgid "BalanceCard.pendingTotalBalance"
 msgstr "Celkový nespracovaný zostatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:233
+#: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr "Toto je celkový zostatok + nespracovaný zostatok alebo to, aký bude váš zostatok po potvrdení všetkých nespracovaných transakcií."
 
-#: src/components/wallet/standard/WalletStandard.tsx:211
+#: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "BalanceCard.spendableBalance"
 msgstr "Disponibilný zostatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:211
+#: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "BalanceCard.spendableBalanceTooltip"
 msgstr "Toto je množstvo Chia, ktoré môžete v súčasnosti použiť na uskutočnenie transakcií. Nezahŕňa nespracované odmeny za ťažbu, nespracované prichádzajúce transakcie a Chia, ktorú ste práve minuli, ale ešte nie je v blockchaine."
 
-#: src/components/wallet/standard/WalletStandard.tsx:205
+#: src/components/wallet/standard/WalletStandard.tsx:206
 msgid "BalanceCard.totalBalance"
 msgstr "Celkový zostatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:205
+#: src/components/wallet/standard/WalletStandard.tsx:206
 msgid "BalanceCard.totalBalanceTooltip"
 msgstr "Toto je celkové množstvo Chia v blockchaine v LCA bloku (najnovší spoločný predok), ktorý je kontrolovaný vašimi súkromnými kľúčmi. Zahŕňa odmeny za zmrazené ťaženie, ale nie nespracované prichádzajúce a odchádzajúce transakcie."
 
-#: src/components/wallet/standard/WalletStandard.tsx:224
+#: src/components/wallet/standard/WalletStandard.tsx:225
 msgid "BalanceCard.viewPendingBalances"
 msgstr "Zobraziť nespracované zostatky"
 
@@ -135,7 +143,7 @@ msgstr "Celkové poplatky v tomto bloku idú ťažiarovi"
 
 #: src/components/block/Block.jsx:266
 msgid "Block.feesPuzzleHash"
-msgstr ""
+msgstr "Poplatky puzzle hash"
 
 #: src/components/block/Block.jsx:149
 msgid "Block.headerHash"
@@ -205,426 +213,430 @@ msgstr "Veľkosť"
 msgid "Block.weightTooltip"
 msgstr "Veľkosť je celková pridaná obtiažnosť všetkých blokov až po tento"
 
-#: src/components/fullNode/FullNode.jsx:427
+#: src/components/fullNode/FullNode.jsx:407
 msgid "BlocksCard.expectedFinishTime"
 msgstr "Očakávaný čas dokončenia"
 
-#: src/components/fullNode/FullNode.jsx:418
+#: src/components/fullNode/FullNode.jsx:398
 msgid "BlocksCard.headerHash"
 msgstr "Poradie hlavičky"
 
-#: src/components/fullNode/FullNode.jsx:421
+#: src/components/fullNode/FullNode.jsx:401
 msgid "BlocksCard.height"
 msgstr "Poradie"
 
-#: src/components/fullNode/FullNode.jsx:424
+#: src/components/fullNode/FullNode.jsx:404
 msgid "BlocksCard.timeCreated"
 msgstr "Čas vytvorenia"
 
-#: src/components/fullNode/FullNode.jsx:406
+#: src/components/fullNode/FullNode.jsx:389
 msgid "BlocksCard.title"
 msgstr "Bloky"
 
-#: src/components/wallet/create/WalletCreate.jsx:164
+#: src/components/wallet/create/WalletCreate.jsx:163
 msgid "CCListItems.title"
 msgstr "Možnosti coloured mincí"
 
 #: src/components/farmer/Farmer.jsx:288
-msgid "Challenges.bestEstimate"
-msgstr "Najlepší odhad"
+#~ msgid "Challenges.bestEstimate"
+#~ msgstr "Najlepší odhad"
 
 #: src/components/farmer/Farmer.jsx:277
-msgid "Challenges.challengeHash"
-msgstr "Hash výzvy"
+#~ msgid "Challenges.challengeHash"
+#~ msgstr "Hash výzvy"
 
 #: src/components/farmer/Farmer.jsx:280
-msgid "Challenges.height"
-msgstr "Poradie"
+#~ msgid "Challenges.height"
+#~ msgstr "Poradie"
 
 #: src/components/farmer/Farmer.jsx:283
-msgid "Challenges.numberOfProofs"
-msgstr "Počet dôkazov"
+#~ msgid "Challenges.numberOfProofs"
+#~ msgstr "Počet dôkazov"
 
 #: src/components/farmer/Farmer.jsx:265
-msgid "Challenges.title"
-msgstr "Výzvy"
+#~ msgid "Challenges.title"
+#~ msgstr "Výzvy"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:194
+#: src/components/wallet/coloured/WalletColoured.tsx:195
 msgid "ColourCard.colour"
 msgstr ""
 
-#: src/components/wallet/coloured/WalletColoured.tsx:210
+#: src/components/wallet/coloured/WalletColoured.tsx:211
 msgid "ColourCard.nickname"
 msgstr "Prezývka"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:216
+#: src/components/wallet/coloured/WalletColoured.tsx:217
 msgid "ColourCard.rename"
 msgstr "Premenovať"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:185
+#: src/components/wallet/coloured/WalletColoured.tsx:186
 msgid "ColourCard.title"
 msgstr ""
 
-#: src/components/wallet/coloured/WalletColoured.tsx:584
+#: src/components/wallet/coloured/WalletColoured.tsx:597
 msgid "ColouredAddressCard.address"
 msgstr "Adresa"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:588
+#: src/components/wallet/coloured/WalletColoured.tsx:601
 msgid "ColouredAddressCard.copy"
 msgstr "Kopírovať"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:600
+#: src/components/wallet/coloured/WalletColoured.tsx:613
 msgid "ColouredAddressCard.newAddress"
 msgstr "Nová adresa"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:576
+#: src/components/wallet/coloured/WalletColoured.tsx:589
 msgid "ColouredAddressCard.title"
 msgstr "Adresa príjemcu"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:312
+#: src/components/wallet/coloured/WalletColoured.tsx:313
 msgid "ColouredBalanceCard.spendableBalance"
 msgstr "Disponibilný zostatok"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:307
+#: src/components/wallet/coloured/WalletColoured.tsx:308
 msgid "ColouredBalanceCard.title"
 msgstr "Zostatok"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:311
+#: src/components/wallet/coloured/WalletColoured.tsx:312
 msgid "ColouredBalanceCard.totalBalance"
 msgstr "Celkový zostatok"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:321
+#: src/components/wallet/coloured/WalletColoured.tsx:322
 msgid "ColouredBalanceCard.viewPendingBalances"
 msgstr "Zobraziť nespracované zostatky ..."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:481
+#: src/components/wallet/coloured/WalletColoured.tsx:563
 msgid "ColouredHistoryCard.title"
 msgstr "História"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:430
+#: src/components/wallet/coloured/WalletColoured.tsx:443
 msgid "ColouredSendCard.address"
 msgstr "Adresa"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:442
+#: src/components/wallet/coloured/WalletColoured.tsx:455
 msgid "ColouredSendCard.amount"
 msgstr "Suma"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:459
+#: src/components/wallet/coloured/WalletColoured.tsx:472
 msgid "ColouredSendCard.farm"
 msgstr "Ťažiť"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:449
+#: src/components/wallet/coloured/WalletColoured.tsx:462
 msgid "ColouredSendCard.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:464
+#: src/components/wallet/coloured/WalletColoured.tsx:477
 msgid "ColouredSendCard.send"
 msgstr "Odoslať"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:415
+#: src/components/wallet/coloured/WalletColoured.tsx:428
 msgid "ColouredSendCard.title"
 msgstr "Vytvoriť transakciu"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:528
+#: src/components/wallet/coloured/WalletColoured.tsx:523
 msgid "ColouredTransactionTable.amount"
 msgstr "Suma"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:509
+#: src/components/wallet/coloured/WalletColoured.tsx:504
 msgid "ColouredTransactionTable.confirmed"
 msgstr "Potvrdené"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:522
+#: src/components/wallet/coloured/WalletColoured.tsx:517
 msgid "ColouredTransactionTable.date"
 msgstr "Dátum"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:531
+#: src/components/wallet/coloured/WalletColoured.tsx:526
 msgid "ColouredTransactionTable.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:504
+#: src/components/wallet/coloured/WalletColoured.tsx:499
 msgid "ColouredTransactionTable.incoming"
 msgstr "Prichádzajúce"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:497
+#: src/components/wallet/coloured/WalletColoured.tsx:492
 msgid "ColouredTransactionTable.noPreviousTransactions"
 msgstr "Žiadne predchádzajúce transakcie"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:506
+#: src/components/wallet/coloured/WalletColoured.tsx:501
 msgid "ColouredTransactionTable.outgoing"
 msgstr "Odchádzajúce"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:509
+#: src/components/wallet/coloured/WalletColoured.tsx:504
 msgid "ColouredTransactionTable.pending"
 msgstr "Spracúva sa"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:525
+#: src/components/wallet/coloured/WalletColoured.tsx:520
 msgid "ColouredTransactionTable.status"
 msgstr "Stav"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:519
+#: src/components/wallet/coloured/WalletColoured.tsx:514
 msgid "ColouredTransactionTable.to"
 msgstr "Príjemca"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:516
+#: src/components/wallet/coloured/WalletColoured.tsx:511
 msgid "ColouredTransactionTable.type"
 msgstr "Typ"
 
-#: src/components/connections/Connections.jsx:198
+#: src/components/fullNode/FullNodeConnections.jsx:192
 msgid "Connections.connect"
 msgstr "Pripojiť"
 
-#: src/components/connections/Connections.jsx:174
+#: src/components/fullNode/FullNodeConnections.jsx:168
 msgid "Connections.connectToOtherPeersTitle"
 msgstr "Pripojiť k iným uzlom"
 
-#: src/components/connections/Connections.jsx:115
+#: src/components/fullNode/FullNodeConnections.jsx:109
 msgid "Connections.connected"
 msgstr "Pripojené"
 
-#: src/components/connections/Connections.jsx:109
+#: src/components/fullNode/FullNodeConnections.jsx:103
 msgid "Connections.connectionType"
 msgstr "Typ pripojenia"
 
-#: src/components/connections/Connections.jsx:124
+#: src/components/fullNode/FullNodeConnections.jsx:118
 msgid "Connections.delete"
 msgstr "Zmazať"
 
-#: src/components/connections/Connections.jsx:100
+#: src/components/fullNode/FullNodeConnections.jsx:94
 msgid "Connections.ipAddress"
 msgstr "IP Adresa"
 
-#: src/components/connections/Connections.jsx:181
+#: src/components/fullNode/FullNodeConnections.jsx:175
 msgid "Connections.ipAddressHost"
 msgstr "IP Adresa / host"
 
-#: src/components/connections/Connections.jsx:120
+#: src/components/fullNode/FullNodeConnections.jsx:114
 msgid "Connections.lastMessage"
 msgstr "Posledná správa"
 
-#: src/components/connections/Connections.jsx:97
+#: src/components/fullNode/FullNodeConnections.jsx:91
 msgid "Connections.nodeId"
 msgstr "Id uzla"
 
-#: src/components/connections/Connections.jsx:103
-#: src/components/connections/Connections.jsx:187
+#: src/components/fullNode/FullNodeConnections.jsx:97
+#: src/components/fullNode/FullNodeConnections.jsx:181
 msgid "Connections.port"
 msgstr "Port"
 
-#: src/components/connections/Connections.jsx:85
+#: src/components/fullNode/FullNodeConnections.jsx:80
 msgid "Connections.title"
 msgstr "Pripojenia"
 
-#: src/components/connections/Connections.jsx:106
+#: src/components/fullNode/FullNodeConnections.jsx:100
 msgid "Connections.upDown"
 msgstr "Odoslané/Stiahnuté"
 
-#: src/components/wallet/create/createExistingColouredCoin.jsx:112
+#: src/components/wallet/create/createExistingColouredCoin.jsx:115
 msgid "CreateExistingCCWallet.colourString"
 msgstr ""
 
-#: src/components/wallet/create/createExistingColouredCoin.jsx:138
+#: src/components/wallet/create/createExistingColouredCoin.jsx:141
 msgid "CreateExistingCCWallet.create"
 msgstr "Vytvoriť"
 
-#: src/components/wallet/create/createExistingColouredCoin.jsx:68
+#: src/components/wallet/create/createExistingColouredCoin.jsx:70
 msgid "CreateExistingCCWallet.enterValidFee"
 msgstr "Prosím zadajte poplatok"
 
-#: src/components/wallet/create/createExistingColouredCoin.jsx:128
+#: src/components/wallet/create/createExistingColouredCoin.jsx:131
 msgid "CreateExistingCCWallet.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/create/createExistingColouredCoin.jsx:92
+#: src/components/wallet/create/createExistingColouredCoin.jsx:95
 msgid "CreateExistingCCWallet.title"
 msgstr "Vytvoriť peňaženku pre colour"
 
-#: src/components/wallet/create/createNewColouredCoin.jsx:120
+#: src/components/wallet/create/createNewColouredCoin.jsx:125
 msgid "CreateNewCCWallet.amount"
 msgstr "Suma"
 
-#: src/components/wallet/create/createNewColouredCoin.jsx:143
+#: src/components/wallet/create/createNewColouredCoin.jsx:148
 msgid "CreateNewCCWallet.create"
 msgstr "Vytvoriť"
 
-#: src/components/wallet/create/createNewColouredCoin.jsx:67
+#: src/components/wallet/create/createNewColouredCoin.jsx:69
 msgid "CreateNewCCWallet.enterValidAmount"
 msgstr "Prosím zadajte sumu"
 
-#: src/components/wallet/create/createNewColouredCoin.jsx:77
+#: src/components/wallet/create/createNewColouredCoin.jsx:81
 msgid "CreateNewCCWallet.enterValidFee"
 msgstr "Prosím zadajte poplatok"
 
-#: src/components/wallet/create/createNewColouredCoin.jsx:133
+#: src/components/wallet/create/createNewColouredCoin.jsx:138
 msgid "CreateNewCCWallet.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/create/createNewColouredCoin.jsx:101
+#: src/components/wallet/create/createNewColouredCoin.jsx:106
 msgid "CreateNewCCWallet.generateNewColour"
 msgstr "Vytvoriť nový colour"
 
-#: src/components/trading/CreateOffer.jsx:354
+#: src/components/trading/CreateOffer.jsx:223
 msgid "CreateOffer.add"
 msgstr "Pridať"
 
-#: src/components/trading/CreateOffer.jsx:244
+#: src/components/trading/CreateOffer.jsx:110
 msgid "CreateOffer.addTradePair"
 msgstr "Prosím pridajte obchodný pár"
 
-#: src/components/trading/CreateOffer.jsx:343
+#: src/components/trading/CreateOffer.jsx:214
 msgid "CreateOffer.amount"
 msgstr "Suma"
 
-#: src/components/trading/CreateOffer.jsx:266
+#: src/components/trading/CreateOffer.jsx:133
 msgid "CreateOffer.availableOnlyFromElectron"
 msgstr "Táto možnosť je dostupná iba z Electron aplikácie"
 
-#: src/components/trading/CreateOffer.jsx:303
+#: src/components/trading/CreateOffer.jsx:175
 msgid "CreateOffer.buyOrSell"
 msgstr "Kúpiť alebo predať"
 
-#: src/components/trading/CreateOffer.jsx:380
+#: src/components/trading/CreateOffer.jsx:154
 msgid "CreateOffer.cancel"
 msgstr "Zrušiť"
 
-#: src/components/trading/CreateOffer.jsx:322
+#: src/components/trading/CreateOffer.jsx:193
 msgid "CreateOffer.colour"
 msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:370
+#: src/components/trading/CreateOffer.jsx:161
 msgid "CreateOffer.save"
 msgstr "Uložiť"
 
-#: src/components/trading/CreateOffer.jsx:210
+#: src/components/trading/CreateOffer.jsx:76
 msgid "CreateOffer.selectAmount"
 msgstr "Prosím vyberte sumu"
 
-#: src/components/trading/CreateOffer.jsx:219
+#: src/components/trading/CreateOffer.jsx:86
 msgid "CreateOffer.selectBuyOrSell"
 msgstr "Prosím vyberte kúpiť alebo predať"
 
-#: src/components/trading/CreateOffer.jsx:199
+#: src/components/trading/CreateOffer.jsx:64
 msgid "CreateOffer.selectCoinType"
 msgstr "Prosím vyberte typ mince"
 
-#: src/components/trading/CreateOffer.jsx:283
+#: src/components/trading/CreateOffer.jsx:147
 msgid "CreateOffer.title"
 msgstr "Vytvorte obchodnú ponuku"
 
 #: src/components/plotter/Plotter.jsx:482
-msgid "CreatePlot.colour"
-msgstr ""
+#~ msgid "CreatePlot.colour"
+#~ msgstr ""
 
 #: src/components/plotter/Plotter.jsx:590
-msgid "CreatePlot.create"
-msgstr "Vytvoriť"
+#~ msgid "CreatePlot.create"
+#~ msgstr "Vytvoriť"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:60
+msgid "CreatePlot.delayDescription"
+msgstr "Minút"
 
 #: src/components/plotter/Plotter.jsx:433
-msgid "CreatePlot.description"
-msgstr "Pomocou tohto nástroja môžete vytvárať polia, ktoré sú alokované na vašom pevnom disku a slúžia na ťažbu a zarábanie Chia. Počas vytvárania súborov polí sa vytvárajú aj dočasné súbory, ktoré sú vačšie ako veľkosť konečných súborov polí, takže sa uistite, že máte dostatok miesta. Skúste použiť rýchly disk ako SSD pre dočasné súbory a na výsledný adresár veľký pomalý pevný disk (napríklad externý pevný disk)."
+#~ msgid "CreatePlot.description"
+#~ msgstr "Pomocou tohto nástroja môžete vytvárať polia, ktoré sú alokované na vašom pevnom disku a slúžia na ťažbu a zarábanie Chia. Počas vytvárania súborov polí sa vytvárajú aj dočasné súbory, ktoré sú vačšie ako veľkosť konečných súborov polí, takže sa uistite, že máte dostatok miesta. Skúste použiť rýchly disk ako SSD pre dočasné súbory a na výsledný adresár veľký pomalý pevný disk (napríklad externý pevný disk)."
 
-#: src/components/plotter/Plotter.jsx:543
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:92
 msgid "CreatePlot.numberOfBuckets"
 msgstr "Počet sektorov"
 
-#: src/components/plotter/Plotter.jsx:553
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 msgid "CreatePlot.numberOfBucketsDescription"
 msgstr "0 automaticky vyberie počet sektorov"
 
-#: src/components/plotter/Plotter.jsx:525
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:83
 msgid "CreatePlot.numberOfThreads"
 msgstr "Počet vlákien"
 
 #: src/components/plotter/Plotter.jsx:478
-msgid "CreatePlot.plotCount"
-msgstr "Počet plotov"
+#~ msgid "CreatePlot.plotCount"
+#~ msgstr "Počet plotov"
 
 #: src/components/plotter/Plotter.jsx:453
 #: src/components/plotter/Plotter.jsx:458
-msgid "CreatePlot.plotSize"
-msgstr "Veľkosť plotu"
+#~ msgid "CreatePlot.plotSize"
+#~ msgstr "Veľkosť plotu"
 
 #: src/components/plotter/Plotter.jsx:499
-msgid "CreatePlot.ramMaxUsage"
-msgstr "Maximálne využitie RAM"
+#~ msgid "CreatePlot.ramMaxUsage"
+#~ msgstr "Maximálne využitie RAM"
 
-#: src/components/plotter/Plotter.jsx:510
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "CreatePlot.ramMaxUsageDescription"
 msgstr "Viac pamäte mierne zvyšuje rýchlosť"
 
 #: src/components/plotter/Plotter.jsx:389
-msgid "CreatePlot.specifyFinalDirectory"
-msgstr "Zadajte dočasný a cieľový adresár"
+#~ msgid "CreatePlot.specifyFinalDirectory"
+#~ msgstr "Zadajte dočasný a cieľový adresár"
 
-#: src/components/plotter/Plotter.jsx:566
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
 msgid "CreatePlot.stripeSize"
 msgstr "Veľkosť sektora"
 
 #: src/components/plotter/Plotter.jsx:427
-msgid "CreatePlot.title"
-msgstr "Vytvoriť pole"
+#~ msgid "CreatePlot.title"
+#~ msgstr "Vytvoriť pole"
 
-#: src/components/wallet/create/createRLAdmin.jsx:248
+#: src/components/wallet/create/createRLAdmin.jsx:259
 msgid "CreateRLAdminWallet.amountForInitialCoin"
 msgstr "Počiatočná suma"
 
-#: src/components/wallet/create/createRLAdmin.jsx:322
+#: src/components/wallet/create/createRLAdmin.jsx:333
 msgid "CreateRLAdminWallet.create"
 msgstr "Vytvoriť"
 
-#: src/components/wallet/create/createRLAdmin.jsx:187
+#: src/components/wallet/create/createRLAdmin.jsx:198
 msgid "CreateRLAdminWallet.createRateLimitedAdminWallet"
 msgstr ""
 
-#: src/components/wallet/create/createRLAdmin.jsx:138
+#: src/components/wallet/create/createRLAdmin.jsx:146
 msgid "CreateRLAdminWallet.enterValidInitialCoin"
 msgstr "Prosím zadajte platnú počiatočnú sumu"
 
-#: src/components/wallet/create/createRLAdmin.jsx:148
+#: src/components/wallet/create/createRLAdmin.jsx:158
 msgid "CreateRLAdminWallet.enterValidNumericFee"
 msgstr "Prosím zadajte platný poplatok"
 
-#: src/components/wallet/create/createRLAdmin.jsx:98
+#: src/components/wallet/create/createRLAdmin.jsx:100
 msgid "CreateRLAdminWallet.enterValidNumericInterval"
 msgstr "Prosím zadajte platnú dĺžku intervalu"
 
-#: src/components/wallet/create/createRLAdmin.jsx:123
+#: src/components/wallet/create/createRLAdmin.jsx:129
 msgid "CreateRLAdminWallet.enterValidPubkey"
 msgstr "Zadajte platný verejný kľúč"
 
-#: src/components/wallet/create/createRLAdmin.jsx:113
+#: src/components/wallet/create/createRLAdmin.jsx:117
 msgid "CreateRLAdminWallet.enterValidSpendableAmount"
 msgstr "Zadajte platný disponibilný zostatok"
 
-#: src/components/wallet/create/createRLAdmin.jsx:255
-#: src/components/wallet/create/createRLAdmin.jsx:287
+#: src/components/wallet/create/createRLAdmin.jsx:266
+#: src/components/wallet/create/createRLAdmin.jsx:298
 msgid "CreateRLAdminWallet.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/create/createRLAdmin.jsx:272
+#: src/components/wallet/create/createRLAdmin.jsx:283
 msgid "CreateRLAdminWallet.initialAmount"
 msgstr "Počiatočná suma"
 
-#: src/components/wallet/create/createRLAdmin.jsx:223
+#: src/components/wallet/create/createRLAdmin.jsx:234
 msgid "CreateRLAdminWallet.interval"
 msgstr "Interval"
 
-#: src/components/wallet/create/createRLAdmin.jsx:312
+#: src/components/wallet/create/createRLAdmin.jsx:323
 msgid "CreateRLAdminWallet.pubkey"
 msgstr "Verejný kľúč"
 
-#: src/components/wallet/create/createRLAdmin.jsx:236
+#: src/components/wallet/create/createRLAdmin.jsx:247
 msgid "CreateRLAdminWallet.spendableAmount"
 msgstr "Disponibilný zostatok"
 
-#: src/components/wallet/create/createRLAdmin.jsx:205
+#: src/components/wallet/create/createRLAdmin.jsx:216
 msgid "CreateRLAdminWallet.spendableAmountPerInterval"
 msgstr "Disponibilná suma na interval"
 
-#: src/components/wallet/create/createRLAdmin.jsx:198
+#: src/components/wallet/create/createRLAdmin.jsx:209
 msgid "CreateRLAdminWallet.spendingIntervalLength"
 msgstr "Dĺžka disponibilného intervalu (počet blokov)"
 
-#: src/components/wallet/create/createRLAdmin.jsx:296
+#: src/components/wallet/create/createRLAdmin.jsx:307
 msgid "CreateRLAdminWallet.userPubkey"
 msgstr "Používateľov verejný kľúč"
 
@@ -640,272 +652,733 @@ msgstr ""
 msgid "CreateRLUserWallet.title"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:129
+#: src/components/wallet/Wallets.tsx:70
 msgid "CreateWallet.addWallet"
 msgstr "Pridať peňaženku"
 
-#: src/components/dashboard/DashboardSideBar.tsx:38
+#: src/components/dashboard/DashboardSideBar.tsx:26
 msgid "DashboardSideBar.farm"
 msgstr "Ťažba"
 
-#: src/components/dashboard/DashboardSideBar.tsx:35
+#: src/components/dashboard/DashboardSideBar.tsx:23
 msgid "DashboardSideBar.home"
 msgstr "Domov"
 
-#: src/components/dashboard/DashboardSideBar.tsx:40
+#: src/components/dashboard/DashboardSideBar.tsx:28
 msgid "DashboardSideBar.keys"
 msgstr "Kľúče"
 
-#: src/components/dashboard/DashboardSideBar.tsx:37
+#: src/components/dashboard/DashboardSideBar.tsx:25
 msgid "DashboardSideBar.plot"
 msgstr "Polia"
 
-#: src/components/dashboard/DashboardSideBar.tsx:39
+#: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "DashboardSideBar.trade"
 msgstr "Obchod"
 
-#: src/components/dashboard/DashboardSideBar.tsx:36
+#: src/components/dashboard/DashboardSideBar.tsx:24
 msgid "DashboardSideBar.wallets"
 msgstr "Peňaženky"
 
-#: src/components/selectKey/SelectKey.tsx:133
+#: src/components/selectKey/SelectKey.tsx:53
 msgid "DeleteAllKeys.back"
 msgstr "Zrušiť"
 
-#: src/components/selectKey/SelectKey.tsx:136
+#: src/components/selectKey/SelectKey.tsx:53
 msgid "DeleteAllKeys.delete"
 msgstr "Zmazať"
 
-#: src/components/selectKey/SelectKey.tsx:124
+#: src/components/selectKey/SelectKey.tsx:54
 msgid "DeleteAllKeys.description"
 msgstr "Po stlačení tlačidla zmazať odstránite natrvalo všetký kľúče z počítača. Uistite sa, že máte zálohu. Ste si istý, že chcete pokračovať?"
 
-#: src/components/selectKey/SelectKey.tsx:120
+#: src/components/selectKey/SelectKey.tsx:53
 msgid "DeleteAllKeys.title"
 msgstr "Zmazať všetky kľúče"
 
-#: src/components/farmer/Farmer.jsx:711
+#: src/components/selectKey/SelectKey.tsx:39
+msgid "DeleteKey.back"
+msgstr "Späť"
+
+#: src/components/selectKey/SelectKey.tsx:39
+msgid "DeleteKey.delete"
+msgstr "Vymazať"
+
+#: src/components/selectKey/SelectKey.tsx:40
+msgid "DeleteKey.description"
+msgstr "Odstránením kľúča natrvalo odstránite kľúč z počítača. Uistite sa, že máte zálohy. Ste si istý, že chcete pokračovať?"
+
+#: src/components/selectKey/SelectKey.tsx:39
+msgid "DeleteKey.title"
+msgstr "Odstrániť kľúč"
+
+#: src/components/farm/overview/FarmOverview.tsx:13
+msgid "Farm.title"
+msgstr "Prehľad vašej farmy"
+
+#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:14
+msgid "FarmCardCoinbaseRewards.title"
+msgstr "Odmeny za ťažbu TXCH"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:18
+msgid "FarmCardExpectedTimeToWin.title"
+msgstr "Očakávaný čas na výhru"
+
+#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:18
+msgid "FarmCardExpectedTimeToWin.tooltip"
+msgstr "Máte {0}% priestoru v sieti, takže ťažba bloku bude trvať {totalHours}"
+
+#: src/components/farm/card/FarmCardFeesReward.tsx:14
+msgid "FarmCardFeesReward.title"
+msgstr "Vyzbierané poplatky TXCH"
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
+msgid "FarmCardLastHeightFarmed.noBlocksFarmedYet"
+msgstr ""
+
+#: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
+msgid "FarmCardLastHeightFarmed.title"
+msgstr "Posledná spracovaná pozícia"
+
+#: src/components/farm/card/FarmCardPlotCount.tsx:7
+msgid "FarmCardPlotCount.title"
+msgstr "Počet polí"
+
+#: src/components/farm/card/FarmCardStatus.tsx:6
+msgid "FarmCardStatus.title"
+msgstr "Stav ťažby"
+
+#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:14
+msgid "FarmCardTotalChiaFarmed.title"
+msgstr "Celková vyťažená Chia"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+msgid "FarmCardTotalNetworkSpace.title"
+msgstr "Celková veľkosť siete"
+
+#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
+msgid "FarmCardTotalNetworkSpace.tooltip"
+msgstr "Najlepší odhad za poslednú 1 hodinu"
+
+#: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:14
+msgid "FarmCardTotalSizeOfPlots.title"
+msgstr "Celková veľkosť polí"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:47
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:47
+msgid "FarmFullNodeConnections.actions"
+msgstr "Akcie"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:70
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:69
+msgid "FarmFullNodeConnections.connectionStatus"
+msgstr "Stav pripojenia"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:11
+msgid "FarmFullNodeConnections.date"
+msgstr "Dátum"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:62
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:62
+msgid "FarmFullNodeConnections.description"
+msgstr "Kombajn je služba bežiaca na stroji, kde sú skutočne uložené polia. Nižšie si pozrite svoju sieť prepojených kombajnov. Viac informácií"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:7
+msgid "FarmFullNodeConnections.height"
+msgstr "Pozícia"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:25
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:25
+msgid "FarmFullNodeConnections.hostName"
+msgstr ""
+
+#: src/components/farm/FarmFullNodeConnections.tsx:20
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:20
+msgid "FarmFullNodeConnections.nodeId"
+msgstr ""
+
+#: src/components/farm/FarmFullNodeConnections.tsx:32
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:32
+msgid "FarmFullNodeConnections.port"
+msgstr "Port"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:15
+msgid "FarmFullNodeConnections.time"
+msgstr "Čas"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:60
+msgid "FarmFullNodeConnections.title"
+msgstr "Vaše pripojenie k sieti"
+
+#: src/components/farm/FarmFullNodeConnections.tsx:43
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:43
+msgid "FarmFullNodeConnections.upDown"
+msgstr "Odoslané/Stiahnuté"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:21
+msgid "FarmLastAttemptedProof.title"
+msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:23
+msgid "FarmLastAttemptedProof.tooltip"
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:41
+msgid "FarmLatestBlockChallenges.bestEstimate"
+msgstr "Najlepší odhad"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:46
+msgid "FarmLatestBlockChallenges.bestEstimateTooltip"
+msgstr "Najlepší odhad je, koľko sekúnd musí byť preukázaních pre vaše dôkazy."
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:15
+#: src/components/farm/FarmLatestBlockChallenges.tsx:27
+msgid "FarmLatestBlockChallenges.challengeHash"
+msgstr "Hash"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:61
+#: src/components/farm/FarmLatestBlockChallenges.tsx:67
+msgid "FarmLatestBlockChallenges.description"
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:20
+msgid "FarmLatestBlockChallenges.height"
+msgstr "Pozícia"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:75
+msgid "FarmLatestBlockChallenges.subDescription"
+msgstr "* Chcete viac preskúmať Chia bloky? Vyskúšajte aplikáciu <0>Chia Explorer</0> vytvorenú open source vývojárom."
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:59
+msgid "FarmLatestBlockChallenges.title"
+msgstr "Najnovšie blokové výzvy"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:29
+msgid "FarmOverviewHero.addAPlot"
+msgstr "Pridať pole"
+
+#: src/components/farm/overview/FarmOverviewHero.tsx:21
+msgid "FarmOverviewHero.description"
+msgstr "Ťažiari zarábajú blokové odmeny a transakčné poplatky tým, že venujú sieti voľný priestor, aby pomohli zabezpečiť transakcie. Toto je miesto, kde bude vaša farma, keď pridáte pole. <0>Ďalšie informácie</0>"
+
+#: src/components/farm/FarmYourHarvesterNetwork.tsx:60
+msgid "FarmYourHarvesterNetwork.title"
+msgstr ""
+
+#: src/components/farm/Farm.tsx:13
 msgid "Farmer.title"
 msgstr "Ťažba"
 
 #: src/components/farmer/Farmer.jsx:122
-msgid "FarmerStatus.connected"
-msgstr "Pripojené"
+#~ msgid "FarmerStatus.connected"
+#~ msgstr "Pripojené"
 
 #: src/components/farmer/Farmer.jsx:120
 #: src/components/farmer/Farmer.jsx:129
-msgid "FarmerStatus.connectionStatus"
-msgstr "Stav pripojenia"
+#~ msgid "FarmerStatus.connectionStatus"
+#~ msgstr "Stav pripojenia"
+
+#: src/components/farm/FarmerStatus.tsx:39
+msgid "FarmerStatus.error"
+msgstr "Chyba"
+
+#: src/components/farm/FarmerStatus.tsx:39
+msgid "FarmerStatus.farming"
+msgstr "Prebieha"
 
 #: src/components/farmer/Farmer.jsx:161
 #: src/components/farmer/Farmer.jsx:170
-msgid "FarmerStatus.lastHeightFarmed"
-msgstr "Posledná vyťažená pozícia"
+#~ msgid "FarmerStatus.lastHeightFarmed"
+#~ msgstr "Posledná vyťažená pozícia"
 
 #: src/components/farmer/Farmer.jsx:164
-msgid "FarmerStatus.noBlocksFarmedYet"
-msgstr "Žiadne bloky zatiaľ neboli vyťažené"
+#~ msgid "FarmerStatus.noBlocksFarmedYet"
+#~ msgstr "Žiadne bloky zatiaľ neboli vyťažené"
 
 #: src/components/farmer/Farmer.jsx:131
-msgid "FarmerStatus.notConnected"
-msgstr "Nepripojené"
+#~ msgid "FarmerStatus.notConnected"
+#~ msgstr "Nepripojené"
+
+#: src/components/farm/FarmerStatus.tsx:39
+msgid "FarmerStatus.synching"
+msgstr "Synchronizácia"
 
 #: src/components/farmer/Farmer.jsx:238
-msgid "FarmerStatus.title"
-msgstr "Stav ťaženia"
+#~ msgid "FarmerStatus.title"
+#~ msgstr "Stav ťaženia"
 
 #: src/components/farmer/Farmer.jsx:155
-msgid "FarmerStatus.totalChiaFarmed"
-msgstr "Celková vyťažená Chia"
+#~ msgid "FarmerStatus.totalChiaFarmed"
+#~ msgstr "Celková vyťažená Chia"
 
 #: src/components/farmer/Farmer.jsx:142
-msgid "FarmerStatus.totalSizeOfLocalPlots"
-msgstr "Celková veľkosť lokálnych polí"
+#~ msgid "FarmerStatus.totalSizeOfLocalPlots"
+#~ msgstr "Celková veľkosť lokálnych polí"
 
-#: src/components/fullNode/FullNode.jsx:546
+#: src/components/core/FormatConnectionStatus/FormatConnectionStatus.tsx:47
+msgid "FormatConnectionStatus.connected"
+msgstr "Pripojené"
+
+#: src/components/core/FormatConnectionStatus/FormatConnectionStatus.tsx:48
+msgid "FormatConnectionStatus.notConnected"
+msgstr "Nepripojené"
+
+#: src/components/fullNode/FullNode.jsx:508
 msgid "FullNode.title"
-msgstr "Všetky uzly"
+msgstr "Sieť"
 
-#: src/components/fullNode/FullNode.jsx:376
+#: src/components/fullNode/FullNode.jsx:363
 msgid "FullNodeStatus.title"
-msgstr "Stav všetkých uzlov"
+msgstr "Stav siete"
 
-#: src/components/wallet/standard/WalletStandard.tsx:408
+#: src/components/wallet/standard/WalletStandard.tsx:488
 msgid "HistoryCard.title"
 msgstr "História"
 
-#: src/components/locale/LocaleToggle.tsx:36
+#: src/components/core/LocaleToggle/LocaleToggle.tsx:36
 msgid "LocaleToggle.helpToTranslate"
 msgstr "Pomôcť s prekladom"
 
-#: src/components/wallet/create/WalletCreate.jsx:116
+#: src/components/wallet/create/WalletCreate.jsx:115
 msgid "MainWalletList.colouredCoin"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:240
+#: src/components/wallet/create/WalletCreate.jsx:239
 msgid "MainWalletList.createAdminWallet"
 msgstr "Vytvoriť peňaženku pre správcu"
 
-#: src/components/wallet/create/WalletCreate.jsx:176
+#: src/components/wallet/create/WalletCreate.jsx:175
 msgid "MainWalletList.createNewColouredCoin"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:252
+#: src/components/wallet/create/WalletCreate.jsx:251
 msgid "MainWalletList.createUserWallet"
 msgstr "Vytvoriť peňaženku pre používateľa"
 
-#: src/components/wallet/create/WalletCreate.jsx:188
+#: src/components/wallet/create/WalletCreate.jsx:187
 msgid "MainWalletList.createWalletForExistingColour"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:126
+#: src/components/wallet/create/WalletCreate.jsx:125
 msgid "MainWalletList.rateLimited"
 msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:104
+#: src/components/wallet/create/WalletCreate.jsx:103
 msgid "MainWalletList.title"
 msgstr "Vyberte typ peňaženky"
 
-#: src/components/trading/ViewOffer.jsx:196
+#: src/components/trading/ViewOffer.jsx:191
 msgid "OfferDropView.dragAndDropOfferFile"
 msgstr "Súbor s ponukami presuňte tu"
 
+#: src/components/trading/ViewOffer.jsx:181
+msgid "OfferDropView.selectOffer"
+msgstr ""
+
 #: src/components/trading/ViewOffer.jsx:182
-msgid "OfferDropView.title"
-msgstr "Zobraziť ponuku"
+#~ msgid "OfferDropView.title"
+#~ msgstr "Zobraziť ponuku"
 
 #: src/components/trading/ViewOffer.jsx:280
-msgid "OfferRow.buy"
-msgstr "Kúpiť"
+#~ msgid "OfferRow.buy"
+#~ msgstr "Kúpiť"
 
 #: src/components/trading/ViewOffer.jsx:278
-msgid "OfferRow.sell"
-msgstr "Predať"
+#~ msgid "OfferRow.sell"
+#~ msgstr "Predať"
 
-#: src/components/trading/ViewOffer.jsx:252
+#: src/components/trading/ViewOffer.jsx:251
 msgid "OfferView.accept"
 msgstr "Akceptovať"
 
-#: src/components/trading/ViewOffer.jsx:262
+#: src/components/trading/TradesTable.tsx:16
+#: src/components/trading/ViewOffer.jsx:209
+msgid "OfferView.amount"
+msgstr "Suma"
+
+#: src/components/trading/ViewOffer.jsx:244
 msgid "OfferView.cancel"
 msgstr "Zrušiť"
 
+#: src/components/trading/TradesTable.tsx:19
+#: src/components/trading/ViewOffer.jsx:212
+msgid "OfferView.colour"
+msgstr ""
+
+#: src/components/trading/TradesTable.tsx:13
+#: src/components/trading/ViewOffer.jsx:206
+msgid "OfferView.side"
+msgstr "Strana"
+
 #: src/components/trading/ViewOffer.jsx:231
-msgid "OfferView.title"
+#~ msgid "OfferView.title"
+#~ msgstr "Ponuka"
+
+#: src/components/trading/ViewOffer.jsx:237
+msgid "OfferView.title2"
 msgstr "Ponuka"
 
-#: src/components/trading/TradingOverview.jsx:451
+#: src/components/trading/TradingOverview.jsx:425
 msgid "PendingTrades.title"
 msgstr "Vytvorené ponuky"
 
+#: src/components/plot/Plot.tsx:13
+msgid "Plot.title"
+msgstr "Pole"
+
+#: src/components/plot/PlotAction.tsx:24
+#: src/components/plot/queue/PlotQueueActions.tsx:26
+msgid "PlotAction.deleteButton"
+msgstr "Vymazať"
+
+#: src/components/plot/PlotAction.tsx:25
+#: src/components/plot/queue/PlotQueueActions.tsx:27
+msgid "PlotAction.deleteDescription"
+msgstr "Naozaj chcete odstrániť pole? Pole nie je možné obnoviť."
+
+#: src/components/plot/PlotAction.tsx:24
+#: src/components/plot/queue/PlotQueueActions.tsx:26
+msgid "PlotAction.deleteTitle"
+msgstr "Zmazať pole"
+
+#: src/components/plot/add/PlotAdd.tsx:54
+msgid "PlotAdd.createPlot"
+msgstr "Vytvoriť pole"
+
+#: src/components/plot/add/PlotAdd.tsx:42
+msgid "PlotAdd.title"
+msgstr "Pridať pole"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:19
+msgid "PlotAddChooseSize.description"
+msgstr ""
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:37
+msgid "PlotAddChooseSize.kLow"
+msgstr "Minimálna požadovaná veľkosť pre sieť je k = 32"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:29
+msgid "PlotAddChooseSize.plotSize"
+msgstr "Velkosť poľa"
+
+#: src/components/plot/add/PlotAddChooseSize.tsx:17
+msgid "PlotAddChooseSize.title"
+msgstr "Vyberte veľkosť poľa"
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:57
+msgid "PlotAddNumberOfPlots.delay"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
+msgid "PlotAddNumberOfPlots.delayTitle"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
+msgid "PlotAddNumberOfPlots.parallelDescription"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
+msgid "PlotAddNumberOfPlots.parallelTitle"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
+msgid "PlotAddNumberOfPlots.plotCount"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
+msgid "PlotAddNumberOfPlots.ramMaxUsage"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
+msgid "PlotAddNumberOfPlots.title"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
+msgid "PlotAddSelectFinalDirectory.description"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
+msgid "PlotAddSelectFinalDirectory.finalFolderLocation"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
+msgid "PlotAddSelectFinalDirectory.specifyFinalDirectory"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
+msgid "PlotAddSelectFinalDirectory.title"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:73
+msgid "PlotAddSelectTemporaryDirectory.browse"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
+msgid "PlotAddSelectTemporaryDirectory.defaultIsFinal"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:33
+msgid "PlotAddSelectTemporaryDirectory.description"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:62
+msgid "PlotAddSelectTemporaryDirectory.selectSecondTemporaryDirectory"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:73
+msgid "PlotAddSelectTemporaryDirectory.selected"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:47
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:51
+msgid "PlotAddSelectTemporaryDirectory.specifyTemporaryDirectory"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:31
+msgid "PlotAddSelectTemporaryDirectory.title"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:40
+msgid "PlotAddSelectTemporaryDirectory.workspaceLocation"
+msgstr ""
+
+#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:67
+msgid "PlotAddSelectTemporaryDirectory.workspaceLocation2"
+msgstr ""
+
+#: src/components/plot/PlotHeader.tsx:33
+msgid "PlotHeader.addAPlot"
+msgstr ""
+
+#: src/components/plot/PlotHeader.tsx:51
+msgid "PlotHeader.addPlotDirectory"
+msgstr ""
+
+#: src/components/plot/PlotHeader.tsx:43
+msgid "PlotHeader.refreshPlots"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:29
+msgid "PlotHero.addAPlot"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:23
+msgid "PlotHero.description"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewHero.tsx:35
+msgid "PlotHero.doYouHavePlot"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:59
+msgid "PlotOverviewPlots.action"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:78
+msgid "PlotOverviewPlots.description"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:36
+msgid "PlotOverviewPlots.harversterId"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+msgid "PlotOverviewPlots.plotKey"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:31
+msgid "PlotOverviewPlots.plotName"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:41
+msgid "PlotOverviewPlots.plotSeed"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:51
+msgid "PlotOverviewPlots.poolKey"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:26
+msgid "PlotOverviewPlots.size"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+msgid "PlotOverviewPlots.status"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:72
+msgid "PlotOverviewPlots.title"
+msgstr ""
+
+#: src/components/plot/overview/PlotOverviewPlots.tsx:85
+msgid "PlotOverviewPlots.totalPlotSize"
+msgstr ""
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:8
+msgid "PlotQueueIndicator.plotting"
+msgstr ""
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:11
+msgid "PlotQueueIndicator.queued"
+msgstr ""
+
+#: src/components/plot/PlotStatus.tsx:25
+msgid "PlotStatus.error"
+msgstr ""
+
+#: src/components/plot/PlotStatus.tsx:19
+msgid "PlotStatus.farming"
+msgstr ""
+
+#: src/components/plot/PlotStatus.tsx:22
+msgid "PlotStatus.synching"
+msgstr ""
+
 #: src/components/farmer/Farmer.jsx:581
-msgid "Plots.back"
-msgstr "Naspäť"
+#~ msgid "Plots.back"
+#~ msgstr "Naspäť"
 
 #: src/components/farmer/Farmer.jsx:425
 #: src/components/farmer/Farmer.jsx:588
-msgid "Plots.delete"
-msgstr "Zmazať"
+#~ msgid "Plots.delete"
+#~ msgstr "Zmazať"
 
 #: src/components/farmer/Farmer.jsx:569
-msgid "Plots.deleteAllKeys"
-msgstr "Zmazať všetky kľúče"
+#~ msgid "Plots.deleteAllKeys"
+#~ msgstr "Zmazať všetky kľúče"
 
 #: src/components/farmer/Farmer.jsx:573
-msgid "Plots.deleteAllKeysDescription"
-msgstr "Naozaj chcete odstrániť pole? Pole nie je možné získať späť."
+#~ msgid "Plots.deleteAllKeysDescription"
+#~ msgstr "Naozaj chcete odstrániť pole? Pole nie je možné získať späť."
 
 #: src/components/farmer/Farmer.jsx:494
-msgid "Plots.deletePlotsDescription"
-msgstr "Pozor, tieto polia sa odstránia navždy. Skontrolujte, či sú pamäťové zariadenia správne pripojené."
+#~ msgid "Plots.deletePlotsDescription"
+#~ msgstr "Pozor, tieto polia sa odstránia navždy. Skontrolujte, či sú pamäťové zariadenia správne pripojené."
 
 #: src/components/farmer/Farmer.jsx:526
-msgid "Plots.failedToOpenPlots"
-msgstr "Nepodarilo sa otvoriť (neplatné polia)"
+#~ msgid "Plots.failedToOpenPlots"
+#~ msgstr "Nepodarilo sa otvoriť (neplatné polia)"
 
 #: src/components/farmer/Farmer.jsx:532
-msgid "Plots.failedToOpenPlotsDescription"
-msgstr "Tieto polia sú neplatné, asi ich budete chcieť odstrániť navždy."
+#~ msgid "Plots.failedToOpenPlotsDescription"
+#~ msgstr "Tieto polia sú neplatné, asi ich budete chcieť odstrániť navždy."
 
 #: src/components/farmer/Farmer.jsx:410
-msgid "Plots.filename"
-msgstr "Názov súboru"
+#~ msgid "Plots.filename"
+#~ msgstr "Názov súboru"
 
 #: src/components/farmer/Farmer.jsx:385
-msgid "Plots.managePlotDirectories"
-msgstr "Spravovať adresáre polí"
+#~ msgid "Plots.managePlotDirectories"
+#~ msgstr "Spravovať adresáre polí"
 
 #: src/components/farmer/Farmer.jsx:490
-msgid "Plots.notFoundPlots"
-msgstr "Polia sa nenašli"
+#~ msgid "Plots.notFoundPlots"
+#~ msgstr "Polia sa nenašli"
 
 #: src/components/farmer/Farmer.jsx:416
-msgid "Plots.plotId"
-msgstr "Id poľa"
+#~ msgid "Plots.plotId"
+#~ msgstr "Id poľa"
 
 #: src/components/farmer/Farmer.jsx:419
-msgid "Plots.plotPk"
-msgstr "Pk poľa"
+#~ msgid "Plots.plotPk"
+#~ msgstr "Pk poľa"
 
 #: src/components/farmer/Farmer.jsx:422
-msgid "Plots.poolPk"
-msgstr "Pk poolu"
+#~ msgid "Plots.poolPk"
+#~ msgstr "Pk poolu"
 
 #: src/components/farmer/Farmer.jsx:374
-msgid "Plots.refreshPlots"
-msgstr "Aktualizovať polia"
+#~ msgid "Plots.refreshPlots"
+#~ msgstr "Aktualizovať polia"
 
 #: src/components/farmer/Farmer.jsx:413
-msgid "Plots.size"
-msgstr "Velkosť"
+#~ msgid "Plots.size"
+#~ msgstr "Velkosť"
 
 #: src/components/farmer/Farmer.jsx:366
-msgid "Plots.title"
-msgstr "Polia"
+#~ msgid "Plots.title"
+#~ msgstr "Polia"
+
+#: src/components/plot/PlotsFailed.tsx:26
+msgid "PlotsFailed.description"
+msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:24
+msgid "PlotsFailed.title"
+msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:14
+#: src/components/plot/PlotsNotFound.tsx:14
+msgid "PlotsNotFound.action"
+msgstr ""
+
+#: src/components/plot/PlotsNotFound.tsx:26
+msgid "PlotsNotFound.description"
+msgstr ""
+
+#: src/components/plot/PlotsFailed.tsx:10
+#: src/components/plot/PlotsNotFound.tsx:10
+msgid "PlotsNotFound.filename"
+msgstr ""
+
+#: src/components/plot/PlotsNotFound.tsx:24
+msgid "PlotsNotFound.title"
+msgstr ""
 
 #: src/components/plotter/Plotter.jsx:677
-msgid "Plotter.title"
-msgstr "Pole"
+#~ msgid "Plotter.title"
+#~ msgstr "Pole"
 
 #: src/components/plotter/Plotter.jsx:298
-msgid "PlotterFinalLocation.availableOnlyFromElectron"
-msgstr "Táto možnosť je dostupná iba z Electron aplikácie"
+#~ msgid "PlotterFinalLocation.availableOnlyFromElectron"
+#~ msgstr "Táto možnosť je dostupná iba z Electron aplikácie"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
+msgid "PlotterFinalLocation.browse"
+msgstr ""
 
 #: src/components/plotter/Plotter.jsx:318
-msgid "PlotterFinalLocation.finalFolderLocation"
-msgstr "Cieľový adresár"
+#~ msgid "PlotterFinalLocation.finalFolderLocation"
+#~ msgstr "Cieľový adresár"
 
 #: src/components/plotter/Plotter.jsx:335
-msgid "PlotterFinalLocation.select"
-msgstr "Vybrať"
+#~ msgid "PlotterFinalLocation.select"
+#~ msgstr "Vybrať"
+
+#: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
+msgid "PlotterFinalLocation.selected"
+msgstr ""
 
 #: src/components/plotter/Plotter.jsx:646
-msgid "PlotterProgress.cancel"
-msgstr "Zrušiť"
+#~ msgid "PlotterProgress.cancel"
+#~ msgstr "Zrušiť"
 
 #: src/components/plotter/Plotter.jsx:657
-msgid "PlotterProgress.clearLog"
-msgstr "Zmazať záznamy"
+#~ msgid "PlotterProgress.clearLog"
+#~ msgstr "Zmazať záznamy"
 
 #: src/components/plotter/Plotter.jsx:630
-msgid "PlotterProgress.plottingStoppedSuccesfully"
-msgstr "Vytváranie polí sa úspešne zastavilo."
+#~ msgid "PlotterProgress.plottingStoppedSuccesfully"
+#~ msgstr "Vytváranie polí sa úspešne zastavilo."
 
 #: src/components/plotter/Plotter.jsx:619
-msgid "PlotterProgress.title"
-msgstr "Aktuálny stav"
+#~ msgid "PlotterProgress.title"
+#~ msgstr "Aktuálny stav"
 
 #: src/components/plotter/Plotter.jsx:232
-msgid "PlotterWorkLocation.availableOnlyFromElectron"
-msgstr "Táto možnosť je dostupná iba z Electron aplikácie"
+#~ msgid "PlotterWorkLocation.availableOnlyFromElectron"
+#~ msgstr "Táto možnosť je dostupná iba z Electron aplikácie"
 
 #: src/components/plotter/Plotter.jsx:269
-msgid "PlotterWorkLocation.select"
-msgstr "Vybrať"
+#~ msgid "PlotterWorkLocation.select"
+#~ msgstr "Vybrať"
 
 #: src/components/plotter/Plotter.jsx:253
-msgid "PlotterWorkLocation.temporaryFolderLocation"
-msgstr "Dočasný adresár"
+#~ msgid "PlotterWorkLocation.temporaryFolderLocation"
+#~ msgstr "Dočasný adresár"
 
 #: src/components/wallet/rateLimited/WalletRateLimited.jsx:649
 msgid "RLBalanceCard.pendingBalance"
@@ -967,91 +1440,91 @@ msgstr ""
 msgid "RLDetailsCard.title"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:868
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:876
 msgid "RLHistoryCard.title"
 msgstr "História"
 
-#: src/components/wallet/create/WalletCreate.jsx:228
+#: src/components/wallet/create/WalletCreate.jsx:227
 msgid "RLListItems.title"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:794
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:802
 msgid "RLSendCard.addressPuzzleHash"
 msgstr "Adresa"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:818
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:826
 msgid "RLSendCard.amount"
 msgstr "Suma"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:752
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:759
 msgid "RLSendCard.enter0fee"
 msgstr ""
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:723
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:726
 msgid "RLSendCard.enterValidAmount"
 msgstr "Prosím zadajte platnú sumu"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:733
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:738
 msgid "RLSendCard.enterValidFee"
 msgstr "Prosím zadajte platný poplatok"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:831
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:839
 msgid "RLSendCard.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:848
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:856
 msgid "RLSendCard.send"
 msgstr "Poslať"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:772
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:780
 msgid "RLSendCard.title"
 msgstr "Vytvoriť transakciu"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:707
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:708
 msgid "RLSendCard.waitForSyncing"
 msgstr "Pred uskutočnením transakcie dokončite synchronizáciu"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:929
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:937
 msgid "RLTransactionTable.amount"
 msgstr "Suma"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:905
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:913
 msgid "RLTransactionTable.confirmed"
 msgstr "Potvrdené"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:923
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:931
 msgid "RLTransactionTable.date"
 msgstr "Dátum"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:932
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:940
 msgid "RLTransactionTable.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:899
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:907
 msgid "RLTransactionTable.incoming"
 msgstr "Prichádzajúce"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:890
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:898
 msgid "RLTransactionTable.noPreviousTransactions"
 msgstr "Žiadne predchádzajúce transakcie"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:901
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:909
 msgid "RLTransactionTable.outgoing"
 msgstr "Odchádzajúce"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:907
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:915
 msgid "RLTransactionTable.pending"
 msgstr "Nespracované"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:926
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:934
 msgid "RLTransactionTable.status"
 msgstr "Stav"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:920
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:928
 msgid "RLTransactionTable.to"
 msgstr "Príjemca"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:917
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:925
 msgid "RLTransactionTable.type"
 msgstr "Typ"
 
@@ -1083,405 +1556,417 @@ msgstr ""
 msgid "RTIncompleteCard.userPubkey"
 msgstr "Používateľov verejný kľúč"
 
-#: src/components/fullNode/FullNode.jsx:501
+#: src/components/fullNode/FullNode.jsx:471
 msgid "SearchBlock.blockHash"
 msgstr "Hash bloku"
 
-#: src/components/fullNode/FullNode.jsx:514
+#: src/components/fullNode/FullNode.jsx:482
 msgid "SearchBlock.search"
 msgstr "Vyhľadať"
 
-#: src/components/fullNode/FullNode.jsx:491
+#: src/components/fullNode/FullNode.jsx:465
 msgid "SearchBlock.title"
 msgstr "Vyhľadať blok podľa hashu"
 
-#: src/components/selectKey/SelectKey.tsx:100
+#: src/components/selectKey/SelectKey.tsx:109
 msgid "SelectKey.createNewPrivateKey"
 msgstr "Vytvoriť nový privátny kľúč"
 
-#: src/components/selectKey/SelectKey.tsx:113
+#: src/components/selectKey/SelectKey.tsx:122
 msgid "SelectKey.deleteAllKeys"
 msgstr "Zmazať všetky kľúče"
 
-#: src/components/selectKey/SelectKey.tsx:107
+#: src/components/selectKey/SelectKey.tsx:116
 msgid "SelectKey.importFromMnemonics"
 msgstr "Obnoviť z mnemotechniky (24 slov)"
 
-#: src/components/selectKey/SelectKey.tsx:78
+#: src/components/selectKey/SelectKey.tsx:87
 msgid "SelectKey.selectFingerprint"
 msgstr "Privátny kľúč s verejným odtlačkom {fingerprint}"
 
-#: src/components/selectKey/SelectKey.tsx:80
+#: src/components/selectKey/SelectKey.tsx:89
 msgid "SelectKey.selectKeyCanBeBacked"
 msgstr "Možnosť zálohovať pomocou mnemotechnickej pomôcky"
 
-#: src/components/selectKey/SelectKey.tsx:68
+#: src/components/selectKey/SelectKey.tsx:77
 msgid "SelectKey.signInDescription"
 msgstr "Vitajte v Chia. Prosím prihláste sa s existujúcim kľúčom alebo si vytvorte nový."
 
-#: src/components/selectKey/SelectKey.tsx:65
+#: src/components/selectKey/SelectKey.tsx:74
 msgid "SelectKey.signInTitle"
 msgstr "Prihlásiť sa"
 
-#: src/components/selectKey/SelectKey.tsx:62
+#: src/components/selectKey/SelectKey.tsx:71
 msgid "SelectKey.title"
 msgstr "Vyberte kľúč"
 
-#: src/components/wallet/standard/WalletStandard.tsx:359
+#: src/components/wallet/standard/WalletStandard.tsx:368
 msgid "SendCard.address"
 msgstr "Adresa"
 
-#: src/components/wallet/standard/WalletStandard.tsx:371
+#: src/components/wallet/standard/WalletStandard.tsx:380
 msgid "SendCard.amount"
 msgstr "Suma"
 
-#: src/components/wallet/standard/WalletStandard.tsx:320
+#: src/components/wallet/standard/WalletStandard.tsx:328
 msgid "SendCard.enterValidAddress"
 msgstr "Prosím zadajte platnú adresu"
 
-#: src/components/wallet/standard/WalletStandard.tsx:306
+#: src/components/wallet/standard/WalletStandard.tsx:310
 msgid "SendCard.enterValidAmount"
 msgstr "Prosím zadajte platnú sumu"
 
-#: src/components/wallet/standard/WalletStandard.tsx:312
+#: src/components/wallet/standard/WalletStandard.tsx:318
 msgid "SendCard.enterValidFee"
 msgstr "Prosím zadajte platný poplatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:386
+#: src/components/wallet/standard/WalletStandard.tsx:395
 msgid "SendCard.farm"
 msgstr "Ťažiť"
 
-#: src/components/wallet/standard/WalletStandard.tsx:376
+#: src/components/wallet/standard/WalletStandard.tsx:385
 msgid "SendCard.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:296
+#: src/components/wallet/standard/WalletStandard.tsx:298
 msgid "SendCard.finishSyncingBeforeTransaction"
 msgstr "Prosím počkajte na synchronizáciu skôr ako vytvoríte transakciu"
 
-#: src/components/wallet/standard/WalletStandard.tsx:391
+#: src/components/wallet/standard/WalletStandard.tsx:400
 msgid "SendCard.send"
 msgstr "Poslať"
 
-#: src/components/wallet/standard/WalletStandard.tsx:344
+#: src/components/wallet/standard/WalletStandard.tsx:353
 msgid "SendCard.title"
 msgstr "Vytvoriť transakciu"
 
-#: src/components/wallet/Wallets.tsx:159
+#: src/components/wallet/Wallets.tsx:100
 msgid "StatusCard.connections"
 msgstr "pripojenia:"
 
-#: src/components/wallet/Wallets.tsx:153
+#: src/components/wallet/Wallets.tsx:94
 msgid "StatusCard.height"
 msgstr "pozícia:"
 
-#: src/components/wallet/Wallets.tsx:145
+#: src/components/wallet/Wallets.tsx:86
 msgid "StatusCard.status"
 msgstr "stav:"
 
-#: src/components/wallet/Wallets.tsx:148
+#: src/components/wallet/Wallets.tsx:89
 msgid "StatusCard.synced"
 msgstr "synchronizované"
 
-#: src/components/wallet/Wallets.tsx:148
+#: src/components/wallet/Wallets.tsx:89
 msgid "StatusCard.syncing"
 msgstr "synchronizuje sa"
 
-#: src/components/wallet/Wallets.tsx:140
+#: src/components/wallet/Wallets.tsx:81
 msgid "StatusCard.title"
 msgstr "Stav"
 
-#: src/components/fullNode/FullNode.jsx:260
-#: src/components/fullNode/FullNode.jsx:267
+#: src/components/fullNode/FullNode.jsx:259
+#: src/components/fullNode/FullNode.jsx:266
 msgid "StatusItem.connectionStatus"
 msgstr "Stav pripojenia"
 
-#: src/components/fullNode/FullNode.jsx:261
+#: src/components/fullNode/FullNode.jsx:260
 msgid "StatusItem.connectionStatusConnected"
 msgstr "Pripojené"
 
-#: src/components/fullNode/FullNode.jsx:269
+#: src/components/fullNode/FullNode.jsx:268
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "Nepripojené"
 
-#: src/components/fullNode/FullNode.jsx:279
+#: src/components/fullNode/FullNode.jsx:278
 msgid "StatusItem.difficulty"
 msgstr "Zložitosť"
 
-#: src/components/fullNode/FullNode.jsx:311
+#: src/components/fullNode/FullNode.jsx:310
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "Odhadovaná velkosť siete"
 
-#: src/components/fullNode/FullNode.jsx:317
+#: src/components/fullNode/FullNode.jsx:316
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ťažiarov v sieti"
 
-#: src/components/fullNode/FullNode.jsx:287
+#: src/components/fullNode/FullNode.jsx:286
 msgid "StatusItem.iterationsPerSecond"
 msgstr "Iterácii za sekundu"
 
-#: src/components/fullNode/FullNode.jsx:291
+#: src/components/fullNode/FullNode.jsx:290
 msgid "StatusItem.iterationsPerSecondTooltip"
 msgstr "Odhadovaný dôkaz časovej rýchlosti najrýchlejšieho timelorda v sieti."
 
-#: src/components/fullNode/FullNode.jsx:199
-#: src/components/fullNode/FullNode.jsx:205
+#: src/components/fullNode/FullNode.jsx:198
+#: src/components/fullNode/FullNode.jsx:204
 msgid "StatusItem.lcaBlockHeight"
 msgstr "Pozícia LCA bloku"
 
-#: src/components/fullNode/FullNode.jsx:239
-#: src/components/fullNode/FullNode.jsx:252
+#: src/components/fullNode/FullNode.jsx:238
+#: src/components/fullNode/FullNode.jsx:251
 msgid "StatusItem.lcaTime"
 msgstr "LCA čas"
 
-#: src/components/fullNode/FullNode.jsx:242
+#: src/components/fullNode/FullNode.jsx:241
 msgid "StatusItem.lcaTimeTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:220
-#: src/components/fullNode/FullNode.jsx:228
+#: src/components/fullNode/FullNode.jsx:219
+#: src/components/fullNode/FullNode.jsx:227
 msgid "StatusItem.maxTipBlockHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:301
+#: src/components/fullNode/FullNode.jsx:300
 msgid "StatusItem.minIterations"
 msgstr "Minumum iterácii"
 
-#: src/components/fullNode/FullNode.jsx:160
-#: src/components/fullNode/FullNode.jsx:177
-#: src/components/fullNode/FullNode.jsx:189
+#: src/components/fullNode/FullNode.jsx:159
+#: src/components/fullNode/FullNode.jsx:176
+#: src/components/fullNode/FullNode.jsx:188
 msgid "StatusItem.status"
 msgstr "Stav"
 
-#: src/components/fullNode/FullNode.jsx:190
+#: src/components/fullNode/FullNode.jsx:189
 msgid "StatusItem.statusNotConnected"
 msgstr "Nepripojené"
 
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:177
 msgid "StatusItem.statusSynced"
 msgstr "synchronizované"
 
-#: src/components/fullNode/FullNode.jsx:181
+#: src/components/fullNode/FullNode.jsx:180
 msgid "StatusItem.statusSyncedTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:168
+#: src/components/fullNode/FullNode.jsx:167
 msgid "StatusItem.statusTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:162
+#: src/components/fullNode/FullNode.jsx:161
 msgid "StatusItem.statusValue"
 msgstr "Synchronizácia {progress}/{tip}"
 
-#: src/components/trading/TradingOverview.jsx:254
+#: src/components/trading/TradingOverview.jsx:230
 msgid "TradeDetail.acceptedAtTime"
 msgstr "Akceptované o"
 
-#: src/components/trading/TradingOverview.jsx:258
+#: src/components/trading/TradingOverview.jsx:234
 msgid "TradeDetail.acceptedAtTimeTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:434
+#: src/components/trading/TradingOverview.jsx:410
 msgid "TradeDetail.cancel"
 msgstr "Zrušiť"
 
-#: src/components/trading/TradingOverview.jsx:423
+#: src/components/trading/TradingOverview.jsx:399
 msgid "TradeDetail.cancelAndSpend"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:400
+#: src/components/trading/TradingOverview.jsx:376
 msgid "TradeDetail.coins"
 msgstr "Mince:"
 
-#: src/components/trading/TradingOverview.jsx:218
+#: src/components/trading/TradingOverview.jsx:202
 msgid "TradeDetail.confirmedAtBlock"
 msgstr "Potvrdené v bloku:"
 
-#: src/components/trading/TradingOverview.jsx:222
+#: src/components/trading/TradingOverview.jsx:206
 msgid "TradeDetail.confirmedAtBlockTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:198
+#: src/components/trading/TradingOverview.jsx:188
 msgid "TradeDetail.createdAt"
 msgstr "Vytvorené o"
 
-#: src/components/trading/TradingOverview.jsx:202
+#: src/components/trading/TradingOverview.jsx:192
 msgid "TradeDetail.createdAtTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:234
+#: src/components/trading/TradingOverview.jsx:214
 msgid "TradeDetail.createdByUs"
 msgstr "Vytvorené nami:"
 
-#: src/components/trading/TradingOverview.jsx:238
+#: src/components/trading/TradingOverview.jsx:218
 msgid "TradeDetail.createdByUsTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:231
+#: src/components/trading/TradingOverview.jsx:212
 msgid "TradeDetail.no"
 msgstr "Nie"
 
-#: src/components/trading/TradingOverview.jsx:248
+#: src/components/trading/TradingOverview.jsx:227
 msgid "TradeDetail.notAcceptedYet"
 msgstr "Zatiaľ neakcteptované"
 
-#: src/components/trading/TradingOverview.jsx:211
+#: src/components/trading/TradingOverview.jsx:199
 msgid "TradeDetail.notConfirmedYet"
 msgstr "Zatiaľ nepotvrdené"
 
-#: src/components/trading/TradingOverview.jsx:191
+#: src/components/trading/TradingOverview.jsx:181
 msgid "TradeDetail.status"
 msgstr "Stav:"
 
-#: src/components/trading/TradingOverview.jsx:194
+#: src/components/trading/TradingOverview.jsx:184
 msgid "TradeDetail.statusTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:384
+#: src/components/trading/TradingOverview.jsx:360
 msgid "TradeDetail.title"
 msgstr "Detaily obchodu"
 
-#: src/components/trading/TradingOverview.jsx:184
+#: src/components/trading/TradingOverview.jsx:174
 msgid "TradeDetail.tradeId"
 msgstr "Id obchodu:"
 
-#: src/components/trading/TradingOverview.jsx:187
+#: src/components/trading/TradingOverview.jsx:177
 msgid "TradeDetail.tradeIdTooltip"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:229
+#: src/components/trading/TradingOverview.jsx:212
 msgid "TradeDetail.yes"
 msgstr "Áno"
 
 #: src/components/trading/CreateOffer.jsx:150
-msgid "TradeList.amount"
-msgstr "Suma"
+#~ msgid "TradeList.amount"
+#~ msgstr "Suma"
 
 #: src/components/trading/CreateOffer.jsx:160
-msgid "TradeList.colour"
-msgstr ""
+#~ msgid "TradeList.colour"
+#~ msgstr ""
 
 #: src/components/trading/CreateOffer.jsx:147
-msgid "TradeList.side"
-msgstr "Strana"
+#~ msgid "TradeList.side"
+#~ msgstr "Strana"
 
-#: src/components/trading/TradeManager.tsx:68
+#: src/components/trading/TradeManager.tsx:22
 msgid "TradeManager.createTrade"
 msgstr "Vytvoriť ponuku"
 
-#: src/components/trading/TradeManager.tsx:54
+#: src/components/trading/TradeManager.tsx:13
 msgid "TradeManager.title"
 msgstr "Obchodovanie"
 
-#: src/components/trading/TradeManager.tsx:63
+#: src/components/trading/TradeManager.tsx:17
 msgid "TradeManager.tradeOverview"
 msgstr "Prehľad ponúk"
 
-#: src/components/trading/TradeManager.tsx:73
-msgid "TradeManager.viewTrade"
-msgstr "Zobraziť ponuku"
+#: src/components/trading/TradeManager.tsx:27
+msgid "TradeManager.viewOffer"
+msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:321
+#: src/components/trading/TradeManager.tsx:73
+#~ msgid "TradeManager.viewTrade"
+#~ msgstr "Zobraziť ponuku"
+
+#: src/components/trading/TradingOverview.jsx:297
 msgid "TradeOfferRow.buy"
 msgstr "Kúpiť"
 
-#: src/components/trading/TradingOverview.jsx:319
+#: src/components/trading/TradingOverview.jsx:295
 msgid "TradeOfferRow.sell"
 msgstr "Predať"
 
-#: src/components/trading/TradingOverview.jsx:163
+#: src/components/trading/TradingOverview.jsx:153
 msgid "TradeOverviewTable.tradesShowUpHere"
 msgstr "Ponuky sa zobrazia tu"
 
-#: src/components/trading/TradingOverview.jsx:147
+#: src/components/trading/TradingOverview.jsx:137
 msgid "TradeOverviewTableHeader.date"
 msgstr "Dátum"
 
-#: src/components/trading/TradingOverview.jsx:138
+#: src/components/trading/TradingOverview.jsx:128
 msgid "TradeOverviewTableHeader.status"
 msgstr "Stav"
 
-#: src/components/trading/TradingOverview.jsx:135
+#: src/components/trading/TradingOverview.jsx:125
 msgid "TradeOverviewTableHeader.tradeId"
 msgstr "Id ponuky"
 
-#: src/components/trading/TradingOverview.jsx:466
+#: src/components/trading/TradesTable.tsx:32
+msgid "TradesTable.buy"
+msgstr ""
+
+#: src/components/trading/TradesTable.tsx:31
+msgid "TradesTable.sell"
+msgstr ""
+
+#: src/components/trading/TradingOverview.jsx:437
 msgid "TradingHistory.title"
 msgstr "História ponúk"
 
-#: src/components/wallet/standard/WalletStandard.tsx:453
+#: src/components/wallet/standard/WalletStandard.tsx:444
 msgid "TransactionTable.amount"
 msgstr "Suma"
 
-#: src/components/wallet/standard/WalletStandard.tsx:432
+#: src/components/wallet/standard/WalletStandard.tsx:423
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "Potvrdené na pozícii {0}"
 
-#: src/components/wallet/standard/WalletStandard.tsx:447
+#: src/components/wallet/standard/WalletStandard.tsx:438
 msgid "TransactionTable.date"
 msgstr "Dátum"
 
-#: src/components/wallet/standard/WalletStandard.tsx:456
+#: src/components/wallet/standard/WalletStandard.tsx:447
 msgid "TransactionTable.fee"
 msgstr "Poplatok"
 
-#: src/components/wallet/standard/WalletStandard.tsx:427
+#: src/components/wallet/standard/WalletStandard.tsx:418
 msgid "TransactionTable.incoming"
 msgstr "Prichádzajúci"
 
-#: src/components/wallet/standard/WalletStandard.tsx:429
+#: src/components/wallet/standard/WalletStandard.tsx:420
 msgid "TransactionTable.outgoing"
 msgstr "Odchádzajúci"
 
-#: src/components/wallet/standard/WalletStandard.tsx:434
+#: src/components/wallet/standard/WalletStandard.tsx:425
 msgid "TransactionTable.pending"
 msgstr ""
 
-#: src/components/wallet/standard/WalletStandard.tsx:450
+#: src/components/wallet/standard/WalletStandard.tsx:441
 msgid "TransactionTable.status"
 msgstr "Stav"
 
-#: src/components/wallet/standard/WalletStandard.tsx:444
+#: src/components/wallet/standard/WalletStandard.tsx:435
 msgid "TransactionTable.to"
 msgstr "Príjemca"
 
-#: src/components/wallet/standard/WalletStandard.tsx:441
+#: src/components/wallet/standard/WalletStandard.tsx:432
 msgid "TransactionTable.type"
 msgstr "Typ"
 
-#: src/components/wallet/WalletAdd.tsx:41
+#: src/components/wallet/WalletAdd.tsx:37
 msgid "WalletAdd.description"
 msgstr "Vitajte! Pre zálohovanie vašej peňaženky sa používajú nasledujúce slová. Bez nich stratíte prístup k svojej peňaženke, chráňte ich! Zapíšte si každé slovo spolu s číslom poradia vedľa nich. (Poradie je dôležité)"
 
-#: src/components/wallet/WalletAdd.tsx:53
+#: src/components/wallet/WalletAdd.tsx:49
 msgid "WalletAdd.next"
 msgstr "Ďalej"
 
-#: src/components/wallet/WalletAdd.tsx:38
+#: src/components/wallet/WalletAdd.tsx:34
 msgid "WalletAdd.title"
 msgstr "Pridať peňaženku"
 
-#: src/components/wallet/WalletImport.tsx:70
+#: src/components/wallet/WalletImport.tsx:66
 msgid "WalletImport.description"
 msgstr "Zadaj 24 slov v presnom poradí, ktoré si si uložil pre obnovu svojej Chia peňaženky."
 
-#: src/components/wallet/WalletImport.tsx:80
+#: src/components/wallet/WalletImport.tsx:76
 msgid "WalletImport.next"
 msgstr "Ďalej"
 
-#: src/components/wallet/WalletImport.tsx:67
+#: src/components/wallet/WalletImport.tsx:63
 msgid "WalletImport.title"
 msgstr "Obnoviť peňaženku pomocou mnemotechnickej pomôcky"
 
-#: src/components/wallet/Wallets.tsx:91
+#: src/components/wallet/Wallets.tsx:33
 msgid "WalletItem.ccWallet"
 msgstr "CC peňaženka"
 
-#: src/components/wallet/Wallets.tsx:87
+#: src/components/wallet/Wallets.tsx:29
 msgid "WalletItem.chiaWallet"
 msgstr "Chia peňaženka"
 
-#: src/components/wallet/Wallets.tsx:98
+#: src/components/wallet/Wallets.tsx:40
 msgid "WalletItem.rlWallet"
 msgstr "RL peňaženka"
 
@@ -1509,6 +1994,14 @@ msgstr "synchronizuje sa"
 msgid "WalletStatusCard.title"
 msgstr "Stav"
 
-#: src/components/wallet/Wallets.tsx:175
+#: src/components/wallet/Wallets.tsx:112
 msgid "Wallets.title"
 msgstr "Peňaženky"
+
+#: src/hooks/useSelectDirectory.tsx:26
+msgid "useSelectDirectory.availableOnlyFromElectron"
+msgstr ""
+
+#: src/hooks/useSelectFile.tsx:26
+msgid "useSelectFile.availableOnlyFromElectron"
+msgstr ""

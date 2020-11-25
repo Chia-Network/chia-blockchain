@@ -63,8 +63,8 @@ export default function incomingReducer(
       };
 
     case 'CLEAR_SEND':
-      var id = action.message.data.wallet_id;
-      var wallet = state.wallets[Number.parseInt(id)];
+      const id = action.message.data.wallet_id;
+      const wallet = state.wallets[Number.parseInt(id, 10)];
       wallet.sending_transaction = false;
       wallet.send_transaction_result = null;
       return {
@@ -75,8 +75,8 @@ export default function incomingReducer(
         action.message.command === 'send_transaction' ||
         action.message.command === 'cc_spend'
       ) {
-        id = action.message.data.wallet_id;
-        wallet = state.wallets[Number.parseInt(id)];
+        const id = action.message.data.wallet_id;
+        const wallet = state.wallets[Number.parseInt(id, 10)];
         wallet.sending_transaction = false;
         wallet.send_transaction_result = null;
         return {
@@ -136,25 +136,26 @@ export default function incomingReducer(
       } else if (command === 'get_wallets') {
         if (data.success) {
           const { wallets } = data;
-          const wallets_state = [];
-          for (const object of wallets) {
-            const walletid = Number(object.id);
+          const wallets_state: Wallet[] = [];
+          wallets.forEach((wallet: Wallet) => {
+            const walletid = Number(wallet.id);
             const wallet_obj = createWallet(
               walletid,
-              object.name,
-              object.type,
-              object.data,
+              wallet.name,
+              wallet.type,
+              wallet.data,
             );
             wallets_state[walletid] = wallet_obj;
-          }
+          });
+
           return { ...state, wallets: wallets_state };
         }
       } else if (command === 'get_wallet_balance') {
         if (data.success) {
           const { wallet_balance } = data;
-          id = wallet_balance.wallet_id;
+          const id = wallet_balance.wallet_id;
           wallets = state.wallets;
-          wallet = wallets[Number.parseInt(id)];
+          const wallet = wallets[Number.parseInt(id, 10)];
           if (!wallet) {
             return state;
           }
@@ -173,10 +174,10 @@ export default function incomingReducer(
         }
       } else if (command === 'get_transactions') {
         if (data.success) {
-          id = data.wallet_id;
+          const id = data.wallet_id;
           const { transactions } = data;
           wallets = state.wallets;
-          wallet = wallets[Number(id)];
+          const wallet = wallets[Number(id)];
           if (!wallet) {
             return state;
           }
@@ -184,10 +185,10 @@ export default function incomingReducer(
           return { ...state };
         }
       } else if (command === 'get_next_address') {
-        id = data.wallet_id;
+        const id = data.wallet_id;
         const { address } = data;
         wallets = state.wallets;
-        wallet = wallets[Number(id)];
+        const wallet = wallets[Number(id)];
         if (!wallet) {
           return state;
         }
@@ -220,10 +221,10 @@ export default function incomingReducer(
           };
         }
       } else if (command === 'cc_get_colour') {
-        id = data.wallet_id;
+        const id = data.wallet_id;
         const { colour } = data;
         wallets = state.wallets;
-        wallet = wallets[Number(id)];
+        const wallet = wallets[Number(id)];
         if (!wallet) {
           return state;
         }
@@ -233,7 +234,7 @@ export default function incomingReducer(
         const id = data.wallet_id;
         const { name } = data;
         wallets = state.wallets;
-        wallet = wallets[Number(id)];
+        const wallet = wallets[Number(id)];
         if (!wallet) {
           return state;
         }
@@ -243,7 +244,7 @@ export default function incomingReducer(
       if (command === 'state_changed' && data.state === 'tx_update') {
         const id = data.wallet_id;
         wallets = state.wallets;
-        wallet = wallets[Number(id)];
+        const wallet = wallets[Number(id)];
         wallet.sending_transaction = false;
         wallet.send_transaction_result = message.data.additional_data;
         return { ...state };

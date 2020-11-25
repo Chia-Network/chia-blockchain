@@ -26,6 +26,7 @@ from src.wallet.puzzles.puzzle_utils import (
 from src.wallet.secret_key_store import SecretKeyStore
 from src.wallet.sign_coin_solutions import sign_coin_solutions
 from src.wallet.transaction_record import TransactionRecord
+from src.wallet.util.transaction_type import TransactionType
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_info import WalletInfo
@@ -326,7 +327,6 @@ class Wallet:
             to_puzzle_hash=puzzle_hash,
             amount=uint64(amount),
             fee_amount=uint64(fee),
-            incoming=False,
             confirmed=False,
             sent=uint32(0),
             spend_bundle=spend_bundle,
@@ -335,6 +335,7 @@ class Wallet:
             wallet_id=self.id(),
             sent_to=[],
             trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
         )
 
     async def push_transaction(self, tx: TransactionRecord) -> None:

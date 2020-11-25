@@ -2,7 +2,7 @@ from enum import IntEnum
 
 
 class WalletType(IntEnum):
-    # Condition Costs
+    # Wallet Types
     STANDARD_WALLET = 0
     RATE_LIMITED = 1
     ATOMIC_SWAP = 2

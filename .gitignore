@@ -83,6 +83,7 @@ main.sym
 # Dev config react
 electron-react/src/dev_config.js
 # React built app
+electron-react/.eslintcache
 electron-react/build
 build_scripts/dist
 build_scripts/*.Dmg
