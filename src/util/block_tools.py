@@ -61,6 +61,22 @@ from src.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
+from src.consensus.default_constants import DEFAULT_CONSTANTS
+
+
+test_constants = DEFAULT_CONSTANTS.replace(
+    **{
+        "DIFFICULTY_STARTING": 2 ** 9,
+        "DISCRIMINANT_SIZE_BITS": 16,
+        "SUB_EPOCH_SUB_BLOCKS": 140,
+        "EPOCH_SUB_BLOCKS": 280,
+        "SUB_SLOT_ITERS_STARTING": 2 ** 12,  # Must be a multiple of 64
+        "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
+        "MAX_FUTURE_TIME": 3600
+        * 24
+        * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
+    }
+)
 
 
 class BlockTools:
@@ -70,6 +86,7 @@ class BlockTools:
 
     def __init__(
         self,
+        constants: ConsensusConstants = test_constants,
         root_path: Optional[Path] = None,
         real_plots: bool = False,
     ):
@@ -77,12 +94,12 @@ class BlockTools:
         if root_path is None:
             self._tempdir = tempfile.TemporaryDirectory()
             root_path = Path(self._tempdir.name)
+
         self.root_path = root_path
         self.real_plots = real_plots
-
+        self.constants = constants
         if not real_plots:
             create_default_chia_config(root_path)
-            initialize_ssl(root_path)
             # No real plots supplied, so we will use the small test plots
             self.use_any_pos = True
             self.keychain = Keychain("testing-1.8.0", True)
@@ -95,40 +112,9 @@ class BlockTools:
             )
             self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
             self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
+            self.init_plots(root_path)
 
-            plot_dir = get_plot_dir()
-            mkdir(plot_dir)
-            temp_dir = plot_dir / "tmp"
-            mkdir(temp_dir)
-            args = Namespace()
-            # Can't go much lower than k19, since plots start having no solutions, and buggy plots
-            args.size = 19
-            args.num = 20
-            args.buffer = 100
-            args.farmer_public_key = bytes(self.farmer_pk).hex()
-            args.pool_public_key = bytes(self.pool_pk).hex()
-            args.tmp_dir = temp_dir
-            args.tmp2_dir = plot_dir
-            args.final_dir = plot_dir
-            args.plotid = None
-            args.memo = None
-            args.buckets = 0
-            args.stripe_size = 2000
-            args.num_threads = 0
-            test_private_keys = [AugSchemeMPL.key_gen(std_hash((i + 500).to_bytes(4, "big"))) for i in range(args.num)]
-            try:
-                # No datetime in the filename, to get deterministic filenames and not re-plot
-                create_plots(
-                    args,
-                    root_path,
-                    use_datetime=False,
-                    test_private_keys=test_private_keys,
-                )
-            except KeyboardInterrupt:
-                shutil.rmtree(plot_dir, ignore_errors=True)
-                sys.exit(1)
         else:
-            initialize_ssl(root_path)
             self.keychain = Keychain()
             self.use_any_pos = False
             sk_and_ent = self.keychain.get_first_private_key()
@@ -136,6 +122,7 @@ class BlockTools:
             self.farmer_master_sk = sk_and_ent[0]
             self.pool_master_sk = sk_and_ent[0]
 
+        initialize_ssl(root_path)
         self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
             master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
         )
@@ -153,6 +140,40 @@ class BlockTools:
         _, loaded_plots, _, _ = load_plots({}, {}, farmer_pubkeys, self.pool_pubkeys, None, root_path)
         self.plots: Dict[Path, PlotInfo] = loaded_plots
         self._config = load_config(self.root_path, "config.yaml")
+
+    def init_plots(self, root_path):
+        plot_dir = get_plot_dir()
+        mkdir(plot_dir)
+        temp_dir = plot_dir / "tmp"
+        mkdir(temp_dir)
+        args = Namespace()
+        # Can't go much lower than 18, since plots start having no solutions
+        args.size = 19
+        # Uses many plots for testing, in order to guarantee proofs of space at every height
+        args.num = 320
+        args.buffer = 100
+        args.farmer_public_key = bytes(self.farmer_pk).hex()
+        args.pool_public_key = bytes(self.pool_pk).hex()
+        args.tmp_dir = temp_dir
+        args.tmp2_dir = plot_dir
+        args.final_dir = plot_dir
+        args.plotid = None
+        args.memo = None
+        args.buckets = 0
+        args.stripe_size = 2000
+        args.num_threads = 0
+        test_private_keys = [AugSchemeMPL.key_gen(std_hash(i.to_bytes(4, "big"))) for i in range(args.num)]
+        try:
+            # No datetime in the filename, to get deterministic filenames and not re-plot
+            create_plots(
+                args,
+                root_path,
+                use_datetime=False,
+                test_private_keys=test_private_keys,
+            )
+        except KeyboardInterrupt:
+            shutil.rmtree(plot_dir, ignore_errors=True)
+            sys.exit(1)
 
     @property
     def config(self) -> Dict:
@@ -187,8 +208,7 @@ class BlockTools:
 
     def get_consecutive_blocks(
         self,
-        constants: ConsensusConstants,
-        num_blocks: int,
+        num_blocks: uint8,
         block_list: List[FullBlock] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
@@ -198,6 +218,8 @@ class BlockTools:
         force_overflow: bool = False,
         skip_slots: uint32 = uint32(0),  # Force at least this number of empty slots before the first SB
     ) -> List[FullBlock]:
+
+        constants = self.constants
         transaction_data_included = False
         if time_per_sub_block is None:
             time_per_sub_block: float = float(constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_SUB_BLOCKS_TARGET)
