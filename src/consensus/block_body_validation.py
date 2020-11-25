@@ -208,6 +208,8 @@ async def validate_block_body(
 
             for coinbase_coin in curr.get_included_reward_coins():
                 coinbases_since_fork[coinbase_coin.name()] = curr.height
+            if curr.height == 0:
+                break
             curr = await block_store.get_full_block(curr.prev_header_hash)
             assert curr is not None
 
