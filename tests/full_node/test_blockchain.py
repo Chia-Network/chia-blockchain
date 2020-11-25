@@ -4,7 +4,7 @@ from pathlib import Path
 
 import aiosqlite
 import pytest
-from blspy import PrivateKey, AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G2Element
 from pytest import raises
 
 from src.full_node.block_store import BlockStore
@@ -61,7 +61,7 @@ class TestGenesisBlock:
     @pytest.mark.asyncio
     async def test_non_overflow_genesis(self, empty_blockchain):
         assert empty_blockchain.get_peak() is None
-        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False)[0]
+        genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
@@ -69,28 +69,28 @@ class TestGenesisBlock:
 
     @pytest.mark.asyncio
     async def test_overflow_genesis(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=True)[0]
+        genesis = bt.get_consecutive_blocks(1, force_overflow=True)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_genesis_empty_slots(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=3)[0]
+        genesis = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=3)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_overflow_genesis_empty_slots(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=True, skip_slots=3)[0]
+        genesis = bt.get_consecutive_blocks(1, force_overflow=True, skip_slots=3)[0]
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_genesis_validate_1(self, empty_blockchain):
-        genesis = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False)[0]
+        genesis = bt.get_consecutive_blocks(1, force_overflow=False)[0]
         bad_prev = bytes([1] * 32)
         genesis = recursive_replace(genesis, "foliage_sub_block.prev_sub_block_hash", bad_prev)
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
@@ -100,7 +100,7 @@ class TestGenesisBlock:
 class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_long_chain(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(test_constants, 400)
+        blocks = bt.get_consecutive_blocks(400)
         for block in blocks:
             if (
                 len(block.finished_sub_slots) > 0
@@ -173,7 +173,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_empty_genesis(self, empty_blockchain):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(test_constants, 2, skip_slots=3)
+        blocks = bt.get_consecutive_blocks(2, skip_slots=3)
         for block in blocks:
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
@@ -181,14 +181,14 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_empty_slots_non_genesis(self, empty_blockchain):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(test_constants, 10)
+        blocks = bt.get_consecutive_blocks(10)
         for block in blocks:
             print(block.reward_chain_sub_block.challenge_chain_ip_vdf)
             print(block.challenge_chain_ip_proof)
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
 
-        blocks = bt.get_consecutive_blocks(test_constants, 10, skip_slots=2, block_list=blocks)
+        blocks = bt.get_consecutive_blocks(10, skip_slots=2, block_list=blocks)
         for block in blocks[10:]:
             result, err, _ = await blockchain.receive_block(block)
             assert err is None
@@ -200,7 +200,7 @@ class TestBlockHeaderValidation:
         num_blocks = 20
         blocks = []
         for i in range(num_blocks):
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=1)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks, skip_slots=1)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
         assert blockchain.get_peak().height == num_blocks - 1
@@ -211,7 +211,7 @@ class TestBlockHeaderValidation:
         num_blocks = 20
         blocks = []
         for i in range(num_blocks):  # Same thing, but 2 sub-slots per sub-block
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=2)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks, skip_slots=2)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
         assert blockchain.get_peak().height == num_blocks - 1
@@ -222,14 +222,14 @@ class TestBlockHeaderValidation:
         num_blocks = 10
         blocks = []
         for i in range(num_blocks):  # Same thing, but 5 sub-slots per sub-block
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=5)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks, skip_slots=5)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
         assert blockchain.get_peak().height == num_blocks - 1
 
     @pytest.mark.asyncio
     async def test_basic_chain_overflow(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(test_constants, 5, force_overflow=True)
+        blocks = bt.get_consecutive_blocks(5, force_overflow=True)
         for block in blocks:
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
@@ -243,7 +243,7 @@ class TestBlockHeaderValidation:
         num_blocks = 10
         blocks = []
         for i in range(num_blocks):
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=2, force_overflow=True)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks, skip_slots=2, force_overflow=True)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
@@ -252,7 +252,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_prev(self, empty_blockchain):
         # 1
-        blocks = bt.get_consecutive_blocks(test_constants, 2, force_overflow=False)
+        blocks = bt.get_consecutive_blocks(2, force_overflow=False)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_1_bad = recursive_replace(blocks[-1], "foliage_sub_block.prev_sub_block_hash", bytes([0] * 32))
         print(block_1_bad)
@@ -263,7 +263,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_pospace(self, empty_blockchain):
         # 2
-        blocks = bt.get_consecutive_blocks(test_constants, 2, force_overflow=False)
+        blocks = bt.get_consecutive_blocks(2, force_overflow=False)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_1_bad = recursive_replace(blocks[-1], "reward_chain_sub_block.proof_of_space.proof", bytes([0] * 32))
 
@@ -274,7 +274,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_sub_slot_challenge_hash_genesis(self, empty_blockchain):
         # 2a
-        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=1)
+        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=1)
         new_finished_ss = recursive_replace(
             blocks[0].finished_sub_slots[0],
             "challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash",
@@ -291,8 +291,8 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_sub_slot_challenge_hash_non_genesis(self, empty_blockchain):
         # 2b
-        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=0)
-        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=1, block_list=blocks)
+        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=0)
+        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=1, block_list=blocks)
         print(blocks)
         new_finished_ss = recursive_replace(
             blocks[1].finished_sub_slots[0],
@@ -311,8 +311,8 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_sub_slot_challenge_hash_empty_ss(self, empty_blockchain):
         # 2c
-        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=0)
-        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=2, block_list=blocks)
+        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=0)
+        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=2, block_list=blocks)
         new_finished_ss = recursive_replace(
             blocks[1].finished_sub_slots[-1],
             "challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash",
@@ -330,7 +330,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_genesis_no_icc(self, empty_blockchain):
         # 2d
-        blocks = bt.get_consecutive_blocks(test_constants, 1, force_overflow=False, skip_slots=1)
+        blocks = bt.get_consecutive_blocks(1, force_overflow=False, skip_slots=1)
         new_finished_ss = recursive_replace(
             blocks[0].finished_sub_slots[0],
             "infused_challenge_chain",
@@ -353,7 +353,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_invalid_icc_sub_slot_vdf(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(test_constants, 10)
+        blocks = bt.get_consecutive_blocks(10)
         for block in blocks:
             if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is not None:
                 # Bad iters
@@ -452,11 +452,11 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_icc_into_cc(self, empty_blockchain):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         case_1, case_2 = False, False
         while not case_1 or not case_2:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=1)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks, skip_slots=1)
             block = blocks[-1]
             if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[-1].infused_challenge_chain is not None:
                 if (
@@ -543,9 +543,9 @@ class TestBlockHeaderValidation:
     async def test_empty_slot_no_ses(self, empty_blockchain):
         # 2l
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
-        blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=4)
+        blocks = bt.get_consecutive_blocks(1, block_list=blocks, skip_slots=4)
 
         new_finished_ss = recursive_replace(
             blocks[-1].finished_sub_slots[-1],
@@ -562,8 +562,8 @@ class TestBlockHeaderValidation:
     async def test_wrong_cc_hash_rc(self, empty_blockchain):
         # 2o
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(test_constants, 1, skip_slots=1)
-        blocks = bt.get_consecutive_blocks(test_constants, 1, skip_slots=1, block_list=blocks)
+        blocks = bt.get_consecutive_blocks(1, skip_slots=1)
+        blocks = bt.get_consecutive_blocks(1, skip_slots=1, block_list=blocks)
         assert (await blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         new_finished_ss = recursive_replace(
@@ -582,7 +582,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_cc_sub_slot_vdf(self, empty_blockchain):
         # 2q
-        blocks = bt.get_consecutive_blocks(test_constants, 10)
+        blocks = bt.get_consecutive_blocks(10)
         for block in blocks:
             if len(block.finished_sub_slots):
                 # Bad iters
@@ -669,7 +669,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_invalid_rc_sub_slot_vdf(self, empty_blockchain):
         # 2p
-        blocks = bt.get_consecutive_blocks(test_constants, 10)
+        blocks = bt.get_consecutive_blocks(10)
         for block in blocks:
             if len(block.finished_sub_slots):
                 # Bad iters
@@ -756,7 +756,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_genesis_bad_deficit(self, empty_blockchain):
         # 2r
-        block = bt.get_consecutive_blocks(test_constants, 1, skip_slots=2)[0]
+        block = bt.get_consecutive_blocks(1, skip_slots=2)[0]
         new_finished_ss = recursive_replace(
             block.finished_sub_slots[-1],
             "reward_chain",
@@ -774,12 +774,12 @@ class TestBlockHeaderValidation:
     async def test_reset_deficit(self, empty_blockchain):
         # 2s, 2t
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         await empty_blockchain.receive_block(blocks[0])
         await empty_blockchain.receive_block(blocks[1])
         case_1, case_2 = False, False
         while not case_1 or not case_2:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks, skip_slots=1)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks, skip_slots=1)
             if len(blocks[-1].finished_sub_slots) > 0:
                 new_finished_ss = recursive_replace(
                     blocks[-1].finished_sub_slots[-1],
@@ -807,7 +807,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_genesis_has_ses(self, empty_blockchain):
         # 3a
-        block = bt.get_consecutive_blocks(test_constants, 1, skip_slots=1)[0]
+        block = bt.get_consecutive_blocks(1, skip_slots=1)[0]
         new_finished_ss = recursive_replace(
             block.finished_sub_slots[0],
             "challenge_chain",
@@ -832,11 +832,11 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_no_ses_if_no_se(self, empty_blockchain):
         # 3b
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         while True:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if len(blocks[-1].finished_sub_slots) > 0:
                 new_finished_ss: EndOfSubSlotBundle = recursive_replace(
                     blocks[-1].finished_sub_slots[0],
@@ -867,7 +867,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_pos(self, empty_blockchain):
         # 4
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         block_bad = recursive_replace(blocks[-1], "reward_chain_sub_block.proof_of_space.challenge_hash", std_hash(b""))
@@ -905,7 +905,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_signage_point_index(self, empty_blockchain):
         # 5
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         with raises(ValueError):
@@ -925,7 +925,7 @@ class TestBlockHeaderValidation:
         blocks = []
         case_1, case_2 = False, False
         while not case_1 or not case_2:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if blocks[-1].reward_chain_sub_block.signage_point_index == 0:
                 case_1 = True
                 block_bad = recursive_replace(blocks[-1], "reward_chain_sub_block.signage_point_index", uint8(1))
@@ -945,7 +945,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_total_iters(self, empty_blockchain):
         # 8
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         block_bad = recursive_replace(
@@ -956,11 +956,11 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_rc_sp_vdf(self, empty_blockchain):
         # 9
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         while True:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if blocks[-1].reward_chain_sub_block.signage_point_index != 0:
                 block_bad = recursive_replace(
                     blocks[-1], "reward_chain_sub_block.reward_chain_sp_vdf.challenge_hash", std_hash(b"1")
@@ -996,7 +996,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_rc_sp_sig(self, empty_blockchain):
         # 10
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad = recursive_replace(
             blocks[-1], "reward_chain_sub_block.reward_chain_sp_signature", G2Element.generator()
@@ -1006,11 +1006,11 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_cc_sp_vdf(self, empty_blockchain):
         # 11. Note: does not validate fully due to proof of space being validated first
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         while True:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if blocks[-1].reward_chain_sub_block.signage_point_index != 0:
                 block_bad = recursive_replace(
                     blocks[-1], "reward_chain_sub_block.challenge_chain_sp_vdf.challenge_hash", std_hash(b"1")
@@ -1046,7 +1046,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_cc_sp_sig(self, empty_blockchain):
         # 12
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad = recursive_replace(
             blocks[-1], "reward_chain_sub_block.challenge_chain_sp_signature", G2Element.generator()
@@ -1061,7 +1061,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_foliage_sb_sig(self, empty_blockchain):
         # 14
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad = recursive_replace(
             blocks[-1], "foliage_sub_block.foliage_sub_block_signature", G2Element.generator()
@@ -1071,11 +1071,11 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_foliage_block_sig(self, empty_blockchain):
         # 15
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
         while True:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if blocks[-1].foliage_block is not None:
                 block_bad = recursive_replace(
                     blocks[-1], "foliage_sub_block.foliage_block_signature", G2Element.generator()
@@ -1087,7 +1087,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_unfinished_reward_chain_sb_hash(self, empty_blockchain):
         # 16
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(
             blocks[-1], "foliage_sub_block.foliage_sub_block_data.unfinished_reward_block_hash", std_hash(b"2")
@@ -1100,7 +1100,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_pool_target_height(self, empty_blockchain):
         # 17
-        blocks = bt.get_consecutive_blocks(test_constants, 3)
+        blocks = bt.get_consecutive_blocks(3)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await empty_blockchain.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(
@@ -1114,7 +1114,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_pool_target_signature(self, empty_blockchain):
         # 18
-        blocks = bt.get_consecutive_blocks(test_constants, 3)
+        blocks = bt.get_consecutive_blocks(3)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await empty_blockchain.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(
@@ -1128,11 +1128,11 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_foliage_data_presence(self, empty_blockchain):
         # 20
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         case_1, case_2 = False, False
         while not case_1 or not case_2:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if blocks[-1].foliage_block is not None:
                 case_1 = True
                 block_bad: FullBlock = recursive_replace(blocks[-1], "foliage_sub_block.foliage_block_hash", None)
@@ -1148,11 +1148,11 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_foliage_block_hash(self, empty_blockchain):
         # 21
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         case_1, case_2 = False, False
         while not case_1 or not case_2:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if blocks[-1].foliage_block is not None:
                 block_bad: FullBlock = recursive_replace(
                     blocks[-1], "foliage_sub_block.foliage_block_hash", std_hash(b"2")
@@ -1170,7 +1170,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_genesis_bad_prev_block(self, empty_blockchain):
         # 22a
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(blocks[-1], "foliage_block.prev_block_hash", std_hash(b"2"))
         block_bad: FullBlock = recursive_replace(
             block_bad, "foliage_sub_block.foliage_block_hash", block_bad.foliage_block.get_hash()
@@ -1183,10 +1183,10 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_prev_block_non_genesis(self, empty_blockchain):
         # 22b
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         while True:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if blocks[-1].foliage_block is not None:
                 block_bad: FullBlock = recursive_replace(blocks[-1], "foliage_block.prev_block_hash", std_hash(b"2"))
                 block_bad: FullBlock = recursive_replace(
@@ -1204,10 +1204,10 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_filter_hash(self, empty_blockchain):
         # 23
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         while True:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if blocks[-1].foliage_block is not None:
                 block_bad: FullBlock = recursive_replace(blocks[-1], "foliage_block.filter_hash", std_hash(b"2"))
                 block_bad: FullBlock = recursive_replace(
@@ -1225,10 +1225,10 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_timestamp(self, empty_blockchain):
         # 24
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         while True:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if blocks[-1].foliage_block is not None:
                 block_bad: FullBlock = recursive_replace(
                     blocks[-1], "foliage_block.timestamp", blocks[0].foliage_block.timestamp - 10
@@ -1261,7 +1261,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_sub_block_height(self, empty_blockchain):
         # 25
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_sub_block.sub_block_height", 2)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_HEIGHT
@@ -1269,14 +1269,14 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_sub_block_height_genesis(self, empty_blockchain):
         # 25
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_sub_block.sub_block_height", 1)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PREV_BLOCK_HASH
 
     @pytest.mark.asyncio
     async def test_weight(self, empty_blockchain):
         # 26
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_sub_block.weight", 22131)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_WEIGHT
@@ -1284,17 +1284,17 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_weight_genesis(self, empty_blockchain):
         # 26
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_sub_block.weight", 0)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_WEIGHT
 
     @pytest.mark.asyncio
     async def test_bad_cc_ip_vdf(self, empty_blockchain):
         # 27
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
-        blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+        blocks = bt.get_consecutive_blocks(1, block_list=blocks)
         block_bad = recursive_replace(
             blocks[-1], "reward_chain_sub_block.challenge_chain_ip_vdf.challenge_hash", std_hash(b"1")
         )
@@ -1327,10 +1327,10 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_rc_ip_vdf(self, empty_blockchain):
         # 28
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
-        blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+        blocks = bt.get_consecutive_blocks(1, block_list=blocks)
         block_bad = recursive_replace(
             blocks[-1], "reward_chain_sub_block.reward_chain_ip_vdf.challenge_hash", std_hash(b"1")
         )
@@ -1363,10 +1363,10 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_bad_icc_ip_vdf(self, empty_blockchain):
         # 29
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
-        blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+        blocks = bt.get_consecutive_blocks(1, block_list=blocks)
         block_bad = recursive_replace(
             blocks[-1], "reward_chain_sub_block.infused_challenge_chain_ip_vdf.challenge_hash", std_hash(b"1")
         )
@@ -1399,7 +1399,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_reward_block_hash(self, empty_blockchain):
         # 30
-        blocks = bt.get_consecutive_blocks(test_constants, 2)
+        blocks = bt.get_consecutive_blocks(2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(blocks[-1], "foliage_sub_block.reward_block_hash", std_hash(b""))
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_REWARD_BLOCK_HASH
@@ -1407,7 +1407,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_reward_block_hash(self, empty_blockchain):
         # 31
-        blocks = bt.get_consecutive_blocks(test_constants, 1)
+        blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(blocks[0], "reward_chain_sub_block.is_block", False)
         block_bad: FullBlock = recursive_replace(
             block_bad, "foliage_sub_block.reward_block_hash", block_bad.reward_chain_sub_block.get_hash()
@@ -1417,7 +1417,7 @@ class TestBlockHeaderValidation:
 
         # Test one which should not be a block
         while True:
-            blocks = bt.get_consecutive_blocks(test_constants, 1, block_list=blocks)
+            blocks = bt.get_consecutive_blocks(1, block_list=blocks)
             if not blocks[-1].is_block():
                 block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_sub_block.is_block", True)
                 block_bad: FullBlock = recursive_replace(
@@ -1439,13 +1439,13 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_basic_reorg(self, empty_blockchain):
         b = empty_blockchain
-        blocks = bt.get_consecutive_blocks(test_constants, 15)
+        blocks = bt.get_consecutive_blocks(15)
 
         for block in blocks:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
         assert b.get_peak().height == 14
 
-        blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 7, blocks[:10], seed=b"2")
+        blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
         for reorg_block in blocks_reorg_chain:
             result, error_code, fork_height = await b.receive_block(reorg_block)
             if reorg_block.height < 10:
@@ -1466,7 +1466,7 @@ class TestReorgs:
         num_blocks_chain_2_start = test_constants.EPOCH_SUB_BLOCKS - 20
         num_blocks_chain_2 = test_constants.EPOCH_SUB_BLOCKS + test_constants.MAX_SLOT_SUB_BLOCKS + 8
 
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks_chain_1)
+        blocks = bt.get_consecutive_blocks(num_blocks_chain_1)
 
         for block in blocks:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1504,7 +1504,7 @@ class TestReorgs:
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain):
         b = empty_blockchain
-        blocks = bt.get_consecutive_blocks(test_constants, 15)
+        blocks = bt.get_consecutive_blocks(15)
 
         for block in blocks:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1512,7 +1512,7 @@ class TestReorgs:
 
         # Reorg to alternate chain that is 1 height longer
         found_orphan = False
-        blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 16, [], seed=b"2")
+        blocks_reorg_chain = bt.get_consecutive_blocks(16, [], seed=b"2")
         for reorg_block in blocks_reorg_chain:
             result, error_code, fork_height = await b.receive_block(reorg_block)
             print(reorg_block.height, result)
@@ -1525,7 +1525,7 @@ class TestReorgs:
             assert error_code is None
 
         # Back to original chain
-        blocks_reorg_chain_2 = bt.get_consecutive_blocks(test_constants, 3, blocks, seed=b"3")
+        blocks_reorg_chain_2 = bt.get_consecutive_blocks(3, blocks, seed=b"3")
 
         result, error_code, fork_height = await b.receive_block(blocks_reorg_chain_2[-3])
         assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
