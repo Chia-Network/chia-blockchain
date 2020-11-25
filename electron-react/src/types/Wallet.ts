@@ -1,5 +1,5 @@
 import type Transaction from './Transaction';
-import type WalletType from './WalletType';
+import type WalletType from '../constants/WalletType';
 
 interface Wallet {
   id: number;

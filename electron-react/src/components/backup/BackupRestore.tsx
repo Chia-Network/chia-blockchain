@@ -11,6 +11,7 @@ import {
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useHistory } from 'react-router';
+import { Flex, Link } from '@chia/core';
 import {
   add_new_key_action,
   add_and_restore_from_backup,
@@ -25,12 +26,10 @@ import {
   setBackupInfo,
   selectFilePath,
 } from '../../modules/backup';
-import Link from '../router/Link';
-import Flex from '../flex/Flex';
 import { unix_to_short_date } from '../../util/utils';
 import type { RootState } from '../../modules/rootReducer';
 import Wallet from '../../types/Wallet';
-import myStyle from '../../pages/style';
+import myStyle from '../../constants/style';
 import LayoutHero from '../layout/LayoutHero';
 
 const StyledDropPaper = styled(Paper)`
@@ -43,6 +42,60 @@ const StyledDropPaper = styled(Paper)`
   justify-content: center;
 `;
 
+function WalletHeader() {
+  const classes = myStyle();
+
+  return (
+    <Box display="flex" style={{ minWidth: '100%' }}>
+      <Box className={classes.column_three} flexGrow={1}>
+        <Typography variant="subtitle2"> id</Typography>
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        <div className={classes.align_center}>
+          {' '}
+          <Typography variant="subtitle2"> name</Typography>
+        </div>
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        <div className={classes.align_right}>
+          {' '}
+          <Typography variant="subtitle2"> type</Typography>
+        </div>
+      </Box>
+    </Box>
+  );
+}
+
+type WalletRowProps = {
+  wallet: Wallet;
+};
+
+function WalletRow(props: WalletRowProps) {
+  const {
+    wallet: {
+      id,
+      name,
+      // @ts-ignore
+      type_name: type,
+    },
+  } = props;
+  const classes = myStyle();
+
+  return (
+    <Box display="flex" style={{ minWidth: '100%' }}>
+      <Box className={classes.column_three} flexGrow={1}>
+        {id}
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        <div className={classes.align_center}> {name}</div>
+      </Box>
+      <Box className={classes.column_three} flexGrow={1}>
+        <div className={classes.align_right}> {type}</div>
+      </Box>
+    </Box>
+  );
+}
+
 function UIPart() {
   const dispatch = useDispatch();
   const classes = myStyle();
@@ -53,12 +106,12 @@ function UIPart() {
     (state: RootState) => state.wallet_state.selected_fingerprint,
   );
 
-  for (const word of words) {
+  words.forEach((word) => {
     if (word === '') {
       // @ts-ignore
       words = null;
     }
-  }
+  });
 
   function handleSkip() {
     if (fingerprint !== null) {
@@ -167,12 +220,12 @@ function BackupDetails() {
     (state: RootState) => state.wallet_state.selected_fingerprint,
   );
 
-  for (const word of words) {
+  words.forEach((word) => {
     if (word === '') {
       // @ts-ignore
       words = null;
     }
-  }
+  });
 
   function handleGoBack() {
     dispatch(changeBackupView(presentMain));
@@ -292,60 +345,6 @@ function BackupDetails() {
         </div>
       </Container>
     </div>
-  );
-}
-
-type WalletRowProps = {
-  wallet: Wallet;
-};
-
-function WalletRow(props: WalletRowProps) {
-  const {
-    wallet: {
-      id,
-      name,
-      // @ts-ignore
-      type_name: type,
-    },
-  } = props;
-  const classes = myStyle();
-
-  return (
-    <Box display="flex" style={{ minWidth: '100%' }}>
-      <Box className={classes.column_three} flexGrow={1}>
-        {id}
-      </Box>
-      <Box className={classes.column_three} flexGrow={1}>
-        <div className={classes.align_center}> {name}</div>
-      </Box>
-      <Box className={classes.column_three} flexGrow={1}>
-        <div className={classes.align_right}> {type}</div>
-      </Box>
-    </Box>
-  );
-}
-
-function WalletHeader() {
-  const classes = myStyle();
-
-  return (
-    <Box display="flex" style={{ minWidth: '100%' }}>
-      <Box className={classes.column_three} flexGrow={1}>
-        <Typography variant="subtitle2"> id</Typography>
-      </Box>
-      <Box className={classes.column_three} flexGrow={1}>
-        <div className={classes.align_center}>
-          {' '}
-          <Typography variant="subtitle2"> name</Typography>
-        </div>
-      </Box>
-      <Box className={classes.column_three} flexGrow={1}>
-        <div className={classes.align_right}>
-          {' '}
-          <Typography variant="subtitle2"> type</Typography>
-        </div>
-      </Box>
-    </Box>
   );
 }
 

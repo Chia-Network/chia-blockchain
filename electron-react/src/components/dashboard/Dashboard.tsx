@@ -1,24 +1,26 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Route, Switch, useRouteMatch } from 'react-router';
-import { AppBar, Toolbar, Drawer, Divider } from '@material-ui/core';
+import { Box, AppBar, Toolbar, Drawer, Divider } from '@material-ui/core';
+import {
+  DarkModeToggle,
+  LocaleToggle,
+  Flex,
+  Logo,
+  ToolbarSpacing,
+} from '@chia/core';
 import Wallets from '../wallet/Wallets';
 import FullNode from '../fullNode/FullNode';
-import Plotter from '../plotter/Plotter';
-import Farmer from '../farmer/Farmer';
-import Brand from '../brand/Brand';
-import Flex from '../flex/Flex';
+import Plot from '../plot/Plot';
+import Farm from '../farm/Farm';
 import DashboardSideBar from './DashboardSideBar';
 import { DashboardTitleTarget } from './DashboardTitle';
-import ToolbarSpacing from '../toolbar/ToolbarSpacing';
 import TradeManager from '../trading/TradeManager';
-import DarkModeToggle from '../darkMode/DarkModeToggle';
-import LocaleToggle from '../locale/LocaleToggle';
 import BackupCreate from '../backup/BackupCreate';
 
 const StyledRoot = styled(Flex)`
   height: 100%;
-  overflow: hidden;
+  // overflow: hidden;
 `;
 
 const StyledAppBar = styled(AppBar)`
@@ -27,10 +29,11 @@ const StyledAppBar = styled(AppBar)`
   box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.2);
   width: ${({ theme }) => `calc(100% - ${theme.drawer.width})`};
   margin-left: ${({ theme }) => theme.drawer.width};
+  z-index: ${({ theme}) => theme.zIndex.drawer + 1};
 `;
 
 const StyledDrawer = styled(Drawer)`
-  z-index: ${({ theme }) => theme.drawer.zIndex};
+  z-index: ${({ theme}) => theme.zIndex.drawer + 2};
   width: ${({ theme }) => theme.drawer.width};
   flex-shrink: 0;
 
@@ -39,10 +42,8 @@ const StyledDrawer = styled(Drawer)`
   }
 `;
 
-const StyledBody = styled(Flex)`
-  box-shadow: inset 6px 0 8px -8px rgba(0, 0, 0, 0.2);
-  // padding-top: ${({ theme }) => `${theme.spacing(2)}px`};
-  // padding-bottom: ${({ theme }) => `${theme.spacing(2)}px`};
+const StyledBody = styled(Box)`
+  min-width: 0;
 `;
 
 const StyledBrandWrapper = styled(Flex)`
@@ -69,35 +70,31 @@ export default function Dashboard() {
       </StyledAppBar>
       <StyledDrawer variant="permanent">
         <StyledBrandWrapper>
-          <Brand width={2 / 3} />
+          <Logo width={2 / 3} />
         </StyledBrandWrapper>
         <Divider />
         <DashboardSideBar />
       </StyledDrawer>
-      <Flex flexGrow={1} flexDirection="column">
-        <StyledBody flexGrow={1} flexDirection="column" overflow="auto">
-          <ToolbarSpacing />
-          <Flex flexGrow={1} overflow="hidden">
-            <Switch>
-              <Route path={`${path}`} exact>
-                <FullNode />
-              </Route>
-              <Route path={`${path}/wallets`}>
-                <Wallets />
-              </Route>
-              <Route path={`${path}/plot`}>
-                <Plotter />
-              </Route>
-              <Route path={`${path}/farm`}>
-                <Farmer />
-              </Route>
-              <Route path={`${path}/trade`}>
-                <TradeManager />
-              </Route>
-            </Switch>
-          </Flex>
-        </StyledBody>
-      </Flex>
+      <StyledBody flexGrow={1}>
+        <ToolbarSpacing />
+        <Switch>
+          <Route path={`${path}`} exact>
+            <FullNode />
+          </Route>
+          <Route path={`${path}/wallets`}>
+            <Wallets />
+          </Route>
+          <Route path={`${path}/plot`}>
+            <Plot />
+          </Route>
+          <Route path={`${path}/farm`}>
+            <Farm />
+          </Route>
+          <Route path={`${path}/trade`}>
+            <TradeManager />
+          </Route>
+        </Switch>
+      </StyledBody>
     </StyledRoot>
   );
 }

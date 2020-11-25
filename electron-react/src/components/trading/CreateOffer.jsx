@@ -1,189 +1,53 @@
 import { useDispatch, useSelector } from 'react-redux';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import { useHistory } from 'react-router';
 import {
   Box,
-  Typography,
   Grid,
-  Paper,
   FormControl,
-  InputLabel,
   MenuItem,
   Select,
   TextField,
   Button,
+  InputLabel,
 } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
+import { AlertDialog, Card, Flex } from '@chia/core';
 import isElectron from 'is-electron';
 import { newBuy, newSell, addTrade, resetTrades } from '../../modules/trade';
 import {
   chia_to_mojo,
-  mojo_to_chia_string,
   colouredcoin_to_mojo,
 } from '../../util/chia';
 import { openDialog } from '../../modules/dialog';
 import { create_trade_action } from '../../modules/trade_messages';
 import { COLOURED_COIN } from '../../util/wallet_types';
-
-const useStyles = makeStyles((theme) => ({
-  toolbar: {
-    paddingRight: 24, // keep right padding when drawer closed
-  },
-  toolbarIcon: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    padding: '0 8px',
-    ...theme.mixins.toolbar,
-  },
-  appBar: {
-    zIndex: theme.zIndex.drawer + 1,
-    transition: theme.transitions.create(['width', 'margin'], {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-  },
-  paper: {
-    margin: theme.spacing(3),
-    padding: theme.spacing(0),
-  },
-  balancePaper: {
-    marginTop: theme.spacing(2),
-  },
-  copyButton: {
-    marginTop: theme.spacing(0),
-    marginBottom: theme.spacing(0),
-    width: 50,
-    height: 56,
-  },
-  cardTitle: {
-    paddingLeft: theme.spacing(1),
-    paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(4),
-  },
-  cardSubSection: {
-    paddingLeft: theme.spacing(3),
-    paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1),
-  },
-  tradeSubSection: {
-    color: '#cccccc',
-    borderRadius: 4,
-    backgroundColor: '#555555',
-    marginLeft: theme.spacing(3),
-    marginRight: theme.spacing(3),
-    marginTop: theme.spacing(1),
-    padding: 15,
-    overflowWrap: 'break-word',
-  },
-  formControl: {
-    widht: '100%',
-  },
-  input: {
-    height: 56,
-    width: '100%',
-  },
-  send: {
-    marginLeft: theme.spacing(2),
-    paddingLeft: '0px',
-    height: 56,
-    width: 150,
-  },
-  card: {
-    paddingTop: theme.spacing(10),
-    height: 200,
-  },
-  saveButton: {
-    width: '100%',
-    marginTop: theme.spacing(4),
-    marginRight: theme.spacing(1),
-    marginBottom: theme.spacing(2),
-    height: 56,
-  },
-  cancelButton: {
-    width: '100%',
-    marginTop: theme.spacing(4),
-    marginLeft: theme.spacing(1),
-    marginBottom: theme.spacing(2),
-    height: 56,
-  },
-  dragContainer: {
-    paddingLeft: 20,
-    paddingRight: 20,
-    paddingBottom: 20,
-  },
-  drag: {
-    backgroundColor: '#888888',
-    height: 300,
-    width: '100%',
-  },
-  dragText: {
-    margin: 0,
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-  },
-  circle: {
-    height: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-}));
+import TradesTable from './TradesTable';
 
 const TradeList = () => {
-  const classes = useStyles();
-
-  const trades = useSelector((state) => state.trade_state.trades);
+  const trades = useSelector((state) => state.trade_state.trades ?? []);
   const wallets = useSelector((state) => state.wallet_state.wallets);
 
+  const tradeRows = useMemo(() => {
+    return trades.map((trade) => ({
+      amount: trade.side === 'sell' 
+        ? -trade.amount
+        : trade.amount,
+      name: wallets[trade.wallet_id].name,
+    }));
+  }, [trades]);
+
+  if (!trades.length) {
+    return null;
+  }
+
   return (
-    <Grid item xs={12}>
-      <div className={classes.tradeSubSection}>
-        <Box display="flex" style={{ minWidth: '100%' }}>
-          <Box flexGrow={1}>
-            <Trans id="TradeList.side">Side</Trans>
-          </Box>
-          <Box flexGrow={1}>
-            <Trans id="TradeList.amount">Amount</Trans>
-          </Box>
-          <Box
-            style={{
-              marginRight: 10,
-              width: '40%',
-              textAlign: 'right',
-              overflowWrap: 'break-word',
-            }}
-          >
-            <Trans id="TradeList.colour">Colour</Trans>
-          </Box>
-        </Box>
-        {trades.map((trade) => (
-          <Box display="flex" style={{ minWidth: '100%' }}>
-            <Box flexGrow={1}>{trade.side}</Box>
-            <Box flexGrow={1}>{mojo_to_chia_string(trade.amount)}</Box>
-            <Box
-              style={{
-                marginRight: 10,
-                width: '40%',
-                textAlign: 'right',
-                overflowWrap: 'break-word',
-              }}
-            >
-              {wallets[trade.wallet_id].name}
-            </Box>
-          </Box>
-        ))}
-      </div>
-    </Grid>
+    <TradesTable rows={tradeRows} />
   );
 };
 
 export default function CreateOffer() {
   const wallets = useSelector((state) => state.wallet_state.wallets);
-  const classes = useStyles();
   const dispatch = useDispatch();
   const history = useHistory();
   let amount_input = null;
@@ -191,14 +55,15 @@ export default function CreateOffer() {
   let wallet_id = null;
   const trades = useSelector((state) => state.trade_state.trades);
 
-  function add() {
+  function handleAdd() {
     if (!wallet_id.value) {
       dispatch(
         openDialog(
-          '',
-          <Trans id="CreateOffer.selectCoinType">
-            Please select coin type
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateOffer.selectCoinType">
+              Please select coin type
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -206,8 +71,9 @@ export default function CreateOffer() {
     if (amount_input.value === '') {
       dispatch(
         openDialog(
-          '',
-          <Trans id="CreateOffer.selectAmount">Please select amount</Trans>,
+          <AlertDialog>
+            <Trans id="CreateOffer.selectAmount">Please select amount</Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -215,33 +81,33 @@ export default function CreateOffer() {
     if (!buy_or_sell.value) {
       dispatch(
         openDialog(
-          '',
-          <Trans id="CreateOffer.selectBuyOrSell">
-            Please select buy or sell
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateOffer.selectBuyOrSell">
+              Please select buy or sell
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
     }
-    let mojo = chia_to_mojo(amount_input.value);
-    if (wallets[wallet_id.value].type === COLOURED_COIN) {
-      mojo = colouredcoin_to_mojo(amount_input.value);
-    }
-    let trade = null;
-    if (buy_or_sell.value === 1) {
-      trade = newBuy(mojo, wallet_id.value);
-    } else {
-      trade = newSell(mojo, wallet_id.value);
-    }
+    const mojo = wallets[wallet_id.value].type === COLOURED_COIN 
+      ? colouredcoin_to_mojo(amount_input.value)
+      : chia_to_mojo(amount_input.value);
+
+    const trade = buy_or_sell.value === 1 
+      ? newBuy(mojo, wallet_id.value) 
+      : newSell(mojo, wallet_id.value);
+
     dispatch(addTrade(trade));
   }
-  async function save() {
-    console.log(trades.length);
+
+  async function handleSave() {
     if (trades.length === 0) {
       dispatch(
         openDialog(
-          '',
-          <Trans id="CreateOffer.addTradePair">Please add trade pair</Trans>,
+          <AlertDialog>
+            <Trans id="CreateOffer.addTradePair">Please add trade pair</Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -262,80 +128,84 @@ export default function CreateOffer() {
     } else {
       dispatch(
         openDialog(
-          '',
-          <Trans id="CreateOffer.availableOnlyFromElectron">
-            This feature is available only from electron app
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateOffer.availableOnlyFromElectron">
+              This feature is available only from electron app
+            </Trans>
+          </AlertDialog>
         ),
       );
     }
   }
-  function cancel() {
+  function handleCancel() {
     dispatch(resetTrades());
   }
 
   return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="CreateOffer.title">Create Trade Offer</Trans>
-            </Typography>
-          </div>
-        </Grid>
+    <Card 
+      title={<Trans id="CreateOffer.title">Create Trade Offer</Trans>}
+      actions={(
+        <>
+          <Button
+            onClick={handleCancel}
+            variant="contained"
+          >
+            <Trans id="CreateOffer.cancel">Cancel</Trans>
+          </Button>
+          <Button
+            onClick={handleSave}
+            variant="contained"
+            color="primary"
+          >
+            <Trans id="CreateOffer.save">Save</Trans>
+          </Button>
+        </>
+      )}
+    >
+      <Flex flexDirection="column" gap={3}>
         <TradeList />
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <FormControl
-                  fullWidth
-                  variant="outlined"
-                  className={classes.formControl}
-                >
-                  <InputLabel>Buy or Sell</InputLabel>
-                  <Select
-                    inputRef={(input) => {
-                      buy_or_sell = input;
-                    }}
-                    label={
-                      <Trans id="CreateOffer.buyOrSell">Buy Or Sell</Trans>
-                    }
-                  >
-                    <MenuItem value={1}>Buy</MenuItem>
-                    <MenuItem value={2}>Sell</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6}>
-                <FormControl
-                  fullWidth
-                  variant="outlined"
-                  className={classes.formControl}
-                >
-                  <InputLabel>Colour</InputLabel>
-                  <Select
-                    inputRef={(input) => {
-                      wallet_id = input;
-                    }}
-                    label={<Trans id="CreateOffer.colour">Colour</Trans>}
-                  >
-                    {wallets.map((wallet) => (
-                      <MenuItem value={wallet.id}>{wallet.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
+        <Grid spacing={2} container>
+          <Grid item xs={6}>
+            <FormControl
+              fullWidth
+              variant="outlined"
+            >
+              <InputLabel required>
+                <Trans id="CreateOffer.buyOrSell">Side</Trans>
+              </InputLabel>
+              <Select
+                inputRef={(input) => {
+                  buy_or_sell = input;
+                }}
+              >
+                <MenuItem value={1}>Buy</MenuItem>
+                <MenuItem value={2}>Sell</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={6}>
+            <FormControl
+              fullWidth
+              variant="outlined"
+            >
+              <InputLabel required>
+                <Trans id="CreateOffer.colour">Colour</Trans>
+              </InputLabel>
+              <Select
+                inputRef={(input) => {
+                  wallet_id = input;
+                }}
+              >
+                {wallets.map((wallet) => (
+                  <MenuItem value={wallet.id}>{wallet.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12}>
+            <Flex alignItems="stretch">
               <Box flexGrow={1}>
                 <TextField
-                  className={classes.input}
                   fullWidth
                   inputRef={(input) => {
                     amount_input = input;
@@ -344,46 +214,17 @@ export default function CreateOffer() {
                   variant="outlined"
                 />
               </Box>
-              <Box>
-                <Button
-                  onClick={add}
-                  className={classes.send}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="CreateOffer.add">Add</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
+              <Button
+                onClick={handleAdd}
+                variant="contained"
+                disableElevation
+              >
+                <Trans id="CreateOffer.add">Add</Trans>
+              </Button>
+            </Flex>
+          </Grid>
         </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Button
-                  onClick={save}
-                  className={classes.saveButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="CreateOffer.save">Save</Trans>
-                </Button>
-              </Grid>
-              <Grid item xs={6}>
-                <Button
-                  onClick={cancel}
-                  className={classes.cancelButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="CreateOffer.cancel">Cancel</Trans>
-                </Button>
-              </Grid>
-            </Grid>
-          </div>
-        </Grid>
-      </Grid>
-    </Paper>
+      </Flex>
+    </Card>
   );
 }

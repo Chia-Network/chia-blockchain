@@ -1,22 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Trans } from '@lingui/macro';
+import styled from 'styled-components';
 import {
   Box,
   Grid,
-  Container,
-  Drawer,
   List,
   Divider,
   ListItem,
   ListItemText,
   Typography,
 } from '@material-ui/core';
-import { makeStyles } from '@material-ui/core/styles';
 import { Route, Switch, useRouteMatch, useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
-import clsx from 'clsx';
-import Flex from '../flex/Flex';
-import DashboardTitle from '../dashboard/DashboardTitle';
+import { Flex } from '@chia/core';
 import StandardWallet from './standard/WalletStandard';
 import {
   changeWalletMenu,
@@ -28,69 +24,12 @@ import { CreateWalletView } from './create/WalletCreate';
 import ColouredWallet from './coloured/WalletColoured';
 import RateLimitedWallet from './rateLimited/WalletRateLimited';
 import type { RootState } from '../../modules/rootReducer';
-import WalletType from '../../types/WalletType';
+import WalletType from '../../constants/WalletType';
+import LayoutSidebar from '../layout/LayoutSidebar';
 
-const drawerWidth = 180;
-
-const useStyles = makeStyles((theme) => ({
-  menuButton: {
-    marginRight: 36,
-  },
-  menuButtonHidden: {
-    display: 'none',
-  },
-  title: {
-    flexGrow: 1,
-  },
-  drawerPaper: {
-    position: 'relative',
-    whiteSpace: 'nowrap',
-    width: drawerWidth,
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  },
-  drawerPaperClose: {
-    overflowX: 'hidden',
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-    width: theme.spacing(7),
-    [theme.breakpoints.up('sm')]: {
-      width: theme.spacing(9),
-    },
-  },
-  paper: {
-    padding: theme.spacing(0),
-    display: 'flex',
-    overflow: 'auto',
-    flexDirection: 'column',
-  },
-  fixedHeight: {
-    height: 240,
-  },
-  drawerWallet: {
-    position: 'relative',
-    whiteSpace: 'nowrap',
-    width: drawerWidth,
-    height: '100%',
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  },
-  balancePaper: {
-    height: 200,
-    marginTop: theme.spacing(2),
-  },
-  bottomOptions: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-  },
-}));
+const StyledList = styled(List)`
+  width: 100%;
+`;
 
 const WalletItem = (props: any) => {
   const dispatch = useDispatch();
@@ -146,14 +85,13 @@ const WalletItem = (props: any) => {
 
 const CreateWallet = () => {
   const history = useHistory();
-  const classes = useStyles();
 
   function presentCreateWallet() {
     history.push('/dashboard/wallets/create');
   }
 
   return (
-    <div className={classes.bottomOptions}>
+    <div>
       <Divider />
       <ListItem button onClick={presentCreateWallet}>
         <ListItemText
@@ -212,62 +150,53 @@ export function StatusCard() {
 }
 
 export default function Wallets() {
-  const classes = useStyles();
   const { path } = useRouteMatch();
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const id = useSelector((state: RootState) => state.wallet_menu.id);
   const wallet = wallets.find((wallet) => wallet && wallet.id === id);
-  const [open] = useState(true);
 
   return (
-    <>
-      <DashboardTitle>
-        <Trans id="Wallets.title">Wallets</Trans>
-      </DashboardTitle>
-      <Drawer
-        variant="permanent"
-        classes={{
-          paper: clsx(classes.drawerPaper, !open && classes.drawerPaperClose),
-        }}
-        open={open}
-      >
-        <Divider />
-        <StatusCard />
-        <Divider />
-        <List disablePadding>
-          {wallets.map((wallet) => (
-            <span key={wallet.id}>
-              <WalletItem wallet_id={wallet.id} key={wallet.id} />
-              <Divider />
-            </span>
-          ))}
-        </List>
-        <CreateWallet />
-      </Drawer>
-      <Flex flexDirection="column" flexGrow={1} height="100%" overflow="auto">
-        <Container maxWidth="lg">
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Switch>
-                <Route path={path} exact>
-                  {!!wallet && wallet.type === WalletType.STANDARD_WALLET && (
-                    <StandardWallet wallet_id={id} />
-                  )}
-                  {!!wallet && wallet.type === WalletType.COLOURED_COIN && (
-                    <ColouredWallet wallet_id={id} />
-                  )}
-                  {!!wallet && wallet.type === WalletType.RATE_LIMITED && (
-                    <RateLimitedWallet wallet_id={id} />
-                  )}
-                </Route>
-                <Route path={`${path}/create`} exact>
-                  <CreateWalletView />
-                </Route>
-              </Switch>
-            </Grid>
+    <LayoutSidebar
+      title={<Trans id="Wallets.title">Wallets</Trans>}
+      sidebar={(
+        <Flex flexDirection="column" height="100%" overflow="hidden">
+          <Divider />
+          <StatusCard />
+          <Divider />
+          <Flex flexGrow={1} overflow="auto">
+            <StyledList disablePadding>
+              {wallets.map((wallet) => (
+                <span key={wallet.id}>
+                  <WalletItem wallet_id={wallet.id} key={wallet.id} />
+                  <Divider />
+                </span>
+              ))}
+            </StyledList>
+          </Flex>
+          <CreateWallet />
+        </Flex>
+      )}
+    >
+      <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <Switch>
+              <Route path={path} exact>
+                {!!wallet && wallet.type === WalletType.STANDARD_WALLET && (
+                  <StandardWallet wallet_id={id} />
+                )}
+                {!!wallet && wallet.type === WalletType.COLOURED_COIN && (
+                  <ColouredWallet wallet_id={id} />
+                )}
+                {!!wallet && wallet.type === WalletType.RATE_LIMITED && (
+                  <RateLimitedWallet wallet_id={id} />
+                )}
+              </Route>
+              <Route path={`${path}/create`} exact>
+                <CreateWalletView />
+              </Route>
+            </Switch>
           </Grid>
-        </Container>
-      </Flex>
-    </>
+        </Grid>
+    </LayoutSidebar>
   );
 }

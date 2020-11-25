@@ -1,17 +1,17 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
+import { FormatBytes, Flex, Card } from '@chia/core';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
-import Container from '@material-ui/core/Container';
 import { useSelector, useDispatch } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
 import Box from '@material-ui/core/Box';
-import { Paper, Tooltip } from '@material-ui/core';
+import { Tooltip } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import HelpIcon from '@material-ui/icons/Help';
 import { unix_to_short_date } from '../../util/utils';
-import Connections from '../connections/Connections';
+import FullNodeConnections from './FullNodeConnections';
 import Block from '../block/Block';
 import {
   closeConnection,
@@ -19,8 +19,7 @@ import {
   getBlock,
   getHeader,
 } from '../../modules/fullnodeMessages';
-import DashboardTitle from '../dashboard/DashboardTitle';
-import Flex from '../flex/Flex';
+import LayoutMain from '../layout/LayoutMain';
 
 /* global BigInt */
 
@@ -303,16 +302,13 @@ const getStatusItems = (state, connected) => {
   };
   status_items.push(min_item);
 
-  const space = `${(
-    BigInt(state.space) / BigInt(Math.pow(1024, 4))
-  ).toString()}TiB`;
   const space_item = {
     label: (
       <Trans id="StatusItem.estimatedNetworkSpace">
         Estimated network space
       </Trans>
     ),
-    value: space,
+    value: <FormatBytes value={state.space} precision={3} />,
     tooltip: (
       <Trans id="StatusItem.estimatedNetworkSpaceTooltip">
         Estimated sum of all the plotted disk space of all farmers in the
@@ -326,33 +322,26 @@ const getStatusItems = (state, connected) => {
 };
 
 const StatusCell = (props) => {
-  const classes = useStyles();
   const { item } = props;
   const { label } = item;
   const { value } = item;
   const { tooltip } = item;
   const { colour } = item;
   return (
-    <Grid item xs={6}>
-      <div className={classes.cardSubSection}>
-        <Box display="flex">
-          <Box display="flex" flexGrow={1}>
-            <Typography variant="subtitle1">{label}</Typography>
-            {tooltip ? (
-              <Tooltip title={tooltip}>
-                <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
-              </Tooltip>
-            ) : (
-              ''
-            )}
-          </Box>
-          <Box>
-            <Typography variant="subtitle1">
-              <span style={colour ? { color: colour } : {}}>{value}</span>
-            </Typography>
-          </Box>
-        </Box>
-      </div>
+    <Grid item xs={12} sm={6}>
+      <Flex mb={-2} alignItems="center">
+        <Flex flexGrow={1} gap={1} alignItems="center">
+          <Typography variant="subtitle1">{label}</Typography>
+          {tooltip && (
+            <Tooltip title={tooltip}>
+              <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
+            </Tooltip>
+          )}
+        </Flex>
+        <Typography variant="subtitle1">
+          <span style={colour ? { color: colour } : {}}>{value}</span>
+        </Typography>
+      </Flex>
     </Grid>
   );
 };
@@ -366,22 +355,16 @@ const FullNodeStatus = (props) => {
   );
   const statusItems = getStatusItems(blockchain_state, connected);
 
-  const classes = useStyles();
   return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="FullNodeStatus.title">Full Node Status</Trans>
-            </Typography>
-          </div>
-        </Grid>
+    <Card
+      title={<Trans id="FullNodeStatus.title">Full Node Status</Trans>}
+    >
+      <Grid spacing={4} container>
         {statusItems.map((item) => (
           <StatusCell item={item} key={item.label.props.id} />
         ))}
       </Grid>
-    </Paper>
+    </Card>
   );
 };
 
@@ -399,15 +382,9 @@ const BlocksCard = () => {
   }
   const classes = useStyles();
   return (
-    <Paper className={classes.balancePaper}>
-      <Grid item xs={12}>
-        <div className={classes.cardTitle}>
-          <Typography component="h6" variant="h6">
-            <Trans id="BlocksCard.title">Blocks</Trans>
-          </Typography>
-        </div>
-      </Grid>
-      <Grid item xs={12}>
+    <Card
+      title={<Trans id="BlocksCard.title">Blocks</Trans>}
+    >
         <Box
           className={classes.block_header}
           display="flex"
@@ -466,13 +443,11 @@ const BlocksCard = () => {
             </Box>
           </Box>
         ))}
-      </Grid>
-    </Paper>
+    </Card>
   );
 };
 
 const SearchBlock = (props) => {
-  const classes = useStyles();
   const dispatch = useDispatch();
   const [searchHash, setSearchHash] = React.useState('');
   const handleChangeSearchHash = (event) => {
@@ -483,42 +458,28 @@ const SearchBlock = (props) => {
     dispatch(getBlock(searchHash));
   };
   return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="SearchBlock.title">Search block by header hash</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Box display="flex">
-              <Box flexGrow={1}>
-                <TextField
-                  fullWidth
-                  label={<Trans id="SearchBlock.blockHash">Block hash</Trans>}
-                  value={searchHash}
-                  onChange={handleChangeSearchHash}
-                  variant="outlined"
-                />
-              </Box>
-              <Box>
-                <Button
-                  onClick={clickSearch}
-                  className={classes.searchHashButton}
-                  color="secondary"
-                  disableElevation
-                >
-                  <Trans id="SearchBlock.search">Search</Trans>
-                </Button>
-              </Box>
-            </Box>
-          </div>
-        </Grid>
-      </Grid>
-    </Paper>
+    <Card
+      title={<Trans id="SearchBlock.title">Search block by header hash</Trans>}
+    >
+      <Flex alignItems="stretch">
+        <Box flexGrow={1}>
+          <TextField
+            fullWidth
+            label={<Trans id="SearchBlock.blockHash">Block hash</Trans>}
+            value={searchHash}
+            onChange={handleChangeSearchHash}
+            variant="outlined"
+          />
+        </Box>
+        <Button
+          onClick={clickSearch}
+          variant="contained"
+          disableElevation
+        >
+          <Trans id="SearchBlock.search">Search</Trans>
+        </Button>
+      </Flex>
+    </Card>
   );
 };
 
@@ -540,45 +501,26 @@ export default function FullNode() {
   };
 
   return (
-    <>
-      <DashboardTitle>
-        <Trans id="FullNode.title">Full Node</Trans>
-      </DashboardTitle>
-      <Flex
-        flexDirection="column"
-        flexGrow={1}
-        height="100%"
-        overflow="auto"
-        alignItems="center"
-      >
-        <Container maxWidth="lg">
-          <Grid container spacing={3}>
-            {block != null ? (
-              <Block block={block} prevHeader={header} />
-            ) : (
-              <>
-                <Grid item xs={12}>
-                  <FullNodeStatus />
-                </Grid>
-                <Grid item xs={12}>
-                  <BlocksCard />
-                </Grid>
-                <Grid item xs={12}>
-                  <Connections
-                    connections={connections}
-                    connectionError={connectionError}
-                    openConnection={openConnectionCallback}
-                    closeConnection={closeConnectionCallback}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <SearchBlock />
-                </Grid>
-              </>
-            )}
-          </Grid>
-        </Container>
+    <LayoutMain
+      title={<Trans id="FullNode.title">Full Node</Trans>}
+    >
+      <Flex flexDirection="column" gap={3}>
+        {block != null ? (
+          <Block block={block} prevHeader={header} />
+        ) : (
+          <>
+            <FullNodeStatus />
+            <BlocksCard />
+            <FullNodeConnections
+              connections={connections}
+              connectionError={connectionError}
+              openConnection={openConnectionCallback}
+              closeConnection={closeConnectionCallback}
+            />
+            <SearchBlock />
+          </>
+        )}
       </Flex>
-    </>
+    </LayoutMain>
   );
 }

@@ -1,31 +1,42 @@
 import { service_farmer, service_harvester } from '../util/service_names';
+import type Plot from '../types/Plot';
 
 type FarmingState = {
   farmer: {
-    latest_challenges: string[];
-    connections: string[];
+    latest_challenges?: {
+      challenge: string;
+      height: number;
+      estimates: number[];
+    }[];
+    connections: {
+      bytes_read: number;
+      bytes_written: number;
+      creation_time: number;
+      last_message_time: number;
+      local_host: string;
+      local_port: number;
+      node_id: string;
+      peer_host: string;
+      peer_port: number;
+      peer_server_port: number;
+      type: number;
+    }[];
     open_connection_error?: string;
   };
   harvester: {
-    plots: string[];
-    not_found_filenames: string[];
-    failed_to_open_filenames: string[];
-    plot_directories: string[];
+    plots?: Plot[];
+    not_found_filenames?: string[];
+    failed_to_open_filenames?: string[];
+    plot_directories?: string[];
   };
 };
 
 const initialState: FarmingState = {
   farmer: {
-    latest_challenges: [],
     connections: [],
     open_connection_error: '',
   },
-  harvester: {
-    plots: [],
-    not_found_filenames: [],
-    failed_to_open_filenames: [],
-    plot_directories: [],
-  },
+  harvester: {},
 };
 
 export default function farmingReducer(

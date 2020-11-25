@@ -1,4 +1,4 @@
-import type WalletType from './WalletType';
+import type WalletType from '../constants/WalletType';
 
 type Coin = {
   confirmed_block_index: number;
@@ -7,6 +7,7 @@ type Coin = {
   coinbase: boolean;
   wallet_type: WalletType;
   wallet_id: number;
+  parent_coin_info: string;
 };
 
 export default Coin;

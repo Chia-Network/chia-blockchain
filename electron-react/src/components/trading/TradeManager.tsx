@@ -1,12 +1,8 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { makeStyles } from '@material-ui/core/styles';
-import { Route, Switch, useRouteMatch, useHistory } from 'react-router';
-import clsx from 'clsx';
+import { Route, Switch, useLocation, useHistory, useRouteMatch } from 'react-router';
 import {
-  Drawer,
   Grid,
-  Container,
   List,
   Divider,
   ListItem,
@@ -15,67 +11,25 @@ import {
 import { OfferSwitch } from './ViewOffer';
 import { TradingOverview } from './TradingOverview';
 import CreateOffer from './CreateOffer';
-import DashboardTitle from '../dashboard/DashboardTitle';
-import Flex from '../flex/Flex';
-
-const drawerWidth = 180;
-
-const useStyles = makeStyles((theme) => ({
-  menuButton: {
-    marginRight: 36,
-  },
-  menuButtonHidden: {
-    display: 'none',
-  },
-  title: {
-    flexGrow: 1,
-  },
-  drawerPaper: {
-    position: 'relative',
-    whiteSpace: 'nowrap',
-    width: drawerWidth,
-  },
-  drawerWallet: {
-    position: 'relative',
-    whiteSpace: 'nowrap',
-    width: drawerWidth,
-    height: '100%',
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  },
-  balancePaper: {
-    height: 200,
-    marginTop: theme.spacing(2),
-  },
-  bottomOptions: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-  },
-}));
+import LayoutSidebar from '../layout/LayoutSidebar';
 
 export default function TradeManager() {
-  const classes = useStyles();
   const { path, url } = useRouteMatch();
   const history = useHistory();
+  const { pathname } = useLocation();
 
   return (
-    <>
-      <DashboardTitle>
-        <Trans id="TradeManager.title">Trading</Trans>
-      </DashboardTitle>
-      <Drawer
-        variant="permanent"
-        classes={{
-          paper: clsx(classes.drawerPaper),
-        }}
-      >
+    <LayoutSidebar
+      title={<Trans id="TradeManager.title">Trading</Trans>}
+      sidebar={(
         <List disablePadding>
           <Divider />
           <span key="trade_overview">
-            <ListItem button onClick={() => history.push(url)}>
+            <ListItem 
+              onClick={() => history.push(url)}
+              selected={pathname === '/dashboard/trade'}
+              button
+            >
               <ListItemText
                 primary={
                   <Trans id="TradeManager.tradeOverview">Trade Overview</Trans>
@@ -85,7 +39,11 @@ export default function TradeManager() {
             </ListItem>
           </span>
           <Divider />
-          <ListItem button onClick={() => history.push(`${url}/create`)}>
+          <ListItem
+            selected={pathname === '/dashboard/trade/create'} 
+            onClick={() => history.push(`${url}/create`)}
+            button
+          >
             <ListItemText
               primary={
                 <Trans id="TradeManager.createTrade">Create Trade</Trans>
@@ -95,36 +53,37 @@ export default function TradeManager() {
           </ListItem>
           <Divider />
 
-          <ListItem button onClick={() => history.push(`${url}/offer`)}>
+          <ListItem
+            onClick={() => history.push(`${url}/offer`)}
+            selected={pathname === '/dashboard/trade/offer'} 
+            button
+          >
             <ListItemText
-              primary={<Trans id="TradeManager.viewTrade">View Trade</Trans>}
+              primary={<Trans id="TradeManager.viewOffer">View Offer</Trans>}
               secondary=""
             />
           </ListItem>
           <Divider />
         </List>
-      </Drawer>
-      <Flex flexDirection="column" flexGrow={1} height="100%" overflow="auto">
-        <Container maxWidth="lg">
-          <Grid container spacing={3}>
-            {/* Chart */}
-            <Grid item xs={12}>
-              <Switch>
-                <Route path={path} exact>
-                  <TradingOverview />
-                </Route>
-                <Route path={`${path}/create`}>
-                  <CreateOffer />
-                </Route>
-                <Route path={`${path}/offer`}>
-                  <OfferSwitch />
-                </Route>
-              </Switch>
-            </Grid>
-            <Grid item xs={12} />
-          </Grid>
-        </Container>
-      </Flex>
-    </>
+      )}
+    >
+      <Grid container spacing={3}>
+        {/* Chart */}
+        <Grid item xs={12}>
+          <Switch>
+            <Route path={path} exact>
+              <TradingOverview />
+            </Route>
+            <Route path={`${path}/create`}>
+              <CreateOffer />
+            </Route>
+            <Route path={`${path}/offer`}>
+              <OfferSwitch />
+            </Route>
+          </Switch>
+        </Grid>
+        <Grid item xs={12} />
+      </Grid>
+    </LayoutSidebar>
   );
 }

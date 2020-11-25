@@ -1,10 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import {
-  Box,
-  Typography,
-  Grid,
   Paper,
   Button,
   CircularProgress,
@@ -16,12 +13,15 @@ import {
   parsingStarted,
   parsingStatePending,
 } from '../../modules/trade';
-import { mojo_to_chia_string } from '../../util/chia';
 
 import {
   accept_trade_action,
   parse_trade_action,
 } from '../../modules/trade_messages';
+import { Card } from '@chia/core';
+import TradesTable from './TradesTable';
+
+/* global BigInt */
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -112,11 +112,6 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
     height: 56,
   },
-  dragContainer: {
-    paddingLeft: 20,
-    paddingRight: 20,
-    paddingBottom: 20,
-  },
   drag: {
     backgroundColor: '#888888',
     height: 300,
@@ -174,134 +169,80 @@ export const DropView = () => {
     : { visibility: 'hidden' };
 
   return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="OfferDropView.title">View Offer</Trans>
-            </Typography>
+    <Card
+      title={<Trans id="OfferDropView.selectOffer">Select Offer</Trans>}
+    >
+      <div
+        onDrop={(e) => handleDrop(e)}
+        onDragOver={(e) => handleDragOver(e)}
+        onDragEnter={(e) => handleDragEnter(e)}
+        onDragLeave={(e) => handleDragLeave(e)}
+      >
+        <Paper className={classes.drag} style={{ position: 'relative' }}>
+          <div className={classes.dragText} style={textStyle}>
+            <Trans id="OfferDropView.dragAndDropOfferFile">
+              Drag and drop offer file
+            </Trans>
           </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div
-            onDrop={(e) => handleDrop(e)}
-            onDragOver={(e) => handleDragOver(e)}
-            onDragEnter={(e) => handleDragEnter(e)}
-            onDragLeave={(e) => handleDragLeave(e)}
-            className={classes.dragContainer}
-          >
-            <Paper className={classes.drag} style={{ position: 'relative' }}>
-              <div className={classes.dragText} style={textStyle}>
-                <Trans id="OfferDropView.dragAndDropOfferFile">
-                  Drag and drop offer file
-                </Trans>
-              </div>
-              <div className={classes.circle} style={progressStyle}>
-                <CircularProgress color="secondary" />
-              </div>
-            </Paper>
+          <div className={classes.circle} style={progressStyle}>
+            <CircularProgress color="secondary" />
           </div>
-        </Grid>
-      </Grid>
-    </Paper>
+        </Paper>
+      </div>
+    </Card>
   );
 };
 
 export const OfferView = () => {
-  const classes = useStyles();
   const offer = useSelector((state) => state.trade_state.parsed_offer);
   const dispatch = useDispatch();
   const file_path = useSelector((state) => state.trade_state.parsed_offer_path);
 
-  function accept() {
+  function handleAccept() {
     dispatch(accept_trade_action(file_path));
   }
 
-  function decline() {
+  function handleDecline() {
     dispatch(resetTrades());
   }
 
-  return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="OfferView.title">View Offer</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.tradeSubSection}>
-            {Object.keys(offer).map((name) => (
-              <OfferRow name={name} amount={offer[name]} />
-            ))}
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <div className={classes.cardSubSection}>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Button
-                  onClick={accept}
-                  className={classes.saveButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="OfferView.accept">Accept</Trans>
-                </Button>
-              </Grid>
-              <Grid item xs={6}>
-                <Button
-                  onClick={decline}
-                  className={classes.cancelButton}
-                  variant="contained"
-                  color="primary"
-                >
-                  <Trans id="OfferView.cancel">Cancel</Trans>
-                </Button>
-              </Grid>
-            </Grid>
-          </div>
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-};
-
-const OfferRow = (props) => {
-  const { name } = props;
-  const { amount } = props;
-  const side =
-    amount < 0 ? (
-      <Trans id="OfferRow.sell">Sell</Trans>
-    ) : (
-      <Trans id="OfferRow.buy">Buy</Trans>
-    );
+  const trades = useMemo(() => {
+    return Object.keys(offer).map((name) => ({
+      amount: offer[name],
+      name,
+    }));
+  }, offer);
 
   return (
-    <Box display="flex" style={{ minWidth: '100%' }}>
-      <Box flexGrow={1}>{side}</Box>
-      <Box flexGrow={1}>{mojo_to_chia_string(amount)}</Box>
-      <Box
-        style={{
-          marginRight: 10,
-          width: '40%',
-          textAlign: 'right',
-          overflowWrap: 'break-word',
-        }}
-      >
-        {name}
-      </Box>
-    </Box>
+    <Card
+      title={<Trans id="OfferView.title2">Offer</Trans>}
+      actions={(
+        <>
+          <Button
+            onClick={handleDecline}
+            variant="contained"
+          >
+            <Trans id="OfferView.cancel">Cancel</Trans>
+          </Button>
+          <Button
+            onClick={handleAccept}
+            variant="contained"
+            color="primary"
+          >
+            <Trans id="OfferView.accept">Accept</Trans>
+          </Button>
+        </>
+      )}
+    >
+      <TradesTable rows={trades} />
+    </Card>
   );
 };
 
 export const OfferSwitch = () => {
-  const show_offer = useSelector((state) => state.trade_state.show_offer);
+  const showOffer = useSelector((state) => state.trade_state.show_offer);
 
-  if (show_offer) {
+  if (showOffer) {
     return <OfferView />;
   }
   return <DropView />;

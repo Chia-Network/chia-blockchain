@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
+import { AlertDialog } from '@chia/core';
 import {
   makeStyles,
   Typography,
@@ -95,9 +96,11 @@ export const CreateRLAdminWallet = () => {
     ) {
       dispatch(
         openDialog(
-          <Trans id="CreateRLAdminWallet.enterValidNumericInterval">
-            Please enter a valid numeric interval length
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateRLAdminWallet.enterValidNumericInterval">
+              Please enter a valid numeric interval length
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -110,9 +113,11 @@ export const CreateRLAdminWallet = () => {
     ) {
       dispatch(
         openDialog(
-          <Trans id="CreateRLAdminWallet.enterValidSpendableAmount">
-            Please enter a valid numeric spendable amount
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateRLAdminWallet.enterValidSpendableAmount">
+              Please enter a valid numeric spendable amount
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -120,9 +125,11 @@ export const CreateRLAdminWallet = () => {
     if (userpubkey_input.value === '') {
       dispatch(
         openDialog(
-          <Trans id="CreateRLAdminWallet.enterValidPubkey">
-            Please enter a valid pubkey
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateRLAdminWallet.enterValidPubkey">
+              Please enter a valid pubkey
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -135,9 +142,11 @@ export const CreateRLAdminWallet = () => {
     ) {
       dispatch(
         openDialog(
-          <Trans id="CreateRLAdminWallet.enterValidInitialCoin">
-            Please enter a valid initial coin amount
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateRLAdminWallet.enterValidInitialCoin">
+              Please enter a valid initial coin amount
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -145,9 +154,11 @@ export const CreateRLAdminWallet = () => {
     if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
       dispatch(
         openDialog(
-          <Trans id="CreateRLAdminWallet.enterValidNumericFee">
-            Please enter a valid numeric fee
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateRLAdminWallet.enterValidNumericFee">
+              Please enter a valid numeric fee
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;

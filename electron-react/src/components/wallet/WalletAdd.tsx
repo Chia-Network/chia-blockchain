@@ -1,15 +1,17 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Typography, Button, Grid, Container } from '@material-ui/core';
+import {
+  TextField,
+  Typography,
+  Button,
+  Grid,
+  Container,
+} from '@material-ui/core';
 import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useEffectOnce } from 'react-use';
+import { Flex, Loading, Link, Logo } from '@chia/core';
 import { genereate_mnemonics, add_new_key_action } from '../../modules/message';
-import TextField from '../form/TextField';
-import Brand from '../brand/Brand';
-import Flex from '../flex/Flex';
-import Loading from '../loading/Loading';
-import Link from '../router/Link';
 import LayoutHero from '../layout/LayoutHero';
 import type { RootState } from '../../modules/rootReducer';
 
@@ -58,7 +60,7 @@ export default function WalletAdd() {
     >
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
-          <Brand />
+          <Logo />
           <Typography variant="h4" component="h1" gutterBottom>
             <Trans id="WalletAdd.title">New Wallet</Trans>
           </Typography>
@@ -74,7 +76,7 @@ export default function WalletAdd() {
             <Grid container spacing={2}>
               {words.map((word: string, index: number) => (
                 <MnemonicField
-                  key={index}
+                  key={word}
                   word={word}
                   id={`id_${index + 1}`}
                   index={index + 1}

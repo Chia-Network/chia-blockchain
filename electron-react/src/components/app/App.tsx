@@ -1,32 +1,43 @@
 import React, { useEffect } from 'react';
-import { CssBaseline } from '@material-ui/core';
 import { Provider } from 'react-redux';
 import { I18nProvider } from '@lingui/react';
+import { i18n } from "@lingui/core"
 import useDarkMode from 'use-dark-mode';
 import isElectron from 'is-electron';
+import { en, sk } from 'make-plural/plurals';
 import { ConnectedRouter } from 'connected-react-router';
-import { ModalDialog, Spinner } from '../../pages/ModalDialog';
-import Router from '../router/Router';
+import { ThemeProvider } from '@chia/core';
+import AppRouter from './AppRouter';
 import darkTheme from '../../theme/dark';
 import lightTheme from '../../theme/light';
 import WebSocketConnection from '../../hocs/WebsocketConnection';
 import { daemon_rpc_ws } from '../../util/config';
 import store, { history } from '../../modules/store';
 import { exit_and_close } from '../../modules/message';
-import ThemeProvider from '../theme/ThemeProvider';
-import en from '../../locales/en/messages';
-import sk from '../../locales/sk/messages';
+import catalogEn from '../../locales/en/messages';
+import catalogSk from '../../locales/sk/messages';
 import useLocale from '../../hooks/useLocale';
 import './App.css';
+import AppModalDialogs from './AppModalDialogs';
+import AppLoading from './AppLoading';
 
-const catalogs = {
-  en,
-  sk,
-};
+i18n.loadLocaleData('en', { plurals: en });
+i18n.loadLocaleData('sk', { plurals: sk });
+
+// @ts-ignore
+i18n.load('en', catalogEn.messages);
+// @ts-ignore
+i18n.load('sk', catalogSk.messages);
+i18n.activate('en');
+
 
 export default function App() {
   const { value: darkMode } = useDarkMode();
   const [locale] = useLocale('en');
+
+  useEffect(() => {
+    i18n.activate(locale);
+  }, [locale]);
 
   useEffect(() => {
     window.addEventListener('load', () => {
@@ -42,13 +53,12 @@ export default function App() {
   return (
     <Provider store={store}>
       <ConnectedRouter history={history}>
-        <I18nProvider language={locale} catalogs={catalogs}>
+        <I18nProvider i18n={i18n}>
           <WebSocketConnection host={daemon_rpc_ws}>
             <ThemeProvider theme={darkMode ? darkTheme : lightTheme}>
-              <CssBaseline />
-              <ModalDialog />
-              <Spinner />
-              <Router />
+              <AppRouter />
+              <AppModalDialogs />
+              <AppLoading />
             </ThemeProvider>
           </WebSocketConnection>
         </I18nProvider>

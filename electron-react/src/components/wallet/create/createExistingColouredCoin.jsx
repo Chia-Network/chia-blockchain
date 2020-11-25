@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
+import { AlertDialog } from '@chia/core';
 import {
   makeStyles,
   Typography,
@@ -65,9 +66,11 @@ export const CreateExistingCCWallet = () => {
     if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
       dispatch(
         openDialog(
-          <Trans id="CreateExistingCCWallet.enterValidFee">
-            Please enter a valid numeric fee
-          </Trans>,
+          <AlertDialog>
+            <Trans id="CreateExistingCCWallet.enterValidFee">
+              Please enter a valid numeric fee
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;

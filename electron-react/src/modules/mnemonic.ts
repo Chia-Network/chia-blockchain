@@ -28,9 +28,8 @@ export default function mnemonicReducer(
 ): MnemonicState {
   switch (action.type) {
     case 'MNEMONIC_TYPING':
-      var { word } = action.data;
-      var { id } = action.data;
-      var current_input = state.mnemonic_input;
+      const { word, id } = action.data;
+      const current_input = state.mnemonic_input;
       current_input[id] = word;
       return { ...state, mnemonic_input: current_input };
     case 'RESET_MNEMONIC':
