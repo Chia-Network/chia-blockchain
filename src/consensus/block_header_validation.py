@@ -461,7 +461,9 @@ async def validate_unfinished_header_block(
             total_iters = uint128(prev_sb.total_iters - prev_sb.ip_iters(constants))
     total_iters += ip_iters
     if total_iters != header_block.reward_chain_sub_block.total_iters:
-        return None, ValidationError(Err.INVALID_TOTAL_ITERS)
+        return None, ValidationError(
+            Err.INVALID_TOTAL_ITERS, f"expected {total_iters} got {header_block.reward_chain_sub_block.total_iters}"
+        )
 
     sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0))
     if overflow and skip_overflow_last_ss_validation:

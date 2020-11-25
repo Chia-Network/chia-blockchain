@@ -1,6 +1,5 @@
 import asyncio
-import pickle
-from typing import Dict, List
+from typing import Dict
 import pytest
 
 from src.consensus.blockchain import ReceiveBlockResult
@@ -16,7 +15,7 @@ from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint64
 from tests.setup_nodes import test_constants, bt
 from tests.full_node.fixtures import empty_blockchain
-from tests.full_node.fixtures import default_400_blocks as blocks
+from tests.full_node.fixtures import default_1000_blocks as blocks
 
 
 @pytest.fixture(scope="module")
@@ -61,6 +60,7 @@ class TestWeightProof:
         blockchain = empty_blockchain
         for block in blocks:
             result, err, _ = await blockchain.receive_block(block)
+            assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
             header_cache[block.header_hash] = full_block_to_header(block)
 
@@ -74,15 +74,16 @@ class TestWeightProof:
         print("sub epoch block num ", sub_epoch_blocks_n)
 
     @pytest.mark.asyncio
-    async def test_create_sub_epoch_segments(self, empty_blockchain, default_blocks):
+    async def test_create_sub_epoch_segments(self, empty_blockchain, blocks):
         assert empty_blockchain.get_peak() is None
         header_cache: Dict[bytes32, HeaderBlock] = {}
         blockchain = empty_blockchain
-        for block in default_blocks:
+        for block in blocks:
             result, err, _ = await blockchain.receive_block(block)
+            assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
             header_cache[block.header_hash] = full_block_to_header(block)
-        curr = get_sub_epoch_start(blockchain, default_blocks[-1].prev_header_hash)
+        curr = get_sub_epoch_start(blockchain, blocks[-1].prev_header_hash)
         sub_epoch_blocks_n: uint32 = get_sub_epoch_block_num(curr, blockchain.sub_blocks)
         print("sub epoch block num ", sub_epoch_blocks_n)
         segments = create_sub_epoch_segments(
@@ -100,12 +101,14 @@ class TestWeightProof:
     #   assert no gaps
 
     @pytest.mark.asyncio
-    async def test_weight_proof(self, empty_blockchain, default_blocks):
+    async def test_weight_proof(self, empty_blockchain, blocks):
         assert empty_blockchain.get_peak() is None
         header_cache: Dict[bytes32, HeaderBlock] = {}
         blockchain = empty_blockchain
-        for block in default_blocks:
+        for block in blocks:
+            print(f"\n validate block {block.height}")
             result, err, _ = await blockchain.receive_block(block)
+            assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
             header_cache[block.header_hash] = full_block_to_header(block)
 
@@ -122,11 +125,18 @@ class TestWeightProof:
 
         #   assert number of segments
         print(f"number of challenge segments {len(wp.sub_epoch_segments)}")
-
         print(f"number of sub-epochs {len(wp.sub_epochs)}")
         assert len(wp.sub_epochs) > 0
-
-        validate_weight()
+        sub_epoch_n = len(wp.sub_epochs)
+        curr = blockchain.sub_blocks[wp.proof_blocks[-1]]
+        first_sub_epoch_summary = None
+        while not sub_epoch_n == 0:
+            if curr.sub_epoch_summary_included is not None:
+                sub_epoch_n -= 1
+                first_sub_epoch_summary = curr.sub_epoch_summary_included
+            # next sub block
+            curr = blockchain.sub_blocks[curr.prev_hash]
+        assert validate_weight(test_constants, wp, first_sub_epoch_summary.prev_subepoch_summary_hash)
 
         #   assert no gaps
 

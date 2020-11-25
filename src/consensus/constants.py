@@ -1,7 +1,7 @@
 import dataclasses
 
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint64, uint32
+from src.util.ints import uint64, uint32, uint8
 
 
 @dataclasses.dataclass(frozen=True)
@@ -52,8 +52,7 @@ class ConsensusConstants:
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
     MAX_BLOCK_COST_CLVM: int
 
-    # todo dont use float
-    WEIGHT_PROOF_THRESHOLD: float
+    WEIGHT_PROOF_THRESHOLD: uint8
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)
