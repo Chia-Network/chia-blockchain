@@ -237,7 +237,7 @@ def create_sub_epoch_segments(
     height_to_hash: Dict[uint32, bytes32],
 ) -> List[SubEpochChallengeSegment]:
     """
-    received the last block in sub epoch and creates List[SubEpochChallengeSegment] for that sub_epoch
+    receives the last block in sub epoch and creates List[SubEpochChallengeSegment] for that sub_epoch
     """
 
     segments: List[SubEpochChallengeSegment] = []
@@ -245,14 +245,15 @@ def create_sub_epoch_segments(
 
     count = sub_epoch_blocks_n
     while not count == 0:
+        log.info(f"challenge segment, starts at {curr.height} ")
         curr = sub_blocks[curr.prev_hash]
+        count -= 1
         if not curr.is_challenge_sub_block(constants):
             continue
 
         challebge_sub_block = header_cache[curr.header_hash]
         segment = handle_challenge_segment(constants, challebge_sub_block, sub_epoch_n, height_to_hash, header_cache)
         segments.append(segment)
-        count -= 1
 
     return segments
 
@@ -277,6 +278,8 @@ def make_weight_proof(
     sub_epoch_n = uint32(forkpoint_sub_epoch_n)
     rng: random.Random = random.Random(tip)
     # ses_hash from the latest sub epoch summary before this part of the chain
+
+    assert sub_blocks[tip].height > total_number_of_blocks
     while not total_number_of_blocks == 0:
         # next sub block
         curr = sub_blocks[curr.prev_header_hash]
