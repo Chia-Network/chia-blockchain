@@ -5,10 +5,13 @@ from src.consensus.pot_iterations import (
     calculate_ip_iters,
     calculate_sp_iters,
     is_overflow_sub_block,
-    calculate_sub_slot_iters,
 )
 from src.consensus.deficit import calculate_deficit
-from src.consensus.difficulty_adjustment import get_next_ips, finishes_sub_epoch, get_next_difficulty
+from src.consensus.difficulty_adjustment import (
+    finishes_sub_epoch,
+    get_next_difficulty,
+    get_next_sub_slot_iters,
+)
 from src.full_node.sub_block_record import SubBlockRecord
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
@@ -23,12 +26,12 @@ def make_sub_epoch_summary(
     blocks_included_height: uint32,
     prev_prev_sub_block: SubBlockRecord,
     new_difficulty: Optional[uint64],
-    new_ips: Optional[uint64],
+    new_sub_slot_iters: Optional[uint64],
 ) -> SubEpochSummary:
     """
     Creates a sub-epoch-summary object, assuming that the first sub-block in the new sub-epoch is at height
     "blocks_included_height". Prev_sb is the last sub block in the previous sub-epoch. On a new epoch,
-    new_difficulty and new_ips are also added.
+    new_difficulty and new_sub_slot_iters are also added.
     """
     assert prev_prev_sub_block.height == blocks_included_height - 2
 
@@ -45,7 +48,7 @@ def make_sub_epoch_summary(
         curr.finished_reward_slot_hashes[-1],
         uint8(curr.height % constants.SUB_EPOCH_SUB_BLOCKS),
         new_difficulty,
-        new_ips,
+        new_sub_slot_iters,
     )
 
 
@@ -59,17 +62,17 @@ def next_sub_epoch_summary(
 ) -> Optional[SubEpochSummary]:
     prev_sb: Optional[SubBlockRecord] = sub_blocks.get(block.prev_header_hash, None)
     if block.height == 0:
-        ips = constants.IPS_STARTING
+        sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
     else:
         assert prev_sb is not None
-        # This is the ips of the current block
-        ips = get_next_ips(
+        # This is the ssi of the current block
+        sub_slot_iters = get_next_sub_slot_iters(
             constants,
             sub_blocks,
             height_to_hash,
             prev_sb.prev_hash,
             prev_sb.height,
-            prev_sb.ips,
+            prev_sb.sub_slot_iters,
             prev_sb.deficit,
             len(block.finished_sub_slots) > 0,
             prev_sb.sp_total_iters(constants),
@@ -86,9 +89,8 @@ def next_sub_epoch_summary(
     if finishes_se:
         assert prev_sb is not None
         if finishes_epoch:
-            sp_iters = calculate_sp_iters(constants, ips, signage_point_index)
-            ip_iters = calculate_ip_iters(constants, ips, signage_point_index, required_iters)
-            sub_slot_iters = calculate_sub_slot_iters(constants, ips)
+            sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+            ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
             next_difficulty = get_next_difficulty(
                 constants,
                 sub_blocks,
@@ -100,20 +102,21 @@ def next_sub_epoch_summary(
                 True,
                 uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
             )
-            next_ips = get_next_ips(
+            next_sub_slot_iters = get_next_sub_slot_iters(
                 constants,
                 sub_blocks,
                 height_to_hash,
                 block.prev_header_hash,
                 block.height,
-                ips,
+                sub_slot_iters,
                 deficit,
                 True,
                 uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
             )
-            sp_total_iters = uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0))
         else:
             next_difficulty = None
-            next_ips = None
-        return make_sub_epoch_summary(constants, sub_blocks, block.height + 1, prev_sb, next_difficulty, next_ips)
+            next_sub_slot_iters = None
+        return make_sub_epoch_summary(
+            constants, sub_blocks, block.height + 1, prev_sb, next_difficulty, next_sub_slot_iters
+        )
     return None

@@ -146,13 +146,13 @@ def finishes_sub_epoch(
     return True
 
 
-def get_next_ips(
+def get_next_sub_slot_iters(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
     prev_header_hash: bytes32,
     height: uint32,
-    ips: uint64,
+    curr_sub_slot_iters: uint64,
     deficit: uint8,
     new_slot: bool,
     signage_point_total_iters: uint128,
@@ -164,16 +164,16 @@ def get_next_ips(
     next_height: uint32 = uint32(height + 1)
 
     if next_height < constants.EPOCH_SUB_BLOCKS:
-        return uint64(constants.IPS_STARTING)
+        return uint64(constants.SUB_SLOT_ITERS_STARTING)
 
     if prev_header_hash not in sub_blocks:
         raise ValueError(f"Header hash {prev_header_hash} not in sub blocks")
 
     prev_sb: SubBlockRecord = sub_blocks[prev_header_hash]
 
-    # If we are in the same epoch, return same ips
+    # If we are in the same epoch, return same ssi
     if not new_slot or not finishes_sub_epoch(constants, height, deficit, True, sub_blocks, prev_header_hash):
-        return ips
+        return curr_sub_slot_iters
 
     last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(
         constants, next_height, height_to_hash, sub_blocks, prev_sb
@@ -185,31 +185,32 @@ def get_next_ips(
         last_block_curr = sub_blocks[last_block_curr.prev_hash]
 
     # This is computed as the iterations per second in last epoch, times the target number of seconds per slot
-    new_ips_precise: uint64 = uint64(
-        (last_block_curr.total_iters - last_block_prev.total_iters)
+    new_ssi_precise: uint64 = uint64(
+        constants.SLOT_TIME_TARGET
+        * (last_block_curr.total_iters - last_block_prev.total_iters)
         // (last_block_curr.timestamp - last_block_prev.timestamp)
     )
-    new_ips_precise = new_ips_precise - (new_ips_precise % constants.NUM_SPS_SUB_SLOT)  # Must divide the sub slot
-    new_ips = uint64(truncate_to_significant_bits(new_ips_precise, constants.SIGNIFICANT_BITS))
-    assert count_significant_bits(new_ips) <= constants.SIGNIFICANT_BITS
+    new_ssi_precise = new_ssi_precise - (new_ssi_precise % constants.NUM_SPS_SUB_SLOT)  # Must divide the sub slot
+    new_ssi = uint64(truncate_to_significant_bits(new_ssi_precise, constants.SIGNIFICANT_BITS))
+    assert count_significant_bits(new_ssi) <= constants.SIGNIFICANT_BITS
 
     # Only change by a max factor as a sanity check
-    max_ips = uint64(
+    max_ssi = uint64(
         truncate_to_significant_bits(
-            constants.DIFFICULTY_FACTOR * last_block_curr.ips,
+            constants.DIFFICULTY_FACTOR * last_block_curr.sub_slot_iters,
             constants.SIGNIFICANT_BITS,
         )
     )
-    min_ips = uint64(
+    min_ssi = uint64(
         truncate_to_significant_bits(
-            last_block_curr.ips // constants.DIFFICULTY_FACTOR,
+            last_block_curr.sub_slot_iters // constants.DIFFICULTY_FACTOR,
             constants.SIGNIFICANT_BITS,
         )
     )
-    if new_ips >= last_block_curr.ips:
-        return min(new_ips, max_ips)
+    if new_ssi >= last_block_curr.sub_slot_iters:
+        return min(new_ssi, max_ssi)
     else:
-        return max([constants.NUM_SPS_SUB_SLOT, new_ips, min_ips])
+        return max([constants.NUM_SPS_SUB_SLOT, new_ssi, min_ssi])
 
 
 def get_next_difficulty(
@@ -262,9 +263,7 @@ def get_next_difficulty(
         // (constants.SLOT_SUB_BLOCKS_TARGET * actual_epoch_time)
     )
     # Take only DIFFICULTY_SIGNIFICANT_BITS significant bits
-    new_difficulty = uint64(
-        truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS)
-    )
+    new_difficulty = uint64(truncate_to_significant_bits(new_difficulty_precise, constants.SIGNIFICANT_BITS))
     assert count_significant_bits(new_difficulty) <= constants.SIGNIFICANT_BITS
 
     # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
@@ -290,7 +289,7 @@ def cc_sp_hash(args):
     pass
 
 
-def get_ips_and_difficulty(
+def get_sub_slot_iters_and_difficulty(
     constants: ConsensusConstants,
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
     height_to_hash: Dict[uint32, bytes32],
@@ -300,7 +299,7 @@ def get_ips_and_difficulty(
 
     # genesis
     if prev_sb is None:
-        return constants.IPS_STARTING, constants.DIFFICULTY_STARTING
+        return constants.SUB_SLOT_ITERS_STARTING, constants.DIFFICULTY_STARTING
 
     if prev_sb.height != 0:
         prev_difficulty: uint64 = uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight)
@@ -320,15 +319,15 @@ def get_ips_and_difficulty(
         len(header_block.finished_sub_slots) > 0,
         sp_total_iters,
     )
-    ips: uint64 = get_next_ips(
+    sub_slot_iters: uint64 = get_next_sub_slot_iters(
         constants,
         sub_blocks,
         height_to_hash,
         header_block.prev_header_hash,
         prev_sb.height,
-        prev_sb.ips,
+        prev_sb.sub_slot_iters,
         prev_sb.deficit,
         len(header_block.finished_sub_slots) > 0,
         sp_total_iters,
     )
-    return ips, difficulty
+    return sub_slot_iters, difficulty

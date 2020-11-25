@@ -9,7 +9,6 @@ from chiabip158 import PyBIP158
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_sub_slot_iters
 from src.full_node.bundle_tools import best_solution_program
 from src.consensus.cost_calculator import calculate_cost_of_program
 from src.consensus.mempool_check_conditions import get_name_puzzle_conditions
@@ -222,12 +221,12 @@ def create_unfinished_block(
     if prev_sub_block is not None:
         curr = prev_sub_block
         is_block, prev_block = get_prev_block(curr, prev_block, sub_blocks, total_iters_sp)
-        prev_sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, prev_sub_block.ips)
+        prev_sub_slot_iters: uint64 = prev_sub_block.sub_slot_iters
     else:
         # Genesis is a block
         is_genesis = True
         is_block = True
-        prev_sub_slot_iters = calculate_sub_slot_iters(constants, constants.IPS_STARTING)
+        prev_sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
 
     new_sub_slot: bool = len(finished_sub_slots) > 0
 
