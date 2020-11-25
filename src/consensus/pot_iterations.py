@@ -11,34 +11,29 @@ def is_overflow_sub_block(constants: ConsensusConstants, signage_point_index: ui
     return signage_point_index >= constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA
 
 
-def calculate_sp_interval_iters(constants: ConsensusConstants, ips: uint64) -> uint64:
-    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
+def calculate_sp_interval_iters(constants: ConsensusConstants, sub_slot_iters: uint64) -> uint64:
     return uint64(sub_slot_iters // constants.NUM_SPS_SUB_SLOT)
 
 
-def calculate_sub_slot_iters(constants: ConsensusConstants, ips: uint64) -> uint64:
-    return ips * constants.SLOT_TIME_TARGET
-
-
-def calculate_sp_iters(constants: ConsensusConstants, ips: uint64, signage_point_index: uint8) -> uint64:
+def calculate_sp_iters(constants: ConsensusConstants, sub_slot_iters: uint64, signage_point_index: uint8) -> uint64:
     if signage_point_index >= constants.NUM_SPS_SUB_SLOT:
         raise ValueError("SP index too high")
-    return uint64(calculate_sp_interval_iters(constants, ips) * signage_point_index)
+    return uint64(calculate_sp_interval_iters(constants, sub_slot_iters) * signage_point_index)
 
 
 def calculate_ip_iters(
-    constants: ConsensusConstants, ips: uint64, signage_point_index: uint8, required_iters: uint64
+    constants: ConsensusConstants, sub_slot_iters: uint64, signage_point_index: uint8, required_iters: uint64
 ) -> uint64:
-    # Note that the IPS is for the block passed in, which might be in the previous epoch
-    sub_slot_iters: uint64 = calculate_sub_slot_iters(constants, ips)
-    sp_iters = calculate_sp_iters(constants, ips, signage_point_index)
-    sp_interval_iters: uint64 = calculate_sp_interval_iters(constants, ips)
+    # Note that the SSI is for the block passed in, which might be in the previous epoch
+    sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+    sp_interval_iters: uint64 = calculate_sp_interval_iters(constants, sub_slot_iters)
     if sp_iters % sp_interval_iters != 0 or sp_iters >= sub_slot_iters:
-        raise ValueError(f"Invalid sp iters {sp_iters} for this ips {ips}")
+        raise ValueError(f"Invalid sp iters {sp_iters} for this ssi {sub_slot_iters}")
 
     if required_iters >= sp_interval_iters or required_iters == 0:
         raise ValueError(
-            f"Required iters {required_iters} is not below the sp interval iters {sp_interval_iters} {ips} or not >0."
+            f"Required iters {required_iters} is not below the sp interval iters {sp_interval_iters} "
+            f"{sub_slot_iters} or not >0."
         )
 
     return (sp_iters + constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % sub_slot_iters
@@ -56,5 +51,5 @@ def calculate_iterations_quality(
     difficulty.
     """
     sp_quality_string: bytes32 = std_hash(quality_string + cc_sp_output_hash)
-    iters = uint64(uint128(int(difficulty) << 32) // quality_str_to_quality(sp_quality_string, size))
+    iters = uint64(uint128(int(difficulty) << 25) // quality_str_to_quality(sp_quality_string, size))
     return max(iters, uint64(1))

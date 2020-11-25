@@ -20,7 +20,7 @@ class NewSignagePoint:
     challenge_chain_sp: bytes32
     reward_chain_sp: bytes32
     difficulty: uint64
-    ips: uint64
+    sub_slot_iters: uint64
     signage_point_index: uint8
 
 

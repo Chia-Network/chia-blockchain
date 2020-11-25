@@ -106,17 +106,17 @@ class TestBlockHeaderValidation:
                 len(block.finished_sub_slots) > 0
                 and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
             ):
-                # Sub/Epoch. Try using a bad ips and difficulty to test 2m and 2n
+                # Sub/Epoch. Try using a bad ssi and difficulty to test 2m and 2n
                 new_finished_ss = recursive_replace(
                     block.finished_sub_slots[0],
-                    "challenge_chain.new_ips",
+                    "challenge_chain.new_sub_slot_iters",
                     uint64(10000000),
                 )
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad)
-                assert err == Err.INVALID_NEW_IPS
+                assert err == Err.INVALID_NEW_SUB_SLOT_ITERS
                 new_finished_ss_2 = recursive_replace(
                     block.finished_sub_slots[0],
                     "challenge_chain.new_difficulty",
@@ -183,6 +183,7 @@ class TestBlockHeaderValidation:
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(test_constants, 10)
         for block in blocks:
+            print(block.reward_chain_sub_block.challenge_chain_ip_vdf)
             print(block.challenge_chain_ip_proof)
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
@@ -1446,7 +1447,6 @@ class TestReorgs:
 
         blocks_reorg_chain = bt.get_consecutive_blocks(test_constants, 7, blocks[:10], seed=b"2")
         for reorg_block in blocks_reorg_chain:
-            print(f"Trying block {reorg_block.height} prev: {reorg_block.prev_header_hash}")
             result, error_code, fork_height = await b.receive_block(reorg_block)
             if reorg_block.height < 10:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
@@ -1483,17 +1483,20 @@ class TestReorgs:
             seed=b"2",
             time_per_sub_block=8,
         )
-
+        found_orphan = False
         for reorg_block in blocks_reorg_chain:
             result, error_code, fork_height = await b.receive_block(reorg_block)
             if reorg_block.height < num_blocks_chain_2_start:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             if reorg_block.weight <= chain_1_weight:
-                assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
+                if result == ReceiveBlockResult.ADDED_AS_ORPHAN:
+                    found_orphan = True
+                assert result == ReceiveBlockResult.ADDED_AS_ORPHAN or result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             elif reorg_block.weight > chain_1_weight:
                 assert reorg_block.height < chain_1_height
                 assert result == ReceiveBlockResult.NEW_PEAK
             assert error_code is None
+        assert found_orphan
 
         assert b.get_peak().weight > chain_1_weight
         assert b.get_peak().height < chain_1_height

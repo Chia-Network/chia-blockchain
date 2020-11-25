@@ -215,7 +215,7 @@ class Harvester:
                     required_iters: uint64 = calculate_iterations_quality(
                         quality_str, prover.get_size(), new_challenge.difficulty, new_challenge.sp_hash
                     )
-                    sp_interval_iters = calculate_sp_interval_iters(self.constants, new_challenge.ips)
+                    sp_interval_iters = calculate_sp_interval_iters(self.constants, new_challenge.sub_slot_iters)
                     if required_iters < sp_interval_iters:
                         # Found a very good proof of space! will fetch the whole proof from disk, then send to farmer
                         try:

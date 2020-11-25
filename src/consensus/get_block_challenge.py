@@ -13,17 +13,21 @@ def get_block_challenge(
     constants: ConsensusConstants,
     genesis_block: bool,
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
-    new_sub_slot: bool,
     overflow: bool,
     prev_sb: SubBlockRecord,
     sub_blocks: Dict[bytes32, SubBlockRecord],
+    skip_overflow_last_ss_validation: bool,
 ):
-    if new_sub_slot:
+    if len(header_block.finished_sub_slots) > 0:
         if overflow:
-            # New slot with overflow block
-            challenge: bytes32 = header_block.finished_sub_slots[
-                -1
-            ].challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
+            # New sub-slot with overflow block
+            if skip_overflow_last_ss_validation:
+                # In this case, we are missing the final sub-slot bundle (it's not finished yet)
+                challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
+            else:
+                challenge: bytes32 = header_block.finished_sub_slots[
+                    -1
+                ].challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
         else:
             # No overflow, new slot with a new challenge
             challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()

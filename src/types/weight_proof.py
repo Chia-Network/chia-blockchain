@@ -17,7 +17,7 @@ from src.types.vdf import VDFProof
 class SubEpochData(Streamable):
     reward_chain_hash: bytes32
     num_sub_blocks_overflow: uint8
-    new_ips: Optional[uint64]
+    new_sub_slot_iters: Optional[uint64]
     new_difficulty: Optional[uint64]
 
 

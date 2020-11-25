@@ -10,6 +10,7 @@ from chiabip158 import PyBIP158
 import dataclasses
 
 from src.consensus.constants import ConsensusConstants
+from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
 from src.consensus.pot_iterations import (
     calculate_sp_iters,
     calculate_ip_iters,
@@ -19,9 +20,6 @@ from src.consensus.pot_iterations import (
 from src.full_node.block_store import BlockStore
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
-from src.consensus.difficulty_adjustment import (
-    get_ips_and_difficulty,
-)
 from src.full_node.full_node_store import FullNodeStore
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.full_node.mempool_manager import MempoolManager
@@ -137,11 +135,6 @@ class FullNode:
         except Exception as e:
             self.log.error(f"Exception in peer discovery: {e}")
 
-        # TODO(mariano)
-        # uncompact_interval = self.config["send_uncompact_interval"]
-        # if uncompact_interval > 0:
-        #     self.broadcast_uncompact_task = asyncio.create_task(self.broadcast_uncompact_blocks(uncompact_interval))
-
     def _set_global_connections(self, global_connections: PeerConnections):
         self.global_connections = global_connections
 
@@ -170,11 +163,11 @@ class FullNode:
                 self.blockchain.sub_blocks,
                 self.blockchain.height_to_hash,
                 peak.signage_point_index,
-                peak.ips,
+                peak.sub_slot_itsub_slot_iters,
                 peak_block,
             )
             timelord_new_peak: timelord_protocol.NewPeak = timelord_protocol.NewPeak(
-                peak_block.reward_chain_sub_block, difficulty, peak.deficit, peak.ips, ses
+                peak_block.reward_chain_sub_block, difficulty, peak.deficit, peak.sub_slot_iters, ses
             )
 
             # Tell timelord about the new peak
@@ -1017,14 +1010,14 @@ class FullNode:
                 )
         if pos_sub_slot[0].challenge_chain.new_difficulty is not None:
             difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
-            ips = pos_sub_slot[0].challenge_chain.new_ips
+            sub_slot_iters = pos_sub_slot[0].challenge_chain.new_sub_slot_iters
         else:
             if peak is None or peak.height == 0:
                 difficulty = self.constants.DIFFICULTY_STARTING
-                ips = self.constants.IPS_STARTING
+                sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
             else:
                 difficulty = uint64(peak.weight - self.blockchain.sub_blocks[peak.prev_hash].weight)
-                ips = peak.ips
+                sub_slot_iters = peak.sub_slot_iters
 
         required_iters: uint64 = calculate_iterations_quality(
             quality_string,
@@ -1032,8 +1025,10 @@ class FullNode:
             difficulty,
             request.challenge_chain_sp,
         )
-        sp_iters: uint64 = calculate_sp_iters(self.constants, ips, request.signage_point_index)
-        ip_iters: uint64 = calculate_ip_iters(self.constants, ips, request.signage_point_index, required_iters)
+        sp_iters: uint64 = calculate_sp_iters(self.constants, sub_slot_iters, request.signage_point_index)
+        ip_iters: uint64 = calculate_ip_iters(
+            self.constants, sub_slot_iters, request.signage_point_index, required_iters
+        )
         total_iters_pos_slot: uint128 = pos_sub_slot[2]
 
         def get_plot_sig(to_sign, _) -> G2Element:
@@ -1141,7 +1136,7 @@ class FullNode:
                 self.full_node_store.add_to_future_ip(request)
                 return
 
-        ips, difficulty = get_ips_and_difficulty(
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants, unfinished_block, self.blockchain.height_to_hash, prev_sb, self.blockchain.sub_blocks
         )
         overflow = is_overflow_sub_block(self.constants, unfinished_block.reward_chain_sub_block.signage_point_index)
