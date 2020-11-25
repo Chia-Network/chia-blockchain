@@ -3,10 +3,10 @@ from .constants import ConsensusConstants
 
 testnet_kwargs = {
     # TODO(mariano): write comments here
-    "SLOT_SUB_BLOCKS_TARGET": 16,
-    "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 5,
-    "MAX_SLOT_SUB_BLOCKS": 64,
-    "NUM_SPS_SUB_SLOT": 32,
+    "SLOT_SUB_BLOCKS_TARGET": 32,
+    "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 16,
+    "MAX_SLOT_SUB_BLOCKS": 128,
+    "NUM_SPS_SUB_SLOT": 64,
     "IPS_STARTING": 2 ** 18,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of 2^32, to be used in the VDF iter calculation formula.
@@ -17,8 +17,8 @@ testnet_kwargs = {
     "EPOCH_SUB_BLOCKS": 4096,  # The number of sub-blocks per epoch, mainnet 32256
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
-    "NUMBER_ZERO_BITS_PLOT_FILTER": 3,  # H(plot signature of the challenge) must start with these many zeroes
-    "SLOT_TIME_TARGET": 300,  # The target number of seconds per slot
+    "NUMBER_ZERO_BITS_PLOT_FILTER": 9,  # H(plot signature of the challenge) must start with these many zeroes
+    "SLOT_TIME_TARGET": 600,  # The target number of seconds per slot
     "NUM_SP_INTERVALS_EXTRA": 3,  # The number of sp intervals to add to the signage point
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more
     "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
