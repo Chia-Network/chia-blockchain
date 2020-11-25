@@ -253,9 +253,12 @@ class Blockchain:
             await self.coin_store.rollback_to_block(fork_h)
 
             # Rollback sub_epoch_summaries
+            heights_to_delete = []
             for ses_included_height in self.sub_epoch_summaries.keys():
                 if ses_included_height > fork_h:
-                    del self.sub_epoch_summaries[ses_included_height]
+                    heights_to_delete.append(ses_included_height)
+            for height in heights_to_delete:
+                del self.sub_epoch_summaries[height]
 
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []

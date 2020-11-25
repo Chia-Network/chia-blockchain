@@ -44,7 +44,7 @@ class MempoolManager:
         self.coin_store = coin_store
 
         tx_per_sec = self.constants.TX_PER_SEC
-        sec_per_block = self.constants.SLOT_TIME_TARGET
+        sec_per_block = self.constants.SUB_SLOT_TIME_TARGET
         block_buffer_count = self.constants.MEMPOOL_BLOCK_BUFFER
 
         # MEMPOOL_SIZE = 60000

@@ -4,7 +4,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "DIFFICULTY_STARTING": 1,
         "DISCRIMINANT_SIZE_BITS": 8,
-        "SLOT_TIME_TARGET": 300,
+        "SUB_SLOT_TIME_TARGET": 300,
         "TX_PER_SEC": 1,
         "MEMPOOL_BLOCK_BUFFER": 10,
         "SUB_SLOT_ITERS_STARTING": 2 ** 10,
