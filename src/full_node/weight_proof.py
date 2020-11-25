@@ -2,7 +2,10 @@ import random
 from typing import Dict, Optional, List
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_sub_slot_iters, calculate_iterations_quality, calculate_ip_iters
+from src.consensus.pot_iterations import (
+    calculate_iterations_quality,
+    calculate_ip_iters,
+)
 from src.full_node.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
 from src.types.full_block import FullBlock
@@ -12,7 +15,12 @@ from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeChainSubSlot, RewardChainSubSlot
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.vdf import VDFProof, VDFInfo
-from src.types.weight_proof import WeightProof, SubEpochData, SubEpochChallengeSegment, SubSlotData
+from src.types.weight_proof import (
+    WeightProof,
+    SubEpochData,
+    SubEpochChallengeSegment,
+    SubSlotData,
+)
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint8
 from src.util.vdf_prover import get_vdf_info_and_proof
@@ -46,7 +54,7 @@ def make_sub_epoch_data(
     #  Number of subblocks overflow in previous slot
     previous_sub_epoch_overflows: uint8 = sub_epoch_summary.num_sub_blocks_overflow  # total in sub epoch - expected
     #  New work difficulty and iterations per subslot
-    sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
+    sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_ips
     new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
@@ -69,9 +77,9 @@ def get_sub_epoch_block_num(block: SubBlockRecord, sub_blocks: Dict[bytes32, Sub
     return count
 
 
-def choose_sub_epoch(sub_epoch_blocks_N: uint32, rng: random.Random, total_number_of_blocks: uint64) -> bool:
-    prob = sub_epoch_blocks_N / total_number_of_blocks
-    for i in range(sub_epoch_blocks_N):
+def choose_sub_epoch(sub_epoch_blocks_n: uint32, rng: random.Random, total_number_of_blocks: uint64) -> bool:
+    prob = sub_epoch_blocks_n / total_number_of_blocks
+    for i in range(sub_epoch_blocks_n):
         if rng.random() < prob:
             return True
     return False
@@ -389,13 +397,16 @@ def validate_weight(
                 if not summaries[segment.sub_epoch_n + 1].reward_chain_hash == rc_sub_slot.get_hash():
                     return False
 
-    # todo validate timing
-    avg_iters = total_ip_iters / total_challenge_blocks
+    # todo threshold from constants ?
+    threshold = 0.5
+    avg_ip_iters = total_ip_iters / total_challenge_blocks
     avg_slot_iters = total_slot_iters / total_slots
+    if avg_ip_iters / avg_slot_iters > threshold:
+        return False
 
     # validate recent reward chain
 
-    return False
+    return True
 
 
 def validate_proof_of_space(constants, segment, summaries, slot_iters):

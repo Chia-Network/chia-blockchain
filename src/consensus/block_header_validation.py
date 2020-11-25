@@ -8,7 +8,7 @@ from blspy import AugSchemeMPL
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import (
-    finishes_sub_epoch,
+    can_finish_sub_and_full_epoch,
     get_sub_slot_iters_and_difficulty,
 )
 from src.consensus.get_block_challenge import get_block_challenge
@@ -68,19 +68,16 @@ async def validate_unfinished_header_block(
     if genesis_block and header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
         return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
 
+    can_finish_se: bool = False
+    can_finish_epoch: bool = False
     if genesis_block:
         height: uint32 = uint32(0)
         sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
         difficulty = constants.DIFFICULTY_STARTING
-        finishes_se: bool = False
-        finishes_epoch: bool = False
     else:
         height: uint32 = uint32(prev_sb.height + 1)
-        finishes_se: bool = finishes_sub_epoch(
-            constants, prev_sb.height, prev_sb.deficit, False, sub_blocks, prev_sb.prev_hash
-        )
-        finishes_epoch: bool = finishes_sub_epoch(
-            constants, prev_sb.height, prev_sb.deficit, True, sub_blocks, prev_sb.prev_hash
+        can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
+            constants, prev_sb.height, prev_sb.deficit, sub_blocks, prev_sb.prev_hash
         )
 
         # Gets the difficulty and SSI for this sub-block
@@ -221,7 +218,7 @@ async def validate_unfinished_header_block(
                 if sub_slot.challenge_chain.subepoch_summary_hash is not None:
                     return None, ValidationError(Err.INVALID_SUB_EPOCH_SUMMARY_HASH)
 
-            if finishes_epoch:
+            if can_finish_epoch:
                 # 2m. Check new difficulty and ssi
                 if sub_slot.challenge_chain.new_sub_slot_iters != sub_slot_iters:
                     return None, ValidationError(Err.INVALID_NEW_SUB_SLOT_ITERS)
@@ -338,10 +335,10 @@ async def validate_unfinished_header_block(
                     )
 
                 # 3b. Check that we finished a slot and we finished a sub-epoch
-                if not new_sub_slot or not finishes_se:
+                if not new_sub_slot or not can_finish_se:
                     return None, ValidationError(
                         Err.INVALID_SUB_EPOCH_SUMMARY_HASH,
-                        f"new sub-slot: {new_sub_slot} finishes sub-epoch {finishes_se}",
+                        f"new sub-slot: {new_sub_slot} finishes sub-epoch {can_finish_se}",
                     )
 
                 # 3c. Check the actual sub-epoch is correct
@@ -350,8 +347,8 @@ async def validate_unfinished_header_block(
                     sub_blocks,
                     uint32(prev_sb.height + 1),
                     sub_blocks[prev_sb.prev_hash],
-                    difficulty if finishes_epoch else None,
-                    sub_slot_iters if finishes_epoch else None,
+                    difficulty if can_finish_epoch else None,
+                    sub_slot_iters if can_finish_epoch else None,
                 )
                 expected_hash = expected_sub_epoch_summary.get_hash()
                 if expected_hash != ses_hash:
@@ -360,7 +357,7 @@ async def validate_unfinished_header_block(
                     )
             elif new_sub_slot and not genesis_block:
                 # 3d. Check that we don't have to include a sub-epoch summary
-                if finishes_sub_epoch(constants, prev_sb.height, prev_sb.deficit, False, sub_blocks, prev_sb.prev_hash):
+                if can_finish_se:
                     return None, ValidationError(
                         Err.INVALID_SUB_EPOCH_SUMMARY, "block finishes sub-epoch but ses-hash is None"
                     )
@@ -444,7 +441,7 @@ async def validate_unfinished_header_block(
 
     # 9. Check no overflows in the first sub-slot of a new epoch
     # (although they are OK in the second sub-slot), this is important
-    if overflow and finishes_epoch:
+    if overflow and can_finish_epoch:
         if finished_sub_slots_since_prev < 2:
             return None, ValidationError(Err.NO_OVERFLOWS_IN_FIRST_SUB_SLOT_NEW_EPOCH)
 
