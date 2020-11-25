@@ -57,9 +57,14 @@ def _get_last_block_in_previous_epoch(
     # before the final sub-block in the epoch. Block at height 0 is an exception.
     # TODO: check edge cases here
     height_epoch_surpass: uint32 = next_height - (next_height % constants.EPOCH_SUB_BLOCKS)
-    height_prev_epoch_surpass: uint32 = height_epoch_surpass - constants.EPOCH_SUB_BLOCKS
-    if (next_height - height_epoch_surpass) > constants.MAX_SUB_SLOT_SUB_BLOCKS:
+    if (next_height - height_epoch_surpass) > constants.MAX_SLOT_SUB_BLOCKS:
         raise ValueError(f"Height at {next_height} should not create a new slot, it is far past the epoch barrier")
+
+    height_prev_epoch_surpass: uint32 = height_epoch_surpass - constants.EPOCH_SUB_BLOCKS
+    if height_prev_epoch_surpass == 0:
+        # The genesis block is an edge case, where we measure from the first block in epoch (height 0), as opposed to
+        # the last sub-block in the previous epoch, which would be height -1
+        return _get_blocks_at_height(height_to_hash, sub_blocks, prev_sb, uint32(0))[0]
 
     # If the prev slot is the first slot, the iterations start at 0
     # We will compute the timestamps of the last block in epoch, as well as the total iterations at infusion
@@ -67,66 +72,61 @@ def _get_last_block_in_previous_epoch(
     prev_slot_start_iters: uint128
     prev_slot_time_start: uint64
 
-    if height_prev_epoch_surpass == 0:
-        # The genesis block is an edge case, where we measure from the first block in epoch (height 0), as opposed to
-        # the last sub-block in the previous epoch, which would be height -1
-        return _get_blocks_at_height(height_to_hash, sub_blocks, prev_sb, uint32(0))[0]
-    else:
-        fetched_blocks = _get_blocks_at_height(
-            height_to_hash,
-            sub_blocks,
-            prev_sb,
-            uint32(height_prev_epoch_surpass - constants.MAX_SUB_SLOT_SUB_BLOCKS - 1),
-            uint32(2 * constants.MAX_SUB_SLOT_SUB_BLOCKS + 1),
-        )
-        # This is the last sb in the slot at which we surpass the height. The last block in epoch will be before this.
-        fetched_index: int = constants.MAX_SUB_SLOT_SUB_BLOCKS
-        last_sb_in_slot: SubBlockRecord = fetched_blocks[fetched_index]
+    fetched_blocks = _get_blocks_at_height(
+        height_to_hash,
+        sub_blocks,
+        prev_sb,
+        uint32(height_prev_epoch_surpass - constants.MAX_SLOT_SUB_BLOCKS - 1),
+        uint32(2 * constants.MAX_SLOT_SUB_BLOCKS + 1),
+    )
+    # This is the last sb in the slot at which we surpass the height. The last block in epoch will be before this.
+    fetched_index: int = constants.MAX_SLOT_SUB_BLOCKS
+    last_sb_in_slot: SubBlockRecord = fetched_blocks[fetched_index]
+    fetched_index += 1
+    assert last_sb_in_slot.height == height_prev_epoch_surpass - 1
+    curr: SubBlockRecord = fetched_blocks[fetched_index]
+    # Wait until the slot finishes with a challenge chain infusion at start of slot
+    # Note that there are no overflow blocks at the start of new epochs
+    while not curr.is_challenge_sub_block(constants):
+        last_sb_in_slot = curr
+        curr = fetched_blocks[fetched_index]
         fetched_index += 1
-        assert last_sb_in_slot.height == height_prev_epoch_surpass - 1
-        curr: SubBlockRecord = fetched_blocks[fetched_index]
-        assert curr.height == height_prev_epoch_surpass
 
-        # Wait until the slot finishes with a challenge chain infusion at start of slot
-        # Note that there are no overflow blocks at the start of new epochs
-        while curr.sub_epoch_summary_included is None:
-            last_sb_in_slot = curr
-            curr = fetched_blocks[fetched_index]
-            fetched_index += 1
+    # Backtrack to find the last block before the signage point
+    curr = sub_blocks[last_sb_in_slot.prev_hash]
+    while curr.total_iters > last_sb_in_slot.sp_total_iters(constants) or not curr.is_block:
+        curr = sub_blocks[curr.prev_hash]
 
-        # Backtrack to find the last block before the signage point
-        curr = sub_blocks[last_sb_in_slot.prev_hash]
-        while curr.total_iters > last_sb_in_slot.sp_total_iters(constants) or not curr.is_block:
-            curr = sub_blocks[curr.prev_hash]
-        return curr
+    return curr
 
 
-def finishes_sub_epoch(
+def can_finish_sub_and_full_epoch(
     constants: ConsensusConstants,
     height: uint32,
     deficit: uint8,
-    also_finishes_epoch: bool,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     prev_header_hash: Optional[bytes32],
-) -> bool:
+) -> (bool, bool):
     """
-    Returns true if the next sub-slot after height will form part of a new sub-epoch (or epoch if also_finished_epoch
-    is set to True). Warning: This assumes the previous sub-block did not finish a sub-epoch. TODO: check
+    Returns a bool tuple
+    first bool is true if the next sub-slot after height will form part of a new sub-epoch and epoch.
+    second bool is true if the next sub-slot after height will form part of a new sub-epoch and epoch.
+    Warning: This assumes the previous sub-block did not finish a sub-epoch. TODO: check
     """
 
     if height < constants.SUB_EPOCH_SUB_BLOCKS - 1:
-        return False
+        return False, False
 
     assert prev_header_hash is not None
 
     # If last slot does not have enough blocks for a new challenge chain infusion, return same difficulty
     if deficit > 0:
-        return False
+        return False, False
 
     # Disqualify blocks which are too far past in height
     # The maximum possible height which includes sub epoch summary
-    if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS:
-        return False
+    if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
+        return False, False
 
     # For sub-blocks which equal 0 or 1, we assume that the sub-epoch has not been finished yet
     if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > 1:
@@ -139,14 +139,13 @@ def finishes_sub_epoch(
             curr = sub_blocks[curr.prev_hash]
 
         if already_included_ses or (curr.sub_epoch_summary_included is not None):
-            return False
+            return False, False
 
     # For checking new epoch, make sure the epoch sub blocks are aligned
-    if also_finishes_epoch:
-        if (height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS:
-            return False
+    if (height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
+        return True, False
 
-    return True
+    return True, True
 
 
 def get_next_sub_slot_iters(
@@ -175,7 +174,8 @@ def get_next_sub_slot_iters(
     prev_sb: SubBlockRecord = sub_blocks[prev_header_hash]
 
     # If we are in the same epoch, return same ssi
-    if not new_slot or not finishes_sub_epoch(constants, height, deficit, True, sub_blocks, prev_header_hash):
+    _, can_finish_epoch = can_finish_sub_and_full_epoch(constants, height, deficit, sub_blocks, prev_header_hash)
+    if not new_slot or not can_finish_epoch:
         return curr_sub_slot_iters
 
     last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(
@@ -244,7 +244,8 @@ def get_next_difficulty(
     prev_sb: SubBlockRecord = sub_blocks[prev_header_hash]
 
     # If we are in the same slot as previous sub-block, return same difficulty
-    if not new_slot or not finishes_sub_epoch(constants, height, deficit, True, sub_blocks, prev_header_hash):
+    can_finish_se, _ = can_finish_sub_and_full_epoch(constants, height, deficit, sub_blocks, prev_header_hash)
+    if not new_slot or not can_finish_se:
         return current_difficulty
 
     last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(

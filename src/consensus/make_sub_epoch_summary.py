@@ -8,7 +8,7 @@ from src.consensus.pot_iterations import (
 )
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import (
-    finishes_sub_epoch,
+    can_finish_sub_and_full_epoch,
     get_next_difficulty,
     get_next_sub_slot_iters,
 )
@@ -62,61 +62,61 @@ def next_sub_epoch_summary(
 ) -> Optional[SubEpochSummary]:
     prev_sb: Optional[SubBlockRecord] = sub_blocks.get(block.prev_header_hash, None)
     if block.height == 0:
-        sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
-    else:
-        assert prev_sb is not None
-        # This is the ssi of the current block
-        sub_slot_iters = get_next_sub_slot_iters(
+        return None
+
+    assert prev_sb is not None
+    # This is the ssi of the current block
+    sub_slot_iters = get_next_sub_slot_iters(
+        constants,
+        sub_blocks,
+        height_to_hash,
+        prev_sb.prev_hash,
+        prev_sb.height,
+        prev_sb.sub_slot_iters,
+        prev_sb.deficit,
+        len(block.finished_sub_slots) > 0,
+        prev_sb.sp_total_iters(constants),
+    )
+    overflow = is_overflow_sub_block(constants, signage_point_index)
+    deficit = calculate_deficit(constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
+    can_finishes_se, can_finishes_epoch = can_finish_sub_and_full_epoch(
+        constants, block.height, deficit, sub_blocks, prev_sb.header_hash if prev_sb is not None else None
+    )
+
+    # can't finish se, no summary
+    if not can_finishes_se:
+        return None
+
+    next_difficulty = None
+    next_sub_slot_iters = None
+
+    # if can finish epoch, new difficulty and ssi
+    if can_finishes_epoch:
+        sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+        ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
+        next_difficulty = get_next_difficulty(
             constants,
             sub_blocks,
             height_to_hash,
-            prev_sb.prev_hash,
-            prev_sb.height,
-            prev_sb.sub_slot_iters,
-            prev_sb.deficit,
-            len(block.finished_sub_slots) > 0,
-            prev_sb.sp_total_iters(constants),
+            block.prev_header_hash,
+            block.height,
+            uint64(block.weight - prev_sb.weight),
+            deficit,
+            True,
+            uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
         )
-    overflow = is_overflow_sub_block(constants, signage_point_index)
-    deficit = calculate_deficit(constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
-    finishes_se = finishes_sub_epoch(
-        constants, block.height, deficit, False, sub_blocks, prev_sb.header_hash if prev_sb is not None else None
-    )
-    finishes_epoch: bool = finishes_sub_epoch(
-        constants, block.height, deficit, True, sub_blocks, prev_sb.header_hash if prev_sb is not None else None
-    )
+        next_sub_slot_iters = get_next_sub_slot_iters(
+            constants,
+            sub_blocks,
+            height_to_hash,
+            block.prev_header_hash,
+            block.height,
+            sub_slot_iters,
+            deficit,
+            True,
+            uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
+        )
 
-    if finishes_se:
-        assert prev_sb is not None
-        if finishes_epoch:
-            sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
-            ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
-            next_difficulty = get_next_difficulty(
-                constants,
-                sub_blocks,
-                height_to_hash,
-                block.prev_header_hash,
-                block.height,
-                uint64(block.weight - prev_sb.weight),
-                deficit,
-                True,
-                uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
-            )
-            next_sub_slot_iters = get_next_sub_slot_iters(
-                constants,
-                sub_blocks,
-                height_to_hash,
-                block.prev_header_hash,
-                block.height,
-                sub_slot_iters,
-                deficit,
-                True,
-                uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
-            )
-        else:
-            next_difficulty = None
-            next_sub_slot_iters = None
-        return make_sub_epoch_summary(
-            constants, sub_blocks, block.height + 1, prev_sb, next_difficulty, next_sub_slot_iters
-        )
-    return None
+    return make_sub_epoch_summary(
+        constants, sub_blocks, block.height + 1, prev_sb, next_difficulty, next_sub_slot_iters
+    )
