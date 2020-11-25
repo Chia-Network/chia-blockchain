@@ -82,7 +82,6 @@ jobs:
         BUILD_VDF_CLIENT: "N"
       run: |
         brew install boost
-        echo "BUILD_VDF_CLIENT is $BUILD_VDF_CLIENT"
         sh install.sh
         rm -f venv/lib/python${{ matrix.python-version }}/site-packages/vdf_client
 
