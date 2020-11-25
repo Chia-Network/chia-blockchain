@@ -28,7 +28,7 @@ def event_loop():
 async def default_blocks():
     # try loading from disc, if not create new blocks.db file
     db_name = "weight_proof_blocks.db"
-    num_of_blocks = 200
+    num_of_blocks = 400
     if path.exists(db_name):
         file = open(db_name, "rb")
         block_bytes_list: List[bytes] = pickle.load(file)
@@ -87,7 +87,7 @@ def get_sub_epoch_start(blockchain, last_hash):
 class TestWeightProof:
     @pytest.mark.asyncio
     async def test_default_blocks(self, empty_blockchain, default_blocks):
-        assert len(default_blocks) == 200
+        assert len(default_blocks) == 400
 
     @pytest.mark.asyncio
     async def test_get_sub_epoch_block_num_basic(self, empty_blockchain, default_blocks):
