@@ -45,8 +45,11 @@ class SubSlotData(Streamable):
     # VDF from infusion point to end of slot
     cc_infusion_to_slot_end_vdf: Optional[VDFProof]
     icc_infusion_to_slot_end_vdf: Optional[VDFProof]
+
+    cc_signage_point_index: Optional[uint8]
     # VDF from beginning to end of slot
     cc_slot_vdf: Optional[VDFProof]
+    icc_slot_vdf: Optional[VDFProof]
 
     def is_challenge(self):
         if self.cc_slot_vdf is not None:
@@ -74,7 +77,6 @@ class SubEpochChallengeSegment(Streamable):
 @dataclass(frozen=True)
 @streamable
 class WeightProof(Streamable):
-    prev_ses_hash: bytes32  # only first in a SubEpochData list should have this
     sub_epochs: List[SubEpochData]
     sub_epoch_segments: List[SubEpochChallengeSegment]
     recent_reward_chain: List[RewardChainSubBlock]
