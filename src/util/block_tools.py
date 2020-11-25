@@ -200,7 +200,7 @@ class BlockTools:
     ) -> List[FullBlock]:
         transaction_data_included = False
         if time_per_sub_block is None:
-            time_per_sub_block: float = float(constants.SLOT_TIME_TARGET) / float(constants.SLOT_SUB_BLOCKS_TARGET)
+            time_per_sub_block: float = float(constants.SUB_SLOT_TIME_TARGET) / float(constants.SLOT_SUB_BLOCKS_TARGET)
 
         if farmer_reward_puzzle_hash is None:
             farmer_reward_puzzle_hash = self.farmer_ph
@@ -304,7 +304,7 @@ class BlockTools:
                     )
 
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
-                        if sub_blocks_added_this_sub_slot == constants.MAX_SLOT_SUB_BLOCKS or force_overflow:
+                        if sub_blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_SUB_BLOCKS or force_overflow:
                             break
                         if same_slot_as_last:
                             if signage_point_index == latest_sub_block.signage_point_index:
@@ -514,7 +514,7 @@ class BlockTools:
                         sub_slot_iters,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
-                        if sub_blocks_added_this_sub_slot == constants.MAX_SLOT_SUB_BLOCKS:
+                        if sub_blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_SUB_BLOCKS:
                             break
                         full_block, sub_block_record = get_full_block_and_sub_record(
                             constants,

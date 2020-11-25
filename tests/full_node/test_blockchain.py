@@ -865,8 +865,13 @@ class TestBlockHeaderValidation:
             await empty_blockchain.receive_block(blocks[-1])
 
     @pytest.mark.asyncio
+    async def test_too_many_sub_blocks(self, empty_blockchain):
+        # 4: TODO
+        pass
+
+    @pytest.mark.asyncio
     async def test_bad_pos(self, empty_blockchain):
-        # 4
+        # 5
         blocks = bt.get_consecutive_blocks(test_constants, 2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -904,7 +909,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_signage_point_index(self, empty_blockchain):
-        # 5
+        # 6
         blocks = bt.get_consecutive_blocks(test_constants, 2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -921,7 +926,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_sp_0_no_sp(self, empty_blockchain):
-        # 6
+        # 7
         blocks = []
         case_1, case_2 = False, False
         while not case_1 or not case_2:
@@ -939,12 +944,12 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_epoch_overflows(self, empty_blockchain):
-        # 7. TODO. This is hard to test because it requires modifying the block tools to make these special blocks
+        # 9. TODO. This is hard to test because it requires modifying the block tools to make these special blocks
         pass
 
     @pytest.mark.asyncio
     async def test_bad_total_iters(self, empty_blockchain):
-        # 8
+        # 10
         blocks = bt.get_consecutive_blocks(test_constants, 2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -955,7 +960,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_rc_sp_vdf(self, empty_blockchain):
-        # 9
+        # 11
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -995,7 +1000,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_rc_sp_sig(self, empty_blockchain):
-        # 10
+        # 12
         blocks = bt.get_consecutive_blocks(test_constants, 2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad = recursive_replace(
@@ -1005,7 +1010,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_cc_sp_vdf(self, empty_blockchain):
-        # 11. Note: does not validate fully due to proof of space being validated first
+        # 13. Note: does not validate fully due to proof of space being validated first
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -1045,7 +1050,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_cc_sp_sig(self, empty_blockchain):
-        # 12
+        # 14
         blocks = bt.get_consecutive_blocks(test_constants, 2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad = recursive_replace(
@@ -1055,12 +1060,12 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_is_block(self, empty_blockchain):
-        # 13: TODO
+        # 15: TODO
         pass
 
     @pytest.mark.asyncio
     async def test_bad_foliage_sb_sig(self, empty_blockchain):
-        # 14
+        # 16
         blocks = bt.get_consecutive_blocks(test_constants, 2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad = recursive_replace(
@@ -1070,7 +1075,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_foliage_block_sig(self, empty_blockchain):
-        # 15
+        # 17
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -1086,7 +1091,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_unfinished_reward_chain_sb_hash(self, empty_blockchain):
-        # 16
+        # 18
         blocks = bt.get_consecutive_blocks(test_constants, 2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(
@@ -1099,7 +1104,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_pool_target_height(self, empty_blockchain):
-        # 17
+        # 19
         blocks = bt.get_consecutive_blocks(test_constants, 3)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await empty_blockchain.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1113,7 +1118,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_pool_target_signature(self, empty_blockchain):
-        # 18
+        # 20
         blocks = bt.get_consecutive_blocks(test_constants, 3)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await empty_blockchain.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
@@ -1127,7 +1132,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_foliage_data_presence(self, empty_blockchain):
-        # 20
+        # 22
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         case_1, case_2 = False, False
@@ -1147,7 +1152,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_foliage_block_hash(self, empty_blockchain):
-        # 21
+        # 23
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         case_1, case_2 = False, False
@@ -1169,7 +1174,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_genesis_bad_prev_block(self, empty_blockchain):
-        # 22a
+        # 24a
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         block_bad: FullBlock = recursive_replace(blocks[-1], "foliage_block.prev_block_hash", std_hash(b"2"))
         block_bad: FullBlock = recursive_replace(
@@ -1182,7 +1187,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_prev_block_non_genesis(self, empty_blockchain):
-        # 22b
+        # 24b
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         while True:
@@ -1203,7 +1208,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_filter_hash(self, empty_blockchain):
-        # 23
+        # 25
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         while True:
@@ -1224,7 +1229,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_timestamp(self, empty_blockchain):
-        # 24
+        # 26
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         while True:
@@ -1260,7 +1265,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_sub_block_height(self, empty_blockchain):
-        # 25
+        # 27
         blocks = bt.get_consecutive_blocks(test_constants, 2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_sub_block.sub_block_height", 2)
@@ -1268,14 +1273,14 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_sub_block_height_genesis(self, empty_blockchain):
-        # 25
+        # 27
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_sub_block.sub_block_height", 1)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PREV_BLOCK_HASH
 
     @pytest.mark.asyncio
     async def test_weight(self, empty_blockchain):
-        # 26
+        # 28
         blocks = bt.get_consecutive_blocks(test_constants, 2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_sub_block.weight", 22131)
@@ -1283,14 +1288,14 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_weight_genesis(self, empty_blockchain):
-        # 26
+        # 28
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         block_bad: FullBlock = recursive_replace(blocks[-1], "reward_chain_sub_block.weight", 0)
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_WEIGHT
 
     @pytest.mark.asyncio
     async def test_bad_cc_ip_vdf(self, empty_blockchain):
-        # 27
+        # 29
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -1326,7 +1331,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_rc_ip_vdf(self, empty_blockchain):
-        # 28
+        # 30
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -1362,7 +1367,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_bad_icc_ip_vdf(self, empty_blockchain):
-        # 29
+        # 31
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
 
@@ -1398,7 +1403,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_reward_block_hash(self, empty_blockchain):
-        # 30
+        # 32
         blocks = bt.get_consecutive_blocks(test_constants, 2)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         block_bad: FullBlock = recursive_replace(blocks[-1], "foliage_sub_block.reward_block_hash", std_hash(b""))
@@ -1406,7 +1411,7 @@ class TestBlockHeaderValidation:
 
     @pytest.mark.asyncio
     async def test_reward_block_hash(self, empty_blockchain):
-        # 31
+        # 33
         blocks = bt.get_consecutive_blocks(test_constants, 1)
         block_bad: FullBlock = recursive_replace(blocks[0], "reward_chain_sub_block.is_block", False)
         block_bad: FullBlock = recursive_replace(
@@ -1462,9 +1467,9 @@ class TestReorgs:
         # Reorg longer than a difficulty adjustment
         # Also tests higher weight chain but lower height
         b = empty_blockchain
-        num_blocks_chain_1 = test_constants.EPOCH_SUB_BLOCKS + test_constants.MAX_SLOT_SUB_BLOCKS + 10
+        num_blocks_chain_1 = 3 * test_constants.EPOCH_SUB_BLOCKS + test_constants.MAX_SUB_SLOT_SUB_BLOCKS + 10
         num_blocks_chain_2_start = test_constants.EPOCH_SUB_BLOCKS - 20
-        num_blocks_chain_2 = test_constants.EPOCH_SUB_BLOCKS + test_constants.MAX_SLOT_SUB_BLOCKS + 8
+        num_blocks_chain_2 = 3 * test_constants.EPOCH_SUB_BLOCKS + test_constants.MAX_SUB_SLOT_SUB_BLOCKS + 8
 
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks_chain_1)
 
@@ -1491,6 +1496,7 @@ class TestReorgs:
             if reorg_block.weight <= chain_1_weight:
                 if result == ReceiveBlockResult.ADDED_AS_ORPHAN:
                     found_orphan = True
+                assert error_code is None
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN or result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             elif reorg_block.weight > chain_1_weight:
                 assert reorg_block.height < chain_1_height

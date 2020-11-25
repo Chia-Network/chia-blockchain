@@ -11,7 +11,7 @@ class TestProofOfSpace:
         """
         num_trials = 40000
         success_count = 0
-        target_filter = (2 ** DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER) * DEFAULT_CONSTANTS.NUM_SPS_SUB_SLOT
+        target_filter = 2 ** DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER
         for _ in range(num_trials):
             challenge_hash = token_bytes(32)
             plot_id = token_bytes(32)
