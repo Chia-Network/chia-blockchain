@@ -1,7 +1,6 @@
 from src.consensus.pot_iterations import (
     calculate_iterations_quality,
     is_overflow_sub_block,
-    calculate_sub_slot_iters,
     calculate_sp_iters,
     calculate_ip_iters,
 )
@@ -20,10 +19,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
 
 
 class TestPotIterations:
-    def test_calculate_sub_slot_iters(self):
-        ips: uint64 = uint64(100001)
-        assert calculate_sub_slot_iters(test_constants, ips) == test_constants.SLOT_TIME_TARGET * ips
-
     def test_is_overflow_sub_block(self):
         assert not is_overflow_sub_block(test_constants, uint8(27))
         assert not is_overflow_sub_block(test_constants, uint8(28))
@@ -34,53 +29,51 @@ class TestPotIterations:
             assert is_overflow_sub_block(test_constants, uint8(32))
 
     def test_calculate_sp_iters(self):
-        ips: uint64 = uint64(100001)
+        ssi: uint64 = uint64(100001) * 300
         with raises(ValueError):
-            calculate_sp_iters(test_constants, ips, uint8(32))
-        calculate_sp_iters(test_constants, ips, uint8(31))
+            calculate_sp_iters(test_constants, ssi, uint8(32))
+        calculate_sp_iters(test_constants, ssi, uint8(31))
 
     def test_calculate_ip_iters(self):
-        ips: uint64 = uint64(100001)
-        sp_interval_iters = test_constants.SLOT_TIME_TARGET * ips // test_constants.NUM_SPS_SUB_SLOT
+        ssi: uint64 = uint64(100001) * 300
+        sp_interval_iters = ssi // test_constants.NUM_SPS_SUB_SLOT
 
         with raises(ValueError):
             # Invalid signage point index
-            calculate_ip_iters(test_constants, ips, uint8(123), uint64(100000))
+            calculate_ip_iters(test_constants, ssi, uint8(123), uint64(100000))
 
         sp_iters = sp_interval_iters * 13
 
         with raises(ValueError):
             # required_iters too high
-            calculate_ip_iters(test_constants, ips, sp_interval_iters, sp_interval_iters)
+            calculate_ip_iters(test_constants, ssi, sp_interval_iters, sp_interval_iters)
 
         with raises(ValueError):
             # required_iters too high
-            calculate_ip_iters(test_constants, ips, sp_interval_iters, sp_interval_iters * 12)
+            calculate_ip_iters(test_constants, ssi, sp_interval_iters, sp_interval_iters * 12)
 
         with raises(ValueError):
             # required_iters too low (0)
-            calculate_ip_iters(test_constants, ips, sp_interval_iters, uint64(0))
+            calculate_ip_iters(test_constants, ssi, sp_interval_iters, uint64(0))
 
         required_iters = sp_interval_iters - 1
-        ip_iters = calculate_ip_iters(test_constants, ips, uint8(13), required_iters)
+        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
         print(sp_iters, sp_interval_iters, required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
 
         required_iters = uint64(1)
-        ip_iters = calculate_ip_iters(test_constants, ips, uint8(13), required_iters)
+        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
 
-        required_iters = ips * 4
-        ip_iters = calculate_ip_iters(test_constants, ips, uint8(13), required_iters)
+        required_iters = ssi * 4 / 300
+        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
         assert sp_iters < ip_iters
 
         # Overflow
         sp_iters = sp_interval_iters * (test_constants.NUM_SPS_SUB_SLOT - 1)
-        ip_iters = calculate_ip_iters(test_constants, ips, uint8(test_constants.NUM_SPS_SUB_SLOT - 1), required_iters)
-        assert ip_iters == (
-            sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
-        ) % calculate_sub_slot_iters(test_constants, ips)
+        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(test_constants.NUM_SPS_SUB_SLOT - 1), required_iters)
+        assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 
     def test_win_percentage(self):

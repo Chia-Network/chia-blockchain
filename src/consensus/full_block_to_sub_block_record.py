@@ -3,7 +3,7 @@ from typing import Dict, Optional
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import is_overflow_sub_block
 from src.consensus.deficit import calculate_deficit
-from src.consensus.difficulty_adjustment import get_next_ips
+from src.consensus.difficulty_adjustment import get_next_sub_slot_iters
 from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeBlockInfo
 from src.types.full_block import FullBlock
@@ -22,16 +22,16 @@ def full_block_to_sub_block_record(
 ):
     if block.height == 0:
         prev_sb = None
-        ips: uint64 = uint64(constants.IPS_STARTING)
+        sub_slot_iters: uint64 = uint64(constants.SUB_SLOT_ITERS_STARTING)
     else:
         prev_sb: Optional[SubBlockRecord] = sub_blocks[block.prev_header_hash]
-        ips: uint64 = get_next_ips(
+        sub_slot_iters: uint64 = get_next_sub_slot_iters(
             constants,
             sub_blocks,
             height_to_hash,
             prev_sb.prev_hash,
             prev_sb.height,
-            prev_sb.ips,
+            prev_sb.sub_slot_iters,
             prev_sb.deficit,
             len(block.finished_sub_slots) > 0,
             prev_sb.sp_total_iters(constants),
@@ -71,7 +71,7 @@ def full_block_to_sub_block_record(
             block.height,
             sub_blocks[prev_sb.prev_hash],
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
-            block.finished_sub_slots[0].challenge_chain.new_ips,
+            block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )
         assert ses.get_hash() == found_ses_hash
 
@@ -97,7 +97,7 @@ def full_block_to_sub_block_record(
         icc_output,
         block.reward_chain_sub_block.get_hash(),
         cbi.get_hash(),
-        ips,
+        sub_slot_iters,
         block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
         block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
         required_iters,

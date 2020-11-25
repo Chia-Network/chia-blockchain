@@ -2,7 +2,6 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_sub_slot_iters
 from src.full_node.signage_point import SignagePoint
 from src.full_node.sub_block_record import SubBlockRecord
 from src.protocols import timelord_protocol
@@ -242,9 +241,9 @@ class FullNodeStore:
         """
 
         if peak is None or peak.height < 2:
-            sub_slot_iters = calculate_sub_slot_iters(self.constants, self.constants.IPS_STARTING)
+            sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
         else:
-            sub_slot_iters = calculate_sub_slot_iters(self.constants, peak.ips)
+            sub_slot_iters = peak.sub_slot_iters
 
         # If we don't have this slot, return False
         assert 0 < index < self.constants.NUM_SPS_SUB_SLOT
@@ -258,11 +257,11 @@ class FullNodeStore:
             if ss_challenge_hash == signage_point.cc_vdf.challenge_hash:
                 # If we do have this slot, find the Prev sub-block from SP and validate SP
                 if peak is not None and start_ss_total_iters > peak.total_iters:
-                    # We are in a future sub slot from the peak, so maybe there is a new IPS
+                    # We are in a future sub slot from the peak, so maybe there is a new SSI
                     checkpoint_size: uint64 = uint64(next_sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
                     delta_iters = checkpoint_size * index
                 else:
-                    # We are not in a future sub slot from the peak, so there is no new IPS
+                    # We are not in a future sub slot from the peak, so there is no new SSI
                     checkpoint_size: uint64 = uint64(sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
                     delta_iters = checkpoint_size * index
                 sp_total_iters = start_ss_total_iters + delta_iters

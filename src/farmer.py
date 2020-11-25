@@ -177,7 +177,7 @@ class Farmer:
             new_proof_of_space.proof.challenge_hash,
         )
         # Double check that the iters are good
-        assert required_iters < calculate_sp_interval_iters(sp.slot_iterations, sp.ips)
+        assert required_iters < calculate_sp_interval_iters(sp.slot_iterations, sp.sub_slot_iters)
 
         self._state_changed("proof")
 
@@ -335,7 +335,7 @@ class Farmer:
         message = harvester_protocol.NewSignagePoint(
             new_signage_point.challenge_hash,
             new_signage_point.difficulty,
-            new_signage_point.ips,
+            new_signage_point.sub_slot_iters,
             new_signage_point.signage_point_index,
             new_signage_point.challenge_chain_sp,
         )

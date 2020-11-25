@@ -7,7 +7,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "SLOT_TIME_TARGET": 300,
         "TX_PER_SEC": 1,
         "MEMPOOL_BLOCK_BUFFER": 10,
-        "IPS_STARTING": 10 * 1,
+        "SUB_SLOT_ITERS_STARTING": 2 ** 10,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "CLVM_COST_RATIO_CONSTANT": 108,
         "COINBASE_FREEZE_PERIOD": 0,
