@@ -9,7 +9,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.block_body_validation import validate_block_body
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from src.consensus.difficulty_adjustment import get_next_difficulty, get_next_ips
+from src.consensus.difficulty_adjustment import get_next_difficulty, get_next_sub_slot_iters
 from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
@@ -304,19 +304,16 @@ class Blockchain:
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert header_hash in self.sub_blocks
         curr = self.sub_blocks[header_hash]
-        return (
-            get_next_ips(
-                self.constants,
-                self.sub_blocks,
-                self.height_to_hash,
-                header_hash,
-                curr.height,
-                curr.ips,
-                curr.deficit,
-                new_slot,
-                curr.sp_total_iters(self.constants),
-            )
-            * self.constants.SLOT_TIME_TARGET
+        return get_next_sub_slot_iters(
+            self.constants,
+            self.sub_blocks,
+            self.height_to_hash,
+            header_hash,
+            curr.height,
+            curr.sub_slot_iters,
+            curr.deficit,
+            new_slot,
+            curr.sp_total_iters(self.constants),
         )
 
     async def pre_validate_blocks_mulpeakrocessing(

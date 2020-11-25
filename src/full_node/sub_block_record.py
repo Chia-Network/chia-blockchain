@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, List
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import calculate_sp_iters, calculate_ip_iters, calculate_sub_slot_iters
+from src.consensus.pot_iterations import calculate_sp_iters, calculate_ip_iters
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
@@ -31,7 +31,7 @@ class SubBlockRecord(Streamable):
     ]  # This is the intermediary VDF output at ip_iters in infused cc, iff deficit <= 3
     reward_infusion_new_challenge: bytes32  # The reward chain infusion output, input to next VDF
     challenge_block_info_hash: bytes32  # Hash of challenge chain data, used to validate end of slots in the future
-    ips: uint64  # Current network iterations per second parameter
+    sub_slot_iters: uint64  # Current network sub_slot_iters parameter
     pool_puzzle_hash: bytes32  # Need to keep track of these because Coins are created in a future block
     farmer_puzzle_hash: bytes32
     required_iters: uint64  # The number of iters required for this proof of space
@@ -67,7 +67,7 @@ class SubBlockRecord(Streamable):
 
     def pos_sub_slot_total_iters(self, constants: ConsensusConstants) -> uint128:
         if self.overflow:
-            return uint128(self.total_iters - self.ip_iters(constants) - calculate_sub_slot_iters(constants, self.ips))
+            return uint128(self.total_iters - self.ip_iters(constants) - self.sub_slot_iters)
         else:
             return uint128(self.total_iters - self.ip_iters(constants))
 
@@ -75,10 +75,10 @@ class SubBlockRecord(Streamable):
         return self.total_iters - self.ip_iters(constants)
 
     def sp_iters(self, constants: ConsensusConstants) -> uint64:
-        return calculate_sp_iters(constants, self.ips, self.signage_point_index)
+        return calculate_sp_iters(constants, self.sub_slot_iters, self.signage_point_index)
 
     def ip_iters(self, constants: ConsensusConstants) -> uint64:
-        return calculate_ip_iters(constants, self.ips, self.signage_point_index, self.required_iters)
+        return calculate_ip_iters(constants, self.sub_slot_iters, self.signage_point_index, self.required_iters)
 
     def sp_total_iters(self, constants: ConsensusConstants):
         return self.pos_sub_slot_total_iters(constants) + self.sp_iters(constants)

@@ -25,7 +25,7 @@ class HarvesterHandshake:
 class NewSignagePoint:
     challenge_hash: bytes32
     difficulty: uint64
-    ips: uint64
+    sub_slot_iters: uint64
     signage_point_index: uint8
     sp_hash: bytes32
 
