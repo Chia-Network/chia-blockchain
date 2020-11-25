@@ -115,7 +115,6 @@ class TestPotIterations:
                         if required_iters < sp_interval_iters:
                             wins[k] += 1
                             total_wins_in_slot += 1
-            print(total_wins_in_slot)
 
         win_percentage = {k: wins[k] / sum(wins.values()) for k in farmer_ks.keys()}
         print(win_percentage)
