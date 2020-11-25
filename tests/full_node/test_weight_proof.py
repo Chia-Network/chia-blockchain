@@ -10,10 +10,11 @@ from src.full_node.weight_proof import (
     create_sub_epoch_segments,
     get_sub_epoch_block_num,
     full_block_to_header,
+    make_weight_proof,
 )
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 from tests.setup_nodes import test_constants, bt
 from os import path
 
@@ -114,8 +115,6 @@ class TestWeightProof:
         header_cache: Dict[bytes32, HeaderBlock] = {}
         blockchain = empty_blockchain
         for block in default_blocks:
-            if block.finished_sub_slots is not None and len(block.finished_sub_slots) > 0:
-                print("block ", block.height, "deficit ", block.finished_sub_slots[-1].reward_chain.deficit)
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
             header_cache[block.header_hash] = full_block_to_header(block)
@@ -133,14 +132,40 @@ class TestWeightProof:
         )
         assert segments is not None
 
-    # @pytest.mark.asyncio
-    # async def test_make_weight_proof(self):
+    #   assert number of segments
+    #   assert no gaps
 
-    # @pytest.mark.asyncio
-    # async def test_make_weight_proof(self):
+    @pytest.mark.asyncio
+    async def test_make_weight_proof(self, empty_blockchain, default_blocks):
+        assert empty_blockchain.get_peak() is None
+        header_cache: Dict[bytes32, HeaderBlock] = {}
+        blockchain = empty_blockchain
+        for block in default_blocks:
+            result, err, _ = await blockchain.receive_block(block)
+            assert result == ReceiveBlockResult.NEW_PEAK
+            header_cache[block.header_hash] = full_block_to_header(block)
 
-    # @pytest.mark.asyncio
-    # test_get_sub_epoch_block_num(self):
+        wp = make_weight_proof(
+            test_constants,
+            uint32(len(header_cache)),
+            blockchain.get_peak().header_hash,
+            blockchain.sub_blocks,
+            uint64(300),
+            header_cache,
+            blockchain.height_to_hash,
+            uint64(0),
+        )
+        assert wp is not None
 
-    # @pytest.mark.asyncio
-    # test_validate_weight_proof
+    #   assert number of segments
+    #   assert no gaps
+
+
+# @pytest.mark.asyncio
+# async def test_make_weight_proof(self):
+
+# @pytest.mark.asyncio
+# test_get_sub_epoch_block_num(self):
+
+# @pytest.mark.asyncio
+# test_validate_weight_proof
