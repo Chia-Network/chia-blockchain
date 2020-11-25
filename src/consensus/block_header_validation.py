@@ -377,7 +377,6 @@ async def validate_unfinished_header_block(
 
     # 5. check signage point index
     # no need to check negative values as this is uint8. (Assumes types are checked)
-    print("Signage point:", header_block.reward_chain_sub_block.signage_point_index)
     if header_block.reward_chain_sub_block.signage_point_index >= constants.NUM_SPS_SUB_SLOT:
         return None, ValidationError(Err.INVALID_SP_INDEX)
 
@@ -585,11 +584,12 @@ async def validate_unfinished_header_block(
         if header_block.foliage_block.get_hash() != header_block.foliage_sub_block.foliage_block_hash:
             return None, ValidationError(Err.INVALID_FOLIAGE_BLOCK_HASH)
 
-        # 22. Check prev block hash
         if genesis_block:
+            # 22a. Check prev block hash for genesis
             if header_block.foliage_block.prev_block_hash != bytes([0] * 32):
                 return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
         else:
+            # 22b. Check prev block hash for non-genesis
             curr_sb: SubBlockRecord = prev_sb
             while not curr_sb.is_block:
                 curr_sb = sub_blocks[curr_sb.prev_hash]
@@ -661,7 +661,6 @@ async def validate_finished_header_block(
     ip_iters: uint64 = calculate_ip_iters(
         constants, ips, header_block.reward_chain_sub_block.signage_point_index, required_iters
     )
-    # TODO: test is_block
     if not genesis_block:
         # 25. Check sub-block height
         if header_block.height != prev_sb.height + 1:

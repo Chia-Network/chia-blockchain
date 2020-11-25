@@ -220,6 +220,7 @@ class BlockTools:
                 timestamp=uint64(int(time.time())),
                 farmer_reward_puzzle_hash=farmer_reward_puzzle_hash,
             )
+            print(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
             block_list = [genesis]
             num_blocks -= 1
@@ -276,6 +277,11 @@ class BlockTools:
                     if curr.total_iters > sub_slot_start_total_iters:
                         finished_sub_slots_at_sp = []
 
+                    if same_slot_as_last:
+                        if signage_point_index < latest_sub_block.signage_point_index:
+                            # Ignore this signage_point because it's in the past
+                            continue
+
                     signage_point: SignagePoint = get_signage_point(
                         constants,
                         sub_blocks,
@@ -304,9 +310,6 @@ class BlockTools:
                         if sub_blocks_added_this_sub_slot == constants.MAX_SLOT_SUB_BLOCKS or force_overflow:
                             break
                         if same_slot_as_last:
-                            if signage_point_index < latest_sub_block.signage_point_index:
-                                # Ignore this sub-block because it's in the past
-                                continue
                             if signage_point_index == latest_sub_block.signage_point_index:
                                 # Ignore this sub-block because it's in the past
                                 if required_iters <= latest_sub_block.required_iters:
@@ -347,14 +350,17 @@ class BlockTools:
 
                         block_list.append(full_block)
                         sub_blocks_added_this_sub_slot += 1
-                        num_blocks -= 1
-                        if num_blocks == 0:
-                            return block_list
+
                         sub_blocks[full_block.header_hash] = sub_block_record
-                        print(f"Added block {sub_block_record.height} ove=False, iters {sub_block_record.total_iters}")
+                        print(
+                            f"Created block {sub_block_record.height} ove=False, iters {sub_block_record.total_iters}"
+                        )
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_sub_block = sub_blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
+                        num_blocks -= 1
+                        if num_blocks == 0:
+                            return block_list
 
             # Finish the end of sub-slot and try again next sub-slot
             # End of sub-slot logic
@@ -547,7 +553,7 @@ class BlockTools:
 
                         block_list.append(full_block)
                         sub_blocks_added_this_sub_slot += 1
-                        print(f"Added block {sub_block_record.height } ov=True, iters {sub_block_record.total_iters}")
+                        print(f"Created block {sub_block_record.height } ov=True, iters {sub_block_record.total_iters}")
                         num_blocks -= 1
                         if num_blocks == 0:
                             return block_list

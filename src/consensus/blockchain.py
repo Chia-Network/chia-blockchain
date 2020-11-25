@@ -41,9 +41,7 @@ class ReceiveBlockResult(Enum):
     ADDED_AS_ORPHAN = 2  # Added as an orphan/stale block (not a new peak of the chain)
     INVALID_BLOCK = 3  # Block was not added because it was invalid
     ALREADY_HAVE_BLOCK = 4  # Block is already present in this blockchain
-    DISCONNECTED_BLOCK = (
-        5  # Block's parent (previous pointer) is not in this blockchain
-    )
+    DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
 
 
 class Blockchain:
@@ -86,9 +84,7 @@ class Blockchain:
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        self.pool = ProcessPoolExecutor(
-            max_workers=max(cpu_count - 2, 1)
-        )
+        self.pool = ProcessPoolExecutor(max_workers=max(cpu_count - 2, 1))
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
@@ -176,7 +172,7 @@ class Blockchain:
         genesis: bool = block.height == 0
 
         if block.header_hash in self.sub_blocks:
-            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
+            return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if block.prev_header_hash not in self.sub_blocks and not genesis:
             return ReceiveBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
@@ -230,9 +226,7 @@ class Blockchain:
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
-    async def _reconsider_peak(
-        self, sub_block: SubBlockRecord, genesis: bool
-    ) -> Optional[uint32]:
+    async def _reconsider_peak(self, sub_block: SubBlockRecord, genesis: bool) -> Optional[uint32]:
         """
         When a new block is added, this is called, to check if the new block is the new peak of the chain.
         This also handles reorgs by reverting blocks which are not in the heaviest chain.
@@ -240,20 +234,20 @@ class Blockchain:
         None if there was no update to the heaviest chain.
         """
         if genesis:
-            block: Optional[FullBlock] = await self.block_store.get_full_block(sub_block.header_hash)
-            assert block is not None
-            await self.coin_store.new_block(block)
-            self.height_to_hash[uint32(0)] = block.header_hash
-            self.peak_height = uint32(0)
-            return uint32(0)
+            if self.get_peak() is None:
+                block: Optional[FullBlock] = await self.block_store.get_full_block(sub_block.header_hash)
+                assert block is not None
+                await self.coin_store.new_block(block)
+                self.height_to_hash[uint32(0)] = block.header_hash
+                self.peak_height = uint32(0)
+                return uint32(0)
+            return None
 
         assert self.get_peak() is not None
         if sub_block.weight > self.get_peak().weight:
             # Find the fork. if the block is just being appended, it will return the peak
             # If no blocks in common, returns -1, and reverts all blocks
-            fork_h: int = find_fork_point_in_chain(
-                self.sub_blocks, sub_block, self.get_peak()
-            )
+            fork_h: int = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_peak())
 
             # Rollback to fork
             await self.coin_store.rollback_to_block(fork_h)
@@ -351,9 +345,7 @@ class Blockchain:
         # return results
         return []
 
-    async def validate_unfinished_block(
-        self, block: UnfinishedBlock
-    ) -> Tuple[Optional[uint64], Optional[Err]]:
+    async def validate_unfinished_block(self, block: UnfinishedBlock) -> Tuple[Optional[uint64], Optional[Err]]:
         if block.header_hash in self.sub_blocks:
             return (
                 self.sub_blocks[block.header_hash].required_iters,
