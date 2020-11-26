@@ -393,126 +393,126 @@ class WalletNodeAPI:
                 ack.txid, name, ack.status, None
             )
 
-    @api_request
-    async def respond_all_proof_hashes(
-        self, response: wallet_protocol.RespondAllProofHashes
-    ):
-        """
-        Receipt of proof hashes, used during sync for interactive weight verification protocol.
-        """
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
-            return
-        if not self.wallet_node.wallet_state_manager.sync_mode:
-            self.wallet_node.log.warning("Receiving proof hashes while not syncing.")
-            return
-        self.wallet_node.proof_hashes = response.hashes
-
-    @api_request
-    async def respond_all_header_hashes_after(
-        self,
-        response: wallet_protocol.RespondAllHeaderHashesAfter,
-    ):
-        """
-        Response containing all header hashes after a point. This is used to find the fork
-        point between our current blockchain, and the current heaviest tip.
-        """
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
-            return
-        if not self.wallet_node.wallet_state_manager.sync_mode:
-            self.wallet_node.log.warning("Receiving header hashes while not syncing.")
-            return
-        self.wallet_node.header_hashes = response.hashes
-
-    @api_request
-    async def reject_all_header_hashes_after_request(
-        self,
-        response: wallet_protocol.RejectAllHeaderHashesAfterRequest,
-    ):
-        """
-        Error in requesting all header hashes.
-        """
-        self.wallet_node.log.error("All header hashes after request rejected")
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
-            return
-        self.wallet_node.header_hashes_error = True
-
-    @peer_required
-    @api_request
-    async def new_lca(self, request: wallet_protocol.NewLCA, peer: WSChiaConnection):
-        """
-        Notification from full node that a new LCA (Least common ancestor of the three blockchain
-        tips) has been added to the full node.
-        """
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
-            return
-        if self.wallet_node._shut_down:
-            return
-        if self.wallet_node.wallet_state_manager.sync_mode:
-            return
-        # If already seen LCA, ignore.
-        if request.lca_hash in self.wallet_node.wallet_state_manager.block_records:
-            return
-
-        lca = self.wallet_node.wallet_state_manager.block_records[
-            self.wallet_node.wallet_state_manager.lca
-        ]
-        # If it's not the heaviest chain, ignore.
-        if request.weight < lca.weight:
-            return
-
-        if (
-            int(request.height) - int(lca.height)
-            > self.wallet_node.short_sync_threshold
-        ):
-            try:
-                # Performs sync, and catch exceptions so we don't close the connection
-                self.wallet_node.wallet_state_manager.set_sync_mode(True)
-                await self.wallet_node._sync(peer)
-            except Exception as e:
-                tb = traceback.format_exc()
-                self.wallet_node.log.error(f"Error with syncing. {type(e)} {tb}")
-            self.wallet_node.wallet_state_manager.set_sync_mode(False)
-        else:
-            header_request = wallet_protocol.RequestHeader(
-                uint32(request.height), request.lca_hash
-            )
-            Message("request_header", header_request),
-            msg = Message("request_header", header_request)
-            await peer.send_message(msg)
-
-        # Try sending queued up transaction when new LCA arrives
-        await self.wallet_node._resend_queue()
-
-    @peer_required
-    @api_request
-    async def respond_header(
-        self, response: wallet_protocol.RespondHeader, peer: WSChiaConnection
-    ):
-        await self.wallet_node._respond_header(response, peer)
-
-    @peer_required
-    @api_request
-    async def respond_peers(
-        self, request: introducer_protocol.RespondPeers, peer: WSChiaConnection
-    ):
-        if not self.wallet_node.has_full_node():
-            await self.wallet_node.wallet_peers.respond_peers(
-                request, peer.get_peer_info(), False
-            )
-        else:
-            await self.wallet_node.wallet_peers.ensure_is_closed()
-
-        if peer is not None and peer.connection_type is NodeType.INTRODUCER:
-            await peer.close()
+    # @api_request
+    # async def respond_all_proof_hashes(
+    #     self, response: wallet_protocol.RespondAllProofHashes
+    # ):
+    #     """
+    #     Receipt of proof hashes, used during sync for interactive weight verification protocol.
+    #     """
+    #     if (
+    #         self.wallet_node.wallet_state_manager is None
+    #         or self.wallet_node.backup_initialized is False
+    #     ):
+    #         return
+    #     if not self.wallet_node.wallet_state_manager.sync_mode:
+    #         self.wallet_node.log.warning("Receiving proof hashes while not syncing.")
+    #         return
+    #     self.wallet_node.proof_hashes = response.hashes
+    #
+    # @api_request
+    # async def respond_all_header_hashes_after(
+    #     self,
+    #     response: wallet_protocol.RespondAllHeaderHashesAfter,
+    # ):
+    #     """
+    #     Response containing all header hashes after a point. This is used to find the fork
+    #     point between our current blockchain, and the current heaviest tip.
+    #     """
+    #     if (
+    #         self.wallet_node.wallet_state_manager is None
+    #         or self.wallet_node.backup_initialized is False
+    #     ):
+    #         return
+    #     if not self.wallet_node.wallet_state_manager.sync_mode:
+    #         self.wallet_node.log.warning("Receiving header hashes while not syncing.")
+    #         return
+    #     self.wallet_node.header_hashes = response.hashes
+    #
+    # @api_request
+    # async def reject_all_header_hashes_after_request(
+    #     self,
+    #     response: wallet_protocol.RejectAllHeaderHashesAfterRequest,
+    # ):
+    #     """
+    #     Error in requesting all header hashes.
+    #     """
+    #     self.wallet_node.log.error("All header hashes after request rejected")
+    #     if (
+    #         self.wallet_node.wallet_state_manager is None
+    #         or self.wallet_node.backup_initialized is False
+    #     ):
+    #         return
+    #     self.wallet_node.header_hashes_error = True
+    #
+    # @peer_required
+    # @api_request
+    # async def new_lca(self, request: wallet_protocol.NewLCA, peer: WSChiaConnection):
+    #     """
+    #     Notification from full node that a new LCA (Least common ancestor of the three blockchain
+    #     tips) has been added to the full node.
+    #     """
+    #     if (
+    #         self.wallet_node.wallet_state_manager is None
+    #         or self.wallet_node.backup_initialized is False
+    #     ):
+    #         return
+    #     if self.wallet_node._shut_down:
+    #         return
+    #     if self.wallet_node.wallet_state_manager.sync_mode:
+    #         return
+    #     # If already seen LCA, ignore.
+    #     if request.lca_hash in self.wallet_node.wallet_state_manager.block_records:
+    #         return
+    #
+    #     lca = self.wallet_node.wallet_state_manager.block_records[
+    #         self.wallet_node.wallet_state_manager.lca
+    #     ]
+    #     # If it's not the heaviest chain, ignore.
+    #     if request.weight < lca.weight:
+    #         return
+    #
+    #     if (
+    #         int(request.height) - int(lca.height)
+    #         > self.wallet_node.short_sync_threshold
+    #     ):
+    #         try:
+    #             # Performs sync, and catch exceptions so we don't close the connection
+    #             self.wallet_node.wallet_state_manager.set_sync_mode(True)
+    #             await self.wallet_node._sync(peer)
+    #         except Exception as e:
+    #             tb = traceback.format_exc()
+    #             self.wallet_node.log.error(f"Error with syncing. {type(e)} {tb}")
+    #         self.wallet_node.wallet_state_manager.set_sync_mode(False)
+    #     else:
+    #         header_request = wallet_protocol.RequestHeader(
+    #             uint32(request.height), request.lca_hash
+    #         )
+    #         Message("request_header", header_request),
+    #         msg = Message("request_header", header_request)
+    #         await peer.send_message(msg)
+    #
+    #     # Try sending queued up transaction when new LCA arrives
+    #     await self.wallet_node._resend_queue()
+    #
+    # @peer_required
+    # @api_request
+    # async def respond_header(
+    #     self, response: wallet_protocol.RespondHeader, peer: WSChiaConnection
+    # ):
+    #     await self.wallet_node._respond_header(response, peer)
+    #
+    # @peer_required
+    # @api_request
+    # async def respond_peers(
+    #     self, request: introducer_protocol.RespondPeers, peer: WSChiaConnection
+    # ):
+    #     if not self.wallet_node.has_full_node():
+    #         await self.wallet_node.wallet_peers.respond_peers(
+    #             request, peer.get_peer_info(), False
+    #         )
+    #     else:
+    #         await self.wallet_node.wallet_peers.ensure_is_closed()
+    #
+    #     if peer is not None and peer.connection_type is NodeType.INTRODUCER:
+    #         await peer.close()
