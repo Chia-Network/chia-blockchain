@@ -58,7 +58,7 @@ def make_sub_epoch_data(
     #  Number of subblocks overflow in previous slot
     previous_sub_epoch_overflows: uint8 = sub_epoch_summary.num_sub_blocks_overflow  # total in sub epoch - expected
     #  New work difficulty and iterations per subslot
-    sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_ips
+    sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
     new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
@@ -237,7 +237,7 @@ def create_sub_epoch_segments(
     height_to_hash: Dict[uint32, bytes32],
 ) -> List[SubEpochChallengeSegment]:
     """
-    received the last block in sub epoch and creates List[SubEpochChallengeSegment] for that sub_epoch
+    receives the last block in sub epoch and creates List[SubEpochChallengeSegment] for that sub_epoch
     """
 
     segments: List[SubEpochChallengeSegment] = []
@@ -245,14 +245,15 @@ def create_sub_epoch_segments(
 
     count = sub_epoch_blocks_n
     while not count == 0:
+        log.info(f"challenge segment, starts at {curr.height} ")
         curr = sub_blocks[curr.prev_hash]
+        count -= 1
         if not curr.is_challenge_sub_block(constants):
             continue
 
         challebge_sub_block = header_cache[curr.header_hash]
         segment = handle_challenge_segment(constants, challebge_sub_block, sub_epoch_n, height_to_hash, header_cache)
         segments.append(segment)
-        count -= 1
 
     return segments
 
@@ -265,21 +266,28 @@ def make_weight_proof(
     total_number_of_blocks: uint64,
     header_cache: Dict[bytes32, HeaderBlock],
     height_to_hash: Dict[uint32, bytes32],
-    forkpoint_sub_epoch_n: uint64,
 ) -> WeightProof:
     """
     Creates a weight proof object
     """
+
+    # todo assert recent blocks number
+
     sub_epoch_data: List[SubEpochData] = []
     sub_epoch_segments: List[SubEpochChallengeSegment] = []
     proof_blocks: List[RewardChainSubBlock] = []
     curr: SubBlockRecord = sub_blocks[tip]
-    sub_epoch_n = uint32(forkpoint_sub_epoch_n)
     rng: random.Random = random.Random(tip)
     # ses_hash from the latest sub epoch summary before this part of the chain
+    log.info(f"build weight proofs peak : {sub_blocks[tip].header_hash } num of blocks: {total_number_of_blocks}")
+    assert sub_blocks[tip].height > total_number_of_blocks
+    sub_epoch_n = count_sub_epochs_in_range(curr, sub_blocks, total_number_of_blocks)
+    sub_epoch_idx: uint32 = uint32(0)
     while not total_number_of_blocks == 0:
+        assert curr.height != 0
+
         # next sub block
-        curr = sub_blocks[curr.prev_header_hash]
+        curr = sub_blocks[curr.prev_hash]
         header_block = header_cache[curr.header_hash]
         # for each sub-epoch
         if curr.sub_epoch_summary_included is not None:
@@ -289,9 +297,15 @@ def make_weight_proof(
             #   sample sub epoch
             if choose_sub_epoch(sub_epoch_blocks_n, rng, total_number_of_blocks):
                 sub_epoch_segments = create_sub_epoch_segments(
-                    constants, curr, sub_epoch_blocks_n, sub_blocks, sub_epoch_n, header_cache, height_to_hash
+                    constants,
+                    curr,
+                    sub_epoch_blocks_n,
+                    sub_blocks,
+                    sub_epoch_n - sub_epoch_idx,
+                    header_cache,
+                    height_to_hash,
                 )
-            sub_epoch_n += 1  # todo this is reversed
+            sub_epoch_idx += 1
 
         if recent_blocks_n > 0:
             # add to needed reward chain recent blocks
@@ -301,6 +315,17 @@ def make_weight_proof(
         total_number_of_blocks -= 1
 
     return WeightProof(sub_epoch_data, sub_epoch_segments, proof_blocks)
+
+
+def count_sub_epochs_in_range(curr, sub_blocks, total_number_of_blocks):
+    sub_epochs_n = 0
+    while not total_number_of_blocks == 0:
+        assert curr.height != 0
+        curr = sub_blocks[curr.prev_hash]
+        if curr.sub_epoch_summary_included is not None:
+            sub_epochs_n += 1
+        total_number_of_blocks -= 1
+    return sub_epochs_n
 
 
 def validate_sub_slot_vdfs(
@@ -326,15 +351,13 @@ def validate_sub_slot_vdfs(
 def validate_weight(
     constants: ConsensusConstants,
     weight_proof: WeightProof,
-    fork_point_weight: uint64,
-    fork_point_sub_epoch_n: uint32,
     prev_ses_hash: bytes32,
 ) -> bool:
     # sub epoch summaries validate hashes
-    summaries, sub_epoch_data_weight = map_summaries(constants, fork_point_sub_epoch_n, prev_ses_hash, weight_proof)
+    summaries, sub_epoch_data_weight = map_summaries(constants, prev_ses_hash, weight_proof)
 
     # last ses
-    ses = summaries[fork_point_sub_epoch_n + len(summaries)]
+    ses = summaries[len(summaries)]
 
     # find first block after last sub epoch end
     count, block_idx = 0, 0
@@ -363,8 +386,8 @@ def validate_weight(
     total_slots = 0
     # validate sub epoch samples
     for segment in weight_proof.sub_epoch_segments:
-        ses = summaries[fork_point_sub_epoch_n + segment.sub_epoch_n]
-        ssi: uint64 = uint64(constants.SLOT_TIME_TARGET * ses.new_ips)
+        ses = summaries[segment.sub_epoch_n]
+        ssi: uint64 = uint64(constants.SUB_SLOT_TIME_TARGET * ses.new_ips)
         total_slot_iters += ssi
         q_str = validate_proof_of_space(constants, segment, summaries, ssi)
         if q_str is None:
@@ -406,9 +429,10 @@ def validate_weight(
                     log.error(f"segment {segment.sub_epoch_n} failed reward_chain_hash validation")
                     return False
 
+        # todo floats
         avg_ip_iters = total_ip_iters / total_challenge_blocks
         avg_slot_iters = total_slot_iters / total_slots
-        if avg_ip_iters / avg_slot_iters > constants.WEIGHT_PROOF_THRESHOLD:
+        if avg_slot_iters / avg_ip_iters < float(constants.WEIGHT_PROOF_THRESHOLD):
             return False
 
     # validate recent reward chain
@@ -439,7 +463,7 @@ def validate_proof_of_space(constants, segment, summaries, slot_iters):
     return q_str
 
 
-def map_summaries(constants, fork_point_sub_epoch_n, ses_hash, weight_proof):
+def map_summaries(constants, ses_hash, weight_proof):
     sub_epoch_data_weight: uint64 = uint64(0)
     summaries: Dict[uint32, SubEpochSummary] = {}
     for idx, sub_epoch_data in enumerate(weight_proof.sub_epochs):
@@ -456,7 +480,7 @@ def map_summaries(constants, fork_point_sub_epoch_n, ses_hash, weight_proof):
         )
 
         # add to dict
-        summaries[fork_point_sub_epoch_n + idx] = ses
+        summaries[idx] = ses
         ses_hash = std_hash(ses)
     return summaries, sub_epoch_data_weight
 
