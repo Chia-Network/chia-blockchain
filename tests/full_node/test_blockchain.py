@@ -79,65 +79,65 @@ class TestBlockHeaderValidation:
     async def test_long_chain(self, empty_blockchain, default_1000_blocks):
         blocks = default_1000_blocks
         for block in blocks:
-            # if (
-            #     len(block.finished_sub_slots) > 0
-            #     and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
-            # ):
-            #     # Sub/Epoch. Try using a bad ssi and difficulty to test 2m and 2n
-            #     new_finished_ss = recursive_replace(
-            #         block.finished_sub_slots[0],
-            #         "challenge_chain.new_sub_slot_iters",
-            #         uint64(10000000),
-            #     )
-            #     block_bad = recursive_replace(
-            #         block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:]
-            #     )
-            #     result, err, _ = await empty_blockchain.receive_block(block_bad)
-            #     assert err == Err.INVALID_NEW_SUB_SLOT_ITERS
-            #     new_finished_ss_2 = recursive_replace(
-            #         block.finished_sub_slots[0],
-            #         "challenge_chain.new_difficulty",
-            #         uint64(10000000),
-            #     )
-            #     block_bad_2 = recursive_replace(
-            #         block, "finished_sub_slots", [new_finished_ss_2] + block.finished_sub_slots[1:]
-            #     )
-            #     result, err, _ = await empty_blockchain.receive_block(block_bad_2)
-            #     assert err == Err.INVALID_NEW_DIFFICULTY
-            #
-            #     # 3c
-            #     new_finished_ss_3: EndOfSubSlotBundle = recursive_replace(
-            #         block.finished_sub_slots[0],
-            #         "challenge_chain.subepoch_summary_hash",
-            #         bytes([0] * 32),
-            #     )
-            #     new_finished_ss_3 = recursive_replace(
-            #         new_finished_ss_3,
-            #         "reward_chain.challenge_chain_sub_slot_hash",
-            #         new_finished_ss_3.challenge_chain.get_hash(),
-            #     )
-            #     block_bad_3 = recursive_replace(
-            #         block, "finished_sub_slots", [new_finished_ss_3] + block.finished_sub_slots[1:]
-            #     )
-            #     result, err, _ = await empty_blockchain.receive_block(block_bad_3)
-            #     assert err == Err.INVALID_SUB_EPOCH_SUMMARY
-            #
-            #     # 3d
-            #     new_finished_ss_4 = recursive_replace(
-            #         block.finished_sub_slots[0],
-            #         "challenge_chain.subepoch_summary_hash",
-            #         None,
-            #     )
-            #     new_finished_ss_4 = recursive_replace(
-            #         new_finished_ss_4,
-            #         "reward_chain.challenge_chain_sub_slot_hash",
-            #         new_finished_ss_4.challenge_chain.get_hash(),
-            #     )
-            #     block_bad_4 = recursive_replace(
-            #         block, "finished_sub_slots", [new_finished_ss_4] + block.finished_sub_slots[1:]
-            #     )
-            #     result, err, _ = await empty_blockchain.receive_block(block_bad_4)
-            #     assert err == Err.INVALID_SUB_EPOCH_SUMMARY
+            if (
+                len(block.finished_sub_slots) > 0
+                and block.finished_sub_slots[0].challenge_chain.subepoch_summary_hash is not None
+            ):
+                # Sub/Epoch. Try using a bad ssi and difficulty to test 2m and 2n
+                new_finished_ss = recursive_replace(
+                    block.finished_sub_slots[0],
+                    "challenge_chain.new_sub_slot_iters",
+                    uint64(10000000),
+                )
+                block_bad = recursive_replace(
+                    block, "finished_sub_slots", [new_finished_ss] + block.finished_sub_slots[1:]
+                )
+                result, err, _ = await empty_blockchain.receive_block(block_bad)
+                assert err == Err.INVALID_NEW_SUB_SLOT_ITERS
+                new_finished_ss_2 = recursive_replace(
+                    block.finished_sub_slots[0],
+                    "challenge_chain.new_difficulty",
+                    uint64(10000000),
+                )
+                block_bad_2 = recursive_replace(
+                    block, "finished_sub_slots", [new_finished_ss_2] + block.finished_sub_slots[1:]
+                )
+                result, err, _ = await empty_blockchain.receive_block(block_bad_2)
+                assert err == Err.INVALID_NEW_DIFFICULTY
+
+                # 3c
+                new_finished_ss_3: EndOfSubSlotBundle = recursive_replace(
+                    block.finished_sub_slots[0],
+                    "challenge_chain.subepoch_summary_hash",
+                    bytes([0] * 32),
+                )
+                new_finished_ss_3 = recursive_replace(
+                    new_finished_ss_3,
+                    "reward_chain.challenge_chain_sub_slot_hash",
+                    new_finished_ss_3.challenge_chain.get_hash(),
+                )
+                block_bad_3 = recursive_replace(
+                    block, "finished_sub_slots", [new_finished_ss_3] + block.finished_sub_slots[1:]
+                )
+                result, err, _ = await empty_blockchain.receive_block(block_bad_3)
+                assert err == Err.INVALID_SUB_EPOCH_SUMMARY
+
+                # 3d
+                new_finished_ss_4 = recursive_replace(
+                    block.finished_sub_slots[0],
+                    "challenge_chain.subepoch_summary_hash",
+                    None,
+                )
+                new_finished_ss_4 = recursive_replace(
+                    new_finished_ss_4,
+                    "reward_chain.challenge_chain_sub_slot_hash",
+                    new_finished_ss_4.challenge_chain.get_hash(),
+                )
+                block_bad_4 = recursive_replace(
+                    block, "finished_sub_slots", [new_finished_ss_4] + block.finished_sub_slots[1:]
+                )
+                result, err, _ = await empty_blockchain.receive_block(block_bad_4)
+                assert err == Err.INVALID_SUB_EPOCH_SUMMARY or err == Err.INVALID_NEW_SUB_SLOT_ITERS
 
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
