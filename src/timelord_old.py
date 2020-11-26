@@ -32,6 +32,7 @@ class Timelord:
                 )
             )
         }
+        self.log = log
         self.lock: asyncio.Lock = asyncio.Lock()
         self.active_discriminants: Dict[bytes32, Tuple[asyncio.StreamWriter, uint64, str]] = {}
         self.best_weight_three_proofs: int = -1
@@ -463,75 +464,3 @@ class Timelord:
                     self.proofs_to_write.clear()
             await asyncio.sleep(3)
 
-    @api_request
-    async def challenge_start(self, challenge_start: timelord_protocol.ChallengeStart):
-        """
-        The full node notifies the timelord node that a new challenge is active, and work
-        should be started on it. We add the challenge into the queue if it's worth it to have.
-        """
-        async with self.lock:
-            if not self.sanitizer_mode:
-                if challenge_start.challenge in self.seen_discriminants:
-                    log.info(f"Have already seen this challenge hash {challenge_start.challenge}. Ignoring.")
-                    return
-                if challenge_start.weight <= self.best_weight_three_proofs:
-                    log.info("Not starting challenge, already three proofs at that weight")
-                    return
-                self.seen_discriminants.append(challenge_start.challenge)
-                self.discriminant_queue.append((challenge_start.challenge, challenge_start.weight))
-                log.info("Appended to discriminant queue.")
-            else:
-                disc_dict = dict(self.discriminant_queue)
-                if challenge_start.challenge in disc_dict:
-                    log.info("Challenge already in discriminant queue. Ignoring.")
-                    return
-                if challenge_start.challenge in self.active_discriminants:
-                    log.info("Challenge currently running. Ignoring.")
-                    return
-
-                self.discriminant_queue.append((challenge_start.challenge, challenge_start.weight))
-                if challenge_start.weight not in self.max_known_weights:
-                    self.max_known_weights.append(challenge_start.weight)
-                    self.max_known_weights.sort()
-                    if len(self.max_known_weights) > 5:
-                        self.max_known_weights = self.max_known_weights[-5:]
-
-    @api_request
-    async def proof_of_space_info(self, proof_of_space_info: timelord_protocol.ProofOfSpaceInfo):
-        """
-        Notification from full node about a new proof of space for a challenge. If we already
-        have a process for this challenge, we should communicate to the process to tell it how
-        many iterations to run for.
-        """
-        async with self.lock:
-            if not self.sanitizer_mode:
-                log.info(f"proof_of_space_info {proof_of_space_info.challenge} {proof_of_space_info.iterations_needed}")
-                if proof_of_space_info.challenge in self.done_discriminants:
-                    log.info(f"proof_of_space_info {proof_of_space_info.challenge} already done, returning")
-                    return
-            else:
-                disc_dict = dict(self.discriminant_queue)
-                if proof_of_space_info.challenge in disc_dict:
-                    challenge_weight = disc_dict[proof_of_space_info.challenge]
-                    if challenge_weight >= min(self.max_known_weights):
-                        log.info("Not storing iter, waiting for more block confirmations.")
-                        return
-                else:
-                    log.info("Not storing iter, challenge inactive.")
-                    return
-
-            if proof_of_space_info.challenge not in self.pending_iters:
-                self.pending_iters[proof_of_space_info.challenge] = []
-            if proof_of_space_info.challenge not in self.submitted_iters:
-                self.submitted_iters[proof_of_space_info.challenge] = []
-
-            if (
-                proof_of_space_info.iterations_needed not in self.pending_iters[proof_of_space_info.challenge]
-                and proof_of_space_info.iterations_needed not in self.submitted_iters[proof_of_space_info.challenge]
-            ):
-                log.info(
-                    f"proof_of_space_info {proof_of_space_info.challenge} adding "
-                    f"{proof_of_space_info.iterations_needed} to "
-                    f"{self.pending_iters[proof_of_space_info.challenge]}"
-                )
-                self.pending_iters[proof_of_space_info.challenge].append(proof_of_space_info.iterations_needed)
