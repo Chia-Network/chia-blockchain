@@ -70,7 +70,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_SUB_BLOCKS": 140,
         "EPOCH_SUB_BLOCKS": 280,
-        "SUB_SLOT_ITERS_STARTING": 2 ** 12,  # Must be a multiple of 64
+        "SUB_SLOT_ITERS_STARTING": 2 ** 10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "MAX_FUTURE_TIME": 3600
         * 24
@@ -148,7 +148,7 @@ class BlockTools:
         mkdir(temp_dir)
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
-        args.size = 20
+        args.size = 22
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = 20
         args.buffer = 100
@@ -162,7 +162,7 @@ class BlockTools:
         args.buckets = 0
         args.stripe_size = 2000
         args.num_threads = 0
-        test_private_keys = [AugSchemeMPL.key_gen(std_hash(i.to_bytes(3, "big"))) for i in range(args.num)]
+        test_private_keys = [AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big"))) for i in range(args.num)]
         try:
             # No datetime in the filename, to get deterministic filenames and not re-plot
             create_plots(
@@ -209,7 +209,7 @@ class BlockTools:
     def get_consecutive_blocks(
         self,
         num_blocks: uint8,
-        block_list: List[FullBlock] = None,
+        block_list_input: List[FullBlock] = None,
         farmer_reward_puzzle_hash: Optional[bytes32] = None,
         pool_reward_puzzle_hash: Optional[bytes32] = None,
         transaction_data: Optional[SpendBundle] = None,
@@ -218,7 +218,10 @@ class BlockTools:
         force_overflow: bool = False,
         skip_slots: uint32 = uint32(0),  # Force at least this number of empty slots before the first SB
     ) -> List[FullBlock]:
-
+        if block_list_input is not None:
+            block_list = block_list_input.copy()
+        else:
+            block_list = []
         constants = self.constants
         transaction_data_included = False
         if time_per_sub_block is None:
@@ -230,7 +233,7 @@ class BlockTools:
             pool_reward_puzzle_hash = self.pool_ph
         pool_target = PoolTarget(pool_reward_puzzle_hash, uint32(0))
 
-        if block_list is None or len(block_list) == 0:
+        if len(block_list) == 0:
             initial_block_list_len = 0
             genesis = self.create_genesis_block(
                 constants,
@@ -272,6 +275,7 @@ class BlockTools:
         same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
         sub_slot_start_total_iters: uint128 = latest_sub_block.infusion_sub_slot_total_iters(constants)
         sub_slots_finished = 0
+        pending_ses: bool = False
 
         # Start at the last block in block list
         # Get the challenge for that slot
@@ -361,12 +365,10 @@ class BlockTools:
                             latest_sub_block,
                             sub_blocks,
                         )
-
-                        if full_block is None:
-                            continue
                         if sub_block_record.is_block:
                             transaction_data_included = True
-
+                        if pending_ses:
+                            pending_ses = False
                         block_list.append(full_block)
                         sub_blocks_added_this_sub_slot += 1
 
@@ -425,14 +427,18 @@ class BlockTools:
             # in order for light clients to validate.
             cc_vdf = VDFInfo(cc_vdf.challenge, ClassgroupElement.get_default_element(), sub_slot_iters, cc_vdf.output)
 
-            sub_epoch_summary: Optional[SubEpochSummary] = next_sub_epoch_summary(
-                constants,
-                sub_blocks,
-                height_to_hash,
-                latest_sub_block.signage_point_index,
-                latest_sub_block.required_iters,
-                block_list[-1],
-            )
+            if pending_ses:
+                sub_epoch_summary: Optional[SubEpochSummary] = None
+            else:
+                sub_epoch_summary: Optional[SubEpochSummary] = next_sub_epoch_summary(
+                    constants,
+                    sub_blocks,
+                    height_to_hash,
+                    latest_sub_block.signage_point_index,
+                    latest_sub_block.required_iters,
+                    block_list[-1],
+                )
+                pending_ses = True
 
             if sub_epoch_summary is not None:
                 ses_hash = sub_epoch_summary.get_hash()
@@ -564,10 +570,10 @@ class BlockTools:
                             overflow_rc_challenge=overflow_rc_challenge,
                         )
 
-                        if full_block is None:
-                            continue
                         if sub_block_record.is_block:
                             transaction_data_included = True
+                        if pending_ses:
+                            pending_ses = False
 
                         block_list.append(full_block)
                         sub_blocks_added_this_sub_slot += 1
@@ -655,6 +661,7 @@ class BlockTools:
                     unfinished_block = create_unfinished_block(
                         constants,
                         sub_slot_total_iters,
+                        constants.SUB_SLOT_ITERS_STARTING,
                         uint8(signage_point_index),
                         sp_iters,
                         ip_iters,
@@ -1086,10 +1093,10 @@ def get_full_block_and_sub_record(
 ) -> Tuple[FullBlock, SubBlockRecord]:
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
-
     unfinished_block = create_unfinished_block(
         constants,
         sub_slot_start_total_iters,
+        sub_slot_iters,
         signage_point_index,
         sp_iters,
         ip_iters,

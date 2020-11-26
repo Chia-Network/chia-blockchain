@@ -717,7 +717,7 @@ class TestWalletProtocol:
         blocks_new = bt.get_consecutive_blocks(
             test_constants,
             1,
-            block_list=blocks_list,
+            block_list_input=blocks_list,
             seed=b"test_request_additions",
         )
         async for _ in full_node_1.respond_block(fnp.RespondBlock(blocks_new[-1])):
@@ -879,7 +879,7 @@ class TestWalletProtocol:
         blocks_new = bt.get_consecutive_blocks(
             test_constants,
             10,
-            block_list=blocks_list,
+            block_list_input=blocks_list,
         )
         for block in blocks_new:
             [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]
@@ -913,7 +913,7 @@ class TestWalletProtocol:
             )
         }
         blocks_new = bt.get_consecutive_blocks(
-            test_constants, 5, block_list=blocks_new, transaction_data_at_height=dic_h
+            test_constants, 5, block_list_input=blocks_new, transaction_data_at_height=dic_h
         )
         for block in blocks_new:
             [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]
@@ -1053,7 +1053,7 @@ class TestWalletProtocol:
         blocks_new = bt.get_consecutive_blocks(
             test_constants,
             10,
-            block_list=blocks_list,
+            block_list_input=blocks_list,
         )
         for block in blocks_new:
             [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]
@@ -1088,7 +1088,7 @@ class TestWalletProtocol:
             )
         }
         blocks_new = bt.get_consecutive_blocks(
-            test_constants, 5, block_list=blocks_new, transaction_data_at_height=dic_h
+            test_constants, 5, block_list_input=blocks_new, transaction_data_at_height=dic_h
         )
         for block in blocks_new:
             [_ async for _ in full_node_1.respond_block(fnp.RespondBlock(block))]

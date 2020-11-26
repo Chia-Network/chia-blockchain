@@ -26,21 +26,12 @@ class UnfinishedBlock(Streamable):
     def prev_header_hash(self):
         return self.foliage_sub_block.prev_sub_block_hash
 
-    @property
-    def height(self):
-        return self.reward_chain_sub_block.sub_block_height
+    def partial_hash(self):
+        return self.reward_chain_sub_block.get_hash()
 
-    @property
-    def weight(self):
-        return self.reward_chain_sub_block.weight
+    def is_block(self):
+        return self.foliage_sub_block.foliage_block_hash is not None
 
     @property
     def total_iters(self):
         return self.reward_chain_sub_block.total_iters
-
-    @property
-    def header_hash(self):
-        return self.foliage_sub_block.get_hash()
-
-    def is_block(self):
-        return self.foliage_sub_block.foliage_block_hash is not None

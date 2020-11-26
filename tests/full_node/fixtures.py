@@ -41,6 +41,16 @@ async def default_1000_blocks():
     yield persistent_blocks(1000, "test_blocks_1000.db")
 
 
+@pytest.fixture(scope="module")
+async def default_10000_blocks():
+    yield persistent_blocks(10000, "test_blocks_10000.db")
+
+
+@pytest.fixture(scope="module")
+async def default_20000_blocks():
+    yield persistent_blocks(20000, "test_blocks_20000.db")
+
+
 def persistent_blocks(num_of_blocks, db_name):
     # try loading from disc, if not create new blocks.db file
     if path.exists(db_name):
