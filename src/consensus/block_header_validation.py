@@ -94,7 +94,7 @@ async def validate_unfinished_header_block(
         # subsequent sub-slots must be empty
         for finished_sub_slot_n, sub_slot in enumerate(header_block.finished_sub_slots):
             # Start of slot challenge is fetched from SP
-            challenge_hash: bytes32 = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
+            challenge_hash: bytes32 = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
 
             if finished_sub_slot_n == 0:
                 if genesis_block:
@@ -454,7 +454,7 @@ async def validate_unfinished_header_block(
             # Add the rest of the slot of prev_sb
             total_iters += prev_sb.sub_slot_iters - prev_sb.ip_iters(constants)
             # Add other empty slots
-            total_iters += sub_slot_iters * (finished_sub_slots_since_prev - 1)
+            total_iters = total_iters + (sub_slot_iters * (finished_sub_slots_since_prev - 1))
         else:
             # Slot iters is guaranteed to be the same for header_block and prev_sb
             # This takes the beginning of the slot, and adds ip_iters

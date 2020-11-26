@@ -147,8 +147,8 @@ class BlockTools:
         temp_dir = plot_dir / "tmp"
         mkdir(temp_dir)
         args = Namespace()
-        # Can't go much lower than 18, since plots start having no solutions
-        args.size = 19
+        # Can't go much lower than 20, since plots start having no solutions and more buggy
+        args.size = 20
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = 20
         args.buffer = 100
@@ -162,7 +162,7 @@ class BlockTools:
         args.buckets = 0
         args.stripe_size = 2000
         args.num_threads = 0
-        test_private_keys = [AugSchemeMPL.key_gen(std_hash(i.to_bytes(4, "big"))) for i in range(args.num)]
+        test_private_keys = [AugSchemeMPL.key_gen(std_hash(i.to_bytes(3, "big"))) for i in range(args.num)]
         try:
             # No datetime in the filename, to get deterministic filenames and not re-plot
             create_plots(
@@ -423,9 +423,7 @@ class BlockTools:
             )
             # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
             # in order for light clients to validate.
-            cc_vdf = VDFInfo(
-                cc_vdf.challenge_hash, ClassgroupElement.get_default_element(), sub_slot_iters, cc_vdf.output
-            )
+            cc_vdf = VDFInfo(cc_vdf.challenge, ClassgroupElement.get_default_element(), sub_slot_iters, cc_vdf.output)
 
             sub_epoch_summary: Optional[SubEpochSummary] = next_sub_epoch_summary(
                 constants,
@@ -462,7 +460,7 @@ class BlockTools:
                     # This means there are no sub-blocks in this sub-slot
                     icc_eos_iters = sub_slot_iters
                 icc_ip_vdf = VDFInfo(
-                    icc_ip_vdf.challenge_hash,
+                    icc_ip_vdf.challenge,
                     ClassgroupElement.get_default_element(),
                     icc_eos_iters,
                     icc_ip_vdf.output,
@@ -775,9 +773,7 @@ class BlockTools:
         for plot_info in plots:
             plot_id = plot_info.prover.get_id()
             if ProofOfSpace.passes_plot_filter(constants, plot_id, challenge_hash, signage_point):
-                new_challenge: bytes32 = ProofOfSpace.calculate_new_challenge_hash(
-                    plot_id, challenge_hash, signage_point
-                )
+                new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(plot_id, challenge_hash, signage_point)
                 qualities = plot_info.prover.get_qualities_for_challenge(new_challenge)
 
                 for proof_index, quality_str in enumerate(qualities):
@@ -986,7 +982,7 @@ def load_block_list(
                     sp_hash = curr.finished_challenge_slot_hashes[-1]
             challenge = sp_hash
         else:
-            challenge = full_block.reward_chain_sub_block.challenge_chain_sp_vdf.challenge_hash
+            challenge = full_block.reward_chain_sub_block.challenge_chain_sp_vdf.challenge
             sp_hash = full_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
         quality_str = full_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
             constants, challenge, sp_hash

@@ -193,9 +193,7 @@ def get_next_sub_slot_iters(
         * (last_block_curr.total_iters - last_block_prev.total_iters)
         // (last_block_curr.timestamp - last_block_prev.timestamp)
     )
-    new_ssi_precise = new_ssi_precise - (new_ssi_precise % constants.NUM_SPS_SUB_SLOT)  # Must divide the sub slot
     new_ssi = uint64(truncate_to_significant_bits(new_ssi_precise, constants.SIGNIFICANT_BITS))
-    assert count_significant_bits(new_ssi) <= constants.SIGNIFICANT_BITS
 
     # Only change by a max factor as a sanity check
     max_ssi = uint64(
@@ -211,9 +209,13 @@ def get_next_sub_slot_iters(
         )
     )
     if new_ssi >= last_block_curr.sub_slot_iters:
-        return min(new_ssi, max_ssi)
+        new_ssi = min(new_ssi, max_ssi)
     else:
-        return max([constants.NUM_SPS_SUB_SLOT, new_ssi, min_ssi])
+        new_ssi = max([constants.NUM_SPS_SUB_SLOT, new_ssi, min_ssi])
+
+    new_ssi = uint64(new_ssi - new_ssi % constants.NUM_SPS_SUB_SLOT)  # Must divide the sub slot
+    assert count_significant_bits(new_ssi) <= constants.SIGNIFICANT_BITS
+    return new_ssi
 
 
 def get_next_difficulty(
