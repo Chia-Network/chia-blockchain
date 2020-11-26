@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
-from src.server.connection import NodeType
+from src.server.outbound_message import NodeType
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint16
 
-protocol_version = "0.0.18"
+protocol_version = "0.0.20"
 
 """
 Handshake when establishing a connection between two servers.

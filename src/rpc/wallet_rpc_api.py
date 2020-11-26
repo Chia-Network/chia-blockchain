@@ -17,7 +17,7 @@ from src.util.path import path_from_root
 from src.util.ws_message import create_payload
 
 from src.cmds.init import check_keys
-from src.server.outbound_message import NodeType, OutboundMessage, Message, Delivery
+from src.server.outbound_message import NodeType, Message
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.util.ints import uint64, uint32
 from src.types.sized_bytes import bytes32
@@ -287,13 +287,9 @@ class WalletRpcApi:
     async def farm_block(self, request):
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
         request = FarmNewBlockProtocol(raw_puzzle_hash)
-        msg = OutboundMessage(
-            NodeType.FULL_NODE,
-            Message("farm_new_block", request),
-            Delivery.BROADCAST,
-        )
+        msg = Message("farm_new_block", request)
 
-        self.service.server.push_message(msg)
+        await self.service.server.send_to_all([msg], NodeType.FULL_NODE)
         return {}
 
     ##########################################################################################

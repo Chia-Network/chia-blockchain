@@ -26,7 +26,7 @@ class TestRpc:
     async def test1(self, simulation):
         test_rpc_port = uint16(21522)
         test_rpc_port_2 = uint16(21523)
-        harvester, farmer = simulation
+        harvester, farmer_api = simulation
 
         def stop_node_cb():
             pass
@@ -38,7 +38,7 @@ class TestRpc:
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 
-        farmer_rpc_api = FarmerRpcApi(farmer)
+        farmer_rpc_api = FarmerRpcApi(farmer_api.farmer)
         harvester_rpc_api = HarvesterRpcApi(harvester)
 
         rpc_cleanup = await start_rpc_server(

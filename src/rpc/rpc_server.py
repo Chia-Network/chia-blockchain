@@ -87,9 +87,9 @@ class RpcServer:
         return inner
 
     async def get_connections(self, request: Dict) -> Dict:
-        if self.rpc_api.service.global_connections is None:
+        if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
-        connections = self.rpc_api.service.global_connections.get_connections()
+        connections = self.rpc_api.service.server.get_connections()
         con_info = [
             {
                 "type": con.connection_type,
@@ -98,7 +98,7 @@ class RpcServer:
                 "peer_host": con.peer_host,
                 "peer_port": con.peer_port,
                 "peer_server_port": con.peer_server_port,
-                "node_id": con.node_id,
+                "node_id": con.peer_node_id,
                 "creation_time": con.creation_time,
                 "bytes_read": con.bytes_read,
                 "bytes_written": con.bytes_written,
@@ -123,17 +123,17 @@ class RpcServer:
 
     async def close_connection(self, request: Dict):
         node_id = hexstr_to_bytes(request["node_id"])
-        if self.rpc_api.service.global_connections is None:
+        if self.rpc_api.service.server is None:
             raise aiohttp.web.HTTPInternalServerError()
         connections_to_close = [
             c
-            for c in self.rpc_api.service.global_connections.get_connections()
-            if c.node_id == node_id
+            for c in self.rpc_api.service.server.get_connections()
+            if c.peer_node_id == node_id
         ]
         if len(connections_to_close) == 0:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
         for connection in connections_to_close:
-            self.rpc_api.service.global_connections.close(connection)
+            await connection.close()
         return {}
 
     async def stop_node(self, request):

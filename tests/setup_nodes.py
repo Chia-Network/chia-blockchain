@@ -2,14 +2,13 @@ import asyncio
 import signal
 
 from secrets import token_bytes
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, List, Optional
 from src.consensus.constants import ConsensusConstants
-from src.full_node.full_node import FullNode
-from src.server.server import ChiaServer
+from src.full_node.full_node_api import FullNodeAPI
 from src.timelord_launcher import spawn_process, kill_processes
 from src.util.block_tools import BlockTools, test_constants
+from src.types.peer_info import PeerInfo
 from src.util.keychain import Keychain, bytes_to_mnemonic
-from src.server.connection import PeerInfo
 from src.simulator.start_simulator import service_kwargs_for_full_node_simulator
 from src.server.start_farmer import service_kwargs_for_farmer
 from src.server.start_full_node import service_kwargs_for_full_node
@@ -20,7 +19,9 @@ from src.server.start_wallet import service_kwargs_for_wallet
 from src.server.start_service import Service
 from src.util.ints import uint16, uint32
 from src.util.chech32 import encode_puzzle_hash
-from tests.time_out_assert import time_out_assert
+from src.consensus.default_constants import DEFAULT_CONSTANTS as constants
+
+from tests.time_out_assert import time_out_assert_custom_interval
 
 
 bt = BlockTools(constants=test_constants)
@@ -57,9 +58,11 @@ async def setup_full_node(
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
     config["peer_connect_interval"] = 3
-    config["introducer_peer"]["host"] = "::1"
     if introducer_port is not None:
+        config["introducer_peer"]["host"] = "localhost"
         config["introducer_peer"]["port"] = introducer_port
+    else:
+        config["introducer_peer"] = None
     config["port"] = port
     config["rpc_port"] = port + 1000
 
@@ -76,7 +79,7 @@ async def setup_full_node(
 
     await service.start()
 
-    yield service._api, service._api.server
+    yield service._api
 
     service.stop()
     await service.wait_closed()
@@ -112,7 +115,7 @@ async def setup_wallet_node(
     config["database_path"] = str(db_name)
     config["testing"] = True
 
-    config["introducer_peer"]["host"] = "::1"
+    config["introducer_peer"]["host"] = "localhost"
     if introducer_port is not None:
         config["introducer_peer"]["port"] = introducer_port
         config["peer_connect_interval"] = 10
@@ -132,7 +135,7 @@ async def setup_wallet_node(
 
     await service.start(new_wallet=True)
 
-    yield service._api, service._api.server
+    yield service._node, service._node.server
 
     service.stop()
     await service.wait_closed()
@@ -154,7 +157,7 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
 
     await service.start()
 
-    yield service._api, service._api.server
+    yield service._node, service._node.server
 
     service.stop()
     await service.wait_closed()
@@ -188,7 +191,7 @@ async def setup_farmer(
 
     await service.start()
 
-    yield service._api, service._api.server
+    yield service._api, service._node.server
 
     service.stop()
     await service.wait_closed()
@@ -208,7 +211,7 @@ async def setup_introducer(port):
 
     await service.start()
 
-    yield service._api, service._api.server
+    yield service._api, service._node.server
 
     service.stop()
     await service.wait_closed()
@@ -245,7 +248,7 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
 
     await service.start()
 
-    yield service._api, service._api.server
+    yield service._api, service._node.server
 
     service.stop()
     await service.wait_closed()
@@ -261,10 +264,10 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
         setup_full_node(consensus_constants, "blockchain_test_2.db", 21235, simulator=False),
     ]
 
-    fn1, s1 = await node_iters[0].__anext__()
-    fn2, s2 = await node_iters[1].__anext__()
+    fn1 = await node_iters[0].__anext__()
+    fn2 = await node_iters[1].__anext__()
 
-    yield fn1, fn2, s1, s2
+    yield (fn1, fn2, fn1.full_node.server, fn2.full_node.server)
 
     await _teardown_nodes(node_iters)
 
@@ -275,10 +278,10 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
         setup_wallet_node(21235, consensus_constants, None, starting_height=starting_height),
     ]
 
-    full_node, s1 = await node_iters[0].__anext__()
+    full_node_api = await node_iters[0].__anext__()
     wallet, s2 = await node_iters[1].__anext__()
 
-    yield full_node, wallet, s1, s2
+    yield (full_node_api, wallet, full_node_api.full_node.server, s2)
 
     await _teardown_nodes(node_iters)
 
@@ -289,7 +292,7 @@ async def setup_simulators_and_wallets(
     dic: Dict,
     starting_height=None,
 ):
-    simulators: List[Tuple[FullNode, ChiaServer]] = []
+    simulators: List[FullNodeAPI] = []
     wallets = []
     node_iters = []
 
@@ -351,20 +354,21 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
     farmer, farmer_server = await node_iters[2].__anext__()
 
     async def num_connections():
-        return len(harvester.global_connections.get_connections())
+        count = len(harvester.server.all_connections.items())
+        return count
 
-    await time_out_assert(10, num_connections, 1)
+    await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
     vdf = await node_iters[3].__anext__()
     timelord, timelord_server = await node_iters[4].__anext__()
-    node1, node1_server = await node_iters[5].__anext__()
-    node2, node2_server = await node_iters[6].__anext__()
+    node_api_1 = await node_iters[5].__anext__()
+    node_api_2 = await node_iters[6].__anext__()
     vdf_sanitizer = await node_iters[7].__anext__()
     sanitizer, sanitizer_server = await node_iters[8].__anext__()
 
     yield (
-        node1,
-        node2,
+        node_api_1,
+        node_api_2,
         harvester,
         farmer,
         introducer,
@@ -372,7 +376,7 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         vdf,
         sanitizer,
         vdf_sanitizer,
-        node1_server,
+        node_api_1.full_node.server,
     )
 
     await _teardown_nodes(node_iters)

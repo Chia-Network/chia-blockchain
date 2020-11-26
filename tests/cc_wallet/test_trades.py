@@ -50,7 +50,8 @@ async def wallets_prefarm(two_wallet_nodes):
     farm_blocks = 10
     buffer = 4
     full_nodes, wallets = two_wallet_nodes
-    full_node, server = full_nodes[0]
+    full_node_api = full_nodes[0]
+    full_node_server = full_node_api.server
     wallet_node_0, wallet_server_0 = wallets[0]
     wallet_node_1, wallet_server_1 = wallets[1]
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
@@ -60,22 +61,22 @@ async def wallets_prefarm(two_wallet_nodes):
     ph1 = await wallet_1.get_new_puzzlehash()
 
     await wallet_server_0.start_client(
-        PeerInfo("localhost", uint16(server._port)), None
+        PeerInfo("localhost", uint16(full_node_server._port)), None
     )
     await wallet_server_1.start_client(
-        PeerInfo("localhost", uint16(server._port)), None
+        PeerInfo("localhost", uint16(full_node_server._port)), None
     )
 
     for i in range(0, farm_blocks):
-        await full_node.farm_new_block(FarmNewBlockProtocol(ph0))
+        await full_node_api.farm_new_block(FarmNewBlockProtocol(ph0))
 
     for i in range(0, farm_blocks):
-        await full_node.farm_new_block(FarmNewBlockProtocol(ph1))
+        await full_node_api.farm_new_block(FarmNewBlockProtocol(ph1))
 
     for i in range(0, buffer):
-        await full_node.farm_new_block(FarmNewBlockProtocol(token_bytes()))
+        await full_node_api.farm_new_block(FarmNewBlockProtocol(token_bytes()))
 
-    return wallet_node_0, wallet_node_1, full_node
+    return wallet_node_0, wallet_node_1, full_node_api
 
 
 class TestCCTrades:

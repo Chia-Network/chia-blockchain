@@ -59,6 +59,7 @@ kwargs = dict(
         "src.daemon",
         "src.full_node",
         "src.protocols",
+        "src.remote",
         "src.rpc",
         "src.server",
         "src.simulator",
