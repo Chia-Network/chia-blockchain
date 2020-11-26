@@ -1045,6 +1045,7 @@ class FullNode:
         unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(
             self.constants,
             total_iters_pos_slot,
+            sub_slot_iters,
             request.signage_point_index,
             sp_iters,
             ip_iters,
