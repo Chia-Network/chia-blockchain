@@ -143,38 +143,36 @@ class Farmer:
         This is a response from the harvester, for a NewChallenge. Here we check if the proof
         of space is sufficiently good, and if so, we ask for the whole proof.
         """
-        if new_proof_of_space.proof.challenge_hash not in self.number_of_responses:
-            self.number_of_responses[new_proof_of_space.proof.challenge_hash] = 0
+        if new_proof_of_space.proof.challenge not in self.number_of_responses:
+            self.number_of_responses[new_proof_of_space.proof.challenge] = 0
 
-        if self.number_of_responses[new_proof_of_space.proof.challenge_hash] >= 5:
+        if self.number_of_responses[new_proof_of_space.proof.challenge] >= 5:
             log.warning(
                 f"Surpassed 5 PoSpace for one SP, no longer submitting PoSpace for signage point "
-                f"{new_proof_of_space.proof.challenge_hash}"
+                f"{new_proof_of_space.proof.challenge}"
             )
             return
 
-        if new_proof_of_space.proof.challenge_hash not in self.sps:
-            log.warning(
-                f"Received response for challenge that we do not have {new_proof_of_space.proof.challenge_hash}"
-            )
+        if new_proof_of_space.proof.challenge not in self.sps:
+            log.warning(f"Received response for challenge that we do not have {new_proof_of_space.proof.challenge}")
             return
 
-        sp = self.sps[new_proof_of_space.proof.challenge_hash]
+        sp = self.sps[new_proof_of_space.proof.challenge]
 
         computed_quality_string = new_proof_of_space.proof.verify_and_get_quality_string(
-            self.constants, new_proof_of_space.challenge_hash, new_proof_of_space.proof.challenge_hash
+            self.constants, new_proof_of_space.challenge_hash, new_proof_of_space.proof.challenge
         )
         if computed_quality_string is None:
             log.error(f"Invalid proof of space {new_proof_of_space.proof}")
             return
 
-        self.number_of_responses[new_proof_of_space.proof.challenge_hash] += 1
+        self.number_of_responses[new_proof_of_space.proof.challenge] += 1
 
         required_iters: uint64 = calculate_iterations_quality(
             computed_quality_string,
             new_proof_of_space.proof.size,
             sp.difficulty,
-            new_proof_of_space.proof.challenge_hash,
+            new_proof_of_space.proof.challenge,
         )
         # Double check that the iters are good
         assert required_iters < calculate_sp_interval_iters(sp.slot_iterations, sp.sub_slot_iters)
@@ -184,7 +182,7 @@ class Farmer:
         # Proceed at getting the signatures for this PoSpace
         request = harvester_protocol.RequestSignatures(
             new_proof_of_space.plot_identifier,
-            new_proof_of_space.proof.challenge_hash,
+            new_proof_of_space.proof.challenge,
             [sp.challenge_chain_sp, sp.reward_chain_sp],
         )
         yield OutboundMessage(
@@ -192,15 +190,15 @@ class Farmer:
             Message("request_signatures", request),
             Delivery.RESPOND,
         )
-        if new_proof_of_space.proof.challenge_hash not in self.proofs_of_space:
-            self.proofs_of_space[new_proof_of_space.proof.challenge_hash] = [
+        if new_proof_of_space.proof.challenge not in self.proofs_of_space:
+            self.proofs_of_space[new_proof_of_space.proof.challenge] = [
                 (
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.proof,
                 )
             ]
         else:
-            self.proofs_of_space[new_proof_of_space.proof.challenge_hash].append(
+            self.proofs_of_space[new_proof_of_space.proof.challenge].append(
                 (
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.proof,
@@ -208,7 +206,7 @@ class Farmer:
             )
         self.quality_str_to_identifiers[computed_quality_string] = (
             new_proof_of_space.plot_identifier,
-            new_proof_of_space.proof.challenge_hash,
+            new_proof_of_space.proof.challenge,
         )
 
     @api_request

@@ -123,7 +123,7 @@ class FullNodeStore:
             del self.unfinished_blocks[partial_reward_hash]
 
     def add_to_future_ip(self, infusion_point: timelord_protocol.NewInfusionPointVDF):
-        ch: bytes32 = infusion_point.reward_chain_ip_vdf.challenge_hash
+        ch: bytes32 = infusion_point.reward_chain_ip_vdf.challenge
         if ch not in self.future_ip_cache:
             self.future_ip_cache[ch] = []
         self.future_ip_cache[ch].append(infusion_point)
@@ -163,7 +163,7 @@ class FullNodeStore:
             last_slot.reward_chain_chain.get_hash() if last_slot is not None else self.constants.FIRST_RC_CHALLENGE
         )
 
-        if eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash != last_slot_ch:
+        if eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge != last_slot_ch:
             # This slot does not append to our next slot
             # This prevent other peers from appending fake VDFs to our cache
             return False
@@ -184,7 +184,7 @@ class FullNodeStore:
 
         if peak is not None and peak.total_iters > last_slot_iters:
             # Peak is in this slot
-            rc_challenge = eos.reward_chain.end_of_slot_vdf.challenge_hash
+            rc_challenge = eos.reward_chain.end_of_slot_vdf.challenge
             if peak.reward_infusion_new_challenge != rc_challenge:
                 # We don't have this challenge hash yet
                 if rc_challenge not in self.future_eos_cache:
@@ -205,13 +205,13 @@ class FullNodeStore:
                     icc_start_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
                 if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                     if (
-                        eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge_hash
+                        eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
                         != icc_start_challenge_hash
                     ):
                         return False
         else:
             # Empty slot after the peak
-            if eos.reward_chain.end_of_slot_vdf.challenge_hash != last_slot_rc_hash:
+            if eos.reward_chain.end_of_slot_vdf.challenge != last_slot_rc_hash:
                 return False
 
             if (
@@ -220,7 +220,7 @@ class FullNodeStore:
             ):
                 # Have infused challenge chain that must be verified
                 if (
-                    eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge_hash
+                    eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
                     != last_slot.infused_challenge_chain.get_hash()
                 ):
                     return False
@@ -254,7 +254,7 @@ class FullNodeStore:
             else:
                 ss_challenge_hash = sub_slot.challenge_chain.get_hash()
                 ss_reward_hash = sub_slot.reward_chain.get_hash()
-            if ss_challenge_hash == signage_point.cc_vdf.challenge_hash:
+            if ss_challenge_hash == signage_point.cc_vdf.challenge:
                 # If we do have this slot, find the Prev sub-block from SP and validate SP
                 if peak is not None and start_ss_total_iters > peak.total_iters:
                     # We are in a future sub slot from the peak, so maybe there is a new SSI
@@ -348,7 +348,7 @@ class FullNodeStore:
                 if index not in sps:
                     return None
                 for sp in sps[index]:
-                    if sp.rc_vdf.challenge_hash == last_rc_infusion:
+                    if sp.rc_vdf.challenge == last_rc_infusion:
                         return sp
                 return None
         return None

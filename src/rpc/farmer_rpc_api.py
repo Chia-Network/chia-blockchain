@@ -32,19 +32,17 @@ class FarmerRpcApi:
         if self.service.current_weight == 0:
             return {"latest_challenges": []}
         for pospace_fin in self.service.challenges[self.service.current_weight]:
-            estimates = self.service.challenge_to_estimates.get(
-                pospace_fin.challenge_hash, []
-            )
-            if pospace_fin.challenge_hash in seen_challenges:
+            estimates = self.service.challenge_to_estimates.get(pospace_fin.challenge, [])
+            if pospace_fin.challenge in seen_challenges:
                 continue
             response.append(
                 {
-                    "challenge": pospace_fin.challenge_hash,
+                    "challenge": pospace_fin.challenge,
                     "weight": pospace_fin.weight,
                     "height": pospace_fin.height,
                     "difficulty": pospace_fin.difficulty,
                     "estimates": estimates,
                 }
             )
-            seen_challenges.add(pospace_fin.challenge_hash)
+            seen_challenges.add(pospace_fin.challenge)
         return {"latest_challenges": response}
