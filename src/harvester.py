@@ -199,7 +199,7 @@ class Harvester:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
-                sp_challenge_hash = ProofOfSpace.calculate_new_challenge_hash(
+                sp_challenge_hash = ProofOfSpace.calculate_pos_challenge(
                     plot_info.prover.get_id(), new_challenge.challenge_hash, new_challenge.sp_hash
                 )
                 quality_strings = prover.get_qualities_for_challenge(sp_challenge_hash)

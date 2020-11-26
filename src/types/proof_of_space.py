@@ -17,7 +17,7 @@ from src.consensus.constants import ConsensusConstants
 @dataclass(frozen=True)
 @streamable
 class ProofOfSpace(Streamable):
-    challenge_hash: bytes32
+    challenge: bytes32
     pool_public_key: Optional[G1Element]  # Only one of these two should be present
     pool_contract_puzzle_hash: Optional[bytes32]
     plot_public_key: G1Element
@@ -39,17 +39,15 @@ class ProofOfSpace(Streamable):
         if (self.pool_public_key is not None) and (self.pool_contract_puzzle_hash is not None):
             return None
         plot_id: bytes32 = self.get_plot_id()
-        new_challenge: bytes32 = ProofOfSpace.calculate_new_challenge_hash(
-            plot_id, original_challenge_hash, signage_point
-        )
+        new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
-        if new_challenge != self.challenge_hash:
+        if new_challenge != self.challenge:
             return None
 
         if not ProofOfSpace.passes_plot_filter(constants, plot_id, original_challenge_hash, signage_point):
             return None
 
-        quality_str = v.validate_proof(plot_id, self.size, self.challenge_hash, bytes(self.proof))
+        quality_str = v.validate_proof(plot_id, self.size, self.challenge, bytes(self.proof))
 
         if not quality_str:
             return None
@@ -70,7 +68,7 @@ class ProofOfSpace(Streamable):
         return std_hash(plot_id + challenge_hash + signage_point)
 
     @staticmethod
-    def calculate_new_challenge_hash(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:
+    def calculate_pos_challenge(plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32) -> bytes32:
         return std_hash(ProofOfSpace.calculate_plot_filter_input(plot_id, challenge_hash, signage_point))
 
     @staticmethod
