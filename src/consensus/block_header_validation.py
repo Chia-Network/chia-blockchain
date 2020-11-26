@@ -218,7 +218,7 @@ async def validate_unfinished_header_block(
                 if sub_slot.challenge_chain.subepoch_summary_hash is not None:
                     return None, ValidationError(Err.INVALID_SUB_EPOCH_SUMMARY_HASH)
 
-            if can_finish_epoch:
+            if can_finish_epoch and sub_slot.challenge_chain.subepoch_summary_hash is not None:
                 # 2m. Check new difficulty and ssi
                 if sub_slot.challenge_chain.new_sub_slot_iters != sub_slot_iters:
                     return None, ValidationError(Err.INVALID_NEW_SUB_SLOT_ITERS)
@@ -357,7 +357,7 @@ async def validate_unfinished_header_block(
                     )
             elif new_sub_slot and not genesis_block:
                 # 3d. Check that we don't have to include a sub-epoch summary
-                if can_finish_se:
+                if can_finish_se or can_finish_epoch:
                     return None, ValidationError(
                         Err.INVALID_SUB_EPOCH_SUMMARY, "block finishes sub-epoch but ses-hash is None"
                     )

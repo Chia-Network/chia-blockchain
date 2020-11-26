@@ -57,23 +57,6 @@ class FullNodeStore:
         self.initialize_genesis_sub_slot()
         return self
 
-    def add_disconnected_block(self, block: FullBlock) -> None:
-        self.disconnected_blocks[block.header_hash] = block
-
-    def get_disconnected_block_by_prev(self, prev_header_hash: bytes32) -> Optional[FullBlock]:
-        for _, block in self.disconnected_blocks.items():
-            if block.prev_header_hash == prev_header_hash:
-                return block
-        return None
-
-    def get_disconnected_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        return self.disconnected_blocks.get(header_hash, None)
-
-    def clear_disconnected_blocks_below(self, height: uint32) -> None:
-        for key in list(self.disconnected_blocks.keys()):
-            if self.disconnected_blocks[key].height < height:
-                del self.disconnected_blocks[key]
-
     def add_candidate_block(
         self,
         quality_string: bytes32,
@@ -95,12 +78,6 @@ class FullNodeStore:
             except KeyError:
                 pass
 
-    def add_unfinished_block(self, unfinished_block: UnfinishedBlock) -> None:
-        self.unfinished_blocks[unfinished_block.reward_chain_sub_block.get_hash()] = unfinished_block
-
-    def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
-        return self.unfinished_blocks.get(unfinished_reward_hash, None)
-
     def seen_unfinished_block(self, temp_header_hash: bytes32) -> bool:
         if temp_header_hash in self.seen_unfinished_blocks:
             return True
@@ -109,6 +86,29 @@ class FullNodeStore:
 
     def clear_seen_unfinished_blocks(self) -> None:
         self.seen_unfinished_blocks.clear()
+
+    def add_disconnected_block(self, block: FullBlock) -> None:
+        self.disconnected_blocks[block.header_hash] = block
+
+    def get_disconnected_block_by_prev(self, prev_header_hash: bytes32) -> Optional[FullBlock]:
+        for _, block in self.disconnected_blocks.items():
+            if block.prev_header_hash == prev_header_hash:
+                return block
+        return None
+
+    def get_disconnected_block(self, header_hash: bytes32) -> Optional[FullBlock]:
+        return self.disconnected_blocks.get(header_hash, None)
+
+    def clear_disconnected_blocks_below(self, height: uint32) -> None:
+        for key in list(self.disconnected_blocks.keys()):
+            if self.disconnected_blocks[key].height < height:
+                del self.disconnected_blocks[key]
+
+    def add_unfinished_block(self, unfinished_block: UnfinishedBlock) -> None:
+        self.unfinished_blocks[unfinished_block.reward_chain_sub_block.get_hash()] = unfinished_block
+
+    def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
+        return self.unfinished_blocks.get(unfinished_reward_hash, None)
 
     def get_unfinished_blocks(self) -> Dict[bytes32, UnfinishedBlock]:
         return self.unfinished_blocks
@@ -146,7 +146,7 @@ class FullNodeStore:
 
     def new_finished_sub_slot(
         self, eos: EndOfSubSlotBundle, sub_blocks: Dict[bytes32, SubBlockRecord], peak: Optional[SubBlockRecord]
-    ):
+    ) -> bool:
         """
         Returns true if finished slot successfully added.
         TODO: do full validation here
@@ -357,9 +357,7 @@ class FullNodeStore:
         self,
         peak: SubBlockRecord,
         peak_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
-        total_iters: uint128,
         prev_sub_slot: Optional[EndOfSubSlotBundle],  # None if not overflow, or in first/second slot
-        prev_sub_slot_total_iters: Optional[uint128],  # None if not overflow
         reorg: bool,
         sub_blocks: Dict[bytes32, SubBlockRecord],
     ) -> Optional[EndOfSubSlotBundle]:
@@ -368,10 +366,11 @@ class FullNodeStore:
         the prev sub-slot (since we still might get more sub-blocks with an sp in the previous sub-slot)
         """
         new_finished_sub_slots = []
+        total_iters = peak.infusion_sub_slot_total_iters(self.constants)
         if not reorg:
             # This is a new peak that adds to the last peak. We can clear data in old sub-slots. (and new ones)
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
-                if prev_sub_slot_total_iters is not None:
+                if peak.overflow and prev_sub_slot is not None:
                     if sub_slot == prev_sub_slot:
                         # In the case of a peak overflow sub-block, the previous sub-slot is added
                         new_finished_sub_slots.append((sub_slot, sps, total_iters))
@@ -384,7 +383,8 @@ class FullNodeStore:
             # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current
             # cache, delete the entire cache and add this sub slot.
             self.clear_slots()
-            if prev_sub_slot_total_iters is not None:
+            if peak.overflow and prev_sub_slot is not None:
+                prev_sub_slot_total_iters = peak.pos_sub_slot_total_iters(self.constants)
                 self.finished_sub_slots = [(prev_sub_slot, {}, prev_sub_slot_total_iters)]
             self.finished_sub_slots.append((peak_sub_slot, {}, total_iters))
 
@@ -398,7 +398,7 @@ class FullNodeStore:
         self,
         prev_sb: Optional[SubBlockRecord],
         sub_block_records: Dict[bytes32, SubBlockRecord],
-        pos_challenge_hash: bytes32,
+        pos_ss_challenge_hash: bytes32,
         extra_sub_slot: bool = False,
     ) -> List[EndOfSubSlotBundle]:
         """
@@ -424,13 +424,13 @@ class FullNodeStore:
                 raise ValueError("First sub slot should be None")
             final_index = 0
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
-                if sub_slot is not None and sub_slot.challenge_chain.get_hash() == pos_challenge_hash:
+                if sub_slot is not None and sub_slot.challenge_chain.get_hash() == pos_ss_challenge_hash:
                     pos_index = index
         else:
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                 if sub_slot is None:
                     pass
-                if sub_slot.challenge_chain.get_hash() == pos_challenge_hash:
+                if sub_slot.challenge_chain.get_hash() == pos_ss_challenge_hash:
                     pos_index = index
                 if sub_slot.challenge_chain.get_hash() == final_sub_slot_in_chain:
                     final_index = index

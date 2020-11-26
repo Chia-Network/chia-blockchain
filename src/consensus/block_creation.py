@@ -197,6 +197,7 @@ def create_foliage(
 def create_unfinished_block(
     constants: ConsensusConstants,
     sub_slot_start_total_iters: uint128,
+    sub_slot_iters: uint64,
     signage_point_index: uint8,
     sp_iters: uint64,
     ip_iters: uint64,
@@ -221,12 +222,10 @@ def create_unfinished_block(
     if prev_sub_block is not None:
         curr = prev_sub_block
         is_block, prev_block = get_prev_block(curr, prev_block, sub_blocks, total_iters_sp)
-        prev_sub_slot_iters: uint64 = prev_sub_block.sub_slot_iters
     else:
         # Genesis is a block
         is_genesis = True
         is_block = True
-        prev_sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
 
     new_sub_slot: bool = len(finished_sub_slots) > 0
 
@@ -255,7 +254,7 @@ def create_unfinished_block(
     assert rc_sp_signature is not None
     assert blspy.AugSchemeMPL.verify(proof_of_space.plot_public_key, cc_sp_hash, cc_sp_signature)
 
-    total_iters = uint128(sub_slot_start_total_iters + ip_iters + (prev_sub_slot_iters if overflow else 0))
+    total_iters = uint128(sub_slot_start_total_iters + ip_iters + (sub_slot_iters if overflow else 0))
 
     rc_sub_block = RewardChainSubBlockUnfinished(
         total_iters,
