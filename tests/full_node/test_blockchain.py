@@ -137,7 +137,7 @@ class TestBlockHeaderValidation:
                     block, "finished_sub_slots", [new_finished_ss_4] + block.finished_sub_slots[1:]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_4)
-                assert err == Err.INVALID_SUB_EPOCH_SUMMARY
+                assert err == Err.INVALID_SUB_EPOCH_SUMMARY or err == Err.INVALID_NEW_SUB_SLOT_ITERS
 
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
