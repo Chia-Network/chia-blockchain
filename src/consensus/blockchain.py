@@ -177,28 +177,16 @@ class Blockchain:
         if block.prev_header_hash not in self.sub_blocks and not genesis:
             return ReceiveBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
 
-        curr_header_block = HeaderBlock(
-            block.finished_sub_slots,
-            block.reward_chain_sub_block,
-            block.challenge_chain_sp_proof,
-            block.challenge_chain_ip_proof,
-            block.reward_chain_sp_proof,
-            block.reward_chain_ip_proof,
-            block.infused_challenge_chain_ip_proof,
-            block.foliage_sub_block,
-            block.foliage_block,
-            b"",  # No filter
-        )
         required_iters, error = await validate_finished_header_block(
             self.constants,
             self.sub_blocks,
             self.height_to_hash,
-            curr_header_block,
+            block.get_block_header(),
             False,
         )
 
         if error is not None:
-            log.error(f"block {curr_header_block.header_hash} failed validation {error.code} {error.error_msg}")
+            log.error(f"block {block.header_hash} failed validation {error.code} {error.error_msg}")
             return ReceiveBlockResult.INVALID_BLOCK, error.code, None
 
         error_code = await validate_block_body(

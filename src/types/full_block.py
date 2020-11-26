@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Tuple, List, Optional, Set
 
+from src.types.header_block import HeaderBlock
 from src.types.name_puzzle_condition import NPC
 from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
@@ -75,6 +76,20 @@ class FullBlock(Streamable):
             farmer_amount,
         )
         return pool_coin, farmer_coin
+
+    def get_block_header(self) -> HeaderBlock:
+        return HeaderBlock(
+            self.finished_sub_slots,
+            self.reward_chain_sub_block,
+            self.challenge_chain_sp_proof,
+            self.challenge_chain_ip_proof,
+            self.reward_chain_sp_proof,
+            self.reward_chain_ip_proof,
+            self.infused_challenge_chain_ip_proof,
+            self.foliage_sub_block,
+            self.foliage_block,
+            b"",  # No filter #todo
+        )
 
     def get_included_reward_coins(self) -> Set[Coin]:
         if not self.is_block():

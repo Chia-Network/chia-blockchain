@@ -33,7 +33,6 @@ class ProofOfSpace(Streamable):
     def verify_and_get_quality_string(
         self, constants: ConsensusConstants, original_challenge_hash: bytes32, signage_point: bytes32
     ) -> Optional[bytes32]:
-        v: Verifier = Verifier()
         if (self.pool_public_key is None) and (self.pool_contract_puzzle_hash is None):
             return None
         if (self.pool_public_key is not None) and (self.pool_contract_puzzle_hash is not None):
@@ -47,11 +46,12 @@ class ProofOfSpace(Streamable):
         if not ProofOfSpace.passes_plot_filter(constants, plot_id, original_challenge_hash, signage_point):
             return None
 
-        quality_str = v.validate_proof(plot_id, self.size, self.challenge, bytes(self.proof))
+        return self.get_quality_string(plot_id)
 
+    def get_quality_string(self, plot_id):
+        quality_str = Verifier().validate_proof(plot_id, self.size, self.challenge, bytes(self.proof))
         if not quality_str:
             return None
-
         return quality_str
 
     @staticmethod
