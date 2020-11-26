@@ -281,7 +281,7 @@ class BlockTools:
         # Get the challenge for that slot
         while True:
             slot_cc_challenge, slot_rc_challenge = get_challenges(
-                sub_blocks, finished_sub_slots_at_sp, latest_sub_block.header_hash
+                constants, sub_blocks, finished_sub_slots_at_sp, latest_sub_block.header_hash
             )
             prev_num_of_blocks = num_blocks
             if num_empty_slots_added < skip_slots:
@@ -618,7 +618,7 @@ class BlockTools:
 
         # Keep trying until we get a good proof of space that also passes sp filter
         while True:
-            cc_challenge, rc_challenge = get_genesis_challenges(constants, finished_sub_slots)
+            cc_challenge, rc_challenge = get_challenges(constants, {}, finished_sub_slots, None)
             for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
@@ -933,11 +933,14 @@ def finish_sub_block(
 
 
 def get_challenges(
+    constants: ConsensusConstants,
     sub_blocks: Dict[uint32, SubBlockRecord],
     finished_sub_slots: List[EndOfSubSlotBundle],
-    prev_header_hash: bytes32,
+    prev_header_hash: Optional[bytes32],
 ):
     if len(finished_sub_slots) == 0:
+        if prev_header_hash is None:
+            return constants.FIRST_CC_CHALLENGE, constants.FIRST_RC_CHALLENGE
         curr = sub_blocks[prev_header_hash]
         while not curr.first_in_sub_slot:
             curr = sub_blocks[curr.prev_hash]
@@ -947,16 +950,6 @@ def get_challenges(
         cc_challenge = finished_sub_slots[-1].challenge_chain.get_hash()
         rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
     return cc_challenge, rc_challenge
-
-
-def get_genesis_challenges(constants, finished_sub_slots):
-    if len(finished_sub_slots) == 0:
-        challenge = constants.FIRST_CC_CHALLENGE
-        rc_challenge = constants.FIRST_RC_CHALLENGE
-    else:
-        challenge = finished_sub_slots[-1].challenge_chain.get_hash()
-        rc_challenge = finished_sub_slots[-1].reward_chain.get_hash()
-    return challenge, rc_challenge
 
 
 def get_plot_dir():
