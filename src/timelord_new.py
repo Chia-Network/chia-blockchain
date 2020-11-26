@@ -225,34 +225,6 @@ class Timelord:
     def _set_server(self, server: ChiaServer):
         self.server = server
 
-    @api_request
-    async def new_peak(self, new_peak: timelord_protocol.NewPeak):
-        async with self.lock:
-            if (
-                self.last_state is None
-                or self.last_state.get_weight() < new_peak.weight
-            ):
-                self.new_peak = new_peak
-
-    @api_request
-    async def new_unfinished_subblock(self, new_unfinished_subblock: timelord_protocol.NewUnfinishedSubBlock):
-        async with self.lock:
-            if not self._accept_unfinished_block(new_unfinished_subblock):
-                return
-            sp_iters, ip_iters = iters_from_sub_block(
-                new_unfinished_subblock.reward_chain_sub_block,
-                self.last_state.get_ips(),
-                self.last_state.get_difficulty(),
-            )
-            last_ip_iters = self.last_state.get_last_ip()
-            if sp_iters < ip_iters:
-                self.overflow_blocks.append(new_unfinished_subblock)
-            elif ip_iters > last_ip_iters:
-                self.unfinished_blocks.append(new_unfinished_subblock)
-                for chain in Chain:
-                    self.iters_to_submit[chain].append(uint64(ip_iters - last_ip_iters))
-                self.iteration_to_proof_type[ip_iters - self.last_ip_iters] = IterationType.INFUSION_POINT
-
     def _accept_unfinished_block(self, block: timelord_protocol.NewUnfinishedSubBlock) -> bool:
         # Total unfinished block iters needs to exceed peak's iters.
         if self.last_state.get_total_iters() >= block.total_iters:
