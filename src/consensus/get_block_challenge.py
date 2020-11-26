@@ -27,7 +27,7 @@ def get_block_challenge(
             else:
                 challenge: bytes32 = header_block.finished_sub_slots[
                     -1
-                ].challenge_chain.challenge_chain_end_of_slot_vdf.challenge_hash
+                ].challenge_chain.challenge_chain_end_of_slot_vdf.challenge
         else:
             # No overflow, new slot with a new challenge
             challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()

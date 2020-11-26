@@ -673,7 +673,7 @@ class FullNode:
                 broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
                     added_eos.challenge_chain.get_hash(),
                     uint8(0),
-                    added_eos.reward_chain.end_of_slot_vdf.challenge_hash,
+                    added_eos.reward_chain.end_of_slot_vdf.challenge,
                 )
                 yield OutboundMessage(
                     NodeType.FULL_NODE,
@@ -921,9 +921,9 @@ class FullNode:
 
         if added:
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
-                request.challenge_chain_vdf.challenge_hash,
+                request.challenge_chain_vdf.challenge,
                 request.index_from_challenge,
-                request.reward_chain_vdf.challenge_hash,
+                request.reward_chain_vdf.challenge,
             )
             yield OutboundMessage(
                 NodeType.FULL_NODE,
@@ -944,7 +944,7 @@ class FullNode:
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
                 request.end_of_slot_bundle.challenge_chain.get_hash(),
                 uint8(0),
-                request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge_hash,
+                request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
             )
             yield OutboundMessage(
                 NodeType.FULL_NODE,
@@ -980,7 +980,7 @@ class FullNode:
 
         # Checks that the proof of space is a response to a recent challenge and valid SP
         pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int]] = self.full_node_store.get_sub_slot(
-            request.proof_of_space.challenge_hash
+            request.proof_of_space.challenge
         )
         sp_vdfs: Optional[SignagePoint] = self.full_node_store.get_signage_point(request.challenge_chain_sp)
 
@@ -1039,7 +1039,7 @@ class FullNode:
             return G2Element.infinity()
 
         finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node_store.get_finished_sub_slots(
-            peak, self.blockchain.sub_blocks, request.proof_of_space.challenge_hash
+            peak, self.blockchain.sub_blocks, request.proof_of_space.challenge
         )
 
         unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(
@@ -1111,7 +1111,7 @@ class FullNode:
             )
 
         prev_sb: Optional[SubBlockRecord] = None
-        if request.reward_chain_ip_vdf.challenge_hash == self.constants.FIRST_RC_CHALLENGE:
+        if request.reward_chain_ip_vdf.challenge == self.constants.FIRST_RC_CHALLENGE:
             # Genesis
             assert unfinished_block.height == 0
         else:
@@ -1122,7 +1122,7 @@ class FullNode:
                 return
             num_sb_checked = 0
             while num_sb_checked < 10:
-                if curr.reward_infusion_new_challenge == request.reward_chain_ip_vdf.challenge_hash:
+                if curr.reward_infusion_new_challenge == request.reward_chain_ip_vdf.challenge:
                     # Found our prev block
                     prev_sb = curr
                     break
@@ -1144,7 +1144,7 @@ class FullNode:
             finished_sub_slots = self.full_node_store.get_finished_sub_slots(
                 prev_sb,
                 self.blockchain.sub_blocks,
-                unfinished_block.reward_chain_sub_block.proof_of_space.challenge_hash,
+                unfinished_block.reward_chain_sub_block.proof_of_space.challenge,
                 True,
             )
         else:

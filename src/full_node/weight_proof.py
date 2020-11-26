@@ -353,7 +353,7 @@ def validate_weight(
     # validate last ses_hash
     cc_vdf = weight_proof.recent_reward_chain[block_idx - 1].challenge_chain_ip_vdf
     challenge = std_hash(ChallengeChainSubSlot(cc_vdf, None, std_hash(ses), ses.new_ips, ses.new_difficulty))
-    if challenge != weight_proof.recent_reward_chain[block_idx + 1].challenge_chain_sp_vdf.challenge_hash:
+    if challenge != weight_proof.recent_reward_chain[block_idx + 1].challenge_chain_sp_vdf.challenge:
         log.error("failed to validate ses hashes")
         return False
 

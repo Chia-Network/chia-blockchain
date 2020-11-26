@@ -12,6 +12,7 @@ def is_overflow_sub_block(constants: ConsensusConstants, signage_point_index: ui
 
 
 def calculate_sp_interval_iters(constants: ConsensusConstants, sub_slot_iters: uint64) -> uint64:
+    assert sub_slot_iters % constants.NUM_SPS_SUB_SLOT == 0
     return uint64(sub_slot_iters // constants.NUM_SPS_SUB_SLOT)
 
 

@@ -307,7 +307,7 @@ class TestFullNodeProtocol:
 
         dont_have = fnp.NewProofOfTime(
             unf_block.height,
-            unf_block.proof_of_space.challenge_hash,
+            unf_block.proof_of_space.challenge,
             res[0].message.data.iterations_needed,
             uint8(2),
         )
@@ -317,7 +317,7 @@ class TestFullNodeProtocol:
         assert blocks_new[-1].proof_of_time is not None
         already_have = fnp.NewProofOfTime(
             unf_block.height,
-            unf_block.proof_of_space.challenge_hash,
+            unf_block.proof_of_space.challenge,
             res[0].message.data.iterations_needed,
             blocks_new[-1].proof_of_time.witness_type,
         )
@@ -330,7 +330,7 @@ class TestFullNodeProtocol:
 
         request = fnp.RequestProofOfTime(
             blocks[3].height,
-            blocks[3].proof_of_space.challenge_hash,
+            blocks[3].proof_of_space.challenge,
             blocks[3].proof_of_time.number_of_iterations,
             blocks[3].proof_of_time.witness_type,
         )
@@ -340,7 +340,7 @@ class TestFullNodeProtocol:
 
         request_bad = fnp.RequestProofOfTime(
             blocks[3].height,
-            blocks[3].proof_of_space.challenge_hash,
+            blocks[3].proof_of_space.challenge,
             blocks[3].proof_of_time.number_of_iterations + 1,
             blocks[3].proof_of_time.witness_type,
         )
@@ -365,7 +365,7 @@ class TestFullNodeProtocol:
         assert blocks_new[-1].proof_of_time is not None
         new_pot = fnp.NewProofOfTime(
             blocks_new[-1].height,
-            blocks_new[-1].proof_of_space.challenge_hash,
+            blocks_new[-1].proof_of_space.challenge,
             blocks_new[-1].proof_of_time.number_of_iterations,
             blocks_new[-1].proof_of_time.witness_type,
         )
@@ -660,7 +660,7 @@ class TestFullNodeProtocol:
         # If invalid, do nothing
         block_invalid = FullBlock(
             ProofOfSpace(
-                blocks_new[-5].proof_of_space.challenge_hash,
+                blocks_new[-5].proof_of_space.challenge,
                 blocks_new[-5].proof_of_space.pool_public_key,
                 blocks_new[-5].proof_of_space.plot_public_key,
                 uint8(blocks_new[-5].proof_of_space.size + 1),
@@ -796,26 +796,26 @@ class TestWalletProtocol:
         msgs = [
             _
             async for _ in full_node_1.request_all_header_hashes_after(
-                wallet_protocol.RequestAllHeaderHashesAfter(uint32(5), blocks_list[5].proof_of_space.challenge_hash)
+                wallet_protocol.RequestAllHeaderHashesAfter(uint32(5), blocks_list[5].proof_of_space.challenge)
             )
         ]
         assert len(msgs) == 1
         assert isinstance(msgs[0].message.data, wallet_protocol.RespondAllHeaderHashesAfter)
         assert msgs[0].message.data.starting_height == 5
-        assert msgs[0].message.data.previous_challenge_hash == blocks_list[5].proof_of_space.challenge_hash
+        assert msgs[0].message.data.previous_challenge_hash == blocks_list[5].proof_of_space.challenge
         assert msgs[0].message.data.hashes[:3] == [b.header_hash for b in blocks_list[5:8]]
 
         # Wrong prev challenge
         msgs = [
             _
             async for _ in full_node_1.request_all_header_hashes_after(
-                wallet_protocol.RequestAllHeaderHashesAfter(uint32(5), blocks_list[4].proof_of_space.challenge_hash)
+                wallet_protocol.RequestAllHeaderHashesAfter(uint32(5), blocks_list[4].proof_of_space.challenge)
             )
         ]
         assert len(msgs) == 1
         assert isinstance(msgs[0].message.data, wallet_protocol.RejectAllHeaderHashesAfterRequest)
         assert msgs[0].message.data.starting_height == 5
-        assert msgs[0].message.data.previous_challenge_hash == blocks_list[4].proof_of_space.challenge_hash
+        assert msgs[0].message.data.previous_challenge_hash == blocks_list[4].proof_of_space.challenge
 
     @pytest.mark.asyncio
     async def test_request_header(self, two_nodes):

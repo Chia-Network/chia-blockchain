@@ -38,7 +38,7 @@ def iters_from_sub_block(
     quality = reward_chain_sub_block.proof_of_space.verify_and_get_quality_string()
     if reward_chain_sub_block.challenge_chain_sp_vdf is None:
         assert reward_chain_sub_block.signage_point_index == 0
-        cc_sp: bytes32 = reward_chain_sub_block.proof_of_space.challenge_hash
+        cc_sp: bytes32 = reward_chain_sub_block.proof_of_space.challenge
     else:
         cc_sp: bytes32 = reward_chain_sub_block.challenge_chain_sp_vdf.get_hash()
     required_iters = calculate_iterations_quality(
@@ -135,12 +135,12 @@ class LastState:
         if self.peak is not None:
             sub_block = self.peak.reward_chain_sub_block
             if chain == Chain.CHALLENGE_CHAIN:
-                return sub_block.challenge_chain_ip_vdf.challenge_hash
+                return sub_block.challenge_chain_ip_vdf.challenge
             if chain == Chain.REWARD_CHAIN:
                 return sub_block.get_hash()
             if chain == Chain.INFUSED_CHALLENGE_CHAIN:
                 if sub_block.infused_challenge_chain_ip_vdf is not None:
-                    return sub_block.infused_challenge_chain_ip_vdf.challenge_hash
+                    return sub_block.infused_challenge_chain_ip_vdf.challenge
                 if sub_block.deficit == 4:
                     return ChallengeBlockInfo(
                         sub_block.proof_of_space,
@@ -263,7 +263,7 @@ class Timelord:
             block.reward_chain_sp_vdf is not None
             and self.last_state.get_last_peak_challenge() is not None
             and self.last_state.get_last_peak_challenge()
-            != block.reward_chain_sp_vdf.challenge_hash
+            != block.reward_chain_sp_vdf.challenge
         ):
             return False
         return True
