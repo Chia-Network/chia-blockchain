@@ -7,6 +7,7 @@ from src.consensus.blockchain import Blockchain
 from src.full_node.sync_store import SyncStore
 from src.protocols import full_node_protocol
 from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+from src.server.server import ChiaServer
 from src.server.ws_connection import WSChiaConnection
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
@@ -42,6 +43,7 @@ class SyncPeersHandler:
         fork_height: uint32,
         blockchain: Blockchain,
         peak_height: uint32,
+        server: ChiaServer
     ):
         self.sync_store = sync_store
         # Set of outbound requests for every full_node peer, and time sent
@@ -61,7 +63,7 @@ class SyncPeersHandler:
 
         self.potential_blocks_received = self.sync_store.potential_blocks_received
         self.potential_blocks = self.sync_store.potential_blocks
-
+        self.server = server
         # No blocks received yet
         for height in range(self.fully_validated_up_to + 1, peak_height + 1):
             self.potential_blocks_received[uint32(height)] = asyncio.Event()
@@ -77,14 +79,33 @@ class SyncPeersHandler:
         # We have received all blocks
         return True
 
-    async def _add_to_request_sets(self) -> List[OutboundMessage]:
+    async def monitor_timeouts(self):
+        """
+        If any of our requests have timed out, disconnects from the node that should
+        have responded.
+        """
+        current_time = time.time()
+        remove_node_ids = []
+        for node_id, outbound_set in self.current_outbound_sets.items():
+            for _, time_requested in outbound_set.items():
+                if current_time - float(time_requested) > self.BLOCK_RESPONSE_TIMEOUT:
+                    remove_node_ids.append(node_id)
+        for rn_id in remove_node_ids:
+            if rn_id in self.current_outbound_sets:
+                log.warning(f"Timeout receiving block, closing connection with node {rn_id}")
+                self.current_outbound_sets.pop(rn_id, None)
+                if rn_id in self.server.all_connections:
+                    con = self.server.all_connections[rn_id]
+                    await con.close()
+
+    async def add_to_request_sets(self):
         """
         Refreshes the pointers of how far we validated and how far we downloaded. Then goes through
         all peers and sends requests to peers for the blocks we have not requested yet, or have
         requested to a peer that did not respond in time or disconnected.
         """
         if not self.sync_store.get_sync_mode():
-            return []
+            return
 
         #     fork       fully validated                           MAX_GAP   target (peak)
         # $$$$$X$$$$$$$$$$$$$$$X================----==---=--====---=--X------->
@@ -108,8 +129,8 @@ class SyncPeersHandler:
         to_send: List[uint32] = []
         # Finds a block height
         for height in range(
-            self.fully_validated_up_to + 1,
-            min(self.fully_validated_up_to + self.MAX_GAP + 1, self.peak_height + 1),
+                self.fully_validated_up_to + 1,
+                min(self.fully_validated_up_to + self.MAX_GAP + 1, self.peak_height + 1),
         ):
             if len(to_send) == free_slots:
                 # No more slots to send to any peers
@@ -135,8 +156,6 @@ class SyncPeersHandler:
         outbound_sets_list = list(self.current_outbound_sets.items())
         outbound_sets_list.sort(key=lambda x: len(x[1]))
         index = 0
-        messages: List[Any] = []
-        node_id = None
         for height in to_send:
             # Find a the next peer with an empty slot. There must be an empty slot: to_send
             # includes up to free_slots things, and current_outbound sets cannot change since there is
@@ -148,22 +167,14 @@ class SyncPeersHandler:
             node_id, request_set = outbound_sets_list[index % len(outbound_sets_list)]
             request_set[uint32(height)] = uint64(int(time.time()))
 
-            request = full_node_protocol.RequestBlock(
-                height, self.header_hashes[height]
-            )
-            msg = OutboundMessage(
-                NodeType.FULL_NODE,
-                Message("request_block", request),
-                Delivery.SPECIFIC,
-                node_id,
-            )
-            messages.append(msg)
+            request = full_node_protocol.RequestSubBlock(height, True)
+            msg = Message("request_block", request)
+            await self.server.send_to_specific([msg], node_id)
 
-        return messages
 
     async def new_block(
         self, block: Union[FullBlock, HeaderBlock]
-    ) -> List[OutboundMessage]:
+    ):
         """
         A new block was received from a peer.
         """
@@ -178,7 +189,7 @@ class SyncPeersHandler:
         # save block to DB
         self.potential_blocks[block.height] = block
         if not self.sync_store.get_sync_mode():
-            return []
+            return
 
         assert block.height in self.potential_blocks_received
 
@@ -189,8 +200,7 @@ class SyncPeersHandler:
             request_set.pop(header_hash, None)
 
         # add to request sets
-        requests = await self._add_to_request_sets()
-        return requests
+        await self.add_to_request_sets()
 
     def new_node_connected(self, node_id: bytes32):
         """

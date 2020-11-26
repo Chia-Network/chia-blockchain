@@ -1,24 +1,19 @@
+import asyncio
 import logging
-from typing import Dict, List, Optional, Callable, Set, Tuple
+from typing import Dict, List, Optional, Callable, Tuple
 
 from blspy import G1Element
 
-from src.server.server import ChiaServer
 from src.server.ws_connection import WSChiaConnection
 from src.util.keychain import Keychain
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import (
-    calculate_iterations_quality,
-    calculate_sp_interval_iters,
-)
+
 from src.protocols import farmer_protocol, harvester_protocol
 from src.server.outbound_message import Message, NodeType
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
-from src.types.pool_target import PoolTarget
-from src.util.api_decorators import api_request
-from src.util.ints import uint32, uint64
+from src.util.ints import uint64
 from src.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_pool_sk
 from src.util.chech32 import decode_puzzle_hash
 
@@ -58,10 +53,9 @@ class Farmer:
         self.cache_clear_task: asyncio.Task
         self.constants = consensus_constants
         self._shut_down = False
-        self.server: Optional[ChiaServer] = None
+        self.server = None
         self.keychain = keychain
         self.state_changed_callback: Optional[Callable] = None
-        self.log = log
 
         if len(self._get_public_keys()) == 0:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
@@ -94,24 +88,16 @@ class Farmer:
 
     async def _on_connect(self, peer: WSChiaConnection):
         # Sends a handshake to the harvester
+        msg = harvester_protocol.HarvesterHandshake(
+            self._get_public_keys(),
+            self.pool_public_keys,
+        )
         if peer.connection_type is NodeType.HARVESTER:
-            h_msg = harvester_protocol.HarvesterHandshake(
-                self._get_public_keys(), self.pool_public_keys
-            )
-            msg = Message("harvester_handshake", h_msg)
+            msg = Message("harvester_handshake", msg)
             await peer.send_message(msg)
-
-            if self.current_weight in self.challenges:
-                for posf in self.challenges[self.current_weight]:
-                    message = harvester_protocol.NewChallenge(posf.challenge_hash)
-                    msg = Message("new_challenge", message)
-                    await peer.send_message(msg)
 
     def _set_server(self, server):
         self.server = server
-
-    def _set_state_changed_callback(self, callback: Callable):
-        self.state_changed_callback = callback
 
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
@@ -122,31 +108,21 @@ class Farmer:
 
     def _get_private_keys(self):
         all_sks = self.keychain.get_all_private_keys()
-        return [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [
-            master_sk_to_pool_sk(sk) for sk, _ in all_sks
-        ]
+        return [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [master_sk_to_pool_sk(sk) for sk, _ in all_sks]
 
-    async def _get_required_iters(
-        self, challenge_hash: bytes32, quality_string: bytes32, plot_size: uint8
-    ):
-        weight: uint128 = self.challenge_to_weight[challenge_hash]
-        difficulty: uint64 = uint64(0)
-        for posf in self.challenges[weight]:
-            if posf.challenge_hash == challenge_hash:
-                difficulty = posf.difficulty
-        if difficulty == 0:
-            raise RuntimeError("Did not find challenge")
-
-        estimate_min = (
-            self.proof_of_time_estimate_ips
-            * self.constants.BLOCK_TIME_TARGET
-            / self.constants.MIN_ITERS_PROPORTION
-        )
-        estimate_min = uint64(int(estimate_min))
-        number_iters: uint64 = calculate_iterations_quality(
-            quality_string,
-            plot_size,
-            difficulty,
-            estimate_min,
-        )
-        return number_iters
+    async def _periodically_clear_cache_task(self):
+        time_slept: uint64 = uint64(0)
+        while not self._shut_down:
+            if time_slept > self.constants.SUB_SLOT_TIME_TARGET * 10:
+                removed_keys: List[bytes32] = []
+                for key, add_time in self.cache_add_time.items():
+                    self.sps.pop(key, None)
+                    self.proofs_of_space.pop(key, None)
+                    self.quality_str_to_identifiers.pop(key, None)
+                    self.number_of_responses.pop(key, None)
+                    removed_keys.append(key)
+                for key in removed_keys:
+                    self.cache_add_time.pop(key, None)
+                time_slept = uint64(0)
+            time_slept += 1
+            await asyncio.sleep(1)
