@@ -14,7 +14,7 @@ from src.consensus.constants import ConsensusConstants
 from src.server.server import ChiaServer
 from src.server.outbound_message import OutboundMessage, NodeType, Message
 from src.server.node_discovery import WalletPeers
-from src.util.ints import uint32, uint64, uint128
+from src.util.ints import uint32, uint64
 from src.types.sized_bytes import bytes32
 from src.wallet.settings.settings_objects import BackupInitialized
 from src.wallet.transaction_record import TransactionRecord
@@ -23,8 +23,6 @@ from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_state_manager import WalletStateManager
 from src.wallet.block_record import BlockRecord
 from src.types.header_block import HeaderBlock
-from src.types.full_block import FullBlock
-from src.full_node.blockchain import ReceiveBlockResult
 from src.util.path import path_from_root, mkdir
 from src.util.keychain import Keychain
 
