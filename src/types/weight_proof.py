@@ -78,5 +78,5 @@ class SubEpochChallengeSegment(Streamable):
 @streamable
 class WeightProof(Streamable):
     sub_epochs: List[SubEpochData]
-    sub_epoch_segments: List[SubEpochChallengeSegment]
+    sub_epoch_segments: List[SubEpochChallengeSegment]  # sampled sub epoch
     recent_reward_chain: List[RewardChainSubBlock]

@@ -24,14 +24,6 @@ class UnfinishedHeaderBlock(Streamable):
     def prev_header_hash(self):
         return self.foliage_sub_block.prev_sub_block_hash
 
-    # @property
-    # def height(self):
-    #     return self.reward_chain_sub_block.sub_block_height
-    #
-    # @property
-    # def weight(self):
-    #     return self.reward_chain_sub_block.weight
-
     @property
     def header_hash(self):
         return self.foliage_sub_block.get_hash()
