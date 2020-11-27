@@ -20,7 +20,7 @@ class FullNodeStore:
     constants: ConsensusConstants
 
     # Blocks which we have created, but don't have plot signatures yet, so not yet "unfinished blocks"
-    candidate_blocks: Dict[bytes32, UnfinishedBlock] = {}
+    candidate_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]] = {}
 
     # Header hashes of unfinished blocks that we have seen recently
     seen_unfinished_blocks: set = set()
@@ -29,7 +29,7 @@ class FullNodeStore:
     disconnected_blocks: Dict[bytes32, FullBlock] = {}
 
     # Unfinished blocks, keyed from reward hash
-    unfinished_blocks: Dict[bytes32, UnfinishedBlock] = {}
+    unfinished_blocks: Dict[bytes32, Tuple[uint32, UnfinishedBlock]] = {}
 
     # Finished slots and sps from the peak's slot onwards
     # We store all 32 SPs for each slot, starting as 32 Nones and filling them as we go
@@ -60,17 +60,21 @@ class FullNodeStore:
     def add_candidate_block(
         self,
         quality_string: bytes32,
+        height: uint32,
         unfinished_block: UnfinishedBlock,
     ):
-        self.candidate_blocks[quality_string] = unfinished_block
+        self.candidate_blocks[quality_string] = (height, unfinished_block)
 
     def get_candidate_block(self, quality_string: bytes32) -> Optional[UnfinishedBlock]:
-        return self.candidate_blocks.get(quality_string, None)
+        result = self.candidate_blocks.get(quality_string, None)
+        if result is None:
+            return None
+        return result[1]
 
     def clear_candidate_blocks_below(self, height: uint32) -> None:
         del_keys = []
         for key, value in self.candidate_blocks.items():
-            if value[4] < height:
+            if value[0] < height:
                 del_keys.append(key)
         for key in del_keys:
             try:
@@ -104,19 +108,25 @@ class FullNodeStore:
             if self.disconnected_blocks[key].height < height:
                 del self.disconnected_blocks[key]
 
-    def add_unfinished_block(self, unfinished_block: UnfinishedBlock) -> None:
-        self.unfinished_blocks[unfinished_block.reward_chain_sub_block.get_hash()] = unfinished_block
+    def add_unfinished_block(self, height: uint32, unfinished_block: UnfinishedBlock) -> None:
+        self.unfinished_blocks[unfinished_block.partial_hash] = (height, unfinished_block)
 
     def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
-        return self.unfinished_blocks.get(unfinished_reward_hash, None)
+        result = self.unfinished_blocks.get(unfinished_reward_hash, None)
+        if result is None:
+            return None
+        return result[1]
 
-    def get_unfinished_blocks(self) -> Dict[bytes32, UnfinishedBlock]:
+    def get_unfinished_blocks(self) -> Dict[bytes32, Tuple[uint32, UnfinishedBlock]]:
         return self.unfinished_blocks
 
     def clear_unfinished_blocks_below(self, height: uint32) -> None:
-        for partial_reward_hash, unfinished_block in self.unfinished_blocks.items():
-            if unfinished_block.height < height:
-                del self.unfinished_blocks[partial_reward_hash]
+        del_keys: List[bytes32] = []
+        for partial_reward_hash, (unf_height, unfinished_block) in self.unfinished_blocks.items():
+            if unf_height < height:
+                del_keys.append(partial_reward_hash)
+        for del_key in del_keys:
+            del self.unfinished_blocks[del_key]
 
     def remove_unfinished_block(self, partial_reward_hash: bytes32):
         if partial_reward_hash in self.unfinished_blocks:
@@ -160,8 +170,12 @@ class FullNodeStore:
             last_slot.challenge_chain.get_hash() if last_slot is not None else self.constants.FIRST_CC_CHALLENGE
         )
         last_slot_rc_hash = (
-            last_slot.reward_chain_chain.get_hash() if last_slot is not None else self.constants.FIRST_RC_CHALLENGE
+            last_slot.reward_chain.get_hash() if last_slot is not None else self.constants.FIRST_RC_CHALLENGE
         )
+        # Skip if already present
+        for slot, _, _ in self.finished_sub_slots:
+            if slot == eos:
+                return True
 
         if eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge != last_slot_ch:
             # This slot does not append to our next slot
@@ -377,7 +391,7 @@ class FullNodeStore:
                         continue
 
                 if sub_slot == peak_sub_slot:
-                    new_finished_sub_slots.append([(sub_slot, sps, total_iters)])
+                    new_finished_sub_slots.append((sub_slot, sps, total_iters))
                     self.finished_sub_slots = new_finished_sub_slots
         if reorg or len(new_finished_sub_slots) == 0:
             # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current
@@ -442,5 +456,7 @@ class FullNodeStore:
             new_final_index = pos_index + 1
         else:
             new_final_index = pos_index
+        if len(self.finished_sub_slots) < new_final_index + 1:
+            raise ValueError("Don't have enough sub-slots")
 
-        return [sub_slot for sub_slot, _, _, _ in self.finished_sub_slots[final_index + 1 : new_final_index + 1]]
+        return [sub_slot for sub_slot, _, _, in self.finished_sub_slots[final_index + 1 : new_final_index + 1]]
