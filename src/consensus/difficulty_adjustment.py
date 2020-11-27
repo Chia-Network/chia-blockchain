@@ -7,7 +7,7 @@ from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 from src.consensus.constants import ConsensusConstants
 from src.types.sized_bytes import bytes32
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.util.ints import uint32, uint64, uint128, uint8
 from src.util.significant_bits import (
     count_significant_bits,

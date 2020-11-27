@@ -29,7 +29,7 @@ from src.consensus.pot_iterations import (
 from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.full_node.signage_point import SignagePoint
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.consensus.vdf_info_computation import get_signage_point_vdf_info
 from src.plotting.plot_tools import load_plots, PlotInfo
 from src.types.classgroup import ClassgroupElement
@@ -425,7 +425,7 @@ class BlockTools:
             )
             # End of slot vdf info for icc and cc have to be from challenge block or start of slot, respectively,
             # in order for light clients to validate.
-            cc_vdf = VDFInfo(cc_vdf.challenge, ClassgroupElement.get_default_element(), sub_slot_iters, cc_vdf.output)
+            cc_vdf = VDFInfo(cc_vdf.challenge, sub_slot_iters, cc_vdf.output)
 
             if pending_ses:
                 sub_epoch_summary: Optional[SubEpochSummary] = None
@@ -467,7 +467,6 @@ class BlockTools:
                     icc_eos_iters = sub_slot_iters
                 icc_ip_vdf = VDFInfo(
                     icc_ip_vdf.challenge,
-                    ClassgroupElement.get_default_element(),
                     icc_eos_iters,
                     icc_ip_vdf.output,
                 )
@@ -684,9 +683,7 @@ class BlockTools:
                             cc_challenge,
                             ip_iters,
                         )
-                        cc_ip_vdf = replace(
-                            cc_ip_vdf, number_of_iterations=ip_iters, input=ClassgroupElement.get_default_element()
-                        )
+                        cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
                         rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
                             constants,
                             ClassgroupElement.get_default_element(),
@@ -851,7 +848,7 @@ def get_signage_point(
         rc_vdf_challenge,
         rc_vdf_iters,
     )
-    cc_sp_vdf = replace(cc_sp_vdf, number_of_iterations=sp_iters, input=ClassgroupElement.get_default_element())
+    cc_sp_vdf = replace(cc_sp_vdf, number_of_iterations=sp_iters)
     return SignagePoint(cc_sp_vdf, cc_sp_proof, rc_sp_vdf, rc_sp_proof)
 
 
@@ -887,7 +884,7 @@ def finish_sub_block(
         cc_vdf_challenge,
         new_ip_iters,
     )
-    cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters, input=ClassgroupElement.get_default_element())
+    cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
     deficit = calculate_deficit(
         constants, latest_sub_block.height + 1, latest_sub_block, is_overflow, len(finished_sub_slots) > 0
     )

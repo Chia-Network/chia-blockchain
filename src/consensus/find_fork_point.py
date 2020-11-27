@@ -1,6 +1,6 @@
-from typing import Dict, Any
+from typing import Dict
 
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 
 
 def find_fork_point_in_chain(hash_to_block: Dict, sub_block_1: SubBlockRecord, sub_block_2: SubBlockRecord) -> int:

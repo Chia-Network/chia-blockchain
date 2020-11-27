@@ -14,7 +14,6 @@ from src.consensus.constants import ConsensusConstants
 @streamable
 class VDFInfo(Streamable):
     challenge: bytes32  # Used to generate the discriminant (VDF group)
-    input: ClassgroupElement  # Used as the input element for the VDF
     number_of_iterations: uint64
     output: ClassgroupElement
 
@@ -28,6 +27,7 @@ class VDFProof(Streamable):
     def is_valid(
         self,
         constants: ConsensusConstants,
+        input_el: ClassgroupElement,
         info: VDFInfo,
         target_vdf_info: Optional[VDFInfo] = None,
     ):
@@ -45,7 +45,7 @@ class VDFProof(Streamable):
                 create_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS),
                 16,
             )
-            x = ClassGroup.from_ab_discriminant(info.input.a, info.input.b, disc)
+            x = ClassGroup.from_ab_discriminant(input_el.a, input_el.b, disc)
             y = ClassGroup.from_ab_discriminant(info.output.a, info.output.b, disc)
         except Exception:
             return False

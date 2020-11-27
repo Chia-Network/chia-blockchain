@@ -6,7 +6,7 @@ from src.types.program import Program
 from src.types.name_puzzle_condition import NPC
 from src.util.errors import Err
 from src.util.ints import uint64
-from src.consensus.mempool_check_conditions import get_name_puzzle_conditions
+from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 
 
 def calculate_cost_of_program(
@@ -27,10 +27,7 @@ def calculate_cost_of_program(
     total_vbyte_cost = 0
     for npc in npc_list:
         for condition, cvp_list in npc.condition_dict.items():
-            if (
-                condition is ConditionOpcode.AGG_SIG
-                or condition is ConditionOpcode.AGG_SIG_ME
-            ):
+            if condition is ConditionOpcode.AGG_SIG or condition is ConditionOpcode.AGG_SIG_ME:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.AGG_SIG.value
             elif condition is ConditionOpcode.CREATE_COIN:
                 total_vbyte_cost += len(cvp_list) * ConditionCost.CREATE_COIN.value
