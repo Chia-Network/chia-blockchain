@@ -37,4 +37,4 @@ def get_vdf_info_and_proof(
         ),
     )
     proof_bytes = result[2 * int_size : 4 * int_size]
-    return VDFInfo(challenge_hash, vdf_input, number_iters, output), VDFProof(uint8(0), proof_bytes)
+    return VDFInfo(challenge_hash, number_iters, output), VDFProof(uint8(0), proof_bytes)

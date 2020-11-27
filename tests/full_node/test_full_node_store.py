@@ -124,6 +124,10 @@ class TestFullNodeStore:
 
         # Test adding non genesis peak directly
         blocks = bt.get_consecutive_blocks(2, skip_slots=2)
+        blocks = bt.get_consecutive_blocks(5, block_list_input=blocks)
         for block in blocks:
             await empty_blockchain.receive_block(block)
             sb = empty_blockchain.sub_blocks[block.header_hash]
+            store.new_peak(
+                sb,
+            )

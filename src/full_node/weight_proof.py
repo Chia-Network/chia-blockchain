@@ -7,7 +7,7 @@ from src.consensus.pot_iterations import (
     calculate_iterations_quality,
     calculate_ip_iters,
 )
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
 from src.types.header_block import HeaderBlock
 from src.types.reward_chain_sub_block import RewardChainSubBlock

@@ -1,7 +1,7 @@
 from typing import Optional
 
 from src.consensus.constants import ConsensusConstants
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.util.ints import uint32, uint8
 
 

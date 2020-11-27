@@ -11,11 +11,10 @@ from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.difficulty_adjustment import get_next_difficulty, get_next_sub_slot_iters
 from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
-from src.types.header_block import HeaderBlock
-from src.types.unfinished_block import UnfinishedBlock
 from src.types.sized_bytes import bytes32
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import Err
@@ -306,6 +305,38 @@ class Blockchain:
             new_slot,
             curr.sp_total_iters(self.constants),
         )
+
+    async def get_pos_and_infusion_sub_slots(
+        self, header_hash: bytes32
+    ) -> Optional[Tuple[Optional[EndOfSubSlotBundle], Optional[EndOfSubSlotBundle]]]:
+        block: Optional[FullBlock] = await self.block_store.get_full_block(header_hash)
+        is_overflow = self.sub_blocks[block.header_hash].overflow
+        if block is None:
+            return None
+
+        curr: Optional[FullBlock] = block
+        while len(curr.finished_sub_slots) == 0 and curr.height > 0:
+            curr = await self.block_store.get_full_block(curr.prev_header_hash)
+            assert curr is not None
+
+        if len(curr.finished_sub_slots) == 0:
+            # This means we got to genesis and still no sub-slots
+            return None, None
+
+        if not is_overflow:
+            # Pos sub-slot is the same as infusion sub slot
+            return None, curr.finished_sub_slots[-1]
+
+        if len(curr.finished_sub_slots) > 1:
+            # Have both sub-slots
+            return curr.finished_sub_slots[-2], curr.finished_sub_slots[-1]
+
+        curr = await self.block_store.get_full_block(curr.prev_header_hash)
+        while len(curr.finished_sub_slots) == 0 and curr.height > 0:
+            curr = await self.block_store.get_full_block(curr.prev_header_hash)
+            assert curr is not None
+
+        # TODO
 
     async def pre_validate_blocks_mulpeakrocessing(
         self, blocks: List[FullBlock]
