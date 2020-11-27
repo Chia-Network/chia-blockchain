@@ -10,13 +10,6 @@ import aiosqlite
 import src.server.ws_connection as ws
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
-from src.consensus.pot_iterations import (
-    calculate_sp_iters,
-    calculate_ip_iters,
-    is_overflow_sub_block,
-    calculate_iterations_quality,
-)
 from src.consensus.pot_iterations import is_overflow_sub_block
 
 from src.full_node.block_store import BlockStore
@@ -25,7 +18,7 @@ from src.full_node.coin_store import CoinStore
 from src.full_node.full_node_store import FullNodeStore
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.full_node.mempool_manager import MempoolManager
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
@@ -36,7 +29,7 @@ from src.protocols import (
 )
 
 from src.server.node_discovery import FullNodePeers
-from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.server.ws_connection import WSChiaConnection
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle

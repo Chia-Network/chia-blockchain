@@ -12,7 +12,7 @@ from src.consensus.difficulty_adjustment import (
     get_next_difficulty,
     get_next_sub_slot_iters,
 )
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary

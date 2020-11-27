@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict
 
 from src.consensus.constants import ConsensusConstants
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.sized_bytes import bytes32

@@ -14,7 +14,7 @@ from src.full_node.block_store import BlockStore
 from src.consensus.blockchain_check_conditions import blockchain_check_conditions_dict
 from src.full_node.coin_store import CoinStore
 from src.consensus.cost_calculator import calculate_cost_of_program
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.coin import Coin
 from src.types.coin_record import CoinRecord
 from src.types.condition_opcodes import ConditionOpcode

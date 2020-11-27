@@ -7,7 +7,7 @@ from src.consensus.difficulty_adjustment import get_next_sub_slot_iters
 from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeBlockInfo
 from src.types.full_block import FullBlock
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint64, uint32
 from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary

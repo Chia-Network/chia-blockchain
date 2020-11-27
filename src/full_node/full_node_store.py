@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
 from src.full_node.signage_point import SignagePoint
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.protocols import timelord_protocol
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -182,15 +182,21 @@ class FullNodeStore:
             # This prevent other peers from appending fake VDFs to our cache
             return False
 
+        # TODO: Fix
         if not eos.proofs.challenge_chain_slot_proof.is_valid(
-            self.constants, eos.challenge_chain.challenge_chain_end_of_slot_vdf
+            self.constants, ClassgroupElement.get_default_element(), eos.challenge_chain.challenge_chain_end_of_slot_vdf
         ):
             return False
-        if not eos.proofs.reward_chain_slot_proof.is_valid(self.constants, eos.reward_chain.end_of_slot_vdf):
+        if not eos.proofs.reward_chain_slot_proof.is_valid(
+            self.constants, ClassgroupElement.get_default_element(), eos.reward_chain.end_of_slot_vdf
+        ):
             return False
         if eos.infused_challenge_chain is not None:
+            # TODO: Fix
             if not eos.proofs.infused_challenge_chain_slot_proof.is_valid(
-                self.constants, eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
+                self.constants,
+                ClassgroupElement.get_default_element(),
+                eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
             ):
                 return False
 
@@ -296,14 +302,12 @@ class FullNodeStore:
                     # Check VDFs from start of sub slot
                     cc_vdf_info_expected = VDFInfo(
                         ss_challenge_hash,
-                        ClassgroupElement.get_default_element(),
                         delta_iters,
                         signage_point.cc_vdf.output,
                     )
 
                     rc_vdf_info_expected = VDFInfo(
                         ss_reward_hash,
-                        ClassgroupElement.get_default_element(),
                         delta_iters,
                         signage_point.rc_vdf.output,
                     )
@@ -312,19 +316,21 @@ class FullNodeStore:
                     assert curr is not None
                     cc_vdf_info_expected = VDFInfo(
                         ss_challenge_hash,
-                        curr.challenge_vdf_output,
                         uint64(sp_total_iters - curr.total_iters),
                         signage_point.cc_vdf.output,
                     )
                     rc_vdf_info_expected = VDFInfo(
                         curr.reward_infusion_new_challenge,
-                        ClassgroupElement.get_default_element(),
                         uint64(sp_total_iters - curr.total_iters),
                         signage_point.rc_vdf.output,
                     )
-                if not signage_point.cc_proof.is_valid(self.constants, signage_point.cc_vdf, cc_vdf_info_expected):
+                if not signage_point.cc_proof.is_valid(
+                    self.constants, curr.challenge_vdf_output, signage_point.cc_vdf, cc_vdf_info_expected
+                ):
                     return False
-                if not signage_point.rc_proof.is_valid(self.constants, signage_point.rc_vdf, rc_vdf_info_expected):
+                if not signage_point.rc_proof.is_valid(
+                    self.constants, ClassgroupElement.get_default_element(), signage_point.rc_vdf, rc_vdf_info_expected
+                ):
                     return False
 
                 if index not in sp_dict:
