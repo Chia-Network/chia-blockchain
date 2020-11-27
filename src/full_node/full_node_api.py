@@ -4,15 +4,19 @@ import time
 import traceback
 
 import src.server.ws_connection as ws
-from typing import AsyncGenerator,  List, Optional, Tuple, Callable
+from typing import AsyncGenerator, List, Optional, Tuple, Callable
 from chiabip158 import PyBIP158
 from blspy import G2Element
 
 from src.consensus.block_creation import unfinished_block_to_full_block, create_unfinished_block
 from src.consensus.blockchain import ReceiveBlockResult
 from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
-from src.consensus.pot_iterations import is_overflow_sub_block, calculate_ip_iters, \
-    calculate_sp_iters, calculate_iterations_quality
+from src.consensus.pot_iterations import (
+    is_overflow_sub_block,
+    calculate_ip_iters,
+    calculate_sp_iters,
+    calculate_iterations_quality,
+)
 
 from src.full_node.full_node import FullNode
 from src.full_node.signage_point import SignagePoint
@@ -62,9 +66,7 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
-    async def request_peers(
-        self, request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection
-    ):
+    async def request_peers(self, request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection):
         if peer.peer_server_port is None:
             return None
         peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
@@ -74,9 +76,7 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def respond_peers(
-        self,
-        request: introducer_protocol.RespondPeers,
-        peer: ws.WSChiaConnection
+        self, request: introducer_protocol.RespondPeers, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
         await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), False)
         await peer.close()
@@ -138,7 +138,9 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
-    async def respond_transaction(self, tx: full_node_protocol.RespondTransaction, peer: ws.WSChiaConnection) -> Optional[Message]:
+    async def respond_transaction(
+        self, tx: full_node_protocol.RespondTransaction, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
         """
         Receives a full transaction from peer.
         If tx is added to mempool, send tx_id to others. (new_transaction)
@@ -195,9 +197,7 @@ class FullNodeAPI:
         return
 
     @api_request
-    async def respond_sub_block(
-        self, respond_sub_block: full_node_protocol.RespondSubBlock
-    ) -> Optional[Message]:
+    async def respond_sub_block(self, respond_sub_block: full_node_protocol.RespondSubBlock) -> Optional[Message]:
         """
         Receive a full block from a peer full node (or ourselves).
         """
@@ -207,13 +207,16 @@ class FullNodeAPI:
     async def new_unfinished_sub_block(
         self, new_unfinished_sub_block: full_node_protocol.NewUnfinishedSubBlock
     ) -> Optional[Message]:
-        if self.full_node.full_node_store.get_unfinished_block(new_unfinished_sub_block.unfinished_reward_hash) is not None:
+        if (
+            self.full_node.full_node_store.get_unfinished_block(new_unfinished_sub_block.unfinished_reward_hash)
+            is not None
+        ):
             return
 
         msg = Message(
-                "request_unfinished_sub_block",
-                full_node_protocol.RequestUnfinishedSubBlock(new_unfinished_sub_block.unfinished_reward_hash),
-            )
+            "request_unfinished_sub_block",
+            full_node_protocol.RequestUnfinishedSubBlock(new_unfinished_sub_block.unfinished_reward_hash),
+        )
         return msg
 
     @api_request
@@ -225,9 +228,9 @@ class FullNodeAPI:
         )
         if unfinished_block is not None:
             msg = Message(
-                    "respond_unfinished_block",
-                    full_node_protocol.RespondUnfinishedSubBlock(unfinished_block),
-                )
+                "respond_unfinished_block",
+                full_node_protocol.RespondUnfinishedSubBlock(unfinished_block),
+            )
             return msg
 
     @peer_required
@@ -283,7 +286,9 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
-    async def respond_signage_point(self, request: full_node_protocol.RespondSignagePoint, peer: ws.WSChiaConnection) -> Optional[Message]:
+    async def respond_signage_point(
+        self, request: full_node_protocol.RespondSignagePoint, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
         peak = self.full_node.blockchain.get_peak()
         next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.get_hash(), True)
 
@@ -424,6 +429,7 @@ class FullNodeAPI:
         unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(
             self.full_node.constants,
             total_iters_pos_slot,
+            sub_slot_iters,
             request.signage_point_index,
             sp_iters,
             ip_iters,
@@ -457,7 +463,9 @@ class FullNodeAPI:
         block, which only needs a Proof of Time to be finished. If the signature is valid,
         we call the unfinished_block routine.
         """
-        candidate: Optional[UnfinishedBlock] = self.full_node.full_node_store.get_candidate_block(farmer_request.quality_string)
+        candidate: Optional[UnfinishedBlock] = self.full_node.full_node_store.get_candidate_block(
+            farmer_request.quality_string
+        )
         if candidate is None:
             self.log.warning(f"Quality string {farmer_request.quality_string} not found in database")
             return
@@ -514,9 +522,15 @@ class FullNodeAPI:
                 return
 
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-            self.full_node.constants, unfinished_block, self.full_node.blockchain.height_to_hash, prev_sb, self.full_node.blockchain.sub_blocks
+            self.full_node.constants,
+            unfinished_block,
+            self.full_node.blockchain.height_to_hash,
+            prev_sb,
+            self.full_node.blockchain.sub_blocks,
         )
-        overflow = is_overflow_sub_block(self.full_node.constants, unfinished_block.reward_chain_sub_block.signage_point_index)
+        overflow = is_overflow_sub_block(
+            self.full_node.constants, unfinished_block.reward_chain_sub_block.signage_point_index
+        )
         if overflow:
             finished_sub_slots = self.full_node.full_node_store.get_finished_sub_slots(
                 prev_sb,
@@ -544,7 +558,9 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
-    async def new_signage_point_vdf(self, request: timelord_protocol.NewSignagePointVDF, peer: ws.WSChiaConnection) -> Optional[Message]:
+    async def new_signage_point_vdf(
+        self, request: timelord_protocol.NewSignagePointVDF, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
         full_node_message = full_node_protocol.RespondSignagePoint(
             request.index_from_challenge,
             request.challenge_chain_sp_vdf,
@@ -556,7 +572,9 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
-    async def new_end_of_sub_slot_vdf(self, request: timelord_protocol.NewEndOfSubSlotVDF, peer: ws.WSChiaConnection) -> Optional[Message]:
+    async def new_end_of_sub_slot_vdf(
+        self, request: timelord_protocol.NewEndOfSubSlotVDF, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
         # Calls our own internal message to handle the end of sub slot, and potentially broadcasts to other peers.
         full_node_message = full_node_protocol.RespondEndOfSubSlot(request.end_of_sub_slot_bundle)
         return await self.respond_end_of_sub_slot(full_node_message, peer)

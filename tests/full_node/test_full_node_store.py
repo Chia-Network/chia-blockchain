@@ -12,6 +12,7 @@ from src.types.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.ints import uint32, uint64
 from tests.setup_nodes import test_constants, bt
+from tests.full_node.fixtures import empty_blockchain
 
 
 @pytest.fixture(scope="module")
@@ -23,7 +24,7 @@ def event_loop():
 class TestFullNodeStore:
     @pytest.mark.asyncio
     async def test_basic_store(self, empty_blockchain):
-        blocks = bt.get_consecutive_blocks(test_constants, 10)
+        blocks = bt.get_consecutive_blocks(10)
 
         store = await FullNodeStore.create(test_constants)
 
@@ -44,8 +45,8 @@ class TestFullNodeStore:
 
         # Add/get candidate block
         assert store.get_candidate_block(unfinished_blocks[0].get_hash()) is None
-        for unf_block in unfinished_blocks:
-            store.add_candidate_block(unf_block.get_hash(), unf_block)
+        for height, unf_block in enumerate(unfinished_blocks):
+            store.add_candidate_block(unf_block.get_hash(), height, unf_block)
 
         assert store.get_candidate_block(unfinished_blocks[4].get_hash()) == unfinished_blocks[4]
         store.clear_candidate_blocks_below(uint32(8))
@@ -56,7 +57,7 @@ class TestFullNodeStore:
         h_hash_1 = bytes32(token_bytes(32))
         assert not store.seen_unfinished_block(h_hash_1)
         assert store.seen_unfinished_block(h_hash_1)
-        await store.clear_seen_unfinished_blocks()
+        store.clear_seen_unfinished_blocks()
         assert not store.seen_unfinished_block(h_hash_1)
 
         # Disconnected blocks
@@ -67,14 +68,14 @@ class TestFullNodeStore:
             assert store.get_disconnected_block(block.header_hash) == block
 
         # Add/get unfinished block
-        for unf_block in unfinished_blocks:
+        for height, unf_block in enumerate(unfinished_blocks):
             assert store.get_unfinished_block(unf_block.partial_hash) is None
-            store.add_unfinished_block(unf_block)
+            store.add_unfinished_block(height, unf_block)
             assert store.get_unfinished_block(unf_block.partial_hash) == unf_block
             store.remove_unfinished_block(unf_block.partial_hash)
             assert store.get_unfinished_block(unf_block.partial_hash) is None
 
-        blocks = bt.get_consecutive_blocks(test_constants, 1, skip_slots=5)
+        blocks = bt.get_consecutive_blocks(1, skip_slots=5)
         sub_slots = blocks[0].finished_sub_slots
         assert len(sub_slots) == 5
 
@@ -87,13 +88,12 @@ class TestFullNodeStore:
 
         # Test adding sub-slots after genesis
         assert store.new_finished_sub_slot(sub_slots[0], {}, None)
-        assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) == sub_slots[0]
+        assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash())[0] == sub_slots[0]
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
         assert store.new_finished_sub_slot(sub_slots[1], {}, None)
         for i in range(len(sub_slots)):
-            if i > 0:
-                assert store.new_finished_sub_slot(sub_slots[i], {}, None)
-                assert store.get_sub_slot(sub_slots[i].challenge_chain.get_hash()) == sub_slots[i]
+            assert store.new_finished_sub_slot(sub_slots[i], {}, None)
+            assert store.get_sub_slot(sub_slots[i].challenge_chain.get_hash())[0] == sub_slots[i]
 
         assert store.get_finished_sub_slots(None, {}, sub_slots[-1].challenge_chain.get_hash(), False) == sub_slots
         with raises(ValueError):
@@ -112,8 +112,8 @@ class TestFullNodeStore:
         assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[1].challenge_chain.get_hash()) is None
         assert store.get_sub_slot(sub_slots[2].challenge_chain.get_hash()) is None
-        assert store.get_sub_slot(sub_slots[3].challenge_chain.get_hash()) == sub_slots[3]
-        assert store.get_sub_slot(sub_slots[4].challenge_chain.get_hash()) == sub_slots[4]
+        assert store.get_sub_slot(sub_slots[3].challenge_chain.get_hash())[0] == sub_slots[3]
+        assert store.get_sub_slot(sub_slots[4].challenge_chain.get_hash())[0] == sub_slots[4]
 
         assert (
             store.get_finished_sub_slots(
@@ -123,7 +123,7 @@ class TestFullNodeStore:
         )
 
         # Test adding non genesis peak directly
-        blocks = bt.get_consecutive_blocks(test_constants, 2, skip_slots=2)
+        blocks = bt.get_consecutive_blocks(2, skip_slots=2)
         for block in blocks:
             await empty_blockchain.receive_block(block)
             sb = empty_blockchain.sub_blocks[block.header_hash]
