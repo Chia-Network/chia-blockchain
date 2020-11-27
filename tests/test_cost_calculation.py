@@ -4,7 +4,7 @@ import pytest
 
 from src.full_node.bundle_tools import best_solution_program
 from src.consensus.cost_calculator import calculate_cost_of_program
-from src.consensus.mempool_check_conditions import get_name_puzzle_conditions
+from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from tests.setup_nodes import test_constants, bt
 
 BURN_PUZZLE_HASH = b"0" * 32

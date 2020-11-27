@@ -4,10 +4,9 @@ from typing import Dict, Optional
 
 import pytest
 
-from src.consensus.blockchain import ReceiveBlockResult
 from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.consensus.pot_iterations import calculate_iterations_quality
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.weight_proof import (
     get_sub_epoch_block_num,
     WeightProofFactory,
@@ -20,7 +19,6 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint32, uint64
 from src.util.logging import initialize_logging
 from tests.setup_nodes import test_constants
-from tests.full_node.fixtures import empty_blockchain, default_1000_blocks as blocks
 
 
 @pytest.fixture(scope="module")

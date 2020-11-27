@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 
 log = logging.getLogger(__name__)
 

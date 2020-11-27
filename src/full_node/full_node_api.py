@@ -1,7 +1,5 @@
-import asyncio
 import dataclasses
 import time
-import traceback
 
 import src.server.ws_connection as ws
 from typing import AsyncGenerator, List, Optional, Tuple, Callable
@@ -9,7 +7,6 @@ from chiabip158 import PyBIP158
 from blspy import G2Element
 
 from src.consensus.block_creation import unfinished_block_to_full_block, create_unfinished_block
-from src.consensus.blockchain import ReceiveBlockResult
 from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
 from src.consensus.pot_iterations import (
     is_overflow_sub_block,
@@ -20,16 +17,15 @@ from src.consensus.pot_iterations import (
 
 from src.full_node.full_node import FullNode
 from src.full_node.signage_point import SignagePoint
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 
 from src.protocols import (
     introducer_protocol,
     farmer_protocol,
     full_node_protocol,
     timelord_protocol,
-    wallet_protocol,
 )
-from src.server.outbound_message import Message, NodeType, OutboundMessage, Delivery
+from src.server.outbound_message import Message, NodeType, OutboundMessage
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
@@ -40,8 +36,7 @@ from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required
-from src.util.errors import ConsensusError
-from src.util.ints import uint32, uint64, uint128, uint8
+from src.util.ints import uint64, uint128, uint8
 from src.types.peer_info import PeerInfo
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]

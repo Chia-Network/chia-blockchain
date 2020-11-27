@@ -32,7 +32,7 @@ class TestGenesisBlock:
         vdf, proof = get_vdf_info_and_proof(
             test_constants, ClassgroupElement.get_default_element(), test_constants.FIRST_CC_CHALLENGE, uint64(231)
         )
-        if proof.is_valid(test_constants, vdf) is False:
+        if proof.is_valid(test_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
 
     @pytest.mark.asyncio
@@ -150,8 +150,7 @@ class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_empty_genesis(self, empty_blockchain):
         blockchain = empty_blockchain
-        blocks = bt.get_consecutive_blocks(2, skip_slots=3)
-        for block in blocks:
+        for block in bt.get_consecutive_blocks(2, skip_slots=3):
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
 
@@ -314,7 +313,6 @@ class TestBlockHeaderValidation:
             InfusedChallengeChainSubSlot(
                 VDFInfo(
                     bytes([0] * 32),
-                    ClassgroupElement.get_default_element(),
                     uint64(1200),
                     ClassgroupElement.get_default_element(),
                 )
@@ -388,25 +386,6 @@ class TestBlockHeaderValidation:
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_3)
-                assert err == Err.INVALID_ICC_EOS_VDF
-
-                # Bad input
-                new_finished_ss_4 = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "infused_challenge_chain",
-                    InfusedChallengeChainSubSlot(
-                        replace(
-                            block.finished_sub_slots[
-                                -1
-                            ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            input=ClassgroupElement(int512(3), int512(5)),
-                        )
-                    ),
-                )
-                block_bad_4 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_4]
-                )
-                result, err, _ = await empty_blockchain.receive_block(block_bad_4)
                 assert err == Err.INVALID_ICC_EOS_VDF
 
                 # Bad proof
@@ -628,22 +607,6 @@ class TestBlockHeaderValidation:
                 result, err, _ = await empty_blockchain.receive_block(block_bad_3)
                 assert err == Err.INVALID_CC_EOS_VDF
 
-                # Bad input
-                new_finished_ss_4 = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "challenge_chain",
-                    recursive_replace(
-                        block.finished_sub_slots[-1].challenge_chain,
-                        "challenge_chain_end_of_slot_vdf.input",
-                        ClassgroupElement(int512(5), int512(1)),
-                    ),
-                )
-                block_bad_4 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_4]
-                )
-                result, err, _ = await empty_blockchain.receive_block(block_bad_4)
-                assert err == Err.INVALID_CC_EOS_VDF
-
                 # Bad proof
                 new_finished_ss_5 = recursive_replace(
                     block.finished_sub_slots[-1],
@@ -713,22 +676,6 @@ class TestBlockHeaderValidation:
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_3)
-                assert err == Err.INVALID_RC_EOS_VDF
-
-                # Bad input
-                new_finished_ss_4 = recursive_replace(
-                    block.finished_sub_slots[-1],
-                    "reward_chain",
-                    recursive_replace(
-                        block.finished_sub_slots[-1].reward_chain,
-                        "end_of_slot_vdf.input",
-                        ClassgroupElement(int512(5), int512(1)),
-                    ),
-                )
-                block_bad_4 = recursive_replace(
-                    block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_4]
-                )
-                result, err, _ = await empty_blockchain.receive_block(block_bad_4)
                 assert err == Err.INVALID_RC_EOS_VDF
 
                 # Bad proof
@@ -968,12 +915,6 @@ class TestBlockHeaderValidation:
                 assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
                 block_bad = recursive_replace(
                     blocks[-1],
-                    "reward_chain_sub_block.reward_chain_sp_vdf.input",
-                    ClassgroupElement(int512(10), int512(2)),
-                )
-                assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_SP_VDF
-                block_bad = recursive_replace(
-                    blocks[-1],
                     "reward_chain_sub_block.reward_chain_sp_vdf.output",
                     ClassgroupElement(int512(10), int512(2)),
                 )
@@ -1014,12 +955,6 @@ class TestBlockHeaderValidation:
             if blocks[-1].reward_chain_sub_block.signage_point_index != 0:
                 block_bad = recursive_replace(
                     blocks[-1], "reward_chain_sub_block.challenge_chain_sp_vdf.challenge", std_hash(b"1")
-                )
-                assert (await empty_blockchain.receive_block(block_bad))[0] == ReceiveBlockResult.INVALID_BLOCK
-                block_bad = recursive_replace(
-                    blocks[-1],
-                    "reward_chain_sub_block.challenge_chain_sp_vdf.input",
-                    ClassgroupElement(int512(10), int512(2)),
                 )
                 assert (await empty_blockchain.receive_block(block_bad))[0] == ReceiveBlockResult.INVALID_BLOCK
                 block_bad = recursive_replace(
@@ -1301,12 +1236,6 @@ class TestBlockHeaderValidation:
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_IP_VDF
         block_bad = recursive_replace(
             blocks[-1],
-            "reward_chain_sub_block.challenge_chain_ip_vdf.input",
-            ClassgroupElement(int512(10), int512(2)),
-        )
-        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_CC_IP_VDF
-        block_bad = recursive_replace(
-            blocks[-1],
             "reward_chain_sub_block.challenge_chain_ip_vdf.output",
             ClassgroupElement(int512(10), int512(2)),
         )
@@ -1333,12 +1262,6 @@ class TestBlockHeaderValidation:
         blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
         block_bad = recursive_replace(
             blocks[-1], "reward_chain_sub_block.reward_chain_ip_vdf.challenge", std_hash(b"1")
-        )
-        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_IP_VDF
-        block_bad = recursive_replace(
-            blocks[-1],
-            "reward_chain_sub_block.reward_chain_ip_vdf.input",
-            ClassgroupElement(int512(10), int512(2)),
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_RC_IP_VDF
         block_bad = recursive_replace(
@@ -1371,11 +1294,6 @@ class TestBlockHeaderValidation:
             blocks[-1], "reward_chain_sub_block.infused_challenge_chain_ip_vdf.challenge", std_hash(b"1")
         )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_ICC_VDF
-        block_bad = recursive_replace(
-            blocks[-1],
-            "reward_chain_sub_block.infused_challenge_chain_ip_vdf.input",
-            ClassgroupElement(int512(10), int512(2)),
-        )
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_ICC_VDF
         block_bad = recursive_replace(
             blocks[-1],

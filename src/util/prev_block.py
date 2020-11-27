@@ -1,6 +1,6 @@
 from typing import Dict
 
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint128
 

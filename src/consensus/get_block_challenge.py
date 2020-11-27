@@ -1,7 +1,7 @@
 from typing import List, Union, Dict
 
 from src.consensus.constants import ConsensusConstants
-from src.full_node.sub_block_record import SubBlockRecord
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
