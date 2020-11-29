@@ -178,7 +178,7 @@ class TestWeightProof:
         valid = wpf.validate_weight(
             wp,
             first_sub_epoch_summary.prev_subepoch_summary_hash,
-            uint64(0),
+            test_constants.DIFFICULTY_STARTING,
             first_after_se.sub_slot_iters,
             curr.weight,
         )
