@@ -22,7 +22,7 @@ from src.types.weight_proof import (
     SubSlotData,
 )
 from src.util.hash import std_hash
-from src.util.ints import uint32, uint64, uint8
+from src.util.ints import uint32, uint64, uint8, uint128
 from src.util.vdf_prover import get_vdf_info_and_proof
 
 
@@ -97,11 +97,20 @@ class WeightProofFactory:
         return WeightProof(sub_epoch_data, sub_epoch_segments, proof_blocks)
 
     def validate_weight(
-        self, weight_proof: WeightProof, prev_ses_hash: bytes32, curr_difficulty: uint64, curr_sub_slot_iters: uint64
+        self,
+        weight_proof: WeightProof,
+        prev_ses_hash: bytes32,
+        fork_point_difficulty: uint64,
+        fork_point_sub_slot_iters: uint64,
+        fork_point_weight: uint128,
     ) -> bool:
         # sub epoch summaries validate hashes
         summaries, sub_epoch_data_weight = map_summaries(
-            self.constants.SUB_EPOCH_SUB_BLOCKS, prev_ses_hash, weight_proof, curr_difficulty, curr_sub_slot_iters
+            self.constants.SUB_EPOCH_SUB_BLOCKS,
+            prev_ses_hash,
+            weight_proof,
+            fork_point_difficulty,
+            fork_point_sub_slot_iters,
         )
 
         # last ses
@@ -109,28 +118,31 @@ class WeightProofFactory:
 
         # validate weight
         # find first block after last sub epoch end
-        block_idx = get_last_ses_block_idx(weight_proof, ses, sub_epoch_data_weight)
+        self.log.info(
+            f"diff {fork_point_difficulty}, sub epoch data weight {sub_epoch_data_weight}, start weight {fork_point_weight}"
+        )
+        block_idx = get_last_ses_block_idx(
+            weight_proof.recent_reward_chain, uint128(fork_point_difficulty), sub_epoch_data_weight + fork_point_weight
+        )
         if block_idx is None:
-            self.log.error(f"could not validate weight, last sub epoch weight does not match")
-
-        self.log.error(f"last ses first block is at index")
-        challenge = weight_proof.recent_reward_chain[block_idx].infused_challenge_chain_ip_vdf.challenge
-        # validate hash
-        if challenge != ses.reward_chain_hash:
-            self.log.error(f"failed to validate weight got {challenge} expected {ses.reward_chain_hash}")
+            self.log.error(f"could not find first block after last sub epoch end")
+            return False
+        last_ses_block = weight_proof.recent_reward_chain[block_idx]
+        self.log.error(f"last ses at height {last_ses_block.sub_block_height}")
+        # use block we found by weight to validate last ses_hash
+        cc_vdf = weight_proof.recent_reward_chain[block_idx].challenge_chain_ip_vdf
+        challenge = std_hash(
+            ChallengeChainSubSlot(cc_vdf, None, std_hash(ses), ses.new_sub_slot_iters, ses.new_difficulty)
+        )
+        expected_challenge = weight_proof.recent_reward_chain[block_idx + 1].challenge_chain_sp_vdf.challenge
+        if challenge != expected_challenge:
+            self.log.error(
+                f"failed to validate ses hashes block height {weight_proof.recent_reward_chain[block_idx].sub_block_height} {challenge}  {expected_challenge}"
+            )
             return False
 
-        # validate last ses_hash
-        cc_vdf = weight_proof.recent_reward_chain[block_idx - 1].challenge_chain_ip_vdf
-        challenge = std_hash(ChallengeChainSubSlot(cc_vdf, None, std_hash(ses), ses.new_ips, ses.new_difficulty))
-        if challenge != weight_proof.recent_reward_chain[block_idx + 1].challenge_chain_sp_vdf.challenge:
-            self.log.error("failed to validate ses hashes")
-            return False
-
-        total_ip_iters = uint64(0)
-        total_challenge_blocks = 0
-        total_slot_iters = uint64(0)
-        total_slots = 0
+        total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
+        total_slot_iters, total_slots = uint64(0), uint64(0)
         # validate sub epoch samples
         for segment in weight_proof.sub_epoch_segments:
             ses = summaries[segment.sub_epoch_n]
@@ -182,6 +194,7 @@ class WeightProofFactory:
             avg_ip_iters = total_ip_iters / total_challenge_blocks
             avg_slot_iters = total_slot_iters / total_slots
             if avg_slot_iters / avg_ip_iters < float(self.constants.WEIGHT_PROOF_THRESHOLD):
+                self.log.error(f"bad avg challenge block positioning ration: {avg_slot_iters / avg_ip_iters}")
                 return False
 
         # validate recent reward chain
@@ -425,24 +438,24 @@ def count_sub_epochs_in_range(
     return sub_epochs_n
 
 
+# todo fix to correct vdf inputs
 def validate_sub_slot_vdfs(
     constants: ConsensusConstants, sub_slot: SubSlotData, vdf_info: VDFInfo, infused: bool
 ) -> bool:
+    default = ClassgroupElement.get_default_element()
     if infused:
-        if not sub_slot.cc_signage_point_vdf.is_valid(constants, vdf_info):
+        if not sub_slot.cc_signage_point_vdf.is_valid(constants, default, vdf_info):
+            return False
+        if not sub_slot.cc_infusion_point_vdf.is_valid(constants, default, vdf_info):
+            return False
+        if not sub_slot.cc_infusion_to_slot_end_vdf.is_valid(constants, default, vdf_info):
+            return False
+        if not sub_slot.icc_infusion_to_slot_end_vdf.is_valid(constants, default, vdf_info):
             return False
 
-        if not sub_slot.cc_infusion_point_vdf.is_valid(constants, vdf_info):
-            return False
-
-        if not sub_slot.cc_infusion_to_slot_end_vdf.is_valid(constants, vdf_info):
-            return False
-
-        if not sub_slot.icc_infusion_to_slot_end_vdf.is_valid(constants, vdf_info):
-            return False
         return True
 
-    return sub_slot.cc_slot_vdf.is_valid(constants, vdf_info)
+    return sub_slot.cc_slot_vdf.is_valid(constants, ClassgroupElement.get_default_element(), vdf_info)
 
 
 def map_summaries(
@@ -451,10 +464,9 @@ def map_summaries(
     weight_proof: WeightProof,
     curr_difficulty: uint64,
     curr_sub_slot_iters: uint64,
-) -> (Dict[uint32, SubEpochSummary], uint64):
-    sub_epoch_data_weight: uint64 = uint64(0)
+) -> (Dict[uint32, SubEpochSummary], uint128):
+    sub_epoch_data_weight: uint128 = uint128(0)
     summaries: Dict[uint32, SubEpochSummary] = {}
-
     for idx, sub_epoch_data in enumerate(weight_proof.sub_epochs):
         ses = SubEpochSummary(
             ses_hash,
@@ -464,13 +476,13 @@ def map_summaries(
             curr_sub_slot_iters,
         )
 
+        # if new epoch update diff and iters
         if sub_epoch_data.new_sub_slot_iters is not None:
-            curr_difficulty = (sub_epoch_data.new_difficulty,)
-            curr_sub_slot_iters = (sub_epoch_data.new_sub_slot_iters,)
+            curr_difficulty = sub_epoch_data.new_difficulty
+            curr_sub_slot_iters = sub_epoch_data.new_sub_slot_iters
 
-        sub_epoch_data_weight += sub_epoch_data.new_difficulty * (
-            sub_blocks_for_se + sub_epoch_data.num_sub_blocks_overflow
-        )
+        print(f"map_summaries curr diff {curr_difficulty} sub_blocks_n {sub_blocks_for_se}")
+        sub_epoch_data_weight += curr_difficulty * (sub_blocks_for_se + sub_epoch_data.num_sub_blocks_overflow)
 
         # add to dict
         summaries[idx] = ses
@@ -479,9 +491,9 @@ def map_summaries(
 
 
 def get_last_ses_block_idx(
-    weight_proof: WeightProof, ses: SubEpochSummary, sub_epoch_data_weight: uint64
+    recent_reward_chain: List[RewardChainSubBlock], difficulty: uint128, prev_weight: uint128
 ) -> Optional[uint32]:
-    for idx, block in enumerate(weight_proof.recent_reward_chain):
-        if block.weight - ses.new_difficulty == sub_epoch_data_weight:
+    for idx, block in enumerate(recent_reward_chain):
+        if block.weight - difficulty == prev_weight:
             return idx
     return None
