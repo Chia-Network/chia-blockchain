@@ -19,6 +19,7 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint32, uint64
 from src.util.logging import initialize_logging
 from tests.setup_nodes import test_constants
+from tests.full_node.fixtures import empty_blockchain, default_10000_blocks as blocks
 
 
 @pytest.fixture(scope="module")
@@ -58,7 +59,6 @@ def load_blocks_dont_validate(blocks):
     header_cache: Dict[bytes32, HeaderBlock] = {}
     height_to_hash: Dict[uint32, bytes32] = {}
     sub_blocks: Dict[bytes32, SubBlockRecord] = {}
-    # Defines the path from genesis to the peak, no orphan sub-blocks
     height_to_hash: Dict[uint32, bytes32]
     prev_block = None
     difficulty = test_constants.DIFFICULTY_STARTING
@@ -110,14 +110,6 @@ class TestWeightProof:
 
     @pytest.mark.asyncio
     async def test_create_sub_epoch_segments(self, empty_blockchain, blocks):
-        # assert empty_blockchain.get_peak() is None
-        # header_cache: Dict[bytes32, HeaderBlock] = {}
-        # blockchain = empty_blockchain
-        # for block in blocks:
-        #     result, err, _ = await blockchain.receive_block(block)
-        #     assert err is None
-        #     assert result == ReceiveBlockResult.NEW_PEAK
-        #     header_cache[block.header_hash] = block.get_block_header()
         header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
         curr = get_sub_epoch_start(sub_blocks, blocks[-1].prev_header_hash)
         sub_epoch_blocks_n: uint32 = get_sub_epoch_block_num(curr, sub_blocks)
@@ -133,47 +125,55 @@ class TestWeightProof:
 
     @pytest.mark.asyncio
     async def test_weight_proof(self, empty_blockchain, blocks):
-        # assert empty_blockchain.get_peak() is None
-        # header_cache: Dict[bytes32, HeaderBlock] = {}
-        # blockchain = empty_blockchain
-        # for block in blocks:
-        #     result, err, _ = await blockchain.receive_block(block)
-        #     assert err is None
-        #     assert result == ReceiveBlockResult.NEW_PEAK
-        #     header_cache[block.header_hash] = block.get_block_header()
         header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
-
-        sub_epoch_n = 2
+        sub_epoch_idx = 3
         num_of_blocks = uint32(0)
         curr = get_sub_epoch_start(sub_blocks, blocks[-1].prev_header_hash)
         first_sub_epoch_summary = None
-        challenge_blocks_n = 0
         print("total blocks: ", len(sub_blocks))
-        while sub_epoch_n + 1 > 0:
+        count = sub_epoch_idx
+        sub_epoch_sub_blocks = 0
+        while not count + 1 == 0:
             if curr.sub_epoch_summary_included is not None:
-                sub_epoch_n -= 1
+                print(f"block {curr.height} has ses,ses sub blocks {sub_epoch_sub_blocks}")
+                count -= 1
+                sub_epoch_sub_blocks = 0
                 first_sub_epoch_summary = curr.sub_epoch_summary_included
             if curr.is_challenge_sub_block(test_constants):
-                challenge_blocks_n += 1
+                print(f"block height {curr.height} is challenge block hash {curr.header_hash}")
             # next sub block
             curr = sub_blocks[curr.prev_hash]
             num_of_blocks += 1
+            sub_epoch_sub_blocks += 1
 
-        print(f"fork point is {len(sub_blocks) - num_of_blocks}")
+        # num_of_blocks = 10000
+        # print(f"fork point is {len(sub_blocks) - num_of_blocks}")
         print(f"num of blocks in proof: {num_of_blocks}")
-        print(f"num of sub epochs in proof: {sub_epoch_n}")
+        print(f"num of sub epochs in proof: {sub_epoch_idx}")
         wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
-        wpf.log.setLevel(logging.DEBUG)
+        wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
         wp = wpf.make_weight_proof(uint32(len(header_cache)), num_of_blocks)
 
         assert wp is not None
         assert len(wp.sub_epochs) > 0
         assert len(wp.sub_epoch_segments) > 0
-        print(f"number of challenge segments {len(wp.sub_epoch_segments)}")
-        assert len(wp.sub_epoch_segments) == challenge_blocks_n  # todo check equals num of challenge blocks
-        print(f"number of sub-epochs {len(wp.sub_epochs)}")
-        assert len(wp.sub_epochs) == sub_epoch_n
-        assert wp.validate_weight(test_constants, wp, first_sub_epoch_summary.prev_subepoch_summary_hash)
+        # for each sampled sub epoch, validate number of segments
+        challenges_sub_epoch_n: Dict[int, int] = {}
+        # map challenges per sub_epoch
+        for segment in wp.sub_epoch_segments:
+            print("found challenge block in epoch number ", segment.sub_epoch_n)
+            if not segment.sub_epoch_n in challenges_sub_epoch_n:
+                challenges_sub_epoch_n[segment.sub_epoch_n] = 0
+            challenges_sub_epoch_n[segment.sub_epoch_n] += 1
+        print("number of sampled sub_epochs: ", len(challenges_sub_epoch_n))
+        for sub_epoch_idx in challenges_sub_epoch_n:
+            print("sub_epoch_n", sub_epoch_idx, "number of slots in sub epoch", challenges_sub_epoch_n[sub_epoch_idx])
 
-        #   assert no gaps
+        # todo get base difficulty and slot iters
+        # curr_difficulty = uint64(0)
+        # curr_sub_slot_iters = uint64(0)
+        # valid = wpf.validate_weight(
+        #     wp, first_sub_epoch_summary.prev_subepoch_summary_hash, curr_difficulty, curr_sub_slot_iters
+        # )
+        # assert valid
