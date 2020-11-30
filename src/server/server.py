@@ -29,15 +29,21 @@ def ssl_context_for_server(
     private_cert_path: Path, private_key_path: Path, require_cert: bool = False
 ) -> Optional[ssl.SSLContext]:
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.CLIENT_AUTH)
-    ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
+    ssl_context.load_cert_chain(
+        certfile=str(private_cert_path), keyfile=str(private_key_path)
+    )
     ssl_context.load_verify_locations(str(private_cert_path))
     ssl_context.verify_mode = ssl.CERT_REQUIRED if require_cert else ssl.CERT_NONE
     return ssl_context
 
 
-def ssl_context_for_client(private_cert_path: Path, private_key_path: Path, auth: bool) -> Optional[ssl.SSLContext]:
+def ssl_context_for_client(
+    private_cert_path: Path, private_key_path: Path, auth: bool
+) -> Optional[ssl.SSLContext]:
     ssl_context = ssl._create_unverified_context(purpose=ssl.Purpose.SERVER_AUTH)
-    ssl_context.load_cert_chain(certfile=str(private_cert_path), keyfile=str(private_key_path))
+    ssl_context.load_cert_chain(
+        certfile=str(private_cert_path), keyfile=str(private_key_path)
+    )
     if auth:
         ssl_context.verify_mode = ssl.CERT_REQUIRED
         ssl_context.load_verify_locations(str(private_cert_path))
@@ -86,7 +92,9 @@ class ChiaServer:
         self.root_path = root_path
         self.config = config
         self.on_connect: Optional[Callable] = None
-        self.incoming_messages: Queue[Tuple[Payload, WSChiaConnection]] = asyncio.Queue()
+        self.incoming_messages: Queue[
+            Tuple[Payload, WSChiaConnection]
+        ] = asyncio.Queue()
         self.shut_down_event = asyncio.Event()
 
         if self._local_type is NodeType.INTRODUCER:
@@ -115,7 +123,9 @@ class ChiaServer:
         self.runner = web.AppRunner(self.app, access_log=None)
         await self.runner.setup()
         require_cert = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
-        ssl_context = ssl_context_for_server(self._private_cert_path, self._private_key_path, require_cert)
+        ssl_context = ssl_context_for_server(
+            self._private_cert_path, self._private_key_path, require_cert
+        )
         if self._local_type not in [NodeType.WALLET, NodeType.HARVESTER]:
             self.site = web.TCPSite(
                 self.runner,
@@ -154,7 +164,10 @@ class ChiaServer:
 
             assert handshake is True
             await self.connection_added(connection, self.on_connect)
-            if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
+            if (
+                self._local_type is NodeType.INTRODUCER
+                and connection.connection_type is NodeType.FULL_NODE
+            ):
                 self.introducer_peers.add(connection.get_peer_info())
         except Exception as e:
             error_stack = traceback.format_exc()
@@ -183,14 +196,18 @@ class ChiaServer:
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
-        ssl_context = ssl_context_for_client(self._private_cert_path, self._private_key_path, auth)
+        ssl_context = ssl_context_for_client(
+            self._private_cert_path, self._private_key_path, auth
+        )
         session = None
         try:
             timeout = aiohttp.ClientTimeout(total=10)
             session = aiohttp.ClientSession(timeout=timeout)
             url = f"wss://{target_node.host}:{target_node.port}/ws"
             self.log.info(f"Connecting: {url}")
-            ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
+            ws = await session.ws_connect(
+                url, autoclose=False, autoping=True, ssl=ssl_context
+            )
             if ws is not None:
                 connection = WSChiaConnection(
                     self._local_type,
@@ -241,20 +258,40 @@ class ChiaServer:
             async def api_call(payload: Payload, connection: WSChiaConnection):
                 try:
                     full_message = payload.msg
-                    connection.log.info(f"<- {full_message.function} from peer {connection.peer_node_id}")
-                    if len(full_message.function) == 0 or full_message.function.startswith("_"):
+                    connection.log.info(
+                        f"<- {full_message.function} from peer {connection.peer_node_id}"
+                    )
+                    if len(
+                        full_message.function
+                    ) == 0 or full_message.function.startswith("_"):
                         # This prevents remote calling of private methods that start with "_"
-                        self.log.error(f"Non existing function: {full_message.function}")
-                        raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [full_message.function])
+                        self.log.error(
+                            f"Non existing function: {full_message.function}"
+                        )
+                        raise ProtocolError(
+                            Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                        )
 
                     f = getattr(self.api, full_message.function, None)
 
                     if f is None:
-                        self.log.error(f"Non existing function: {full_message.function}")
-                        raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [full_message.function])
+                        self.log.error(
+                            f"Non existing function: {full_message.function}"
+                        )
+                        raise ProtocolError(
+                            Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                        )
+
+                    if not hasattr(f, "api_function"):
+                        self.log.error("Peer trying to call non api function")
+                        raise ProtocolError(
+                            Err.INVALID_PROTOCOL_MESSAGE, [full_message.function]
+                        )
 
                     if hasattr(f, "peer_required"):
-                        response: Optional[Message] = await f(full_message.data, connection)
+                        response: Optional[Message] = await f(
+                            full_message.data, connection
+                        )
                     else:
                         response = await f(full_message.data)
 
@@ -265,12 +302,19 @@ class ChiaServer:
 
                 except Exception as e:
                     tb = traceback.format_exc()
-                    connection.log.error(f"Exception: {e}, closing connection {connection}. {tb}")
+                    connection.log.error(
+                        f"Exception: {e}, closing connection {connection}. {tb}"
+                    )
                     await connection.close()
 
             asyncio.create_task(api_call(payload_inc, connection_inc))
 
-    async def send_to_others(self, messages: List[Message], node_type: NodeType, origin_peer: WSChiaConnection):
+    async def send_to_others(
+        self,
+        messages: List[Message],
+        node_type: NodeType,
+        origin_peer: WSChiaConnection,
+    ):
         for node_id, connection in self.all_connections.items():
             if node_id == origin_peer.peer_node_id:
                 continue
@@ -284,9 +328,14 @@ class ChiaServer:
                 for message in messages:
                     await connection.send_message(message)
 
-    async def send_to_all_except(self, messages: List[Message], node_type: NodeType, exclude: bytes32):
+    async def send_to_all_except(
+        self, messages: List[Message], node_type: NodeType, exclude: bytes32
+    ):
         for _, connection in self.all_connections.items():
-            if connection.connection_type is node_type and connection.peer_node_id != exclude:
+            if (
+                connection.connection_type is node_type
+                and connection.peer_node_id != exclude
+            ):
                 for message in messages:
                     await connection.send_message(message)
 
