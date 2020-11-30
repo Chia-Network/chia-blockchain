@@ -1,12 +1,18 @@
 import asyncio
+
+import aiohttp
 import pytest
 import random
 import time
+import logging
 from typing import Dict
 from secrets import token_bytes
 
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol as fnp, wallet_protocol
+from src.server.outbound_message import NodeType
+from src.server.server import ssl_context_for_client, ChiaServer
+from src.server.ws_connection import WSChiaConnection
 from src.types.coin import hash_coin_list
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.peer_info import TimestampedPeerInfo, PeerInfo
@@ -29,6 +35,9 @@ from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
 from src.util.clvm import int_to_bytes
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from src.protocols.shared_protocol import protocol_version
+
+log = logging.getLogger(__name__)
 
 
 async def get_block_path(full_node: FullNodeAPI):
@@ -38,6 +47,23 @@ async def get_block_path(full_node: FullNodeAPI):
         assert b is not None
         blocks_list.insert(0, b)
     return blocks_list
+
+
+async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> asyncio.Queue:
+    timeout = aiohttp.ClientTimeout(total=10)
+    session = aiohttp.ClientSession(timeout=timeout)
+    incoming_queue = asyncio.Queue()
+    ssl_context = ssl_context_for_client(server._private_cert_path, server._private_key_path, False)
+    url = f"wss://127.0.0.1:{server._port}/ws"
+    ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
+    wsc = WSChiaConnection(
+        NodeType.FULL_NODE, ws, server._port, log, True, False, "127.0.0.1", incoming_queue, lambda x: x
+    )
+    handshake = await wsc.perform_handshake(
+        server._network_id, protocol_version, std_hash(b"123"), dummy_port, NodeType.FULL_NODE
+    )
+    assert handshake is True
+    return incoming_queue
 
 
 @pytest.fixture(scope="module")
@@ -105,10 +131,33 @@ class TestFullNodeProtocol:
     async def test_basic_chain(self, two_nodes):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
-        blocks = bt.get_consecutive_blocks(100)
-        for block in blocks:
+        incoming_queue = await add_dummy_connection(server_1, 12312)
+
+        async def has_mempool_tx():
+            if incoming_queue.qsize() == 0:
+                return False
+            res = set()
+            while incoming_queue.qsize() > 0:
+                res.add((await incoming_queue.get())[0].msg.function)
+            return res == {"request_mempool_transactions"}
+
+        await time_out_assert(10, has_mempool_tx, True)
+
+        blocks = bt.get_consecutive_blocks(1)
+        for block in blocks[:1]:
             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
-        assert full_node_1.full_node.blockchain.get_peak().height == 99
+
+        async def has_new_peak():
+            if incoming_queue.qsize() == 0:
+                return False
+            res = set()
+            while incoming_queue.qsize() > 0:
+                res.add((await incoming_queue.get())[0].msg.function)
+            return res == {"new_peak"}
+
+        await time_out_assert(10, has_new_peak, True)
+
+        assert full_node_1.full_node.blockchain.get_peak().height == 0
 
 
 #     @pytest.mark.asyncio

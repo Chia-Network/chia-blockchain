@@ -492,7 +492,7 @@ class FullNode:
                     added_eos.reward_chain.end_of_slot_vdf.challenge,
                 )
                 msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
-                self.server.send_to_all([msg], NodeType.FullNode)
+                await self.server.send_to_all([msg], NodeType.FullNode)
 
             if new_peak.height % 1000 == 0:
                 # Occasionally clear the seen list to keep it small
@@ -511,7 +511,7 @@ class FullNode:
                     sub_block.reward_chain_sub_block.get_unfinished().get_hash(),
                 ),
             )
-            self.server.send_to_all([msg], NodeType.FULL_NODE)
+            await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
             # Tell wallets about the new peak
             msg = Message(
@@ -523,7 +523,7 @@ class FullNode:
                     fork_height,
                 ),
             )
-            self.server.send_to_all([msg], NodeType.WALLET)
+            await self.server.send_to_all([msg], NodeType.WALLET)
 
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
             self.log.info(f"Received orphan block of height {sub_block.height}")
@@ -607,12 +607,12 @@ class FullNode:
         )
 
         msg = Message("new_unfinished_sub_block", timelord_request)
-        self.server.send_to_all([msg], NodeType.TIMELORD)
+        await self.server.send_to_all([msg], NodeType.TIMELORD)
 
         full_node_request = full_node_protocol.NewUnfinishedSubBlock(block.reward_chain_sub_block.get_hash())
         msg = Message("new_unfinished_sub_block", full_node_request)
         if peer is not None:
-            self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
         else:
-            self.server.send_to_all([msg], NodeType.FULL_NODE)
+            await self.server.send_to_all([msg], NodeType.FULL_NODE)
         self._state_changed("sub_block")

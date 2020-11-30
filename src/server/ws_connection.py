@@ -20,7 +20,6 @@ from src.util.errors import Err, ProtocolError
 from src.util.network import class_for_type
 
 LENGTH_BYTES: int = 4
-log = logging.getLogger(__name__)
 
 OnConnectFunc = Optional[Callable[[], AsyncGenerator[OutboundMessage, None]]]
 
@@ -54,9 +53,7 @@ class WSChiaConnection:
         # Remote properties
         self.peer_host = peer_host
 
-        connection_host, connection_port = self.ws._writer.transport.get_extra_info(
-            "peername"
-        )
+        connection_host, connection_port = self.ws._writer.transport.get_extra_info("peername")
 
         self.peer_port = connection_port
         self.peer_server_port: Optional[uint16] = None
@@ -75,9 +72,7 @@ class WSChiaConnection:
         self.last_message_time: float = 0
 
         # Messaging
-        self.incoming_queue: asyncio.Queue[
-            Tuple[Payload, WSChiaConnection]
-        ] = incoming_queue
+        self.incoming_queue: asyncio.Queue[Tuple[Payload, WSChiaConnection]] = incoming_queue
         self.outgoing_queue: asyncio.Queue[Payload] = asyncio.Queue()
 
         self.inbound_task = None
@@ -90,10 +85,9 @@ class WSChiaConnection:
         self.pending_requests: Dict[bytes32, asyncio.Event] = {}
         self.request_results: Dict[bytes32, Payload] = {}
         self.closed = False
+        self.connection_type = None
 
-    async def perform_handshake(
-        self, network_id, protocol_version, node_id, server_port, local_type
-    ):
+    async def perform_handshake(self, network_id, protocol_version, node_id, server_port, local_type):
         self.log.info("Doing handshake")
         if self.is_outbound:
             self.log.info("Outbound handshake")
@@ -111,11 +105,7 @@ class WSChiaConnection:
             await self._send_message(payload)
             payload = await self._read_one_message()
             inbound_handshake = Handshake(**payload.msg.data)
-            if (
-                payload.msg.function != "handshake"
-                or not inbound_handshake
-                or not inbound_handshake.node_type
-            ):
+            if payload.msg.function != "handshake" or not inbound_handshake or not inbound_handshake.node_type:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             self.peer_node_id = inbound_handshake.node_id
             self.peer_server_port = int(inbound_handshake.server_port)
@@ -124,11 +114,7 @@ class WSChiaConnection:
             self.log.info("Inbound handshake")
             payload = await self._read_one_message()
             inbound_handshake = Handshake(**payload.msg.data)
-            if (
-                payload.msg.function != "handshake"
-                or not inbound_handshake
-                or not inbound_handshake.node_type
-            ):
+            if payload.msg.function != "handshake" or not inbound_handshake or not inbound_handshake.node_type:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             outbound_handshake = Message(
                 "handshake",
@@ -213,9 +199,7 @@ class WSChiaConnection:
             msg = Message(attr_name, args[0])
             result = await self.create_request(msg)
             if result is not None:
-                ret_attr = getattr(
-                    class_for_type(self.local_type), result.function, None
-                )
+                ret_attr = getattr(class_for_type(self.local_type), result.function, None)
 
                 req_annotations = ret_attr.__annotations__
                 req = None
@@ -236,27 +220,25 @@ class WSChiaConnection:
             return None
 
         event = asyncio.Event()
-        id = token_bytes(8)
-        payload = Payload(message, id)
+        payload = Payload(message, token_bytes(8))
 
         self.pending_requests[payload.id] = event
         await self.outgoing_queue.put(payload)
 
         async def time_out(req_id, req_timeout):
             await asyncio.sleep(req_timeout)
-            if id in self.pending_requests:
-                event = self.pending_requests[req_id]
-                event.set()
+            if req_id in self.pending_requests:
+                self.pending_requests[req_id].set()
 
-        asyncio.create_task(time_out(id, timeout))
+        asyncio.create_task(time_out(payload.id, timeout))
         await event.wait()
 
-        self.pending_requests.pop(id)
+        self.pending_requests.pop(payload.id)
         result: Optional[Message] = None
-        if id in self.request_results:
-            result_payload: Payload = self.request_results[id]
+        if payload.id in self.request_results:
+            result_payload: Payload = self.request_results[payload.id]
             result = result_payload.msg
-            self.request_results.pop(id)
+            self.request_results.pop(payload.id)
 
         return result
 
@@ -274,9 +256,7 @@ class WSChiaConnection:
 
     async def _send_message(self, payload: Payload):
         self.log.info(f"-> {payload.msg.function}")
-        encoded: bytes = cbor.dumps(
-            {"f": payload.msg.function, "d": payload.msg.data, "i": payload.id}
-        )
+        encoded: bytes = cbor.dumps({"f": payload.msg.function, "d": payload.msg.data, "i": payload.id})
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         await self.ws.send_bytes(encoded)
@@ -303,7 +283,5 @@ class WSChiaConnection:
         return None
 
     def get_peer_info(self):
-        connection_host, connection_port = self.ws._writer.transport.get_extra_info(
-            "peername"
-        )
+        connection_host, connection_port = self.ws._writer.transport.get_extra_info("peername")
         return PeerInfo(connection_host, self.peer_server_port)
