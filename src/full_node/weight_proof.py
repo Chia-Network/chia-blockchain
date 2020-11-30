@@ -115,12 +115,7 @@ class WeightProofFactory:
     ) -> bool:
         # sub epoch summaries validate hashes
         summaries, sub_epoch_data_weight = map_summaries(
-            self.log,
-            self.constants.SUB_EPOCH_SUB_BLOCKS,
-            prev_ses_hash,
-            weight_proof.sub_epochs,
-            fork_point_difficulty,
-            fork_point_sub_slot_iters,
+            self.log, self.constants.SUB_EPOCH_SUB_BLOCKS, prev_ses_hash, weight_proof.sub_epochs, fork_point_difficulty
         )
 
         # validate weight
