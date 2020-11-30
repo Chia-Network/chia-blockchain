@@ -306,7 +306,7 @@ class Blockchain:
             curr.sp_total_iters(self.constants),
         )
 
-    async def get_pos_and_infusion_sub_slots(
+    async def get_sp_and_ip_sub_slots(
         self, header_hash: bytes32
     ) -> Optional[Tuple[Optional[EndOfSubSlotBundle], Optional[EndOfSubSlotBundle]]]:
         block: Optional[FullBlock] = await self.block_store.get_full_block(header_hash)
@@ -323,20 +323,24 @@ class Blockchain:
             # This means we got to genesis and still no sub-slots
             return None, None
 
+        ip_sub_slot = curr.finished_sub_slots[-1]
+
         if not is_overflow:
             # Pos sub-slot is the same as infusion sub slot
-            return None, curr.finished_sub_slots[-1]
+            return None, ip_sub_slot
 
         if len(curr.finished_sub_slots) > 1:
             # Have both sub-slots
-            return curr.finished_sub_slots[-2], curr.finished_sub_slots[-1]
+            return curr.finished_sub_slots[-2], ip_sub_slot
 
         curr = await self.block_store.get_full_block(curr.prev_header_hash)
         while len(curr.finished_sub_slots) == 0 and curr.height > 0:
             curr = await self.block_store.get_full_block(curr.prev_header_hash)
             assert curr is not None
 
-        # TODO
+        if len(curr.finished_sub_slots) == 0:
+            return None, ip_sub_slot
+        return curr.finished_sub_slots[-1], ip_sub_slot
 
     async def pre_validate_blocks_mulpeakrocessing(
         self, blocks: List[FullBlock]

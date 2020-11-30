@@ -273,7 +273,7 @@ class BlockTools:
         finished_sub_slots_at_ip: List[EndOfSubSlotBundle] = []  # Sub-slots since last sub block, up to infusion point
         sub_slot_iters: uint64 = latest_sub_block.sub_slot_iters  # The number of iterations in one sub-slot
         same_slot_as_last = True  # Only applies to first slot, to prevent old blocks from being added
-        sub_slot_start_total_iters: uint128 = latest_sub_block.infusion_sub_slot_total_iters(constants)
+        sub_slot_start_total_iters: uint128 = latest_sub_block.ip_sub_slot_total_iters(constants)
         sub_slots_finished = 0
         pending_ses: bool = False
 
@@ -825,6 +825,7 @@ def get_signage_point(
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     overflow = is_overflow_sub_block(constants, signage_point_index)
     sp_total_iters = sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
+
     (
         cc_vdf_challenge,
         rc_vdf_challenge,
@@ -850,6 +851,19 @@ def get_signage_point(
     )
     cc_sp_vdf = replace(cc_sp_vdf, number_of_iterations=sp_iters)
     return SignagePoint(cc_sp_vdf, cc_sp_proof, rc_sp_vdf, rc_sp_proof)
+
+
+def get_signage_point_test_store(
+    constants: ConsensusConstants,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    latest_sub_block: Optional[SubBlockRecord],
+    sub_slot_start_total_iters: uint128,
+    signage_point_index: uint8,
+    finished_sub_slots: List[EndOfSubSlotBundle],
+    sub_slot_iters: uint64,
+) -> SignagePoint:
+
+    pass
 
 
 def finish_sub_block(
