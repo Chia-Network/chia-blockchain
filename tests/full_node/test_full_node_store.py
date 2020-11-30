@@ -374,24 +374,43 @@ class TestFullNodeStore:
 
         # Test future IP cache
         store.initialize_genesis_sub_slot()
-        blocks = bt.get_consecutive_blocks(50)
+        blocks = bt.get_consecutive_blocks(60)
 
-        for block in blocks[:-3]:
+        for block in blocks[:5]:
             await blockchain.receive_block(block)
             sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(block.header_hash)
             res = store.new_peak(sb, sp_sub_slot, ip_sub_slot, False, blockchain.sub_blocks)
             assert res[0] is None
 
-        # for block in blocks[-2:]:
-        #     new_ip = NewInfusionPointVDF(
-        #         block.reward_chain_sub_block.get_unfinished().get_hash(),
-        #         block.reward_chain_sub_block.challenge_chain_ip_vdf,
-        #         block.challenge_chain_ip_proof,
-        #         block.reward_chain_sub_block.reward_chain_ip_vdf,
-        #         block.reward_chain_ip_proof,
-        #         block.reward_chain_sub_block.infused_challenge_chain_ip_vdf,
-        #         block.infused_challenge_chain_ip_proof,
-        #     )
-        #     store.
+        case_0, case_1 = False, False
+        for i in range(5, len(blocks) - 1):
+            prev_block = blocks[i]
+            block = blocks[i + 1]
+            new_ip = NewInfusionPointVDF(
+                block.reward_chain_sub_block.get_unfinished().get_hash(),
+                block.reward_chain_sub_block.challenge_chain_ip_vdf,
+                block.challenge_chain_ip_proof,
+                block.reward_chain_sub_block.reward_chain_ip_vdf,
+                block.reward_chain_ip_proof,
+                block.reward_chain_sub_block.infused_challenge_chain_ip_vdf,
+                block.infused_challenge_chain_ip_proof,
+            )
+            store.add_to_future_ip(new_ip)
 
-        # Test adding signage two competing signage point (for peaks we don't have)
+            await blockchain.receive_block(prev_block)
+            sp_sub_slot, ip_sub_slot = await blockchain.get_sp_and_ip_sub_slots(prev_block.header_hash)
+            sb = blockchain.sub_blocks[prev_block.header_hash]
+            res = store.new_peak(sb, sp_sub_slot, ip_sub_slot, False, blockchain.sub_blocks)
+            if len(block.finished_sub_slots) == 0:
+                case_0 = True
+                assert res[2] == [new_ip]
+            else:
+                case_1 = True
+                assert res[2] == []
+                found_ips = []
+                for ss in block.finished_sub_slots:
+                    found_ips += store.new_finished_sub_slot(ss, blockchain.sub_blocks, sb)
+                assert found_ips == [new_ip]
+
+        # If flaky, increase the number of blocks created
+        assert case_0 and case_1
