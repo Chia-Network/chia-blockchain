@@ -60,7 +60,7 @@ class WeightProofFactory:
         self.log.info(
             f"build weight proofs, peak : {self.sub_blocks[tip].height} num of blocks: {total_number_of_blocks}"
         )
-        assert self.sub_blocks[tip].height > total_number_of_blocks
+        assert self.sub_blocks[tip].height >= total_number_of_blocks
         sub_epoch_n = count_sub_epochs_in_range(self.sub_blocks[tip], self.sub_blocks, total_number_of_blocks)
         sub_epoch_reverse_idx: uint32 = uint32(0)
 
