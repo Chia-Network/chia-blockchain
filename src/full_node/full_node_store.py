@@ -157,14 +157,15 @@ class FullNodeStore:
 
     def new_finished_sub_slot(
         self, eos: EndOfSubSlotBundle, sub_blocks: Dict[bytes32, SubBlockRecord], peak: Optional[SubBlockRecord]
-    ) -> bool:
+    ) -> Optional[List[timelord_protocol.NewInfusionPointVDF]]:
         """
-        Returns true if finished slot successfully added.
+        Returns false if not added. Returns a list if added. The list contains all infusion points that depended
+        on this sub slot
         TODO: do full validation here
         """
 
         if len(self.finished_sub_slots) == 0:
-            return False
+            return None
 
         last_slot, _, last_slot_iters = self.finished_sub_slots[-1]
         last_slot_ch = (
@@ -176,12 +177,12 @@ class FullNodeStore:
         # Skip if already present
         for slot, _, _ in self.finished_sub_slots:
             if slot == eos:
-                return True
+                return []
 
         if eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge != last_slot_ch:
             # This slot does not append to our next slot
             # This prevent other peers from appending fake VDFs to our cache
-            return False
+            return None
 
         # TODO: Fix
         # if not eos.proofs.challenge_chain_slot_proof.is_valid(
@@ -211,9 +212,9 @@ class FullNodeStore:
                 if rc_challenge not in self.future_eos_cache:
                     self.future_eos_cache[rc_challenge] = []
                 self.future_eos_cache[rc_challenge].append(eos)
-                return False
+                return None
             if peak.total_iters + eos.reward_chain.end_of_slot_vdf.number_of_iterations != total_iters:
-                return False
+                return None
 
             if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                 curr = peak
@@ -229,11 +230,11 @@ class FullNodeStore:
                         eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
                         != icc_start_challenge_hash
                     ):
-                        return False
+                        return None
         else:
             # Empty slot after the peak
             if eos.reward_chain.end_of_slot_vdf.challenge != last_slot_rc_hash:
-                return False
+                return None
 
             if (
                 last_slot is not None
@@ -244,10 +245,15 @@ class FullNodeStore:
                     eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
                     != last_slot.infused_challenge_chain.get_hash()
                 ):
-                    return False
+                    return None
 
         self.finished_sub_slots.append((eos, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
-        return True
+
+        new_ips = []
+        for ip in self.future_ip_cache.get(eos.reward_chain.get_hash(), []):
+            new_ips.append(ip)
+
+        return new_ips
 
     def new_signage_point(
         self,
@@ -382,7 +388,7 @@ class FullNodeStore:
         ip_sub_slot: Optional[EndOfSubSlotBundle],  # None if in first slot
         reorg: bool,
         sub_blocks: Dict[bytes32, SubBlockRecord],
-    ) -> Optional[EndOfSubSlotBundle]:
+    ) -> Tuple[Optional[EndOfSubSlotBundle], List[SignagePoint], List[timelord_protocol.NewInfusionPointVDF]]:
         """
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
         the prev sub-slot (since we still might get more sub-blocks with an sp in the previous sub-slot)
@@ -412,11 +418,29 @@ class FullNodeStore:
                 ]
             self.finished_sub_slots.append((ip_sub_slot, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
 
+        new_eos: Optional[EndOfSubSlotBundle] = None
+        new_sps: List[SignagePoint] = []
+        new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
+
         for eos in self.future_eos_cache.get(peak.reward_infusion_new_challenge, []):
-            if self.new_finished_sub_slot(eos, sub_blocks, peak):
-                return eos  # Return new sub slot, if added
-        # TODO: handle other caches
-        return None
+            if self.new_finished_sub_slot(eos, sub_blocks, peak) is not None:
+                new_eos = eos
+                break
+
+        # This cache is not currently being used
+        for sp in self.future_sp_cache.get(peak.reward_infusion_new_challenge, []):
+            index = uint8(sp.cc_vdf.number_of_iterations // peak.sub_slot_iters)
+            if self.new_signage_point(index, sub_blocks, peak, peak.sub_slot_iters, sp):
+                new_sps.append(sp)
+
+        for ip in self.future_ip_cache.get(peak.reward_infusion_new_challenge, []):
+            new_ips.append(ip)
+
+        self.future_eos_cache.pop(peak.reward_infusion_new_challenge, [])
+        self.future_sp_cache.pop(peak.reward_infusion_new_challenge, [])
+        self.future_ip_cache.pop(peak.reward_infusion_new_challenge, [])
+
+        return new_eos, new_sps, new_ips
 
     def get_finished_sub_slots(
         self,
