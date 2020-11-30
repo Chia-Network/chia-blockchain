@@ -479,39 +479,11 @@ class FullNode:
             sub_slot_iters = self.blockchain.get_next_slot_iters(new_peak, False)
             self.log.info(f"Difficulty {difficulty} slot iterations {sub_slot_iters}")
 
-            # Find the sub slot of the peak
-            curr = sub_block
-            while len(curr.finished_sub_slots) == 0:
-                curr = await self.blockchain.get_full_block(curr.prev_header_hash)
-                assert curr is not None
-            peak_sub_slot = curr.finished_sub_slots[-1]
-            peak_sub_slot_iters = new_peak.infusion_sub_slot_total_iters(self.constants)
-            is_overflow: bool = is_overflow_sub_block(
-                self.constants, sub_block.reward_chain_sub_block.signage_point_index
-            )
-            if is_overflow:
-                # Find the previous sub-slots end of slot
-                if len(curr.finished_sub_slots) >= 2:
-                    prev_sub_slot = curr.finished_sub_slots[-2]
-                else:
-                    curr = await self.blockchain.get_full_block(curr.prev_header_hash)
-                    while len(curr.finished_sub_slots) == 0:
-                        curr = await self.blockchain.get_full_block(curr.prev_header_hash)
-                        assert curr is not None
-                    prev_sub_slot = curr.finished_sub_slots[-1]
-
-                # If overflow, guaranteed to have the same slot iters for previous slot
-                prev_sub_slot_iters = peak_sub_slot_iters - sub_slot_iters
-            else:
-                prev_sub_slot = None
-                prev_sub_slot_iters = None
-
+            sp_sub_slot, ip_sub_slot = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
             added_eos: Optional[EndOfSubSlotBundle] = self.full_node_store.new_peak(
                 new_peak,
-                peak_sub_slot,
-                peak_sub_slot_iters,
-                prev_sub_slot,
-                prev_sub_slot_iters,
+                sp_sub_slot,
+                ip_sub_slot,
                 fork_height != sub_block.height - 1,
                 self.blockchain.sub_blocks,
             )
@@ -535,15 +507,15 @@ class FullNode:
 
             # Tell full nodes about the new peak
             msg = Message(
-                    "new_peak",
-                    full_node_protocol.NewPeak(
-                        sub_block.header_hash,
-                        sub_block.height,
-                        sub_block.weight,
-                        fork_height,
-                        sub_block.reward_chain_sub_block.get_unfinished().get_hash(),
-                    ),
-                )
+                "new_peak",
+                full_node_protocol.NewPeak(
+                    sub_block.header_hash,
+                    sub_block.height,
+                    sub_block.weight,
+                    fork_height,
+                    sub_block.rewardchain_sub_block.get_unfinished().get_hash(),
+                ),
+            )
             self.server.send_to_all([msg], NodeType.FULL_NODE)
 
             # Tell wallets about the new peak
