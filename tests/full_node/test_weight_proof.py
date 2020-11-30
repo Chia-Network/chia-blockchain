@@ -109,7 +109,7 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
             print(f"ses height {curr.height} prev overflows {curr.sub_epoch_summary_included.num_sub_blocks_overflow}")
             if sub_epochs_left == 0:
                 break
-            orig_summaries[sub_epochs - sub_epochs_left] = curr.sub_epoch_summary_included
+            orig_summaries[sub_epochs_left - 1] = curr.sub_epoch_summary_included
             sub_epochs_left -= 1
 
         if curr.is_challenge_sub_block(test_constants):
@@ -120,7 +120,8 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
         curr = sub_blocks[curr.prev_hash]
         num_of_blocks += 1
     num_of_blocks += 1
-    print(f"fork point is {curr.height}")
+    curr = sub_blocks[curr.prev_hash]
+    print(f"fork point is {curr.height} (not included)")
     print(f"num of blocks in proof: {num_of_blocks}")
     print(f"num of full sub epochs in proof: {sub_epochs}")
     wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
@@ -129,9 +130,9 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
     wp = wpf.make_weight_proof(uint32(len(header_cache)), uint32(num_of_blocks), blocks[-1].header_hash)
     assert wp is not None
     first_after_se = sub_blocks[height_to_hash[sub_epoch_end.height + 1]]
-    curr_difficulty = first_after_se.weight - sub_epoch_end.weight
+    # curr_difficulty = first_after_se.weight - sub_epoch_end.weight
     fork_point_difficulty = uint64(curr.weight - sub_blocks[curr.prev_hash].weight)
-    print(f"diff {curr_difficulty}, weight {sub_epoch_end.weight}")
+    print(f"fork_point_difficulty {fork_point_difficulty}")
     # sub epoch summaries validate hashes
     summaries, sub_epoch_data_weight = map_summaries(
         wpf.log,
@@ -139,7 +140,6 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
         orig_summaries[0].prev_subepoch_summary_hash,
         wp.sub_epochs,
         fork_point_difficulty,
-        first_after_se.sub_slot_iters,
     )
     assert len(summaries) == len(orig_summaries)
     assert len(summaries) == sub_epochs
@@ -183,13 +183,13 @@ class TestWeightProof:
         _test_map_summaries(default_400_blocks, header_cache, height_to_hash, sub_blocks, sub_epochs)
 
     @pytest.mark.asyncio
-    async def test_weight_proof_map_summaries_2(self, default_10000_blocks):
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_10000_blocks)
+    async def test_weight_proof_map_summaries_2(self, default_400_blocks):
+        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_400_blocks)
         sub_epochs = 2
-        _test_map_summaries(default_10000_blocks, header_cache, height_to_hash, sub_blocks, sub_epochs)
+        _test_map_summaries(default_400_blocks, header_cache, height_to_hash, sub_blocks, sub_epochs)
 
     @pytest.mark.asyncio
-    async def test_weight_proof_map_summaries_2(self, default_10000_blocks):
+    async def test_weight_proof_map_summaries_3(self, default_10000_blocks):
         header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_10000_blocks)
         sub_epochs = 3
         _test_map_summaries(default_10000_blocks, header_cache, height_to_hash, sub_blocks, sub_epochs)
