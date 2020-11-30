@@ -279,6 +279,8 @@ class Blockchain:
     def get_next_difficulty(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert header_hash in self.sub_blocks
         curr = self.sub_blocks[header_hash]
+        if curr.height <= 2:
+            return self.constants.DIFFICULTY_STARTING
         return get_next_difficulty(
             self.constants,
             self.sub_blocks,
@@ -294,6 +296,8 @@ class Blockchain:
     def get_next_slot_iters(self, header_hash: bytes32, new_slot: bool) -> uint64:
         assert header_hash in self.sub_blocks
         curr = self.sub_blocks[header_hash]
+        if curr.height <= 2:
+            return self.constants.SUB_SLOT_ITERS_STARTING
         return get_next_sub_slot_iters(
             self.constants,
             self.sub_blocks,

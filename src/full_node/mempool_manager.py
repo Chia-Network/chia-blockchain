@@ -344,7 +344,7 @@ class MempoolManager:
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
-        if self.peak.header_hash == new_peak.header_hash:
+        if self.peak == new_peak:
             return
         self.peak = new_peak
 
