@@ -191,20 +191,20 @@ class TestWeightProof:
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_3(self, default_10000_blocks):
         header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_10000_blocks)
-        sub_epochs = 3
+        sub_epochs = 10
         _test_map_summaries(default_10000_blocks, header_cache, height_to_hash, sub_blocks, sub_epochs)
 
     @pytest.mark.asyncio
-    async def test_weight_proof(self, blocks):
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
+    async def test_weight_proof(self, default_10000_blocks):
+        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_10000_blocks)
         sub_epoch_idx = 3
         num_of_blocks = uint32(0)
-        sub_epoch_end, _ = get_prev_ses_block(sub_blocks, blocks[-1].prev_header_hash)
+        sub_epoch_end, _ = get_prev_ses_block(sub_blocks, default_10000_blocks[-1].prev_header_hash)
         first_sub_epoch_summary = None
         print("total blocks: ", len(sub_blocks))
         sub_epochs_left = sub_epoch_idx
         sub_epoch_sub_blocks = 0
-        curr = sub_blocks[blocks[-1].header_hash]
+        curr = sub_blocks[default_10000_blocks[-1].header_hash]
 
         while not sub_epochs_left == 0:
             if curr.sub_epoch_summary_included is not None:
