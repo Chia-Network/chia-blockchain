@@ -6,6 +6,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
     calculate_iterations_quality,
     calculate_ip_iters,
+    is_overflow_sub_block,
 )
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
@@ -44,43 +45,49 @@ class WeightProofFactory:
         else:
             self.log = logging.getLogger(__name__)
 
-    def make_weight_proof(self, recent_blocks_n: uint32, total_number_of_blocks: uint32) -> WeightProof:
+    def make_weight_proof(self, recent_blocks_n: uint32, total_number_of_blocks: uint32, tip: bytes32) -> WeightProof:
         """
         Creates a weight proof object
         """
 
         # todo assert recent blocks number
-        tip = self.height_to_hash[uint32(len(self.height_to_hash) - 1)]
+        # todo clean some of the logs after tests pass
         sub_epoch_data: List[SubEpochData] = []
         sub_epoch_segments: List[SubEpochChallengeSegment] = []
         proof_blocks: List[RewardChainSubBlock] = []
-        curr: SubBlockRecord = self.sub_blocks[tip]
         rng: random.Random = random.Random(tip)
         # ses_hash from the latest sub epoch summary before this part of the chain
         self.log.info(
-            f"build weight proofs peak : {self.sub_blocks[tip].header_hash} num of blocks: {total_number_of_blocks}"
+            f"build weight proofs, peak : {self.sub_blocks[tip].height} num of blocks: {total_number_of_blocks}"
         )
         assert self.sub_blocks[tip].height > total_number_of_blocks
-        sub_epoch_n = count_sub_epochs_in_range(curr, self.sub_blocks, total_number_of_blocks)
+        sub_epoch_n = count_sub_epochs_in_range(self.sub_blocks[tip], self.sub_blocks, total_number_of_blocks)
         sub_epoch_reverse_idx: uint32 = uint32(0)
 
         blocks_left = total_number_of_blocks
-        while blocks_left > 0:
+        curr_height = self.sub_blocks[tip].height - total_number_of_blocks
+        total_overflow_blocks = 0
+        while blocks_left != 0:
             # next sub block
-            curr = self.sub_blocks[curr.prev_hash]
-            header_block = self.header_cache[curr.header_hash]
+            block = self.height_to_hash[curr_height]
+            sub_block = self.sub_blocks[block]
+            header_block = self.header_cache[block]
+            if is_overflow_sub_block(self.constants, header_block.reward_chain_sub_block.signage_point_index):
+                total_overflow_blocks += 1
+                self.log.info(f"overflow block at height {curr_height}  ")
             # for each sub-epoch
-            if curr.sub_epoch_summary_included is not None:
-                self.log.info(f"sub epoch end in block height {curr.height}")
-                sub_epoch_data.append(make_sub_epoch_data(curr.sub_epoch_summary_included))
+            if sub_block.sub_epoch_summary_included is not None:
+                self.log.info(f"sub epoch end in block height {sub_block.height}")
+                sub_epoch_data.append(make_sub_epoch_data(sub_block.sub_epoch_summary_included))
                 # get sub_epoch_blocks_n in sub_epoch
-                sub_epoch_blocks_n = get_sub_epoch_block_num(curr, self.sub_blocks)
+                sub_epoch_blocks_n = get_sub_epoch_block_num(sub_block, self.sub_blocks)
+                self.log.info(f"sub epoch {sub_epoch_n - sub_epoch_reverse_idx} has {sub_epoch_blocks_n} blocks")
                 #   sample sub epoch
                 if choose_sub_epoch(sub_epoch_blocks_n, rng, total_number_of_blocks):
                     self.log.info(f"sub epoch {sub_epoch_n - sub_epoch_reverse_idx} chosen")
                     sub_epoch_segments.extend(
                         self.create_sub_epoch_segments(
-                            curr,
+                            sub_block,
                             sub_epoch_blocks_n,
                             sub_epoch_n - sub_epoch_reverse_idx,
                         )
@@ -93,7 +100,8 @@ class WeightProofFactory:
                 recent_blocks_n -= 1
 
             blocks_left -= 1
-
+            curr_height += 1
+        self.log.info(f"total overflow blocks in proof {total_overflow_blocks}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, proof_blocks)
 
     def validate_weight(
@@ -106,21 +114,21 @@ class WeightProofFactory:
     ) -> bool:
         # sub epoch summaries validate hashes
         summaries, sub_epoch_data_weight = map_summaries(
+            self.log,
             self.constants.SUB_EPOCH_SUB_BLOCKS,
             prev_ses_hash,
-            weight_proof,
+            weight_proof.sub_epochs,
             fork_point_difficulty,
             fork_point_sub_slot_iters,
         )
-
-        # last ses
-        ses = summaries[uint32(len(summaries) - 1)]
 
         # validate weight
         # find first block after last sub epoch end
         self.log.info(
             f"diff {fork_point_difficulty}, sub epoch data weight {sub_epoch_data_weight}, start weight {fork_point_weight}"
         )
+
+        self.log.info(f"")
         block_idx = get_last_ses_block_idx(
             weight_proof.recent_reward_chain, uint128(fork_point_difficulty), sub_epoch_data_weight + fork_point_weight
         )
@@ -130,10 +138,15 @@ class WeightProofFactory:
         last_ses_block = weight_proof.recent_reward_chain[block_idx]
         self.log.error(f"last ses at height {last_ses_block.sub_block_height}")
         # use block we found by weight to validate last ses_hash
-        cc_vdf = weight_proof.recent_reward_chain[block_idx].challenge_chain_ip_vdf
-        challenge = std_hash(
-            ChallengeChainSubSlot(cc_vdf, None, std_hash(ses), ses.new_sub_slot_iters, ses.new_difficulty)
-        )
+        cc_vdf = weight_proof.recent_reward_chain[block_idx - 1].challenge_chain_ip_vdf
+
+        # last ses
+        ses = summaries[uint32(len(summaries) - 1)]
+
+        challenge = ChallengeChainSubSlot(
+            cc_vdf, None, ses.get_hash(), ses.new_sub_slot_iters, ses.new_difficulty
+        ).get_hash()
+
         expected_challenge = weight_proof.recent_reward_chain[block_idx + 1].challenge_chain_sp_vdf.challenge
         if challenge != expected_challenge:
             self.log.error(
@@ -396,7 +409,7 @@ def get_sub_epoch_block_num(last_block: SubBlockRecord, sub_blocks: Dict[bytes32
     """
     # count from end of sub_epoch
     if last_block.sub_epoch_summary_included is None:
-        raise Exception("block dose not finish a sub_epoch")
+        raise Exception("block does not finish a sub_epoch")
 
     curr = sub_blocks[last_block.prev_hash]
     count: uint32 = uint32(0)
@@ -407,15 +420,13 @@ def get_sub_epoch_block_num(last_block: SubBlockRecord, sub_blocks: Dict[bytes32
 
         curr = sub_blocks[curr.prev_hash]
         count += 1
-
     count += 1
+
     return count
 
 
 def choose_sub_epoch(sub_epoch_blocks_n: uint32, rng: random.Random, total_number_of_blocks: uint32) -> bool:
-    print("sub_epoch_blocks_n", sub_epoch_blocks_n, "total ", total_number_of_blocks)
     prob = sub_epoch_blocks_n / total_number_of_blocks
-    print("try sub_epoch ", "with prob ", prob, " ", sub_epoch_blocks_n, "times")
     for i in range(sub_epoch_blocks_n):
         if rng.random() < prob:
             return True
@@ -459,15 +470,16 @@ def validate_sub_slot_vdfs(
 
 
 def map_summaries(
+    log,
     sub_blocks_for_se: uint32,
     ses_hash: bytes32,
-    weight_proof: WeightProof,
+    sub_epoch_data: List[SubEpochData],
     curr_difficulty: uint64,
     curr_sub_slot_iters: uint64,
 ) -> (Dict[uint32, SubEpochSummary], uint128):
     sub_epoch_data_weight: uint128 = uint128(0)
     summaries: Dict[uint32, SubEpochSummary] = {}
-    for idx, sub_epoch_data in enumerate(weight_proof.sub_epochs):
+    for idx, sub_epoch_data in enumerate(sub_epoch_data):
         ses = SubEpochSummary(
             ses_hash,
             sub_epoch_data.reward_chain_hash,
@@ -481,7 +493,12 @@ def map_summaries(
             curr_difficulty = sub_epoch_data.new_difficulty
             curr_sub_slot_iters = sub_epoch_data.new_sub_slot_iters
 
-        print(f"map_summaries curr diff {curr_difficulty} sub_blocks_n {sub_blocks_for_se}")
+        log.info(
+            f"sub_epoch {idx} sub_epoch_weight {sub_epoch_data_weight} "
+            f"sub_epoch_diff {curr_difficulty} "
+            f"num of overflow blocks {sub_epoch_data.num_sub_blocks_overflow} "
+            f"se blocks num {sub_blocks_for_se +sub_epoch_data.num_sub_blocks_overflow}"
+        )
         sub_epoch_data_weight += curr_difficulty * (sub_blocks_for_se + sub_epoch_data.num_sub_blocks_overflow)
 
         # add to dict
