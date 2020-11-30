@@ -2,7 +2,8 @@ from src.full_node.full_node import FullNode
 from typing import Callable, List, Optional, Dict
 
 from src.full_node.full_node_api import FullNodeAPI
-#from src.types.header import Header
+
+# from src.types.header import Header
 from src.types.full_block import FullBlock
 from src.util.ints import uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
@@ -21,14 +22,14 @@ class FullNodeRpcApi:
 
     def get_routes(self) -> Dict[str, Callable]:
         return {
-            "/get_blockchain_state": self.get_blockchain_state,
-            "/get_block": self.get_block,
-            "/get_header_by_height": self.get_header_by_height,
-            "/get_header": self.get_header,
-            "/get_unfinished_block_headers": self.get_unfinished_block_headers,
-            "/get_network_space": self.get_network_space,
-            "/get_unspent_coins": self.get_unspent_coins,
-            "/get_heaviest_block_seen": self.get_heaviest_block_seen,
+            # "/get_blockchain_state": self.get_blockchain_state,
+            # "/get_block": self.get_block,
+            # "/get_header_by_height": self.get_header_by_height,
+            # "/get_header": self.get_header,
+            # "/get_unfinished_block_headers": self.get_unfinished_block_headers,
+            # "/get_network_space": self.get_network_space,
+            # "/get_unspent_coins": self.get_unspent_coins,
+            # "/get_heaviest_block_seen": self.get_heaviest_block_seen,
         }
 
     async def _state_changed(self, change: str) -> List[Dict]:

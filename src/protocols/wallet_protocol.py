@@ -44,7 +44,7 @@ class NewPeak:
     header_hash: bytes32
     sub_block_height: uint32
     weight: uint128
-    fork_point_with_previous_peak: bytes32
+    fork_point_with_previous_peak: uint32
 
 
 @dataclass(frozen=True)

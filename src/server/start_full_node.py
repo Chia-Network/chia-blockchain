@@ -15,7 +15,7 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 
 
 # See: https://bugs.python.org/issue29288
-u"".encode("idna")
+"".encode("idna")
 
 SERVICE_NAME = "full_node"
 
@@ -23,10 +23,12 @@ SERVICE_NAME = "full_node"
 def service_kwargs_for_full_node(
     root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
-    full_node = FullNode(
-        config, root_path=root_path, consensus_constants=consensus_constants
-    )
+    full_node = FullNode(config, root_path=root_path, consensus_constants=consensus_constants)
     api = FullNodeAPI(full_node)
+
+    upnp_list = []
+    if config["enable_upnp"]:
+        upnp_list = [config["port"]]
 
     kwargs = dict(
         root_path=root_path,

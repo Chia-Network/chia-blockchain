@@ -152,14 +152,14 @@ class FullNode:
         """
         peak_block = await self.blockchain.get_full_peak()
         peak = self.blockchain.sub_blocks[peak_block.header_hash]
-        difficulty = self.blockchain.get_next_difficulty(peak, False)
+        difficulty = self.blockchain.get_next_difficulty(peak.header_hash, False)
         if peak is not None:
             ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
                 self.constants,
                 self.blockchain.sub_blocks,
                 self.blockchain.height_to_hash,
                 peak.signage_point_index,
-                peak.sub_slot_itsub_slot_iters,
+                peak.required_iters,
                 peak_block,
             )
             timelord_new_peak: timelord_protocol.NewPeak = timelord_protocol.NewPeak(
@@ -172,18 +172,9 @@ class FullNode:
 
     async def _on_connect(self, connection: WSChiaConnection):
         """
-          Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
-          and challenges to timelords.
-          """
-        peak_full: FullBlock = await self.blockchain.get_full_peak()
-        peak: SubBlockRecord = self.blockchain.sub_blocks[peak_full.header_hash]
-        request_node = full_node_protocol.NewPeak(
-            peak.header_hash,
-            peak.sub_block_height,
-            peak.weight,
-            peak.sub_block_height,
-            peak_full.reward_chain_sub_block.get_unfinished().get_hash(),
-        )
+        Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
+        and challenges to timelords.
+        """
         if connection.connection_type is NodeType.FULL_NODE:
             # Send filter to node and request mempool items that are not in it
             my_filter = self.mempool_manager.get_filter()
@@ -192,15 +183,28 @@ class FullNode:
             msg = Message("request_mempool_transactions", mempool_request)
             await connection.send_message(msg)
 
-            return Message("new_peak", request_node)
-        elif  connection.connection_type is NodeType.WALLET:
-            # If connected to a wallet, send the LCA
-            request_wallet = wallet_protocol.NewPeak(
-                peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height
-            )
-            return Message("new_peak", request_wallet)
-        elif connection.connection_type is NodeType.TIMELORD:
-            await self._send_peak_to_timelords()
+        peak_full: Optional[FullBlock] = await self.blockchain.get_full_peak()
+
+        if peak_full is not None:
+            peak: SubBlockRecord = self.blockchain.sub_blocks[peak_full.header_hash]
+            if connection.connection_type is NodeType.FULL_NODE:
+                request_node = full_node_protocol.NewPeak(
+                    peak.header_hash,
+                    peak.sub_block_height,
+                    peak.weight,
+                    peak.sub_block_height,
+                    peak_full.reward_chain_sub_block.get_unfinished().get_hash(),
+                )
+                return Message("new_peak", request_node)
+
+            elif connection.connection_type is NodeType.WALLET:
+                # If connected to a wallet, send the LCA
+                request_wallet = wallet_protocol.NewPeak(
+                    peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height
+                )
+                return Message("new_peak", request_wallet)
+            elif connection.connection_type is NodeType.TIMELORD:
+                await self._send_peak_to_timelords()
 
     async def _on_disconnect(self, connection: WSChiaConnection):
         self.log.info("peer disconnected")
@@ -293,11 +297,8 @@ class FullNode:
 
             cur_peers: List[WSChiaConnection] = [
                 con
-                for id, con in self.server.all_connections.items()
-                if (
-                        con.peer_node_id is not None
-                        and con.connection_type == NodeType.FULL_NODE
-                )
+                for _, con in self.server.all_connections.items()
+                if (con.peer_node_id is not None and con.connection_type == NodeType.FULL_NODE)
             ]
 
             for node_id in cur_peers:
@@ -398,7 +399,7 @@ class FullNode:
             return
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
-        header_hash = sub_block.header.get_hash()
+        header_hash = sub_block.foliage_sub_block.get_hash()
         if self.blockchain.contains_sub_block(header_hash):
             return
 
@@ -414,7 +415,7 @@ class FullNode:
             # Tries to add the block to the blockchain
             added, error_code, fork_height = await self.blockchain.receive_block(sub_block, False)
             if added == ReceiveBlockResult.NEW_PEAK:
-                await self.mempool_manager.new_peak(await self.blockchain.get_peak())
+                await self.mempool_manager.new_peak(self.blockchain.get_peak())
 
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
@@ -469,8 +470,8 @@ class FullNode:
             new_peak: SubBlockRecord = self.blockchain.get_peak()
             self.log.info(f"Updated peak to {new_peak} at height {new_peak.height}, " f"forked at {fork_height}")
 
-            difficulty = self.blockchain.get_next_difficulty(new_peak, False)
-            sub_slot_iters = self.blockchain.get_next_slot_iters(new_peak, False)
+            difficulty = self.blockchain.get_next_difficulty(new_peak.header_hash, False)
+            sub_slot_iters = self.blockchain.get_next_slot_iters(new_peak.header_hash, False)
             self.log.info(f"Difficulty {difficulty} slot iterations {sub_slot_iters}")
 
             sp_sub_slot, ip_sub_slot = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
@@ -507,22 +508,22 @@ class FullNode:
                     sub_block.height,
                     sub_block.weight,
                     fork_height,
-                    sub_block.rewardchain_sub_block.get_unfinished().get_hash(),
+                    sub_block.reward_chain_sub_block.get_unfinished().get_hash(),
                 ),
             )
             self.server.send_to_all([msg], NodeType.FULL_NODE)
 
             # Tell wallets about the new peak
             msg = Message(
-                    "new_peak",
-                    wallet_protocol.NewPeak(
-                        sub_block.header_hash,
-                        sub_block.height,
-                        sub_block.weight,
-                        fork_height,
-                    ),
-                )
-            self.server.send_to_all([msg], NodeType.Wallet)
+                "new_peak",
+                wallet_protocol.NewPeak(
+                    sub_block.header_hash,
+                    sub_block.height,
+                    sub_block.weight,
+                    fork_height,
+                ),
+            )
+            self.server.send_to_all([msg], NodeType.WALLET)
 
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
             self.log.info(f"Received orphan block of height {sub_block.height}")
