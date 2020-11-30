@@ -65,13 +65,13 @@ class SubBlockRecord(Streamable):
     def is_challenge_sub_block(self, constants: ConsensusConstants) -> bool:
         return self.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
 
-    def pos_sub_slot_total_iters(self, constants: ConsensusConstants) -> uint128:
+    def sp_sub_slot_total_iters(self, constants: ConsensusConstants) -> uint128:
         if self.overflow:
             return uint128(self.total_iters - self.ip_iters(constants) - self.sub_slot_iters)
         else:
             return uint128(self.total_iters - self.ip_iters(constants))
 
-    def infusion_sub_slot_total_iters(self, constants: ConsensusConstants) -> uint128:
+    def ip_sub_slot_total_iters(self, constants: ConsensusConstants) -> uint128:
         return self.total_iters - self.ip_iters(constants)
 
     def sp_iters(self, constants: ConsensusConstants) -> uint64:
@@ -81,4 +81,4 @@ class SubBlockRecord(Streamable):
         return calculate_ip_iters(constants, self.sub_slot_iters, self.signage_point_index, self.required_iters)
 
     def sp_total_iters(self, constants: ConsensusConstants):
-        return self.pos_sub_slot_total_iters(constants) + self.sp_iters(constants)
+        return self.sp_sub_slot_total_iters(constants) + self.sp_iters(constants)
