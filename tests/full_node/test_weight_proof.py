@@ -225,7 +225,7 @@ class TestWeightProof:
         wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
         wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
-        wp = wpf.make_weight_proof(uint32(len(header_cache)), num_of_blocks, blocks[-1].header_hash)
+        wp = wpf.make_weight_proof(uint32(len(header_cache)), num_of_blocks, default_10000_blocks[-1].header_hash)
 
         assert wp is not None
         assert len(wp.sub_epochs) == sub_epoch_idx
