@@ -10,7 +10,6 @@ import aiosqlite
 import src.server.ws_connection as ws
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import is_overflow_sub_block
 
 from src.full_node.block_store import BlockStore
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
@@ -124,11 +123,6 @@ class FullNode:
             """
         except Exception as e:
             self.log.error(f"Exception in peer discovery: {e}")
-
-        # TODO(mariano)
-        # uncompact_interval = self.config["send_uncompact_interval"]
-        # if uncompact_interval > 0:
-        #     self.broadcast_uncompact_task = asyncio.create_task(self.broadcast_uncompact_blocks(uncompact_interval))
 
     def _set_server(self, server: ChiaServer):
         self.server = server
@@ -480,14 +474,14 @@ class FullNode:
             self.log.info(f"Difficulty {difficulty} slot iterations {sub_slot_iters}")
 
             sp_sub_slot, ip_sub_slot = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
-            added_eos: Optional[EndOfSubSlotBundle] = self.full_node_store.new_peak(
+            added_eos, added_sps, new_ips = self.full_node_store.new_peak(
                 new_peak,
                 sp_sub_slot,
                 ip_sub_slot,
                 fork_height != sub_block.height - 1,
                 self.blockchain.sub_blocks,
             )
-            # TODO: maybe broadcast new SP as well?
+            # TODO: maybe broadcast new SP/IPs as well?
 
             # If there were pending end of slots that happen after this peak, broadcast them if they are added
             if added_eos is not None:
