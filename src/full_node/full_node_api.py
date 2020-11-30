@@ -307,7 +307,7 @@ class FullNodeAPI:
                 request.reward_chain_vdf.challenge_hash,
             )
             msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
-            self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
         return
 
@@ -328,7 +328,7 @@ class FullNodeAPI:
                 request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge_hash,
             )
             msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
-            self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
         return
 
