@@ -68,7 +68,7 @@ def get_signage_point_vdf_info(
         # Case 5: prev is in the same sub slot and also overflow. Starting at prev does not skip any sub slots
         curr: SubBlockRecord = prev_sb
 
-        # Collects the last two finishes slots
+        # Collects the last two finished slots
         found_sub_slots = (
             list(reversed(list(zip(curr.finished_challenge_slot_hashes, curr.finished_reward_slot_hashes))))
             if curr.first_in_sub_slot
