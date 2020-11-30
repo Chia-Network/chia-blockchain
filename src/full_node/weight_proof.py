@@ -479,18 +479,22 @@ def map_summaries(
 ) -> (Dict[uint32, SubEpochSummary], uint128):
     sub_epoch_data_weight: uint128 = uint128(0)
     summaries: Dict[uint32, SubEpochSummary] = {}
+    prev_difficulty = curr_difficulty
+    prev_sub_slot_iters = curr_sub_slot_iters
     for idx, sub_epoch_data in enumerate(sub_epoch_data):
         ses = SubEpochSummary(
             ses_hash,
             sub_epoch_data.reward_chain_hash,
             sub_epoch_data.num_sub_blocks_overflow,
-            curr_difficulty,
-            curr_sub_slot_iters,
+            curr_difficulty if prev_difficulty != curr_difficulty else None,
+            curr_sub_slot_iters if prev_sub_slot_iters != curr_sub_slot_iters else None,
         )
 
         # if new epoch update diff and iters
         if sub_epoch_data.new_sub_slot_iters is not None:
+            prev_difficulty = curr_difficulty
             curr_difficulty = sub_epoch_data.new_difficulty
+            prev_sub_slot_iters = curr_sub_slot_iters
             curr_sub_slot_iters = sub_epoch_data.new_sub_slot_iters
 
         log.info(
