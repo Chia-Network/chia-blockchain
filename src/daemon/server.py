@@ -27,9 +27,7 @@ io_pool_exc = ThreadPoolExecutor()
 try:
     from aiohttp import web
 except ModuleNotFoundError:
-    print(
-        "Error: Make sure to run . ./activate from the project folder before starting Chia."
-    )
+    print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     quit()
 
 try:
@@ -83,6 +81,11 @@ else:
         return service_name
 
 
+async def ping():
+    response = {"success": True, "value": "pong"}
+    return response
+
+
 class WebSocketServer:
     def __init__(self, root_path):
         self.root_path = root_path
@@ -95,6 +98,7 @@ class WebSocketServer:
         net_config = load_config(root_path, "config.yaml")
         self.self_hostname = net_config["self_hostname"]
         self.daemon_port = net_config["daemon_port"]
+        self.websocket_server = None
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -103,12 +107,8 @@ class WebSocketServer:
             asyncio.ensure_future(self.stop())
 
         try:
-            asyncio.get_running_loop().add_signal_handler(
-                signal.SIGINT, master_close_cb
-            )
-            asyncio.get_running_loop().add_signal_handler(
-                signal.SIGTERM, master_close_cb
-            )
+            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
+            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
         except NotImplementedError:
             self.log.info("Not implemented")
 
@@ -145,23 +145,20 @@ class WebSocketServer:
             async for message in websocket:
                 try:
                     decoded = json.loads(message)
-                    response, sockets_to_use = await self.handle_message(
-                        websocket, decoded
-                    )
+                    response, sockets_to_use = await self.handle_message(websocket, decoded)
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error while handling message: {tb}")
                     error = {"success": False, "error": f"{e}"}
                     response = format_response(message, error)
+                    sockets_to_use = 0
                 if len(sockets_to_use) > 0:
                     for socket in sockets_to_use:
                         try:
                             await socket.send(response)
                         except Exception as e:
                             tb = traceback.format_exc()
-                            self.log.error(
-                                f"Unexpected exception trying to send to websocket: {e} {tb}"
-                            )
+                            self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
                             self.remove_connection(socket)
                             await socket.close()
         except Exception as e:
@@ -171,13 +168,9 @@ class WebSocketServer:
             if remote_address in self.remote_address_map:
                 service_name = self.remote_address_map[remote_address]
             if isinstance(e, ConnectionClosedOK):
-                self.log.info(
-                    f"ConnectionClosedOk. Closing websocket with {service_name} {e}"
-                )
+                self.log.info(f"ConnectionClosedOk. Closing websocket with {service_name} {e}")
             elif isinstance(e, WebSocketException):
-                self.log.info(
-                    f"Websocket exception. Closing websocket with {service_name} {e} {tb}"
-                )
+                self.log.info(f"Websocket exception. Closing websocket with {service_name} {e} {tb}")
             else:
                 self.log.error(f"Unexpected exception in websocket: {e} {tb}")
         finally:
@@ -221,9 +214,7 @@ class WebSocketServer:
         if restart is True:
             self.ping_job = asyncio.create_task(self.ping_task())
 
-    async def handle_message(
-        self, websocket, message
-    ) -> Tuple[Optional[str], List[Any]]:
+    async def handle_message(self, websocket, message) -> Tuple[Optional[str], List[Any]]:
         """
         This function gets called when new message is received via websocket.
         """
@@ -242,7 +233,7 @@ class WebSocketServer:
         if "data" in message:
             data = message["data"]
         if command == "ping":
-            response = await self.ping()
+            response = await ping()
         elif command == "start_service":
             response = await self.start_service(data)
         elif command == "start_plotting":
@@ -262,11 +253,7 @@ class WebSocketServer:
             response = {"success": False, "error": f"unknown_command {command}"}
 
         full_response = format_response(message, response)
-        return (full_response, [websocket])
-
-    async def ping(self):
-        response = {"success": True, "value": "pong"}
-        return response
+        return full_response, [websocket]
 
     def plot_queue_to_payload(self, plot_queue_item):
         error = plot_queue_item.get("error")
@@ -380,114 +367,23 @@ class WebSocketServer:
         if a is not None:
             command_args.append(f"-a={a}")
 
-        return command_args
-
-    def _is_serial_plotting_running(self):
-        response = False
-        for item in self.plots_queue:
-            if item["parallel"] is False and item["state"] is PlotState.RUNNING:
-                response = True
-        return response
-
-    def _get_plots_queue_item(self, id: str):
-        config = next(item for item in self.plots_queue if item["id"] == id)
-        return config
-
-    def _run_next_serial_plotting(self, loop):
-        next_plot_id = None
-
-        for item in self.plots_queue:
-            if item["state"] is PlotState.SUBMITTED and item["parallel"] is False:
-                next_plot_id = item["id"]
-
-        if next_plot_id is not None:
-            loop.create_task(self._start_plotting(next_plot_id, loop))
-
-    async def _start_plotting(self, id: str, loop):
-        current_process = None
-        try:
-            log.info(f"Starting plotting with ID {id}")
-            config = self._get_plots_queue_item(id)
-
-            if config is None:
-                raise Exception(f"Plot queue with ID {id} does not exists")
-
-            state = config["state"]
-            if state is not PlotState.SUBMITTED:
-                raise Exception(f"Plot with ID {id} has no state submitted")
-
-            id = config["id"]
-            delay = config["delay"]
-            await asyncio.sleep(delay)
-
-            service_name = config["service_name"]
-            command_args = config["command_args"]
-            process, pid_path = launch_plotter(
-                self.root_path, service_name, command_args, id
-            )
-
-            current_process = process
-
-            config["state"] = PlotState.RUNNING
-            config["out_file"] = plotter_log_path(self.root_path, id).absolute()
-            config["process"] = process
-            self.state_changed(service_plotter, "state")
-
-            if service_name not in self.services:
-                self.services[service_name] = []
-
-            self.services[service_name].append(process)
-
-            await self._track_plotting_progress(id, loop)
-
-            # (output, err) = process.communicate()
-            # await process.wait()
-
-            config["state"] = PlotState.FINISHED
-            self.state_changed(service_plotter, "state")
-
-        except (subprocess.SubprocessError, IOError):
-            log.exception(f"problem starting {service_name}")
-            error = Exception("Start plotting failed")
-            config["state"] = PlotState.ERROR
-            config["error"] = error
-            self.state_changed(service_plotter, "state")
-            raise error
-
-        finally:
-            if current_process is not None:
-                self.services[service_name].remove(current_process)
-            self._run_next_serial_plotting(loop)
-
-    async def start_plotting(self, request):
-        service_name = request["service"]
-
-        delay = request.get("delay", 0)
-        parallel = request.get("parallel", False)
-        size = request.get("k")
-
-        id = str(uuid.uuid1())
-        config = {
-            "id": id,
-            "size": size,
-            "service_name": service_name,
-            "command_args": self._build_plotting_command_args(request),
-            "parallel": parallel,
-            "delay": delay,
-            "state": PlotState.SUBMITTED,
-            "error": None,
-            "log": None,
-            "process": None,
-        }
-
-        self.plots_queue.append(config)
-
-        if parallel is True or self._is_serial_plotting_running() is False:
-            log.info(f"Plotting will start in {delay} seconds")
-            loop = asyncio.get_event_loop()
-            loop.create_task(self._start_plotting(id, loop))
-        else:
-            log.info("Plotting will start automatically when previous plotting finish")
+        if service_name in self.services:
+            service = self.services[service_name]
+            r = service is not None and service.poll() is None
+            if r is False:
+                self.services.pop(service_name)
+                error = None
+            else:
+                error = f"Service {service_name} already running"
+        if error is None:
+            try:
+                self.log.info(f"Start potting: {command_args}")
+                process, pid_path = launch_plotter(self.root_path, service_name, command_args)
+                self.services[service_name] = process
+                success = True
+            except (subprocess.SubprocessError, IOError):
+                log.exception(f"problem starting {service_name}")
+                error = "start failed"
 
         response = {
             "success": True,
@@ -663,9 +559,7 @@ def launch_plotter(root_path, service_name, service_array, id):
         mkdir(plotter_path.parent)
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")
-    process = subprocess.Popen(
-        service_array, shell=False, stdout=outfile, startupinfo=startupinfo
-    )
+    process = subprocess.Popen(service_array, shell=False, stdout=outfile, startupinfo=startupinfo)
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:

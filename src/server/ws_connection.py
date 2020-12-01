@@ -282,6 +282,9 @@ class WSChiaConnection:
             raise TimeoutError("self.reader.readexactly(full_message_length)")
         return None
 
-    def get_peer_info(self):
-        connection_host, connection_port = self.ws._writer.transport.get_extra_info("peername")
+    def get_peer_info(self) -> Optional[PeerInfo]:
+        result = self.ws._writer.transport.get_extra_info("peername")
+        if result is None:
+            return None
+        connection_host, connection_port = result
         return PeerInfo(connection_host, self.peer_server_port)

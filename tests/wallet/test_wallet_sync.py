@@ -14,12 +14,7 @@ from tests.time_out_assert import time_out_assert
 
 
 def wallet_height_at_least(wallet_node, h):
-    if (
-        wallet_node.wallet_state_manager.block_records[
-            wallet_node.wallet_state_manager.lca
-        ].height
-        >= h
-    ):
+    if wallet_node.wallet_state_manager.block_records[wallet_node.wallet_state_manager.lca].height >= h:
         return True
     return False
 
@@ -49,26 +44,18 @@ class TestWalletSync:
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
         for i in range(1, len(blocks)):
-            await full_node_api.full_node._respond_block(
-                full_node_protocol.RespondBlock(blocks[i])
-            )
+            await full_node_api.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
 
-        await wallet_server.start_client(
-            PeerInfo("localhost", uint16(full_node_server._port)), None
-        )
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1.
-        await time_out_assert(
-            200, wallet_height_at_least, True, wallet_node, num_blocks - 6
-        )
+        await time_out_assert(200, wallet_height_at_least, True, wallet_node, num_blocks - 6)
 
         # Tests a reorg with the wallet
         blocks_reorg = bt.get_consecutive_blocks(test_constants, 15, blocks[:-5])
         for i in range(1, len(blocks_reorg)):
-            await full_node_api.full_node._respond_block(
-                full_node_protocol.RespondBlock(blocks_reorg[i])
-            )
+            await full_node_api.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks_reorg[i]))
 
         await time_out_assert(200, wallet_height_at_least, True, wallet_node, 33)
 
@@ -79,15 +66,11 @@ class TestWalletSync:
         full_node_1, wallet_node, server_1, server_2 = wallet_node_starting_height
 
         for i in range(1, len(blocks)):
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(blocks[i])
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
-        await time_out_assert(
-            60, wallet_height_at_least, True, wallet_node, num_blocks - 6
-        )
+        await time_out_assert(60, wallet_height_at_least, True, wallet_node, num_blocks - 6)
 
     @pytest.mark.asyncio
     async def test_short_sync_wallet(self, wallet_node):
@@ -96,9 +79,7 @@ class TestWalletSync:
         full_node_1, wallet_node, server_1, server_2 = wallet_node
 
         for i in range(1, len(blocks)):
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(blocks[i])
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 3)
@@ -114,13 +95,9 @@ class TestWalletSync:
         puzzle_hashes = [await wallet_a.get_new_puzzlehash() for _ in range(10)]
         puzzle_hashes.append(BURN_PUZZLE_HASH_2)
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, 3, [], 10, b"", coinbase_puzzlehash
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, 3, [], 10, b"", coinbase_puzzlehash)
         for block in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(block)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 1)
@@ -141,14 +118,10 @@ class TestWalletSync:
             prev_coin = Coin(prev_coin.name(), puzzle_hashes[i], uint64(1000))
             dic_h[i + 4] = (program, aggsig)
 
-        blocks = bt.get_consecutive_blocks(
-            test_constants, 13, blocks, 10, b"", coinbase_puzzlehash_rest, dic_h
-        )
+        blocks = bt.get_consecutive_blocks(test_constants, 13, blocks, 10, b"", coinbase_puzzlehash_rest, dic_h)
         # Move chain to height 16, with consecutive transactions in blocks 4 to 14
         for block in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(block)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         # Do a short sync from 0 to 14
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -159,15 +132,11 @@ class TestWalletSync:
         # 3 block rewards and 3 fees - 1000 coins spent
         assert (
             await wallet_a.get_confirmed_balance()
-            == (blocks[1].get_coinbase().amount * 3)
-            + (blocks[1].get_fees_coin().amount * 3)
-            - 1000
+            == (blocks[1].get_coinbase().amount * 3) + (blocks[1].get_fees_coin().amount * 3) - 1000
         )
         # All of our coins are spent and puzzle hashes present
         for puzzle_hash in puzzle_hashes[:-1]:
-            records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
-                puzzle_hash
-            )
+            records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(puzzle_hash)
             assert len(records) == 1
             assert records[0].spent and not records[0].coinbase
 
@@ -200,9 +169,7 @@ class TestWalletSync:
 
         # Move chain to height 34, with consecutive transactions in blocks 4 to 14
         for block in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(block)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         # Do a sync from 0 to 22
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -213,15 +180,11 @@ class TestWalletSync:
         # 3 block rewards and 3 fees - 1000 coins spent
         assert (
             await wallet_a.get_confirmed_balance()
-            == (blocks[1].get_coinbase().amount * 3)
-            + (blocks[1].get_fees_coin().amount * 3)
-            - 1000
+            == (blocks[1].get_coinbase().amount * 3) + (blocks[1].get_fees_coin().amount * 3) - 1000
         )
         # All of our coins are spent and puzzle hashes present
         for puzzle_hash in puzzle_hashes[:-1]:
-            records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
-                puzzle_hash
-            )
+            records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(puzzle_hash)
             assert len(records) == 1
             assert records[0].spent and not records[0].coinbase
 
@@ -231,9 +194,7 @@ class TestWalletSync:
 
         dic_h = {}
         pk, sk = await wallet_a.wallet_state_manager.get_keys(new_coinbase_puzzlehash)
-        coinbase_coin = create_coinbase_coin(
-            uint32(25), new_coinbase_puzzlehash, uint64(14000000000000)
-        )
+        coinbase_coin = create_coinbase_coin(uint32(25), new_coinbase_puzzlehash, uint64(14000000000000))
         transaction_unsigned = await wallet_a.generate_unsigned_transaction(
             7000000000000,
             another_puzzlehash,
@@ -266,9 +227,7 @@ class TestWalletSync:
             dic_h,
         )
         for block in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(block)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 38)
@@ -276,9 +235,7 @@ class TestWalletSync:
         # 4 block rewards and 4 fees - 1000 coins spent
         assert (
             await wallet_a.get_confirmed_balance()
-            == (blocks[1].get_coinbase().amount * 4)
-            + (blocks[1].get_fees_coin().amount * 4)
-            - 1000
+            == (blocks[1].get_coinbase().amount * 4) + (blocks[1].get_fees_coin().amount * 4) - 1000
         )
         records = await wallet_node.wallet_state_manager.wallet_store.get_coin_records_by_puzzle_hash(
             new_coinbase_puzzlehash

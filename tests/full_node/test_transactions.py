@@ -26,16 +26,12 @@ class TestTransactions:
 
     @pytest.fixture(scope="function")
     async def two_wallet_nodes(self):
-        async for _ in setup_simulators_and_wallets(
-            1, 2, {"COINBASE_FREEZE_PERIOD": 0}
-        ):
+        async for _ in setup_simulators_and_wallets(1, 2, {"COINBASE_FREEZE_PERIOD": 0}):
             yield _
 
     @pytest.fixture(scope="function")
     async def three_nodes_two_wallets(self):
-        async for _ in setup_simulators_and_wallets(
-            3, 2, {"COINBASE_FREEZE_PERIOD": 0}
-        ):
+        async for _ in setup_simulators_and_wallets(3, 2, {"COINBASE_FREEZE_PERIOD": 0}):
             yield _
 
     @pytest.mark.asyncio
@@ -48,17 +44,12 @@ class TestTransactions:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(
-            PeerInfo("localhost", uint16(full_node_server._port)), None
-        )
+        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         for i in range(1, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [
-                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
-            ]
+            [calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i)) for i in range(1, num_blocks - 2)]
         )
         await asyncio.sleep(2)
         print(await wallet.get_confirmed_balance(), funds)
@@ -84,33 +75,20 @@ class TestTransactions:
         #
         # wallet0 <-> sever0 <-> server1 <-> server2 <-> wallet1
         #
-        await wallet_server_0.start_client(
-            PeerInfo("localhost", uint16(server_0._port)), None
-        )
+        await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_0._port)), None)
         await server_0.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await server_1.start_client(PeerInfo("localhost", uint16(server_2._port)), None)
-        await wallet_server_1.start_client(
-            PeerInfo("localhost", uint16(server_2._port)), None
-        )
+        await wallet_server_1.start_client(PeerInfo("localhost", uint16(server_2._port)), None)
 
         for i in range(1, num_blocks):
             await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [
-                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
-            ]
+            [calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i)) for i in range(1, num_blocks - 2)]
         )
-        await time_out_assert(
-            10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds
-        )
+        await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-        tx = (
-            await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-                10, ph1, 0
-            )
-        )
+        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, ph1, 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(
@@ -135,20 +113,13 @@ class TestTransactions:
         # Farm another block
         for i in range(1, 8):
             await full_node_api_1.farm_new_block(FarmNewBlockProtocol(token_bytes()))
-        funds = sum(
-            [
-                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks)
-            ]
-        )
+        funds = sum([calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i)) for i in range(1, num_blocks)])
         await time_out_assert(
             10,
             wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance,
             (funds - 10),
         )
-        await time_out_assert(
-            15, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, (10)
-        )
+        await time_out_assert(15, wallet_1.wallet_state_manager.main_wallet.get_confirmed_balance, (10))
 
     @pytest.mark.asyncio
     async def test_mempool_tx_sync(self, three_nodes_two_wallets):
@@ -167,9 +138,7 @@ class TestTransactions:
 
         # wallet0 <-> sever0 <-> server1
 
-        await wallet_server_0.start_client(
-            PeerInfo("localhost", uint16(server_0._port)), None
-        )
+        await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_0._port)), None)
         await server_0.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         for i in range(1, num_blocks):
@@ -178,25 +147,14 @@ class TestTransactions:
         all_blocks = await full_node_api_0.get_current_blocks(full_node_api_0.get_tip())
 
         for block in all_blocks:
-            await full_node_api_2.full_node._respond_block(
-                full_node_protocol.RespondBlock(block)
-            )
+            await full_node_api_2.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         funds = sum(
-            [
-                calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-                for i in range(1, num_blocks - 2)
-            ]
+            [calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i)) for i in range(1, num_blocks - 2)]
         )
-        await time_out_assert(
-            10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds
-        )
+        await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-        tx = (
-            await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
-                10, token_bytes(), 0
-            )
-        )
+        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, token_bytes(), 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert(
