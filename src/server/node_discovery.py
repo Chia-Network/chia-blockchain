@@ -110,9 +110,7 @@ class FullNodeDiscovery:
                         peer_info.port,
                         uint64(int(time.time())),
                     )
-                    await self.address_manager.add_to_new_table(
-                        [timestamped_peer_info], peer_info, 0
-                    )
+                    await self.address_manager.add_to_new_table([timestamped_peer_info], peer_info, 0)
                     # await self.address_manager.mark_good(peer_info, True)
                     if self.relay_queue is not None:
                         self.relay_queue.put_nowait((timestamped_peer_info, 1))
@@ -133,9 +131,7 @@ class FullNodeDiscovery:
 
     def _poisson_next_send(self, now, avg_interval_seconds, random):
         return now + (
-            math.log(random.randrange(1 << 48) * -0.0000000000000035527136788 + 1)
-            * avg_interval_seconds
-            * -1000000.0
+            math.log(random.randrange(1 << 48) * -0.0000000000000035527136788 + 1) * avg_interval_seconds * -1000000.0
             + 0.5
         )
 
@@ -164,6 +160,7 @@ class FullNodeDiscovery:
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
         while not self.is_closed:
+            print("Iterating connect to peers")
             try:
                 # We don't know any address, connect to the introducer to get some.
                 size = await self.address_manager.size()
@@ -177,6 +174,7 @@ class FullNodeDiscovery:
                 groups = []
                 full_node_connected = self.server.get_full_node_connections()
                 connected = [c.get_peer_info() for c in full_node_connected]
+                connected = [c for c in connected if c is not None]
                 for conn in full_node_connected:
                     peer = conn.get_peer_info()
                     group = peer.get_group()
@@ -199,9 +197,7 @@ class FullNodeDiscovery:
                 has_collision = False
                 if self._num_needed_peers() == 0:
                     if time.time() * 1000 * 1000 > next_feeler:
-                        next_feeler = self._poisson_next_send(
-                            time.time() * 1000 * 1000, 240, random
-                        )
+                        next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
                         is_feeler = True
 
                 await self.address_manager.resolve_tried_collisions()
@@ -223,9 +219,7 @@ class FullNodeDiscovery:
                         addr = None
                         empty_tables = True
                         break
-                    info: Optional[
-                        ExtendedPeerInfo
-                    ] = await self.address_manager.select_tried_collision()
+                    info: Optional[ExtendedPeerInfo] = await self.address_manager.select_tried_collision()
                     if info is None:
                         info = await self.address_manager.select_peer(is_feeler)
                     else:
@@ -251,10 +245,7 @@ class FullNodeDiscovery:
                     # only consider very recently tried nodes after 30 failed attempts
                     if now - info.last_try < 3600 and tries < 30:
                         continue
-                    if (
-                        time.time() - last_timestamp_local_info > 1800
-                        or local_peerinfo is None
-                    ):
+                    if time.time() - last_timestamp_local_info > 1800 or local_peerinfo is None:
                         local_peerinfo = await self.server.get_peer_info()
                         last_timestamp_local_info = uint64(int(time.time()))
                     if local_peerinfo is not None and addr == local_peerinfo:
@@ -265,15 +256,9 @@ class FullNodeDiscovery:
                 if self._num_needed_peers() == 0:
                     disconnect_after_handshake = True
                     empty_tables = False
-                initiate_connection = (
-                    self._num_needed_peers() > 0 or has_collision or is_feeler
-                )
+                initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
                 if addr is not None and initiate_connection:
-                    asyncio.create_task(
-                        self.server.start_client(
-                            addr, is_feeler=disconnect_after_handshake
-                        )
-                    )
+                    asyncio.create_task(self.server.start_client(addr, is_feeler=disconnect_after_handshake))
                 sleep_interval = 1 + len(groups) * 0.5
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
                 await asyncio.sleep(sleep_interval)
@@ -310,13 +295,9 @@ class FullNodeDiscovery:
             peers_adjusted_timestamp.append(current_peer)
 
         if is_full_node:
-            await self.address_manager.add_to_new_table(
-                peers_adjusted_timestamp, peer_src, 2 * 60 * 60
-            )
+            await self.address_manager.add_to_new_table(peers_adjusted_timestamp, peer_src, 2 * 60 * 60)
         else:
-            await self.address_manager.add_to_new_table(
-                peers_adjusted_timestamp, None, 0
-            )
+            await self.address_manager.add_to_new_table(peers_adjusted_timestamp, None, 0)
 
 
 class FullNodePeers(FullNodeDiscovery):
@@ -347,9 +328,7 @@ class FullNodePeers(FullNodeDiscovery):
 
     async def start(self):
         await self.initialize_address_manager()
-        self.self_advertise_task = asyncio.create_task(
-            self._periodically_self_advertise()
-        )
+        self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise())
         self.address_relay_task = asyncio.create_task(self._address_relay())
         await self.start_tasks()
 
@@ -458,10 +437,7 @@ class FullNodePeers(FullNodeDiscovery):
                     peer_info = connection.get_peer_info()
                     pair = (peer_info.host, peer_info.port)
                     async with self.lock:
-                        if (
-                            pair in self.neighbour_known_peers
-                            and relay_peer.host in self.neighbour_known_peers[pair]
-                        ):
+                        if pair in self.neighbour_known_peers and relay_peer.host in self.neighbour_known_peers[pair]:
                             continue
                         if pair not in self.neighbour_known_peers:
                             self.neighbour_known_peers[pair] = set()

@@ -87,6 +87,13 @@ class FullNodeAPI:
         if self.full_node.blockchain.contains_sub_block(request.header_hash):
             return
 
+        # Not interested in less heavy peaks
+        if (
+            self.full_node.blockchain.get_peak() is not None
+            and self.full_node.blockchain.get_peak().weight > request.weight
+        ):
+            return
+
         # TODO: potential optimization, don't request blocks that we have already sent out
         request_transactions: bool = (
             self.full_node.full_node_store.get_unfinished_block(request.unfinished_reward_block_hash) is None
@@ -187,7 +194,7 @@ class FullNodeAPI:
         if block is not None:
             if not request_block.include_transaction_block:
                 block = dataclasses.replace(block, transactions_generator=None)
-            msg = Message("respond_block", full_node_protocol.RespondSubBlock(block))
+            msg = Message("respond_sub_block", full_node_protocol.RespondSubBlock(block))
             return msg
         return
 
@@ -322,11 +329,10 @@ class FullNodeAPI:
         )
 
         if new_infusions is not None:
-            print("Added!")
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
                 request.end_of_slot_bundle.challenge_chain.get_hash(),
                 uint8(0),
-                request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge_hash,
+                request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
             )
             msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
