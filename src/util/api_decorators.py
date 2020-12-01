@@ -29,6 +29,7 @@ def api_request(f):
 
         return f(**inter)
 
+    setattr(f_substitute, "api_function", True)
     return f_substitute
 
 
