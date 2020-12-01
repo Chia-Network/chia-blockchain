@@ -39,7 +39,7 @@ def service_kwargs_for_full_node(
         service_name=SERVICE_NAME,
         upnp_ports=upnp_list,
         server_listen_ports=[config["port"]],
-        on_connect_callback=full_node._on_connect,
+        on_connect_callback=full_node.on_connect,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])

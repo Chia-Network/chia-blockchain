@@ -175,12 +175,8 @@ class WalletNode:
         self._shut_down = True
         if self.wallet_state_manager is None:
             return
-        self.wsm_close_task = asyncio.create_task(
-            self.wallet_state_manager.close_all_stores()
-        )
-        self.wallet_peers_task = asyncio.create_task(
-            self.wallet_peers.ensure_is_closed()
-        )
+        self.wsm_close_task = asyncio.create_task(self.wallet_state_manager.close_all_stores())
+        self.wallet_peers_task = asyncio.create_task(self.wallet_peers.ensure_is_closed())
 
     async def _await_closed(self):
         if self.wallet_state_manager is None or self.backup_initialized is False:
@@ -205,9 +201,7 @@ class WalletNode:
     async def _action_messages(self) -> List[Message]:
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return []
-        actions: List[
-            WalletAction
-        ] = await self.wallet_state_manager.action_store.get_all_pending_actions()
+        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
         result: List[Message] = []
         for action in actions:
             data = json.loads(action.data)
@@ -253,11 +247,7 @@ class WalletNode:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def _messages_to_resend(self) -> List[Message]:
-        if (
-            self.wallet_state_manager is None
-            or self.backup_initialized is False
-            or self._shut_down
-        ):
+        if self.wallet_state_manager is None or self.backup_initialized is False or self._shut_down:
             return []
         messages: List[Message] = []
 
@@ -274,7 +264,7 @@ class WalletNode:
 
         return messages
 
-    def _set_server(self, server: ChiaServer):
+    def set_server(self, server: ChiaServer):
         self.server = server
         self.wallet_peers = WalletPeers(
             self.server,
@@ -287,7 +277,7 @@ class WalletNode:
         )
         asyncio.create_task(self.wallet_peers.start())
 
-    async def _on_connect(self, peer: WSChiaConnection):
+    async def on_connect(self, peer: WSChiaConnection):
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
         messages = await self._messages_to_resend()
@@ -311,13 +301,9 @@ class WalletNode:
                 self.config["full_node_peer"]["port"],
             )
             peers = [c.get_peer_info() for c in self.server.get_full_node_connections()]
-            full_node_resolved = PeerInfo(
-                socket.gethostbyname(full_node_peer.host), full_node_peer.port
-            )
+            full_node_resolved = PeerInfo(socket.gethostbyname(full_node_peer.host), full_node_peer.port)
             if full_node_peer in peers or full_node_resolved in peers:
-                self.log.info(
-                    f"Will not attempt to connect to other nodes, already connected to {full_node_peer}"
-                )
+                self.log.info(f"Will not attempt to connect to other nodes, already connected to {full_node_peer}")
                 for connection in self.server.get_full_node_connections():
                     if (
                         connection.get_peer_info() != full_node_peer

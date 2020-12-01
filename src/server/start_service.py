@@ -73,7 +73,7 @@ class Service:
             service_config,
             name=f"{service_name}_server",
         )
-        for _ in ["set_server", "_set_server"]:
+        for _ in ["set_server", "set_server"]:
             f = getattr(node, _, None)
             if f:
                 f(self._server)

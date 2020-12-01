@@ -28,9 +28,7 @@ def service_kwargs_for_wallet(
     consensus_constants: ConsensusConstants,
     keychain: Keychain,
 ) -> Dict:
-    node = WalletNode(
-        config, keychain, root_path, consensus_constants=consensus_constants
-    )
+    node = WalletNode(config, keychain, root_path, consensus_constants=consensus_constants)
     peer_api = WalletNodeAPI(node)
 
     fnp = config.get("full_node_peer")
@@ -45,7 +43,7 @@ def service_kwargs_for_wallet(
         peer_api=peer_api,
         node_type=NodeType.WALLET,
         service_name=SERVICE_NAME,
-        on_connect_callback=node._on_connect,
+        on_connect_callback=node.on_connect,
         connect_peers=connect_peers,
         auth_connect_peers=False,
     )

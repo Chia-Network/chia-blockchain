@@ -222,7 +222,7 @@ class Timelord:
         self.finished_sp = 0
         self.overflow_blocks: List[timelord_protocol.NewUnfinishedSubBlock] = []
 
-    def _set_server(self, server: ChiaServer):
+    def set_server(self, server: ChiaServer):
         self.server = server
 
     def _accept_unfinished_block(self, block: timelord_protocol.NewUnfinishedSubBlock) -> bool:
