@@ -31,7 +31,6 @@ from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.server.ws_connection import WSChiaConnection
-from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 
 from src.types.sized_bytes import bytes32
@@ -96,6 +95,7 @@ class FullNode:
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
+        self.full_node_peers = None
         if self.blockchain.get_peak() is None:
             self.log.info("Initialized with empty blockchain")
         else:
@@ -124,7 +124,7 @@ class FullNode:
         except Exception as e:
             self.log.error(f"Exception in peer discovery: {e}")
 
-    def _set_server(self, server: ChiaServer):
+    def set_server(self, server: ChiaServer):
         self.server = server
         try:
             self.full_node_peers = FullNodePeers(
@@ -170,7 +170,7 @@ class FullNode:
             msg = Message("new_peak", timelord_new_peak)
             await self.server.send_to_all([msg], NodeType.TIMELORD)
 
-    async def _on_connect(self, connection: WSChiaConnection):
+    async def on_connect(self, connection: WSChiaConnection):
         """
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
@@ -566,7 +566,9 @@ class FullNode:
         if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
             return
 
-        if block.height > 0 and not self.blockchain.contains_sub_block(block.prev_header_hash):
+        if block.prev_header_hash != self.constants.GENESIS_PREV_HASH and not self.blockchain.contains_sub_block(
+            block.prev_header_hash
+        ):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
             self.log.info(f"Received a disconnected unfinished block at height {block.height}")
             return
@@ -589,7 +591,12 @@ class FullNode:
         if self.full_node_store.get_unfinished_block(block.reward_chain_sub_block.get_hash()) is not None:
             return
 
-        self.full_node_store.add_unfinished_block(block)
+        if block.prev_header_hash == self.constants.GENESIS_PREV_HASH:
+            height = uint32(0)
+        else:
+            height = self.blockchain.sub_blocks[block.prev_header_hash].height + 1
+
+        self.full_node_store.add_unfinished_block(height, block)
 
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
             block.reward_chain_sub_block,

@@ -55,7 +55,7 @@ class Timelord:
         self.last_time_seen_discriminant: Dict = {}
         self.max_known_weights: List[uint128] = []
 
-    def _set_server(self, server: ChiaServer):
+    def set_server(self, server: ChiaServer):
         self.server = server
 
     async def _handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
@@ -463,4 +463,3 @@ class Timelord:
                         self.server.push_message(msg)
                     self.proofs_to_write.clear()
             await asyncio.sleep(3)
-

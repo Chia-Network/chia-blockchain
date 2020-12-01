@@ -38,7 +38,7 @@ class RpcServer:
         change = args[0]
         if self.websocket is None:
             return
-        payloads: List[Dict] = await self.rpc_api._state_changed(*args)
+        payloads: List[Dict] = await self.rpc_api.state_changed(*args)
 
         if change == "add_connection" or change == "close_connection":
             data = await self.get_connections({})
@@ -113,8 +113,8 @@ class RpcServer:
         port = request["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
         on_connect = None
-        if hasattr(self.rpc_api.service, "_on_connect"):
-            on_connect = self.rpc_api.service._on_connect
+        if hasattr(self.rpc_api.service, "on_connect"):
+            on_connect = self.rpc_api.service.on_connect
         if getattr(self.rpc_api.service, "server", None) is None or not (
             await self.rpc_api.service.server.start_client(target_node, on_connect)
         ):
@@ -125,11 +125,7 @@ class RpcServer:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
             raise aiohttp.web.HTTPInternalServerError()
-        connections_to_close = [
-            c
-            for c in self.rpc_api.service.server.get_connections()
-            if c.peer_node_id == node_id
-        ]
+        connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
         if len(connections_to_close) == 0:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
         for connection in connections_to_close:
@@ -242,9 +238,7 @@ class RpcServer:
                 self.websocket = None
                 await session.close()
             except aiohttp.client_exceptions.ClientConnectorError:
-                self.log.warning(
-                    f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}"
-                )
+                self.log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
@@ -271,10 +265,7 @@ async def start_rpc_server(
     rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
     http_routes: Dict[str, Callable] = rpc_api.get_routes()
 
-    routes = [
-        aiohttp.web.post(route, rpc_server._wrap_http_handler(func))
-        for (route, func) in http_routes.items()
-    ]
+    routes = [aiohttp.web.post(route, rpc_server._wrap_http_handler(func)) for (route, func) in http_routes.items()]
     routes += [
         aiohttp.web.post(
             "/get_connections",
@@ -288,16 +279,12 @@ async def start_rpc_server(
             "/close_connection",
             rpc_server._wrap_http_handler(rpc_server.close_connection),
         ),
-        aiohttp.web.post(
-            "/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)
-        ),
+        aiohttp.web.post("/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)),
     ]
 
     app.add_routes(routes)
     if connect_to_daemon:
-        daemon_connection = asyncio.create_task(
-            rpc_server.connect_to_daemon(self_hostname, daemon_port)
-        )
+        daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
     site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port))
