@@ -74,6 +74,7 @@ class FullNode:
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
         self.sync_peers_handler = None
+        self.full_node_peers = None
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -95,7 +96,6 @@ class FullNode:
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
-        self.full_node_peers = None
         if self.blockchain.get_peak() is None:
             self.log.info("Initialized with empty blockchain")
         else:
