@@ -5,7 +5,7 @@ import pytest
 import random
 import time
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Callable
 from secrets import token_bytes
 
 from src.full_node.full_node_api import FullNodeAPI
@@ -35,7 +35,7 @@ from src.util.merkle_set import (
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
 from src.util.clvm import int_to_bytes
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from src.protocols.shared_protocol import protocol_version
 
 log = logging.getLogger(__name__)
@@ -134,28 +134,12 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         incoming_queue, _ = await add_dummy_connection(server_1, 12312)
-
-        async def has_mempool_tx():
-            return (
-                incoming_queue.qsize() > 0
-                and (await incoming_queue.get())[0].msg.function == "request_mempool_transactions"
-            )
-
-        await time_out_assert(10, has_mempool_tx, True)
-
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
         blocks = bt.get_consecutive_blocks(1)
         for block in blocks[:1]:
             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
 
-        async def has_new_peak():
-            if incoming_queue.qsize() == 0:
-                return False
-            res = set()
-            while incoming_queue.qsize() > 0:
-                res.add((await incoming_queue.get())[0].msg.function)
-            return res == {"new_peak"}
-
-        await time_out_assert(10, has_new_peak, True)
+        await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 1))
 
         assert full_node_1.full_node.blockchain.get_peak().height == 0
 
@@ -172,13 +156,7 @@ class TestFullNodeProtocol:
         # Get peer
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
 
-        async def has_mempool_tx():
-            if incoming_queue.qsize() == 0:
-                return False
-            msg = (await incoming_queue.get())[0].msg.function
-            return msg == "request_mempool_transactions"
-
-        await time_out_assert(10, has_mempool_tx, True)
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
 
         peer = None
         for node_id, wsc in server_1.full_nodes.items():
@@ -191,18 +169,11 @@ class TestFullNodeProtocol:
         # Add empty slots successful
         for slot in blocks[-1].finished_sub_slots[:-2]:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+        num_sub_slots_added = len(blocks[-1].finished_sub_slots[:-2])
+        await time_out_assert(
+            10, time_out_messages(incoming_queue, "new_signage_point_or_end_of_sub_slot", num_sub_slots_added)
+        )
 
-        async def has_eos():
-            if incoming_queue.qsize() != len(blocks[-1].finished_sub_slots) - 2:
-                print("Size", incoming_queue.qsize(), len(blocks[-1].finished_sub_slots) - 2)
-                return False
-            while incoming_queue.qsize() > 0:
-                msg = (await incoming_queue.get())[0].msg.function
-                if msg != "new_signage_point_or_end_of_sub_slot":
-                    return False
-            return True
-
-        await time_out_assert(10, has_eos, True)
         # Add empty slots unsuccessful
         # Add some blocks
         # Add empty slots successful

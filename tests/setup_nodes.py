@@ -273,7 +273,7 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants):
     fn1 = await node_iters[0].__anext__()
     fn2 = await node_iters[1].__anext__()
 
-    yield (fn1, fn2, fn1.full_node.server, fn2.full_node.server)
+    yield fn1, fn2, fn1.full_node.server, fn2.full_node.server
 
     await _teardown_nodes(node_iters)
 
@@ -287,7 +287,7 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
     full_node_api = await node_iters[0].__anext__()
     wallet, s2 = await node_iters[1].__anext__()
 
-    yield (full_node_api, wallet, full_node_api.full_node.server, s2)
+    yield full_node_api, wallet, full_node_api.full_node.server, s2
 
     await _teardown_nodes(node_iters)
 

@@ -1,10 +1,9 @@
 import asyncio
 import time
+from typing import Callable
 
 
-async def time_out_assert_custom_interval(
-    timeout: int, interval, function, value, *args, **kwargs
-):
+async def time_out_assert_custom_interval(timeout: int, interval, function, value=True, *args, **kwargs):
     start = time.time()
     while time.time() - start < timeout:
         if asyncio.iscoroutinefunction(function):
@@ -17,13 +16,11 @@ async def time_out_assert_custom_interval(
     assert False
 
 
-async def time_out_assert(timeout: int, function, value, *args, **kwargs):
-    await time_out_assert_custom_interval(
-        timeout, 0.05, function, value, *args, *kwargs
-    )
+async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
+    await time_out_assert_custom_interval(timeout, 0.05, function, value, *args, *kwargs)
 
 
-async def time_out_assert_not_None(timeout: int, function, *args, **kwargs):
+async def time_out_assert_not_none(timeout: int, function, *args, **kwargs):
     start = time.time()
     while time.time() - start < timeout:
         if asyncio.iscoroutinefunction(function):
@@ -34,3 +31,17 @@ async def time_out_assert_not_None(timeout: int, function, *args, **kwargs):
             return
         await asyncio.sleep(0.05)
     assert False
+
+
+def time_out_messages(incoming_queue: asyncio.Queue, msg_name: str, count: int = 1) -> Callable:
+    async def bool_f():
+        if incoming_queue.qsize() < count:
+            return False
+        for _ in range(count):
+            response = (await incoming_queue.get())[0].msg.function
+            if response != msg_name:
+                print(f"Error, found {response} instead of {msg_name}")
+                return False
+        return True
+
+    return bool_f

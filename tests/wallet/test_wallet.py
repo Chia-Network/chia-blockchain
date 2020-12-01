@@ -19,7 +19,7 @@ from tests.setup_nodes import (
     _teardown_nodes,
 )
 from src.consensus.block_rewards import calculate_base_fee, calculate_block_reward
-from tests.time_out_assert import time_out_assert, time_out_assert_not_None
+from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
 @pytest.fixture(scope="module")
@@ -179,17 +179,17 @@ class TestWalletSimulator:
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, token_bytes(), 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
-        await time_out_assert_not_None(5, full_node_0.mempool_manager.get_spendbundle, tx.name())
+        await time_out_assert_not_none(5, full_node_0.mempool_manager.get_spendbundle, tx.name())
 
         # wallet0 <-> sever1
         await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_1._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_None(5, full_node_1.mempool_manager.get_spendbundle, tx.name())
+        await time_out_assert_not_none(5, full_node_1.mempool_manager.get_spendbundle, tx.name())
 
         # wallet0 <-> sever2
         await wallet_server_0.start_client(PeerInfo("localhost", uint16(server_2._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_None(5, full_node_2.mempool_manager.get_spendbundle, tx.name())
+        await time_out_assert_not_none(5, full_node_2.mempool_manager.get_spendbundle, tx.name())
 
     @pytest.mark.asyncio
     async def test_wallet_make_transaction_hop(self, two_wallet_nodes_five_freeze):
