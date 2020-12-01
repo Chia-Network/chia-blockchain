@@ -122,12 +122,7 @@ class WeightProofFactory:
             self.constants.SUB_EPOCH_SUB_BLOCKS, prev_ses_hash, weight_proof.sub_epochs, fork_point_difficulty
         )
         last_ses = summaries[uint32(len(summaries) - 1)]
-        self.log.info(f"last ses  {last_ses}")
-        block_idx = get_last_ses_block_idx(
-            self.constants,
-            weight_proof.recent_reward_chain,
-            last_ses.num_sub_blocks_overflow,
-        )
+        block_idx = get_last_ses_block_idx(self.constants, weight_proof.recent_reward_chain)
         if block_idx is None:
             self.log.error(f"could not find first block after last sub epoch end")
             return False
@@ -143,7 +138,6 @@ class WeightProofFactory:
         challenge = ChallengeChainSubSlot(
             cc_vdf, icc_vdf, last_ses.get_hash(), last_ses.new_sub_slot_iters, last_ses.new_difficulty
         )
-        self.log.info(f"last ses challenge slot {challenge}")
         expected_challenge = weight_proof.recent_reward_chain[block_idx].challenge_chain_sp_vdf.challenge
         if challenge.get_hash() != expected_challenge:
             self.log.error(
@@ -497,11 +491,18 @@ def map_summaries(
 
 
 def get_last_ses_block_idx(
-    constants: ConsensusConstants, recent_reward_chain: List[RewardChainSubBlock], overflows: uint8
+    constants: ConsensusConstants, recent_reward_chain: List[RewardChainSubBlock]
 ) -> Optional[uint32]:
-    print(f"get_last_ses_block_idx overflows {overflows}")
     for idx, block in enumerate(reversed(recent_reward_chain)):
-        if uint8(block.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS) == overflows:
-            return len(recent_reward_chain) - 1 - idx
+        if uint8(block.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS) == 0:
+            idx = len(recent_reward_chain) - 1 - idx  # reverse
+            # find next block with different challenge chain challenge
+            curr = recent_reward_chain[idx]
+            next = recent_reward_chain[idx + 1]
+            while curr.challenge_chain_ip_vdf.challenge == next.challenge_chain_ip_vdf.challenge:
+                idx += 1
+                curr = recent_reward_chain[idx]
+                next = recent_reward_chain[idx + 1]
+            return idx + 1
 
     return None
