@@ -79,19 +79,19 @@ def next_sub_epoch_summary(
     )
     overflow = is_overflow_sub_block(constants, signage_point_index)
     deficit = calculate_deficit(constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
-    can_finishes_se, can_finishes_epoch = can_finish_sub_and_full_epoch(
+    can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
         constants, block.height, deficit, sub_blocks, prev_sb.header_hash if prev_sb is not None else None
     )
 
     # can't finish se, no summary
-    if not can_finishes_se:
+    if not can_finish_se:
         return None
 
     next_difficulty = None
     next_sub_slot_iters = None
 
     # if can finish epoch, new difficulty and ssi
-    if can_finishes_epoch:
+    if can_finish_epoch:
         sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
         ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
         next_difficulty = get_next_difficulty(
