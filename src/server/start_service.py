@@ -39,6 +39,7 @@ class Service:
         on_connect_callback: Optional[Callable] = None,
         rpc_info: Optional[Tuple[type, int]] = None,
         parse_cli_args=True,
+        connect_to_daemon=True,
     ):
         config = load_config(root_path, "config.yaml")
         ping_interval = config.get("ping_interval")
@@ -47,7 +48,7 @@ class Service:
         self.daemon_port = config.get("daemon_port")
         assert ping_interval is not None
         assert network_id is not None
-
+        self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
 
@@ -111,8 +112,7 @@ class Service:
         await self._server.start_server(self._on_connect_callback)
 
         self._reconnect_tasks = [
-            start_reconnect_task(self._server, _, self._log, self._auth_connect_peers)
-            for _ in self._connect_peers
+            start_reconnect_task(self._server, _, self._log, self._auth_connect_peers) for _ in self._connect_peers
         ]
 
         self._rpc_task = None
@@ -126,6 +126,7 @@ class Service:
                     self.daemon_port,
                     rpc_port,
                     self.stop,
+                    self._connect_to_daemon,
                 )
             )
 
@@ -181,9 +182,7 @@ class Service:
 
         self._log.info("Waiting for service _await_closed callback")
         await self._node._await_closed()
-        self._log.info(
-            f"Service {self._service_name} at port {self._advertised_port} fully closed"
-        )
+        self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 
 async def async_run_service(*args, **kwargs):
