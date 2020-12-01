@@ -134,7 +134,12 @@ class TestFullNodeProtocol:
         incoming_queue = await add_dummy_connection(server_1, 12312)
 
         async def has_mempool_tx():
-            return incoming_queue.qsize() > 0 and (await incoming_queue.get())[0].msg.function == "has_mempool_tx"
+            # print((await incoming_queue.get())[0].msg)
+            # return False
+            return (
+                incoming_queue.qsize() > 0
+                and (await incoming_queue.get())[0].msg.function == "request_mempool_transactions"
+            )
 
         await time_out_assert(10, has_mempool_tx, True)
 

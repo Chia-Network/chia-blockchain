@@ -73,6 +73,7 @@ async def setup_full_node(
 
     kwargs.update(
         parse_cli_args=False,
+        connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
@@ -129,6 +130,7 @@ async def setup_wallet_node(
     kwargs = service_kwargs_for_wallet(bt.root_path, config, consensus_constants, keychain)
     kwargs.update(
         parse_cli_args=False,
+        connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
@@ -151,6 +153,7 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
         advertised_port=port,
         connect_peers=[PeerInfo(self_hostname, farmer_port)],
         parse_cli_args=False,
+        connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
@@ -185,6 +188,7 @@ async def setup_farmer(
     kwargs = service_kwargs_for_farmer(bt.root_path, config, config_pool, bt.keychain, consensus_constants)
     kwargs.update(
         parse_cli_args=False,
+        connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
@@ -205,6 +209,7 @@ async def setup_introducer(port):
     kwargs.update(
         advertised_port=port,
         parse_cli_args=False,
+        connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
@@ -242,6 +247,7 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
     kwargs = service_kwargs_for_timelord(bt.root_path, config, consensus_constants.DISCRIMINANT_SIZE_BITS)
     kwargs.update(
         parse_cli_args=False,
+        connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
