@@ -73,10 +73,11 @@ class Service:
             service_config,
             name=f"{service_name}_server",
         )
-        for _ in ["set_server", "set_server"]:
-            f = getattr(node, _, None)
-            if f:
-                f(self._server)
+        f = getattr(node, "set_server", None)
+        if f:
+            f(self._server)
+        else:
+            self._log.warning(f"No set_server method for {service_name}")
 
         self._connect_peers = connect_peers
         self._auth_connect_peers = auth_connect_peers

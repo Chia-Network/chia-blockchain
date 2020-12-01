@@ -28,10 +28,9 @@ class FullNodeSimulator(FullNodeAPI):
         self.full_node = full_node
         self.bt = bt
 
-
     # @api_request
-    # async def respond_block(self, respond_block: full_node_protocol.RespondBlock) -> OutboundMessageGenerator:
-    #     async for msg in super().respond_block(respond_block):
+    # async def respond_sub_block(self, respond_sub_block: full_node_protocol.RespondSubBlock) -> OutboundMessageGenerator:
+    #     async for msg in super().respond_sub_block(respond_sub_block):
     #         yield msg
 
     # WALLET PROTOCOL
@@ -114,7 +113,7 @@ class FullNodeSimulator(FullNodeAPI):
     #     new_lca = more_blocks[-1]
     #
     #     assert self.server is not None
-    #     async for msg in self.respond_block(full_node_protocol.RespondBlock(new_lca)):
+    #     async for msg in self.respond_sub_block(full_node_protocol.RespondSubBlock(new_lca)):
     #         self.server.push_message(msg)
     #
     # @api_request
@@ -138,6 +137,6 @@ class FullNodeSimulator(FullNodeAPI):
     #     )
     #     assert self.server is not None
     #     for block in more_blocks:
-    #         async for msg in self.respond_block(full_node_protocol.RespondBlock(block)):
+    #         async for msg in self.respond_sub_block(full_node_protocol.RespondSubBlock(block)):
     #             self.server.push_message(msg)
     #             self.log.info(f"New message: {msg}")
