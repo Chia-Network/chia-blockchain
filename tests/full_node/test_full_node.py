@@ -5,7 +5,7 @@ import pytest
 import random
 import time
 import logging
-from typing import Dict
+from typing import Dict, Tuple
 from secrets import token_bytes
 
 from src.full_node.full_node_api import FullNodeAPI
@@ -19,6 +19,7 @@ from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
 from src.types.full_block import FullBlock
 from src.types.proof_of_space import ProofOfSpace
+from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.full_node.bundle_tools import best_solution_program
 from src.util.errors import ConsensusError, Err
@@ -49,7 +50,7 @@ async def get_block_path(full_node: FullNodeAPI):
     return blocks_list
 
 
-async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> asyncio.Queue:
+async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asyncio.Queue, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
     incoming_queue = asyncio.Queue()
@@ -59,11 +60,12 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> asyncio.Q
     wsc = WSChiaConnection(
         NodeType.FULL_NODE, ws, server._port, log, True, False, "127.0.0.1", incoming_queue, lambda x: x
     )
+    node_id = std_hash(b"123")
     handshake = await wsc.perform_handshake(
-        server._network_id, protocol_version, std_hash(b"123"), dummy_port, NodeType.FULL_NODE
+        server._network_id, protocol_version, node_id, dummy_port, NodeType.FULL_NODE
     )
     assert handshake is True
-    return incoming_queue
+    return incoming_queue, node_id
 
 
 @pytest.fixture(scope="module")
@@ -131,11 +133,9 @@ class TestFullNodeProtocol:
     async def test_basic_chain(self, two_nodes):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
-        incoming_queue = await add_dummy_connection(server_1, 12312)
+        incoming_queue, _ = await add_dummy_connection(server_1, 12312)
 
         async def has_mempool_tx():
-            # print((await incoming_queue.get())[0].msg)
-            # return False
             return (
                 incoming_queue.qsize() > 0
                 and (await incoming_queue.get())[0].msg.function == "request_mempool_transactions"
@@ -170,25 +170,39 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # Get peer
-        incoming_queue, dummy_id = await add_dummy_connection(server_1, 12312)
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
 
         async def has_mempool_tx():
-            return incoming_queue.qsize() > 0 and (await incoming_queue.get())[0].msg.function == "has_mempool_tx"
+            if incoming_queue.qsize() == 0:
+                return False
+            msg = (await incoming_queue.get())[0].msg.function
+            return msg == "request_mempool_transactions"
 
         await time_out_assert(10, has_mempool_tx, True)
 
         peer = None
         for node_id, wsc in server_1.full_nodes.items():
-            if node_id != dummy_id:
+            if node_id != dummy_node_id:
                 peer = wsc
 
         # Create empty slots
-        blocks = bt.get_consecutive_blocks(1, skip_slots=5)
+        blocks = bt.get_consecutive_blocks(1, skip_slots=6)
 
         # Add empty slots successful
-        for slot in blocks[-1].finished_sub_slots[:-1]:
-            await full_node_1.respond_end_of_slot(fnp.RespondEndOfSubSlot(slot), peer)
+        for slot in blocks[-1].finished_sub_slots[:-2]:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
 
+        async def has_eos():
+            if incoming_queue.qsize() != len(blocks[-1].finished_sub_slots) - 2:
+                print("Size", incoming_queue.qsize(), len(blocks[-1].finished_sub_slots) - 2)
+                return False
+            while incoming_queue.qsize() > 0:
+                msg = (await incoming_queue.get())[0].msg.function
+                if msg != "new_signage_point_or_end_of_sub_slot":
+                    return False
+            return True
+
+        await time_out_assert(10, has_eos, True)
         # Add empty slots unsuccessful
         # Add some blocks
         # Add empty slots successful

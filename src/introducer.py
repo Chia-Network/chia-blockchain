@@ -25,7 +25,7 @@ class Introducer:
     async def _await_closed(self):
         await self._vetting_task
 
-    def _set_server(self, server: ChiaServer):
+    def set_server(self, server: ChiaServer):
         self.server = server
 
     async def _vetting_loop(self):
@@ -37,9 +37,7 @@ class Introducer:
                 await asyncio.sleep(5)
                 if self.server.introducer_peers is None:
                     continue
-                rawpeers = self.server.introducer_peers.get_peers(
-                    100, True, 3 * self.recent_peer_threshold
-                )
+                rawpeers = self.server.introducer_peers.get_peers(100, True, 3 * self.recent_peer_threshold)
 
                 if len(rawpeers) == 0:
                     continue
@@ -51,10 +49,7 @@ class Introducer:
                         if time.time() > self.vetted_timestamps[peer.get_hash()] + 3600:
                             if peer.get_hash() in self.vetted:
                                 self.vetted[peer.get_hash()] = False
-                    if (
-                        peer.get_hash() not in self.vetted
-                        or not self.vetted[peer.get_hash()]
-                    ):
+                    if peer.get_hash() not in self.vetted or not self.vetted[peer.get_hash()]:
                         try:
                             self.log.info(f"Vetting peer {peer.host} {peer.port}")
                             r, w = await asyncio.wait_for(

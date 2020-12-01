@@ -56,8 +56,9 @@ class Farmer:
         self.server = None
         self.keychain = keychain
         self.state_changed_callback: Optional[Callable] = None
+        self.log = log
 
-        if len(self._get_public_keys()) == 0:
+        if len(self.get_public_keys()) == 0:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
             raise RuntimeError(error_str)
 
@@ -68,7 +69,7 @@ class Farmer:
         # This is the pool configuration, which should be moved out to the pool once it exists
         self.pool_target = decode_puzzle_hash(pool_config["xch_target_address"])
         self.pool_sks_map: Dict = {}
-        for key in self._get_private_keys():
+        for key in self.get_private_keys():
             self.pool_sks_map[bytes(key.get_g1())] = key
 
         assert len(self.wallet_target) == 32
@@ -86,27 +87,27 @@ class Farmer:
     async def _await_closed(self):
         await self.cache_clear_task
 
-    async def _on_connect(self, peer: WSChiaConnection):
+    async def on_connect(self, peer: WSChiaConnection):
         # Sends a handshake to the harvester
         msg = harvester_protocol.HarvesterHandshake(
-            self._get_public_keys(),
+            self.get_public_keys(),
             self.pool_public_keys,
         )
         if peer.connection_type is NodeType.HARVESTER:
             msg = Message("harvester_handshake", msg)
             await peer.send_message(msg)
 
-    def _set_server(self, server):
+    def set_server(self, server):
         self.server = server
 
-    def _state_changed(self, change: str):
+    def state_changed(self, change: str):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
-    def _get_public_keys(self):
-        return [child_sk.get_g1() for child_sk in self._get_private_keys()]
+    def get_public_keys(self):
+        return [child_sk.get_g1() for child_sk in self.get_private_keys()]
 
-    def _get_private_keys(self):
+    def get_private_keys(self):
         all_sks = self.keychain.get_all_private_keys()
         return [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [master_sk_to_pool_sk(sk) for sk, _ in all_sks]
 
