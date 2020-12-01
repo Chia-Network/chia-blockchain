@@ -317,11 +317,12 @@ class FullNodeAPI:
         self, request: full_node_protocol.RespondEndOfSubSlot, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
 
-        added = self.full_node.full_node_store.new_finished_sub_slot(
+        new_infusions = self.full_node.full_node_store.new_finished_sub_slot(
             request.end_of_slot_bundle, self.full_node.blockchain.sub_blocks, self.full_node.blockchain.get_peak()
         )
 
-        if added:
+        if new_infusions is not None:
+            print("Added!")
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
                 request.end_of_slot_bundle.challenge_chain.get_hash(),
                 uint8(0),
@@ -329,6 +330,9 @@ class FullNodeAPI:
             )
             msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+
+            for infusion in new_infusions:
+                await self.new_infusion_point_vdf(infusion)
 
         return
 

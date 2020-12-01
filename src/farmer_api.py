@@ -1,4 +1,4 @@
-from typing import Optional, Callable
+from typing import Callable
 
 from blspy import AugSchemeMPL, G2Element
 
@@ -8,9 +8,8 @@ from src.protocols import harvester_protocol, farmer_protocol
 from src.server.outbound_message import Message, NodeType
 from src.types.pool_target import PoolTarget
 from src.types.proof_of_space import ProofOfSpace
-from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request
-from src.util.ints import uint32, uint128, uint64
+from src.util.ints import uint32, uint64
 
 
 class FarmerAPI:
@@ -28,60 +27,60 @@ class FarmerAPI:
         This is a response from the harvester, for a NewChallenge. Here we check if the proof
         of space is sufficiently good, and if so, we ask for the whole proof.
         """
-        if new_proof_of_space.proof.challenge_hash not in self.farmer.number_of_responses:
-            self.farmer.number_of_responses[new_proof_of_space.proof.challenge_hash] = 0
+        if new_proof_of_space.proof.challenge not in self.farmer.number_of_responses:
+            self.farmer.number_of_responses[new_proof_of_space.proof.challenge] = 0
 
-        if self.farmer.number_of_responses[new_proof_of_space.proof.challenge_hash] >= 5:
+        if self.farmer.number_of_responses[new_proof_of_space.proof.challenge] >= 5:
             self.farmer.log.warning(
                 f"Surpassed 5 PoSpace for one SP, no longer submitting PoSpace for signage point "
-                f"{new_proof_of_space.proof.challenge_hash}"
+                f"{new_proof_of_space.proof.challenge}"
             )
             return
 
-        if new_proof_of_space.proof.challenge_hash not in self.farmer.sps:
+        if new_proof_of_space.proof.challenge not in self.farmer.sps:
             self.farmer.log.warning(
-                f"Received response for challenge that we do not have {new_proof_of_space.proof.challenge_hash}"
+                f"Received response for challenge that we do not have {new_proof_of_space.proof.challenge}"
             )
             return
 
-        sp = self.farmer.sps[new_proof_of_space.proof.challenge_hash]
+        sp = self.farmer.sps[new_proof_of_space.proof.challenge]
 
         computed_quality_string = new_proof_of_space.proof.verify_and_get_quality_string(
-            self.farmer.constants, new_proof_of_space.challenge_hash, new_proof_of_space.proof.challenge_hash
+            self.farmer.constants, new_proof_of_space.challenge_hash, new_proof_of_space.proof.challenge
         )
         if computed_quality_string is None:
             self.farmer.log.error(f"Invalid proof of space {new_proof_of_space.proof}")
             return
 
-        self.farmer.number_of_responses[new_proof_of_space.proof.challenge_hash] += 1
+        self.farmer.number_of_responses[new_proof_of_space.proof.challenge] += 1
 
         required_iters: uint64 = calculate_iterations_quality(
             computed_quality_string,
             new_proof_of_space.proof.size,
             sp.difficulty,
-            new_proof_of_space.proof.challenge_hash,
+            new_proof_of_space.proof.challenge,
         )
         # Double check that the iters are good
         assert required_iters < calculate_sp_interval_iters(sp.slot_iterations, sp.sub_slot_iters)
 
-        self.farmer._state_changed("proof")
+        self.farmer.state_changed("proof")
 
         # Proceed at getting the signatures for this PoSpace
         request = harvester_protocol.RequestSignatures(
             new_proof_of_space.plot_identifier,
-            new_proof_of_space.proof.challenge_hash,
+            new_proof_of_space.proof.challenge,
             [sp.challenge_chain_sp, sp.reward_chain_sp],
         )
 
-        if new_proof_of_space.proof.challenge_hash not in self.farmer.proofs_of_space:
-            self.farmer.proofs_of_space[new_proof_of_space.proof.challenge_hash] = [
+        if new_proof_of_space.proof.challenge not in self.farmer.proofs_of_space:
+            self.farmer.proofs_of_space[new_proof_of_space.proof.challenge] = [
                 (
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.proof,
                 )
             ]
         else:
-            self.farmer.proofs_of_space[new_proof_of_space.proof.challenge_hash].append(
+            self.farmer.proofs_of_space[new_proof_of_space.proof.challenge].append(
                 (
                     new_proof_of_space.plot_identifier,
                     new_proof_of_space.proof,
@@ -89,7 +88,7 @@ class FarmerAPI:
             )
         self.farmer.quality_str_to_identifiers[computed_quality_string] = (
             new_proof_of_space.plot_identifier,
-            new_proof_of_space.proof.challenge_hash,
+            new_proof_of_space.proof.challenge,
         )
 
         msg = Message("request_signatures", request)
@@ -121,7 +120,7 @@ class FarmerAPI:
                 challenge_chain_sp_harv_sig,
             ) = response.message_signatures[0]
             reward_chain_sp, reward_chain_sp_harv_sig = response.message_signatures[1]
-            for sk in self.farmer._get_private_keys():
+            for sk in self.farmer.get_private_keys():
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
                     agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
@@ -142,7 +141,9 @@ class FarmerAPI:
 
                         pool_pk = bytes(pospace.pool_public_key)
                         if pool_pk not in self.farmer.pool_sks_map:
-                            self.farmer.log.error(f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}")
+                            self.farmer.log.error(
+                                f"Don't have the private key for the pool key used by harvester: {pool_pk.hex()}"
+                            )
                             return
                         pool_target: PoolTarget = PoolTarget(self.farmer.pool_target, uint32(0))
                         pool_target_signature: G2Element = AugSchemeMPL.sign(
@@ -221,7 +222,7 @@ class FarmerAPI:
         msg = Message("new_signage_point", message)
         await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
         self.farmer.sps[new_signage_point.challenge_chain_sp] = new_signage_point
-        self.farmer._state_changed("signage_point")
+        self.farmer.state_changed("signage_point")
 
     @api_request
     async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues):

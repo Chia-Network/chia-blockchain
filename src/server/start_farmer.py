@@ -16,7 +16,7 @@ from src.rpc.farmer_rpc_api import FarmerRpcApi
 from src.server.start_service import run_service
 
 # See: https://bugs.python.org/issue29288
-u"".encode("idna")
+"".encode("idna")
 
 SERVICE_NAME = "farmer"
 
@@ -47,7 +47,7 @@ def service_kwargs_for_farmer(
         server_listen_ports=[config["port"]],
         connect_peers=connect_peers,
         auth_connect_peers=False,
-        on_connect_callback=farmer._on_connect,
+        on_connect_callback=farmer.on_connect,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FarmerRpcApi, config["rpc_port"])
@@ -58,9 +58,7 @@ def main():
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
     keychain = Keychain()
-    kwargs = service_kwargs_for_farmer(
-        DEFAULT_ROOT_PATH, config, config_pool, keychain, DEFAULT_CONSTANTS
-    )
+    kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH, config, config_pool, keychain, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 

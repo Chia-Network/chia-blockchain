@@ -17,7 +17,7 @@ from .simulator_constants import test_constants
 
 
 # See: https://bugs.python.org/issue29288
-u"".encode("idna")
+"".encode("idna")
 
 SERVICE_NAME = "full_node"
 
@@ -56,7 +56,7 @@ def service_kwargs_for_full_node_simulator(
         advertised_port=config["port"],
         service_name=SERVICE_NAME,
         server_listen_ports=[config["port"]],
-        on_connect_callback=node._on_connect,
+        on_connect_callback=node.on_connect,
         rpc_info=(FullNodeRpcApi, config["rpc_port"]),
     )
     return kwargs

@@ -143,9 +143,8 @@ class Harvester:
         remove_plot_directory(str_path, self.root_path)
         return True
 
-    def _set_server(self, server):
+    def set_server(self, server):
         self.server = server
-
 
     @api_request
     async def harvester_handshake(self, harvester_handshake: harvester_protocol.HarvesterHandshake):
