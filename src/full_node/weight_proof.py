@@ -4,8 +4,6 @@ from typing import Dict, Optional, List
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
-    calculate_iterations_quality,
-    calculate_ip_iters,
     is_overflow_sub_block,
 )
 from src.consensus.sub_block_record import SubBlockRecord
@@ -114,19 +112,21 @@ class WeightProofFactory:
         fork_point_difficulty = uint64(fork_point.weight - self.sub_blocks[fork_point.prev_hash].weight)
 
         curr = fork_point
+        self.log.info(f"fork point {fork_point.height}")
         while not curr.sub_epoch_summary_included:
             curr = self.sub_blocks[curr.prev_hash]
 
         self.log.info(f"prev sub_epoch summary at {curr.height}")
         prev_ses_hash = curr.sub_epoch_summary_included.get_hash()
         summaries, sub_epoch_data_weight = map_summaries(
-            self.log, self.constants.SUB_EPOCH_SUB_BLOCKS, prev_ses_hash, weight_proof.sub_epochs, fork_point_difficulty
+            self.constants.SUB_EPOCH_SUB_BLOCKS, prev_ses_hash, weight_proof.sub_epochs, fork_point_difficulty
         )
-
+        last_ses = summaries[uint32(len(summaries) - 1)]
+        self.log.info(f"last ses  {last_ses}")
         block_idx = get_last_ses_block_idx(
             self.constants,
             weight_proof.recent_reward_chain,
-            summaries[uint32(len(summaries) - 1)].num_sub_blocks_overflow,
+            last_ses.num_sub_blocks_overflow,
         )
         if block_idx is None:
             self.log.error(f"could not find first block after last sub epoch end")
@@ -136,16 +136,16 @@ class WeightProofFactory:
         self.log.info(f"last ses at height {last_ses_block.sub_block_height}")
 
         # validate last ses_hash
-        cc_vdf = weight_proof.recent_reward_chain[block_idx - 1].challenge_chain_ip_vdf
+        prev_block = weight_proof.recent_reward_chain[block_idx - 1]
+        cc_vdf = prev_block.challenge_chain_ip_vdf
+        icc_vdf = prev_block.infused_challenge_chain_ip_vdf
         # last ses
-        ses = summaries[uint32(len(summaries) - 1)]
-
         challenge = ChallengeChainSubSlot(
-            cc_vdf, None, ses.get_hash(), ses.new_sub_slot_iters, ses.new_difficulty
-        ).get_hash()
-
+            cc_vdf, icc_vdf, last_ses.get_hash(), last_ses.new_sub_slot_iters, last_ses.new_difficulty
+        )
+        self.log.info(f"last ses challenge slot {challenge}")
         expected_challenge = weight_proof.recent_reward_chain[block_idx].challenge_chain_sp_vdf.challenge
-        if challenge != expected_challenge:
+        if challenge.get_hash() != expected_challenge:
             self.log.error(
                 f"failed to validate ses hashes block height {weight_proof.recent_reward_chain[block_idx].sub_block_height} {challenge}  {expected_challenge}"
             )
@@ -467,7 +467,6 @@ def validate_sub_slot_vdfs(
 
 
 def map_summaries(
-    log,
     sub_blocks_for_se: uint32,
     ses_hash: bytes32,
     sub_epoch_data: List[SubEpochData],
@@ -489,12 +488,6 @@ def map_summaries(
         if data.new_sub_slot_iters is not None:
             curr_difficulty = data.new_difficulty
 
-        log.info(
-            f"sub_epoch {idx} sub_epoch_weight {sub_epoch_data_weight} "
-            f"sub_epoch_diff {curr_difficulty} "
-            f"num of overflow blocks {data.num_sub_blocks_overflow} "
-            f"se blocks num {sub_blocks_for_se + data.num_sub_blocks_overflow}"
-        )
         sub_epoch_data_weight += curr_difficulty * (sub_blocks_for_se + data.num_sub_blocks_overflow)
 
         # add to dict
@@ -506,8 +499,9 @@ def map_summaries(
 def get_last_ses_block_idx(
     constants: ConsensusConstants, recent_reward_chain: List[RewardChainSubBlock], overflows: uint8
 ) -> Optional[uint32]:
-    for idx, block in enumerate(recent_reward_chain):
+    print(f"get_last_ses_block_idx overflows {overflows}")
+    for idx, block in enumerate(reversed(recent_reward_chain)):
         if uint8(block.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS) == overflows:
-            return idx
+            return len(recent_reward_chain) - 1 - idx
 
     return None
