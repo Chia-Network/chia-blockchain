@@ -34,9 +34,7 @@ def generate_test_spend_bundle(
 ) -> SpendBundle:
     if condition_dic is None:
         condition_dic = {}
-    transaction = WALLET_A.generate_signed_transaction(
-        amount, newpuzzlehash, coin, condition_dic, fee
-    )
+    transaction = WALLET_A.generate_signed_transaction(amount, newpuzzlehash, coin, condition_dic, fee)
     assert transaction is not None
     return transaction
 
@@ -68,20 +66,14 @@ class TestMempool:
         full_node_api, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        await full_node_api.full_node._respond_block(
-            full_node_protocol.RespondBlock(block)
-        )
+        await full_node_api.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         spend_bundle = generate_test_spend_bundle(block.get_coinbase())
         assert spend_bundle is not None
-        tx: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle)
-        )
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
         await full_node_api.respond_transaction(tx)
 
-        sb = full_node_api.full_node.mempool_manager.get_spendbundle(
-            spend_bundle.name()
-        )
+        sb = full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle
 
     @pytest.mark.asyncio
@@ -92,35 +84,25 @@ class TestMempool:
         full_node_api, full_node_2, server_1, server_2 = two_nodes_small_freeze
 
         block = blocks[1]
-        await full_node_api.full_node._respond_block(
-            full_node_protocol.RespondBlock(block)
-        )
+        await full_node_api.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         spend_bundle = generate_test_spend_bundle(block.get_coinbase())
         assert spend_bundle is not None
-        tx: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle)
-        )
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
 
         await full_node_api.respond_transaction(tx)
 
-        sb = full_node_api.full_node.mempool_manager.get_spendbundle(
-            spend_bundle.name()
-        )
+        sb = full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is None
 
         blocks = bt.get_consecutive_blocks(test_constants, 30, [], 10, b"")
 
         for i in range(1, 31):
-            await full_node_api.full_node._respond_block(
-                full_node_protocol.RespondBlock(blocks[i])
-            )
+            await full_node_api.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
 
         await full_node_api.respond_transaction(tx)
 
-        sb = full_node_api.full_node.mempool_manager.get_spendbundle(
-            spend_bundle.name()
-        )
+        sb = full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle
 
     @pytest.mark.asyncio
@@ -131,16 +113,12 @@ class TestMempool:
         full_node_api, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        await full_node_api.full_node._respond_block(
-            full_node_protocol.RespondBlock(block)
-        )
+        await full_node_api.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase())
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_api.respond_transaction(tx1)
 
         spend_bundle2 = generate_test_spend_bundle(
@@ -148,17 +126,11 @@ class TestMempool:
             newpuzzlehash=BURN_PUZZLE_HASH_2,
         )
         assert spend_bundle2 is not None
-        tx2: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle2)
-        )
+        tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle2)
         await full_node_api.respond_transaction(tx2)
 
-        sb1 = full_node_api.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
-        sb2 = full_node_api.full_node.mempool_manager.get_spendbundle(
-            spend_bundle2.name()
-        )
+        sb1 = full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        sb2 = full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle2.name())
 
         assert sb1 == spend_bundle1
         assert sb2 is None
@@ -171,33 +143,23 @@ class TestMempool:
         full_node_api, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        await full_node_api.full_node._respond_block(
-            full_node_protocol.RespondBlock(block)
-        )
+        await full_node_api.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase())
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
 
         await full_node_api.respond_transaction(tx1)
 
         spend_bundle2 = generate_test_spend_bundle(block.get_coinbase(), fee=1)
 
         assert spend_bundle2 is not None
-        tx2: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle2)
-        )
+        tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle2)
 
         await full_node_api.respond_transaction(tx2)
 
-        sb1 = full_node_api.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
-        sb2 = full_node_api.full_node.mempool_manager.get_spendbundle(
-            spend_bundle2.name()
-        )
+        sb1 = full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
+        sb2 = full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle2.name())
 
         assert sb1 is None
         assert sb2 == spend_bundle2
@@ -210,9 +172,7 @@ class TestMempool:
         full_node_api, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        await full_node_api.full_node._respond_block(
-            full_node_protocol.RespondBlock(block)
-        )
+        await full_node_api.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS,
@@ -224,14 +184,10 @@ class TestMempool:
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase(), dic)
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_api.respond_transaction(tx1)
 
-        sb1 = full_node_api.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        sb1 = full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
 
@@ -243,9 +199,7 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        await full_node_1.full_node._respond_block(
-            full_node_protocol.RespondBlock(block)
-        )
+        await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS,
@@ -257,14 +211,10 @@ class TestMempool:
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase(), dic)
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx1)
 
-        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
 
@@ -276,26 +226,18 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        await full_node_1.full_node._respond_block(
-            full_node_protocol.RespondBlock(block)
-        )
+        await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, uint64(5).to_bytes(4, "big"), None
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, uint64(5).to_bytes(4, "big"), None)
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase(), dic)
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx1)
 
-        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
         assert sb1 is None
 
     @pytest.mark.asyncio
@@ -308,26 +250,18 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(b)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(b))
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, uint64(3).to_bytes(4, "big"), None
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS, uint64(3).to_bytes(4, "big"), None)
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase(), dic)
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx1)
 
-        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
 
@@ -341,26 +275,18 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(b)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(b))
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_MY_COIN_ID, block.get_coinbase().name(), None
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, block.get_coinbase().name(), None)
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase(), dic)
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx1)
 
-        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
 
@@ -374,9 +300,7 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(b)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(b))
 
         cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_MY_COIN_ID,
@@ -388,14 +312,10 @@ class TestMempool:
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase(), dic)
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx1)
 
-        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is None
 
@@ -409,28 +329,20 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(b)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(b))
 
         time_now = uint64(int(time() * 1000))
 
-        cvp = ConditionVarPair(
-            ConditionOpcode.ASSERT_TIME_EXCEEDS, time_now.to_bytes(8, "big"), None
-        )
+        cvp = ConditionVarPair(ConditionOpcode.ASSERT_TIME_EXCEEDS, time_now.to_bytes(8, "big"), None)
         dic = {cvp.opcode: [cvp]}
 
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase(), dic)
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx1)
 
-        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
 
@@ -444,9 +356,7 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(b)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(b))
 
         time_now = uint64(int(time() * 1000))
         time_now_plus_3 = time_now + 3000
@@ -461,22 +371,16 @@ class TestMempool:
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase(), dic)
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx1)
 
         # Sleep so that 3 sec passes
         await asyncio.sleep(3)
 
-        tx2: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx2)
 
-        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        sb1 = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert sb1 is spend_bundle1
 
@@ -491,9 +395,7 @@ class TestMempool:
         block2 = blocks[2]
 
         for b in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(b)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(b))
 
         cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_COIN_CONSUMED,
@@ -508,14 +410,10 @@ class TestMempool:
 
         bundle = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(bundle)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(bundle)
         await full_node_1.respond_transaction(tx1)
 
-        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(
-            bundle.name()
-        )
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(bundle.name())
 
         assert mempool_bundle is bundle
 
@@ -530,9 +428,7 @@ class TestMempool:
         block2 = blocks[2]
 
         for b in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(b)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(b))
 
         cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_COIN_CONSUMED,
@@ -544,14 +440,10 @@ class TestMempool:
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase(), dic)
 
         assert spend_bundle1 is not None
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
         await full_node_1.respond_transaction(tx1)
 
-        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert mempool_bundle is None
 
@@ -565,9 +457,7 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(b)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(b))
 
         cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_FEE,
@@ -580,15 +470,11 @@ class TestMempool:
 
         assert spend_bundle1 is not None
 
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
 
         await full_node_1.respond_transaction(tx1)
 
-        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert mempool_bundle is not None
 
@@ -602,9 +488,7 @@ class TestMempool:
         block = blocks[1]
 
         for b in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(b)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(b))
 
         cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_FEE,
@@ -617,15 +501,11 @@ class TestMempool:
 
         assert spend_bundle1 is not None
 
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
 
         await full_node_1.respond_transaction(tx1)
 
-        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert mempool_bundle is None
 
@@ -645,9 +525,7 @@ class TestMempool:
         wallet_2_block = blocks[3]
 
         for b in blocks:
-            await full_node_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(b)
-            )
+            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(b))
 
         cvp = ConditionVarPair(
             ConditionOpcode.ASSERT_FEE,
@@ -671,15 +549,11 @@ class TestMempool:
 
         assert combined.fees() == 4
 
-        tx1: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle1)
-        )
+        tx1: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle1)
 
         await full_node_1.respond_transaction(tx1)
 
-        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle1.name()
-        )
+        mempool_bundle = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle1.name())
 
         assert mempool_bundle is None
 
@@ -691,9 +565,7 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        await full_node_1.full_node._respond_block(
-            full_node_protocol.RespondBlock(block)
-        )
+        await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         spend_bundle1 = generate_test_spend_bundle(block.get_coinbase())
 
@@ -708,15 +580,11 @@ class TestMempool:
 
         spend_bundle_combined = SpendBundle.aggregate([spend_bundle1, spend_bundle2])
 
-        tx: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle_combined)
-        )
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle_combined)
 
         await full_node_1.respond_transaction(tx)
 
-        sb = full_node_1.full_node.mempool_manager.get_spendbundle(
-            spend_bundle_combined.name()
-        )
+        sb = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle_combined.name())
         assert sb is None
 
     @pytest.mark.asyncio
@@ -727,9 +595,7 @@ class TestMempool:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         block = blocks[1]
-        await full_node_1.full_node._respond_block(
-            full_node_protocol.RespondBlock(block)
-        )
+        await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         # this code has been changed to use generate_test_spend_bundle
         # not quite sure why all the gymnastics are being performed
@@ -746,22 +612,15 @@ class TestMempool:
 
         puzzle, solution = list(coin_solution.solution.as_iter())
         conditions_dict = conditions_by_opcode(con)
-        pkm_pairs = pkm_pairs_for_conditions_dict(
-            conditions_dict, coin_solution.coin.name()
-        )
+        pkm_pairs = pkm_pairs_for_conditions_dict(conditions_dict, coin_solution.coin.name())
         assert len(pkm_pairs) == 1
 
-        assert (
-            pkm_pairs[0][1]
-            == solution.rest().first().get_tree_hash() + coin_solution.coin.name()
-        )
+        assert pkm_pairs[0][1] == solution.first().get_tree_hash() + coin_solution.coin.name()
 
         spend_bundle = WALLET_A.sign_transaction(unsigned)
         assert spend_bundle is not None
 
-        tx: full_node_protocol.RespondTransaction = (
-            full_node_protocol.RespondTransaction(spend_bundle)
-        )
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
         await full_node_1.respond_transaction(tx)
 
         sb = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name())

@@ -23,12 +23,8 @@ class TestRpc:
         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
 
         for i in range(1, num_blocks):
-            await full_node_api_1.respond_unfinished_block(
-                full_node_protocol.RespondUnfinishedBlock(blocks[i])
-            )
-            await full_node_api_1.full_node._respond_block(
-                full_node_protocol.RespondBlock(blocks[i])
-            )
+            await full_node_api_1.respond_unfinished_block(full_node_protocol.RespondUnfinishedBlock(blocks[i]))
+            await full_node_api_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
 
         def stop_node_cb():
             full_node_api_1._close()
