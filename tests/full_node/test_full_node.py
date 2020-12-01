@@ -134,12 +134,7 @@ class TestFullNodeProtocol:
         incoming_queue = await add_dummy_connection(server_1, 12312)
 
         async def has_mempool_tx():
-            if incoming_queue.qsize() == 0:
-                return False
-            res = set()
-            while incoming_queue.qsize() > 0:
-                res.add((await incoming_queue.get())[0].msg.function)
-            return res == {"request_mempool_transactions"}
+            return incoming_queue.qsize() > 0 and (await incoming_queue.get())[0].msg.function == "has_mempool_tx"
 
         await time_out_assert(10, has_mempool_tx, True)
 
@@ -158,6 +153,40 @@ class TestFullNodeProtocol:
         await time_out_assert(10, has_new_peak, True)
 
         assert full_node_1.full_node.blockchain.get_peak().height == 0
+
+        blocks = bt.get_consecutive_blocks(30)
+        for block in blocks:
+            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+
+        assert full_node_1.full_node.blockchain.get_peak().height == 29
+
+    @pytest.mark.asyncio
+    async def test_respond_end_of_slot(self, two_nodes):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        # Get peer
+        incoming_queue, dummy_id = await add_dummy_connection(server_1, 12312)
+
+        async def has_mempool_tx():
+            return incoming_queue.qsize() > 0 and (await incoming_queue.get())[0].msg.function == "has_mempool_tx"
+
+        await time_out_assert(10, has_mempool_tx, True)
+
+        peer = None
+        for node_id, wsc in server_1.full_nodes.items():
+            if node_id != dummy_id:
+                peer = wsc
+
+        # Create empty slots
+        blocks = bt.get_consecutive_blocks(1, skip_slots=5)
+
+        # Add empty slots successful
+        for slot in blocks[-1].finished_sub_slots[:-1]:
+            await full_node_1.respond_end_of_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+        # Add empty slots unsuccessful
+        # Add some blocks
+        # Add empty slots successful
 
 
 #     @pytest.mark.asyncio
