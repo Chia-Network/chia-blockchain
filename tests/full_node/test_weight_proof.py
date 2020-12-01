@@ -125,6 +125,10 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
     print(f"fork point is {curr.height} (not included)")
     print(f"num of blocks in proof: {num_of_blocks}")
     print(f"num of full sub epochs in proof: {sub_epochs}")
+    print("last ses end of challenge slot")
+    # print(f"{header_cache[height_to_hash[9810]].finished_sub_slots[-1].challenge_chain}")
+    print("last ses end of challenge summary")
+    # print(f"{sub_blocks[height_to_hash[9810]].sub_epoch_summary_included}")
     wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
     wpf.log.setLevel(logging.INFO)
     initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
@@ -134,7 +138,6 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
     print(f"fork_point_difficulty {fork_point_difficulty}")
     # sub epoch summaries validate hashes
     summaries, sub_epoch_data_weight = map_summaries(
-        wpf.log,
         test_constants.SUB_EPOCH_SUB_BLOCKS,
         orig_summaries[0].prev_subepoch_summary_hash,
         wp.sub_epochs,
@@ -205,9 +208,7 @@ class TestWeightProof:
         orig_summaries: Dict[int, SubEpochSummary] = {}
         while sub_epochs_left != 0:
             if curr.sub_epoch_summary_included is not None:
-                print(
-                    f"ses height {curr.height} prev overflows {curr.sub_epoch_summary_included.num_sub_blocks_overflow}"
-                )
+                print(f"ses height {curr.height} summary {curr.sub_epoch_summary_included} index {sub_epochs_left - 1}")
                 if sub_epochs_left == 0:
                     break
                 orig_summaries[sub_epochs_left - 1] = curr.sub_epoch_summary_included
@@ -225,6 +226,9 @@ class TestWeightProof:
         print(f"fork point is {curr.height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
+        print("last ses end of challenge slot")
+        print(f"{header_cache[height_to_hash[9961]].finished_sub_slots[-1].challenge_chain}")
+
         wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
         wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
@@ -232,11 +236,7 @@ class TestWeightProof:
 
         assert wp is not None
         assert len(wp.sub_epochs) == sub_epochs
-        # for each sampled sub epoch, validate number of segments
-
-        first_after_se = sub_blocks[height_to_hash[sub_epoch_end.height + 1]]
-        curr_difficulty = first_after_se.weight - sub_epoch_end.weight
-        print(f"diff {curr_difficulty}, weight {sub_epoch_end.weight}")
+        # todo for each sampled sub epoch, validate number of segments
 
         # todo validate with different factory
         valid = wpf.validate_weight(wp, curr)
