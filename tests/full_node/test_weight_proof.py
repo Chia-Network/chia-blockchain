@@ -163,20 +163,15 @@ class TestWeightProof:
         assert sub_epoch_blocks_n == sub_epoch_end.height - prev_sub_epoch_end.height
 
     @pytest.mark.asyncio
-    async def test_get_last_ses_block_idx_(self, default_400_blocks):
+    async def test_get_last_ses_block_idx(self, default_400_blocks):
         header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_400_blocks)
         sub_epoch_end, _ = get_prev_ses_block(sub_blocks, default_400_blocks[-1].prev_header_hash)
-        print(f"sub_epoch_summary_included, height: {sub_epoch_end.height} {sub_epoch_end.sub_epoch_summary_included}")
         reward_blocks: List[RewardChainSubBlock] = []
         for block in header_cache.values():
             reward_blocks.append(block.reward_chain_sub_block)
-
-        first_after_se: SubBlockRecord = sub_blocks[height_to_hash[sub_epoch_end.height + 1]]
-        print(f"before weight : {sub_epoch_end.weight}")
-        # find last ses
-        print(f"diff {first_after_se.weight - sub_epoch_end.weight}, weight {sub_epoch_end.weight}")
-        idx = get_last_ses_block_idx(reward_blocks, first_after_se.weight - sub_epoch_end.weight, sub_epoch_end.weight)
-        assert idx == first_after_se.height
+        idx = get_last_ses_block_idx(test_constants, reward_blocks)
+        assert idx is not None
+        assert idx == sub_epoch_end.height
 
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_1(self, default_400_blocks):
@@ -226,8 +221,7 @@ class TestWeightProof:
         print(f"fork point is {curr.height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
-        print("last ses end of challenge slot")
-        print(f"{header_cache[height_to_hash[9961]].finished_sub_slots[-1].challenge_chain}")
+        print(f"\n_____________  {header_cache[height_to_hash[9961]].finished_sub_slots[-1].challenge_chain} __________")
 
         wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
         wpf.log.setLevel(logging.INFO)
