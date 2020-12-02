@@ -4,8 +4,6 @@ from typing import Dict, Optional, List
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
-    calculate_iterations_quality,
-    calculate_ip_iters,
     is_overflow_sub_block,
 )
 from src.consensus.sub_block_record import SubBlockRecord
@@ -108,43 +106,40 @@ class WeightProofFactory:
     def validate_weight(
         self,
         weight_proof: WeightProof,
-        prev_ses_hash: bytes32,
-        fork_point_difficulty: uint64,
-        fork_point_sub_slot_iters: uint64,
-        fork_point_weight: uint128,
+        fork_point: SubBlockRecord,
     ) -> bool:
         # sub epoch summaries validate hashes
+        fork_point_difficulty = uint64(fork_point.weight - self.sub_blocks[fork_point.prev_hash].weight)
+
+        curr = fork_point
+        self.log.info(f"fork point {fork_point.height}")
+        while not curr.sub_epoch_summary_included:
+            curr = self.sub_blocks[curr.prev_hash]
+
+        self.log.info(f"prev sub_epoch summary at {curr.height}")
+        prev_ses_hash = curr.sub_epoch_summary_included.get_hash()
         summaries, sub_epoch_data_weight = map_summaries(
-            self.log, self.constants.SUB_EPOCH_SUB_BLOCKS, prev_ses_hash, weight_proof.sub_epochs, fork_point_difficulty
+            self.constants.SUB_EPOCH_SUB_BLOCKS, prev_ses_hash, weight_proof.sub_epochs, fork_point_difficulty
         )
-
-        # validate weight
-        # find first block after last sub epoch end
-        self.log.info(
-            f"diff {fork_point_difficulty}, sub epoch data weight {sub_epoch_data_weight}, start weight {fork_point_weight}"
-        )
-
-        self.log.info(f"")
-        block_idx = get_last_ses_block_idx(
-            weight_proof.recent_reward_chain, uint128(fork_point_difficulty), sub_epoch_data_weight + fork_point_weight
-        )
+        last_ses = summaries[uint32(len(summaries) - 1)]
+        block_idx = get_last_ses_block_idx(self.constants, weight_proof.recent_reward_chain)
         if block_idx is None:
             self.log.error(f"could not find first block after last sub epoch end")
             return False
+        # validate weight
         last_ses_block = weight_proof.recent_reward_chain[block_idx]
-        self.log.error(f"last ses at height {last_ses_block.sub_block_height}")
-        # use block we found by weight to validate last ses_hash
-        cc_vdf = weight_proof.recent_reward_chain[block_idx - 1].challenge_chain_ip_vdf
+        self.log.info(f"last ses at height {last_ses_block.sub_block_height}")
 
+        # validate last ses_hash
+        prev_block = weight_proof.recent_reward_chain[block_idx - 1]
+        cc_vdf = prev_block.challenge_chain_ip_vdf
+        icc_vdf = prev_block.infused_challenge_chain_ip_vdf
         # last ses
-        ses = summaries[uint32(len(summaries) - 1)]
-
         challenge = ChallengeChainSubSlot(
-            cc_vdf, None, ses.get_hash(), ses.new_sub_slot_iters, ses.new_difficulty
-        ).get_hash()
-
-        expected_challenge = weight_proof.recent_reward_chain[block_idx + 1].challenge_chain_sp_vdf.challenge
-        if challenge != expected_challenge:
+            cc_vdf, icc_vdf, last_ses.get_hash(), last_ses.new_sub_slot_iters, last_ses.new_difficulty
+        )
+        expected_challenge = weight_proof.recent_reward_chain[block_idx].challenge_chain_sp_vdf.challenge
+        if challenge.get_hash() != expected_challenge:
             self.log.error(
                 f"failed to validate ses hashes block height {weight_proof.recent_reward_chain[block_idx].sub_block_height} {challenge}  {expected_challenge}"
             )
@@ -153,58 +148,58 @@ class WeightProofFactory:
         total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
         total_slot_iters, total_slots = uint64(0), uint64(0)
         # validate sub epoch samples
-        for segment in weight_proof.sub_epoch_segments:
-            ses = summaries[segment.sub_epoch_n]
-            ssi: uint64 = uint64(self.constants.SUB_SLOT_TIME_TARGET * ses.new_ips)
-            total_slot_iters += ssi
-            q_str = self.get_quality_string(segment, summaries[segment.sub_epoch_n], ssi)
-            if q_str is None:
-                return False
-
-            # validate vdfs
-            challenge = ses.prev_subepoch_summary_hash
-            for sub_slot in segment.sub_slots:
-                total_slots += 1
-                vdf_info, _ = get_vdf_info_and_proof(
-                    self.constants, ClassgroupElement.get_default_element(), challenge, ssi
-                )
-                if not validate_sub_slot_vdfs(self.constants, sub_slot, vdf_info, sub_slot.is_challenge()):
-                    self.log.error("failed to validate vdfs for sub slot ")
-                    return False
-
-                if sub_slot.is_challenge():
-                    required_iters: uint64 = calculate_iterations_quality(
-                        q_str,
-                        sub_slot.proof_of_space.size,
-                        challenge,
-                        sub_slot.cc_signage_point_vdf.get_hash(),
-                    )
-                    total_ip_iters = +calculate_ip_iters(
-                        self.constants, ses.new_ips, sub_slot.cc_signage_point_index, required_iters
-                    )
-                    total_challenge_blocks += 1
-                    challenge = sub_slot.cc_slot_vdf.get_hash()
-                else:
-                    challenge = sub_slot.cc_infusion_to_slot_end_vdf.get_hash()
-
-                    # validate reward chain sub slot obj with next ses
-                    rc_sub_slot = RewardChainSubSlot(
-                        segment.last_reward_chain_vdf_info,
-                        segment.sub_slots[-1].cc_infusion_to_slot_end_vdf.get_hash(),
-                        segment.sub_slots[-1].icc_infusion_to_slot_end_vdf.get_hash(),
-                        uint8(0),
-                    )
-
-                    if not summaries[segment.sub_epoch_n + 1].reward_chain_hash == rc_sub_slot.get_hash():
-                        self.log.error(f"segment {segment.sub_epoch_n} failed reward_chain_hash validation")
-                        return False
-
-            # todo floats
-            avg_ip_iters = total_ip_iters / total_challenge_blocks
-            avg_slot_iters = total_slot_iters / total_slots
-            if avg_slot_iters / avg_ip_iters < float(self.constants.WEIGHT_PROOF_THRESHOLD):
-                self.log.error(f"bad avg challenge block positioning ration: {avg_slot_iters / avg_ip_iters}")
-                return False
+        # for segment in weight_proof.sub_epoch_segments:
+        #     ses = summaries[segment.sub_epoch_n]
+        #     ssi: uint64 = uint64(self.constants.SUB_SLOT_TIME_TARGET * ses.new_ips)
+        #     total_slot_iters += ssi
+        #     q_str = self.get_quality_string(segment, summaries[segment.sub_epoch_n], ssi)
+        #     if q_str is None:
+        #         return False
+        #
+        #     # validate vdfs
+        #     challenge = ses.prev_subepoch_summary_hash
+        #     for sub_slot in segment.sub_slots:
+        #         total_slots += 1
+        #         vdf_info, _ = get_vdf_info_and_proof(
+        #             self.constants, ClassgroupElement.get_default_element(), challenge, ssi
+        #         )
+        #         if not validate_sub_slot_vdfs(self.constants, sub_slot, vdf_info, sub_slot.is_challenge()):
+        #             self.log.error("failed to validate vdfs for sub slot ")
+        #             return False
+        #
+        #         if sub_slot.is_challenge():
+        #             required_iters: uint64 = calculate_iterations_quality(
+        #                 q_str,
+        #                 sub_slot.proof_of_space.size,
+        #                 challenge,
+        #                 sub_slot.cc_signage_point_vdf.get_hash(),
+        #             )
+        #             total_ip_iters = +calculate_ip_iters(
+        #                 self.constants, ses.new_ips, sub_slot.cc_signage_point_index, required_iters
+        #             )
+        #             total_challenge_blocks += 1
+        #             challenge = sub_slot.cc_slot_vdf.get_hash()
+        #         else:
+        #             challenge = sub_slot.cc_infusion_to_slot_end_vdf.get_hash()
+        #
+        #             # validate reward chain sub slot obj with next ses
+        #             rc_sub_slot = RewardChainSubSlot(
+        #                 segment.last_reward_chain_vdf_info,
+        #                 segment.sub_slots[-1].cc_infusion_to_slot_end_vdf.get_hash(),
+        #                 segment.sub_slots[-1].icc_infusion_to_slot_end_vdf.get_hash(),
+        #                 uint8(0),
+        #             )
+        #
+        #             if not summaries[segment.sub_epoch_n + 1].reward_chain_hash == rc_sub_slot.get_hash():
+        #                 self.log.error(f"segment {segment.sub_epoch_n} failed reward_chain_hash validation")
+        #                 return False
+        #
+        #     # todo floats
+        #     avg_ip_iters = total_ip_iters / total_challenge_blocks
+        #     avg_slot_iters = total_slot_iters / total_slots
+        #     if avg_slot_iters / avg_ip_iters < float(self.constants.WEIGHT_PROOF_THRESHOLD):
+        #         self.log.error(f"bad avg challenge block positioning ration: {avg_slot_iters / avg_ip_iters}")
+        #         return False
 
         # validate recent reward chain
 
@@ -466,7 +461,6 @@ def validate_sub_slot_vdfs(
 
 
 def map_summaries(
-    log,
     sub_blocks_for_se: uint32,
     ses_hash: bytes32,
     sub_epoch_data: List[SubEpochData],
@@ -488,12 +482,6 @@ def map_summaries(
         if data.new_sub_slot_iters is not None:
             curr_difficulty = data.new_difficulty
 
-        log.info(
-            f"sub_epoch {idx} sub_epoch_weight {sub_epoch_data_weight} "
-            f"sub_epoch_diff {curr_difficulty} "
-            f"num of overflow blocks {data.num_sub_blocks_overflow} "
-            f"se blocks num {sub_blocks_for_se + data.num_sub_blocks_overflow}"
-        )
         sub_epoch_data_weight += curr_difficulty * (sub_blocks_for_se + data.num_sub_blocks_overflow)
 
         # add to dict
@@ -503,9 +491,18 @@ def map_summaries(
 
 
 def get_last_ses_block_idx(
-    recent_reward_chain: List[RewardChainSubBlock], difficulty: uint128, prev_weight: uint128
+    constants: ConsensusConstants, recent_reward_chain: List[RewardChainSubBlock]
 ) -> Optional[uint32]:
-    for idx, block in enumerate(recent_reward_chain):
-        if block.weight - difficulty == prev_weight:
-            return idx
+    for idx, block in enumerate(reversed(recent_reward_chain)):
+        if uint8(block.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS) == 0:
+            idx = len(recent_reward_chain) - 1 - idx  # reverse
+            # find next block with different challenge chain challenge
+            curr = recent_reward_chain[idx]
+            next = recent_reward_chain[idx + 1]
+            while curr.challenge_chain_ip_vdf.challenge == next.challenge_chain_ip_vdf.challenge:
+                idx += 1
+                curr = recent_reward_chain[idx]
+                next = recent_reward_chain[idx + 1]
+            return idx + 1
+
     return None
