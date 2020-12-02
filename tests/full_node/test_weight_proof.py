@@ -221,10 +221,6 @@ class TestWeightProof:
         print(f"fork point is {curr.height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
-        print(
-            f"\n_____________  {header_cache[height_to_hash[9961]].finished_sub_slots[-1].challenge_chain} __________"
-        )
-
         wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
         wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
