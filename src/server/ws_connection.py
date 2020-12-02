@@ -88,9 +88,7 @@ class WSChiaConnection:
         self.connection_type = None
 
     async def perform_handshake(self, network_id, protocol_version, node_id, server_port, local_type):
-        self.log.info("Doing handshake")
         if self.is_outbound:
-            self.log.info("Outbound handshake")
             outbound_handshake = Message(
                 "handshake",
                 Handshake(
@@ -111,7 +109,6 @@ class WSChiaConnection:
             self.peer_server_port = int(inbound_handshake.server_port)
             self.connection_type = inbound_handshake.node_type
         else:
-            self.log.info("Inbound handshake")
             payload = await self._read_one_message()
             inbound_handshake = Handshake(**payload.msg.data)
             if payload.msg.function != "handshake" or not inbound_handshake or not inbound_handshake.node_type:
@@ -134,7 +131,6 @@ class WSChiaConnection:
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
-        self.log.info("Handshake success")
         return True
 
     async def close(self):
@@ -155,7 +151,7 @@ class WSChiaConnection:
 
     async def outbound_handler(self):
         try:
-            while True:
+            while not self.closed:
                 msg = await self.outgoing_queue.get()
                 if msg is not None:
                     await self._send_message(msg)
@@ -166,7 +162,7 @@ class WSChiaConnection:
 
     async def inbound_handler(self):
         try:
-            while True:
+            while not self.closed:
                 payload: Payload = await self._read_one_message()
                 if payload is not None:
                     if payload.id in self.pending_requests:
@@ -255,7 +251,7 @@ class WSChiaConnection:
             await self.outgoing_queue.put(payload)
 
     async def _send_message(self, payload: Payload):
-        self.log.info(f"-> {payload.msg.function}")
+        self.log.info(f"-> {payload.msg.function} to peer {self.peer_node_id} {self.peer_host}")
         encoded: bytes = cbor.dumps({"f": payload.msg.function, "d": payload.msg.data, "i": payload.id})
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
@@ -266,14 +262,20 @@ class WSChiaConnection:
         try:
             # Need timeout here in case connection is closed, this allows GC to clean up
             message: WSMessage = await self.ws.receive()
-            if message.type == WSMsgType.BINARY:
+            if message.type == WSMsgType.CLOSING or message.type == WSMsgType.CLOSE:
+                self.log.info(
+                    f"Closing connection to {NodeType(self.connection_type).name.lower()} {self.peer_host}:"
+                    f"{self.peer_server_port}/"
+                    f"{self.peer_port}"
+                )
+            elif message.type == WSMsgType.BINARY:
                 data = message.data
                 full_message_loaded: Any = cbor.loads(data)
                 self.bytes_read += len(data)
                 self.last_message_time = time.time()
                 msg = Message(full_message_loaded["f"], full_message_loaded["d"])
-                id = full_message_loaded["i"]
-                payload = Payload(msg, id)
+                payload_id = full_message_loaded["i"]
+                payload = Payload(msg, payload_id)
                 return payload
             else:
                 self.log.error(f"Not binary message: {message}")
