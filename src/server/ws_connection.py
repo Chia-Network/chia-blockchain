@@ -134,7 +134,7 @@ class WSChiaConnection:
         return True
 
     async def close(self):
-        # Closes the connection. This should only be called by PeerConnections class.
+        # Closes the connection
         self.closed = True
         if self.ws is not None:
             await self.ws.close()
@@ -269,6 +269,7 @@ class WSChiaConnection:
                     f"{self.peer_server_port}/"
                     f"{self.peer_port}"
                 )
+                await self.close()
             elif message.type == WSMsgType.BINARY:
                 data = message.data
                 full_message_loaded: Any = cbor.loads(data)
