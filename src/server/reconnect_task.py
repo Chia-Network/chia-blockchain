@@ -23,6 +23,6 @@ def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth:
                     await server.start_client(peer_info, None, auth=auth)
                 except Exception as e:
                     log.info(f"Failed to connect to {peer_info} {e}")
-            await asyncio.sleep(300)
+            await asyncio.sleep(3)
 
     return asyncio.create_task(connection_check())
