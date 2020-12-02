@@ -135,14 +135,14 @@ class WSChiaConnection:
 
     async def close(self):
         # Closes the connection. This should only be called by PeerConnections class.
-        print("CLOSING!")
         self.closed = True
         if self.ws is not None:
             await self.ws.close()
         if self.inbound_task is not None:
             self.inbound_task.cancel()
         if self.outbound_task is not None:
-            await self.outbound_task
+            if self.outbound_task.
+            self.outbound_task.cancel()
         if self.session is not None:
             await self.session.close()
 
@@ -153,12 +153,9 @@ class WSChiaConnection:
     async def outbound_handler(self):
         try:
             while not self.closed:
-                try:
-                    msg = await asyncio.wait_for(self.outgoing_queue.get(), 1)
-                    if msg is not None:
-                        await self._send_message(msg)
-                except asyncio.TimeoutError:
-                    pass
+                msg = await self.outgoing_queue.get()
+                if msg is not None:
+                    await self._send_message(msg)
         except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception: {e}")
@@ -255,7 +252,7 @@ class WSChiaConnection:
             await self.outgoing_queue.put(payload)
 
     async def _send_message(self, payload: Payload):
-        self.log.info(f"-> {payload.msg.function} to peer {self.peer_node_id} {self.peer_host}")
+        self.log.info(f"-> {payload.msg.function} to peer {self.peer_host} {self.peer_node_id}")
         encoded: bytes = cbor.dumps({"f": payload.msg.function, "d": payload.msg.data, "i": payload.id})
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
