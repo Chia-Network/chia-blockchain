@@ -21,12 +21,13 @@ for setuptools_scm/PEP 440 reasons.
 - We have moved from using gulrak/filesystem across all platforms to only using it on MacOS. It's required on MacOS as we are still targeting Mojave compatibility. This should resolve Windows path issues.
 - There are new farming and plotting pages. The plotting flow was redesigned to streamline it and add advanced options as drop downs as appropriate. Plots are now queued into your local plot list. To see the plotting log, try the three vertical dots. Remote harvester plot display will be coming to the plot page as well.
 - Harvester and farmer will start when the GUI starts instead of waiting for key selection.
-- We have moved to taproot across all of our transactions and smart transactions. Additionally we're using aggsig_me nearly everywhere.
+- We have moved to taproot across all of our transactions and smart transactions.
 - The rate limited wallet was updated and re-factored.
 - All appropriate Chialisp smart transactions have been updated to use aggsig_me.
 - Full node should be more aggressive about finding other peers.
 - Peer disconnect messages are now set to log level INFO down from WARNING.
 - chiavdf now allows passing in input to a VDF for new consensus.
+- sha256tree has been removed from Chialisp.
 - aiohttp, cbor2, clvm-tools, colorlog, concurrent-log-handler, keyring, cryptography, and sortedcontainers have been upgraded to their current versions.
 
 ### Fixed
