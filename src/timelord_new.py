@@ -235,7 +235,7 @@ class Timelord:
         # Unfinished block info, iters adjusted to the last peak.
         self.unfinished_blocks: List[timelord_protocol.NewUnfinishedSubBlock] = []
         # Signage points iters, adjusted to the last peak.
-        self.signage_points_iters: List[uint64] = []
+        self.signage_point_iters: List[uint64] = []
         # For each chain, send those info when the process spawns.
         self.iters_to_submit: Dict[str, List[uint64]] = {}
         self.iters_submitted: Dict[str, List[uint64]] = {}
@@ -337,7 +337,7 @@ class Timelord:
         self.signage_point_iters = [
             k * iters_per_signage - ip_iters
             for k in range(1, self.constants.NUM_SPS_SUB_SLOT + 1)
-            if k * iters_per_signage - ip_iters > 0 and k * iters_per_signage <= sub_slot_iters
+            if k * iters_per_signage - ip_iters > 0 and k * iters_per_signage < sub_slot_iters
         ]
         # Adjust all unfinished blocks iterations to the peak.
         new_unfinished_blocks = []
