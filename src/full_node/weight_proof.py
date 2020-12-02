@@ -5,6 +5,7 @@ from typing import Dict, Optional, List
 from blspy import AugSchemeMPL
 
 from src.consensus.constants import ConsensusConstants
+from src.consensus.get_block_challenge import get_block_challenge
 from src.consensus.pot_iterations import (
     is_overflow_sub_block,
     calculate_iterations_quality,
@@ -111,7 +112,7 @@ class WeightProofFactory:
         self.log.info(f"fork point {fork_point.height}")
         # sub epoch summaries validate hashes
         self.log.info(f"validate summaries")
-        summaries = self._validate_sub_epoch_summaries(fork_point, weight_proof)
+        summaries = self._validate_sub_epoch_summaries(weight_proof, fork_point)
         if summaries is None:
             return False
         self.log.info(f"validate sub epoch challenge segments")
@@ -121,7 +122,7 @@ class WeightProofFactory:
 
         return True
 
-    def _validate_sub_epoch_summaries(self, fork_point: SubBlockRecord, weight_proof: WeightProof):
+    def _validate_sub_epoch_summaries(self, weight_proof: WeightProof, fork_point: SubBlockRecord):
         fork_point_difficulty = uint64(fork_point.weight - self.sub_blocks[fork_point.prev_hash].weight)
         curr = fork_point
         while not curr.sub_epoch_summary_included:
@@ -241,9 +242,10 @@ class WeightProofFactory:
         sub_slots.extend(first_sub_slots)
 
         # VDFs from slot after challenge block to end of slot
-
         self.log.info(f"create slot end vdf for block {block.header_hash} height {block.height} ")
+
         challenge_slot_end_sub_slots = self._get_slot_end_vdf(self.header_cache[self.height_to_hash[end_height]])
+
         sub_slots.extend(challenge_slot_end_sub_slots)
         self.log.info(f"segment number of sub slots {len(sub_slots)}")
         return SubEpochChallengeSegment(sub_epoch_n, block.reward_chain_sub_block.reward_chain_ip_vdf, sub_slots)
@@ -354,7 +356,7 @@ class WeightProofFactory:
             cc_sp_vdf_hash = challenge_sub_slot.cc_signage_point_vdf.get_hash()
         else:
             # before first sp in slot, take challenge from prev sub slot end
-            cc_sp_vdf_hash = segment.sub_slots[idx - 1].cc_slot_vdf.get_hash()
+            cc_sp_vdf_hash = segment.sub_slots[idx - 1].cc_infusion_to_slot_end_vdf.get_hash()
 
         if not AugSchemeMPL.verify(
             challenge_sub_slot.proof_of_space.plot_public_key,

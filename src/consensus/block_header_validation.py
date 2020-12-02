@@ -376,11 +376,10 @@ async def validate_unfinished_header_block(
     # This computes what the challenge should be for this sub-block
     challenge = get_block_challenge(
         constants,
-        genesis_block,
         header_block,
-        overflow,
-        prev_sb,
         sub_blocks,
+        genesis_block,
+        overflow,
         skip_overflow_last_ss_validation,
     )
 
