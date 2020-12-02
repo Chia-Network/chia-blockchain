@@ -1,0 +1,47 @@
+(mod block_program
+
+  (defmacro and ARGS
+      (if ARGS
+          (qq (if (unquote (f ARGS))
+              (unquote (c and (r ARGS)))
+              ()
+          ))
+      1)
+  )
+
+  (defmacro not (ARGS)
+      (qq (if (unquote ARGS) 0 1))
+  )
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree1 (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+            (sha256 1 TREE)
+        )
+  )
+
+  (defun len (arg count)
+    (if arg
+      (len (r arg) (+ count 1))
+      count
+    )
+  )
+
+  (defun npc_list_for_coinsolution (coin_solution)
+    (if (and (= (len coin_solution 0) 2) (= (len (f (r coin_solution)) 0) 2) (= (strlen (f coin_solution)) 32))
+      (list (f coin_solution) (sha256tree1 (f (f (r coin_solution)))) ((c (f (f (r coin_solution))) (f (r (f (r coin_solution)))))))
+      (x)
+    )
+  )
+
+  (defun generate_npc_pair_list (coin_solutions npc_list)
+    (if coin_solutions
+      (generate_npc_pair_list (r coin_solutions) (c (npc_list_for_coinsolution (f coin_solutions)) npc_list))
+      npc_list
+    )
+  )
+
+  ; main
+  (generate_npc_pair_list ((c block_program (q ()))) ())
+)
