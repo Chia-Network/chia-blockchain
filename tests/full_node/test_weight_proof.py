@@ -91,7 +91,7 @@ def load_blocks_dont_validate(blocks):
         )
 
         sub_blocks[block.header_hash] = full_block_to_sub_block_record(
-            test_constants, sub_blocks, height_to_hash, block, required_iters
+            test_constants, sub_blocks, height_to_hash, required_iters, block, None
         )
         height_to_hash[block.height] = block.header_hash
         header_cache[block.header_hash] = block.get_block_header()
