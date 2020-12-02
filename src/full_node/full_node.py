@@ -139,7 +139,10 @@ class FullNode:
             )
             asyncio.create_task(self.full_node_peers.start())
         except Exception as e:
+            error_stack = traceback.format_exc()
+            self.log.error(f"Exception: {e}")
             self.log.error(f"Exception in peer discovery: {e}")
+            self.log.error(f"Exception Stack: {error_stack}")
 
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
@@ -217,7 +220,8 @@ class FullNode:
     def _close(self):
         self._shut_down = True
         self.blockchain.shut_down()
-        asyncio.create_task(self.full_node_peers.close())
+        if self.full_node_peers is not None:
+            asyncio.create_task(self.full_node_peers.close())
 
     async def _await_closed(self):
         await self.connection.close()

@@ -48,9 +48,10 @@ class FullNodeDiscovery:
         self.target_outbound_count = target_outbound_count
         self.peer_db_path = path_from_root(root_path, peer_db_path)
         if introducer_info is not None:
+            log.warning(f"Introducer info {introducer_info}")
             self.introducer_info: Optional[PeerInfo] = PeerInfo(
-                introducer_info.host,
-                introducer_info.port,
+                introducer_info["host"],
+                introducer_info["port"],
             )
         else:
             self.introducer_info = None
