@@ -11,11 +11,10 @@ from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
 def get_block_challenge(
     constants: ConsensusConstants,
-    genesis_block: bool,
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
-    overflow: bool,
-    prev_sb: SubBlockRecord,
     sub_blocks: Dict[bytes32, SubBlockRecord],
+    genesis_block: bool,
+    overflow: bool,
     skip_overflow_last_ss_validation: bool,
 ):
     if len(header_block.finished_sub_slots) > 0:
@@ -41,7 +40,7 @@ def get_block_challenge(
             else:
                 challenges_to_look_for = 1
             reversed_challenge_hashes: List[bytes32] = []
-            curr: SubBlockRecord = prev_sb
+            curr: SubBlockRecord = sub_blocks[header_block.prev_header_hash]
             while len(reversed_challenge_hashes) < challenges_to_look_for:
                 if curr.first_in_sub_slot:
                     reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
