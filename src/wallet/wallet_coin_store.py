@@ -1,14 +1,14 @@
 from typing import Dict, Optional, List, Set
 import aiosqlite
 from src.types.coin import Coin
-from src.wallet.block_record import BlockRecord
+from src.wallet.block_record import HeaderBlockRecord
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_coin_record import WalletCoinRecord
 
 
-class WalletStore:
+class WalletCoinStore:
     """
     This object handles CoinRecords in DB used by wallet.
     """
@@ -41,10 +41,6 @@ class WalletStore:
                 " wallet_id int)"
             )
         )
-        await self.db_connection.execute(
-            "CREATE TABLE IF NOT EXISTS block_records(header_hash text PRIMARY KEY, height int,"
-            " in_lca_path tinyint, timestamp int, block blob)"
-        )
 
         # Useful for reorg lookups
         await self.db_connection.execute(
@@ -71,21 +67,6 @@ class WalletStore:
             "CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)"
         )
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS header_hash on block_records(header_hash)"
-        )
-
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS timestamp on block_records(timestamp)"
-        )
-
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS height on block_records(height)"
-        )
-
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS in_lca_path on block_records(in_lca_path)"
-        )
 
         await self.db_connection.commit()
         self.coin_record_cache = dict()
@@ -94,8 +75,6 @@ class WalletStore:
     async def _clear_database(self):
         cursor = await self.db_connection.execute("DELETE FROM coin_record")
         await cursor.close()
-        cursor_2 = await self.db_connection.execute("DELETE FROM block_records")
-        await cursor_2.close()
         await self.db_connection.commit()
 
     # Store CoinRecord in DB and ram cache
@@ -326,7 +305,7 @@ class WalletStore:
         )
         return coin_record
 
-    async def rollback_lca_to_block(self, block_index):
+    async def rollback_to_block(self, block_index):
         """
         Rolls back the blockchain to block_index. All blocks confirmed after this point
         are removed from the LCA. All coins confirmed after this point are removed.
@@ -362,80 +341,8 @@ class WalletStore:
             (block_index,),
         )
         await c2.close()
-        await self.remove_blocks_from_path(block_index)
         await self.db_connection.commit()
 
-    async def get_lca_path(self) -> Dict[bytes32, BlockRecord]:
-        """
-        Returns block records representing the blockchain from the genesis
-        block up to the LCA (least common ancestor). Note that the DB also
-        contains many blocks not on this path, due to reorgs.
-        """
-        cursor = await self.db_connection.execute(
-            "SELECT * from block_records WHERE in_lca_path=1"
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
-        hash_to_br: Dict = {}
-        max_height = -1
-        for row in rows:
-            br = BlockRecord.from_bytes(row[4])
-            hash_to_br[bytes.fromhex(row[0])] = br
-            assert row[0] == br.header_hash.hex()
-            assert row[1] == br.height
-            if br.height > max_height:
-                max_height = br.height
-        # Makes sure there's exactly one block per height
-        assert max_height == len(list(rows)) - 1
-        return hash_to_br
-
-    async def add_block_record(self, block_record: BlockRecord, in_lca_path: bool):
-        """
-        Adds a block record to the database. This block record is assumed to be connected
-        to the chain, but it may or may not be in the LCA path.
-        """
-        cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO block_records VALUES(?, ?, ?, ?, ?)",
-            (
-                block_record.header_hash.hex(),
-                block_record.height,
-                in_lca_path,
-                block_record.timestamp,
-                bytes(block_record),
-            ),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
-
-    async def get_block_record(self, header_hash: bytes32) -> Optional[BlockRecord]:
-        """Gets a block record from the database, if present"""
-        cursor = await self.db_connection.execute(
-            "SELECT * from block_records WHERE header_hash=?", (header_hash.hex(),)
-        )
-        row = await cursor.fetchone()
-        await cursor.close()
-        if row is not None:
-            return BlockRecord.from_bytes(row[4])
-        else:
-            return None
-
-    async def add_block_to_path(self, header_hash: bytes32) -> None:
-        """Adds a block record to the LCA path."""
-        cursor = await self.db_connection.execute(
-            "UPDATE block_records SET in_lca_path=1 WHERE header_hash=?",
-            (header_hash.hex(),),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
-
-    async def remove_blocks_from_path(self, from_height: uint32) -> None:
-        """
-        When rolling back the LCA, sets in_lca_path to 0 for blocks over the given
-        height. This is used during reorgs to rollback the current lca.
-        """
-        cursor = await self.db_connection.execute(
-            "UPDATE block_records SET in_lca_path=0 WHERE height>?",
-            (from_height,),
-        )
-        await cursor.close()
-        await self.db_connection.commit()
+    async def new_block(self, block: HeaderBlockRecord):
+        # TODO add additions removals to db
+        pass

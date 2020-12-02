@@ -14,27 +14,32 @@ from blspy import PrivateKey, G1Element, AugSchemeMPL
 from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
+from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.coin import Coin
+from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
+from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.key_val_store import KeyValStore
 from src.wallet.settings.user_settings import UserSettings
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.trade_manager import TradeManager
 from src.wallet.transaction_record import TransactionRecord
-from src.wallet.block_record import BlockRecord
 from src.wallet.util.backup_utils import open_backup_file
 from src.wallet.util.transaction_type import TransactionType
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_action_store import WalletActionStore
+from src.wallet.wallet_blockchain import WalletBlockchain
 from src.wallet.wallet_coin_record import WalletCoinRecord
+from src.wallet.wallet_coin_store import WalletCoinStore
+from src.wallet.wallet_header_store import WalletBlockStore
 from src.wallet.wallet_info import WalletInfo, WalletInfoBackup
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
-from src.wallet.wallet_store import WalletStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
 from src.wallet.wallet_user_store import WalletUserStore
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -51,20 +56,12 @@ from src import __version__
 class WalletStateManager:
     constants: ConsensusConstants
     config: Dict
-    wallet_store: WalletStore
     tx_store: WalletTransactionStore
     puzzle_store: WalletPuzzleStore
     user_store: WalletUserStore
     action_store: WalletActionStore
     basic_store: KeyValStore
-    # Map from header hash to BlockRecord
-    block_records: Dict[bytes32, BlockRecord]
-    # Specifies the LCA path
-    height_to_hash: Dict[uint32, bytes32]
-    # Map from previous header hash, to new work difficulty
-    difficulty_resets_prev: Dict[bytes32, uint64]
-    # Header hash of tip (least common ancestor)
-    lca: Optional[bytes32]
+
     start_index: int
 
     # Makes sure only one asyncio thread is changing the blockchain state at one time
@@ -89,6 +86,9 @@ class WalletStateManager:
     trade_manager: TradeManager
     new_wallet: bool
     user_settings: UserSettings
+    blockchain: WalletBlockchain
+    block_store: WalletBlockStore
+    coin_store: WalletCoinStore
 
     @staticmethod
     async def create(
@@ -110,7 +110,7 @@ class WalletStateManager:
         self.lock = asyncio.Lock()
 
         self.db_connection = await aiosqlite.connect(db_path)
-        self.wallet_store = await WalletStore.create(self.db_connection)
+        self.coin_store = await WalletCoinStore.create(self.db_connection)
         self.tx_store = await WalletTransactionStore.create(self.db_connection)
         self.puzzle_store = await WalletPuzzleStore.create(self.db_connection)
         self.user_store = await WalletUserStore.create(self.db_connection)
@@ -119,12 +119,12 @@ class WalletStateManager:
         self.trade_manager = await TradeManager.create(self, self.db_connection)
 
         self.user_settings = await UserSettings.create(self.basic_store)
-        self.lca = None
+        self.block_store = await WalletBlockStore.create(self.db_connection)
+        self.blockchain = await WalletBlockchain.create(self.coin_store, self.block_store, self.constants)
+
         self.sync_mode = False
         self.height_to_hash = {}
-        self.block_records = await self.wallet_store.get_lca_path()
-        genesis = FullBlock.from_bytes(self.constants.GENESIS_BLOCK)
-        self.genesis = genesis
+
         self.state_changed_callback = None
         self.pending_tx_callback = None
         self.difficulty_resets_prev = {}
@@ -205,6 +205,10 @@ class WalletStateManager:
         #     )
         #
         # return self
+
+    @property
+    def peak(self):
+        return self.blockchain.get_peak()
 
     def get_derivation_index(self, pubkey: G1Element, max_depth: int = 1000) -> int:
         for i in range(0, max_depth):
@@ -455,7 +459,7 @@ class WalletStateManager:
         return uint64(result)
 
     async def get_frozen_balance(self, wallet_id: int) -> uint64:
-        current_index = self.block_records[self.lca].height
+        current_index = self.block_records[self.peak.header_hash].height
 
         coinbase_freeze_period = self.constants.COINBASE_FREEZE_PERIOD
 
@@ -635,7 +639,7 @@ class WalletStateManager:
         if wallet_type == WalletType.COLOURED_COIN:
             wallet: CCWallet = self.wallets[wallet_id]
             header_hash: bytes32 = self.height_to_hash[index]
-            block: Optional[BlockRecord] = await self.wallet_store.get_block_record(header_hash)
+            block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(header_hash)
             assert block is not None
             assert block.removals is not None
             await wallet.coin_added(coin, index, header_hash, block.removals)
@@ -697,7 +701,7 @@ class WalletStateManager:
         Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
         where both blockchains are equal. Used for syncing.
         """
-        lca: BlockRecord = self.block_records[self.lca]
+        lca: HeaderBlockRecord = self.block_records[self.peak]
 
         if lca.height >= len(alternate_chain) - 1:
             raise ValueError("Alternate chain is shorter")
@@ -1106,19 +1110,19 @@ class WalletStateManager:
     #     return True
 
     async def get_filter_additions_removals(
-        self, new_block: BlockRecord, transactions_filter: bytes
+        self, new_block: SubBlockRecord, transactions_filter: bytes
     ) -> Tuple[List[bytes32], List[bytes32]]:
         """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
-        assert new_block.prev_header_hash in self.block_records
+        assert new_block.prev_header_hash in self.blockchain.sub_blocks
 
         tx_filter = PyBIP158([b for b in transactions_filter])
 
         # Find fork point
         # TODO: handle returning of -1
-        fork_h: uint32 = find_fork_point_in_chain(self.block_records, self.block_records[self.lca], new_block)
+        fork_h = find_fork_point_in_chain(self.blockchain.sub_blocks, self.blockchain.sub_blocks[self.peak.header_hash], new_block)
 
         # Get all unspent coins
-        my_coin_records_lca: Set[WalletCoinRecord] = await self.wallet_store.get_unspent_coins_at_height(uint32(fork_h))
+        my_coin_records_lca: Set[WalletCoinRecord] = await self.coin_store.get_unspent_coins_at_height(uint32(fork_h))
 
         # Filter coins up to and including fork point
         unspent_coin_names: Set[bytes32] = set()
@@ -1127,11 +1131,11 @@ class WalletStateManager:
                 unspent_coin_names.add(coin.name())
 
         # Get all blocks after fork point up to but not including this block
-        curr: BlockRecord = self.block_records[new_block.prev_header_hash]
-        reorg_blocks: List[BlockRecord] = []
+        curr: SubBlockRecord = self.blockchain.sub_blocks[new_block.prev_header_hash]
+        reorg_blocks: List[SubBlockRecord] = []
         while curr.height > fork_h:
             reorg_blocks.append(curr)
-            curr = self.block_records[curr.prev_header_hash]
+            curr = self.blockchain.sub_blocks[curr.prev_header_hash]
         reorg_blocks.reverse()
 
         # For each block, process additions to get all Coins, then process removals to get unspent coins
@@ -1197,7 +1201,7 @@ class WalletStateManager:
         return result
 
     async def get_wallet_for_coin(self, coin_id: bytes32) -> Any:
-        coin_record = await self.wallet_store.get_coin_record(coin_id)
+        coin_record = await self.coin_store.get_coin_record(coin_id)
         if coin_record is None:
             return None
         wallet_id = uint32(coin_record.wallet_id)
@@ -1208,7 +1212,7 @@ class WalletStateManager:
         """ Returns a list of our unspent coins that are in the passed list. """
 
         result: List[Coin] = []
-        wallet_coin_records = await self.wallet_store.get_unspent_coins_at_height()
+        wallet_coin_records = await self.coin_store.get_unspent_coins_at_height()
         my_coins: Dict[bytes32, Coin] = {r.coin.name(): r.coin for r in list(wallet_coin_records)}
 
         for coin in removals:
@@ -1222,7 +1226,7 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
-        await self.wallet_store.rollback_lca_to_block(index)
+        await self.coin_store.rollback_to_block(index)
 
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(index)
         await self.tx_store.rollback_to_block(index)
@@ -1248,7 +1252,7 @@ class WalletStateManager:
 
     async def clear_all_stores(self):
         async with self.lock:
-            await self.wallet_store._clear_database()
+            await self.coin_store._clear_database()
             await self.tx_store._clear_database()
             await self.puzzle_store._clear_database()
             await self.user_store._clear_database()
@@ -1266,9 +1270,9 @@ class WalletStateManager:
         otherwise use the lca height - some buffer(100)
         """
 
-        first_coin_height = await self.wallet_store.get_first_coin_height()
+        first_coin_height = await self.coin_store.get_first_coin_height()
         if first_coin_height is None:
-            start_height = self.block_records[self.lca].height
+            start_height = self.blockchain.get_peak()
         else:
             start_height = first_coin_height
 
@@ -1339,7 +1343,7 @@ class WalletStateManager:
         await self.create_more_puzzle_hashes()
 
     async def get_spendable_coins_for_wallet(self, wallet_id: int) -> Set[WalletCoinRecord]:
-        if self.lca is None:
+        if self.peak is None:
             return set()
 
         current_index = self.block_records[self.lca].height
@@ -1351,7 +1355,7 @@ class WalletStateManager:
 
         valid_index = current_index - coinbase_freeze_period
 
-        records = await self.wallet_store.get_spendable_for_index(valid_index, wallet_id)
+        records = await self.coin_store.get_spendable_for_index(valid_index, wallet_id)
 
         # Coins that are currently part of a transaction
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)

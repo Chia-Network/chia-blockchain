@@ -957,8 +957,9 @@ def finish_sub_block(
         constants,
         sub_blocks,
         height_to_hash,
-        full_block,
         required_iters,
+        full_block,
+        None
     )
     return full_block, sub_block_record
 
@@ -1020,8 +1021,9 @@ def load_block_list(
             constants,
             sub_blocks,
             height_to_hash,
-            full_block,
             required_iters,
+            full_block,
+            None,
         )
         height_to_hash[uint32(full_block.height)] = full_block.header_hash
     return height_to_hash, difficulty, sub_blocks

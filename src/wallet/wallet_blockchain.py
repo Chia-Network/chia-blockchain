@@ -6,13 +6,14 @@ import multiprocessing
 from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.block_body_validation import validate_block_body
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.difficulty_adjustment import get_next_difficulty, get_next_sub_slot_iters
 from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
+from src.types.coin import Coin
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.sub_epoch_summary import SubEpochSummary
@@ -22,9 +23,10 @@ from src.util.ints import uint32, uint64
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_header_validation import (
     validate_finished_header_block,
-    validate_unfinished_header_block,
 )
-from src.types.unfinished_header_block import UnfinishedHeaderBlock
+from src.wallet.block_record import HeaderBlockRecord
+from src.wallet.wallet_coin_store import WalletCoinStore
+from src.wallet.wallet_header_store import WalletHeaderStore, WalletBlockStore
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +45,7 @@ class ReceiveBlockResult(Enum):
     DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
 
 
-class Blockchain:
+class WalletBlockchain:
     constants: ConsensusConstants
     # peak of the blockchain
     peak_height: Optional[uint32]
@@ -55,9 +57,9 @@ class Blockchain:
     # (height_included, SubEpochSummary). Note: ONLY for the sub-blocks in the path to the peak
     sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {}
     # Unspent Store
-    coin_store: CoinStore
+    coin_store: WalletCoinStore
     # Store
-    block_store: BlockStore
+    block_store: WalletHeaderStore
     # Used to verify blocks in parallel
     pool: ProcessPoolExecutor
 
@@ -70,7 +72,7 @@ class Blockchain:
     @staticmethod
     async def create(
         coin_store: CoinStore,
-        block_store: BlockStore,
+        block_store: WalletBlockStore,
         consensus_constants: ConsensusConstants,
     ):
         """
@@ -78,7 +80,7 @@ class Blockchain:
         validated. Uses the genesis block given in override_constants, or as a fallback,
         in the consensus constants config.
         """
-        self = Blockchain()
+        self = WalletBlockchain()
         self.lock = asyncio.Lock()  # External lock handled by full node
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
@@ -105,6 +107,7 @@ class Blockchain:
 
         if len(self.sub_blocks) == 0:
             assert peak is None
+            log.info("Initializing empty blockchain")
             self.peak_height = None
             return
 
@@ -120,7 +123,7 @@ class Blockchain:
             if curr.height == 0:
                 break
             curr = self.sub_blocks[curr.prev_hash]
-        assert len(self.height_to_hash) == self.peak_height + 1
+        assert len(self.sub_blocks) == len(self.height_to_hash) == self.peak_height + 1
 
     def get_peak(self) -> Optional[SubBlockRecord]:
         """
@@ -130,11 +133,11 @@ class Blockchain:
             return None
         return self.sub_blocks[self.height_to_hash[self.peak_height]]
 
-    async def get_full_peak(self) -> Optional[FullBlock]:
+    async def get_full_peak(self) -> Optional[HeaderBlock]:
         if self.peak_height is None:
             return None
         """ Return list of FullBlocks that are peaks"""
-        block = await self.block_store.get_full_block(self.height_to_hash[self.peak_height])
+        block = await self.block_store.get_header_block(self.height_to_hash[self.peak_height])
         assert block is not None
         return block
 
@@ -154,11 +157,13 @@ class Blockchain:
         return header_hash in self.sub_blocks
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        return await self.block_store.get_full_block(header_hash)
+        return await self.block_store.get_header_block(header_hash)
 
     async def receive_block(
         self,
-        block: FullBlock,
+        block: HeaderBlock,
+        additions: List[Coin],
+        removals: List[Coin],
         pre_validated: bool = False,
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
@@ -187,24 +192,18 @@ class Blockchain:
             log.error(f"block {block.header_hash} failed validation {error.code} {error.error_msg}")
             return ReceiveBlockResult.INVALID_BLOCK, error.code, None
 
-        error_code = await validate_block_body(
-            self.constants, self.sub_blocks, self.block_store, self.coin_store, self.get_peak(), block, block.height
-        )
-
-        if error_code is not None:
-            return ReceiveBlockResult.INVALID_BLOCK, error_code, None
-
         sub_block = full_block_to_sub_block_record(
             self.constants,
             self.sub_blocks,
             self.height_to_hash,
             required_iters,
-            block,
-            None
+            None,
+            block
         )
 
         # Always add the block to the database
-        await self.block_store.add_full_block(block, sub_block)
+        header_block_record = HeaderBlockRecord(block, additions, removals)
+        await self.block_store.add_block_record(header_block_record, sub_block)
         self.sub_blocks[sub_block.header_hash] = sub_block
 
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
@@ -222,12 +221,11 @@ class Blockchain:
         """
         if genesis:
             if self.get_peak() is None:
-                block: Optional[FullBlock] = await self.block_store.get_full_block(sub_block.header_hash)
+                block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(sub_block.header_hash)
                 assert block is not None
                 await self.coin_store.new_block(block)
                 self.height_to_hash[uint32(0)] = block.header_hash
                 self.peak_height = uint32(0)
-                await self.block_store.set_peak(block.header_hash)
                 return uint32(0)
             return None
 
@@ -249,10 +247,10 @@ class Blockchain:
                 del self.sub_epoch_summaries[height]
 
             # Collect all blocks from fork point to new peak
-            blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
+            blocks_to_add: List[Tuple[HeaderBlockRecord, SubBlockRecord]] = []
             curr = sub_block.header_hash
             while fork_h < 0 or curr != self.height_to_hash[uint32(fork_h)]:
-                fetched_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
+                fetched_block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(curr)
                 fetched_sub_block: Optional[SubBlockRecord] = await self.block_store.get_sub_block_record(curr)
                 assert fetched_block is not None
                 assert fetched_sub_block is not None
@@ -272,7 +270,7 @@ class Blockchain:
             # Changes the peak to be the new peak
             await self.block_store.set_peak(sub_block.header_hash)
             self.peak_height = sub_block.height
-            return uint32(max(fork_h, 0))
+            return uint32(min(fork_h, 0))
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
         return None
@@ -314,14 +312,14 @@ class Blockchain:
     async def get_sp_and_ip_sub_slots(
         self, header_hash: bytes32
     ) -> Optional[Tuple[Optional[EndOfSubSlotBundle], Optional[EndOfSubSlotBundle]]]:
-        block: Optional[FullBlock] = await self.block_store.get_full_block(header_hash)
+        block: Optional[FullBlock] = await self.block_store.get_header_block(header_hash)
         is_overflow = self.sub_blocks[block.header_hash].overflow
         if block is None:
             return None
 
         curr: Optional[FullBlock] = block
         while len(curr.finished_sub_slots) == 0 and curr.height > 0:
-            curr = await self.block_store.get_full_block(curr.prev_header_hash)
+            curr = await self.block_store.get_header_block(curr.prev_header_hash)
             assert curr is not None
 
         if len(curr.finished_sub_slots) == 0:
@@ -338,87 +336,11 @@ class Blockchain:
             # Have both sub-slots
             return curr.finished_sub_slots[-2], ip_sub_slot
 
-        curr = await self.block_store.get_full_block(curr.prev_header_hash)
+        curr = await self.block_store.get_header_block(curr.prev_header_hash)
         while len(curr.finished_sub_slots) == 0 and curr.height > 0:
-            curr = await self.block_store.get_full_block(curr.prev_header_hash)
+            curr = await self.block_store.get_header_block(curr.prev_header_hash)
             assert curr is not None
 
         if len(curr.finished_sub_slots) == 0:
             return None, ip_sub_slot
         return curr.finished_sub_slots[-1], ip_sub_slot
-
-    async def pre_validate_blocks_mulpeakrocessing(
-        self, blocks: List[FullBlock]
-    ) -> List[Tuple[bool, Optional[bytes32]]]:
-        # TODO(mariano): re-write
-        # futures = []
-        # # Pool of workers to validate blocks concurrently
-        # for block in blocks:
-        #     if self._shut_down:
-        #         return [(False, None) for _ in range(len(blocks))]
-        #     futures.append(
-        #         asyncio.get_running_loop().run_in_executor(
-        #             self.pool,
-        #             pre_validate_finished_block_header,
-        #             self.constants,
-        #             bytes(block),
-        #         )
-        #     )
-        # results = await asyncio.gather(*futures)
-        #
-        # for i, (val, pos) in enumerate(results):
-        #     if pos is not None:
-        #         pos = bytes32(pos)
-        #     results[i] = val, pos
-        # return results
-        return []
-
-    async def validate_unfinished_block(self, block: UnfinishedBlock) -> Tuple[Optional[uint64], Optional[Err]]:
-        if (
-            block.prev_header_hash not in self.sub_blocks
-            and not block.prev_header_hash == self.constants.GENESIS_PREV_HASH
-        ):
-            return None, Err.INVALID_PREV_BLOCK_HASH
-
-        unfinished_header_block = UnfinishedHeaderBlock(
-            block.finished_sub_slots,
-            block.reward_chain_sub_block,
-            block.challenge_chain_sp_proof,
-            block.reward_chain_sp_proof,
-            block.foliage_sub_block,
-            block.foliage_block,
-            b"",
-        )
-
-        required_iters, error_code = await validate_unfinished_header_block(
-            self.constants,
-            self.sub_blocks,
-            self.height_to_hash,
-            unfinished_header_block,
-            False,
-            True,
-        )
-
-        if error_code is not None:
-            return None, error_code.code
-
-        prev_height = (
-            -1
-            if block.prev_header_hash == self.constants.GENESIS_PREV_HASH
-            else self.sub_blocks[block.prev_header_hash].height
-        )
-
-        error_code = await validate_block_body(
-            self.constants,
-            self.sub_blocks,
-            self.block_store,
-            self.coin_store,
-            self.get_peak(),
-            block,
-            uint32(prev_height + 1),
-        )
-
-        if error_code is not None:
-            return None, error_code
-
-        return required_iters, None
