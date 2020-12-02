@@ -277,7 +277,7 @@ class WSChiaConnection:
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
-            asyncio.ensure_future(self.close())
+            asyncio.create_task(self.close())
         elif message.type == WSMsgType.BINARY:
             data = message.data
             full_message_loaded: Any = cbor.loads(data)
