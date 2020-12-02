@@ -192,7 +192,7 @@ class TestWeightProof:
         _test_map_summaries(default_10000_blocks, header_cache, height_to_hash, sub_blocks, sub_epochs)
 
     @pytest.mark.asyncio
-    async def test_weight_proof(self, default_10000_blocks):
+    async def test_weight_proof_summaries(self, default_10000_blocks):
         sub_epochs = 3
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
@@ -229,8 +229,47 @@ class TestWeightProof:
         assert wp is not None
         assert len(wp.sub_epochs) == sub_epochs
         # todo for each sampled sub epoch, validate number of segments
-
         # todo validate with different factory
-        valid = wpf.validate_weight_proof(wp, curr)
+        assert wpf._validate_sub_epoch_summaries(wp, curr)
 
-        assert valid
+
+@pytest.mark.asyncio
+async def test_weight_proof_summaries(self, default_10000_blocks):
+    sub_epochs = 3
+    blocks = default_10000_blocks
+    header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
+    sub_epoch_end, num_of_blocks = get_prev_ses_block(sub_blocks, blocks[-1].header_hash)
+    print("num of blocks to first ses: ", num_of_blocks)
+    sub_epochs_left = sub_epochs
+    curr = sub_epoch_end
+    orig_summaries: Dict[int, SubEpochSummary] = {}
+    while sub_epochs_left != 0:
+        if curr.sub_epoch_summary_included is not None:
+            print(f"ses height {curr.height} summary {curr.sub_epoch_summary_included} index {sub_epochs_left - 1}")
+            if sub_epochs_left == 0:
+                break
+            orig_summaries[sub_epochs_left - 1] = curr.sub_epoch_summary_included
+            sub_epochs_left -= 1
+
+        if curr.is_challenge_sub_block(test_constants):
+            print(f"block height {curr.height} is challenge block hash {curr.header_hash}")
+        if is_overflow_sub_block(test_constants, curr.signage_point_index):
+            print(f"block height {curr.height} is overflow")
+        # next sub block
+        curr = sub_blocks[curr.prev_hash]
+        num_of_blocks += 1
+    num_of_blocks += 1
+    curr = sub_blocks[curr.prev_hash]
+    print(f"fork point is {curr.height} (not included)")
+    print(f"num of blocks in proof: {num_of_blocks}")
+    print(f"num of full sub epochs in proof: {sub_epochs}")
+    wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
+    wpf.log.setLevel(logging.INFO)
+    initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
+    wp = wpf.make_weight_proof(uint32(len(header_cache)), uint32(num_of_blocks), blocks[-1].header_hash)
+
+    assert wp is not None
+    assert len(wp.sub_epochs) == sub_epochs
+    # todo for each sampled sub epoch, validate number of segments
+    # todo validate with different factory
+    assert wpf.validate_weight_proof(wp, curr)
