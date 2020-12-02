@@ -141,9 +141,7 @@ class WSChiaConnection:
         if self.inbound_task is not None:
             self.inbound_task.cancel()
         if self.outbound_task is not None:
-            self.log.error("CLOSING!")
             self.outbound_task.cancel()
-            self.log.error("CLOSED!")
         if self.session is not None:
             await self.session.close()
         if self.close_event is not None:

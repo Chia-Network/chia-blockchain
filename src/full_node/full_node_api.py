@@ -185,14 +185,14 @@ class FullNodeAPI:
         pass
 
     @api_request
-    async def request_sub_block(self, request_block: full_node_protocol.RequestSubBlock) -> Optional[Message]:
-        if request_block.height not in self.full_node.blockchain.height_to_hash:
+    async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
+        if request.height not in self.full_node.blockchain.height_to_hash:
             return
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-            self.full_node.blockchain.height_to_hash[request_block.height]
+            self.full_node.blockchain.height_to_hash[request.height]
         )
         if block is not None:
-            if not request_block.include_transaction_block:
+            if not request.include_transaction_block:
                 block = dataclasses.replace(block, transactions_generator=None)
             msg = Message("respond_sub_block", full_node_protocol.RespondSubBlock(block))
             return msg

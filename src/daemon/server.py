@@ -104,7 +104,7 @@ class WebSocketServer:
         self.log.info("Starting Daemon Server")
 
         def master_close_cb():
-            asyncio.ensure_future(self.stop())
+            asyncio.create_task(self.stop())
 
         try:
             asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
