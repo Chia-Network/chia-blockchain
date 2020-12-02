@@ -62,7 +62,7 @@ async def connect_runner_and_apis(site_for_runner_f, *api_list):
     site = await site_for_runner_f(runner)
 
     app["site"] = site
-    task = asyncio.ensure_future(site._server.wait_closed())
+    task = asyncio.create_task(site._server.wait_closed())
     return site, task
 
 

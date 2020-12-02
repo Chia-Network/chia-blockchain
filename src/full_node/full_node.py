@@ -463,7 +463,7 @@ class FullNode:
                     f"current peak is {peak_height}"
                 )
                 msg = Message(
-                    "request_block",
+                    "request_sub_block",
                     full_node_protocol.RequestSubBlock(uint32(sub_block.height - 1), True),
                 )
                 self.full_node_store.add_disconnected_block(sub_block)

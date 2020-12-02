@@ -99,7 +99,7 @@ def create_foliage(
         # TODO: prev generators root
         pool_coin = create_pool_coin(height, pool_target.puzzle_hash, calculate_pool_reward(height))
         farmer_coin = create_farmer_coin(
-            uint32(height), farmer_reward_puzzlehash, calculate_base_farmer_reward(uint32(height))
+            uint32(height), farmer_reward_puzzlehash, calculate_base_farmer_reward(uint32(height)) + spend_bundle_fees
         )
         reward_claims_incorporated = [pool_coin, farmer_coin]
         if height > 0:

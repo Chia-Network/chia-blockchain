@@ -45,7 +45,7 @@ class DaemonProxy:
         request_id = request["request_id"]
         self._request_dict[request_id] = asyncio.Event()
         string = dict_to_json_str(request)
-        asyncio.ensure_future(self.websocket.send(string))
+        asyncio.create_task(self.websocket.send(string))
 
         async def timeout():
             await asyncio.sleep(30)
@@ -53,7 +53,7 @@ class DaemonProxy:
                 print("Error, timeout.")
                 self._request_dict[request_id].set()
 
-        asyncio.ensure_future(timeout())
+        asyncio.create_task(timeout())
         await self._request_dict[request_id].wait()
         if request_id in self.response_dict:
             response = self.response_dict[request_id]
@@ -113,9 +113,7 @@ async def connect_to_daemon_and_validate(root_path):
     """
     try:
         net_config = load_config(root_path, "config.yaml")
-        connection = await connect_to_daemon(
-            net_config["self_hostname"], net_config["daemon_port"]
-        )
+        connection = await connect_to_daemon(net_config["self_hostname"], net_config["daemon_port"])
         r = await connection.ping()
 
         if r["data"]["value"] == "pong":
