@@ -4,6 +4,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import is_overflow_sub_block
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import get_next_sub_slot_iters
+from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeBlockInfo
 from src.types.full_block import FullBlock
@@ -17,9 +18,16 @@ def full_block_to_sub_block_record(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
-    block: FullBlock,
     required_iters: uint64,
+    full_block: Optional[FullBlock],
+    header_block: Optional[HeaderBlock],
 ):
+    if full_block is None:
+        block = header_block
+    elif header_block is None:
+        block = full_block
+    else:
+        raise ValueError("full_block or header_block must be given")
     if block.height == 0:
         prev_sb = None
         sub_slot_iters: uint64 = uint64(constants.SUB_SLOT_ITERS_STARTING)
