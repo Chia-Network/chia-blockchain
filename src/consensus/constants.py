@@ -7,7 +7,7 @@ from src.util.ints import uint64, uint32, uint8
 @dataclasses.dataclass(frozen=True)
 class ConsensusConstants:
     SLOT_SUB_BLOCKS_TARGET: uint32  # How many sub-blocks to target per sub-slot
-    MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK: uint32  # How many sub-blocks must be created per slot (to make challenge sb)
+    MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK: uint8  # How many sub-blocks must be created per slot (to make challenge sb)
     # Max number of sub-blocks that can be infused into a sub-slot.
     # Note: this must be less than SUB_EPOCH_SUB_BLOCKS/2, and > SLOT_SUB_BLOCKS_TARGET
     MAX_SUB_SLOT_SUB_BLOCKS: uint32
