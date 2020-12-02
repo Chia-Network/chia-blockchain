@@ -19,7 +19,6 @@ from src.server.start_wallet import service_kwargs_for_wallet
 from src.server.start_service import Service
 from src.util.ints import uint16, uint32
 from src.util.chech32 import encode_puzzle_hash
-from src.consensus.default_constants import DEFAULT_CONSTANTS as constants
 
 from tests.time_out_assert import time_out_assert_custom_interval
 
