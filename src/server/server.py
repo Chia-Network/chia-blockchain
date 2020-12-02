@@ -213,7 +213,7 @@ class ChiaServer:
                 )
                 assert handshake is True
                 await self.connection_added(connection, on_connect)
-                self.log.info("Connected")
+                self.log.info(f"Connected with {connection.connection_type.name.lower()} {target_node}")
             return True
         except aiohttp.client_exceptions.ClientConnectorError as e:
             self.log.warning(f"{e}")
@@ -243,7 +243,9 @@ class ChiaServer:
             async def api_call(payload: Payload, connection: WSChiaConnection):
                 try:
                     full_message = payload.msg
-                    connection.log.info(f"<- {full_message.function} from peer {connection.peer_node_id}")
+                    connection.log.info(
+                        f"<- {full_message.function} from peer {connection.peer_node_id} {connection.peer_host}"
+                    )
                     if len(full_message.function) == 0 or full_message.function.startswith("_"):
                         # This prevents remote calling of private methods that start with "_"
                         self.log.error(f"Non existing function: {full_message.function}")
@@ -337,7 +339,7 @@ class ChiaServer:
                     connection = self.all_connections[node_id]
                     await connection.close()
             except Exception as e:
-                self.log.error(f"exeption while closing connection {e}")
+                self.log.error(f"Exception while closing connection {e}")
 
     def close_all(self):
         self.connection_close_task = asyncio.create_task(self.close_all_connections())
