@@ -2,6 +2,7 @@ import asyncio
 import io
 import logging
 import time
+from asyncio import StreamReader, StreamWriter
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -25,7 +26,6 @@ from src.types.reward_chain_sub_block import (
 from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeChainSubSlot, InfusedChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from src.types.vdf import VDFInfo, VDFProof
-from src.util.api_decorators import api_request
 from src.util.ints import uint64, uint8, uint128, int512
 from src.types.sub_epoch_summary import SubEpochSummary
 from chiapos import Verifier
@@ -272,33 +272,7 @@ class Timelord:
     def set_server(self, server: ChiaServer):
         self.server = server
 
-    @api_request
-    async def new_peak(self, new_peak: timelord_protocol.NewPeak):
-        async with self.lock:
-            if self.last_state is None or self.last_state.get_weight() < new_peak.weight:
-                self.new_peak = new_peak
-
-    @api_request
-    async def new_unfinished_subblock(self, new_unfinished_subblock: timelord_protocol.NewUnfinishedSubBlock):
-        async with self.lock:
-            if not self._accept_unfinished_block(new_unfinished_subblock):
-                return
-            sp_iters, ip_iters = iters_from_sub_block(
-                self.constants,
-                new_unfinished_subblock.reward_chain_sub_block,
-                self.last_state.get_sub_slot_iters(),
-                self.last_state.get_difficulty(),
-            )
-            last_ip_iters = self.last_state.get_last_ip()
-            if sp_iters < ip_iters:
-                self.overflow_blocks.append(new_unfinished_subblock)
-            elif ip_iters > last_ip_iters:
-                self.unfinished_blocks.append(new_unfinished_subblock)
-                for chain in Chain:
-                    self.iters_to_submit[chain].append(uint64(ip_iters - last_ip_iters))
-                self.iteration_to_proof_type[ip_iters - last_ip_iters] = IterationType.INFUSION_POINT
-
-    def _accept_unfinished_block(self, block: timelord_protocol.NewUnfinishedSubBlock) -> bool:
+    def accept_unfinished_block(self, block: timelord_protocol.NewUnfinishedSubBlock) -> bool:
         # Total unfinished block iters needs to exceed peak's iters.
         if self.last_state.get_total_iters() >= block.total_iters:
             return False
@@ -355,7 +329,7 @@ class Timelord:
             self.iters_submitted[chain] = []
         self.iteration_to_proof_type = {}
         for block in self.unfinished_blocks:
-            if not self._accept_unfinished_block(block):
+            if not self.accept_unfinished_block(block):
                 continue
             block_sp_iters, block_ip_iters = iters_from_sub_block(
                 self.constants,
@@ -664,7 +638,15 @@ class Timelord:
                 # Check for end of subslot, respawn chains and build EndOfSubslotBundle.
                 await self._check_for_end_of_subslot()
 
-    async def _do_process_communication(self, chain, challenge_hash, initial_form, ip, reader, writer):
+    async def _do_process_communication(
+        self,
+        chain: Chain,
+        challenge_hash: bytes32,
+        initial_form: ClassgroupElement,
+        ip: str,
+        reader: StreamReader,
+        writer: StreamWriter,
+    ):
         disc: int = create_discriminant(challenge_hash, self.constants.DISCRIMINANT_SIZE_BITS)
         # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
         # the timelord tells the vdf_client what to execute.
@@ -714,8 +696,7 @@ class Timelord:
             try:
                 msg = data.decode()
             except Exception as e:
-                # log.error(f"Exception while decoding data {e}")
-                pass
+                log.error(f"Exception while decoding data {e}")
             if msg == "STOP":
                 log.info(f"Stopped client running on ip {ip}.")
                 async with self.lock:
@@ -767,8 +748,7 @@ class Timelord:
                     proof_bytes,
                 )
 
-                if not vdf_proof.is_valid(self.constants, vdf_info):
+                if not vdf_proof.is_valid(self.constants, initial_form, vdf_info):
                     log.error("Invalid proof of time!")
-                    # continue
                 async with self.lock:
                     self.proofs_finished.append((chain, vdf_info, vdf_proof))
