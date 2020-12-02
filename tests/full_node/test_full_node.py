@@ -68,6 +68,25 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
     return incoming_queue, node_id
 
 
+async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer) -> WSChiaConnection:
+    """
+    Connect server_2 to server_1, and get return the connection in server_1.
+    """
+    await server_2.start_client(PeerInfo("127.0.0.1", uint16(server_1._port)))
+
+    async def connected():
+        for node_id_c, _ in server_1.full_nodes.items():
+            if node_id_c == server_2.node_id:
+                return True
+        return False
+
+    await time_out_assert(10, connected, True)
+    for node_id, wsc in server_1.full_nodes.items():
+        if node_id == server_2.node_id:
+            return wsc
+    assert False
+
+
 @pytest.fixture(scope="module")
 def event_loop():
     loop = asyncio.get_event_loop()
@@ -93,8 +112,8 @@ async def wb(num_blocks, two_nodes):
     wallet_a = bt.get_pool_wallet_tool()
     wallet_receiver = WalletTool()
     blocks = bt.get_consecutive_blocks(num_blocks)
-    for i in range(1, num_blocks):
-        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks[i]))
+    for block in blocks:
+        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 
     return wallet_a, wallet_receiver, blocks
 
@@ -163,16 +182,7 @@ class TestFullNodeProtocol:
 
         await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
 
-        await server_2.start_client(PeerInfo("127.0.0.1", uint16(server_1._port)))
-
-        async def num_connections():
-            return len(full_node_1.server.get_connections())
-
-        await time_out_assert(10, num_connections, 2)
-        peer = None
-        for node_id, wsc in server_1.full_nodes.items():
-            if node_id != dummy_node_id:
-                peer = wsc
+        peer = await connect_and_get_peer(server_1, server_2)
 
         # Create empty slots
         blocks = bt.get_consecutive_blocks(1, skip_slots=6)
@@ -261,6 +271,8 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.blockchain.get_peak().height == 4
         conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
 
+        peer = await connect_and_get_peer(server_1, server_2)
+
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []
         for _ in range(110):
@@ -272,10 +284,11 @@ class TestFullNodeProtocol:
         spend_bundle = wallet_a.generate_signed_transaction(
             100,
             puzzle_hashes[0],
-            blocks[1].get_coinbase(),
+            blocks[1].get_future_reward_coins()[0],
             condition_dic=conditions_dict,
         )
         assert spend_bundle is not None
+        print("Spending coin", blocks[1].get_future_reward_coins()[0])
 
         new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
 
@@ -283,7 +296,7 @@ class TestFullNodeProtocol:
         assert msg.data == fnp.RequestTransaction(spend_bundle.get_hash())
 
         respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
-        await full_node_1.respond_transaction(respond_transaction_2)
+        await full_node_1.respond_transaction(respond_transaction_2, peer)
 
         blocks_new = bt.get_consecutive_blocks(
             1, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
@@ -306,7 +319,7 @@ class TestFullNodeProtocol:
                 500, receiver_puzzlehash, coin_record.coin, fee=fee
             )
             respond_transaction = fnp.RespondTransaction(spend_bundle)
-            await full_node_1.respond_transaction(respond_transaction)
+            await full_node_1.respond_transaction(respond_transaction, peer)
 
             request = fnp.RequestTransaction(spend_bundle.get_hash())
             req = await full_node_1.request_transaction(request)
@@ -337,21 +350,7 @@ class TestFullNodeProtocol:
 
         await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
 
-        await server_2.start_client(PeerInfo("127.0.0.1", uint16(server_1._port)))
-
-        for block in blocks:
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
-
-        await time_out_assert(10, time_out_messages(incoming_queue, "new_peak"), len(blocks))
-
-        async def num_connections():
-            return len(full_node_1.server.get_connections())
-
-        await time_out_assert(10, num_connections, 2)
-        peer = None
-        for node_id, wsc in server_1.full_nodes.items():
-            if node_id != dummy_node_id:
-                peer = wsc
+        peer = await connect_and_get_peer(server_1, server_2)
 
         tx_id = token_bytes(32)
         request_transaction = fnp.RequestTransaction(tx_id)
