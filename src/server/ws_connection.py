@@ -156,6 +156,8 @@ class WSChiaConnection:
                 msg = await self.outgoing_queue.get()
                 if msg is not None:
                     await self._send_message(msg)
+        except asyncio.CancelledError:
+            pass
         except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception: {e}")
@@ -174,6 +176,8 @@ class WSChiaConnection:
                         await self.incoming_queue.put((payload, self))
                 else:
                     break
+        except asyncio.CancelledError:
+            self.log.info(f"task canceled")
         except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception: {e}")
@@ -260,30 +264,32 @@ class WSChiaConnection:
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Payload]:
-        try:
-            # Need timeout here in case connection is closed, this allows GC to clean up
-            message: WSMessage = await self.ws.receive()
-            if message.type == WSMsgType.CLOSING or message.type == WSMsgType.CLOSE:
-                self.log.info(
-                    f"Closing connection to {NodeType(self.connection_type).name.lower()} {self.peer_host}:"
-                    f"{self.peer_server_port}/"
-                    f"{self.peer_port}"
-                )
-                await self.close()
-            elif message.type == WSMsgType.BINARY:
-                data = message.data
-                full_message_loaded: Any = cbor.loads(data)
-                self.bytes_read += len(data)
-                self.last_message_time = time.time()
-                msg = Message(full_message_loaded["f"], full_message_loaded["d"])
-                payload_id = full_message_loaded["i"]
-                payload = Payload(msg, payload_id)
-                return payload
-            else:
-                self.log.error(f"Not binary message: {message}")
-                await self.close()
-        except asyncio.TimeoutError:
-            raise TimeoutError("self.reader.readexactly(full_message_length)")
+        message: WSMessage = await self.ws.receive()
+        if message.type == WSMsgType.CLOSING:
+            self.log.info(
+                f"Closing connection to {NodeType(self.connection_type).name.lower()} {self.peer_host}:"
+                f"{self.peer_server_port}/"
+                f"{self.peer_port}"
+            )
+        elif message.type == WSMsgType.CLOSE:
+            self.log.info(
+                f"Peer closed connection {NodeType(self.connection_type).name.lower()} {self.peer_host}:"
+                f"{self.peer_server_port}/"
+                f"{self.peer_port}"
+            )
+            asyncio.ensure_future(self.close())
+        elif message.type == WSMsgType.BINARY:
+            data = message.data
+            full_message_loaded: Any = cbor.loads(data)
+            self.bytes_read += len(data)
+            self.last_message_time = time.time()
+            msg = Message(full_message_loaded["f"], full_message_loaded["d"])
+            payload_id = full_message_loaded["i"]
+            payload = Payload(msg, payload_id)
+            return payload
+        else:
+            self.log.error(f"Not binary message: {message}")
+            await self.close()
         return None
 
     def get_peer_info(self) -> Optional[PeerInfo]:
