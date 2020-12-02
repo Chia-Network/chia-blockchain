@@ -275,7 +275,13 @@ class TestFullNodeProtocol:
 
         # Mempool has capacity of 100, make 110 unspents that we can use
         puzzle_hashes = []
-        for _ in range(110):
+
+        tx_per_sec = bt.constants.TX_PER_SEC
+        sec_per_block = bt.constants.SUB_SLOT_TIME_TARGET // bt.constants.SLOT_SUB_BLOCKS_TARGET
+        block_buffer_count = bt.constants.MEMPOOL_BLOCK_BUFFER
+        mempool_size = int(tx_per_sec * sec_per_block * block_buffer_count)
+
+        for _ in range(mempool_size + 1):
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             puzzle_hashes.append(receiver_puzzlehash)
             output = ConditionVarPair(ConditionOpcode.CREATE_COIN, receiver_puzzlehash, int_to_bytes(1000))
@@ -288,7 +294,6 @@ class TestFullNodeProtocol:
             condition_dic=conditions_dict,
         )
         assert spend_bundle is not None
-        print("Spending coin", blocks[1].get_future_reward_coins()[0])
 
         new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
 
@@ -311,7 +316,7 @@ class TestFullNodeProtocol:
 
         spend_bundles = []
         # Fill mempool
-        for puzzle_hash in puzzle_hashes:
+        for puzzle_hash in puzzle_hashes[1:]:
             coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(puzzle_hash))[0]
             receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
             fee = random.randint(2, 499)
@@ -335,11 +340,16 @@ class TestFullNodeProtocol:
         blocks_new = bt.get_consecutive_blocks(
             1,
             block_list_input=blocks_new,
-            transaction_data_at_height=agg_bundle,
+            transaction_data=agg_bundle,
             guarantee_block=True,
         )
         # Farm one block to clear mempool
         await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]))
+
+        # No longer full
+        new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
+        msg = await full_node_1.new_transaction(new_transaction)
+        assert msg is not None
 
     @pytest.mark.asyncio
     async def test_request_respond_transaction(self, two_nodes, wallet_blocks_five):

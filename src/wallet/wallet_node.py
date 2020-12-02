@@ -196,7 +196,7 @@ class WalletNode:
     def _pending_tx_handler(self):
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
-        asyncio.ensure_future(self._resend_queue())
+        asyncio.create_task(self._resend_queue())
 
     async def _action_messages(self) -> List[Message]:
         if self.wallet_state_manager is None or self.backup_initialized is False:

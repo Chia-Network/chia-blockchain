@@ -44,11 +44,11 @@ class MempoolManager:
         self.coin_store = coin_store
 
         tx_per_sec = self.constants.TX_PER_SEC
-        sec_per_block = self.constants.SUB_SLOT_TIME_TARGET
+        sec_per_block = self.constants.SUB_SLOT_TIME_TARGET // self.constants.SLOT_SUB_BLOCKS_TARGET
         block_buffer_count = self.constants.MEMPOOL_BLOCK_BUFFER
 
         # MEMPOOL_SIZE = 60000
-        self.mempool_size = tx_per_sec * sec_per_block * block_buffer_count
+        self.mempool_size = int(tx_per_sec * sec_per_block * block_buffer_count)
         self.potential_cache_size = 300
         self.seen_cache_size = 10000
         self.coinbase_freeze = self.constants.COINBASE_FREEZE_PERIOD
@@ -96,6 +96,7 @@ class MempoolManager:
         if cost == 0:
             return False
         fees_per_cost = fees / cost
+        print("Fee:", fees_per_cost, self.mempool.get_min_fee_rate())
         if not self.mempool.at_full_capacity() or fees_per_cost >= self.mempool.get_min_fee_rate():
             return True
         return False
