@@ -43,7 +43,7 @@ class SyncPeersHandler:
         fork_height: uint32,
         blockchain: Blockchain,
         peak_height: uint32,
-        server: ChiaServer
+        server: ChiaServer,
     ):
         self.sync_store = sync_store
         # Set of outbound requests for every full_node peer, and time sent
@@ -129,8 +129,8 @@ class SyncPeersHandler:
         to_send: List[uint32] = []
         # Finds a block height
         for height in range(
-                self.fully_validated_up_to + 1,
-                min(self.fully_validated_up_to + self.MAX_GAP + 1, self.peak_height + 1),
+            self.fully_validated_up_to + 1,
+            min(self.fully_validated_up_to + self.MAX_GAP + 1, self.peak_height + 1),
         ):
             if len(to_send) == free_slots:
                 # No more slots to send to any peers
@@ -168,13 +168,10 @@ class SyncPeersHandler:
             request_set[uint32(height)] = uint64(int(time.time()))
 
             request = full_node_protocol.RequestSubBlock(height, True)
-            msg = Message("request_block", request)
+            msg = Message("request_sub_block", request)
             await self.server.send_to_specific([msg], node_id)
 
-
-    async def new_block(
-        self, block: Union[FullBlock, HeaderBlock]
-    ):
+    async def new_block(self, block: Union[FullBlock, HeaderBlock]):
         """
         A new block was received from a peer.
         """

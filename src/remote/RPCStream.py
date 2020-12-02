@@ -28,12 +28,8 @@ class RPCStream:
         self._bad_channel_callback = bad_channel_callback
         self._next_channel: int = 0
         self._inputs_task: Optional[Awaitable] = None
-        self._local_objects_by_channel: Any = (
-            weakref.WeakValueDictionary()
-        )  # Type  Dict[int, Any]
-        self._remote_channels_by_proxy: Any = (
-            weakref.WeakKeyDictionary()
-        )  # Type : Dict[Proxy, int]
+        self._local_objects_by_channel: Any = weakref.WeakValueDictionary()  # Type  Dict[int, Any]
+        self._remote_channels_by_proxy: Any = weakref.WeakKeyDictionary()  # Type : Dict[Proxy, int]
 
     def next_channel(self) -> int:
         channel = self._next_channel
@@ -62,12 +58,8 @@ class RPCStream:
             source = self.register_local_obj(response)
 
             to_simple_types = self._rpc_message_class.to_simple_types
-            raw_args, raw_kwargs = recast_arguments(
-                annotations, to_simple_types, args, kwargs, self
-            )
-            msg = self._rpc_message_class.for_invocation(
-                attr_name, raw_args, raw_kwargs, source, channel
-            )
+            raw_args, raw_kwargs = recast_arguments(annotations, to_simple_types, args, kwargs, self)
+            msg = self._rpc_message_class.for_invocation(attr_name, raw_args, raw_kwargs, source, channel)
             await self._async_msg_out_callback(msg)
             if is_one_shot:
                 return None
@@ -85,7 +77,7 @@ class RPCStream:
         """
         if self._inputs_task:
             raise RuntimeError(f"{self} already running")
-        self._inputs_task = asyncio.ensure_future(self._run_inputs())
+        self._inputs_task = asyncio.create_task(self._run_inputs())
 
     async def process_msg_for_obj(self, msg: RPCMessage, obj: Any) -> Any:
         """
@@ -105,9 +97,7 @@ class RPCStream:
                 annotations = method.__annotations__
 
                 raw_args, raw_kwargs = msg.args_and_kwargs()
-                args, kwargs = recast_arguments(
-                    annotations, msg.from_simple_types, raw_args, raw_kwargs, self
-                )
+                args, kwargs = recast_arguments(annotations, msg.from_simple_types, raw_args, raw_kwargs, self)
                 is_one_shot = getattr(method, "one_shot", False)
                 r = await method(*args, **kwargs)
 
@@ -127,9 +117,7 @@ class RPCStream:
         if exception:
             obj.future.set_exception(exception)
         else:
-            final_r = recast_to_type(
-                msg.response(), return_type, msg.from_simple_types, self
-            )
+            final_r = recast_to_type(msg.response(), return_type, msg.from_simple_types, self)
             obj.future.set_result(final_r)
         return None
 
@@ -179,9 +167,7 @@ def recast_to_type(
 
     if origin is list:
         value_type = the_type.__args__[0]
-        return list(
-            recast_to_type(_, value_type, cast_simple_type, rpc_stream) for _ in value
-        )
+        return list(recast_to_type(_, value_type, cast_simple_type, rpc_stream) for _ in value)
 
     return cast_simple_type(value, the_type, rpc_stream)
 
@@ -197,10 +183,7 @@ def recast_arguments(
     Returns `args`, `kwargs`, using the annotation hints and cast function.
     """
 
-    cast_args = [
-        recast_to_type(v, t, cast_simple_type, rpc_stream)
-        for v, t in zip(args, annotations.values())
-    ]
+    cast_args = [recast_to_type(v, t, cast_simple_type, rpc_stream) for v, t in zip(args, annotations.values())]
 
     cast_kwargs = {}
 

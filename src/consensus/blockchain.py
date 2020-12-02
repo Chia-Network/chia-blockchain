@@ -105,7 +105,6 @@ class Blockchain:
 
         if len(self.sub_blocks) == 0:
             assert peak is None
-            log.info("Initializing empty blockchain")
             self.peak_height = None
             return
 
