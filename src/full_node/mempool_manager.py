@@ -193,6 +193,8 @@ class MempoolManager:
             return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
 
         if addition_amount > removal_amount:
+            print("Removal: ", removal_record)
+            print(addition_amount, removal_amount)
             return None, MempoolInclusionStatus.FAILED, Err.MINTING_COIN
 
         fees = removal_amount - addition_amount
