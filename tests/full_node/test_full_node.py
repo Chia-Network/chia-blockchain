@@ -384,195 +384,88 @@ class TestFullNodeProtocol:
         assert msg is not None
         assert msg.data == fnp.RespondTransaction(spend_bundle)
 
+    @pytest.mark.asyncio
+    async def test_respond_transaction_fail(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
 
-#
-#     @pytest.mark.asyncio
-#     async def test_respond_transaction_fail(self, two_nodes, wallet_blocks):
-#         full_node_1, full_node_2, server_1, server_2 = two_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         tx_id = token_bytes(32)
-#         request_transaction = fnp.RequestTransaction(tx_id)
-#         msg = await full_node_1.request_transaction(request_transaction)
-#         assert msg is not None
-#         assert msg.data == fnp.RejectTransactionRequest(tx_id)
-#
-#         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-#
-#         # Invalid transaction does not propagate
-#         spend_bundle = wallet_a.generate_signed_transaction(
-#             100000000000000,
-#             receiver_puzzlehash,
-#             blocks[3].get_coinbase(),
-#         )
-#         assert spend_bundle is not None
-#         respond_transaction = fnp.RespondTransaction(spend_bundle)
-#         msg = await full_node_1.respond_transaction(respond_transaction)
-#         assert msg is None
-#
-#     @pytest.mark.asyncio
-#     async def test_new_pot(self, two_nodes, wallet_blocks):
-#         full_node_1, full_node_2, server_1, server_2 = two_nodes
-#         wallet_a, wallet_receiver, _ = wallet_blocks
-#
-#         no_unf_block = fnp.NewProofOfTime(uint32(5), bytes(32 * [1]), uint64(124512), uint8(2))
-#         msg = await full_node_1.new_proof_of_time(no_unf_block)
-#         assert msg is None
-#
-#         blocks = await get_block_path(full_node_1.full_node)
-#
-#         blocks_new = bt.get_consecutive_blocks(
-#             1,
-#             blocks[:-1],
-#             10,
-#             seed=b"1212412",
-#         )
-#
-#         unf_block = FullBlock(
-#             blocks_new[-1].proof_of_space,
-#             None,
-#             blocks_new[-1].header,
-#             blocks_new[-1].transactions_generator,
-#             blocks_new[-1].transactions_filter,
-#         )
-#         unf_block_req = fnp.RespondUnfinishedBlock(unf_block)
-#         await full_node_1.respond_unfinished_block(unf_block_req)
-#
-#         dont_have = fnp.NewProofOfTime(
-#             unf_block.height,
-#             unf_block.proof_of_space.challenge,
-#             res[0].message.data.iterations_needed,
-#             uint8(2),
-#         )
-#         msg = await full_node_1.new_proof_of_time(dont_have)
-#         assert msg is not None
-#         await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]))
-#         assert blocks_new[-1].proof_of_time is not None
-#         already_have = fnp.NewProofOfTime(
-#             unf_block.height,
-#             unf_block.proof_of_space.challenge,
-#             res[0].message.data.iterations_needed,
-#             blocks_new[-1].proof_of_time.witness_type,
-#         )
-#         msg = await full_node_1.new_proof_of_time(already_have)
-#         assert msg is None
-#
-#     @pytest.mark.asyncio
-#     async def test_request_pot(self, two_nodes, wallet_blocks):
-#         full_node_1, full_node_2, server_1, server_2 = two_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         request = fnp.RequestProofOfTime(
-#             blocks[3].height,
-#             blocks[3].proof_of_space.challenge,
-#             blocks[3].proof_of_time.number_of_iterations,
-#             blocks[3].proof_of_time.witness_type,
-#         )
-#         res = await full_node_1.request_proof_of_time(request)
-#         assert res.data.proof == blocks[3].proof_of_time
-#
-#         request_bad = fnp.RequestProofOfTime(
-#             blocks[3].height,
-#             blocks[3].proof_of_space.challenge,
-#             blocks[3].proof_of_time.number_of_iterations + 1,
-#             blocks[3].proof_of_time.witness_type,
-#         )
-#         res_bad = await full_node_1.request_proof_of_time(request_bad)
-#         assert isinstance(res_bad.data, fnp.RejectProofOfTimeRequest)
-#
-#     @pytest.mark.asyncio
-#     async def test_respond_pot(self, two_nodes, wallet_blocks):
-#         full_node_1, full_node_2, server_1, server_2 = two_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         blocks_list = await get_block_path(full_node_1.full_node)
-#
-#         blocks_new = bt.get_consecutive_blocks(
-#             1,
-#             blocks_list,
-#             10,
-#             seed=b"another seed",
-#         )
-#         assert blocks_new[-1].proof_of_time is not None
-#         new_pot = fnp.NewProofOfTime(
-#             blocks_new[-1].height,
-#             blocks_new[-1].proof_of_space.challenge,
-#             blocks_new[-1].proof_of_time.number_of_iterations,
-#             blocks_new[-1].proof_of_time.witness_type,
-#         )
-#         await full_node_1.new_proof_of_time(new_pot)
-#
-#         # Don't have unfinished block
-#         respond_pot = fnp.RespondProofOfTime(blocks_new[-1].proof_of_time)
-#         res = await full_node_1.respond_proof_of_time(respond_pot)
-#         assert res is None
-#
-#         unf_block = FullBlock(
-#             blocks_new[-1].proof_of_space,
-#             None,
-#             blocks_new[-1].header,
-#             blocks_new[-1].transactions_generator,
-#             blocks_new[-1].transactions_filter,
-#         )
-#         unf_block_req = fnp.RespondUnfinishedBlock(unf_block)
-#         await full_node_1.respond_unfinished_block(unf_block_req)
-#         # Have unfinished block, finish
-#         assert blocks_new[-1].proof_of_time is not None
-#         respond_pot = fnp.RespondProofOfTime(blocks_new[-1].proof_of_time)
-#         res = await full_node_1.respond_proof_of_time(respond_pot)
-#         # TODO Test this assert len(res) == 4
-#
-#     @pytest.mark.asyncio
-#     async def test_new_unfinished(self, two_nodes, wallet_blocks):
-#         full_node_1, full_node_2, server_1, server_2 = two_nodes
-#         wallet_a, wallet_receiver, blocks = wallet_blocks
-#
-#         blocks_list = await get_block_path(full_node_1.full_node)
-#
-#         blocks_new = bt.get_consecutive_blocks(
-#             1,
-#             blocks_list,
-#             10,
-#             seed=b"another seed 2",
-#         )
-#         assert blocks_new[-1].proof_of_time is not None
-#         assert blocks_new[-2].proof_of_time is not None
-#         already_have = fnp.NewUnfinishedBlock(
-#             blocks_new[-2].prev_header_hash,
-#             blocks_new[-2].proof_of_time.number_of_iterations,
-#             blocks_new[-2].header_hash,
-#         )
-#         res = await full_node_1.new_unfinished_block(already_have)
-#         assert res is None
-#
-#         bad_prev = fnp.NewUnfinishedBlock(
-#             blocks_new[-1].header_hash,
-#             blocks_new[-1].proof_of_time.number_of_iterations,
-#             blocks_new[-1].header_hash,
-#         )
-#
-#         res = await full_node_1.new_unfinished_block(bad_prev)
-#         assert res is None
-#         good = fnp.NewUnfinishedBlock(
-#             blocks_new[-1].prev_header_hash,
-#             blocks_new[-1].proof_of_time.number_of_iterations,
-#             blocks_new[-1].header_hash,
-#         )
-#         res = full_node_1.new_unfinished_block(good)
-#         assert res is not None
-#
-#         unf_block = FullBlock(
-#             blocks_new[-1].proof_of_space,
-#             None,
-#             blocks_new[-1].header,
-#             blocks_new[-1].transactions_generator,
-#             blocks_new[-1].transactions_filter,
-#         )
-#         unf_block_req = fnp.RespondUnfinishedBlock(unf_block)
-#         await full_node_1.respond_unfinished_block(unf_block_req)
-#
-#         res = await full_node_1.new_unfinished_block(good)
-#         assert res is None
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
+
+        tx_id = token_bytes(32)
+        request_transaction = fnp.RequestTransaction(tx_id)
+        msg = await full_node_1.request_transaction(request_transaction)
+        assert msg is None
+
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        # Invalid transaction does not propagate
+        spend_bundle = wallet_a.generate_signed_transaction(
+            100000000000000,
+            receiver_puzzlehash,
+            blocks[3].get_coinbase(),
+        )
+        while incoming_queue.qsize() > 0:
+            await incoming_queue.get()
+        assert spend_bundle is not None
+        respond_transaction = fnp.RespondTransaction(spend_bundle)
+        msg = await full_node_1.respond_transaction(respond_transaction)
+        assert msg is None
+        await asyncio.sleep(1)
+        assert incoming_queue.qsize() == 0
+
+    # @pytest.mark.asyncio
+    # async def test_new_unfinished(self, two_nodes, wallet_blocks):
+    #     full_node_1, full_node_2, server_1, server_2 = two_nodes
+    #     wallet_a, wallet_receiver, blocks = wallet_blocks
+    #
+    #     blocks_list = await get_block_path(full_node_1.full_node)
+    #
+    #     blocks_new = bt.get_consecutive_blocks(
+    #         1,
+    #         block_list_input=blocks_list,
+    #         seed=b"another seed 2",
+    #     )
+    #     block = blocks_new[-1].
+    #     assert blocks_new[-1].proof_of_time is not None
+    #     assert blocks_new[-2].proof_of_time is not None
+    #     already_have = fnp.NewUnfinishedBlock(
+    #         blocks_new[-2].prev_header_hash,
+    #         blocks_new[-2].proof_of_time.number_of_iterations,
+    #         blocks_new[-2].header_hash,
+    #     )
+    #     res = await full_node_1.new_unfinished_block(already_have)
+    #     assert res is None
+    #
+    #     bad_prev = fnp.NewUnfinishedBlock(
+    #         blocks_new[-1].header_hash,
+    #         blocks_new[-1].proof_of_time.number_of_iterations,
+    #         blocks_new[-1].header_hash,
+    #     )
+    #
+    #     res = await full_node_1.new_unfinished_block(bad_prev)
+    #     assert res is None
+    #     good = fnp.NewUnfinishedBlock(
+    #         blocks_new[-1].prev_header_hash,
+    #         blocks_new[-1].proof_of_time.number_of_iterations,
+    #         blocks_new[-1].header_hash,
+    #     )
+    #     res = full_node_1.new_unfinished_block(good)
+    #     assert res is not None
+    #
+    #     unf_block = FullBlock(
+    #         blocks_new[-1].proof_of_space,
+    #         None,
+    #         blocks_new[-1].header,
+    #         blocks_new[-1].transactions_generator,
+    #         blocks_new[-1].transactions_filter,
+    #     )
+    #     unf_block_req = fnp.RespondUnfinishedBlock(unf_block)
+    #     await full_node_1.respond_unfinished_block(unf_block_req)
+    #
+    #     res = await full_node_1.new_unfinished_block(good)
+    #     assert res is None
+
+
 #
 #     @pytest.mark.asyncio
 #     async def test_request_unfinished(self, two_nodes, wallet_blocks):
