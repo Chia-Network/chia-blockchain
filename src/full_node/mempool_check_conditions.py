@@ -8,11 +8,12 @@ from src.types.name_puzzle_condition import NPC
 from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
-from src.util.condition_tools import ConditionOpcode, conditions_dict_for_solution
+from src.util.condition_tools import ConditionOpcode, conditions_dict_for_solution, conditions_by_opcode
 from src.util.errors import Err
 import time
 
 from src.util.ints import uint64
+from src.wallet.puzzles.generator_loader import GENERATOR_MOD
 
 
 def mempool_assert_coin_consumed(
@@ -127,8 +128,46 @@ def get_name_puzzle_conditions(
             conditions_dict = {}
         npc: NPC = NPC(coin_name, puzzle_hash, conditions_dict)
         npc_list.append(npc)
-
+    cost2, npc_list2 = get_name_puzzle_conditions2(block_program)
+    assert equal_ignore_order(npc_list2, npc_list)
     return None, npc_list, uint64(cost_sum)
+
+
+# taken from StackOverflow for testing purposes
+# https://stackoverflow.com/questions/8866652/determine-if-2-lists-have-the-same-elements-regardless-of-order
+def equal_ignore_order(a, b):
+    """ Use only when elements are neither hashable nor sortable! """
+    unmatched = list(b)
+    for element in a:
+        try:
+            unmatched.remove(element)
+        except ValueError:
+            return False
+    return not unmatched
+
+
+def get_name_puzzle_conditions2(block_program):
+    cost, result = GENERATOR_MOD.run_with_cost(block_program)
+    npc_list = []
+    opcodes = [bytes([i]) for i in range(49, 59)]
+    for res in result.as_python():
+        conditions_list = []
+        name = res[0]
+        puzzle_hash = bytes32(res[1])
+        for cond in res[2]:
+            if cond[0] not in opcodes:
+                breakpoint()
+            c = ConditionOpcode(cond[0])
+            if len(cond) == 3:
+                cvp = ConditionVarPair(c, cond[1], cond[2])
+            else:
+                cvp = ConditionVarPair(c, cond[1], None)
+            conditions_list.append(cvp)
+        conditions_dict = conditions_by_opcode(conditions_list)
+        if conditions_dict is None:
+            conditions_dict = {}
+        npc_list.append(NPC(name, puzzle_hash, conditions_dict))
+    return cost, npc_list
 
 
 def mempool_check_conditions_dict(
