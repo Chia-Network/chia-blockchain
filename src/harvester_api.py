@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Optional, Callable, List, Tuple
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G2Element, G1Element
 from chiapos import DiskProver
 
 from src.consensus.pot_iterations import calculate_sp_interval_iters, calculate_iterations_quality
@@ -24,6 +24,8 @@ class HarvesterAPI:
 
     def __init__(self, harvester):
         self.harvester = harvester
+        self.farmer_public_keys: List[G1Element] = []
+        self.pool_public_keys: List[G1Element] = []
 
     def _set_state_changed_callback(self, callback: Callable):
         self.harvester.state_changed_callback = callback
@@ -38,7 +40,7 @@ class HarvesterAPI:
         self.farmer_public_keys = harvester_handshake.farmer_public_keys
         self.pool_public_keys = harvester_handshake.pool_public_keys
 
-        await self.harvester._refresh_plots()
+        await self.harvester.refresh_plots()
 
         if len(self.harvester.provers) == 0:
             self.harvester.log.warning("Not farming any plots on this harvester. Check your configuration.")
@@ -69,7 +71,7 @@ class HarvesterAPI:
         assert len(new_challenge.challenge_hash) == 32
 
         # Refresh plots to see if there are any new ones
-        await self.harvester._refresh_plots()
+        await self.harvester.refresh_plots()
 
         loop = asyncio.get_running_loop()
 
@@ -93,7 +95,9 @@ class HarvesterAPI:
                     required_iters: uint64 = calculate_iterations_quality(
                         quality_str, prover.get_size(), new_challenge.difficulty, new_challenge.sp_hash
                     )
-                    sp_interval_iters = calculate_sp_interval_iters(self.harvester.constants, new_challenge.sub_slot_iters)
+                    sp_interval_iters = calculate_sp_interval_iters(
+                        self.harvester.constants, new_challenge.sub_slot_iters
+                    )
                     if required_iters < sp_interval_iters:
                         # Found a very good proof of space! will fetch the whole proof from disk, then send to farmer
                         try:
@@ -137,7 +141,10 @@ class HarvesterAPI:
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
                 if ProofOfSpace.passes_plot_filter(
-                    self.harvester.constants, try_plot_info.prover.get_id(), new_challenge.challenge_hash, new_challenge.sp_hash
+                    self.harvester.constants,
+                    try_plot_info.prover.get_id(),
+                    new_challenge.challenge_hash,
+                    new_challenge.sp_hash,
                 ):
                     awaitables.append(lookup_challenge(try_plot_filename, try_plot_info.prover))
 
