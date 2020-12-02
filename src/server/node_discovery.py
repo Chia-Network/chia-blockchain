@@ -160,7 +160,6 @@ class FullNodeDiscovery:
         local_peerinfo: Optional[PeerInfo] = await self.server.get_peer_info()
         last_timestamp_local_info: uint64 = uint64(int(time.time()))
         while not self.is_closed:
-            print("Iterating connect to peers")
             try:
                 # We don't know any address, connect to the introducer to get some.
                 size = await self.address_manager.size()
