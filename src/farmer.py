@@ -125,5 +125,5 @@ class Farmer:
                 for key in removed_keys:
                     self.cache_add_time.pop(key, None)
                 time_slept = uint64(0)
-            time_slept += 1
-            await asyncio.sleep(1)
+            time_slept += 0.1
+            await asyncio.sleep(0.1)
