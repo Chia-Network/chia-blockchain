@@ -151,13 +151,15 @@ class WeightProofFactory:
         total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
         total_slot_iters, total_slots = uint64(0), uint64(0)
         # validate sub epoch samples
-        for segment in weight_proof.sub_epoch_segments:
+        for idx, segment in enumerate(weight_proof.sub_epoch_segments):
+            self.log.info(f"validate {idx} segment")
             ses = summaries[segment.sub_epoch_n]
             if ses.new_sub_slot_iters is not None:
                 curr_ssi: uint64 = ses.new_sub_slot_iters
             total_slot_iters += curr_ssi
             q_str = self._get_quality_string(segment, summaries[segment.sub_epoch_n], curr_ssi)
             if q_str is None:
+                self.log.info(f"failed to validate {idx} segment space proof")
                 return False
 
             # validate vdfs
@@ -168,7 +170,7 @@ class WeightProofFactory:
                     self.constants, ClassgroupElement.get_default_element(), challenge, curr_ssi
                 )
                 if not validate_sub_slot_vdfs(self.constants, sub_slot, vdf_info, sub_slot.is_challenge()):
-                    self.log.error("failed to validate vdfs for sub slot ")
+                    self.log.info(f"failed to validate {idx} sub slot vdfs")
                     return False
 
                 if sub_slot.is_challenge():
@@ -239,6 +241,7 @@ class WeightProofFactory:
         sub_slots.extend(first_sub_slots)
 
         # VDFs from slot after challenge block to end of slot
+
         self.log.info(f"create slot end vdf for block {block.header_hash} height {block.height} ")
         challenge_slot_end_sub_slots = self._get_slot_end_vdf(self.header_cache[self.height_to_hash[end_height]])
         sub_slots.extend(challenge_slot_end_sub_slots)
@@ -340,20 +343,25 @@ class WeightProofFactory:
 
         # find challenge block sub slot
         challenge_sub_slot: Optional[SubSlotData] = None
-        for slot in segment.sub_slots:
+        idx = 0
+        for idx, slot in enumerate(segment.sub_slots):
             if slot.proof_of_space is not None:
                 challenge_sub_slot = slot
                 break
 
-        self.log.error(
-            f"---------------------------------\n{challenge_sub_slot}\n----------------------------------------------"
-        )
         # check filter
+        if challenge_sub_slot.cc_signage_point_vdf is not None:
+            cc_sp_vdf_hash = challenge_sub_slot.cc_signage_point_vdf.get_hash()
+        else:
+            # before first sp in slot, take challenge from prev sub slot end
+            cc_sp_vdf_hash = segment.sub_slots[idx - 1].cc_slot_vdf.get_hash()
+
         if not AugSchemeMPL.verify(
             challenge_sub_slot.proof_of_space.plot_public_key,
-            challenge_sub_slot.cc_signage_point_vdf.get_hash(),
-            challenge_sub_slot.challenge_chain_sp_signature,
+            cc_sp_vdf_hash,
+            challenge_sub_slot.cc_sp_sig,
         ):
+            self.log.error(f"failed to validate filter {cc_sp_vdf_hash},{challenge_sub_slot.cc_sp_sig}")
             return None
 
         # validate proof of space

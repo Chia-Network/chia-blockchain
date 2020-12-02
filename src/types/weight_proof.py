@@ -36,7 +36,7 @@ class SubEpochData(Streamable):
 class SubSlotData(Streamable):
     proof_of_space: Optional[ProofOfSpace]
     # Signature of signage point
-    cc_signage_point_sig: Optional[G2Element]
+    cc_sp_sig: Optional[G2Element]
     # VDF to signage point
     cc_signage_point_vdf: Optional[VDFProof]
     # VDF from signage to infusion point
@@ -53,7 +53,7 @@ class SubSlotData(Streamable):
     def is_challenge(self):
         if self.cc_slot_vdf is not None:
             return False
-        if self.cc_signage_point_sig is None:
+        if self.cc_sp_sig is None:
             return False
         if self.cc_signage_point_vdf is None:
             return False
