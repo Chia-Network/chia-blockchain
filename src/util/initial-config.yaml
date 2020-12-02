@@ -70,7 +70,7 @@ timelord_launcher:
   # The server where the VDF clients will connect to.
   port: 8000
   # Number of VDF client processes to keep alive in the local machine.
-  process_count: 2
+  process_count: 3
   logging: *logging
 
 

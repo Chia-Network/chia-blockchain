@@ -62,19 +62,6 @@ def iters_from_sub_block(
     )
 
 
-class EndOfSubSlotData:
-    eos_bundle: EndOfSubSlotBundle
-    sub_slot_iters: uint64
-    new_difficulty: uint64
-    deficit: uint8
-
-    def __init__(self, eos_bundle, sub_slot_iters, new_difficulty, deficit):
-        self.eos_bundle = eos_bundle
-        self.sub_slot_iters = sub_slot_iters
-        self.new_difficulty = new_difficulty
-        self.deficit = deficit
-
-
 class Chain(Enum):
     CHALLENGE_CHAIN = 1
     REWARD_CHAIN = 2
@@ -90,16 +77,19 @@ class IterationType(Enum):
 class LastState:
     def __init__(self, constants: ConsensusConstants):
         self.peak: Optional[timelord_protocol.NewPeak] = None
-        self.subslot_end: Optional[EndOfSubSlotData] = None
+        self.subslot_end: Optional[EndOfSubSlotBundle] = None
         self.last_ip: uint64 = uint64(0)
-        self.deficit: uint8 = uint8(0)
+        self.deficit: uint8 = constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
         self.sub_epoch_summary: Optional[SubEpochSummary] = None
         self.constants: ConsensusConstants = constants
         self.last_weight: uint128 = uint128(0)
         self.total_iters: uint128 = uint128(0)
-        self.last_peak_challenge: Optional[bytes32] = None
+        self.last_peak_challenge: bytes32 = constants.FIRST_RC_CHALLENGE
+        self.first_sub_slot_no_peak: bool = True
+        self.difficulty: uint64 = constants.DIFFICULTY_STARTING
+        self.sub_slot_iters: uint64 = constants.SUB_SLOT_ITERS_STARTING
 
-    def set_state(self, state):
+    def set_state(self, state: Union[timelord_protocol.NewPeak, EndOfSubSlotBundle]):
         if isinstance(state, timelord_protocol.NewPeak):
             self.peak = state
             self.subslot_end = None
@@ -114,19 +104,21 @@ class LastState:
             self.last_weight = state.reward_chain_sub_block.weight
             self.total_iters = state.reward_chain_sub_block.total_iters
             self.last_peak_challenge = state.reward_chain_sub_block.get_hash()
-        if isinstance(state, EndOfSubSlotData):
+            self.difficulty = state.difficulty
+            self.sub_slot_iters = state.sub_slot_iters
+
+        if isinstance(state, EndOfSubSlotBundle):
             self.peak = None
             self.subslot_end = state
             self.last_ip = 0
-            self.deficit = state.deficit
-
-    def is_empty(self) -> bool:
-        return self.peak is None and self.subslot_end is None
+            self.deficit = state.reward_chain.deficit
+            if state.challenge_chain.new_difficulty is not None:
+                self.difficulty = state.challenge_chain.new_difficulty
+                self.sub_slot_iters = state.challenge_chain.new_sub_slot_iters
+        self.first_sub_slot_no_peak = False
 
     def get_sub_slot_iters(self) -> uint64:
-        if self.peak is not None:
-            return self.peak.sub_slot_iters
-        return self.subslot_end.sub_slot_iters
+        return self.sub_slot_iters
 
     def get_weight(self) -> uint128:
         return self.last_weight
@@ -138,32 +130,35 @@ class LastState:
         return self.last_peak_challenge
 
     def get_difficulty(self) -> uint64:
-        if self.peak is not None:
-            return self.peak.difficulty
-        return self.subslot_end.new_difficulty
+        return self.difficulty
 
     def get_last_ip(self) -> uint64:
         return self.last_ip
 
     def get_deficit(self) -> uint8:
-        if self.peak is not None:
-            return self.peak.deficit
-        return self.subslot_end.deficit
+        return self.deficit
 
     def get_sub_epoch_summary(self) -> Optional[SubEpochSummary]:
         return self.sub_epoch_summary
 
     def get_challenge(self, chain: Chain) -> Optional[bytes32]:
-        if self.peak is not None:
+        if self.first_sub_slot_no_peak:
+            if chain == Chain.CHALLENGE_CHAIN:
+                return self.constants.FIRST_CC_CHALLENGE
+            elif chain == Chain.REWARD_CHAIN:
+                return self.constants.FIRST_RC_CHALLENGE
+            elif chain == Chain.INFUSED_CHALLENGE_CHAIN:
+                return None
+        elif self.peak is not None:
             sub_block = self.peak.reward_chain_sub_block
             if chain == Chain.CHALLENGE_CHAIN:
                 return sub_block.challenge_chain_ip_vdf.challenge_hash
-            if chain == Chain.REWARD_CHAIN:
+            elif chain == Chain.REWARD_CHAIN:
                 return sub_block.get_hash()
-            if chain == Chain.INFUSED_CHALLENGE_CHAIN:
+            elif chain == Chain.INFUSED_CHALLENGE_CHAIN:
                 if sub_block.infused_challenge_chain_ip_vdf is not None:
                     return sub_block.infused_challenge_chain_ip_vdf.challenge_hash
-                if self.peak.deficit == 4:
+                elif self.peak.deficit == 4:
                     return ChallengeBlockInfo(
                         sub_block.proof_of_space,
                         sub_block.challenge_chain_sp_vdf,
@@ -171,19 +166,20 @@ class LastState:
                         sub_block.challenge_chain_ip_vdf,
                     ).get_hash()
                 return None
-        if self.subslot_end is not None:
+        elif self.subslot_end is not None:
             if chain == Chain.CHALLENGE_CHAIN:
-                return self.subslot_end.eos_bundle.challenge_chain.get_hash()
-            if chain == Chain.REWARD_CHAIN:
-                return self.subslot_end.eos_bundle.reward_chain.get_hash()
-            if chain == Chain.INFUSED_CHALLENGE_CHAIN:
-                if self.subslot_end.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-                    return self.subslot_end.eos_bundle.infused_challenge_chain.get_hash()
-                else:
-                    return None
+                return self.subslot_end.challenge_chain.get_hash()
+            elif chain == Chain.REWARD_CHAIN:
+                return self.subslot_end.reward_chain.get_hash()
+            elif chain == Chain.INFUSED_CHALLENGE_CHAIN:
+                if self.subslot_end.reward_chain.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                    return self.subslot_end.infused_challenge_chain.get_hash()
+                return None
         return None
 
     def get_initial_form(self, chain: Chain) -> Optional[ClassgroupElement]:
+        if self.first_sub_slot_no_peak:
+            return ClassgroupElement.get_default_element()
         if self.peak is not None:
             sub_block = self.peak.reward_chain_sub_block
             if chain == Chain.CHALLENGE_CHAIN:
@@ -201,7 +197,7 @@ class LastState:
             if chain == Chain.CHALLENGE_CHAIN or chain == Chain.REWARD_CHAIN:
                 return ClassgroupElement.get_default_element()
             if chain == Chain.INFUSED_CHALLENGE_CHAIN:
-                if self.subslot_end.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                if self.subslot_end.reward_chain.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                     return ClassgroupElement.get_default_element()
                 else:
                     return None
@@ -214,7 +210,6 @@ class Timelord:
         self.constants = constants
         self._shut_down = False
         self.free_clients: List[Tuple[str, asyncio.StreamReader, asyncio.StreamWriter]] = []
-        self.lock: asyncio.Lock = asyncio.Lock()
         self.potential_free_clients: List = []
         self.ip_whitelist = self.config["vdf_clients"]["ip"]
         self.server: Optional[ChiaServer] = None
@@ -231,13 +226,13 @@ class Timelord:
         # Last peak received, None if it's already processed.
         self.new_peak: Optional[timelord_protocol.NewPeak] = None
         # Last end of subslot bundle, None if we built a peak on top of it.
-        self.new_subslot_end: Optional[EndOfSubSlotData] = None
+        self.new_subslot_end: Optional[EndOfSubSlotBundle] = None
         # Last state received. Can either be a new peak or a new EndOfSubslotBundle.
         self.last_state: LastState = LastState(self.constants)
         # Unfinished block info, iters adjusted to the last peak.
         self.unfinished_blocks: List[timelord_protocol.NewUnfinishedSubBlock] = []
         # Signage points iters, adjusted to the last peak.
-        self.signage_point_iters: List[uint64] = []
+        self.signage_point_iters: List[Tuple[uint64, uint8]] = []
         # For each chain, send those info when the process spawns.
         self.iters_to_submit: Dict[Chain, List[uint64]] = {}
         self.iters_submitted: Dict[Chain, List[uint64]] = {}
@@ -246,14 +241,13 @@ class Timelord:
         # List of proofs finished.
         self.proofs_finished: List[Tuple[Chain, VDFInfo, VDFProof]] = []
         # Data to send at vdf_client initialization.
-        self.finished_sp = 0
         self.overflow_blocks: List[timelord_protocol.NewUnfinishedSubBlock] = []
         self.main_loop = None
         self.vdf_server = None
         self._shut_down = False
 
     async def _start(self):
-        log.info("Starting timelord.")
+        self.lock: asyncio.Lock = asyncio.Lock()
         self.main_loop = asyncio.create_task(self._manage_chains())
 
         self.vdf_server = await asyncio.start_server(
@@ -290,6 +284,7 @@ class Timelord:
         async with self.lock:
             client_ip = writer.get_extra_info("peername")[0]
             log.info(f"New timelord connection from client: {client_ip}.")
+            print(client_ip, self.ip_whitelist)
             if client_ip in self.ip_whitelist:
                 self.free_clients.append((client_ip, reader, writer))
                 log.info(f"Added new VDF client {client_ip}.")
@@ -312,15 +307,17 @@ class Timelord:
         ip_iters = self.last_state.get_last_ip()
         sub_slot_iters = self.last_state.get_sub_slot_iters()
         difficulty = self.last_state.get_difficulty()
+        print(ip_iters, sub_slot_iters, difficulty)
         for chain in self.chain_type_to_stream.keys():
             await self._stop_chain(chain)
         # Adjust all signage points iterations to the peak.
         iters_per_signage = uint64(sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
         self.signage_point_iters = [
-            k * iters_per_signage - ip_iters
-            for k in range(1, self.constants.NUM_SPS_SUB_SLOT + 1)
-            if k * iters_per_signage - ip_iters > 0 and k * iters_per_signage < sub_slot_iters
+            (k * iters_per_signage - ip_iters, k) for k in range(1, self.constants.NUM_SPS_SUB_SLOT)
         ]
+        for sp, k in self.signage_point_iters:
+            assert k * iters_per_signage > 0
+            assert k * iters_per_signage < sub_slot_iters
         # Adjust all unfinished blocks iterations to the peak.
         new_unfinished_blocks = []
         self.proofs_finished = []
@@ -348,7 +345,7 @@ class Timelord:
         # Signage points.
         if len(self.signage_point_iters) > 0:
             count_signage = 0
-            for signage in self.signage_point_iters:
+            for signage, k in self.signage_point_iters:
                 for chain in [Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN]:
                     self.iters_to_submit[chain].append(signage)
                 self.iteration_to_proof_type[signage] = IterationType.SIGNAGE_POINT
@@ -360,6 +357,8 @@ class Timelord:
         log.info(f"Left subslot iters: {left_subslot_iters}.")
         for chain in Chain:
             self.iters_to_submit[chain].append(left_subslot_iters)
+
+        log.warning(f"Iters to submit {self.iters_to_submit}")
         self.iteration_to_proof_type[left_subslot_iters] = IterationType.END_OF_SUBSLOT
 
     async def _handle_new_peak(self):
@@ -368,7 +367,6 @@ class Timelord:
         await self._reset_chains()
 
     async def _handle_subslot_end(self):
-        self.finished_sp = 0
         self.last_state.set_state(self.new_subslot_end)
         self.new_subslot_end = None
         await self._reset_chains()
@@ -425,7 +423,11 @@ class Timelord:
         ]
         if len(signage_iters) == 0:
             return
-        for signage_iter in signage_iters:
+        to_remove = []
+        for potential_sp_iters, signage_point_index in self.signage_point_iters:
+            if potential_sp_iters not in signage_iters:
+                continue
+            signage_iter = potential_sp_iters
             proofs_with_iter = [
                 (chain, info, proof)
                 for chain, info, proof in self.proofs_finished
@@ -447,8 +449,9 @@ class Timelord:
                 if cc_info is None or cc_proof is None or rc_info is None or rc_proof is None:
                     log.error(f"Insufficient signage point data {signage_iter}")
                     continue
+
                 response = timelord_protocol.NewSignagePointVDF(
-                    uint8(self.finished_sp),
+                    signage_point_index,
                     cc_info,
                     cc_proof,
                     rc_info,
@@ -458,12 +461,13 @@ class Timelord:
                     msg = Message("new_signage_point_vdf", response)
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
                 # Cleanup the signage point from memory.
-                self.signage_point_iters.remove(signage_iter)
-                self.finished_sp += 1
+                to_remove.append((signage_iter, signage_point_index))
+
+                print(f"Finished signage point at {signage_point_index}")
                 self.proofs_finished = self._clear_proof_list(signage_iter)
                 # Send the next 3 signage point to the chains.
                 next_iters_count = 0
-                for next_sp in self.signage_point_iters:
+                for next_sp, k in self.signage_point_iters:
                     for chain in [Chain.CHALLENGE_CHAIN, Chain.REWARD_CHAIN]:
                         if next_sp not in self.iters_submitted[chain] and next_sp not in self.iters_to_submit[chain]:
                             self.iters_to_submit[chain].append(next_sp)
@@ -471,6 +475,8 @@ class Timelord:
                     next_iters_count += 1
                     if next_iters_count == 3:
                         break
+        for r in to_remove:
+            self.signage_point_iters.remove(r)
 
     async def _check_for_new_ip(self):
         infusion_iters = [
@@ -606,20 +612,15 @@ class Timelord:
             log.info("Built end of subslot bundle.")
             self.unfinished_blocks = self.overflow_blocks
             self.overflow_blocks = []
-            self.new_subslot_end = EndOfSubSlotData(
-                eos_bundle,
-                new_sub_slot_iters,
-                new_difficulty,
-                eos_deficit,
-            )
+            self.new_subslot_end = eos_bundle
 
     async def _manage_chains(self):
+        async with self.lock:
+            await asyncio.sleep(5)
+            await self._reset_chains()
         while not self._shut_down:
             await asyncio.sleep(0.1)
             # Didn't get any useful data, continue.
-            async with self.lock:
-                if self.last_state.is_empty() and self.new_peak is None:
-                    continue
             # Map free vdf_clients to unspawned chains.
             await self._map_chains_with_vdf_clients()
             async with self.lock:
@@ -696,7 +697,7 @@ class Timelord:
             try:
                 msg = data.decode()
             except Exception as e:
-                log.error(f"Exception while decoding data {e}")
+                log.warning(f"Exception while decoding data {e}")
             if msg == "STOP":
                 log.info(f"Stopped client running on ip {ip}.")
                 async with self.lock:
