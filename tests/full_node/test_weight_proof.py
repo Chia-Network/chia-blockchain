@@ -166,10 +166,10 @@ class TestWeightProof:
     async def test_get_last_ses_block_idx(self, default_400_blocks):
         header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_400_blocks)
         sub_epoch_end, _ = get_prev_ses_block(sub_blocks, default_400_blocks[-1].prev_header_hash)
-        reward_blocks: List[RewardChainSubBlock] = []
+        recent_blocks: List[HeaderBlock] = []
         for block in header_cache.values():
-            reward_blocks.append(block.reward_chain_sub_block)
-        idx = get_last_ses_block_idx(test_constants, reward_blocks)
+            recent_blocks.append(block)
+        idx = get_last_ses_block_idx(test_constants, recent_blocks)
         assert idx is not None
         assert idx == sub_epoch_end.height
 
@@ -221,7 +221,9 @@ class TestWeightProof:
         print(f"fork point is {curr.height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
-        print(f"\n_____________  {header_cache[height_to_hash[9961]].finished_sub_slots[-1].challenge_chain} __________")
+        print(
+            f"\n_____________  {header_cache[height_to_hash[9961]].finished_sub_slots[-1].challenge_chain} __________"
+        )
 
         wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
         wpf.log.setLevel(logging.INFO)
@@ -233,6 +235,6 @@ class TestWeightProof:
         # todo for each sampled sub epoch, validate number of segments
 
         # todo validate with different factory
-        valid = wpf.validate_weight(wp, curr)
+        valid = wpf.validate_weight_proof(wp, curr)
 
         assert valid

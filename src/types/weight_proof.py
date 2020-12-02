@@ -3,13 +3,12 @@ from typing import List, Optional
 
 from blspy import G2Element
 
-from src.types.reward_chain_sub_block import RewardChainSubBlock
-
+from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
+from src.types.vdf import VDFProof, VDFInfo
 from src.util.ints import uint8, uint64, uint32
 from src.util.streamable import Streamable, streamable
-from src.types.vdf import VDFProof, VDFInfo
 
 
 @dataclass(frozen=True)
@@ -79,4 +78,4 @@ class SubEpochChallengeSegment(Streamable):
 class WeightProof(Streamable):
     sub_epochs: List[SubEpochData]
     sub_epoch_segments: List[SubEpochChallengeSegment]  # sampled sub epoch
-    recent_reward_chain: List[RewardChainSubBlock]
+    recent_chain_data: List[HeaderBlock]  # todo switch HeaderBlock tp class with only needed field
