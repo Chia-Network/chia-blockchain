@@ -254,122 +254,126 @@ class TestFullNodeProtocol:
         message = await full_node_1.new_peak(new_peak)
         assert message is not None
 
-    # @pytest.mark.asyncio
-    # async def test_new_transaction(self, two_nodes, wallet_blocks_five):
-    #     full_node_1, full_node_2, server_1, server_2 = two_nodes
-    #     wallet_a, wallet_receiver, blocks = wallet_blocks_five
-    #     conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
-    #
-    #     # Mempool has capacity of 100, make 110 unspents that we can use
-    #     puzzle_hashes = []
-    #     for _ in range(110):
-    #         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-    #         puzzle_hashes.append(receiver_puzzlehash)
-    #         output = ConditionVarPair(ConditionOpcode.CREATE_COIN, receiver_puzzlehash, int_to_bytes(1000))
-    #         conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
-    #
-    #     spend_bundle = wallet_a.generate_signed_transaction(
-    #         100,
-    #         receiver_puzzlehash,
-    #         blocks[1].get_coinbase(),
-    #         condition_dic=conditions_dict,
-    #     )
-    #     assert spend_bundle is not None
-    #
-    #     new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
-    #
-    #     msg = await full_node_1.new_transaction(new_transaction)
-    #     assert msg.data == fnp.RequestTransaction(spend_bundle.get_hash())
-    #
-    #     respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
-    #     await full_node_1.respond_transaction(respond_transaction_2)
-    #
-    #     program = best_solution_program(spend_bundle)
-    #     aggsig = spend_bundle.aggregated_signature
-    #
-    #     dic_h = {5: (program, aggsig)}
-    #     blocks_new = bt.get_consecutive_blocks(
-    #         3,
-    #         blocks[:-1],
-    #         10,
-    #         transaction_data_at_height=dic_h,
-    #     )
-    #     # Already seen
-    #     msg = await full_node_1.new_transaction(new_transaction)
-    #     assert msg is None
-    #     # Farm one block
-    #     for block in blocks_new:
-    #         await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
-    #
-    #     spend_bundles = []
-    #     total_fee = 0
-    #     # Fill mempool
-    #     for puzzle_hash in puzzle_hashes:
-    #         coin_record = (
-    #             await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(
-    #                 puzzle_hash, blocks_new[-3].header
-    #             )
-    #         )[0]
-    #         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-    #         fee = random.randint(2, 499)
-    #         spend_bundle = wallet_receiver.generate_signed_transaction(
-    #             500, receiver_puzzlehash, coin_record.coin, fee=fee
-    #         )
-    #         respond_transaction = fnp.RespondTransaction(spend_bundle)
-    #         await full_node_1.respond_transaction(respond_transaction)
-    #
-    #         request = fnp.RequestTransaction(spend_bundle.get_hash())
-    #         req = await full_node_1.request_transaction(request)
-    #         if req.data == fnp.RespondTransaction(spend_bundle):
-    #             total_fee += fee
-    #             spend_bundles.append(spend_bundle)
-    #
-    #     # Mempool is full
-    #     new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
-    #     msg = await full_node_1.new_transaction(new_transaction)
-    #     assert msg is None
-    #
-    #     agg = SpendBundle.aggregate(spend_bundles)
-    #     program = best_solution_program(agg)
-    #     aggsig = agg.aggregated_signature
-    #
-    #     dic_h = {8: (program, aggsig)}
-    #
-    #     blocks_new = bt.get_consecutive_blocks(
-    #         1,
-    #         blocks_new,
-    #         10,
-    #         transaction_data_at_height=dic_h,
-    #         fees=uint64(total_fee),
-    #     )
-    #     # Farm one block to clear mempool
-    #     await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]))
+    @pytest.mark.asyncio
+    async def test_new_transaction(self, two_nodes, wallet_blocks_five):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks_five
+        assert full_node_1.full_node.blockchain.get_peak().height == 4
+        conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
 
-    # @pytest.mark.asyncio
-    # async def test_request_respond_transaction(self, two_nodes, wallet_blocks_five):
-    #     full_node_1, full_node_2, server_1, server_2 = two_nodes
-    #     wallet_a, wallet_receiver, blocks = wallet_blocks_five
-    #
-    #     tx_id = token_bytes(32)
-    #     request_transaction = fnp.RequestTransaction(tx_id)
-    #     msg = await full_node_1.request_transaction(request_transaction)
-    #     assert msg is not None
-    #     assert msg.data == fnp.RejectTransactionRequest(tx_id)
-    #
-    #     receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-    #     spend_bundle = wallet_a.generate_signed_transaction(
-    #         100,
-    #         receiver_puzzlehash,
-    #         blocks[2].get_coinbase(),
-    #     )
-    #     assert spend_bundle is not None
-    #     respond_transaction = fnp.RespondTransaction(spend_bundle)
-    #     await full_node_1.respond_transaction(respond_transaction)
-    #
-    #     request_transaction = fnp.RequestTransaction(spend_bundle.get_hash())
-    #     msg = await full_node_1.request_transaction(request_transaction)
-    #     assert msg is not None
-    #     assert msg.data == fnp.RespondTransaction(spend_bundle)
+        # Mempool has capacity of 100, make 110 unspents that we can use
+        puzzle_hashes = []
+        for _ in range(110):
+            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+            puzzle_hashes.append(receiver_puzzlehash)
+            output = ConditionVarPair(ConditionOpcode.CREATE_COIN, receiver_puzzlehash, int_to_bytes(1000))
+            conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
+
+        spend_bundle = wallet_a.generate_signed_transaction(
+            100,
+            puzzle_hashes[0],
+            blocks[1].get_coinbase(),
+            condition_dic=conditions_dict,
+        )
+        assert spend_bundle is not None
+
+        new_transaction = fnp.NewTransaction(spend_bundle.get_hash(), uint64(100), uint64(100))
+
+        msg = await full_node_1.new_transaction(new_transaction)
+        assert msg.data == fnp.RequestTransaction(spend_bundle.get_hash())
+
+        respond_transaction_2 = fnp.RespondTransaction(spend_bundle)
+        await full_node_1.respond_transaction(respond_transaction_2)
+
+        blocks_new = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
+        )
+
+        # Already seen
+        msg = await full_node_1.new_transaction(new_transaction)
+        assert msg is None
+        # Farm one block
+        for block in blocks_new:
+            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+
+        spend_bundles = []
+        # Fill mempool
+        for puzzle_hash in puzzle_hashes:
+            coin_record = (await full_node_1.full_node.coin_store.get_coin_records_by_puzzle_hash(puzzle_hash))[0]
+            receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+            fee = random.randint(2, 499)
+            spend_bundle = wallet_receiver.generate_signed_transaction(
+                500, receiver_puzzlehash, coin_record.coin, fee=fee
+            )
+            respond_transaction = fnp.RespondTransaction(spend_bundle)
+            await full_node_1.respond_transaction(respond_transaction)
+
+            request = fnp.RequestTransaction(spend_bundle.get_hash())
+            req = await full_node_1.request_transaction(request)
+            if req.data == fnp.RespondTransaction(spend_bundle):
+                spend_bundles.append(spend_bundle)
+
+        # Mempool is full
+        new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
+        msg = await full_node_1.new_transaction(new_transaction)
+        assert msg is None
+
+        agg_bundle: SpendBundle = SpendBundle.aggregate(spend_bundles)
+        blocks_new = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks_new,
+            transaction_data_at_height=agg_bundle,
+            guarantee_block=True,
+        )
+        # Farm one block to clear mempool
+        await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]))
+
+    @pytest.mark.asyncio
+    async def test_request_respond_transaction(self, two_nodes, wallet_blocks_five):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks_five
+
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
+
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+
+        await server_2.start_client(PeerInfo("127.0.0.1", uint16(server_1._port)))
+
+        for block in blocks:
+            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+
+        await time_out_assert(10, time_out_messages(incoming_queue, "new_peak"), len(blocks))
+
+        async def num_connections():
+            return len(full_node_1.server.get_connections())
+
+        await time_out_assert(10, num_connections, 2)
+        peer = None
+        for node_id, wsc in server_1.full_nodes.items():
+            if node_id != dummy_node_id:
+                peer = wsc
+
+        tx_id = token_bytes(32)
+        request_transaction = fnp.RequestTransaction(tx_id)
+        msg = await full_node_1.request_transaction(request_transaction)
+        assert msg is None
+
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+        spend_bundle = wallet_a.generate_signed_transaction(
+            100, receiver_puzzlehash, blocks[2].get_future_reward_coins()[0]
+        )
+        assert spend_bundle is not None
+        respond_transaction = fnp.RespondTransaction(spend_bundle)
+        res = await full_node_1.respond_transaction(respond_transaction, peer)
+        assert res is None
+
+        # Check broadcast
+        await time_out_assert(10, time_out_messages(incoming_queue, "new_transaction"))
+
+        request_transaction = fnp.RequestTransaction(spend_bundle.get_hash())
+        msg = await full_node_1.request_transaction(request_transaction)
+        assert msg is not None
+        assert msg.data == fnp.RespondTransaction(spend_bundle)
 
 
 #
