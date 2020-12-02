@@ -4,8 +4,6 @@ from typing import List, Optional, Tuple
 
 from blspy import G2Element, AugSchemeMPL
 
-from clvm_tools.curry import curry as ct_curry, uncurry
-
 from src.types.coin import Coin
 from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
@@ -39,20 +37,13 @@ class SpendableCC:
     lineage_proof: Program
 
 
-def curry(*args, **kwargs):
-    """
-    The clvm_tools version of curry returns `cost, program` for now.
-    Eventually it will just return `program`. This placeholder awaits that day.
-    """
-    cost, prog = ct_curry(*args, **kwargs)
-    return Program.to(prog)
-
-
 def cc_puzzle_for_inner_puzzle(mod_code, genesis_coin_checker, inner_puzzle) -> Program:
     """
     Given an inner puzzle, generate a puzzle program for a specific cc.
     """
-    return curry(mod_code, [mod_code.get_tree_hash(), genesis_coin_checker, inner_puzzle])
+    return mod_code.curry(
+        [mod_code.get_tree_hash(), genesis_coin_checker, inner_puzzle]
+    )
 
 
 def cc_puzzle_hash_for_inner_puzzle_hash(mod_code, genesis_coin_checker, inner_puzzle_hash) -> bytes32:
@@ -60,9 +51,9 @@ def cc_puzzle_hash_for_inner_puzzle_hash(mod_code, genesis_coin_checker, inner_p
     Given an inner puzzle hash, calculate a puzzle program hash for a specific cc.
     """
     gcc_hash = genesis_coin_checker.get_tree_hash()
-    return curry(mod_code, [mod_code.get_tree_hash(), gcc_hash, inner_puzzle_hash]).get_tree_hash(
-        gcc_hash, inner_puzzle_hash
-    )
+    return mod_code.curry(
+        [mod_code.get_tree_hash(), gcc_hash, inner_puzzle_hash]
+    ).get_tree_hash(gcc_hash, inner_puzzle_hash)
 
 
 def lineage_proof_for_cc_parent(parent_coin: Coin, parent_inner_puzzle_hash: bytes32) -> Program:
@@ -102,7 +93,7 @@ def coin_solution_for_lock_coin(
     subtotal: int,
     coin: Coin,
 ) -> CoinSolution:
-    puzzle_reveal = curry(LOCK_INNER_PUZZLE, [prev_coin.as_list(), subtotal])
+    puzzle_reveal = LOCK_INNER_PUZZLE.curry([prev_coin.as_list(), subtotal])
 
     coin = Coin(coin.name(), puzzle_reveal.get_tree_hash(), uint64(0))
     coin_solution = CoinSolution(coin, Program.to([puzzle_reveal, 0]))
@@ -200,7 +191,7 @@ def is_cc_mod(inner_f: Program):
 
 
 def check_is_cc_puzzle(puzzle: Program):
-    r = uncurry(puzzle)
+    r = puzzle.uncurry()
     if r is None:
         return False
     inner_f, args = r
