@@ -135,13 +135,14 @@ class WSChiaConnection:
 
     async def close(self):
         # Closes the connection. This should only be called by PeerConnections class.
+        print("CLOSING!")
         self.closed = True
         if self.ws is not None:
             await self.ws.close()
         if self.inbound_task is not None:
             self.inbound_task.cancel()
         if self.outbound_task is not None:
-            self.outbound_task.cancel()
+            await self.outbound_task
         if self.session is not None:
             await self.session.close()
 
@@ -152,9 +153,12 @@ class WSChiaConnection:
     async def outbound_handler(self):
         try:
             while not self.closed:
-                msg = await self.outgoing_queue.get()
-                if msg is not None:
-                    await self._send_message(msg)
+                try:
+                    msg = await asyncio.wait_for(self.outgoing_queue.get(), 1)
+                    if msg is not None:
+                        await self._send_message(msg)
+                except asyncio.TimeoutError:
+                    pass
         except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception: {e}")
