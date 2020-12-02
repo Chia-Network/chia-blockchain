@@ -158,7 +158,7 @@ class LastState:
             elif chain == Chain.INFUSED_CHALLENGE_CHAIN:
                 if sub_block.infused_challenge_chain_ip_vdf is not None:
                     return sub_block.infused_challenge_chain_ip_vdf.challenge_hash
-                elif self.peak.deficit == 4:
+                elif self.peak.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                     return ChallengeBlockInfo(
                         sub_block.proof_of_space,
                         sub_block.challenge_chain_sp_vdf,
@@ -173,6 +173,7 @@ class LastState:
                 return self.subslot_end.reward_chain.get_hash()
             elif chain == Chain.INFUSED_CHALLENGE_CHAIN:
                 if self.subslot_end.reward_chain.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                    log.error(f"DEFICIT: {self.subslot_end.reward_chain.deficit}")
                     return self.subslot_end.infused_challenge_chain.get_hash()
                 return None
         return None
@@ -189,7 +190,7 @@ class LastState:
             if chain == Chain.INFUSED_CHALLENGE_CHAIN:
                 if sub_block.infused_challenge_chain_ip_vdf is not None:
                     return sub_block.infused_challenge_chain_ip_vdf.output
-                elif self.peak.deficit == 4:
+                elif self.peak.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
                     return ClassgroupElement.get_default_element()
                 else:
                     return None
@@ -355,8 +356,11 @@ class Timelord:
         # TODO: handle the special case when infusion point is the end of subslot.
         left_subslot_iters = sub_slot_iters - ip_iters
         log.info(f"Left subslot iters: {left_subslot_iters}.")
-        for chain in Chain:
-            self.iters_to_submit[chain].append(left_subslot_iters)
+
+        if self.last_state.get_deficit() < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+            self.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(left_subslot_iters)
+        self.iters_to_submit[Chain.CHALLENGE_CHAIN].append(left_subslot_iters)
+        self.iters_to_submit[Chain.REWARD_CHAIN].append(left_subslot_iters)
 
         log.warning(f"Iters to submit {self.iters_to_submit}")
         self.iteration_to_proof_type[left_subslot_iters] = IterationType.END_OF_SUBSLOT
@@ -457,6 +461,7 @@ class Timelord:
                     rc_info,
                     rc_proof,
                 )
+                log.info(f"Finished signage point {signage_point_index}")
                 if self.server is not None:
                     msg = Message("new_signage_point_vdf", response)
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
@@ -591,7 +596,7 @@ class Timelord:
             cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_sub_slot_hash, ses_hash, new_sub_slot_iters, new_difficulty)
             eos_deficit: uint8 = (
                 self.last_state.get_deficit()
-                if self.last_state.get_deficit() > 0
+                if self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK > self.last_state.get_deficit() > 0
                 else self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
             )
             rc_sub_slot = RewardChainSubSlot(
@@ -607,7 +612,7 @@ class Timelord:
                 SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
             )
             if self.server is not None:
-                msg = Message("end_of_sub_slot_bundle", timelord_protocol.NewEndOfSubSlotVDF(eos_bundle))
+                msg = Message("new_end_of_sub_slot_vdf", timelord_protocol.NewEndOfSubSlotVDF(eos_bundle))
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
             log.info("Built end of subslot bundle.")
             self.unfinished_blocks = self.overflow_blocks
