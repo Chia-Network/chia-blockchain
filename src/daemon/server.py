@@ -695,7 +695,7 @@ def create_server_for_daemon(root_path):
 
     @routes.get("/daemon/service/stop/")
     async def stop_service(request):
-        service_name = request.query.get("service")
+        service_name = request.qu5ry.get("service")
         r = await kill_service(root_path, services, service_name)
         return web.Response(text=str(r))
 
