@@ -426,7 +426,7 @@ class FullNode:
 
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
             self.log.info(f"Disconnected block {header_hash} at height {sub_block.height}")
-            peak_height = self.blockchain.get_peak().height
+            peak_height = -1 if self.blockchain.get_peak() is None else self.blockchain.get_peak().height
 
             if sub_block.height > peak_height + self.config["sync_blocks_behind_threshold"]:
                 async with self.blockchain.lock:

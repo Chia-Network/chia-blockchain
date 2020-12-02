@@ -217,6 +217,7 @@ class BlockTools:
         time_per_sub_block: Optional[float] = None,
         force_overflow: bool = False,
         skip_slots: uint32 = uint32(0),  # Force at least this number of empty slots before the first SB
+        guarantee_block: bool = False,  # Force that this sub-block must be a block
     ) -> List[FullBlock]:
         if block_list_input is not None:
             block_list = block_list_input.copy()
@@ -367,6 +368,9 @@ class BlockTools:
                         )
                         if sub_block_record.is_block:
                             transaction_data_included = True
+                        else:
+                            if guarantee_block:
+                                continue
                         if pending_ses:
                             pending_ses = False
                         block_list.append(full_block)
