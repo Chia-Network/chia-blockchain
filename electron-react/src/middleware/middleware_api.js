@@ -10,6 +10,7 @@ import {
   get_colour_info,
   get_colour_name,
   did_get_recovery_list,
+  did_get_did,
   pingWallet
 } from "../modules/message";
 
@@ -225,6 +226,7 @@ export const handle_message = (store, payload) => {
         }
         if (wallet.type === DISTRIBUTED_ID) {
           store.dispatch(did_get_recovery_list(wallet.id));
+          store.dispatch(did_get_did(wallet.id));
         }
       }
     }

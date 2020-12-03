@@ -264,6 +264,8 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       } else if (command === "did_get_recovery_list") {
         id = data.wallet_id;
         const dids = data.recover_list;
+        console.log("INC API GRL")
+        console.log(dids)
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
         if (!wallet) {
