@@ -29,7 +29,6 @@ from src.types.slots import ChallengeChainSubSlot, InfusedChallengeChainSubSlot,
 from src.types.vdf import VDFInfo, VDFProof
 from src.util.ints import uint64, uint8, uint128, int512
 from src.types.sub_epoch_summary import SubEpochSummary
-from chiapos import Verifier
 from src.types.slots import ChallengeBlockInfo
 
 log = logging.getLogger(__name__)
@@ -41,18 +40,21 @@ def iters_from_sub_block(
     sub_slot_iters: uint64,
     difficulty: uint64,
 ) -> Tuple[uint64, uint64]:
-    v = Verifier()
-    pos = reward_chain_sub_block.proof_of_space
-    plot_id: bytes32 = pos.get_plot_id()
-    quality = v.validate_proof(plot_id, pos.size, pos.challenge, bytes(pos.proof))
-
     if reward_chain_sub_block.challenge_chain_sp_vdf is None:
         assert reward_chain_sub_block.signage_point_index == 0
         cc_sp: bytes32 = reward_chain_sub_block.pos_ss_cc_challenge_hash
     else:
-        cc_sp: bytes32 = reward_chain_sub_block.challenge_chain_sp_vdf.get_hash()
-    required_iters = calculate_iterations_quality(
-        quality,
+        cc_sp: bytes32 = reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
+
+    quality_string: Optional[bytes32] = reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
+        constants,
+        reward_chain_sub_block.pos_ss_cc_challenge_hash,
+        cc_sp,
+    )
+    assert quality_string is not None
+
+    required_iters: uint64 = calculate_iterations_quality(
+        quality_string,
         reward_chain_sub_block.proof_of_space.size,
         difficulty,
         cc_sp,
@@ -727,7 +729,7 @@ class Timelord:
                 time_taken = time.time() - self.chain_start_time[chain]
                 ips = int(iterations_needed / time_taken * 10) / 10
                 log.info(
-                    f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
+                    f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed} input: {initial_form}"
                     f" iters."
                     f"Estimated IPS: {ips}. Chain: {chain}"
                 )

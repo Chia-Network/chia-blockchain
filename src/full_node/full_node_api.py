@@ -675,34 +675,16 @@ class FullNodeAPI:
         else:
             finished_sub_slots = unfinished_block.finished_sub_slots
 
-        if unfinished_block.reward_chain_sub_block.signage_point_index == 0:
-            cc_sp_output_hash = unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
-        else:
-            cc_sp_output_hash = unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
+        _, _, sub_slot_start_iters = self.full_node.full_node_store.get_sub_slot(
+            unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
+        )
+        sp_total_iters = sub_slot_start_iters + calculate_sp_iters(
+            self.full_node.constants, sub_slot_iters, unfinished_block.reward_chain_sub_block.signage_point_index
+        )
 
-        quality_string: Optional[
-            bytes32
-        ] = unfinished_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
-            self.full_node.constants,
-            unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf.challenge,
-            cc_sp_output_hash,
-        )
-        required_iters: uint64 = calculate_iterations_quality(
-            quality_string,
-            unfinished_block.reward_chain_sub_block.proof_of_space.size,
-            difficulty,
-            cc_sp_output_hash,
-        )
-        ip_iters = calculate_ip_iters(
-            self.full_node.constants,
-            sub_slot_iters,
-            unfinished_block.reward_chain_sub_block.signage_point_index,
-            required_iters,
-        )
-        modified_cc_ip_vdf = dataclasses.replace(request.challenge_chain_ip_vdf, number_of_iterations=ip_iters)
         block: FullBlock = unfinished_block_to_full_block(
             unfinished_block,
-            modified_cc_ip_vdf,
+            request.challenge_chain_ip_vdf,
             request.challenge_chain_ip_proof,
             request.reward_chain_ip_vdf,
             request.reward_chain_ip_proof,
@@ -710,6 +692,8 @@ class FullNodeAPI:
             request.infused_challenge_chain_ip_proof,
             finished_sub_slots,
             prev_sb,
+            self.full_node.blockchain.sub_blocks,
+            sp_total_iters,
             difficulty,
         )
 

@@ -383,9 +383,12 @@ async def validate_unfinished_header_block(
         sub_blocks,
         skip_overflow_last_ss_validation,
     )
-    assert challenge is not None
 
-    # 5. Check proof of space
+    # 5a. Check proof of space
+    if challenge != header_block.reward_chain_sub_block.pos_ss_cc_challenge_hash:
+        return None, ValidationError(Err.INVALID_CC_CHALLENGE)
+
+    # 5b. Check proof of space
     if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is None:
         # Edge case of first sp (start of slot), where sp_iters == 0
         cc_sp_hash: bytes32 = challenge
@@ -581,6 +584,10 @@ async def validate_unfinished_header_block(
             our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters)
         if (our_sp_total_iters > curr.total_iters) != (header_block.foliage_sub_block.foliage_block_hash is not None):
             return None, ValidationError(Err.INVALID_IS_BLOCK)
+        if (our_sp_total_iters > curr.total_iters) != (
+            header_block.foliage_sub_block.foliage_block_signature is not None
+        ):
+            return None, ValidationError(Err.INVALID_IS_BLOCK)
 
     # 16. Check foliage sub block signature by plot key
     if not AugSchemeMPL.verify(
@@ -768,18 +775,11 @@ async def validate_finished_header_block(
         ip_vdf_iters,
         header_block.reward_chain_sub_block.challenge_chain_ip_vdf.output,
     )
-    log.warning(f"{header_block.reward_chain_sub_block.challenge_chain_ip_vdf}")
-    should = dataclasses.replace(
-        cc_target_vdf_info,
-        number_of_iterations=ip_iters,
-    )
-    log.warning(f"Should be {should}")
     if header_block.reward_chain_sub_block.challenge_chain_ip_vdf != dataclasses.replace(
         cc_target_vdf_info,
         number_of_iterations=ip_iters,
     ):
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
-    log.warning("Is!")
     if not header_block.challenge_chain_ip_proof.is_valid(
         constants,
         cc_vdf_output,

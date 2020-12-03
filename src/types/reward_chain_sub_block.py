@@ -29,8 +29,8 @@ class RewardChainSubBlock(Streamable):
     sub_block_height: uint32
     total_iters: uint128
     signage_point_index: uint8
-    proof_of_space: ProofOfSpace
     pos_ss_cc_challenge_hash: bytes32
+    proof_of_space: ProofOfSpace
     challenge_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
     challenge_chain_sp_signature: G2Element
     challenge_chain_ip_vdf: VDFInfo
