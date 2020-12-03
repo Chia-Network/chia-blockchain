@@ -24,7 +24,7 @@ from src.protocols import (
     farmer_protocol,
     full_node_protocol,
     timelord_protocol,
-)
+    wallet_protocol)
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -747,3 +747,19 @@ class FullNodeAPI:
         # Calls our own internal message to handle the end of sub slot, and potentially broadcasts to other peers.
         full_node_message = full_node_protocol.RespondEndOfSubSlot(request.end_of_sub_slot_bundle)
         return await self.respond_end_of_sub_slot(full_node_message, peer)
+
+
+    # @api_request
+    # async def request_sub_block_header(self, request: wallet_protocol.RequestSubBlockHeader) -> Optional[Message]:
+    #     if request.height not in self.full_node.blockchain.height_to_hash:
+    #         return
+    #     block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
+    #         self.full_node.blockchain.height_to_hash[request.height]
+    #     )
+    #     header_block =
+    #     if block is not None:
+    #         if not request.include_transaction_block:
+    #             block = dataclasses.replace(block, transactions_generator=None)
+    #         msg = Message("respond_sub_block_header", wallet_protocol.RespondSubBlockHeader(block))
+    #         return msg
+    #     return

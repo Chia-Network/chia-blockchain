@@ -60,10 +60,15 @@ class ChiaServer:
     ):
         # Keeps track of all connections to and from this node.
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
-        self.full_nodes: Dict[bytes32, WSChiaConnection] = {}
         self.tasks: Set[asyncio.Task] = set()
 
-        self.connection_by_type: Dict[NodeType, Dict[str, WSChiaConnection]] = {}
+        self.connection_by_type: Dict[NodeType, Dict[bytes32, WSChiaConnection]] = {NodeType.FULL_NODE: {},
+                                                                                    NodeType.WALLET: {},
+                                                                                    NodeType.HARVESTER: {},
+                                                                                    NodeType.FARMER: {},
+                                                                                    NodeType.TIMELORD: {},
+                                                                                    NodeType.INTRODUCER: {}}
+
         self._port = port  # TCP port to identify our node
         self._local_type: NodeType = local_type
 
@@ -170,8 +175,7 @@ class ChiaServer:
 
     async def connection_added(self, connection: WSChiaConnection, on_connect=None):
         self.all_connections[connection.peer_node_id] = connection
-        if connection.connection_type is NodeType.FULL_NODE:
-            self.full_nodes[connection.peer_node_id] = connection
+        self.connection_by_type[connection.connection_type][connection.peer_node_id] = connection
         if on_connect is not None:
             await on_connect(connection)
 
@@ -241,8 +245,8 @@ class ChiaServer:
         self.log.info(f"Connection closed: {connection.peer_host}")
         if connection.peer_node_id in self.all_connections:
             self.all_connections.pop(connection.peer_node_id)
-        if connection.peer_node_id in self.full_nodes:
-            self.full_nodes.pop(connection.peer_node_id)
+        if connection.peer_node_id in self.connection_by_type[connection.connection_type]:
+            self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
 
     async def incoming_api_task(self):
         self.tasks = set()
@@ -329,12 +333,7 @@ class ChiaServer:
         return result
 
     def get_full_node_connections(self) -> List[WSChiaConnection]:
-        result = []
-        for _, connection in self.all_connections.items():
-            if connection.connection_type is NodeType.FULL_NODE:
-                result.append(connection)
-
-        return result
+        return list(self.connection_by_type[NodeType.FULL_NODE].values())
 
     def get_connections(self) -> List[WSChiaConnection]:
         result = []
