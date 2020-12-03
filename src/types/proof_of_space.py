@@ -48,11 +48,11 @@ class ProofOfSpace(Streamable):
 
         return self.get_quality_string(plot_id)
 
-    def get_quality_string(self, plot_id):
+    def get_quality_string(self, plot_id: bytes32) -> Optional[bytes32]:
         quality_str = Verifier().validate_proof(plot_id, self.size, self.challenge, bytes(self.proof))
         if not quality_str:
             return None
-        return quality_str
+        return bytes32(quality_str)
 
     @staticmethod
     def passes_plot_filter(
