@@ -461,7 +461,7 @@ class Timelord:
                     rc_info,
                     rc_proof,
                 )
-                log.info(f"Finished signage point {signage_point_index}")
+                log.info(f"Finished signage point {signage_point_index}/{self.constants.NUM_SPS_SUB_SLOT}")
                 if self.server is not None:
                     msg = Message("new_signage_point_vdf", response)
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)

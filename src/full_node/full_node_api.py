@@ -254,6 +254,12 @@ class FullNodeAPI:
         ):
             return
 
+        if self.full_node.full_node_store.get_sub_slot(new_sp.challenge_hash) is None:
+            full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
+                new_sp.challenge_hash, uint8(0), new_sp.last_rc_infusion
+            )
+
+        return Message("request_signage_point_or_end_of_sub_slot", full_node_request)
         full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
             new_sp.challenge_hash, new_sp.index_from_challenge, new_sp.last_rc_infusion
         )
@@ -273,6 +279,10 @@ class FullNodeAPI:
             else:
                 self.log.warning("Don't have sub slot")
         else:
+            if self.full_node.full_node_store.get_sub_slot(request.challenge_hash) is None:
+                if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
+                    self.log.warning(f"Done have challenge hash {request.challenge_hash}")
+
             sp: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index(
                 request.challenge_hash, request.index_from_challenge, request.last_rc_infusion
             )
@@ -286,7 +296,7 @@ class FullNodeAPI:
                 )
                 return Message("respond_signage_point", full_node_response)
             else:
-                self.log.warning("Don't have signage point")
+                self.log.warning(f"Don't have signage point {request}")
 
     @peer_required
     @api_request
@@ -321,7 +331,6 @@ class FullNodeAPI:
         )
 
         if added:
-            self.log.warning("ADDED :)")
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
                 request.challenge_chain_vdf.challenge,
                 request.index_from_challenge,
@@ -345,6 +354,8 @@ class FullNodeAPI:
             )
             msg = Message("new_signage_point", broadcast_farmer)
             await self.server.send_to_all([msg], NodeType.FARMER)
+        else:
+            self.log.info("Signage point not added")
 
         return
 
@@ -364,8 +375,9 @@ class FullNodeAPI:
             request.end_of_slot_bundle, self.full_node.blockchain.sub_blocks, self.full_node.blockchain.get_peak()
         )
 
-        # It may be an empty list, even if it's not None. Not None means added succesfully
+        # It may be an empty list, even if it's not None. Not None means added successfully
         if new_infusions is not None:
+            print(f"Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}")
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
                 request.end_of_slot_bundle.challenge_chain.get_hash(),
                 uint8(0),
@@ -387,6 +399,8 @@ class FullNodeAPI:
             )
             msg = Message("new_signage_point", broadcast_farmer)
             await self.server.send_to_all([msg], NodeType.FARMER)
+        else:
+            self.log.info("End of slot not added")
 
     @peer_required
     @api_request
