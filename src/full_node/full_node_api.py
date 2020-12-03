@@ -254,12 +254,25 @@ class FullNodeAPI:
         ):
             return
 
-        if self.full_node.full_node_store.get_sub_slot(new_sp.challenge_hash) is None:
-            full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
-                new_sp.challenge_hash, uint8(0), new_sp.last_rc_infusion
-            )
+        if new_sp.index_from_challenge == 0 and new_sp.prev_challenge_hash is not None:
+            if self.full_node.full_node_store.get_sub_slot(new_sp.prev_challenge_hash) is None:
+                # If this is an end of sub slot, and we don't have the prev, request the prev instead
+                full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
+                    new_sp.prev_challenge_hash, uint8(0), new_sp.last_rc_infusion
+                )
+                return Message("request_signage_point_or_end_of_sub_slot", full_node_request)
+        if new_sp.index_from_challenge > 0:
+            if (
+                new_sp.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE
+                and self.full_node.full_node_store.get_sub_slot(new_sp.challenge_hash) is None
+            ):
+                # If this is a normal signage point,, and we don't have the end of sub slot, request the end of sub slot
+                full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
+                    new_sp.challenge_hash, uint8(0), new_sp.last_rc_infusion
+                )
+                return Message("request_signage_point_or_end_of_sub_slot", full_node_request)
 
-        return Message("request_signage_point_or_end_of_sub_slot", full_node_request)
+        # Otherwise (we have the prev or the end of sub slot), request it normally
         full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
             new_sp.challenge_hash, new_sp.index_from_challenge, new_sp.last_rc_infusion
         )
@@ -275,13 +288,13 @@ class FullNodeAPI:
                 request.challenge_hash
             )
             if sub_slot is not None:
-                return Message("respond_end_of_slot", full_node_protocol.RespondEndOfSubSlot(sub_slot[0]))
+                return Message("respond_end_of_sub_slot", full_node_protocol.RespondEndOfSubSlot(sub_slot[0]))
             else:
                 self.log.warning("Don't have sub slot")
         else:
             if self.full_node.full_node_store.get_sub_slot(request.challenge_hash) is None:
                 if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
-                    self.log.warning(f"Done have challenge hash {request.challenge_hash}")
+                    self.log.warning(f"Don't have challenge hash {request.challenge_hash}")
 
             sp: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index(
                 request.challenge_hash, request.index_from_challenge, request.last_rc_infusion
@@ -331,19 +344,32 @@ class FullNodeAPI:
         )
 
         if added:
+            self.log.info(
+                f"Finished signage point {request.index_from_challenge}/{self.full_node.constants.NUM_SPS_SUB_SLOT}"
+            )
+            sub_slot_tuple = self.full_node.full_node_store.get_sub_slot(request.challenge_chain_vdf.challenge)
+            if sub_slot_tuple is not None:
+                prev_challenge = sub_slot_tuple[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+            else:
+                prev_challenge = None
+            # Notify nodes of the new signage point
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
+                prev_challenge,
                 request.challenge_chain_vdf.challenge,
                 request.index_from_challenge,
                 request.reward_chain_vdf.challenge,
             )
             msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+
             if peak is not None and peak.height > 2:
+                # Makes sure to potentially update the difficulty if we are past the peak (into a new sub-slot)
                 assert ip_sub_slot is not None
                 if request.challenge_chain_vdf.challenge != ip_sub_slot.challenge_chain.get_hash():
                     difficulty = next_difficulty
                     sub_slot_iters = next_sub_slot_iters
 
+            # Notify farmers of the new signage point
             broadcast_farmer = farmer_protocol.NewSignagePoint(
                 request.challenge_chain_vdf.challenge,
                 request.challenge_chain_vdf.output.get_hash(),
@@ -371,14 +397,21 @@ class FullNodeAPI:
         else:
             next_sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
             next_difficulty = self.full_node.constants.DIFFICULTY_STARTING
+
+        # Adds the sub slot and potentially get new infusions
         new_infusions = self.full_node.full_node_store.new_finished_sub_slot(
             request.end_of_slot_bundle, self.full_node.blockchain.sub_blocks, self.full_node.blockchain.get_peak()
         )
 
         # It may be an empty list, even if it's not None. Not None means added successfully
         if new_infusions is not None:
-            print(f"Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}")
+            self.log.info(
+                f"Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}, number of sub-slots: "
+                f"{len(self.full_node.full_node_store.finished_sub_slots)}"
+            )
+            # Notify full nodes of the new sub-slot
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
+                request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
                 request.end_of_slot_bundle.challenge_chain.get_hash(),
                 uint8(0),
                 request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
@@ -389,6 +422,7 @@ class FullNodeAPI:
             for infusion in new_infusions:
                 await self.new_infusion_point_vdf(infusion)
 
+            # Notify farmers of the new sub-slot
             broadcast_farmer = farmer_protocol.NewSignagePoint(
                 request.end_of_slot_bundle.challenge_chain.get_hash(),
                 request.end_of_slot_bundle.challenge_chain.get_hash(),

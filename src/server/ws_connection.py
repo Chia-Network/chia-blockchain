@@ -48,7 +48,6 @@ class WSChiaConnection:
         # Local properties
         self.ws: Any = ws
         self.local_type = local_type
-        self.local_host = ""
         self.local_port = server_port
         # Remote properties
         self.peer_host = peer_host
@@ -108,6 +107,7 @@ class WSChiaConnection:
             self.peer_node_id = inbound_handshake.node_id
             self.peer_server_port = int(inbound_handshake.server_port)
             self.connection_type = inbound_handshake.node_type
+
         else:
             payload = await self._read_one_message()
             inbound_handshake = Handshake(**payload.msg.data)
@@ -128,6 +128,9 @@ class WSChiaConnection:
             self.peer_node_id = inbound_handshake.node_id
             self.peer_server_port = int(inbound_handshake.server_port)
             self.connection_type = inbound_handshake.node_type
+
+        if self.peer_node_id == node_id:
+            raise ProtocolError(Err.SELF_CONNECTION)
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
@@ -276,6 +279,8 @@ class WSChiaConnection:
                 f"{self.peer_port}"
             )
             asyncio.create_task(self.close())
+        elif message.type == WSMsgType.CLOSED:
+            pass
         elif message.type == WSMsgType.BINARY:
             data = message.data
             full_message_loaded: Any = cbor.loads(data)
@@ -286,7 +291,7 @@ class WSChiaConnection:
             payload = Payload(msg, payload_id)
             return payload
         else:
-            self.log.error(f"Not binary message: {message}")
+            self.log.error(f"Unexpected WebSocket message type: {message}")
             await self.close()
         return None
 
