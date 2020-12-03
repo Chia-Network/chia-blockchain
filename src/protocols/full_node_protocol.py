@@ -94,6 +94,7 @@ class RespondUnfinishedSubBlock:
 @dataclass(frozen=True)
 @cbor_message
 class NewSignagePointOrEndOfSubSlot:
+    prev_challenge_hash: uint32
     challenge_hash: uint32
     index_from_challenge: uint8
     last_rc_infusion: bytes32
