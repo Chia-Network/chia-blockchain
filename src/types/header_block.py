@@ -2,6 +2,8 @@ from typing import Optional, List
 from dataclasses import dataclass
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.full_block import FullBlock
+from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
 from src.types.vdf import VDFProof
 from src.types.reward_chain_sub_block import RewardChainSubBlock
@@ -46,3 +48,26 @@ class HeaderBlock(Streamable):
     @property
     def log_string(self):
         return "block " + str(self.header_hash) + " height " + str(self.height) + " "
+
+
+# def full_block_to_header_block(block: FullBlock):
+#     # Create filter
+#     removals, additions = await block.tx_removals_and_additions()
+#
+#     byte_array_tx: List[bytes32] = []
+#
+#     for coin in additions:
+#         byte_array_tx.append(bytearray(coin.puzzle_hash))
+#     for coin in removals:
+#         byte_array_tx.append(bytearray(coin.name()))
+#
+#     for
+#     byte_array_tx.append(bytearray(block.transactions_info.farmer_rewards_puzzle_hash))
+#     byte_array_tx.append(bytearray(request.pool_target.puzzle_hash))
+#
+#     bip158: PyBIP158 = PyBIP158(byte_array_tx)
+#     encoded_filter: bytes = bytes(bip158.GetEncoded())
+#
+#     header_block = HeaderBlock(block.finished_sub_slots, block.reward_chain_sub_block, block.challenge_chain_sp_proof, block.challenge_chain_ip_proof,
+#                                block.reward_chain_sp_proof, block.reward_chain_ip_proof, block.infused_challenge_chain_ip_proof, block.foliage_sub_block, block.foliage_block, block.transactions_info.)
+#     return header_block

@@ -289,7 +289,7 @@ class FullNode:
         fork_point_height: uint32 = uint32(0)
         self.log.info(f"Fork point at height {fork_point_height}")
 
-        peers: List[WSChiaConnection] = list(self.server.full_nodes.values())
+        peers: List[WSChiaConnection] = self.server.get_full_node_connections()
 
         self.sync_peers_handler = SyncPeersHandler(
             self.sync_store, peers, fork_point_height, self.blockchain, peak_height, self.server

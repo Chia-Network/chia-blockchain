@@ -59,7 +59,6 @@ class RequestSubBlockHeader:
 @cbor_message
 class RespondSubBlockHeader:
     header_block: HeaderBlock
-    transactions_filter: bytes
 
 
 @dataclass(frozen=True)
