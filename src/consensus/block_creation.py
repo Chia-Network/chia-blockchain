@@ -314,6 +314,7 @@ def unfinished_block_to_full_block(
         new_weight = uint128(difficulty)
         new_height = uint32(0)
         new_foliage_sub_block = unfinished_block.foliage_sub_block
+        new_foliage_block = unfinished_block.foliage_block
     else:
         is_block, _ = get_prev_block(prev_sub_block, sub_blocks, total_iters_sp)
         new_weight = uint128(prev_sub_block.weight + difficulty)
@@ -321,9 +322,11 @@ def unfinished_block_to_full_block(
         if is_block:
             new_fbh = unfinished_block.foliage_sub_block.foliage_block_hash
             new_fbs = unfinished_block.foliage_sub_block.foliage_block_signature
+            new_foliage_block = unfinished_block.foliage_block
         else:
             new_fbh = None
             new_fbs = None
+            new_foliage_block = None
         new_foliage_sub_block = replace(
             unfinished_block.foliage_sub_block,
             prev_sub_block_hash=prev_sub_block.header_hash,
@@ -354,7 +357,7 @@ def unfinished_block_to_full_block(
         rc_ip_proof,
         icc_ip_proof,
         new_foliage_sub_block,
-        unfinished_block.foliage_block,
+        new_foliage_block,
         unfinished_block.transactions_info,
         unfinished_block.transactions_generator,
     )
