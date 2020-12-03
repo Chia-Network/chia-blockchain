@@ -519,7 +519,7 @@ class FullNodeAPI:
                 spend_bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(
                     peak.header_hash
                 )
-        if peak is None or peak.height == 0:
+        if peak is None or peak.height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
             difficulty = self.full_node.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
         else:
@@ -675,9 +675,21 @@ class FullNodeAPI:
         else:
             finished_sub_slots = unfinished_block.finished_sub_slots
 
-        _, _, sub_slot_start_iters = self.full_node.full_node_store.get_sub_slot(
+        if (
             unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
-        )
+            == self.full_node.constants.FIRST_CC_CHALLENGE
+        ):
+            sub_slot_start_iters = uint128(0)
+        else:
+            ss_res = self.full_node.full_node_store.get_sub_slot(
+                unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
+            )
+            if ss_res is None:
+                self.log.warning(
+                    f"Do not have sub slot {unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}"
+                )
+                return
+            _, _, sub_slot_start_iters = ss_res
         sp_total_iters = sub_slot_start_iters + calculate_sp_iters(
             self.full_node.constants, sub_slot_iters, unfinished_block.reward_chain_sub_block.signage_point_index
         )
