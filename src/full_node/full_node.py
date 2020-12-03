@@ -560,10 +560,12 @@ class FullNode:
         timelords.
         """
         block = respond_unfinished_sub_block.unfinished_sub_block
+
         # Adds the unfinished block to seen, and check if it's seen before, to prevent
         # processing it twice. This searches for the exact version of the unfinished block (there can be many different
-        # foliages for the same trunk). Note that it does not require that this block was successfully processed
-        if self.full_node_store.seen_unfinished_block(block.header_hash):
+        # foliages for the same trunk). This is intentional, to prevent DOS attacks.
+        # Note that it does not require that this block was successfully processed
+        if self.full_node_store.seen_unfinished_block(block.get_hash()):
             return
 
         # This searched for the trunk hash (unfinished reward hash). If we have already added a block with the same
@@ -602,6 +604,7 @@ class FullNode:
             height = self.blockchain.sub_blocks[block.prev_header_hash].height + 1
 
         self.full_node_store.add_unfinished_block(height, block)
+        self.log.warning(f"Added unfinished_block {block.partial_hash}")
 
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
             block.reward_chain_sub_block,
@@ -627,4 +630,4 @@ class FullNode:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
         else:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
-        self._state_changed("sub_block")
+        self._state_changed("unfinished_sub_block")

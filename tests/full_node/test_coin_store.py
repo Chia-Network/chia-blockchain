@@ -34,7 +34,7 @@ class TestCoinStore:
         # Generate some coins
         print("paying to ph", reward_ph)
         blocks = bt.get_consecutive_blocks(
-            constants, 10, [], farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            10, [], farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
         )
 
         coins_to_spend: List[Coin] = []
@@ -53,7 +53,6 @@ class TestCoinStore:
         coin_store = await CoinStore.create(connection)
 
         blocks = bt.get_consecutive_blocks(
-            constants,
             10,
             blocks,
             farmer_reward_puzzle_hash=reward_ph,
@@ -94,7 +93,7 @@ class TestCoinStore:
 
     @pytest.mark.asyncio
     async def test_set_spent(self):
-        blocks = bt.get_consecutive_blocks(test_constants, 9, [])
+        blocks = bt.get_consecutive_blocks(9, [])
 
         db_path = Path("fndb_test.db")
         if db_path.exists():
@@ -122,7 +121,7 @@ class TestCoinStore:
 
     @pytest.mark.asyncio
     async def test_rollback(self):
-        blocks = bt.get_consecutive_blocks(test_constants, 20)
+        blocks = bt.get_consecutive_blocks(20)
 
         db_path = Path("fndb_test.db")
         if db_path.exists():
@@ -166,7 +165,7 @@ class TestCoinStore:
     async def test_basic_reorg(self):
         initial_block_count = 30
         reorg_length = 15
-        blocks = bt.get_consecutive_blocks(test_constants, initial_block_count)
+        blocks = bt.get_consecutive_blocks(initial_block_count)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()
@@ -191,9 +190,7 @@ class TestCoinStore:
                         assert record.confirmed_block_index == block.height
                         assert record.spent_block_index == 0
 
-            blocks_reorg_chain = bt.get_consecutive_blocks(
-                test_constants, reorg_length, blocks[: initial_block_count - 10], seed=b"2"
-            )
+            blocks_reorg_chain = bt.get_consecutive_blocks(reorg_length, blocks[: initial_block_count - 10], seed=b"2")
 
             for reorg_block in blocks_reorg_chain:
                 result, error_code, _ = await b.receive_block(reorg_block)
@@ -228,7 +225,7 @@ class TestCoinStore:
     @pytest.mark.asyncio
     async def test_get_puzzle_hash(self):
         num_blocks = 10
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks)
+        blocks = bt.get_consecutive_blocks(num_blocks)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()

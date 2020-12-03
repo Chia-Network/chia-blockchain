@@ -165,7 +165,7 @@ class FullNodeDiscovery:
                 size = await self.address_manager.size()
                 if size == 0 or empty_tables:
                     await self._introducer_client()
-                    await asyncio.sleep(min(10, self.peer_connect_interval))
+                    await asyncio.sleep(min(30, self.peer_connect_interval))
                     empty_tables = False
                     continue
 

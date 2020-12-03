@@ -61,7 +61,7 @@ def next_sub_epoch_summary(
     block: Union[UnfinishedBlock, FullBlock],
 ) -> Optional[SubEpochSummary]:
     prev_sb: Optional[SubBlockRecord] = sub_blocks.get(block.prev_header_hash, None)
-    if block.height == 0:
+    if prev_sb is None or prev_sb.height == 0:
         return None
 
     assert prev_sb is not None
@@ -78,9 +78,9 @@ def next_sub_epoch_summary(
         prev_sb.sp_total_iters(constants),
     )
     overflow = is_overflow_sub_block(constants, signage_point_index)
-    deficit = calculate_deficit(constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
+    deficit = calculate_deficit(constants, prev_sb.height + 1, prev_sb, overflow, len(block.finished_sub_slots) > 0)
     can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
-        constants, block.height, deficit, sub_blocks, prev_sb.header_hash if prev_sb is not None else None
+        constants, prev_sb.height + 1, deficit, sub_blocks, prev_sb.header_hash if prev_sb is not None else None
     )
 
     # can't finish se, no summary
@@ -99,7 +99,7 @@ def next_sub_epoch_summary(
             sub_blocks,
             height_to_hash,
             block.prev_header_hash,
-            block.height,
+            prev_sb.height + 1,
             uint64(block.weight - prev_sb.weight),
             deficit,
             True,
@@ -110,7 +110,7 @@ def next_sub_epoch_summary(
             sub_blocks,
             height_to_hash,
             block.prev_header_hash,
-            block.height,
+            prev_sb.height + 1,
             sub_slot_iters,
             deficit,
             True,
@@ -118,5 +118,5 @@ def next_sub_epoch_summary(
         )
 
     return make_sub_epoch_summary(
-        constants, sub_blocks, block.height + 1, prev_sb, next_difficulty, next_sub_slot_iters
+        constants, sub_blocks, prev_sb.height + 2, prev_sb, next_difficulty, next_sub_slot_iters
     )

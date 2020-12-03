@@ -259,6 +259,7 @@ def create_unfinished_block(
     rc_sub_block = RewardChainSubBlockUnfinished(
         total_iters,
         signage_point_index,
+        slot_cc_challenge,
         proof_of_space,
         signage_point.cc_vdf,
         cc_sp_signature,
@@ -324,6 +325,7 @@ def unfinished_block_to_full_block(
             new_height,
             unfinished_block.reward_chain_sub_block.total_iters,
             unfinished_block.reward_chain_sub_block.signage_point_index,
+            unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash,
             unfinished_block.reward_chain_sub_block.proof_of_space,
             unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf,
             unfinished_block.reward_chain_sub_block.challenge_chain_sp_signature,

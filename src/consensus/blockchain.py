@@ -188,7 +188,7 @@ class Blockchain:
             return ReceiveBlockResult.INVALID_BLOCK, error.code, None
 
         error_code = await validate_block_body(
-            self.constants, self.sub_blocks, self.block_store, self.coin_store, self.get_peak(), block
+            self.constants, self.sub_blocks, self.block_store, self.coin_store, self.get_peak(), block, block.height
         )
 
         if error_code is not None:
@@ -372,13 +372,10 @@ class Blockchain:
         return []
 
     async def validate_unfinished_block(self, block: UnfinishedBlock) -> Tuple[Optional[uint64], Optional[Err]]:
-        if block.header_hash in self.sub_blocks:
-            return (
-                self.sub_blocks[block.header_hash].required_iters,
-                None,
-            )  # Already validated and added
-
-        if block.prev_header_hash not in self.sub_blocks and not block.height == 0:
+        if (
+            block.prev_header_hash not in self.sub_blocks
+            and not block.prev_header_hash == self.constants.GENESIS_PREV_HASH
+        ):
             return None, Err.INVALID_PREV_BLOCK_HASH
 
         unfinished_header_block = UnfinishedHeaderBlock(
@@ -402,8 +399,20 @@ class Blockchain:
         if error_code is not None:
             return None, error_code.code
 
+        prev_height = (
+            -1
+            if block.prev_header_hash == self.constants.GENESIS_PREV_HASH
+            else self.sub_blocks[block.prev_header_hash].height
+        )
+
         error_code = await validate_block_body(
-            self.constants, self.sub_blocks, self.block_store, self.coin_store, self.get_peak(), block
+            self.constants,
+            self.sub_blocks,
+            self.block_store,
+            self.coin_store,
+            self.get_peak(),
+            block,
+            uint32(prev_height + 1),
         )
 
         if error_code is not None:

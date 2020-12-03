@@ -26,6 +26,7 @@ class UnfinishedBlock(Streamable):
     def prev_header_hash(self):
         return self.foliage_sub_block.prev_sub_block_hash
 
+    @property
     def partial_hash(self):
         return self.reward_chain_sub_block.get_hash()
 
