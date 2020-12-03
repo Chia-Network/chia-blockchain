@@ -226,6 +226,7 @@ class Blockchain:
                 await self.coin_store.new_block(block)
                 self.height_to_hash[uint32(0)] = block.header_hash
                 self.peak_height = uint32(0)
+                await self.block_store.set_peak(block.header_hash)
                 return uint32(0)
             return None
 

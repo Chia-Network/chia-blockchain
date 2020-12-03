@@ -221,7 +221,7 @@ def create_unfinished_block(
     is_genesis = False
     if prev_sub_block is not None:
         curr = prev_sub_block
-        is_block, prev_block = get_prev_block(curr, prev_block, sub_blocks, total_iters_sp)
+        is_block, prev_block = get_prev_block(curr, sub_blocks, total_iters_sp)
     else:
         # Genesis is a block
         is_genesis = True
@@ -305,6 +305,8 @@ def unfinished_block_to_full_block(
     icc_ip_proof: Optional[VDFProof],
     finished_sub_slots: List[EndOfSubSlotBundle],
     prev_sub_block: Optional[SubBlockRecord],
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    total_iters_sp: uint128,
     difficulty: uint64,
 ) -> FullBlock:
     # Replace things that need to be replaced, since foliage blocks did not necessarily have the latest information
@@ -313,10 +315,20 @@ def unfinished_block_to_full_block(
         new_height = uint32(0)
         new_foliage_sub_block = unfinished_block.foliage_sub_block
     else:
+        is_block, _ = get_prev_block(prev_sub_block, sub_blocks, total_iters_sp)
         new_weight = uint128(prev_sub_block.weight + difficulty)
         new_height = uint32(prev_sub_block.height + 1)
+        if is_block:
+            new_fbh = unfinished_block.foliage_sub_block.foliage_block_hash
+            new_fbs = unfinished_block.foliage_sub_block.foliage_block_signature
+        else:
+            new_fbh = None
+            new_fbs = None
         new_foliage_sub_block = replace(
-            unfinished_block.foliage_sub_block, prev_sub_block_hash=prev_sub_block.header_hash
+            unfinished_block.foliage_sub_block,
+            prev_sub_block_hash=prev_sub_block.header_hash,
+            foliage_block_hash=new_fbh,
+            foliage_block_signature=new_fbs,
         )
     ret = FullBlock(
         finished_sub_slots,
