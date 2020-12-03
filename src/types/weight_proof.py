@@ -36,30 +36,34 @@ class SubEpochData(Streamable):
 @dataclass(frozen=True)
 @streamable
 class SubSlotData(Streamable):
+    # if infused
     proof_of_space: Optional[ProofOfSpace]
     # Signature of signage point
     cc_sp_sig: Optional[G2Element]
     # VDF to signage point
-    cc_signage_point_vdf: Optional[VDFProof]
+    cc_signage_point: Optional[VDFProof]
     # VDF from signage to infusion point
-    cc_infusion_point_vdf: Optional[VDFProof]
-    # VDF from infusion point to end of slot
-    cc_infusion_to_slot_end_vdf: Optional[VDFProof]
-    icc_infusion_to_slot_end_vdf: Optional[VDFProof]
+    cc_infusion_point: Optional[VDFProof]
 
     cc_signage_point_index: Optional[uint8]
-    # VDF from beginning to end of slot
-    cc_slot_vdf: Optional[VDFProof]
-    icc_slot_vdf: Optional[VDFProof]
+
+    # VDF from beginning to end of slot if not infused
+    #  from ip to end if infused
+    cc_slot_end: Optional[VDFProof]
+    icc_slot_end: Optional[VDFProof]
+
+    # info from finished slots
+    cc_slot_end_info: Optional[VDFInfo]
+    icc_slot_end_info: Optional[VDFInfo]
 
     def is_challenge(self):
-        if self.cc_slot_vdf is not None:
+        if self.cc_slot_end is not None:
             return False
         if self.cc_sp_sig is None:
             return False
-        if self.cc_signage_point_vdf is None:
+        if self.cc_signage_point is None:
             return False
-        if self.cc_infusion_point_vdf is None:
+        if self.cc_infusion_point is None:
             return False
         if self.icc_infusion_to_slot_end_vdf is None:
             return False
