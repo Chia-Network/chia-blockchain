@@ -17,6 +17,7 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 
 - We have moved from using gulrak/filesystem across all platforms to only using it on MacOS. It's required on MacOS as we are still targeting Mojave compatibility. This should resolve Windows path issues.
+- We upgraded to cbor 5.2.0 but expect to deprecate cbor in a future release.
 
 ### Fixed
 
