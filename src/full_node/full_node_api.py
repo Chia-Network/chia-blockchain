@@ -389,7 +389,23 @@ class FullNodeAPI:
     @api_request
     async def respond_end_of_sub_slot(
         self, request: full_node_protocol.RespondEndOfSubSlot, peer: ws.WSChiaConnection
-    ) -> None:
+    ) -> Optional[Message]:
+        if (
+            self.full_node.full_node_store.get_sub_slot(
+                request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+            )
+            is None
+            and request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+            != self.full_node.constants.FIRST_CC_CHALLENGE
+        ):
+            # If we don't have the prev, request the prev instead
+            full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
+                request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                uint8(0),
+                bytes([0] * 32),
+            )
+            return Message("request_signage_point_or_end_of_sub_slot", full_node_request)
+
         peak = self.full_node.blockchain.get_peak()
         if peak is not None and peak.height > 2:
             next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
@@ -402,7 +418,6 @@ class FullNodeAPI:
         new_infusions = self.full_node.full_node_store.new_finished_sub_slot(
             request.end_of_slot_bundle, self.full_node.blockchain.sub_blocks, self.full_node.blockchain.get_peak()
         )
-
         # It may be an empty list, even if it's not None. Not None means added successfully
         if new_infusions is not None:
             self.log.info(
