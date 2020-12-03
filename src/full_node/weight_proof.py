@@ -147,7 +147,7 @@ class WeightProofFactory:
         # validate last ses_hash
         if last_ses.get_hash() != last_ses_block.finished_sub_slots[-1].challenge_chain.subepoch_summary_hash:
             self.log.error(
-                f"failed to validate ses hashes block height {last_ses_block.height} {last_ses.get_hash()} "
+                f"failed to validate ses hashes block height {last_ses_block.reward_chain_sub_block.sub_block_height} {last_ses.get_hash()} "
                 f" {last_ses_block.finished_sub_slots[-1].challenge_chain.subepoch_summary_has}"
             )
             return None
@@ -513,6 +513,9 @@ def get_last_ses_block_idx(
 
 
 def empty_sub_slot_data(end_of_slot: EndOfSubSlotBundle):
+    icc_end_of_slot_info: Optional = None
+    if end_of_slot.infused_challenge_chain is not None:
+        icc_end_of_slot_info = end_of_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
     return SubSlotData(
         None,
         None,
@@ -522,5 +525,5 @@ def empty_sub_slot_data(end_of_slot: EndOfSubSlotBundle):
         end_of_slot.proofs.challenge_chain_slot_proof,
         end_of_slot.proofs.infused_challenge_chain_slot_proof,
         end_of_slot.challenge_chain.challenge_chain_end_of_slot_vdf,
-        end_of_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+        icc_end_of_slot_info,
     )
