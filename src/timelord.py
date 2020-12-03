@@ -299,7 +299,8 @@ class Timelord:
         # Adjust all signage points iterations to the peak.
         iters_per_signage = uint64(sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
         self.signage_point_iters = [
-            (k * iters_per_signage - ip_iters, k) for k in range(1, self.constants.NUM_SPS_SUB_SLOT)
+            (k * iters_per_signage - ip_iters, k)
+            for k in range(1, self.constants.NUM_SPS_SUB_SLOT)
             if k * iters_per_signage - ip_iters > 0
         ]
         for sp, k in self.signage_point_iters:
@@ -446,7 +447,6 @@ class Timelord:
                     rc_info,
                     rc_proof,
                 )
-                log.info(f"Finished signage point {signage_point_index}/{self.constants.NUM_SPS_SUB_SLOT}")
                 if self.server is not None:
                     msg = Message("new_signage_point_vdf", response)
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
@@ -469,8 +469,7 @@ class Timelord:
 
     async def _check_for_new_ip(self):
         infusion_iters = [
-            iteration for iteration, t in self.iteration_to_proof_type.items()
-            if t == IterationType.INFUSION_POINT
+            iteration for iteration, t in self.iteration_to_proof_type.items() if t == IterationType.INFUSION_POINT
         ]
         for iteration in infusion_iters:
             proofs_with_iter = [
@@ -514,9 +513,7 @@ class Timelord:
                             icc_info = info
                             icc_proof = proof
                     if cc_info is None or cc_proof is None or rc_info is None or rc_proof is None:
-                        log.error(
-                            f"Insufficient VDF proofs for infusion point ch: {challenge} iterations:{iteration}"
-                        )
+                        log.error(f"Insufficient VDF proofs for infusion point ch: {challenge} iterations:{iteration}")
                     log.info(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
                     response = timelord_protocol.NewInfusionPointVDF(
                         challenge,
