@@ -24,8 +24,6 @@ class TimelordAPI:
     @api_request
     async def new_unfinished_subblock(self, new_unfinished_subblock: timelord_protocol.NewUnfinishedSubBlock):
         async with self.timelord.lock:
-            if not self.timelord.accept_unfinished_block(new_unfinished_subblock):
-                return
             sp_iters, ip_iters = iters_from_sub_block(
                 self.timelord.constants,
                 new_unfinished_subblock.reward_chain_sub_block,
@@ -33,7 +31,7 @@ class TimelordAPI:
                 self.timelord.last_state.get_difficulty(),
             )
             last_ip_iters = self.timelord.last_state.get_last_ip()
-            if sp_iters < ip_iters:
+            if sp_iters > ip_iters:
                 self.timelord.overflow_blocks.append(new_unfinished_subblock)
             elif ip_iters > last_ip_iters:
                 self.timelord.unfinished_blocks.append(new_unfinished_subblock)
