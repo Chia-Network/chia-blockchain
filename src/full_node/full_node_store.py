@@ -83,10 +83,10 @@ class FullNodeStore:
             except KeyError:
                 pass
 
-    def seen_unfinished_block(self, temp_header_hash: bytes32) -> bool:
-        if temp_header_hash in self.seen_unfinished_blocks:
+    def seen_unfinished_block(self, object_hash: bytes32) -> bool:
+        if object_hash in self.seen_unfinished_blocks:
             return True
-        self.seen_unfinished_blocks.add(temp_header_hash)
+        self.seen_unfinished_blocks.add(object_hash)
         return False
 
     def clear_seen_unfinished_blocks(self) -> None:
@@ -470,6 +470,8 @@ class FullNodeStore:
                 raise ValueError("Should have finished sub slots")
             if self.finished_sub_slots[0][0] is not None:
                 raise ValueError("First sub slot should be None")
+            if pos_ss_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
+                pos_index = 0
             final_index = 0
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                 if sub_slot is not None and sub_slot.challenge_chain.get_hash() == pos_ss_challenge_hash:

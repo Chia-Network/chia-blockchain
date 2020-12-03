@@ -22,7 +22,7 @@ class TimelordAPI:
                 self.timelord.new_peak = new_peak
 
     @api_request
-    async def new_unfinished_subblock(self, new_unfinished_subblock: timelord_protocol.NewUnfinishedSubBlock):
+    async def new_unfinished_sub_block(self, new_unfinished_subblock: timelord_protocol.NewUnfinishedSubBlock):
         async with self.timelord.lock:
             sp_iters, ip_iters = iters_from_sub_block(
                 self.timelord.constants,

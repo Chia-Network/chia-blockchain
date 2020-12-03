@@ -186,6 +186,11 @@ class ChiaServer:
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
+        if (target_node.host == "127.0.0.1" or target_node.host == "localhost") and target_node.port == self._port:
+            # Don't connect to self
+            self.log.info(f"Not connecting to {target_node}")
+            return False
+
         ssl_context = ssl_context_for_client(self._private_cert_path, self._private_key_path, auth)
         session = None
         try:

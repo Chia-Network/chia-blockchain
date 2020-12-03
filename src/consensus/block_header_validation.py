@@ -768,11 +768,18 @@ async def validate_finished_header_block(
         ip_vdf_iters,
         header_block.reward_chain_sub_block.challenge_chain_ip_vdf.output,
     )
+    log.warning(f"{header_block.reward_chain_sub_block.challenge_chain_ip_vdf}")
+    should = dataclasses.replace(
+        cc_target_vdf_info,
+        number_of_iterations=ip_iters,
+    )
+    log.warning(f"Should be {should}")
     if header_block.reward_chain_sub_block.challenge_chain_ip_vdf != dataclasses.replace(
         cc_target_vdf_info,
         number_of_iterations=ip_iters,
     ):
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
+    log.warning("Is!")
     if not header_block.challenge_chain_ip_proof.is_valid(
         constants,
         cc_vdf_output,

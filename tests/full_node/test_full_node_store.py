@@ -82,6 +82,12 @@ class TestFullNodeStore:
         sub_slots = blocks[0].finished_sub_slots
         assert len(sub_slots) == 5
 
+        assert (
+            store.get_finished_sub_slots(
+                None, {}, sub_slots[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge, False
+            )
+            == []
+        )
         # Test adding non-connecting sub-slots genesis
         assert store.get_sub_slot(test_constants.FIRST_CC_CHALLENGE) is None
         assert store.get_sub_slot(sub_slots[0].challenge_chain.get_hash()) is None

@@ -34,30 +34,30 @@ class FullNodeRpcApi:
 
     async def _state_changed(self, change: str) -> List[Dict]:
         payloads = []
-        if change == "sub_block":
-            data = await self.get_latest_block_headers({})
-            assert data is not None
-            payloads.append(
-                create_payload(
-                    "get_latest_block_headers",
-                    data,
-                    self.service_name,
-                    "wallet_ui",
-                    string=False,
-                )
-            )
-            data = await self.get_blockchain_state({})
-            assert data is not None
-            payloads.append(
-                create_payload(
-                    "get_blockchain_state",
-                    data,
-                    self.service_name,
-                    "wallet_ui",
-                    string=False,
-                )
-            )
-            return payloads
+        # if change == "sub_block":
+        #     data = await self.get_latest_block_headers({})
+        #     assert data is not None
+        #     payloads.append(
+        #         create_payload(
+        #             "get_latest_block_headers",
+        #             data,
+        #             self.service_name,
+        #             "wallet_ui",
+        #             string=False,
+        #         )
+        #     )
+        #     data = await self.get_blockchain_state({})
+        #     assert data is not None
+        #     payloads.append(
+        #         create_payload(
+        #             "get_blockchain_state",
+        #             data,
+        #             self.service_name,
+        #             "wallet_ui",
+        #             string=False,
+        #         )
+        #     )
+        #     return payloads
         return []
 
     # async def get_blockchain_state(self, request: Dict):

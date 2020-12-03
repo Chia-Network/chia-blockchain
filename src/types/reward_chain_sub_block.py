@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from blspy import G2Element
 from typing import Optional
 
+from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint128, uint8
 from src.util.streamable import Streamable, streamable
 from src.types.proof_of_space import ProofOfSpace
@@ -13,6 +14,7 @@ from src.types.vdf import VDFInfo
 class RewardChainSubBlockUnfinished(Streamable):
     total_iters: uint128
     signage_point_index: uint8
+    pos_ss_cc_challenge_hash: bytes32
     proof_of_space: ProofOfSpace
     challenge_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
     challenge_chain_sp_signature: G2Element
@@ -28,6 +30,7 @@ class RewardChainSubBlock(Streamable):
     total_iters: uint128
     signage_point_index: uint8
     proof_of_space: ProofOfSpace
+    pos_ss_cc_challenge_hash: bytes32
     challenge_chain_sp_vdf: Optional[VDFInfo]  # Not present for first sp in slot
     challenge_chain_sp_signature: G2Element
     challenge_chain_ip_vdf: VDFInfo
@@ -41,6 +44,7 @@ class RewardChainSubBlock(Streamable):
         return RewardChainSubBlockUnfinished(
             self.total_iters,
             self.signage_point_index,
+            self.pos_ss_cc_challenge_hash,
             self.proof_of_space,
             self.challenge_chain_sp_vdf,
             self.challenge_chain_sp_signature,

@@ -36,12 +36,15 @@ async def validate_block_body(
     coin_store: CoinStore,
     peak: Optional[SubBlockRecord],
     block: Union[FullBlock, UnfinishedBlock],
+    height: uint32,
 ) -> Optional[Err]:
     """
     This assumes the header block has been completely validated.
     Validates the transactions and body of the block. Returns None if everything
     validates correctly, or an Err if something does not validate.
     """
+    if isinstance(block, FullBlock):
+        assert height == block.height
 
     # 1. For non block sub-blocks, foliage block, transaction filter, transactions info, and generator must be empty
     # If it is a sub block but not a block, there is no body to validate. Check that all fields are None
@@ -82,19 +85,19 @@ async def validate_block_body(
 
     # 7. The reward claims must be valid for the previous sub-blocks, and current block fees
     pool_coin = create_pool_coin(
-        block.height,
+        height,
         block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
-        calculate_pool_reward(block.height),
+        calculate_pool_reward(height),
     )
     farmer_coin = create_farmer_coin(
-        block.height,
+        height,
         block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
-        calculate_base_farmer_reward(block.height) + block.transactions_info.fees,
+        calculate_base_farmer_reward(height) + block.transactions_info.fees,
     )
     expected_reward_coins.add(pool_coin)
     expected_reward_coins.add(farmer_coin)
 
-    if block.height > 0:
+    if height > 0:
         # Add reward claims for all sub-blocks since the last block
         curr_sb = sub_blocks[block.prev_header_hash]
         while not curr_sb.is_block:
@@ -185,7 +188,7 @@ async def validate_block_body(
             return Err.DOUBLE_SPEND
 
     # 15. Check if removals exist and were not previously spent. (unspent_db + diff_store + this_block)
-    if peak is None or block.height == 0:
+    if peak is None or height == 0:
         fork_h: int = -1
     else:
         fork_h: int = find_fork_point_in_chain(sub_blocks, peak, sub_blocks[block.prev_header_hash])
@@ -195,7 +198,7 @@ async def validate_block_body(
     removals_since_fork: Set[bytes32] = set()
     coinbases_since_fork: Dict[bytes32, uint32] = {}
 
-    if block.height > 0:
+    if height > 0:
         curr: Optional[FullBlock] = await block_store.get_full_block(block.prev_header_hash)
         assert curr is not None
 
@@ -218,7 +221,7 @@ async def validate_block_body(
         if rem in additions_dic:
             # Ephemeral coin
             rem_coin: Coin = additions_dic[rem]
-            new_unspent: CoinRecord = CoinRecord(rem_coin, block.height, uint32(0), False, False)
+            new_unspent: CoinRecord = CoinRecord(rem_coin, height, uint32(0), False, False)
             removal_coin_records[new_unspent.name] = new_unspent
         else:
             unspent = await coin_store.get_coin_record(rem)
@@ -230,7 +233,7 @@ async def validate_block_body(
                     return Err.DOUBLE_SPEND
                 # If it's a coinbase, check that it's not frozen
                 if unspent.coinbase == 1:
-                    if block.height < unspent.confirmed_block_index + constants.COINBASE_FREEZE_PERIOD:
+                    if height < unspent.confirmed_block_index + constants.COINBASE_FREEZE_PERIOD:
                         return Err.COINBASE_NOT_YET_SPENDABLE
                 removal_coin_records[unspent.name] = unspent
             else:
@@ -241,7 +244,7 @@ async def validate_block_body(
                     return Err.UNKNOWN_UNSPENT
                 if rem in coinbases_since_fork:
                     # This coin is a coinbase coin
-                    if block.height < coinbases_since_fork[rem] + constants.COINBASE_FREEZE_PERIOD:
+                    if height < coinbases_since_fork[rem] + constants.COINBASE_FREEZE_PERIOD:
                         return Err.COINBASE_NOT_YET_SPENDABLE
                 new_coin, confirmed_height = additions_since_fork[rem]
                 new_coin_record: CoinRecord = CoinRecord(
@@ -304,7 +307,7 @@ async def validate_block_body(
             unspent,
             removal_coin_records,
             npc.condition_dict,
-            block.height,
+            height,
         )
         if error:
             return error
