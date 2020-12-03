@@ -317,7 +317,7 @@ class FullNodeAPI:
         self, request: full_node_protocol.RespondSignagePoint, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
         peak = self.full_node.blockchain.get_peak()
-        if peak is not None and peak.height > 2:
+        if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
             sub_slot_iters = peak.sub_slot_iters
             difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
             next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
@@ -362,7 +362,7 @@ class FullNodeAPI:
             msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
-            if peak is not None and peak.height > 2:
+            if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
                 # Makes sure to potentially update the difficulty if we are past the peak (into a new sub-slot)
                 assert ip_sub_slot is not None
                 if request.challenge_chain_vdf.challenge != ip_sub_slot.challenge_chain.get_hash():

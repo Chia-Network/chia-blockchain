@@ -311,10 +311,13 @@ def unfinished_block_to_full_block(
 ) -> FullBlock:
     # Replace things that need to be replaced, since foliage blocks did not necessarily have the latest information
     if prev_sub_block is None:
+        is_block = True
         new_weight = uint128(difficulty)
         new_height = uint32(0)
         new_foliage_sub_block = unfinished_block.foliage_sub_block
         new_foliage_block = unfinished_block.foliage_block
+        new_tx_info = unfinished_block.transactions_info
+        new_generator = unfinished_block.transactions_generator
     else:
         is_block, _ = get_prev_block(prev_sub_block, sub_blocks, total_iters_sp)
         new_weight = uint128(prev_sub_block.weight + difficulty)
@@ -323,10 +326,14 @@ def unfinished_block_to_full_block(
             new_fbh = unfinished_block.foliage_sub_block.foliage_block_hash
             new_fbs = unfinished_block.foliage_sub_block.foliage_block_signature
             new_foliage_block = unfinished_block.foliage_block
+            new_tx_info = unfinished_block.transactions_info
+            new_generator = unfinished_block.transactions_generator
         else:
             new_fbh = None
             new_fbs = None
             new_foliage_block = None
+            new_tx_info = None
+            new_generator = None
         new_foliage_sub_block = replace(
             unfinished_block.foliage_sub_block,
             prev_sub_block_hash=prev_sub_block.header_hash,
@@ -349,7 +356,7 @@ def unfinished_block_to_full_block(
             unfinished_block.reward_chain_sub_block.reward_chain_sp_signature,
             rc_ip_vdf,
             icc_ip_vdf,
-            unfinished_block.foliage_block is not None,
+            is_block,
         ),
         unfinished_block.challenge_chain_sp_proof,
         cc_ip_proof,
@@ -358,7 +365,7 @@ def unfinished_block_to_full_block(
         icc_ip_proof,
         new_foliage_sub_block,
         new_foliage_block,
-        unfinished_block.transactions_info,
-        unfinished_block.transactions_generator,
+        new_tx_info,
+        new_generator,
     )
     return recursive_replace(ret, "foliage_sub_block.reward_block_hash", ret.reward_chain_sub_block.get_hash())

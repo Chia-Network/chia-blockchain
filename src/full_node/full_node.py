@@ -483,7 +483,10 @@ class FullNode:
         elif added == ReceiveBlockResult.NEW_PEAK:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
             new_peak: SubBlockRecord = self.blockchain.get_peak()
-            self.log.info(f"Updated peak to {new_peak} at height {new_peak.height}, " f"forked at {fork_height}")
+            self.log.info(
+                f"Updated peak to height {new_peak.height}, weight {new_peak.weight}, hh {new_peak.header_hash}, "
+                f"forked at {fork_height}"
+            )
 
             difficulty = self.blockchain.get_next_difficulty(new_peak.header_hash, False)
             sub_slot_iters = self.blockchain.get_next_slot_iters(new_peak.header_hash, False)
@@ -615,7 +618,7 @@ class FullNode:
             height = self.blockchain.sub_blocks[block.prev_header_hash].height + 1
 
         self.full_node_store.add_unfinished_block(height, block)
-        self.log.warning(f"Added unfinished_block {block.partial_hash}")
+        self.log.info(f"Added unfinished_block {block.partial_hash}")
 
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
             block.reward_chain_sub_block,

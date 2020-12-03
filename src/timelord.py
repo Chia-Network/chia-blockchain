@@ -734,7 +734,7 @@ class Timelord:
                     time_taken = time.time() - self.chain_start_time[chain]
                     ips = int(iterations_needed / time_taken * 10) / 10
                     log.info(
-                        f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed} input: {initial_form}"
+                        f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
                         f" iters."
                         f"Estimated IPS: {ips}. Chain: {chain}"
                     )

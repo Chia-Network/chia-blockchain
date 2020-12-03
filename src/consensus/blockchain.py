@@ -271,7 +271,7 @@ class Blockchain:
             # Changes the peak to be the new peak
             await self.block_store.set_peak(sub_block.header_hash)
             self.peak_height = sub_block.height
-            return uint32(min(fork_h, 0))
+            return uint32(max(fork_h, 0))
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
         return None
