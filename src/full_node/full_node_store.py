@@ -349,6 +349,8 @@ class FullNodeStore:
 
                 sp_arr[index] = signage_point
                 return True
+        log.warning(f"{self.finished_sub_slots}")
+        log.warning("No cc found...")
         return False
 
     def get_signage_point(self, cc_signage_point: bytes32) -> Optional[SignagePoint]:
@@ -465,13 +467,15 @@ class FullNodeStore:
 
         pos_index: Optional[int] = None
         final_index: Optional[int] = None
+        if pos_ss_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
+            pos_index = 0
+        if final_sub_slot_in_chain == self.constants.FIRST_CC_CHALLENGE:
+            final_index = 0
         if prev_sb is None:
             if len(self.finished_sub_slots) < 1:
                 raise ValueError("Should have finished sub slots")
             if self.finished_sub_slots[0][0] is not None:
                 raise ValueError("First sub slot should be None")
-            if pos_ss_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
-                pos_index = 0
             final_index = 0
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                 if sub_slot is not None and sub_slot.challenge_chain.get_hash() == pos_ss_challenge_hash:
@@ -479,14 +483,17 @@ class FullNodeStore:
         else:
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                 if sub_slot is None:
-                    pass
+                    continue
                 if sub_slot.challenge_chain.get_hash() == pos_ss_challenge_hash:
                     pos_index = index
                 if sub_slot.challenge_chain.get_hash() == final_sub_slot_in_chain:
                     final_index = index
 
         if pos_index is None or final_index is None:
-            raise ValueError(f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index}")
+            log.error(f"{pos_ss_challenge_hash} {len(self.finished_sub_slots)} {prev_sb.height}")
+            raise ValueError(
+                f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index} {len(sub_block_records)}"
+            )
 
         if extra_sub_slot:
             new_final_index = pos_index + 1

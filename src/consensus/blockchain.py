@@ -120,7 +120,7 @@ class Blockchain:
             if curr.height == 0:
                 break
             curr = self.sub_blocks[curr.prev_hash]
-        assert len(self.sub_blocks) == len(self.height_to_hash) == self.peak_height + 1
+        assert len(self.height_to_hash) == self.peak_height + 1
 
     def get_peak(self) -> Optional[SubBlockRecord]:
         """
