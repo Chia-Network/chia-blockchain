@@ -2,6 +2,7 @@ import asyncio
 import io
 import logging
 import time
+import traceback
 from asyncio import StreamReader, StreamWriter
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Union
@@ -607,25 +608,29 @@ class Timelord:
             await asyncio.sleep(5)
             await self._reset_chains()
         while not self._shut_down:
-            await asyncio.sleep(0.1)
-            # Didn't get any useful data, continue.
-            # Map free vdf_clients to unspawned chains.
-            await self._map_chains_with_vdf_clients()
-            async with self.lock:
-                # We've got a new peak, process it.
-                if self.new_peak is not None:
-                    await self._handle_new_peak()
-                # A subslot ended, process it.
-                if self.new_subslot_end is not None:
-                    await self._handle_subslot_end()
-                # Submit pending iterations.
-                await self._submit_iterations()
-                # Check for new signage point and broadcast it if present.
-                await self._check_for_new_sp()
-                # Check for new infusion point and broadcast it if present.
-                await self._check_for_new_ip()
-                # Check for end of subslot, respawn chains and build EndOfSubslotBundle.
-                await self._check_for_end_of_subslot()
+            try:
+                await asyncio.sleep(0.1)
+                # Didn't get any useful data, continue.
+                # Map free vdf_clients to unspawned chains.
+                await self._map_chains_with_vdf_clients()
+                async with self.lock:
+                    # We've got a new peak, process it.
+                    if self.new_peak is not None:
+                        await self._handle_new_peak()
+                    # A subslot ended, process it.
+                    if self.new_subslot_end is not None:
+                        await self._handle_subslot_end()
+                    # Submit pending iterations.
+                    await self._submit_iterations()
+                    # Check for new signage point and broadcast it if present.
+                    await self._check_for_new_sp()
+                    # Check for new infusion point and broadcast it if present.
+                    await self._check_for_new_ip()
+                    # Check for end of subslot, respawn chains and build EndOfSubslotBundle.
+                    await self._check_for_end_of_subslot()
+            except Exception as e:
+                tb = traceback.format_exc()
+                log.error(f"Error while handling message: {tb}")
 
     async def _do_process_communication(
         self,
