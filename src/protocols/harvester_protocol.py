@@ -34,6 +34,7 @@ class NewSignagePoint:
 @cbor_message
 class NewProofOfSpace:
     challenge_hash: bytes32
+    sp_hash: bytes32
     plot_identifier: str
     proof: ProofOfSpace
     signage_point_index: uint8
@@ -43,6 +44,7 @@ class NewProofOfSpace:
 @cbor_message
 class RequestSignatures:
     plot_identifier: str
+    challenge_hash: bytes32
     sp_hash: bytes32
     messages: List[bytes32]
 
@@ -51,6 +53,7 @@ class RequestSignatures:
 @cbor_message
 class RespondSignatures:
     plot_identifier: str
+    challenge_hash: bytes32
     sp_hash: bytes32
     local_pk: G1Element
     farmer_pk: G1Element

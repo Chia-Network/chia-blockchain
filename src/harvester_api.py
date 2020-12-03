@@ -22,10 +22,8 @@ from src.util.ints import uint8, uint64
 class HarvesterAPI:
     harvester: Harvester
 
-    def __init__(self, harvester):
+    def __init__(self, harvester: Harvester):
         self.harvester = harvester
-        self.farmer_public_keys: List[G1Element] = []
-        self.pool_public_keys: List[G1Element] = []
 
     def _set_state_changed_callback(self, callback: Callable):
         self.harvester.state_changed_callback = callback
@@ -37,8 +35,8 @@ class HarvesterAPI:
         as well as the farmer pks, which must be put into the plots, before the plotting process begins.
         We cannot use any plots which have different keys in them.
         """
-        self.farmer_public_keys = harvester_handshake.farmer_public_keys
-        self.pool_public_keys = harvester_handshake.pool_public_keys
+        self.harvester.farmer_public_keys = harvester_handshake.farmer_public_keys
+        self.harvester.pool_public_keys = harvester_handshake.pool_public_keys
 
         await self.harvester.refresh_plots()
 
@@ -63,7 +61,7 @@ class HarvesterAPI:
         4. Looks up the full proof of space in the plot for each quality, approximately 64 reads per quality
         5. Returns the proof of space to the farmer
         """
-        if len(self.pool_public_keys) == 0 or len(self.farmer_public_keys) == 0:
+        if len(self.harvester.pool_public_keys) == 0 or len(self.harvester.farmer_public_keys) == 0:
             # This means that we have not received the handshake yet
             return
 
@@ -75,16 +73,16 @@ class HarvesterAPI:
 
         loop = asyncio.get_running_loop()
 
-        def blocking_lookup(filename: Path, plot_info: PlotInfo, prover: DiskProver) -> List[ProofOfSpace]:
+        def blocking_lookup(filename: Path, plot_info: PlotInfo) -> List[ProofOfSpace]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
-                sp_challenge_hash = ProofOfSpace.calculate_new_challenge_hash(
+                sp_challenge_hash = ProofOfSpace.calculate_pos_challenge(
                     plot_info.prover.get_id(), new_challenge.challenge_hash, new_challenge.sp_hash
                 )
-                quality_strings = prover.get_qualities_for_challenge(sp_challenge_hash)
-            except Exception:
-                self.harvester.log.error("Error using prover object. Reinitializing prover object.")
+                quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
+            except Exception as e:
+                self.harvester.log.error(f"Error using prover object. Reinitializing prover object. {e}")
                 self.harvester.provers[filename] = dataclasses.replace(plot_info, prover=DiskProver(str(filename)))
                 return []
 
@@ -93,7 +91,7 @@ class HarvesterAPI:
                 # Found proofs of space (on average 1 is expected per plot)
                 for index, quality_str in enumerate(quality_strings):
                     required_iters: uint64 = calculate_iterations_quality(
-                        quality_str, prover.get_size(), new_challenge.difficulty, new_challenge.sp_hash
+                        quality_str, plot_info.prover.get_size(), new_challenge.difficulty, new_challenge.sp_hash
                     )
                     sp_interval_iters = calculate_sp_interval_iters(
                         self.harvester.constants, new_challenge.sub_slot_iters
@@ -101,7 +99,7 @@ class HarvesterAPI:
                     if required_iters < sp_interval_iters:
                         # Found a very good proof of space! will fetch the whole proof from disk, then send to farmer
                         try:
-                            proof_xs = prover.get_full_proof(sp_challenge_hash, index)
+                            proof_xs = plot_info.prover.get_full_proof(sp_challenge_hash, index)
                         except RuntimeError:
                             self.harvester.log.error(f"Exception fetching full proof for {filename}")
                             continue
@@ -115,22 +113,28 @@ class HarvesterAPI:
                                 plot_info.pool_public_key,
                                 None,
                                 plot_public_key,
-                                uint8(prover.get_size()),
+                                uint8(plot_info.prover.get_size()),
                                 proof_xs,
                             )
                         )
             return responses
 
-        async def lookup_challenge(filename: Path, prover: DiskProver) -> List[harvester_protocol.NewProofOfSpace]:
+        async def lookup_challenge(filename: Path, plot_info: PlotInfo) -> List[harvester_protocol.NewProofOfSpace]:
             # Executes a DiskProverLookup in a thread pool, and returns responses
             all_responses: List[harvester_protocol.NewProofOfSpace] = []
+            if self.harvester._is_shutdown:
+                return []
             proofs_of_space: List[ProofOfSpace] = await loop.run_in_executor(
-                self.harvester.executor, blocking_lookup, filename, prover
+                self.harvester.executor, blocking_lookup, filename, plot_info
             )
             for proof_of_space in proofs_of_space:
                 all_responses.append(
                     harvester_protocol.NewProofOfSpace(
-                        new_challenge.challenge_hash, prover.get_id(), proof_of_space, new_challenge.signage_point_index
+                        new_challenge.challenge_hash,
+                        new_challenge.sp_hash,
+                        str(filename.resolve()),
+                        proof_of_space,
+                        new_challenge.signage_point_index,
                     )
                 )
             return all_responses
@@ -146,14 +150,14 @@ class HarvesterAPI:
                     new_challenge.challenge_hash,
                     new_challenge.sp_hash,
                 ):
-                    awaitables.append(lookup_challenge(try_plot_filename, try_plot_info.prover))
+                    awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0
         for sublist_awaitable in asyncio.as_completed(awaitables):
             for response in await sublist_awaitable:
                 total_proofs_found += 1
-                msg = Message("challenge_response", response)
+                msg = Message("new_proof_of_space", response)
                 await peer.send_message(msg)
         self.harvester.log.info(
             f"{len(awaitables)} plots were eligible for farming {new_challenge.challenge_hash.hex()[:10]}..."
@@ -186,6 +190,7 @@ class HarvesterAPI:
 
         response: harvester_protocol.RespondSignatures = harvester_protocol.RespondSignatures(
             request.plot_identifier,
+            request.challenge_hash,
             request.sp_hash,
             local_sk.get_g1(),
             plot_info.farmer_public_key,

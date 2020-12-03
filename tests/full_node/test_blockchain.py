@@ -9,6 +9,7 @@ from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.slots import InfusedChallengeChainSubSlot
+from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFInfo, VDFProof
 from src.util.block_tools import get_vdf_info_and_proof
 from src.util.errors import Err
@@ -146,6 +147,42 @@ class TestBlockHeaderValidation:
                 f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
             )
         assert empty_blockchain.get_peak().height == len(blocks) - 1
+
+    @pytest.mark.asyncio
+    async def test_unfinished_blocks(self, empty_blockchain):
+        blockchain = empty_blockchain
+        blocks = bt.get_consecutive_blocks(2)
+        for block in blocks[:-1]:
+            result, err, _ = await blockchain.receive_block(block)
+            assert result == ReceiveBlockResult.NEW_PEAK
+        block = blocks[-1]
+        unf = UnfinishedBlock(
+            block.finished_sub_slots,
+            block.reward_chain_sub_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+        _, err = await blockchain.validate_unfinished_block(unf)
+        assert err is None
+        result, err, _ = await blockchain.receive_block(block)
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, force_overflow=True)
+        block = blocks[-1]
+        unf = UnfinishedBlock(
+            block.finished_sub_slots,
+            block.reward_chain_sub_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+        _, err = await blockchain.validate_unfinished_block(unf)
+        assert err is None
 
     @pytest.mark.asyncio
     async def test_empty_genesis(self, empty_blockchain):
