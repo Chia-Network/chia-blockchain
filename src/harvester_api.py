@@ -73,7 +73,7 @@ class HarvesterAPI:
 
         loop = asyncio.get_running_loop()
 
-        def blocking_lookup(filename: Path, plot_info: PlotInfo) -> List[ProofOfSpace]:
+        def blocking_lookup(filename: Path, plot_info: PlotInfo) -> List[Tuple[bytes32, ProofOfSpace]]:
             # Uses the DiskProver object to lookup qualities. This is a blocking call,
             # so it should be run in a thread pool.
             try:
@@ -86,7 +86,7 @@ class HarvesterAPI:
                 self.harvester.provers[filename] = dataclasses.replace(plot_info, prover=DiskProver(str(filename)))
                 return []
 
-            responses: List[ProofOfSpace] = []
+            responses: List[Tuple[bytes32, ProofOfSpace]] = []
             if quality_strings is not None:
                 # Found proofs of space (on average 1 is expected per plot)
                 for index, quality_str in enumerate(quality_strings):
@@ -108,13 +108,16 @@ class HarvesterAPI:
                             plot_info.local_sk.get_g1(), plot_info.farmer_public_key
                         )
                         responses.append(
-                            ProofOfSpace(
-                                sp_challenge_hash,
-                                plot_info.pool_public_key,
-                                None,
-                                plot_public_key,
-                                uint8(plot_info.prover.get_size()),
-                                proof_xs,
+                            (
+                                quality_str,
+                                ProofOfSpace(
+                                    sp_challenge_hash,
+                                    plot_info.pool_public_key,
+                                    None,
+                                    plot_public_key,
+                                    uint8(plot_info.prover.get_size()),
+                                    proof_xs,
+                                ),
                             )
                         )
             return responses
@@ -124,15 +127,15 @@ class HarvesterAPI:
             all_responses: List[harvester_protocol.NewProofOfSpace] = []
             if self.harvester._is_shutdown:
                 return []
-            proofs_of_space: List[ProofOfSpace] = await loop.run_in_executor(
+            proofs_of_space_and_q: List[Tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
                 self.harvester.executor, blocking_lookup, filename, plot_info
             )
-            for proof_of_space in proofs_of_space:
+            for quality_str, proof_of_space in proofs_of_space_and_q:
                 all_responses.append(
                     harvester_protocol.NewProofOfSpace(
                         new_challenge.challenge_hash,
                         new_challenge.sp_hash,
-                        str(filename.resolve()),
+                        quality_str.hex() + str(filename.resolve()),
                         proof_of_space,
                         new_challenge.signage_point_index,
                     )
@@ -172,10 +175,11 @@ class HarvesterAPI:
         A signature is created on the header hash using the harvester private key. This can also
         be used for pooling.
         """
+        plot_filename = Path(request.plot_identifier[64:]).resolve()
         try:
-            plot_info = self.harvester.provers[Path(request.plot_identifier).resolve()]
+            plot_info = self.harvester.provers[plot_filename]
         except KeyError:
-            self.harvester.log.warning(f"KeyError plot {request.plot_identifier} does not exist.")
+            self.harvester.log.warning(f"KeyError plot {plot_filename} does not exist.")
             return
 
         local_sk = plot_info.local_sk
