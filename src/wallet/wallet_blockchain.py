@@ -71,7 +71,7 @@ class WalletBlockchain:
 
     @staticmethod
     async def create(
-        coin_store: CoinStore,
+        coin_store: WalletCoinStore,
         block_store: WalletBlockStore,
         consensus_constants: ConsensusConstants,
     ):
