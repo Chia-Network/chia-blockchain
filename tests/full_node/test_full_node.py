@@ -175,7 +175,7 @@ class TestFullNodeProtocol:
         assert full_node_1.full_node.blockchain.get_peak().height == 29
 
     @pytest.mark.asyncio
-    async def test_respond_end_of_slot(self, two_empty_nodes):
+    async def test_respond_end_of_sub_slot(self, two_empty_nodes):
         full_node_1, full_node_2, server_1, server_2 = two_empty_nodes
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)

@@ -491,6 +491,7 @@ class FullNode:
             # If there were pending end of slots that happen after this peak, broadcast them if they are added
             if added_eos is not None:
                 broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
+                    added_eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
                     added_eos.challenge_chain.get_hash(),
                     uint8(0),
                     added_eos.reward_chain.end_of_slot_vdf.challenge,

@@ -34,7 +34,7 @@ class Introducer:
                 return
             try:
                 self.log.info("Vetting random peers.")
-                await asyncio.sleep(5)
+                await asyncio.sleep(60)
                 if self.server.introducer_peers is None:
                     continue
                 rawpeers = self.server.introducer_peers.get_peers(100, True, 3 * self.recent_peer_threshold)

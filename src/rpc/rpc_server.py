@@ -93,7 +93,6 @@ class RpcServer:
         con_info = [
             {
                 "type": con.connection_type,
-                "local_host": con.local_host,
                 "local_port": con.local_port,
                 "peer_host": con.peer_host,
                 "peer_port": con.peer_port,
