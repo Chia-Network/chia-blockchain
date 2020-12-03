@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from typing import Dict, Optional, Tuple, List, AsyncGenerator, Callable
 from pathlib import Path
 import socket
@@ -14,7 +15,7 @@ from src.consensus.constants import ConsensusConstants
 from src.server.server import ChiaServer
 from src.server.outbound_message import OutboundMessage, NodeType, Message
 from src.server.node_discovery import WalletPeers
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 from src.types.sized_bytes import bytes32
 from src.wallet.settings.settings_objects import BackupInitialized
 from src.wallet.transaction_record import TransactionRecord
@@ -310,7 +311,7 @@ class WalletNode:
                         and connection.get_peer_info() != full_node_resolved
                     ):
                         self.log.info(f"Closing unnecessary connection to {connection.get_peer_info()}.")
-                        self.global_connections.close(connection)
+                        await connection.close()
                 return True
         return False
 
@@ -341,340 +342,35 @@ class WalletNode:
     # async def respond_peers_full_node(self, request: full_node_protocol.RespondPeers):
     #     pass
     #
-    # async def _sync(self):
-    #     """
-    #     Wallet has fallen far behind (or is starting up for the first time), and must be synced
-    #     up to the LCA of the blockchain.
-    #     """
-    #     if self.wallet_state_manager is None or self.backup_initialized is False:
-    #         return
-    #
-    #     # 1. Get all header hashes
-    #     self.header_hashes = []
-    #     self.header_hashes_error = False
-    #     self.proof_hashes = []
-    #     self.potential_header_hashes = {}
-    #     # TODO: fix
-    #     # genesis = FullBlock.from_bytes(self.constants.GENESIS_BLOCK)
-    #     quit()
-    #
-    #     genesis_challenge = genesis.proof_of_space.challenge_hash
-    #     request_header_hashes = wallet_protocol.RequestAllHeaderHashesAfter(
-    #         uint32(0), genesis_challenge
-    #     )
-    #     yield OutboundMessage(
-    #         NodeType.FULL_NODE,
-    #         Message("request_all_header_hashes_after", request_header_hashes),
-    #         Delivery.RESPOND,
-    #     )
-    #     timeout = 50
-    #     sleep_interval = 3
-    #     sleep_interval_short = 1
-    #     start_wait = time.time()
-    #     while time.time() - start_wait < timeout:
-    #         if self._shut_down:
-    #             return
-    #         if self.header_hashes_error:
-    #             raise ValueError(
-    #                 f"Received error from full node while fetching hashes from {request_header_hashes}."
-    #             )
-    #         if len(self.header_hashes) > 0:
-    #             break
-    #         await asyncio.sleep(0.5)
-    #     if len(self.header_hashes) == 0:
-    #         raise TimeoutError("Took too long to fetch header hashes.")
-    #
-    #     # 2. Find fork point
-    #     fork_point_height: uint32 = (
-    #         self.wallet_state_manager.find_fork_point_alternate_chain(
-    #             self.header_hashes
-    #         )
-    #     )
-    #     fork_point_hash: bytes32 = self.header_hashes[fork_point_height]
-    #     # Sync a little behind, in case there is a short reorg
-    #     tip_height = (
-    #         len(self.header_hashes) - 5
-    #         if len(self.header_hashes) > 5
-    #         else len(self.header_hashes)
-    #     )
-    #
-    #     if self.wallet_state_manager.new_wallet is True and fork_point_height == 0:
-    #         self.config["starting_height"] = max(
-    #             0, tip_height - self.config["start_height_buffer"]
-    #         )
-    #
-    #     self.log.info(
-    #         f"Fork point: {fork_point_hash} at height {fork_point_height}. Will sync up to {tip_height}"
-    #     )
-    #     for height in range(0, tip_height + 1):
-    #         self.potential_blocks_received[uint32(height)] = asyncio.Event()
-    #
-    #     header_validate_start_height: uint32
-    #     if self.config["starting_height"] == 0:
-    #         header_validate_start_height = fork_point_height
-    #     else:
-    #         # Request all proof hashes
-    #         request_proof_hashes = wallet_protocol.RequestAllProofHashes()
-    #         yield OutboundMessage(
-    #             NodeType.FULL_NODE,
-    #             Message("request_all_proof_hashes", request_proof_hashes),
-    #             Delivery.RESPOND,
-    #         )
-    #         start_wait = time.time()
-    #         while time.time() - start_wait < timeout:
-    #             if self._shut_down:
-    #                 return
-    #             if len(self.proof_hashes) > 0:
-    #                 break
-    #             await asyncio.sleep(0.5)
-    #         if len(self.proof_hashes) == 0:
-    #             raise TimeoutError("Took too long to fetch proof hashes.")
-    #         if len(self.proof_hashes) < tip_height:
-    #             raise ValueError("Not enough proof hashes fetched.")
-    #
-    #         # Creates map from height to difficulty
-    #         heights: List[uint32] = []
-    #         difficulty_weights: List[uint64] = []
-    #         difficulty: uint64
-    #         for i in range(tip_height):
-    #             if self.proof_hashes[i][1] is not None:
-    #                 difficulty = self.proof_hashes[i][1]
-    #             if i > (fork_point_height + 1) and i % 2 == 1:  # Only add odd heights
-    #                 heights.append(uint32(i))
-    #                 difficulty_weights.append(difficulty)
-    #
-    #         # Randomly sample based on difficulty
-    #         query_heights_odd = sorted(
-    #             list(
-    #                 set(
-    #                     random.choices(
-    #                         heights, difficulty_weights, k=min(100, len(heights))
-    #                     )
-    #                 )
-    #             )
-    #         )
-    #         query_heights: List[uint32] = []
-    #
-    #         for odd_height in query_heights_odd:
-    #             query_heights += [uint32(odd_height - 1), odd_height]
-    #
-    #         # Send requests for these heights
-    #         # Verify these proofs
-    #         last_request_time = float(0)
-    #         highest_height_requested = uint32(0)
-    #         request_made = False
-    #
-    #         for height_index in range(len(query_heights)):
-    #             total_time_slept = 0
-    #             while True:
-    #                 if self._shut_down:
-    #                     return
-    #                 if total_time_slept > timeout:
-    #                     raise TimeoutError("Took too long to fetch blocks")
-    #
-    #                 # Request batches that we don't have yet
-    #                 for batch_start_index in range(
-    #                     height_index,
-    #                     min(
-    #                         height_index + self.config["num_sync_batches"],
-    #                         len(query_heights),
-    #                     ),
-    #                 ):
-    #                     if self._shut_down:
-    #                         return
-    #                     blocks_missing = not self.potential_blocks_received[
-    #                         uint32(query_heights[batch_start_index])
-    #                     ].is_set()
-    #                     if (
-    #                         time.time() - last_request_time > sleep_interval
-    #                         and blocks_missing
-    #                     ) or (
-    #                         query_heights[batch_start_index]
-    #                     ) > highest_height_requested:
-    #                         self.log.info(
-    #                             f"Requesting sync header {query_heights[batch_start_index]}"
-    #                         )
-    #                         if (
-    #                             query_heights[batch_start_index]
-    #                             > highest_height_requested
-    #                         ):
-    #                             highest_height_requested = uint32(
-    #                                 query_heights[batch_start_index]
-    #                             )
-    #                         request_made = True
-    #                         request_header = wallet_protocol.RequestHeader(
-    #                             uint32(query_heights[batch_start_index]),
-    #                             self.header_hashes[query_heights[batch_start_index]],
-    #                         )
-    #                         yield OutboundMessage(
-    #                             NodeType.FULL_NODE,
-    #                             Message("request_header", request_header),
-    #                             Delivery.RANDOM,
-    #                         )
-    #                 if request_made:
-    #                     last_request_time = time.time()
-    #                     request_made = False
-    #                 try:
-    #                     aw = self.potential_blocks_received[
-    #                         uint32(query_heights[height_index])
-    #                     ].wait()
-    #                     await asyncio.wait_for(aw, timeout=sleep_interval)
-    #                     break
-    #                 # https://github.com/python/cpython/pull/13528
-    #                 except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
-    #                     total_time_slept += sleep_interval
-    #                     self.log.info("Did not receive desired headers")
-    #
-    #         self.log.info(
-    #             f"Finished downloading sample of headers at heights: {query_heights}, validating."
-    #         )
-    #         # Validates the downloaded proofs
-    #         assert self.wallet_state_manager.validate_select_proofs(
-    #             self.proof_hashes,
-    #             query_heights_odd,
-    #             self.cached_blocks,
-    #             self.potential_header_hashes,
-    #         )
-    #         self.log.info("All proofs validated successfuly.")
-    #
-    #         # Add blockrecords one at a time, to catch up to starting height
-    #         weight = self.wallet_state_manager.block_records[fork_point_hash].weight
-    #
-    #         header_validate_start_height = min(
-    #             max(fork_point_height, self.config["starting_height"] - 1),
-    #             tip_height + 1,
-    #         )
-    #         if fork_point_height == 0:
-    #             difficulty = self.constants.DIFFICULTY_STARTING
-    #         else:
-    #             fork_point_parent_hash = self.wallet_state_manager.block_records[
-    #                 fork_point_hash
-    #             ].prev_header_hash
-    #             fork_point_parent_weight = self.wallet_state_manager.block_records[
-    #                 fork_point_parent_hash
-    #             ]
-    #             difficulty = uint64(weight - fork_point_parent_weight.weight)
-    #
-    #         for height in range(
-    #             fork_point_height + 1, header_validate_start_height + 1
-    #         ):
-    #             _, difficulty_change, total_iters = self.proof_hashes[height]
-    #             if difficulty_change is not None:
-    #                 difficulty = difficulty_change
-    #             weight += difficulty
-    #             block_record = BlockRecord(
-    #                 self.header_hashes[height],
-    #                 self.header_hashes[height - 1],
-    #                 uint32(height),
-    #                 weight,
-    #                 [],
-    #                 [],
-    #                 total_iters,
-    #                 None,
-    #                 uint64(0),
-    #             )
-    #             res = await self.wallet_state_manager.receive_block(block_record, None)
-    #             assert (
-    #                 res == ReceiveBlockResult.NEW_TIP
-    #                 or res == ReceiveBlockResult.ADDED_AS_ORPHAN
-    #             )
-    #         self.log.info(
-    #             f"Fast sync successful up to height {header_validate_start_height}"
-    #         )
-    #
-    #     # Download headers in batches, and verify them as they come in. We download a few batches ahead,
-    #     # in case there are delays. TODO(mariano): optimize sync by pipelining
-    #     last_request_time = float(0)
-    #     highest_height_requested = uint32(0)
-    #     request_made = False
-    #
-    #     for height_checkpoint in range(
-    #         header_validate_start_height + 1, tip_height + 1
-    #     ):
-    #         total_time_slept = 0
-    #         while True:
-    #             # Request batches that we don't have yet
-    #             for batch_start in range(
-    #                 height_checkpoint,
-    #                 min(
-    #                     height_checkpoint + self.config["num_sync_batches"],
-    #                     tip_height + 1,
-    #                 ),
-    #             ):
-    #                 if self._shut_down:
-    #                     return
-    #                 if total_time_slept > timeout:
-    #                     raise TimeoutError("Took too long to fetch blocks")
-    #                 batch_end = min(batch_start + 1, tip_height + 1)
-    #                 blocks_missing = any(
-    #                     [
-    #                         not (self.potential_blocks_received[uint32(h)]).is_set()
-    #                         for h in range(batch_start, batch_end)
-    #                     ]
-    #                 )
-    #                 if (
-    #                     time.time() - last_request_time > sleep_interval
-    #                     and blocks_missing
-    #                 ) or (batch_end - 1) > highest_height_requested:
-    #                     self.log.info(f"Requesting sync header {batch_start}")
-    #                     if batch_end - 1 > highest_height_requested:
-    #                         highest_height_requested = uint32(batch_end - 1)
-    #                     request_made = True
-    #                     request_header = wallet_protocol.RequestHeader(
-    #                         uint32(batch_start),
-    #                         self.header_hashes[batch_start],
-    #                     )
-    #                     yield OutboundMessage(
-    #                         NodeType.FULL_NODE,
-    #                         Message("request_header", request_header),
-    #                         Delivery.RANDOM,
-    #                     )
-    #             if request_made:
-    #                 last_request_time = time.time()
-    #                 request_made = False
-    #
-    #             awaitables = [
-    #                 self.potential_blocks_received[uint32(height_checkpoint)].wait()
-    #             ]
-    #             future = asyncio.gather(*awaitables, return_exceptions=True)
-    #             try:
-    #                 await asyncio.wait_for(future, timeout=sleep_interval)
-    #             # https://github.com/python/cpython/pull/13528
-    #             except (concurrent.futures.TimeoutError, asyncio.TimeoutError):
-    #                 try:
-    #                     await future
-    #                 except asyncio.CancelledError:
-    #                     pass
-    #                 total_time_slept += sleep_interval
-    #                 self.log.info("Did not receive desired headers")
-    #                 continue
-    #
-    #             # Succesfully downloaded header. Now confirm it's added to chain.
-    #             hh = self.potential_header_hashes[height_checkpoint]
-    #             if hh in self.wallet_state_manager.block_records:
-    #                 # Successfully added the block to chain
-    #                 break
-    #             else:
-    #                 # Not added to chain yet. Try again soon.
-    #                 await asyncio.sleep(sleep_interval_short)
-    #                 if self._shut_down:
-    #                     return
-    #                 total_time_slept += sleep_interval_short
-    #                 if hh in self.wallet_state_manager.block_records:
-    #                     break
-    #                 else:
-    #                     _, hb, tfilter = self.cached_blocks[hh]
-    #                     self.log.warning(
-    #                         f"Received header, but it has not been added to chain. Retrying. {hb.height}"
-    #                     )
-    #                     respond_header_msg = wallet_protocol.RespondHeader(hb, tfilter)
-    #                     async for msg in self.respond_header(respond_header_msg):
-    #                         yield msg
-    #
-    #     self.log.info(
-    #         f"Finished sync process up to height {max(self.wallet_state_manager.height_to_hash.keys())}"
-    #     )
-    #
+
+    async def _sync(self):
+        """
+        Wallet has fallen far behind (or is starting up for the first time), and must be synced
+        up to the LCA of the blockchain.
+        """
+        if self.wallet_state_manager is None or self.backup_initialized is False:
+            return
+
+        await asyncio.sleep(2)
+        highest_weight: uint128 = uint128(0)
+        peak_height: uint32 = uint32(0)
+        sync_start_time = time.time()
+
+        potential_peaks: List[Tuple[bytes32, HeaderBlock]] = self.wallet_state_manager.sync_store.get_potential_peaks_tuples()
+
+        self.log.info(f"Have collected {len(potential_peaks)} potential peaks")
+
+        for header_hash, potential_peak_block in potential_peaks:
+            if potential_peak_block.weight > highest_weight:
+                highest_weight = potential_peak_block.weight
+                peak_height = potential_peak_block.height
+
+        if highest_weight <= self.wallet_state_manager.peak.weight:
+            self.log.info("Not performing sync, already caught up.")
+            return
+
+        peers: List[WSChiaConnection] = self.server.get_full_node_connections()
+
     # async def _block_finished(
     #     self,
     #     block_record: BlockRecord,
