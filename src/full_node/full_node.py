@@ -106,6 +106,17 @@ class FullNode:
             await self.mempool_manager.new_peak(self.blockchain.get_peak())
 
         self.state_changed_callback = None
+
+        peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
+        if peak is not None:
+            sp_sub_slot, ip_sub_slot = await self.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+            self.full_node_store.new_peak(
+                peak,
+                sp_sub_slot,
+                ip_sub_slot,
+                False,
+                self.blockchain.sub_blocks,
+            )
         try:
             """
             self.full_node_peers = FullNodePeers(

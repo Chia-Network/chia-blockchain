@@ -197,8 +197,6 @@ class TestBlockHeaderValidation:
         blockchain = empty_blockchain
         blocks = bt.get_consecutive_blocks(10)
         for block in blocks:
-            print(block.reward_chain_sub_block.challenge_chain_ip_vdf)
-            print(block.challenge_chain_ip_proof)
             result, err, _ = await blockchain.receive_block(block)
             assert result == ReceiveBlockResult.NEW_PEAK
 

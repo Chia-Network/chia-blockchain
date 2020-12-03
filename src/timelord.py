@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import io
 import logging
 import time
@@ -350,8 +351,6 @@ class Timelord:
             self.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(left_subslot_iters)
         self.iters_to_submit[Chain.CHALLENGE_CHAIN].append(left_subslot_iters)
         self.iters_to_submit[Chain.REWARD_CHAIN].append(left_subslot_iters)
-
-        log.warning(f"Iters to submit {self.iters_to_submit}")
         self.iteration_to_proof_type[left_subslot_iters] = IterationType.END_OF_SUBSLOT
 
     async def _handle_new_peak(self):
@@ -443,9 +442,10 @@ class Timelord:
                     log.error(f"Insufficient signage point data {signage_iter}")
                     continue
 
+                iters_from_sub_slot_start = cc_info.number_of_iterations + self.last_state.get_last_ip()
                 response = timelord_protocol.NewSignagePointVDF(
                     signage_point_index,
-                    cc_info,
+                    dataclasses.replace(cc_info, number_of_iterations=iters_from_sub_slot_start),
                     cc_proof,
                     rc_info,
                     rc_proof,
@@ -486,6 +486,7 @@ class Timelord:
                 chain_count = 2
             if len(proofs_with_iter) == chain_count:
                 block = None
+                ip_iters = None
                 for unfinished_block in self.unfinished_blocks:
                     _, ip_iters = iters_from_sub_block(
                         self.constants,
@@ -520,7 +521,7 @@ class Timelord:
                     log.info(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
                     response = timelord_protocol.NewInfusionPointVDF(
                         challenge,
-                        cc_info,
+                        dataclasses.replace(cc_info, number_of_iterations=ip_iters),
                         cc_proof,
                         rc_info,
                         rc_proof,
@@ -566,6 +567,8 @@ class Timelord:
                     icc_ip_proof = proof
             assert cc_proof is not None and rc_proof is not None and cc_vdf is not None and rc_vdf is not None
             log.info("Collected end of subslot vdfs.")
+            iters_from_sub_slot_start = cc_vdf.number_of_iterations + self.last_state.get_last_ip()
+            cc_vdf = dataclasses.replace(cc_vdf, number_of_iterations=iters_from_sub_slot_start)
 
             icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = (
                 None if icc_ip_vdf is None else InfusedChallengeChainSubSlot(icc_ip_vdf)
@@ -644,107 +647,111 @@ class Timelord:
         writer: StreamWriter,
     ):
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
-        # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
-        # the timelord tells the vdf_client what to execute.
-        if self.config["fast_algorithm"]:
-            # Run n-wesolowski (fast) algorithm.
-            writer.write(b"N")
-        else:
-            # Run two-wesolowski (slow) algorithm.
-            writer.write(b"N")
-        await writer.drain()
 
-        prefix = str(len(str(disc)))
-        if len(prefix) == 1:
-            prefix = "00" + prefix
-        if len(prefix) == 2:
-            prefix = "0" + prefix
-        writer.write((prefix + str(disc)).encode())
-        await writer.drain()
-
-        # Send (a, b) from 'initial_form'.
-        for num in [initial_form.a, initial_form.b]:
-            prefix = len(str(num))
-            prefix_len = len(str(prefix))
-            writer.write((str(prefix_len) + str(prefix) + str(num)).encode())
-            await writer.drain()
         try:
-            ok = await reader.readexactly(2)
-        except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
-            log.warning(f"{type(e)} {e}")
-            return
+            # Depending on the flags 'fast_algorithm' and 'sanitizer_mode',
+            # the timelord tells the vdf_client what to execute.
+            if self.config["fast_algorithm"]:
+                # Run n-wesolowski (fast) algorithm.
+                writer.write(b"N")
+            else:
+                # Run two-wesolowski (slow) algorithm.
+                writer.write(b"N")
+            await writer.drain()
 
-        if ok.decode() != "OK":
-            return
+            prefix = str(len(str(disc)))
+            if len(prefix) == 1:
+                prefix = "00" + prefix
+            if len(prefix) == 2:
+                prefix = "0" + prefix
+            writer.write((prefix + str(disc)).encode())
+            await writer.drain()
 
-        log.info("Got handshake with VDF client.")
-        async with self.lock:
-            self.allows_iters.append(chain)
-        # Listen to the client until "STOP" is received.
-        while True:
+            # Send (a, b) from 'initial_form'.
+            for num in [initial_form.a, initial_form.b]:
+                prefix = len(str(num))
+                prefix_len = len(str(prefix))
+                writer.write((str(prefix_len) + str(prefix) + str(num)).encode())
+                await writer.drain()
             try:
-                data = await reader.readexactly(4)
+                ok = await reader.readexactly(2)
             except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
                 log.warning(f"{type(e)} {e}")
-                break
+                return
 
-            msg = ""
-            try:
-                msg = data.decode()
-            except Exception as e:
-                pass
-            if msg == "STOP":
-                log.info(f"Stopped client running on ip {ip}.")
-                async with self.lock:
-                    writer.write(b"ACK")
-                    await writer.drain()
-                break
-            else:
+            if ok.decode() != "OK":
+                return
+
+            log.info("Got handshake with VDF client.")
+            async with self.lock:
+                self.allows_iters.append(chain)
+            # Listen to the client until "STOP" is received.
+            while True:
                 try:
-                    # This must be a proof, 4 bytes is length prefix
-                    length = int.from_bytes(data, "big")
-                    proof = await reader.readexactly(length)
-                    stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(proof.decode()))
-                except (
-                    asyncio.IncompleteReadError,
-                    ConnectionResetError,
-                    Exception,
-                ) as e:
+                    data = await reader.readexactly(4)
+                except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
                     log.warning(f"{type(e)} {e}")
                     break
 
-                iterations_needed = uint64(int.from_bytes(stdout_bytes_io.read(8), "big", signed=True))
+                msg = ""
+                try:
+                    msg = data.decode()
+                except Exception as e:
+                    pass
+                if msg == "STOP":
+                    log.info(f"Stopped client running on ip {ip}.")
+                    async with self.lock:
+                        writer.write(b"ACK")
+                        await writer.drain()
+                    break
+                else:
+                    try:
+                        # This must be a proof, 4 bytes is length prefix
+                        length = int.from_bytes(data, "big")
+                        proof = await reader.readexactly(length)
+                        stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(proof.decode()))
+                    except (
+                        asyncio.IncompleteReadError,
+                        ConnectionResetError,
+                        Exception,
+                    ) as e:
+                        log.warning(f"{type(e)} {e}")
+                        break
 
-                y_size_bytes = stdout_bytes_io.read(8)
-                y_size = uint64(int.from_bytes(y_size_bytes, "big", signed=True))
+                    iterations_needed = uint64(int.from_bytes(stdout_bytes_io.read(8), "big", signed=True))
 
-                y_bytes = stdout_bytes_io.read(y_size)
-                witness_type = uint8(int.from_bytes(stdout_bytes_io.read(1), "big", signed=True))
-                proof_bytes: bytes = stdout_bytes_io.read()
+                    y_size_bytes = stdout_bytes_io.read(8)
+                    y_size = uint64(int.from_bytes(y_size_bytes, "big", signed=True))
 
-                # Verifies our own proof just in case
-                a = int.from_bytes(y_bytes[:129], "big", signed=True)
-                b = int.from_bytes(y_bytes[129:], "big", signed=True)
-                output = ClassgroupElement(int512(a), int512(b))
-                time_taken = time.time() - self.chain_start_time[chain]
-                ips = int(iterations_needed / time_taken * 10) / 10
-                log.info(
-                    f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed} input: {initial_form}"
-                    f" iters."
-                    f"Estimated IPS: {ips}. Chain: {chain}"
-                )
+                    y_bytes = stdout_bytes_io.read(y_size)
+                    witness_type = uint8(int.from_bytes(stdout_bytes_io.read(1), "big", signed=True))
+                    proof_bytes: bytes = stdout_bytes_io.read()
 
-                vdf_info: VDFInfo = VDFInfo(
-                    challenge,
-                    iterations_needed,
-                    output,
-                )
-                vdf_proof: VDFProof = VDFProof(
-                    witness_type,
-                    proof_bytes,
-                )
+                    # Verifies our own proof just in case
+                    a = int.from_bytes(y_bytes[:129], "big", signed=True)
+                    b = int.from_bytes(y_bytes[129:], "big", signed=True)
+                    output = ClassgroupElement(int512(a), int512(b))
+                    time_taken = time.time() - self.chain_start_time[chain]
+                    ips = int(iterations_needed / time_taken * 10) / 10
+                    log.info(
+                        f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed} input: {initial_form}"
+                        f" iters."
+                        f"Estimated IPS: {ips}. Chain: {chain}"
+                    )
 
-                if not vdf_proof.is_valid(self.constants, initial_form, vdf_info):
-                    log.error("Invalid proof of time!")
-                async with self.lock:
-                    self.proofs_finished.append((chain, vdf_info, vdf_proof))
+                    vdf_info: VDFInfo = VDFInfo(
+                        challenge,
+                        iterations_needed,
+                        output,
+                    )
+                    vdf_proof: VDFProof = VDFProof(
+                        witness_type,
+                        proof_bytes,
+                    )
+
+                    if not vdf_proof.is_valid(self.constants, initial_form, vdf_info):
+                        log.error("Invalid proof of time!")
+                    async with self.lock:
+                        self.proofs_finished.append((chain, vdf_info, vdf_proof))
+        except ConnectionResetError as e:
+            log.info(f"Connection reset with VDF client")
