@@ -157,10 +157,13 @@ class ChiaServer:
             if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
                 self.introducer_peers.add(connection.get_peer_info())
         except Exception as e:
-            error_stack = traceback.format_exc()
-            self.log.error(f"Exception: {e}")
-            self.log.error(f"Exception Stack: {error_stack}")
-            close_event.set()
+            if isinstance(e, ProtocolError) and e.code == Err.SELF_CONNECTION:
+                close_event.set()
+            else:
+                error_stack = traceback.format_exc()
+                self.log.error(f"Exception: {e}")
+                self.log.error(f"Exception Stack: {error_stack}")
+                close_event.set()
 
         await close_event.wait()
         return ws
@@ -218,9 +221,12 @@ class ChiaServer:
         except aiohttp.client_exceptions.ClientConnectorError as e:
             self.log.warning(f"{e}")
         except Exception as e:
-            error_stack = traceback.format_exc()
-            self.log.error(f"Exception: {e}")
-            self.log.error(f"Exception Stack: {error_stack}")
+            if isinstance(e, ProtocolError) and e.code == Err.SELF_CONNECTION:
+                pass
+            else:
+                error_stack = traceback.format_exc()
+                self.log.error(f"Exception: {e}")
+                self.log.error(f"Exception Stack: {error_stack}")
         if session is not None:
             await session.close()
 
