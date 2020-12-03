@@ -593,16 +593,19 @@ class WalletRpcApi:
         recovery_list = []
         for _ in request["new_list"]:
             recovery_list.append(bytes.fromhex(_))
-        new_amount_verifications_required = uint64(
-            request["num_verifications_required"]
-        )
-        await wallet.update_recovery_list(
+        if "num_verifications_required" in request:
+            new_amount_verifications_required = uint64(
+                request["num_verifications_required"]
+            )
+        else:
+            new_amount_verifications_required = len(recovery_list)
+        success = await wallet.update_recovery_list(
             recovery_list, new_amount_verifications_required
         )
         # Update coin with new ID info
         updated_puz = await wallet.get_new_puzzle()
         spend_bundle = await wallet.create_spend(updated_puz.get_tree_hash())
-        if spend_bundle is not None:
+        if spend_bundle is not None and success:
             return {"success": True}
         return {"success": False}
 
@@ -617,13 +620,13 @@ class WalletRpcApi:
     async def did_get_did(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did = wallet.get_my_DID()
-        try:
-            coins = wallet.select_coins(1)
+        my_did: str = wallet.get_my_DID()
+        coins = wallet.select_coins(1)
+        if len(coins) == 0:
+            return {"success": True, "my_did": my_did}
+        else:
             coin = coins.pop()
             return {"success": True, "my_did": my_did, "coin_id": coin.name()}
-        except Exception:
-            return {"success": False}
 
     async def did_get_recovery_list(self, request):
         wallet_id = int(request["wallet_id"])
