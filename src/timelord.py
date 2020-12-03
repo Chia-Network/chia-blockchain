@@ -48,7 +48,7 @@ def iters_from_sub_block(
 
     if reward_chain_sub_block.challenge_chain_sp_vdf is None:
         assert reward_chain_sub_block.signage_point_index == 0
-        cc_sp: bytes32 = reward_chain_sub_block.proof_of_space.challenge
+        cc_sp: bytes32 = reward_chain_sub_block.pos_ss_cc_challenge_hash
     else:
         cc_sp: bytes32 = reward_chain_sub_block.challenge_chain_sp_vdf.get_hash()
     required_iters = calculate_iterations_quality(

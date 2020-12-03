@@ -476,15 +476,28 @@ class FullNodeAPI:
         if request.pool_target is None or request.pool_signature is None:
             raise ValueError("Adaptable pool protocol not yet available.")
 
-        # Checks that the proof of space is a response to a recent challenge and valid SP
-        pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int]] = self.full_node.full_node_store.get_sub_slot(
-            request.proof_of_space.challenge_hash
-        )
         sp_vdfs: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point(request.challenge_chain_sp)
 
-        if sp_vdfs is None or pos_sub_slot is None:
-            self.log.warning(f"Received proof of space for an unknown signage point: {request}")
+        if sp_vdfs is None:
+            self.log.warning(f"Received proof of space for an unknown signage point {request.challenge_chain_sp}")
             return
+
+        if request.signage_point_index == 0:
+            cc_challenge_hash: bytes32 = request.challenge_chain_sp
+        else:
+            cc_challenge_hash: bytes32 = sp_vdfs.cc_vdf.challenge
+
+        pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int]] = None
+        if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
+            # Checks that the proof of space is a response to a recent challenge and valid SP
+            pos_sub_slot = self.full_node.full_node_store.get_sub_slot(cc_challenge_hash)
+            if pos_sub_slot is None:
+                self.log.warning(f"Received proof of space for an unknown sub slot: {request}")
+                return
+            total_iters_pos_slot: uint128 = pos_sub_slot[2]
+        else:
+            total_iters_pos_slot: uint128 = uint128(0)
+        assert cc_challenge_hash == request.challenge_hash
 
         # Now we know that the proof of space has a signage point either:
         # 1. In the previous sub-slot of the peak (overflow)
@@ -493,9 +506,9 @@ class FullNodeAPI:
 
         # Checks that the proof of space is valid
         quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
-            self.full_node.constants, request.challenge_hash, request.challenge_chain_sp
+            self.full_node.constants, cc_challenge_hash, request.challenge_chain_sp
         )
-        assert len(quality_string) == 32
+        assert quality_string is not None and len(quality_string) == 32
 
         # Grab best transactions from Mempool for given tip target
         async with self.full_node.blockchain.lock:
@@ -506,13 +519,14 @@ class FullNodeAPI:
                 spend_bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(
                     peak.header_hash
                 )
-        if pos_sub_slot[0].challenge_chain.new_difficulty is not None:
-            difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
-            sub_slot_iters = pos_sub_slot[0].challenge_chain.new_sub_slot_iters
+        if peak is None or peak.height == 0:
+            difficulty = self.full_node.constants.DIFFICULTY_STARTING
+            sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
         else:
-            if peak is None or peak.height == 0:
-                difficulty = self.full_node.constants.DIFFICULTY_STARTING
-                sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+            assert pos_sub_slot is not None
+            if pos_sub_slot[0].challenge_chain.new_difficulty is not None:
+                difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
+                sub_slot_iters = pos_sub_slot[0].challenge_chain.new_sub_slot_iters
             else:
                 difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
                 sub_slot_iters = peak.sub_slot_iters
@@ -527,17 +541,19 @@ class FullNodeAPI:
         ip_iters: uint64 = calculate_ip_iters(
             self.full_node.constants, sub_slot_iters, request.signage_point_index, required_iters
         )
-        total_iters_pos_slot: uint128 = pos_sub_slot[2]
 
         def get_plot_sig(to_sign, _) -> G2Element:
             if to_sign == request.challenge_chain_sp:
                 return request.challenge_chain_sp_signature
-            if to_sign == request.reward_chain_sp:
+            elif to_sign == request.reward_chain_sp:
                 return request.reward_chain_sp_signature
             return G2Element.infinity()
 
+        def get_pool_sig(to_sign, _) -> G2Element:
+            return request.pool_signature
+
         finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node.full_node_store.get_finished_sub_slots(
-            peak, self.full_node.blockchain.sub_blocks, request.proof_of_space.challenge_hash
+            peak, self.full_node.blockchain.sub_blocks, cc_challenge_hash
         )
 
         unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(
@@ -548,11 +564,11 @@ class FullNodeAPI:
             sp_iters,
             ip_iters,
             request.proof_of_space,
-            pos_sub_slot[0].challenge_chain.get_hash(),
+            cc_challenge_hash,
             request.farmer_puzzle_hash,
             request.pool_target,
             get_plot_sig,
-            get_plot_sig,
+            get_pool_sig,
             sp_vdfs,
             uint64(int(time.time())),
             b"",
@@ -561,12 +577,19 @@ class FullNodeAPI:
             self.full_node.blockchain.sub_blocks,
             finished_sub_slots,
         )
-        self.full_node.full_node_store.add_candidate_block(quality_string, unfinished_block)
+        prev_sb: Optional[SubBlockRecord] = self.full_node.blockchain.sub_blocks.get(
+            unfinished_block.prev_header_hash, None
+        )
+        if prev_sb is not None:
+            height = prev_sb.height + 1
+        else:
+            height = 0
+        self.full_node.full_node_store.add_candidate_block(quality_string, height, unfinished_block)
 
         message = farmer_protocol.RequestSignedValues(
             quality_string,
-            unfinished_block.foliage_sub_block.get_hash(),
-            unfinished_block.foliage_block.get_hash(),
+            unfinished_block.foliage_sub_block.foliage_sub_block_data.get_hash(),
+            unfinished_block.foliage_sub_block.foliage_block_hash,
         )
         return Message("request_signed_values", message)
 
@@ -610,25 +633,22 @@ class FullNodeAPI:
             )
 
         prev_sb: Optional[SubBlockRecord] = None
-        if request.reward_chain_ip_vdf.challenge_hash == self.full_node.constants.FIRST_RC_CHALLENGE:
+        if request.reward_chain_ip_vdf.challenge == self.full_node.constants.FIRST_RC_CHALLENGE:
             # Genesis
-            assert unfinished_block.height == 0
+            assert request.challenge_chain_ip_vdf.challenge == self.full_node.constants.FIRST_RC_CHALLENGE
         else:
             # Find the prev block
             curr: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
             if curr is None:
                 self.log.warning(f"Have no blocks in chain, so can not complete block {unfinished_block.height}")
                 return
-            num_sb_checked = 0
-            while num_sb_checked < 10:
-                if curr.reward_infusion_new_challenge == request.reward_chain_ip_vdf.challenge_hash:
+            for _ in range(10):
+                if curr.reward_infusion_new_challenge == request.reward_chain_ip_vdf.challenge:
                     # Found our prev block
                     prev_sb = curr
                     break
-                curr = self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None)
-                if curr is None:
+                if self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None) is None:
                     return
-                num_sb_checked += 1
 
             # If not found, cache keyed on prev block
             if prev_sb is None:
@@ -649,15 +669,40 @@ class FullNodeAPI:
             finished_sub_slots = self.full_node.full_node_store.get_finished_sub_slots(
                 prev_sb,
                 self.full_node.blockchain.sub_blocks,
-                unfinished_block.reward_chain_sub_block.proof_of_space.challenge_hash,
+                unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf.challenge,
                 True,
             )
         else:
             finished_sub_slots = unfinished_block.finished_sub_slots
 
+        if unfinished_block.reward_chain_sub_block.signage_point_index == 0:
+            cc_sp_output_hash = unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
+        else:
+            cc_sp_output_hash = unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
+
+        quality_string: Optional[
+            bytes32
+        ] = unfinished_block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
+            self.full_node.constants,
+            unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf.challenge,
+            cc_sp_output_hash,
+        )
+        required_iters: uint64 = calculate_iterations_quality(
+            quality_string,
+            unfinished_block.reward_chain_sub_block.proof_of_space.size,
+            difficulty,
+            cc_sp_output_hash,
+        )
+        ip_iters = calculate_ip_iters(
+            self.full_node.constants,
+            sub_slot_iters,
+            unfinished_block.reward_chain_sub_block.signage_point_index,
+            required_iters,
+        )
+        modified_cc_ip_vdf = dataclasses.replace(request.challenge_chain_ip_vdf, number_of_iterations=ip_iters)
         block: FullBlock = unfinished_block_to_full_block(
             unfinished_block,
-            request.challenge_chain_ip_vdf,
+            modified_cc_ip_vdf,
             request.challenge_chain_ip_proof,
             request.reward_chain_ip_vdf,
             request.reward_chain_ip_proof,

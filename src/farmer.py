@@ -41,7 +41,7 @@ class Farmer:
         self.proofs_of_space: Dict[bytes32, List[Tuple[str, ProofOfSpace]]] = {}
 
         # Quality string to plot identifier and challenge_hash, for use with harvester.RequestSignatures
-        self.quality_str_to_identifiers: Dict[bytes32, Tuple[str, bytes32]] = {}
+        self.quality_str_to_identifiers: Dict[bytes32, Tuple[str, bytes32, bytes32]] = {}
 
         # number of responses to each signage point
         self.number_of_responses: Dict[bytes32, int] = {}
@@ -86,6 +86,9 @@ class Farmer:
 
     async def _await_closed(self):
         await self.cache_clear_task
+
+    def _set_state_changed_callback(self, callback: Callable):
+        self.state_changed_callback = callback
 
     async def on_connect(self, peer: WSChiaConnection):
         # Sends a handshake to the harvester
