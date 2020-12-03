@@ -18,8 +18,7 @@ class TimelordAPI:
     @api_request
     async def new_peak(self, new_peak: timelord_protocol.NewPeak):
         async with self.timelord.lock:
-            if self.timelord.last_state is None or self.timelord.last_state.get_weight() < new_peak.weight:
-                self.timelord.new_peak = new_peak
+            self.timelord.new_peak = new_peak
 
     @api_request
     async def new_unfinished_sub_block(self, new_unfinished_subblock: timelord_protocol.NewUnfinishedSubBlock):

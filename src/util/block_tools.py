@@ -698,6 +698,7 @@ class BlockTools:
                             ip_iters,
                         )
                         assert unfinished_block is not None
+                        total_iters_sp = sub_slot_total_iters + sp_iters
                         return unfinished_block_to_full_block(
                             unfinished_block,
                             cc_ip_vdf,
@@ -708,6 +709,8 @@ class BlockTools:
                             None,
                             finished_sub_slots,
                             None,
+                            {},
+                            total_iters_sp,
                             constants.DIFFICULTY_STARTING,
                         )
 
@@ -753,6 +756,11 @@ class BlockTools:
                         finished_sub_slots[-1].reward_chain.get_hash(),
                         ip_iters,
                     )
+                    total_iters_sp = sub_slot_total_iters + calculate_sp_iters(
+                        self.constants,
+                        self.constants.SUB_SLOT_ITERS_STARTING,
+                        unfinished_block.reward_chain_sub_block.signage_point_index,
+                    )
                     return unfinished_block_to_full_block(
                         unfinished_block,
                         cc_ip_vdf,
@@ -763,6 +771,8 @@ class BlockTools:
                         None,
                         finished_sub_slots,
                         None,
+                        {},
+                        total_iters_sp,
                         constants.DIFFICULTY_STARTING,
                     )
             sub_slot_total_iters += constants.SUB_SLOT_ITERS_STARTING
@@ -927,6 +937,7 @@ def finish_sub_block(
         new_ip_iters,
     )
     assert unfinished_block is not None
+    sp_total_iters = sub_slot_start_total_iters + calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     full_block: FullBlock = unfinished_block_to_full_block(
         unfinished_block,
         cc_ip_vdf,
@@ -937,6 +948,8 @@ def finish_sub_block(
         icc_ip_proof,
         finished_sub_slots,
         latest_sub_block,
+        sub_blocks,
+        sp_total_iters,
         difficulty,
     )
 
@@ -988,17 +1001,8 @@ def load_block_list(
         else:
             difficulty = full_block.weight - block_list[full_block.height - 1].weight
         if full_block.reward_chain_sub_block.signage_point_index == 0:
-            if len(full_block.finished_sub_slots) > 0:
-                sp_hash = full_block.finished_sub_slots[-1].challenge_chain.get_hash()
-            else:
-                if full_block.height == 0:
-                    sp_hash = constants.FIRST_CC_CHALLENGE
-                else:
-                    curr = sub_blocks[full_block.prev_header_hash]
-                    while not curr.first_in_sub_slot:
-                        curr = sub_blocks[curr.prev_hash]
-                    sp_hash = curr.finished_challenge_slot_hashes[-1]
-            challenge = sp_hash
+            challenge = full_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
+            sp_hash = challenge
         else:
             challenge = full_block.reward_chain_sub_block.challenge_chain_sp_vdf.challenge
             sp_hash = full_block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()

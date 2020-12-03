@@ -189,6 +189,7 @@ class TestBlockHeaderValidation:
         blockchain = empty_blockchain
         for block in bt.get_consecutive_blocks(2, skip_slots=3):
             result, err, _ = await blockchain.receive_block(block)
+            assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
