@@ -1,6 +1,6 @@
 import React from 'react';
 import { useHistory } from 'react-router';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { Button } from '@material-ui/core';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
@@ -13,12 +13,14 @@ import PlotAddSelectTemporaryDirectory from './PlotAddSelectTemporaryDirectory';
 import PlotAddSelectFinalDirectory from './PlotAddSelectFinalDirectory';
 import { plotQueueAdd } from '../../../modules/plotQueue';
 import PlotAddConfig from '../../../types/PlotAdd';
+import type { RootState } from '../../../modules/rootReducer';
 
 type FormData = PlotAddConfig;
 
 export default function PlotAdd() {
   const history = useHistory();
   const dispatch = useDispatch();
+  const fingerprint = useSelector((state: RootState) => state.wallet_state.selected_fingerprint);
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
@@ -38,7 +40,10 @@ export default function PlotAdd() {
   });
 
   const handleSubmit: SubmitHandler<FormData> = (data) => {
-    dispatch(plotQueueAdd(data));
+    dispatch(plotQueueAdd(fingerprint ? {
+      ...data,
+      fingerprint,
+    } : data));
 
     history.push('/dashboard/plot');
   }
