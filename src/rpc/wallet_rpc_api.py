@@ -410,7 +410,6 @@ class WalletRpcApi:
                     num_needed,
                 )
                 my_did = did_wallet.get_my_DID()
-                logging.exception(self.service.wallet_state_manager.wallets)
                 return {
                     "type": did_wallet.type(),
                     "my_did": my_did,
@@ -637,6 +636,7 @@ class WalletRpcApi:
             recover_hex_list.append(_.hex())
         return {
             "success": True,
+            "wallet_id": wallet_id,
             "recover_list": recover_hex_list,
             "num_required": wallet.did_info.num_of_backup_ids_needed,
         }

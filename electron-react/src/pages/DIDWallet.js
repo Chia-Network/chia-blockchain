@@ -19,8 +19,7 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 
 import {
   did_spend,
-  did_update_recovery_ids,
-  did_get_recovery_list
+  did_update_recovery_ids_action
 } from "../modules/message";
 import {
   Accordion,
@@ -412,7 +411,11 @@ const BalanceCard = props => {
 
 const ViewDIDsSubsection = props => {
   const classes = useStyles();
-  const backup_list = props.backup_dids
+  let backup_list = props.backup_did_list
+  let isEmptyList = false
+  if (backup_list.length === 0) {
+    isEmptyList = true
+  }
   return (
     <Grid item xs={12}>
       <div className={classes.cardSubSection}>
@@ -434,6 +437,7 @@ const ViewDIDsSubsection = props => {
                     <Box display="flex">
                       <Box flexGrow={1}>
                         <Typography variant="subtitle1">
+                          {isEmptyList ? 'Your backup list is currently empty.' : null }
                           {backup_list.map((object, i) => {
                             return (
                               <span key={i}>
@@ -463,21 +467,23 @@ const ManageDIDsCard = props => {
   const dispatch = useDispatch();
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
-  let backup_dids = useSelector(state => state.wallet_state.wallets[id].backup_dids);
-  console.log(backup_dids)
+  let backup_did_list = useSelector(state => state.wallet_state.wallets[id].backup_dids);
+  console.log(backup_did_list)
   const { handleSubmit, control } = useForm();
   const { fields, append, remove } = useFieldArray(
     {
       control,
-      name: "new_list"
+      name: "backup_dids"
     }
   );
 
   const onSubmit = (data) => {
     const didArray = data.backup_dids?.map((item) => item.backupid) ?? [];
-    console.log(didArray)
-    console.log(id, didArray)
-    dispatch(did_update_recovery_ids(id, didArray));
+    console.log("LOOK1:", didArray)
+    const cleanDidArray = didArray.filter(function(e) { return e !== "" })
+    console.log("LOOK2:", cleanDidArray)
+    const num_verifications_required = parseInt(1)
+    dispatch(did_update_recovery_ids_action(id, cleanDidArray, num_verifications_required));
   };
 
   return (
@@ -491,7 +497,7 @@ const ManageDIDsCard = props => {
           </div>
         </Grid>
         <ViewDIDsSubsection
-          backup_dids={backup_dids}
+          backup_did_list={backup_did_list}
         />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
@@ -536,7 +542,7 @@ const ManageDIDsCard = props => {
                         <li key={item.id} style={{ listStyleType: "none" }}>
                           <Controller
                             as={TextField}
-                            name={`new_list[${index}].backupid`}
+                            name={`backup_dids[${index}].backupid`}
                             control={control}
                             defaultValue=""
                             label="Backup ID"

@@ -719,7 +719,7 @@ export const exit_and_close = event => {
   };
 };
 
-export const create_did_wallet = (amount, backup_dids) => {
+export const create_did_wallet = (amount, backup_dids, num_of_backup_ids_needed) => {
   var action = walletMessage();
   action.message.command = "create_new_wallet";
   action.message.data = {
@@ -727,17 +727,18 @@ export const create_did_wallet = (amount, backup_dids) => {
     did_type: "new",
     amount: amount,
     backup_dids: backup_dids,
+    num_of_backup_ids_needed: num_of_backup_ids_needed,
     host: backup_host
   };
   console.log(action.message.data)
   return action;
 };
 
-export const create_did_action = (amount, backup_dids) => {
+export const create_did_action = (amount, backup_dids, num_of_backup_ids_needed) => {
   return dispatch => {
     return async_api(
       dispatch,
-      create_did_wallet(amount, backup_dids),
+      create_did_wallet(amount, backup_dids, num_of_backup_ids_needed),
       true
     ).then(response => {
       dispatch(closeProgress());
@@ -756,11 +757,25 @@ export const create_did_action = (amount, backup_dids) => {
   };
 };
 
-export const did_update_recovery_ids = (wallet_id, new_list) => {
+export const did_update_recovery_ids = (wallet_id, new_list, num_verifications_required) => {
   var action = walletMessage();
   action.message.command = "did_update_recovery_ids";
-  action.message.data = { wallet_id: wallet_id, new_list: new_list };
+  action.message.data = { wallet_id: wallet_id, new_list: new_list, num_verifications_required: num_verifications_required };
   return action;
+};
+
+export const did_update_recovery_ids_action = (wallet_id, new_list, num_verifications_required) => {
+  return dispatch => {
+    return async_api(
+      dispatch,
+      did_update_recovery_ids(wallet_id, new_list, num_verifications_required),
+      true
+    ).then(response => {
+      dispatch(closeProgress());
+      dispatch(format_message("get_wallets", {}));
+      dispatch(createState(true, false));
+    });
+  };
 };
 
 export const did_spend = (wallet_id, puzzlehash) => {

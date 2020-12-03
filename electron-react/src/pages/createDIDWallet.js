@@ -124,8 +124,9 @@ export const CreateDIDWallet = () => {
       return;
     }
     var amount_val = chia_to_mojo(parseInt(data.amount));
+    const num_of_backup_ids_needed = parseInt(1);
     dispatch(createState(true, true));
-    dispatch(create_did_action(amount_val, didArray));
+    dispatch(create_did_action(amount_val, didArray, num_of_backup_ids_needed));
   };
 
   function goBack() {
