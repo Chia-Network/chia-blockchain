@@ -620,8 +620,8 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did: str = wallet.get_my_DID()
-        coins = wallet.select_coins(1)
-        if len(coins) == 0:
+        coins = await wallet.select_coins(1)
+        if len(coins) == 0 or coins == set():
             return {"success": True, "my_did": my_did}
         else:
             coin = coins.pop()
