@@ -584,10 +584,16 @@ async def validate_unfinished_header_block(
         else:
             our_sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters)
         if (our_sp_total_iters > curr.total_iters) != (header_block.foliage_sub_block.foliage_block_hash is not None):
+            log.warning(
+                f"HERE1... {header_block.foliage_sub_block.foliage_block_hash} {header_block.foliage_sub_block.foliage_block_signature is None}"
+            )
             return None, ValidationError(Err.INVALID_IS_BLOCK)
         if (our_sp_total_iters > curr.total_iters) != (
             header_block.foliage_sub_block.foliage_block_signature is not None
         ):
+            log.warning(
+                f"HERE2... {header_block.foliage_sub_block.foliage_block_hash} {header_block.foliage_sub_block.foliage_block_signature is None}"
+            )
             return None, ValidationError(Err.INVALID_IS_BLOCK)
 
     # 16. Check foliage sub block signature by plot key

@@ -67,7 +67,10 @@ class CoinStore:
             await self._set_spent(coin_name, block.height)
 
         included_reward_coins = block.get_included_reward_coins()
-        assert len(included_reward_coins) >= 2
+        if block.height == 0:
+            assert len(included_reward_coins) == 0
+        else:
+            assert len(included_reward_coins) >= 2
 
         for coin in included_reward_coins:
             reward_coin_r: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, True)

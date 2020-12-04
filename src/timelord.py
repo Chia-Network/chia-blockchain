@@ -353,6 +353,10 @@ class Timelord:
         self.iters_to_submit[Chain.REWARD_CHAIN].append(left_subslot_iters)
         self.iteration_to_proof_type[left_subslot_iters] = IterationType.END_OF_SUBSLOT
 
+        for chain, iters in self.iters_to_submit.items():
+            for iteration in iters:
+                assert iteration > 0
+
     async def _handle_new_peak(self):
         self.last_state.set_state(self.new_peak)
         self.new_peak = None

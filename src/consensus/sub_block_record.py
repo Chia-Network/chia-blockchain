@@ -41,6 +41,7 @@ class SubBlockRecord(Streamable):
     # Block (present iff is_block)
     timestamp: Optional[uint64]
     prev_block_hash: Optional[bytes32]  # Header hash of the previous transaction block
+    fees: Optional[uint64]
 
     # Slot (present iff this is the first SB in sub slot)
     finished_challenge_slot_hashes: Optional[List[bytes32]]
