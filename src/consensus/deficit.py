@@ -7,12 +7,12 @@ from src.util.ints import uint32, uint8
 
 def calculate_deficit(
     constants: ConsensusConstants,
-    height: uint32,
+    sub_block_height: uint32,
     prev_sb: Optional[SubBlockRecord],
     overflow: bool,
     passed_slot_barrier: bool,
 ) -> uint8:
-    if height == 0:
+    if sub_block_height == 0:
         return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK) - 1
     else:
         prev_deficit: uint8 = prev_sb.deficit

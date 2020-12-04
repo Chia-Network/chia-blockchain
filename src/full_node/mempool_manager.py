@@ -179,7 +179,7 @@ class MempoolManager:
                 removal_coin = additions_dict[name]
                 removal_record = CoinRecord(
                     removal_coin,
-                    uint32(self.peak.height + 1),
+                    uint32(self.peak.prev_block_height + 1),
                     uint32(0),
                     False,
                     False,
@@ -263,7 +263,7 @@ class MempoolManager:
                 log.warning(f"{npc.puzzle_hash} != {coin_record.coin.puzzle_hash}")
                 return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 
-            error = mempool_check_conditions_dict(coin_record, new_spend, npc.condition_dict, self.peak.height)
+            error = mempool_check_conditions_dict(coin_record, new_spend, npc.condition_dict, self.peak.prev_block_height + 1)
 
             if error:
                 if error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED:

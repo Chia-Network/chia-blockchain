@@ -1,21 +1,19 @@
 import traceback
 from typing import List, Optional
 
-from src.protocols import wallet_protocol, introducer_protocol
-from src.server.outbound_message import Message, NodeType
+from src.protocols import wallet_protocol
+from src.server.outbound_message import Message
 from src.server.ws_connection import WSChiaConnection
 from src.types.coin import Coin, hash_coin_list
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request, peer_required
 from src.util.errors import Err
-from src.util.ints import uint32
 from src.util.merkle_set import (
     MerkleSet,
     confirm_not_included_already_hashed,
     confirm_included_already_hashed,
 )
-from src.wallet.block_record import BlockRecord
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_node import WalletNode
@@ -98,32 +96,32 @@ class WalletNodeAPI:
                         response.proofs[i][1],
                     )
 
-        new_br = BlockRecord(
-            block_record.header_hash,
-            block_record.prev_header_hash,
-            block_record.height,
-            block_record.weight,
-            block_record.additions,
-            all_coins,
-            block_record.total_iters,
-            header_block.challenge.get_hash(),
-            header_block.header.data.timestamp,
-        )
-
-        self.wallet_node.cached_blocks[response.header_hash] = (
-            new_br,
-            header_block,
-            transaction_filter,
-        )
-
-        # We have collected all three things: header, additions, and removals. Can proceed.
-        respond_header_msg: Optional[
-            wallet_protocol.RespondHeader
-        ] = await self.wallet_node._block_finished(
-            new_br, header_block, transaction_filter
-        )
-        if respond_header_msg is not None:
-            await self.respond_header(respond_header_msg, peer)
+        # new_br = BlockRecord(
+        #     block_record.header_hash,
+        #     block_record.prev_header_hash,
+        #     block_record.height,
+        #     block_record.weight,
+        #     block_record.additions,
+        #     all_coins,
+        #     block_record.total_iters,
+        #     header_block.challenge.get_hash(),
+        #     header_block.header.data.timestamp,
+        # )
+        #
+        # self.wallet_node.cached_blocks[response.header_hash] = (
+        #     new_br,
+        #     header_block,
+        #     transaction_filter,
+        # )
+        #
+        # # We have collected all three things: header, additions, and removals. Can proceed.
+        # respond_header_msg: Optional[
+        #     wallet_protocol.RespondHeader
+        # ] = await self.wallet_node._block_finished(
+        #     new_br, header_block, transaction_filter
+        # )
+        # if respond_header_msg is not None:
+        #     await self.respond_header(respond_header_msg, peer)
 
     @api_request
     async def reject_removals_request(
@@ -202,159 +200,159 @@ class WalletNodeAPI:
             return
         self.wallet_node.log.error("Header request rejected")
 
-    @peer_required
-    @api_request
-    async def respond_additions(
-        self, response: wallet_protocol.RespondAdditions, peer: WSChiaConnection
-    ):
-        """
-        The full node has responded with the additions for a block. We will use this
-        to try to finish the block, and add it to the state.
-        """
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
-            return
-        if self.wallet_node._shut_down:
-            return
-        if response.header_hash not in self.wallet_node.cached_blocks:
-            self.wallet_node.log.warning("Do not have header for additions")
-            return
-        block_record, header_block, transaction_filter = self.wallet_node.cached_blocks[
-            response.header_hash
-        ]
-        assert response.height == block_record.height
-
-        additions: List[Coin]
-        if response.proofs is None:
-            # If there are no proofs, it means all additions were returned in the response.
-            # we must find the ones relevant to our wallets.
-            all_coins: List[Coin] = []
-            for puzzle_hash, coin_list_0 in response.coins:
-                all_coins += coin_list_0
-            additions = (
-                await self.wallet_node.wallet_state_manager.get_relevant_additions(
-                    all_coins
-                )
-            )
-            # Verify root
-            additions_merkle_set = MerkleSet()
-
-            # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-            for puzzle_hash, coins in response.coins:
-                additions_merkle_set.add_already_hashed(puzzle_hash)
-                additions_merkle_set.add_already_hashed(hash_coin_list(coins))
-
-            additions_root = additions_merkle_set.get_root()
-            if header_block.header.data.additions_root != additions_root:
-                return
-        else:
-            # This means the full node has responded only with the relevant additions
-            # for our wallet. Each merkle proof must be verified.
-            additions = []
-            assert len(response.coins) == len(response.proofs)
-            for i in range(len(response.coins)):
-                assert response.coins[i][0] == response.proofs[i][0]
-                coin_list_1: List[Coin] = response.coins[i][1]
-                puzzle_hash_proof: bytes32 = response.proofs[i][1]
-                coin_list_proof: Optional[bytes32] = response.proofs[i][2]
-                if len(coin_list_1) == 0:
-                    # Verify exclusion proof for puzzle hash
-                    assert confirm_not_included_already_hashed(
-                        header_block.header.data.additions_root,
-                        response.coins[i][0],
-                        puzzle_hash_proof,
-                    )
-                else:
-                    # Verify inclusion proof for puzzle hash
-                    assert confirm_included_already_hashed(
-                        header_block.header.data.additions_root,
-                        response.coins[i][0],
-                        puzzle_hash_proof,
-                    )
-                    # Verify inclusion proof for coin list
-                    assert confirm_included_already_hashed(
-                        header_block.header.data.additions_root,
-                        hash_coin_list(coin_list_1),
-                        coin_list_proof,
-                    )
-                    for coin in coin_list_1:
-                        assert coin.puzzle_hash == response.coins[i][0]
-                    additions += coin_list_1
-        new_br = BlockRecord(
-            block_record.header_hash,
-            block_record.prev_header_hash,
-            block_record.height,
-            block_record.weight,
-            additions,
-            None,
-            block_record.total_iters,
-            header_block.challenge.get_hash(),
-            header_block.header.data.timestamp,
-        )
-        self.wallet_node.cached_blocks[response.header_hash] = (
-            new_br,
-            header_block,
-            transaction_filter,
-        )
-
-        if transaction_filter is None:
-            raise RuntimeError("Got additions for block with no transactions.")
-
-        (
-            _,
-            removals,
-        ) = await self.wallet_node.wallet_state_manager.get_filter_additions_removals(
-            new_br, transaction_filter
-        )
-        request_all_removals = False
-        for coin in additions:
-            puzzle_store = self.wallet_node.wallet_state_manager.puzzle_store
-            record_info: Optional[
-                DerivationRecord
-            ] = await puzzle_store.get_derivation_record_for_puzzle_hash(
-                coin.puzzle_hash.hex()
-            )
-            if (
-                record_info is not None
-                and record_info.wallet_type == WalletType.COLOURED_COIN
-            ):
-                request_all_removals = True
-                break
-
-        if len(removals) > 0 or request_all_removals:
-            if request_all_removals:
-                request_r = wallet_protocol.RequestRemovals(
-                    header_block.height, header_block.header_hash, None
-                )
-            else:
-                request_r = wallet_protocol.RequestRemovals(
-                    header_block.height, header_block.header_hash, removals
-                )
-            msg = Message("request_removals", request_r)
-            await peer.send_message(msg)
-        else:
-            # We have collected all three things: header, additions, and removals (since there are no
-            # relevant removals for us). Can proceed. Otherwise, we wait for the removals to arrive.
-            new_br = BlockRecord(
-                new_br.header_hash,
-                new_br.prev_header_hash,
-                new_br.height,
-                new_br.weight,
-                new_br.additions,
-                [],
-                new_br.total_iters,
-                new_br.new_challenge_hash,
-                new_br.timestamp,
-            )
-            respond_header_msg: Optional[
-                wallet_protocol.RespondHeader
-            ] = await self.wallet_node._block_finished(
-                new_br, header_block, transaction_filter
-            )
-            if respond_header_msg is not None:
-                await self.wallet_node._respond_header(respond_header_msg, peer)
+    # @peer_required
+    # @api_request
+    # async def respond_additions(
+    #     self, response: wallet_protocol.RespondAdditions, peer: WSChiaConnection
+    # ):
+    #     """
+    #     The full node has responded with the additions for a block. We will use this
+    #     to try to finish the block, and add it to the state.
+    #     """
+    #     if (
+    #         self.wallet_node.wallet_state_manager is None
+    #         or self.wallet_node.backup_initialized is False
+    #     ):
+    #         return
+    #     if self.wallet_node._shut_down:
+    #         return
+    #     if response.header_hash not in self.wallet_node.cached_blocks:
+    #         self.wallet_node.log.warning("Do not have header for additions")
+    #         return
+    #     block_record, header_block, transaction_filter = self.wallet_node.cached_blocks[
+    #         response.header_hash
+    #     ]
+    #     assert response.height == block_record.height
+    #
+    #     additions: List[Coin]
+    #     if response.proofs is None:
+    #         # If there are no proofs, it means all additions were returned in the response.
+    #         # we must find the ones relevant to our wallets.
+    #         all_coins: List[Coin] = []
+    #         for puzzle_hash, coin_list_0 in response.coins:
+    #             all_coins += coin_list_0
+    #         additions = (
+    #             await self.wallet_node.wallet_state_manager.get_relevant_additions(
+    #                 all_coins
+    #             )
+    #         )
+    #         # Verify root
+    #         additions_merkle_set = MerkleSet()
+    #
+    #         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+    #         for puzzle_hash, coins in response.coins:
+    #             additions_merkle_set.add_already_hashed(puzzle_hash)
+    #             additions_merkle_set.add_already_hashed(hash_coin_list(coins))
+    #
+    #         additions_root = additions_merkle_set.get_root()
+    #         if header_block.header.data.additions_root != additions_root:
+    #             return
+    #     else:
+    #         # This means the full node has responded only with the relevant additions
+    #         # for our wallet. Each merkle proof must be verified.
+    #         additions = []
+    #         assert len(response.coins) == len(response.proofs)
+    #         for i in range(len(response.coins)):
+    #             assert response.coins[i][0] == response.proofs[i][0]
+    #             coin_list_1: List[Coin] = response.coins[i][1]
+    #             puzzle_hash_proof: bytes32 = response.proofs[i][1]
+    #             coin_list_proof: Optional[bytes32] = response.proofs[i][2]
+    #             if len(coin_list_1) == 0:
+    #                 # Verify exclusion proof for puzzle hash
+    #                 assert confirm_not_included_already_hashed(
+    #                     header_block.header.data.additions_root,
+    #                     response.coins[i][0],
+    #                     puzzle_hash_proof,
+    #                 )
+    #             else:
+    #                 # Verify inclusion proof for puzzle hash
+    #                 assert confirm_included_already_hashed(
+    #                     header_block.header.data.additions_root,
+    #                     response.coins[i][0],
+    #                     puzzle_hash_proof,
+    #                 )
+    #                 # Verify inclusion proof for coin list
+    #                 assert confirm_included_already_hashed(
+    #                     header_block.header.data.additions_root,
+    #                     hash_coin_list(coin_list_1),
+    #                     coin_list_proof,
+    #                 )
+    #                 for coin in coin_list_1:
+    #                     assert coin.puzzle_hash == response.coins[i][0]
+    #                 additions += coin_list_1
+    #     new_br = BlockRecord(
+    #         block_record.header_hash,
+    #         block_record.prev_header_hash,
+    #         block_record.height,
+    #         block_record.weight,
+    #         additions,
+    #         None,
+    #         block_record.total_iters,
+    #         header_block.challenge.get_hash(),
+    #         header_block.header.data.timestamp,
+    #     )
+    #     self.wallet_node.cached_blocks[response.header_hash] = (
+    #         new_br,
+    #         header_block,
+    #         transaction_filter,
+    #     )
+    #
+    #     if transaction_filter is None:
+    #         raise RuntimeError("Got additions for block with no transactions.")
+    #
+    #     (
+    #         _,
+    #         removals,
+    #     ) = await self.wallet_node.wallet_state_manager.get_filter_additions_removals(
+    #         new_br, transaction_filter
+    #     )
+    #     request_all_removals = False
+    #     for coin in additions:
+    #         puzzle_store = self.wallet_node.wallet_state_manager.puzzle_store
+    #         record_info: Optional[
+    #             DerivationRecord
+    #         ] = await puzzle_store.get_derivation_record_for_puzzle_hash(
+    #             coin.puzzle_hash.hex()
+    #         )
+    #         if (
+    #             record_info is not None
+    #             and record_info.wallet_type == WalletType.COLOURED_COIN
+    #         ):
+    #             request_all_removals = True
+    #             break
+    #
+    #     if len(removals) > 0 or request_all_removals:
+    #         if request_all_removals:
+    #             request_r = wallet_protocol.RequestRemovals(
+    #                 header_block.height, header_block.header_hash, None
+    #             )
+    #         else:
+    #             request_r = wallet_protocol.RequestRemovals(
+    #                 header_block.height, header_block.header_hash, removals
+    #             )
+    #         msg = Message("request_removals", request_r)
+    #         await peer.send_message(msg)
+    #     else:
+    #         # We have collected all three things: header, additions, and removals (since there are no
+    #         # relevant removals for us). Can proceed. Otherwise, we wait for the removals to arrive.
+    #         new_br = BlockRecord(
+    #             new_br.header_hash,
+    #             new_br.prev_header_hash,
+    #             new_br.height,
+    #             new_br.weight,
+    #             new_br.additions,
+    #             [],
+    #             new_br.total_iters,
+    #             new_br.new_challenge_hash,
+    #             new_br.timestamp,
+    #         )
+    #         respond_header_msg: Optional[
+    #             wallet_protocol.RespondHeader
+    #         ] = await self.wallet_node._block_finished(
+    #             new_br, header_block, transaction_filter
+    #         )
+    #         if respond_header_msg is not None:
+    #             await self.wallet_node._respond_header(respond_header_msg, peer)
 
     @peer_required
     @api_request

@@ -3,7 +3,7 @@ from typing import List, Optional
 from blspy import G2Element
 
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint64
+from src.util.ints import uint64, uint32
 from src.util.streamable import Streamable, streamable
 from src.types.pool_target import PoolTarget
 from src.types.coin import Coin
@@ -31,6 +31,7 @@ class FoliageBlock(Streamable):
     additions_root: bytes32
     removals_root: bytes32
     transactions_info_hash: bytes32
+    height: uint32
 
 
 @dataclass(frozen=True)

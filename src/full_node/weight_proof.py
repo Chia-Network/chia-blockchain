@@ -35,13 +35,13 @@ class WeightProofFactory:
         constants: ConsensusConstants,
         sub_blocks: Dict[bytes32, SubBlockRecord],
         header_cache: Dict[bytes32, HeaderBlock],
-        height_to_hash: Dict[uint32, bytes32],
+        sub_height_to_hash: Dict[uint32, bytes32],
         name: str = None,
     ):
         self.constants = constants
         self.sub_blocks = sub_blocks
         self.header_cache = header_cache
-        self.height_to_hash = height_to_hash
+        self.sub_height_to_hash = sub_height_to_hash
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -60,17 +60,17 @@ class WeightProofFactory:
         rng: random.Random = random.Random(tip)
         # ses_hash from the latest sub epoch summary before this part of the chain
         self.log.info(
-            f"build weight proofs, peak : {self.sub_blocks[tip].height} num of blocks: {total_number_of_blocks}"
+            f"build weight proofs, peak : {self.sub_blocks[tip].sub_block_height} num of blocks: {total_number_of_blocks}"
         )
-        assert self.sub_blocks[tip].height >= total_number_of_blocks
+        assert self.sub_blocks[tip].sub_block_height >= total_number_of_blocks
         sub_epoch_n: uint32 = uint32(0)
 
         blocks_left = total_number_of_blocks
-        curr_height = self.sub_blocks[tip].height - total_number_of_blocks
+        curr_height = self.sub_blocks[tip].sub_block_height - total_number_of_blocks
         total_overflow_blocks = 0
         while blocks_left != 0:
             # next sub block
-            block = self.height_to_hash[curr_height]
+            block = self.sub_height_to_hash[curr_height]
             sub_block = self.sub_blocks[block]
             header_block = self.header_cache[block]
             if is_overflow_sub_block(self.constants, header_block.reward_chain_sub_block.signage_point_index):
@@ -78,7 +78,7 @@ class WeightProofFactory:
                 self.log.debug(f"overflow block at height {curr_height}  ")
             # for each sub-epoch
             if sub_block.sub_epoch_summary_included is not None:
-                self.log.debug(f"sub epoch end, block height {sub_block.height} {sub_block.sub_epoch_summary_included}")
+                self.log.debug(f"sub epoch end, block height {sub_block.sub_block_height} {sub_block.sub_epoch_summary_included}")
                 sub_epoch_data.append(make_sub_epoch_data(sub_block.sub_epoch_summary_included))
                 # get sub_epoch_blocks_n in sub_epoch
                 sub_epoch_blocks_n = get_sub_epoch_block_num(sub_block, self.sub_blocks)
@@ -107,13 +107,13 @@ class WeightProofFactory:
         return WeightProof(sub_epoch_data, sub_epoch_segments, proof_blocks)
 
     def validate_weight_proof(self, weight_proof: WeightProof, fork_point: SubBlockRecord) -> bool:
-        self.log.info(f"fork point {fork_point.height}")
+        self.log.info(f"fork point {fork_point.sub_block_height}")
         # sub epoch summaries validate hashes
         self.log.info(f"validate summaries")
         curr = fork_point
         while not curr.sub_epoch_summary_included:
             curr = self.sub_blocks[curr.prev_hash]
-        self.log.info(f"prev sub_epoch summary at {curr.height}")
+        self.log.info(f"prev sub_epoch summary at {curr.sub_block_height}")
 
         summaries = self.validate_sub_epoch_summaries(weight_proof, fork_point, curr.sub_epoch_summary_included)
         if summaries is None:
@@ -244,7 +244,7 @@ class WeightProofFactory:
             if not curr.is_challenge_sub_block(self.constants):
                 continue
 
-            self.log.debug(f"sub epoch {sub_epoch_n} challenge segment, starts at {curr.height} ")
+            self.log.debug(f"sub epoch {sub_epoch_n} challenge segment, starts at {curr.sub_block_height} ")
             challenge_sub_block = self.header_cache[curr.header_hash]
             segments.append(self._handle_challenge_segment(challenge_sub_block, sub_epoch_n))
 
@@ -252,17 +252,17 @@ class WeightProofFactory:
 
     def _handle_challenge_segment(self, block: HeaderBlock, sub_epoch_n: uint32) -> SubEpochChallengeSegment:
         sub_slots: List[SubSlotData] = []
-        self.log.debug(f"create challenge segment for block {block.header_hash} height {block.height} ")
+        self.log.debug(f"create challenge segment for block {block.header_hash} sub_block_height {block.sub_block_height} ")
 
         # VDFs from sub slots before challenge block
-        self.log.debug(f"create ip vdf for block {block.header_hash} height {block.height} ")
+        self.log.debug(f"create ip vdf for block {block.header_hash} height {block.sub_block_height} ")
         first_sub_slots, end_height = self.__first_sub_slots_data(block)
         sub_slots.extend(first_sub_slots)
 
         # VDFs from slot after challenge block to end of slot
-        self.log.debug(f"create slot end vdf for block {block.header_hash} height {block.height} ")
+        self.log.debug(f"create slot end vdf for block {block.header_hash} height {block.sub_block_height} ")
 
-        challenge_slot_end_sub_slots = self.__get_slot_end_vdf(self.header_cache[self.height_to_hash[end_height]])
+        challenge_slot_end_sub_slots = self.__get_slot_end_vdf(self.header_cache[self.sub_height_to_hash[end_height]])
 
         sub_slots.extend(challenge_slot_end_sub_slots)
         self.log.debug(f"segment number of sub slots {len(sub_slots)}")
@@ -274,8 +274,8 @@ class WeightProofFactory:
         cc_proofs: List[VDFProof] = []
         icc_proofs: List[VDFProof] = []
         sub_slots_data: List[SubSlotData] = []
-        while curr.height + 1 < len(self.sub_blocks):
-            curr = self.header_cache[self.height_to_hash[curr.height + 1]]
+        while curr.sub_block_height + 1 < len(self.sub_blocks):
+            curr = self.header_cache[self.sub_height_to_hash[curr.sub_block_height + 1]]
             if len(curr.finished_sub_slots) > 0:
                 # slot finished combine proofs and add slot data to list
                 sub_slots_data.append(
@@ -318,10 +318,10 @@ class WeightProofFactory:
         cc_slot_end_vdf: List[VDFProof] = []
         icc_slot_end_vdf: List[VDFProof] = []
         while True:
-            curr = self.header_cache[self.height_to_hash[curr.height + 1]]
+            curr = self.header_cache[self.sub_height_to_hash[curr.sub_block_height + 1]]
             if len(curr.finished_sub_slots) > 0:
                 # sub slot ended
-                next_slot_height = curr.height + 1
+                next_slot_height = curr.sub_block_height + 1
                 break
 
             cc_slot_end_vdf.extend([curr.challenge_chain_sp_proof, curr.challenge_chain_ip_proof])
@@ -413,7 +413,7 @@ def get_sub_epoch_block_num(last_block: SubBlockRecord, sub_blocks: Dict[bytes32
     count: uint32 = uint32(0)
     while not curr.sub_epoch_summary_included:
         # todo skip overflows from last sub epoch
-        if curr.height == 0:
+        if curr.sub_block_height == 0:
             return count
 
         curr = sub_blocks[curr.prev_hash]
@@ -439,7 +439,7 @@ def count_sub_epochs_in_range(
 ):
     sub_epochs_n = 0
     while not total_number_of_blocks == 0:
-        assert curr.height != 0
+        assert curr.sub_block_height != 0
         curr = sub_blocks[curr.prev_hash]
         if curr.sub_epoch_summary_included is not None:
             sub_epochs_n += 1
