@@ -32,6 +32,10 @@ from src.util.merkle_set import MerkleSet
 from src.util.prev_block import get_prev_block
 from tests.recursive_replace import recursive_replace
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def create_foliage(
     constants: ConsensusConstants,
@@ -97,20 +101,28 @@ def create_foliage(
         if solution_program is not None:
             _, _, cost = calculate_cost_of_program(solution_program, constants.CLVM_COST_RATIO_CONSTANT)
         # TODO: prev generators root
-        pool_coin = create_pool_coin(height, pool_target.puzzle_hash, calculate_pool_reward(height))
-        farmer_coin = create_farmer_coin(
-            uint32(height), farmer_reward_puzzlehash, calculate_base_farmer_reward(uint32(height)) + spend_bundle_fees
-        )
-        reward_claims_incorporated = [pool_coin, farmer_coin]
+        reward_claims_incorporated = []
         if height > 0:
             curr: SubBlockRecord = prev_sub_block
             while not curr.is_block:
-                pool_coin = create_pool_coin(curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height))
-                farmer_coin = create_farmer_coin(
-                    curr.height, curr.farmer_puzzle_hash, calculate_base_farmer_reward(curr.height)
-                )
-                reward_claims_incorporated += [pool_coin, farmer_coin]
                 curr = sub_blocks[curr.prev_hash]
+            pool_coin = create_pool_coin(curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height))
+            farmer_coin = create_farmer_coin(
+                curr.height, curr.farmer_puzzle_hash, calculate_base_farmer_reward(curr.height) + curr.fees
+            )
+            assert curr.header_hash == prev_block.header_hash
+            reward_claims_incorporated += [pool_coin, farmer_coin]
+
+            if curr.height > 0:
+                curr = sub_blocks[curr.prev_hash]
+                # Prev block is not genesis
+                while not curr.is_block:
+                    pool_coin = create_pool_coin(curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height))
+                    farmer_coin = create_farmer_coin(
+                        curr.height, curr.farmer_puzzle_hash, calculate_base_farmer_reward(curr.height)
+                    )
+                    reward_claims_incorporated += [pool_coin, farmer_coin]
+                    curr = sub_blocks[curr.prev_hash]
         additions: List[Coin] = reward_claims_incorporated.copy()
         npc_list = []
         if solution_program is not None:
@@ -123,8 +135,6 @@ def create_foliage(
             tx_removals.append(npc.coin_name)
             byte_array_tx.append(bytearray(npc.coin_name))
 
-        byte_array_tx.append(bytearray(farmer_reward_puzzlehash))
-        byte_array_tx.append(bytearray(pool_target.puzzle_hash))
         bip158: PyBIP158 = PyBIP158(byte_array_tx)
         encoded = bytes(bip158.GetEncoded())
 
@@ -181,6 +191,8 @@ def create_foliage(
         foliage_block_signature = None
         foliage_block = None
         transactions_info = None
+    assert (foliage_block_hash is None) == (foliage_block_signature is None)
+    log.warning(f"MAking block with {foliage_block_hash} {foliage_block_signature}")
 
     foliage_sub_block = FoliageSubBlock(
         prev_sub_block_hash,
@@ -334,6 +346,7 @@ def unfinished_block_to_full_block(
             new_foliage_block = None
             new_tx_info = None
             new_generator = None
+        assert (new_fbh is None) == (new_fbs is None)
         new_foliage_sub_block = replace(
             unfinished_block.foliage_sub_block,
             prev_sub_block_hash=prev_sub_block.header_hash,

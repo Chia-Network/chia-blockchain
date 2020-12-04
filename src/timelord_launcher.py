@@ -60,7 +60,7 @@ async def spawn_process(host, port, counter):
         if stdout:
             log.info(f"Stdout:\n{stdout.decode().rstrip()}")
         if stderr:
-            log.info(f"Stderr:\n{stderr.decode().rstrip()}")
+            log.error(f"Stderr:\n{stderr.decode().rstrip()}")
         log.info(f"Process number {counter} ended.")
         async with lock:
             if proc in active_processes:

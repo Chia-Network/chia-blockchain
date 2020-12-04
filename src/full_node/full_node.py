@@ -36,7 +36,7 @@ from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
-from src.util.errors import ConsensusError
+from src.util.errors import ConsensusError, Err
 from src.util.ints import uint32, uint128, uint8
 from src.util.path import mkdir, path_from_root
 
@@ -435,8 +435,11 @@ class FullNode:
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
         elif added == ReceiveBlockResult.INVALID_BLOCK:
-            self.log.error(f"Block {header_hash} at height {sub_block.height} is invalid with code {error_code}.")
             assert error_code is not None
+            if error_code == Err.TOO_MANY_SUB_BLOCKS:
+                self.log.info(f"Reached the limit of sub_blocks in sub_slot {self.constants.MAX_SUB_SLOT_SUB_BLOCKS}")
+                return
+            self.log.error(f"Block {header_hash} at height {sub_block.height} is invalid with code {error_code}.")
             raise ConsensusError(error_code, header_hash)
 
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
@@ -484,7 +487,7 @@ class FullNode:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
             new_peak: SubBlockRecord = self.blockchain.get_peak()
             self.log.info(
-                f"Updated peak to height {new_peak.height}, weight {new_peak.weight}, hh {new_peak.header_hash}, "
+                f"🌱 Updated peak to height {new_peak.height}, weight {new_peak.weight}, hh {new_peak.header_hash}, "
                 f"forked at {fork_height}"
             )
 
