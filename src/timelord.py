@@ -15,6 +15,7 @@ from src.consensus.pot_iterations import (
     calculate_iterations_quality,
     calculate_sp_iters,
     calculate_ip_iters,
+    is_overflow_sub_block,
 )
 from src.protocols import timelord_protocol
 from src.server.outbound_message import NodeType, Message
@@ -28,7 +29,7 @@ from src.types.reward_chain_sub_block import (
 from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeChainSubSlot, InfusedChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
 from src.types.vdf import VDFInfo, VDFProof
-from src.util.ints import uint64, uint8, uint128, int512
+from src.util.ints import uint64, uint8, uint128, int512, uint32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.slots import ChallengeBlockInfo
 
@@ -87,7 +88,9 @@ class LastState:
         self.sub_epoch_summary: Optional[SubEpochSummary] = None
         self.constants: ConsensusConstants = constants
         self.last_weight: uint128 = uint128(0)
+        self.last_height: uint32 = uint32(0)
         self.total_iters: uint128 = uint128(0)
+        self.last_block_total_iters: Optional[uint128] = None
         self.last_peak_challenge: bytes32 = constants.FIRST_RC_CHALLENGE
         self.first_sub_slot_no_peak: bool = True
         self.difficulty: uint64 = constants.DIFFICULTY_STARTING
@@ -106,10 +109,13 @@ class LastState:
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary
             self.last_weight = state.reward_chain_sub_block.weight
+            self.last_height = state.reward_chain_sub_block.sub_block_height
             self.total_iters = state.reward_chain_sub_block.total_iters
             self.last_peak_challenge = state.reward_chain_sub_block.get_hash()
             self.difficulty = state.difficulty
             self.sub_slot_iters = state.sub_slot_iters
+            if state.reward_chain_sub_block.is_block:
+                self.last_block_total_iters = self.total_iters
 
         if isinstance(state, EndOfSubSlotBundle):
             self.peak = None
@@ -126,6 +132,9 @@ class LastState:
 
     def get_weight(self) -> uint128:
         return self.last_weight
+
+    def get_height(self) -> uint32:
+        return self.last_height
 
     def get_total_iters(self) -> uint128:
         return self.total_iters
@@ -144,6 +153,9 @@ class LastState:
 
     def get_sub_epoch_summary(self) -> Optional[SubEpochSummary]:
         return self.sub_epoch_summary
+
+    def get_last_block_total_iters(self) -> Optional[uint128]:
+        return self.last_block_total_iters
 
     def get_challenge(self, chain: Chain) -> Optional[bytes32]:
         if self.first_sub_slot_no_peak:
@@ -502,6 +514,7 @@ class Timelord:
                         block = unfinished_block
                         break
                 if block is not None:
+                    ip_total_iters = self.last_state.get_total_iters() + iteration
                     self.unfinished_blocks.remove(block)
                     challenge = block.reward_chain_sub_block.get_hash()
                     icc_info: Optional[VDFInfo] = None
@@ -523,9 +536,10 @@ class Timelord:
                     if cc_info is None or cc_proof is None or rc_info is None or rc_proof is None:
                         log.error(f"Insufficient VDF proofs for infusion point ch: {challenge} iterations:{iteration}")
                     log.info(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
+                    cc_info = dataclasses.replace(cc_info, number_of_iterations=ip_iters)
                     response = timelord_protocol.NewInfusionPointVDF(
                         challenge,
-                        dataclasses.replace(cc_info, number_of_iterations=ip_iters),
+                        cc_info,
                         cc_proof,
                         rc_info,
                         rc_proof,
@@ -535,7 +549,52 @@ class Timelord:
                     msg = Message("new_infusion_point_vdf", response)
                     if self.server is not None:
                         await self.server.send_to_all([msg], NodeType.FULL_NODE)
+
                     self.proofs_finished = self._clear_proof_list(iteration)
+
+                    if self.last_state.get_last_block_total_iters() is None:
+                        # We don't know when the last block was, so we can't make peaks
+                        return
+
+                    overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
+                    sp_total_iters = (
+                        ip_total_iters
+                        - ip_iters
+                        + calculate_sp_iters(
+                            self.constants, block.sub_slot_iters, block.reward_chain_sub_block.signage_point_index
+                        )
+                        - (block.sub_slot_iters if overflow else 0)
+                    )
+                    is_block = self.last_state.get_last_block_total_iters() < sp_total_iters
+
+                    new_reward_chain_sub_block = RewardChainSubBlock(
+                        self.last_state.get_weight() + block.difficulty,
+                        self.last_state.get_height() + 1,
+                        ip_total_iters,
+                        block.reward_chain_sub_block.signage_point_index,
+                        block.reward_chain_sub_block.pos_ss_cc_challenge_hash,
+                        block.reward_chain_sub_block.proof_of_space,
+                        block.reward_chain_sub_block.challenge_chain_sp_vdf,
+                        block.reward_chain_sub_block.challenge_chain_sp_signature,
+                        cc_info,
+                        block.reward_chain_sub_block.reward_chain_sp_vdf,
+                        block.reward_chain_sub_block.reward_chain_sp_signature,
+                        rc_info,
+                        icc_info,
+                        is_block,
+                    )
+                    if overflow:
+                        new_deficit = self.last_state.deficit
+                    else:
+                        new_deficit = max(self.last_state.deficit - 1, 0)
+                    self.new_peak = timelord_protocol.NewPeak(
+                        new_reward_chain_sub_block,
+                        block.difficulty,
+                        new_deficit,
+                        block.sub_slot_iters,
+                        block.sub_epoch_summary,
+                    )
+                    await self._handle_new_peak()
 
     async def _check_for_end_of_subslot(self):
         left_subslot_iters = [
