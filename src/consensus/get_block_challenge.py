@@ -35,8 +35,12 @@ def get_block_challenge(
             challenge = constants.FIRST_CC_CHALLENGE
         else:
             if overflow:
-                # Overflow infusion, so get the second to last challenge
-                challenges_to_look_for = 2
+                if skip_overflow_last_ss_validation:
+                    # Overflow infusion without the new slot, so get the last challenge
+                    challenges_to_look_for = 1
+                else:
+                    # Overflow infusion, so get the second to last challenge
+                    challenges_to_look_for = 2
             else:
                 challenges_to_look_for = 1
             reversed_challenge_hashes: List[bytes32] = []
