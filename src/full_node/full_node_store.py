@@ -349,8 +349,6 @@ class FullNodeStore:
 
                 sp_arr[index] = signage_point
                 return True
-        log.warning(f"{self.finished_sub_slots}")
-        log.warning("No cc found...")
         return False
 
     def get_signage_point(self, cc_signage_point: bytes32) -> Optional[SignagePoint]:
