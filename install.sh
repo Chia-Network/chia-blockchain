@@ -2,68 +2,64 @@
 set -e
 UBUNTU=false
 if [ "$(uname)" = "Linux" ]; then
-  #LINUX=1
-  if type apt-get; then
-    UBUNTU=true
-  fi
+	#LINUX=1
+	if type apt-get; then
+		UBUNTU=true
+	fi
 fi
 
 UBUNTU_PRE_2004=false
 if $UBUNTU; then
-  LSB_RELEASE=$(lsb_release -rs)
-  UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20.04" | bc)
+	LSB_RELEASE=$(lsb_release -rs)
+	UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20.04" | bc)
 fi
 
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
-  #LINUX=1
-  if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "1" ]; then
-    # Debian/Ubuntu
-    echo "Installing on Ubuntu/Debian pre 20.04 LTS"
-    sudo apt-get update
-    sudo apt-get install -y  python3.7-venv python3.7-distutils
-  elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ]; then
-    echo "Installing on Ubuntu/Debian 20.04 LTS or newer"
-    sudo apt-get update
-    sudo apt-get install -y  python3.8-venv python3.8-distutils
-  elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
-    # AMZN 2
-    echo "Installing on Amazon Linux 2"
-    sudo yum install -y python3 git
-  elif type yum && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
-    # CentOS or Redhat
-    echo "Installing on CentOS/Redhat"
-  fi
+	#LINUX=1
+	if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "1" ]; then
+		# Debian/Ubuntu
+		echo "Installing on Ubuntu/Debian pre 20.04 LTS"
+		sudo apt-get update
+		sudo apt-get install -y python3.7-venv python3.7-distutils
+	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ]; then
+		echo "Installing on Ubuntu/Debian 20.04 LTS or newer"
+		sudo apt-get update
+		sudo apt-get install -y python3.8-venv python3.8-distutils
+	elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
+		# AMZN 2
+		echo "Installing on Amazon Linux 2"
+		sudo yum install -y python3 git
+	elif type yum && [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
+		# CentOS or Redhat
+		echo "Installing on CentOS/Redhat"
+	fi
 elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
-  echo "Installation currently requires brew on MacOS - https://brew.sh/"
+	echo "Installation currently requires brew on MacOS - https://brew.sh/"
 elif [ "$(uname)" = "OpenBSD" ]; then
-  export MAKE=${MAKE:-gmake}
-  export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
+	export MAKE=${MAKE:-gmake}
+	export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
 elif [ "$(uname)" = "FreeBSD" ]; then
-  export MAKE=${MAKE:-gmake}
-  export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
+	export MAKE=${MAKE:-gmake}
+	export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
 fi
 
 find_python() {
-    set +e
-    unset BEST_VERSION
-    for V in 37 3.7 38 3.8 3
-    do
-        if which python$V > /dev/null
-        then
-            if [ x"$BEST_VERSION" = x ]
-            then
-                BEST_VERSION=$V
-            fi
-        fi
-    done
-    echo $BEST_VERSION
-    set -e
+	set +e
+	unset BEST_VERSION
+	for V in 37 3.7 38 3.8 3; do
+		if which python$V >/dev/null; then
+			if [ x"$BEST_VERSION" = x ]; then
+				BEST_VERSION=$V
+			fi
+		fi
+	done
+	echo $BEST_VERSION
+	set -e
 }
 
-if [ x"$INSTALL_PYTHON_VERSION" = x ]
-then
-  INSTALL_PYTHON_VERSION=$(find_python)
+if [ x"$INSTALL_PYTHON_VERSION" = x ]; then
+	INSTALL_PYTHON_VERSION=$(find_python)
 fi
 
 # this fancy syntax sets INSTALL_PYTHON_PATH to "python3.7" unless INSTALL_PYTHON_VERSION is defined
@@ -74,7 +70,7 @@ INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
 echo "Python version is $INSTALL_PYTHON_VERSION"
 $INSTALL_PYTHON_PATH -m venv venv
 if [ ! -f "activate" ]; then
-    ln -s venv/bin/activate .
+	ln -s venv/bin/activate .
 fi
 
 # shellcheck disable=SC1091
@@ -84,8 +80,8 @@ pip install --upgrade pip
 pip install wheel
 #if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
 # This remains in case there is a diversion of binary wheels
-pip install --extra-index-url https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10 cbor2==5.1.2
-pip install -e .
+pip install --extra-index-url https://download.chia.net/simple/ miniupnpc==2.1 setproctitle==1.1.10
+pip install -e . --extra-index-url https://download.chia.net/simple/
 
 echo ""
 echo "Chia blockchain install.sh complete."

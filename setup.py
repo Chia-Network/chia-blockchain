@@ -3,17 +3,17 @@ from setuptools import setup
 
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
-    "blspy==0.2.4",  # Signature library
+    "blspy==0.2.9",  # Signature library
     "chiavdf==0.12.26",  # timelord and vdf verification
-    "chiabip158==0.16",  # bip158-style wallet filters
-    "chiapos==0.12.33",  # proof of space
+    "chiabip158==0.17",  # bip158-style wallet filters
+    "chiapos==0.12.38",  # proof of space
     "clvm==0.5.3",
     "clvm_tools==0.1.6",
     "aiohttp==3.6.3",  # HTTP server for full node rpc
     "aiosqlite@git+https://github.com/mariano54/aiosqlite.git@28cb5754deec562ac931da8fca799fb82df97a12#egg=aiosqlite",
     # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.7",  # Binary data management library
-    "cbor2==5.1.2",  # Used for network wire format
+    "cbor2==5.2.0",  # Used for network wire format
     "colorlog==4.4.0",  # Adds color to logs
     "concurrent-log-handler==0.9.17",  # Concurrently log and rotate logs
     "cryptography==3.1.1",  # Python cryptography library for TLS

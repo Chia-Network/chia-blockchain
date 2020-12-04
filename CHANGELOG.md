@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project does not yet adhere to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 for setuptools_scm/PEP 440 reasons.
 
+## [1.0beta18] aka Beta 1.18 - 2020-12-03
+
+### Added
+
+- F1 generation in the plotter is now fully parallel for a small speedup.
+- We have bitfield optimized phase 2 of plotting. There is only about a 1% increase in speed from this change but there is a 12% decrease in writes with a penalty of 3% more reads. More details in [PR 120](https://github.com/Chia-Network/chiapos/pull/120). Note that some sorts in phase 2 and phase 3 will now appear "out of order" and that is now expected behavior.
+- Partial support for Python 3.9. That includes new versions of Chia dependencies like chiabip158.
+
+### Changed
+
+- We have moved from using gulrak/filesystem across all platforms to only using it on MacOS. It's required on MacOS as we are still targeting Mojave compatibility. This should resolve Windows path issues.
+- We upgraded to cbor 5.2.0 but expect to deprecate cbor in a future release.
+
+### Fixed
+
+- A segfault caused by memory leaks in bls-library has been fixed. This should end the random farmer and harvester crashes over time as outlined in [Issue 500](https://github.com/Chia-Network/chia-blockchain/issues/500).
+- Plotting could hang up retrying in an "error 0" state due to a bug in table handling in some edge cases.
+- CPU utilization as reported in the plotter is now accurate for Windows.
+- FreeBSD and OpenBSD should be able to build and install chia-blockchain and its dependencies again.
+- Starting with recent setuptools fixes, we can no longer pass an empty string to the linker on Windows when building binary wheels in the sub repos. Thanks @jaraco for tracking this down.
+
 ## [1.0beta17] aka Beta 1.17 - 2020-10-22
 
 ### Changed
