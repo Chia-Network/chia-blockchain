@@ -63,7 +63,7 @@ class RespondProofOfWeight:
 @dataclass(frozen=True)
 @cbor_message
 class RequestSubBlock:
-    height: uint32
+    sub_height: uint32
     include_transaction_block: bool
 
 
@@ -133,13 +133,13 @@ class RequestMempoolTransactions:
 @dataclass(frozen=True)
 @cbor_message
 class RequestCompactVDFs:
-    height: uint32
+    sub_height: uint32
 
 
 @dataclass(frozen=True)
 @cbor_message
 class RespondCompactVDFs:
-    height: uint32
+    sub_height: uint32
     header_hash: bytes32
     end_of_slot_proofs: List[SubSlotProofs]  # List of challenge eos vdf and reward eos vdf
     cc_sp_proof: Optional[VDFProof]  # If not first sp

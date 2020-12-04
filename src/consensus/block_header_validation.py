@@ -70,9 +70,9 @@ async def validate_unfinished_header_block(
         sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
         difficulty = constants.DIFFICULTY_STARTING
     else:
-        height: uint32 = uint32(prev_sb.height + 1)
+        height: uint32 = uint32(prev_sb.sub_block_height + 1)
         can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
-            constants, prev_sb.height, prev_sb.deficit, sub_blocks, prev_sb.prev_hash
+            constants, prev_sb.sub_block_height, prev_sb.deficit, sub_blocks, prev_sb.prev_hash
         )
 
         # Gets the difficulty and SSI for this sub-block
@@ -346,7 +346,7 @@ async def validate_unfinished_header_block(
                 expected_sub_epoch_summary = make_sub_epoch_summary(
                     constants,
                     sub_blocks,
-                    uint32(prev_sb.height + 1),
+                    uint32(prev_sb.sub_block_height + 1),
                     sub_blocks[prev_sb.prev_hash],
                     difficulty if can_finish_epoch else None,
                     sub_slot_iters if can_finish_epoch else None,
@@ -679,7 +679,7 @@ async def validate_unfinished_header_block(
                 curr_sb = fetched
             if len(last_timestamps) != constants.NUMBER_OF_TIMESTAMPS:
                 # For blocks 1 to 10, average timestamps of all previous blocks
-                assert curr_sb.height == 0
+                assert curr_sb.sub_block_height == 0
             prev_time: uint64 = uint64(int(sum(last_timestamps) // len(last_timestamps)))
             if header_block.foliage_block.timestamp <= prev_time:
                 return None, ValidationError(Err.TIMESTAMP_TOO_FAR_IN_PAST)
@@ -717,7 +717,7 @@ async def validate_finished_header_block(
     genesis_block = False
     if validate_unfinished_result is not None:
         return None, validate_unfinished_result
-    if header_block.height == 0:
+    if header_block.sub_block_height == 0:
         prev_sb: Optional[SubBlockRecord] = None
         genesis_block = True
     else:
@@ -731,14 +731,14 @@ async def validate_finished_header_block(
     )
     if not genesis_block:
         # 27. Check sub-block height
-        if header_block.height != prev_sb.height + 1:
+        if header_block.sub_block_height != prev_sb.sub_block_height + 1:
             return None, ValidationError(Err.INVALID_HEIGHT)
 
         # 28. Check weight
         if header_block.weight != prev_sb.weight + difficulty:
             return None, ValidationError(Err.INVALID_WEIGHT)
     else:
-        if header_block.height != uint32(0):
+        if header_block.sub_block_height != uint32(0):
             return None, ValidationError(Err.INVALID_HEIGHT)
         if header_block.weight != constants.DIFFICULTY_STARTING:
             return None, ValidationError(Err.INVALID_WEIGHT)
@@ -815,7 +815,7 @@ async def validate_finished_header_block(
     if not genesis_block:
         overflow = is_overflow_sub_block(constants, header_block.reward_chain_sub_block.signage_point_index)
         deficit = calculate_deficit(
-            constants, header_block.height, prev_sb, overflow, len(header_block.finished_sub_slots) > 0
+            constants, header_block.sub_block_height, prev_sb, overflow, len(header_block.finished_sub_slots) > 0
         )
 
         if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:

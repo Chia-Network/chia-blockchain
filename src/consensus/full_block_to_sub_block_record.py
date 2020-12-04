@@ -22,13 +22,32 @@ def full_block_to_sub_block_record(
     full_block: Optional[FullBlock],
     header_block: Optional[HeaderBlock],
 ):
+
     if full_block is None:
         block = header_block
     elif header_block is None:
         block = full_block
     else:
         raise ValueError("full_block or header_block must be given")
-    if block.height == 0:
+
+    prev_block: Optional[SubBlockRecord] = None
+    loop_hash = block.prev_header_hash
+    while True:
+        if loop_hash in sub_blocks:
+            prev = sub_blocks[loop_hash]
+            if prev.is_block:
+                prev_block = prev
+                break
+            else:
+                loop_hash = prev.prev_hash
+        else:
+            break
+    if prev_block is None:
+        prev_tx_height = 0
+    else:
+        prev_tx_height = prev_block.prev_block_height + 1
+
+    if block.sub_block_height == 0:
         prev_sb = None
         sub_slot_iters: uint64 = uint64(constants.SUB_SLOT_ITERS_STARTING)
     else:
@@ -38,14 +57,14 @@ def full_block_to_sub_block_record(
             sub_blocks,
             height_to_hash,
             prev_sb.prev_hash,
-            prev_sb.height,
+            prev_sb.sub_block_height,
             prev_sb.sub_slot_iters,
             prev_sb.deficit,
             len(block.finished_sub_slots) > 0,
             prev_sb.sp_total_iters(constants),
         )
     overflow = is_overflow_sub_block(constants, block.reward_chain_sub_block.signage_point_index)
-    deficit = calculate_deficit(constants, block.height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
+    deficit = calculate_deficit(constants, block.sub_block_height, prev_sb, overflow, len(block.finished_sub_slots) > 0)
     prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
     timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
     fees = block.transactions_info.fees if block.foliage_block is not None else None
@@ -57,7 +76,7 @@ def full_block_to_sub_block_record(
             for sub_slot in block.finished_sub_slots
             if sub_slot.infused_challenge_chain is not None
         ]
-    elif block.height == 0:
+    elif block.sub_block_height == 0:
         finished_challenge_slot_hashes = [constants.FIRST_CC_CHALLENGE]
         finished_reward_slot_hashes = [constants.FIRST_RC_CHALLENGE]
         finished_infused_challenge_slot_hashes = None
@@ -77,7 +96,7 @@ def full_block_to_sub_block_record(
         ses = make_sub_epoch_summary(
             constants,
             sub_blocks,
-            block.height,
+            block.sub_block_height,
             sub_blocks[prev_sb.prev_hash],
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
@@ -98,7 +117,8 @@ def full_block_to_sub_block_record(
     return SubBlockRecord(
         block.header_hash,
         block.prev_header_hash,
-        block.height,
+        block.sub_block_height,
+        prev_tx_height,
         block.weight,
         block.total_iters,
         block.reward_chain_sub_block.signage_point_index,

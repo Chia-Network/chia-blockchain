@@ -6,8 +6,6 @@ import multiprocessing
 from typing import Dict, List, Optional, Tuple
 
 from src.consensus.constants import ConsensusConstants
-from src.full_node.block_store import BlockStore
-from src.full_node.coin_store import CoinStore
 from src.consensus.difficulty_adjustment import get_next_difficulty, get_next_sub_slot_iters
 from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
 from src.types.coin import Coin
@@ -26,7 +24,7 @@ from src.consensus.block_header_validation import (
 )
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.wallet_coin_store import WalletCoinStore
-from src.wallet.wallet_header_store import WalletHeaderStore, WalletBlockStore
+from src.wallet.wallet_block_store import WalletBlockStore
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +57,7 @@ class WalletBlockchain:
     # Unspent Store
     coin_store: WalletCoinStore
     # Store
-    block_store: WalletHeaderStore
+    block_store: WalletBlockStore
     # Used to verify blocks in parallel
     pool: ProcessPoolExecutor
 

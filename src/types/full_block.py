@@ -42,6 +42,12 @@ class FullBlock(Streamable):
 
     @property
     def height(self):
+        if self.foliage_block is None:
+            return None
+        return self.foliage_block.height
+
+    @property
+    def sub_block_height(self):
         return self.reward_chain_sub_block.sub_block_height
 
     @property

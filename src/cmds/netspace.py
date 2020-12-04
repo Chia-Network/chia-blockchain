@@ -61,7 +61,7 @@ async def netstorge_async(args, parser):
             # Get lca or newer block
             if args.start == "":
                 blockchain_state = await client.get_blockchain_state()
-                newer_block_height = blockchain_state["lca"].data.height
+                newer_block_height = blockchain_state["lca"].data.sub_block_height
             else:
                 newer_block_height = int(args.start)  # Starting block height in args
             newer_block_header = await client.get_header_by_height(newer_block_height)
@@ -83,6 +83,7 @@ async def netstorge_async(args, parser):
                 newer_block_header_hash, older_block_header_hash
             )
             print(
+                f"Older Block: {older_block_header.data.height}\n"
                 f"Older Block: {older_block_header.data.height}\n"
                 f"Header Hash: 0x{older_block_header_hash}\n"
                 f"Timestamp:   {older_block_time_string}\n"

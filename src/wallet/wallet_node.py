@@ -22,7 +22,6 @@ from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.backup_utils import open_backup_file
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_state_manager import WalletStateManager
-from src.wallet.block_record import BlockRecord
 from src.types.header_block import HeaderBlock
 from src.util.path import path_from_root, mkdir
 from src.util.keychain import Keychain
@@ -39,11 +38,6 @@ class WalletNode:
     wallet_peers: WalletPeers
     # Maintains the state of the wallet (blockchain and transactions), handles DB connections
     wallet_state_manager: Optional[WalletStateManager]
-
-    # Maintains headers recently received. Once the desired removals and additions are downloaded,
-    # the data is persisted in the WalletStateManager. These variables are also used to store
-    # temporary sync data. The bytes is the transaction filter.
-    cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock, bytes]]
 
     # Prev hash to curr hash
     future_block_hashes: Dict[bytes32, bytes32]
@@ -311,7 +305,7 @@ class WalletNode:
                         and connection.get_peer_info() != full_node_resolved
                     ):
                         self.log.info(f"Closing unnecessary connection to {connection.get_peer_info()}.")
-                        await connection.close()
+                        asyncio.create_task(connection.close())
                 return True
         return False
 
