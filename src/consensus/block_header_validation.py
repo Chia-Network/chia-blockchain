@@ -56,12 +56,7 @@ async def validate_unfinished_header_block(
     and lead to other small tweaks in validation.
     """
     # 1. Check that the previous block exists in the blockchain, or that it is correct
-    if skip_overflow_last_ss_validation:
-        finished_sub_slots_since_prev = len(header_block.finished_sub_slots) + 1
-    else:
-        finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
 
-    new_sub_slot: bool = finished_sub_slots_since_prev > 0
     prev_sb = sub_blocks.get(header_block.prev_header_hash, None)
     genesis_block = prev_sb is None
 
@@ -86,6 +81,12 @@ async def validate_unfinished_header_block(
         )
 
     overflow = is_overflow_sub_block(constants, header_block.reward_chain_sub_block.signage_point_index)
+    if skip_overflow_last_ss_validation and overflow:
+        finished_sub_slots_since_prev = len(header_block.finished_sub_slots) + 1
+    else:
+        finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
+
+    new_sub_slot: bool = finished_sub_slots_since_prev > 0
 
     # 2. Check finished slots that have been crossed since prev_sb
     ses_hash: Optional[bytes32] = None
@@ -374,6 +375,7 @@ async def validate_unfinished_header_block(
 
     # If sub_block state is correct, we should always find a challenge here
     # This computes what the challenge should be for this sub-block
+
     challenge = get_block_challenge(
         constants,
         header_block,

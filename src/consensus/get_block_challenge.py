@@ -8,6 +8,10 @@ from src.types.sized_bytes import bytes32
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.unfinished_header_block import UnfinishedHeaderBlock
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def get_block_challenge(
     constants: ConsensusConstants,
@@ -49,6 +53,7 @@ def get_block_challenge(
                 if curr.first_in_sub_slot:
                     reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
                 if curr.height == 0:
+                    assert len(curr.finished_challenge_slot_hashes) > 0
                     break
                 curr = sub_blocks[curr.prev_hash]
             challenge = reversed_challenge_hashes[challenges_to_look_for - 1]
