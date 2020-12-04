@@ -61,6 +61,7 @@ class TestCoinStore:
         )
 
         # Adding blocks to the coin store
+        should_be_included_prev: Set[Coin] = set()
         should_be_included: Set[Coin] = set()
         for block in blocks:
             farmer_coin, pool_coin = block.get_future_reward_coins()
@@ -68,9 +69,9 @@ class TestCoinStore:
             should_be_included.add(pool_coin)
             if block.is_block():
                 removals, additions = await block.tx_removals_and_additions()
-                assert block.get_included_reward_coins() == should_be_included
+                assert block.get_included_reward_coins() == should_be_included_prev
                 await coin_store.new_block(block)
-                for expected_coin in should_be_included:
+                for expected_coin in should_be_included_prev:
                     # Check that the coinbase rewards are added
                     record = await coin_store.get_coin_record(expected_coin.name())
                     assert record is not None
@@ -86,6 +87,7 @@ class TestCoinStore:
                     assert not record.spent
                     assert coin == record.coin
 
+                should_be_included_prev = should_be_included.copy()
                 should_be_included = set()
 
         await connection.close()

@@ -84,32 +84,41 @@ async def validate_block_body(
             return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
 
     # 7. The reward claims must be valid for the previous sub-blocks, and current block fees
-    pool_coin = create_pool_coin(
-        height,
-        block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
-        calculate_pool_reward(height),
-    )
-    farmer_coin = create_farmer_coin(
-        height,
-        block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
-        calculate_base_farmer_reward(height) + block.transactions_info.fees,
-    )
-    expected_reward_coins.add(pool_coin)
-    expected_reward_coins.add(farmer_coin)
 
     if height > 0:
-        # Add reward claims for all sub-blocks since the last block
+        # Add reward claims for all sub-blocks from the prev prev block, until the prev block (including the latter)
         curr_sb = sub_blocks[block.prev_header_hash]
+
         while not curr_sb.is_block:
-            expected_reward_coins.add(
-                create_pool_coin(curr_sb.height, curr_sb.pool_puzzle_hash, calculate_pool_reward(curr_sb.height))
-            )
-            expected_reward_coins.add(
-                create_farmer_coin(
-                    curr_sb.height, curr_sb.farmer_puzzle_hash, calculate_base_farmer_reward(curr_sb.height)
-                )
-            )
+            # Finds the prev block
             curr_sb = sub_blocks[curr_sb.prev_hash]
+        assert curr_sb.header_hash == block.foliage_block.prev_block_hash
+
+        pool_coin = create_pool_coin(
+            curr_sb.height,
+            curr_sb.pool_puzzle_hash,
+            calculate_pool_reward(curr_sb.height),
+        )
+        farmer_coin = create_farmer_coin(
+            curr_sb.height, curr_sb.farmer_puzzle_hash, calculate_base_farmer_reward(curr_sb.height) + curr_sb.fees
+        )
+        # Adds the previous block
+        expected_reward_coins.add(pool_coin)
+        expected_reward_coins.add(farmer_coin)
+
+        # For the second block in the chain, don't go back further
+        if curr_sb.height > 0:
+            curr_sb = sub_blocks[curr_sb.prev_hash]
+            while not curr_sb.is_block:
+                expected_reward_coins.add(
+                    create_pool_coin(curr_sb.height, curr_sb.pool_puzzle_hash, calculate_pool_reward(curr_sb.height))
+                )
+                expected_reward_coins.add(
+                    create_farmer_coin(
+                        curr_sb.height, curr_sb.farmer_puzzle_hash, calculate_base_farmer_reward(curr_sb.height)
+                    )
+                )
+                curr_sb = sub_blocks[curr_sb.prev_hash]
 
     if set(block.transactions_info.reward_claims_incorporated) != expected_reward_coins:
         return Err.INVALID_REWARD_COINS
