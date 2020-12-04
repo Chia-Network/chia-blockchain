@@ -586,10 +586,17 @@ class FullNodeAPI:
             height = 0
         self.full_node.full_node_store.add_candidate_block(quality_string, height, unfinished_block)
 
+        if unfinished_block.is_block():
+            foliage_sb_data_hash = unfinished_block.foliage_sub_block.foliage_sub_block_data.get_hash()
+            foliage_block_hash = unfinished_block.foliage_sub_block.foliage_block_hash
+        else:
+            foliage_sb_data_hash = bytes([1] * 32)
+            foliage_block_hash = bytes([1] * 32)
+
         message = farmer_protocol.RequestSignedValues(
             quality_string,
-            unfinished_block.foliage_sub_block.foliage_sub_block_data.get_hash(),
-            unfinished_block.foliage_sub_block.foliage_block_hash,
+            foliage_sb_data_hash,
+            foliage_block_hash,
         )
         return Message("request_signed_values", message)
 

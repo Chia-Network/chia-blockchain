@@ -198,6 +198,7 @@ class TestBlockHeaderValidation:
         blocks = bt.get_consecutive_blocks(10)
         for block in blocks:
             result, err, _ = await blockchain.receive_block(block)
+            assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
 
         blocks = bt.get_consecutive_blocks(10, skip_slots=2, block_list_input=blocks)
