@@ -13,27 +13,33 @@ from chiabip158 import PyBIP158
 from blspy import PrivateKey, G1Element, AugSchemeMPL
 from cryptography.fernet import Fernet
 
+from src.consensus.blockchain import ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.coin import Coin
+from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.full_block import FullBlock
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint32, uint64
 from src.util.hash import std_hash
+from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.cc_wallet.cc_wallet import CCWallet
 from src.wallet.key_val_store import KeyValStore
 from src.wallet.settings.user_settings import UserSettings
 from src.wallet.rl_wallet.rl_wallet import RLWallet
 from src.wallet.trade_manager import TradeManager
 from src.wallet.transaction_record import TransactionRecord
-from src.wallet.block_record import BlockRecord
 from src.wallet.util.backup_utils import open_backup_file
 from src.wallet.wallet_action import WalletAction
 from src.wallet.wallet_action_store import WalletActionStore
+from src.wallet.wallet_blockchain import WalletBlockchain
 from src.wallet.wallet_coin_record import WalletCoinRecord
+from src.wallet.wallet_coin_store import WalletCoinStore
+from src.wallet.wallet_block_store import WalletBlockStore
 from src.wallet.wallet_info import WalletInfo, WalletInfoBackup
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
-from src.wallet.wallet_store import WalletStore
+from src.wallet.wallet_sync_store import WalletSyncStore
 from src.wallet.wallet_transaction_store import WalletTransactionStore
 from src.wallet.wallet_user_store import WalletUserStore
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -50,20 +56,12 @@ from src import __version__
 class WalletStateManager:
     constants: ConsensusConstants
     config: Dict
-    wallet_store: WalletStore
     tx_store: WalletTransactionStore
     puzzle_store: WalletPuzzleStore
     user_store: WalletUserStore
     action_store: WalletActionStore
     basic_store: KeyValStore
-    # Map from header hash to BlockRecord
-    block_records: Dict[bytes32, BlockRecord]
-    # Specifies the LCA path
-    height_to_hash: Dict[uint32, bytes32]
-    # Map from previous header hash, to new work difficulty
-    difficulty_resets_prev: Dict[bytes32, uint64]
-    # Header hash of tip (least common ancestor)
-    lca: Optional[bytes32]
+
     start_index: int
 
     # Makes sure only one asyncio thread is changing the blockchain state at one time
@@ -88,6 +86,10 @@ class WalletStateManager:
     trade_manager: TradeManager
     new_wallet: bool
     user_settings: UserSettings
+    blockchain: WalletBlockchain
+    block_store: WalletBlockStore
+    coin_store: WalletCoinStore
+    sync_store: WalletSyncStore
 
     @staticmethod
     async def create(
@@ -109,7 +111,7 @@ class WalletStateManager:
         self.lock = asyncio.Lock()
 
         self.db_connection = await aiosqlite.connect(db_path)
-        self.wallet_store = await WalletStore.create(self.db_connection)
+        self.coin_store = await WalletCoinStore.create(self.db_connection)
         self.tx_store = await WalletTransactionStore.create(self.db_connection)
         self.puzzle_store = await WalletPuzzleStore.create(self.db_connection)
         self.user_store = await WalletUserStore.create(self.db_connection)
@@ -118,12 +120,13 @@ class WalletStateManager:
         self.trade_manager = await TradeManager.create(self, self.db_connection)
 
         self.user_settings = await UserSettings.create(self.basic_store)
-        self.lca = None
+        self.block_store = await WalletBlockStore.create(self.db_connection)
+        self.blockchain = await WalletBlockchain.create(self.coin_store, self.block_store, self.constants)
+
         self.sync_mode = False
+        self.sync_store = await WalletSyncStore.create()
         self.height_to_hash = {}
-        self.block_records = await self.wallet_store.get_lca_path()
-        genesis = FullBlock.from_bytes(self.constants.GENESIS_BLOCK)
-        self.genesis = genesis
+
         self.state_changed_callback = None
         self.pending_tx_callback = None
         self.difficulty_resets_prev = {}
@@ -204,6 +207,10 @@ class WalletStateManager:
         #     )
         #
         # return self
+
+    @property
+    def peak(self):
+        return self.blockchain.get_peak()
 
     def get_derivation_index(self, pubkey: G1Element, max_depth: int = 1000) -> int:
         for i in range(0, max_depth):
@@ -428,7 +435,7 @@ class WalletStateManager:
         """
         Returns the confirmed balance, including coinbase rewards that are not spendable.
         """
-        record_list: Set[WalletCoinRecord] = await self.wallet_store.get_unspent_coins_for_wallet(wallet_id)
+        record_list: Set[WalletCoinRecord] = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
         amount: uint64 = uint64(0)
 
         for record in record_list:
@@ -454,14 +461,14 @@ class WalletStateManager:
         return uint64(result)
 
     async def get_frozen_balance(self, wallet_id: int) -> uint64:
-        current_index = self.block_records[self.lca].height
+        current_index = self.peak.height
 
         coinbase_freeze_period = self.constants.COINBASE_FREEZE_PERIOD
 
         valid_index = current_index - coinbase_freeze_period
 
-        not_frozen: Set[WalletCoinRecord] = await self.wallet_store.get_spendable_for_index(valid_index, wallet_id)
-        all_records: Set[WalletCoinRecord] = await self.wallet_store.get_spendable_for_index(current_index, wallet_id)
+        not_frozen: Set[WalletCoinRecord] = await self.coin_store.get_spendable_for_index(valid_index, wallet_id)
+        all_records: Set[WalletCoinRecord] = await self.coin_store.get_spendable_for_index(current_index, wallet_id)
         sum_not_frozen = sum(record.coin.amount for record in not_frozen if record.coinbase)
         sum_all_records = sum(record.coin.amount for record in all_records if record.coinbase)
         return uint64(sum_all_records - sum_not_frozen)
@@ -535,7 +542,7 @@ class WalletStateManager:
 
         for coin in coins:
             self.log.info(f"Coin removed: {coin.name()}")
-            record = await self.wallet_store.get_coin_record_by_coin_id(coin.name())
+            record = await self.coin_store.get_coin_record_by_coin_id(coin.name())
             if coin.name() in trade_removals:
                 self.log.info(f"Coin:{coin.name()} is part of trade")
                 trade_coin_removed.append(coin)
@@ -552,7 +559,7 @@ class WalletStateManager:
         Called when coin gets spent
         """
 
-        await self.wallet_store.set_spent(coin.name(), index)
+        await self.coin_store.set_spent(coin.name(), index)
 
         unconfirmed_record: List[TransactionRecord] = await self.tx_store.unconfirmed_with_removal_coin(coin.name())
         for unconfirmed in unconfirmed_record:
@@ -622,12 +629,12 @@ class WalletStateManager:
         coin_record: WalletCoinRecord = WalletCoinRecord(
             coin, index, uint32(0), False, coinbase, wallet_type, wallet_id
         )
-        await self.wallet_store.add_coin_record(coin_record)
+        await self.coin_store.add_coin_record(coin_record)
 
         if wallet_type == WalletType.COLOURED_COIN:
             wallet: CCWallet = self.wallets[wallet_id]
-            header_hash: bytes32 = self.height_to_hash[index]
-            block: Optional[BlockRecord] = await self.wallet_store.get_block_record(header_hash)
+            header_hash: bytes32 = self.blockchain.height_to_hash[index]
+            block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(header_hash)
             assert block is not None
             assert block.removals is not None
             await wallet.coin_added(coin, index, header_hash, block.removals)
@@ -684,433 +691,38 @@ class WalletStateManager:
     async def get_transaction(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         return await self.tx_store.get_transaction_record(tx_id)
 
-    def find_fork_point_alternate_chain(self, alternate_chain: List[bytes32]) -> uint32:
-        """
-        Takes in an alternate blockchain (headers), and compares it to self. Returns the last header
-        where both blockchains are equal. Used for syncing.
-        """
-        lca: BlockRecord = self.block_records[self.lca]
 
-        if lca.height >= len(alternate_chain) - 1:
-            raise ValueError("Alternate chain is shorter")
-        low: uint32 = uint32(0)
-        high = lca.height
-        while low + 1 < high:
-            mid = uint32((low + high) // 2)
-            if self.height_to_hash[uint32(mid)] != alternate_chain[mid]:
-                high = mid
-            else:
-                low = mid
-        if low == high and low == 0:
-            assert self.height_to_hash[uint32(0)] == alternate_chain[0]
-            return uint32(0)
-        assert low + 1 == high
-        if self.height_to_hash[uint32(low)] == alternate_chain[low]:
-            if self.height_to_hash[uint32(high)] == alternate_chain[high]:
-                return high
-            else:
-                return low
-        elif low > 0:
-            assert self.height_to_hash[uint32(low - 1)] == alternate_chain[low - 1]
-            return uint32(low - 1)
-        else:
-            raise ValueError("Invalid genesis block")
+    async def receive_block(
+        self,
+        header_block: HeaderBlock,
+        additions: List[Coin],
+        removals: List[Coin]
+    ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
+        """
+        Adds a new block to the blockchain. It doesn't have to be a new tip, can also be an orphan,
+        but it must be connected to the blockchain. If a header block is specified, the full header
+        and proofs will be validated. Otherwise, the block is added without validation (for use in
+        fast sync). If validation succeeds, block is adedd to DB. If it's a new TIP, transactions are
+        reorged accordingly.
+        """
 
-    # async def receive_block(
-    #     self,
-    #     block: BlockRecord,
-    #     header_block: Optional[HeaderBlock] = None,
-    # ) -> ReceiveBlockResult:
-    #     """
-    #     Adds a new block to the blockchain. It doesn't have to be a new tip, can also be an orphan,
-    #     but it must be connected to the blockchain. If a header block is specified, the full header
-    #     and proofs will be validated. Otherwise, the block is added without validation (for use in
-    #     fast sync). If validation succeeds, block is adedd to DB. If it's a new TIP, transactions are
-    #     reorged accordingly.
-    #     """
-    #     assert block.additions is not None
-    #     assert block.removals is not None
-    #
-    #     async with self.lock:
-    #         if block.header_hash in self.block_records:
-    #             return ReceiveBlockResult.ALREADY_HAVE_BLOCK
-    #
-    #         if block.prev_header_hash not in self.block_records and block.height != 0:
-    #             return ReceiveBlockResult.DISCONNECTED_BLOCK
-    #
-    #         if header_block is not None:
-    #             if not await self.validate_header_block(block, header_block):
-    #                 return ReceiveBlockResult.INVALID_BLOCK
-    #             if (block.height + 1) % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
-    #                 assert header_block.challenge.new_work_difficulty is not None
-    #                 self.difficulty_resets_prev[block.header_hash] = header_block.challenge.new_work_difficulty
-    #
-    #         if (block.height + 1) % self.constants.DIFFICULTY_EPOCH == 0:
-    #             assert block.total_iters is not None
-    #
-    #         # Block is valid, so add it to the blockchain
-    #         self.block_records[block.header_hash] = block
-    #         await self.wallet_store.add_block_record(block, False)
-    #
-    #         # If one of these new additions is ours, generate more puzzle hashes
-    #         phs: List[bytes32] = [addition.puzzle_hash for addition in block.additions]
-    #         block_includes_our_tx: bool = await self.puzzle_store.one_of_puzzle_hashes_exists(phs)
-    #         if block_includes_our_tx:
-    #             async with self.puzzle_store.lock:
-    #                 for addition in block.additions:
-    #                     record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
-    #                         addition.puzzle_hash.hex()
-    #                     )
-    #                     if record is None:
-    #                         continue
-    #                     index = record.index
-    #                     await self.puzzle_store.set_used_up_to(index)
-    #                 await self.create_more_puzzle_hashes()
-    #
-    #         # Genesis case
-    #         if self.lca is None:
-    #             assert block.height == 0
-    #             await self.wallet_store.add_block_to_path(block.header_hash)
-    #             self.lca = block.header_hash
-    #             await self.coins_of_interest_received(block.removals, block.additions, block.height)
-    #             self.height_to_hash[uint32(0)] = block.header_hash
-    #             return ReceiveBlockResult.NEW_TIP
-    #
-    #         # Not genesis, updated LCA
-    #         if block.weight > self.block_records[self.lca].weight:
-    #
-    #             # TODO: handle returning of -1
-    #             fork_h = find_fork_point_in_chain(self.block_records, self.block_records[self.lca], block)
-    #             await self.reorg_rollback(fork_h)
-    #
-    #             # Add blocks between fork point and new lca
-    #             fork_hash = self.height_to_hash[fork_h]
-    #             blocks_to_add: List[BlockRecord] = []
-    #             tip_hash: bytes32 = block.header_hash
-    #             while True:
-    #                 if tip_hash == fork_hash or tip_hash == self.genesis.header_hash:
-    #                     break
-    #                 block_record: BlockRecord = self.block_records[tip_hash]
-    #                 blocks_to_add.append(block_record)
-    #                 tip_hash = block_record.prev_header_hash
-    #             blocks_to_add.reverse()
-    #
-    #             for path_block in blocks_to_add:
-    #                 self.height_to_hash[path_block.height] = path_block.header_hash
-    #                 await self.wallet_store.add_block_to_path(path_block.header_hash)
-    #                 assert path_block.additions is not None and path_block.removals is not None
-    #                 await self.coins_of_interest_received(path_block.removals, path_block.additions, path_block.height)
-    #             self.lca = block.header_hash
-    #             self.state_changed("new_block")
-    #             return ReceiveBlockResult.NEW_TIP
-    #
-    #         return ReceiveBlockResult.ADDED_AS_ORPHAN
-    #
-    # def get_min_iters(self, block_record: BlockRecord) -> uint64:
-    #     """
-    #     Returns the min_iters value, which is calculated every epoch. This requires looking
-    #     up the epoch barrier blocks, and taking 10% of the total iterations in the previous
-    #     epoch.
-    #     """
-    #     curr = block_record
-    #     if curr.height < self.constants.DIFFICULTY_EPOCH + self.constants.DIFFICULTY_DELAY:
-    #         return self.constants.MIN_ITERS_STARTING
-    #     if curr.height % self.constants.DIFFICULTY_EPOCH < self.constants.DIFFICULTY_DELAY:
-    #         # First few blocks of epoch (using old difficulty and min_iters)
-    #         height2 = (
-    #             curr.height - (curr.height % self.constants.DIFFICULTY_EPOCH) - self.constants.DIFFICULTY_EPOCH - 1
-    #         )
-    #     else:
-    #         # The rest of the blocks of epoch (using new difficulty and min iters)
-    #         height2 = curr.height - (curr.height % self.constants.DIFFICULTY_EPOCH) - 1
-    #     height1 = height2 - self.constants.DIFFICULTY_EPOCH
-    #     assert height2 > 0
-    #
-    #     iters1: Optional[uint64] = uint64(0)
-    #     iters2: Optional[uint64] = None
-    #     while curr.height > height1 and curr.height > 0:
-    #         if curr.height == height2:
-    #             iters2 = curr.total_iters
-    #         curr = self.block_records[curr.prev_header_hash]
-    #     if height1 > -1:  # For height of -1, total iters is 0
-    #         iters1 = curr.total_iters
-    #     assert iters1 is not None
-    #     assert iters2 is not None
-    #     min_iters_precise = uint64(
-    #         (iters2 - iters1) // (self.constants.DIFFICULTY_EPOCH * self.constants.MIN_ITERS_PROPORTION)
-    #     )
-    #     # Truncates to only 12 bits plus 0s. This prevents grinding attacks.
-    #     return uint64(truncate_to_significant_bits(min_iters_precise, self.constants.SIGNIFICANT_BITS))
-    #
-    # async def validate_header_block(self, br: BlockRecord, header_block: HeaderBlock) -> bool:
-    #     """
-    #     Fully validates a header block. This requires the ancestors to be present in the blockchain.
-    #     This method also validates that the header block is consistent with the block record.
-    #     """
-    #     # POS challenge hash == POT challenge hash == Challenge prev challenge hash
-    #     if header_block.proof_of_space.challenge_hash != header_block.proof_of_time.challenge_hash:
-    #         return False
-    #     if header_block.proof_of_space.challenge_hash != header_block.challenge.prev_challenge_hash:
-    #         return False
-    #
-    #     if br.height > 0:
-    #         prev_br = self.block_records[br.prev_header_hash]
-    #         # If prev header block, check prev header block hash matches
-    #         if prev_br.new_challenge_hash is not None:
-    #             if header_block.proof_of_space.challenge_hash != prev_br.new_challenge_hash:
-    #                 return False
-    #
-    #     # Validate PoS and get quality
-    #     quality_str: Optional[bytes32] = header_block.proof_of_space.verify_and_get_quality_string(
-    #         self.constants.NUMBER_ZERO_BITS_PLOT_FILTER
-    #     )
-    #     if quality_str is None:
-    #         return False
-    #
-    #     difficulty: uint64
-    #     min_iters: uint64 = self.get_min_iters(br)
-    #     prev_block: Optional[BlockRecord]
-    #     if br.height % self.constants.DIFFICULTY_EPOCH != self.constants.DIFFICULTY_DELAY:
-    #         # Only allow difficulty changes once per epoch
-    #         if br.height > 1:
-    #             prev_block = self.block_records[br.prev_header_hash]
-    #             assert prev_block is not None
-    #             prev_prev_block = self.block_records[prev_block.prev_header_hash]
-    #             assert prev_prev_block is not None
-    #             difficulty = uint64(br.weight - prev_block.weight)
-    #             assert difficulty == prev_block.weight - prev_prev_block.weight
-    #         elif br.height == 1:
-    #             prev_block = self.block_records[br.prev_header_hash]
-    #             assert prev_block is not None
-    #             difficulty = uint64(br.weight - prev_block.weight)
-    #             assert difficulty == prev_block.weight
-    #         else:
-    #             difficulty = uint64(br.weight)
-    #             assert difficulty == self.constants.DIFFICULTY_STARTING
-    #     else:
-    #         # This is a difficulty change, so check whether it's within the allowed range.
-    #         # (But don't check whether it's the right amount).
-    #         prev_block = self.block_records[br.prev_header_hash]
-    #         assert prev_block is not None
-    #         prev_prev_block = self.block_records[prev_block.prev_header_hash]
-    #         assert prev_prev_block is not None
-    #         difficulty = uint64(br.weight - prev_block.weight)
-    #         prev_difficulty = uint64(prev_block.weight - prev_prev_block.weight)
-    #
-    #         # Ensures the challenge for this block is valid (contains correct diff reset)
-    #         if prev_block.header_hash in self.difficulty_resets_prev:
-    #             if self.difficulty_resets_prev[prev_block.header_hash] != difficulty:
-    #                 return False
-    #
-    #         max_diff = uint64(
-    #             truncate_to_significant_bits(
-    #                 prev_difficulty * self.constants.DIFFICULTY_FACTOR,
-    #                 self.constants.SIGNIFICANT_BITS,
-    #             )
-    #         )
-    #         min_diff = uint64(
-    #             truncate_to_significant_bits(
-    #                 prev_difficulty // self.constants.DIFFICULTY_FACTOR,
-    #                 self.constants.SIGNIFICANT_BITS,
-    #             )
-    #         )
-    #
-    #         if difficulty < min_diff or difficulty > max_diff:
-    #             return False
-    #
-    #     number_of_iters: uint64 = calculate_iterations_quality(
-    #         quality_str,
-    #         header_block.proof_of_space.size,
-    #         difficulty,
-    #         min_iters,
-    #     )
-    #
-    #     if header_block.proof_of_time is None:
-    #         return False
-    #
-    #     if number_of_iters != header_block.proof_of_time.number_of_iterations:
-    #         return False
-    #
-    #     # Check PoT
-    #     if not header_block.proof_of_time.is_valid(self.constants.DISCRIMINANT_SIZE_BITS):
-    #         return False
-    #
-    #     # Validate challenge
-    #     proofs_hash = std_hash(header_block.proof_of_space.get_hash() + header_block.proof_of_time.output.get_hash())
-    #     if proofs_hash != header_block.challenge.proofs_hash:
-    #         return False
-    #     # Note that we are not validating the work difficulty reset (since we don't know the
-    #     # next block yet. When we process the next block, we will check that it matches).
-    #
-    #     # Validate header:
-    #     if header_block.header.header_hash != br.header_hash:
-    #         return False
-    #     if header_block.header.prev_header_hash != br.prev_header_hash:
-    #         return False
-    #     if header_block.height != br.height:
-    #         return False
-    #     if header_block.weight != br.weight:
-    #         return False
-    #     if br.height > 0:
-    #         assert prev_block is not None
-    #         if prev_block.weight + difficulty != br.weight:
-    #             return False
-    #         if prev_block.total_iters is not None and br.total_iters is not None:
-    #             if prev_block.total_iters + number_of_iters != br.total_iters:
-    #                 return False
-    #         if prev_block.height + 1 != br.height:
-    #             return False
-    #     else:
-    #         if br.weight != difficulty:
-    #             return False
-    #         if br.total_iters != number_of_iters:
-    #             return False
-    #
-    #     # Check that block is not far in the future
-    #     if header_block.header.data.timestamp > time.time() + self.constants.MAX_FUTURE_TIME:
-    #         return False
-    #
-    #     # Check header pos hash
-    #     if header_block.proof_of_space.get_hash() != header_block.header.data.proof_of_space_hash:
-    #         return False
-    #
-    #     return True
-    #
-    # def validate_select_proofs(
-    #     self,
-    #     all_proof_hashes: List[Tuple[bytes32, Optional[uint64], Optional[uint64]]],
-    #     heights: List[uint32],
-    #     cached_blocks: Dict[bytes32, Tuple[BlockRecord, HeaderBlock, Optional[bytes]]],
-    #     potential_header_hashes: Dict[uint32, bytes32],
-    # ) -> bool:
-    #     """
-    #     Given a full list of proof hashes (hash of pospace and time, along with difficulty resets), this function
-    #     checks that the proofs at the passed in heights are correct. This is used to validate the weight of a chain,
-    #     by probabilisticly sampling a few blocks, and only validating these. Cached blocks and potential header hashes
-    #     contains the actual data for the header blocks to validate. This method also requires the previous block for
-    #     each height to be present, to ensure an attacker can't grind on the challenge hash.
-    #     """
-    #
-    #     for height in heights:
-    #         prev_height = uint32(height - 1)
-    #         # Get previous header block
-    #         prev_hh = potential_header_hashes[prev_height]
-    #         _, prev_header_block, _ = cached_blocks[prev_hh]
-    #
-    #         # Validate proof hash of previous header block
-    #         if (
-    #             std_hash(
-    #                 prev_header_block.proof_of_space.get_hash() + prev_header_block.proof_of_time.output.get_hash()
-    #             )
-    #             != all_proof_hashes[prev_height][0]
-    #         ):
-    #             return False
-    #
-    #         # Calculate challenge hash (with difficulty)
-    #         if prev_header_block.challenge.prev_challenge_hash != prev_header_block.proof_of_space.challenge_hash:
-    #             return False
-    #         if prev_header_block.challenge.prev_challenge_hash != prev_header_block.proof_of_time.challenge_hash:
-    #             return False
-    #         if prev_header_block.challenge.proofs_hash != all_proof_hashes[prev_height][0]:
-    #             return False
-    #         if height % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
-    #             diff_change = all_proof_hashes[height][1]
-    #             assert diff_change is not None
-    #             if prev_header_block.challenge.new_work_difficulty != diff_change:
-    #                 return False
-    #         else:
-    #             if prev_header_block.challenge.new_work_difficulty is not None:
-    #                 return False
-    #         challenge_hash = prev_header_block.challenge.get_hash()
-    #
-    #         # Get header block
-    #         hh = potential_header_hashes[height]
-    #         _, header_block, _ = cached_blocks[hh]
-    #
-    #         # Validate challenge hash is == pospace challenge hash
-    #         if challenge_hash != header_block.proof_of_space.challenge_hash:
-    #             return False
-    #         # Validate challenge hash is == potime challenge hash
-    #         if challenge_hash != header_block.proof_of_time.challenge_hash:
-    #             return False
-    #         # Validate proof hash
-    #         if (
-    #             std_hash(header_block.proof_of_space.get_hash() + header_block.proof_of_time.output.get_hash())
-    #             != all_proof_hashes[height][0]
-    #         ):
-    #             return False
-    #
-    #         # Get difficulty
-    #         if height % self.constants.DIFFICULTY_EPOCH < self.constants.DIFFICULTY_DELAY:
-    #             diff_height = (
-    #                 height
-    #                 - (height % self.constants.DIFFICULTY_EPOCH)
-    #                 - (self.constants.DIFFICULTY_EPOCH - self.constants.DIFFICULTY_DELAY)
-    #             )
-    #         else:
-    #             diff_height = height - (height % self.constants.DIFFICULTY_EPOCH) + self.constants.DIFFICULTY_DELAY
-    #
-    #         difficulty = all_proof_hashes[diff_height][1]
-    #         assert difficulty is not None
-    #
-    #         # Validate pospace to get iters
-    #         quality_str = header_block.proof_of_space.verify_and_get_quality_string(
-    #             self.constants.NUMBER_ZERO_BITS_PLOT_FILTER
-    #         )
-    #         assert quality_str is not None
-    #
-    #         if height < self.constants.DIFFICULTY_EPOCH + self.constants.DIFFICULTY_DELAY:
-    #             min_iters = self.constants.MIN_ITERS_STARTING
-    #         else:
-    #             if height % self.constants.DIFFICULTY_EPOCH < self.constants.DIFFICULTY_DELAY:
-    #                 height2 = height - (height % self.constants.DIFFICULTY_EPOCH) - self.constants.DIFFICULTY_EPOCH - 1
-    #             else:
-    #                 height2 = height - (height % self.constants.DIFFICULTY_EPOCH) - 1
-    #
-    #             height1 = height2 - self.constants.DIFFICULTY_EPOCH
-    #             if height1 == -1:
-    #                 iters1: Optional[uint64] = uint64(0)
-    #             else:
-    #                 iters1 = all_proof_hashes[height1][2]
-    #             iters2 = all_proof_hashes[height2][2]
-    #             assert iters1 is not None
-    #             assert iters2 is not None
-    #
-    #             min_iters = uint64(
-    #                 (iters2 - iters1) // (self.constants.DIFFICULTY_EPOCH * self.constants.MIN_ITERS_PROPORTION)
-    #             )
-    #
-    #         trunc = truncate_to_significant_bits(min_iters, self.constants.SIGNIFICANT_BITS)
-    #         number_of_iters: uint64 = calculate_iterations_quality(
-    #             quality_str,
-    #             header_block.proof_of_space.size,
-    #             difficulty,
-    #             trunc,
-    #         )
-    #
-    #         # Validate potime
-    #         if number_of_iters != header_block.proof_of_time.number_of_iterations:
-    #             return False
-    #
-    #         if not header_block.proof_of_time.is_valid(self.constants.DISCRIMINANT_SIZE_BITS):
-    #             return False
-    #
-    #     return True
+        return await self.blockchain.receive_block(header_block, additions, removals)
+
 
     async def get_filter_additions_removals(
-        self, new_block: BlockRecord, transactions_filter: bytes
+        self, new_block: SubBlockRecord, transactions_filter: bytes
     ) -> Tuple[List[bytes32], List[bytes32]]:
         """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
-        assert new_block.prev_header_hash in self.block_records
+        assert new_block.prev_header_hash in self.blockchain.sub_blocks
 
         tx_filter = PyBIP158([b for b in transactions_filter])
 
         # Find fork point
         # TODO: handle returning of -1
-        fork_h: uint32 = find_fork_point_in_chain(self.block_records, self.block_records[self.lca], new_block)
+        fork_h = find_fork_point_in_chain(self.blockchain.sub_blocks, self.blockchain.sub_blocks[self.peak.header_hash], new_block)
 
         # Get all unspent coins
-        my_coin_records_lca: Set[WalletCoinRecord] = await self.wallet_store.get_unspent_coins_at_height(uint32(fork_h))
+        my_coin_records_lca: Set[WalletCoinRecord] = await self.coin_store.get_unspent_coins_at_height(uint32(fork_h))
 
         # Filter coins up to and including fork point
         unspent_coin_names: Set[bytes32] = set()
@@ -1119,11 +731,11 @@ class WalletStateManager:
                 unspent_coin_names.add(coin.name())
 
         # Get all blocks after fork point up to but not including this block
-        curr: BlockRecord = self.block_records[new_block.prev_header_hash]
-        reorg_blocks: List[BlockRecord] = []
+        curr: SubBlockRecord = self.blockchain.sub_blocks[new_block.prev_header_hash]
+        reorg_blocks: List[SubBlockRecord] = []
         while curr.height > fork_h:
             reorg_blocks.append(curr)
-            curr = self.block_records[curr.prev_header_hash]
+            curr = self.blockchain.sub_blocks[curr.prev_header_hash]
         reorg_blocks.reverse()
 
         # For each block, process additions to get all Coins, then process removals to get unspent coins
@@ -1189,7 +801,7 @@ class WalletStateManager:
         return result
 
     async def get_wallet_for_coin(self, coin_id: bytes32) -> Any:
-        coin_record = await self.wallet_store.get_coin_record(coin_id)
+        coin_record = await self.coin_store.get_coin_record(coin_id)
         if coin_record is None:
             return None
         wallet_id = uint32(coin_record.wallet_id)
@@ -1200,7 +812,7 @@ class WalletStateManager:
         """ Returns a list of our unspent coins that are in the passed list. """
 
         result: List[Coin] = []
-        wallet_coin_records = await self.wallet_store.get_unspent_coins_at_height()
+        wallet_coin_records = await self.coin_store.get_unspent_coins_at_height()
         my_coins: Dict[bytes32, Coin] = {r.coin.name(): r.coin for r in list(wallet_coin_records)}
 
         for coin in removals:
@@ -1214,7 +826,7 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
-        await self.wallet_store.rollback_lca_to_block(index)
+        await self.coin_store.rollback_to_block(index)
 
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(index)
         await self.tx_store.rollback_to_block(index)
@@ -1240,7 +852,7 @@ class WalletStateManager:
 
     async def clear_all_stores(self):
         async with self.lock:
-            await self.wallet_store._clear_database()
+            await self.coin_store._clear_database()
             await self.tx_store._clear_database()
             await self.puzzle_store._clear_database()
             await self.user_store._clear_database()
@@ -1258,9 +870,9 @@ class WalletStateManager:
         otherwise use the lca height - some buffer(100)
         """
 
-        first_coin_height = await self.wallet_store.get_first_coin_height()
+        first_coin_height = await self.coin_store.get_first_coin_height()
         if first_coin_height is None:
-            start_height = self.block_records[self.lca].height
+            start_height = self.blockchain.get_peak()
         else:
             start_height = first_coin_height
 
@@ -1331,10 +943,10 @@ class WalletStateManager:
         await self.create_more_puzzle_hashes()
 
     async def get_spendable_coins_for_wallet(self, wallet_id: int) -> Set[WalletCoinRecord]:
-        if self.lca is None:
+        if self.peak is None:
             return set()
 
-        current_index = self.block_records[self.lca].height
+        current_index = self.peak.height
 
         coinbase_freeze_period = self.constants.COINBASE_FREEZE_PERIOD
 
@@ -1343,7 +955,7 @@ class WalletStateManager:
 
         valid_index = current_index - coinbase_freeze_period
 
-        records = await self.wallet_store.get_spendable_for_index(valid_index, wallet_id)
+        records = await self.coin_store.get_spendable_for_index(valid_index, wallet_id)
 
         # Coins that are currently part of a transaction
         unconfirmed_tx: List[TransactionRecord] = await self.tx_store.get_unconfirmed_for_wallet(wallet_id)

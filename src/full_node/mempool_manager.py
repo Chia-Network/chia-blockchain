@@ -179,7 +179,7 @@ class MempoolManager:
                 removal_coin = additions_dict[name]
                 removal_record = CoinRecord(
                     removal_coin,
-                    uint32(self.peak.height + 1),
+                    self.peak.prev_block_height + 1,
                     uint32(0),
                     False,
                     False,
@@ -194,7 +194,6 @@ class MempoolManager:
             return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
 
         if addition_amount > removal_amount:
-            print("Removal: ", removal_record)
             print(addition_amount, removal_amount)
             return None, MempoolInclusionStatus.FAILED, Err.MINTING_COIN
 
@@ -263,7 +262,9 @@ class MempoolManager:
                 log.warning(f"{npc.puzzle_hash} != {coin_record.coin.puzzle_hash}")
                 return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 
-            error = mempool_check_conditions_dict(coin_record, new_spend, npc.condition_dict, self.peak.height)
+            error = mempool_check_conditions_dict(
+                coin_record, new_spend, npc.condition_dict, self.peak.prev_block_height + 1
+            )
 
             if error:
                 if error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED:
@@ -311,7 +312,7 @@ class MempoolManager:
 
             # 3. Check coinbase freeze period
             if record.coinbase == 1:
-                if self.peak.height + 1 < record.confirmed_block_index + self.coinbase_freeze:
+                if self.peak.prev_block_height + 1 < record.confirmed_block_index + self.coinbase_freeze:
                     return Err.COINBASE_NOT_YET_SPENDABLE, []
 
         if len(conflicts) > 0:

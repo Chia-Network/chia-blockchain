@@ -105,7 +105,7 @@ class FullNode:
         else:
             self.log.info(
                 f"Blockchain initialized to peak {self.blockchain.get_peak().header_hash} height"
-                f" {self.blockchain.get_peak().height}"
+                f" {self.blockchain.get_peak().sub_block_height}"
             )
             await self.mempool_manager.new_peak(self.blockchain.get_peak())
 
@@ -174,7 +174,7 @@ class FullNode:
             ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
                 self.constants,
                 self.blockchain.sub_blocks,
-                self.blockchain.height_to_hash,
+                self.blockchain.sub_height_to_hash,
                 peak.signage_point_index,
                 peak.required_iters,
                 peak_block,
@@ -274,7 +274,7 @@ class FullNode:
         for header_hash, potential_peak_block in potential_peaks:
             if potential_peak_block.weight > highest_weight:
                 highest_weight = potential_peak_block.weight
-                peak_height = potential_peak_block.height
+                peak_height = potential_peak_block.sub_block_height
 
         if highest_weight <= self.blockchain.get_peak().weight:
             self.log.info("Not performing sync, already caught up.")
@@ -288,7 +288,7 @@ class FullNode:
         fork_point_height: uint32 = uint32(0)
         self.log.info(f"Fork point at height {fork_point_height}")
 
-        peers: List[WSChiaConnection] = list(self.server.full_nodes.values())
+        peers: List[WSChiaConnection] = self.server.get_full_node_connections()
 
         self.sync_peers_handler = SyncPeersHandler(
             self.sync_store, peers, fork_point_height, self.blockchain, peak_height, self.server
@@ -336,7 +336,7 @@ class FullNode:
                     "new_peak",
                     wallet_protocol.NewPeak(
                         new_peak.header_hash,
-                        new_peak.height,
+                        new_peak.sub_block_height,
                         new_peak.weight,
                         new_peak.prev_hash,
                     ),
@@ -353,7 +353,7 @@ class FullNode:
             return
 
         # A successful sync will leave the height at least as high as peak_height
-        assert self.blockchain.get_peak().height >= peak_height
+        assert self.blockchain.get_peak().sub_block_height >= peak_height
 
         self.log.info(
             f"Finished sync up to height {peak_height}. Total time: "
@@ -440,14 +440,16 @@ class FullNode:
             if error_code == Err.TOO_MANY_SUB_BLOCKS:
                 self.log.info(f"Reached the limit of sub_blocks in sub_slot {self.constants.MAX_SUB_SLOT_SUB_BLOCKS}")
                 return
-            self.log.error(f"Block {header_hash} at height {sub_block.height} is invalid with code {error_code}.")
+            self.log.error(
+                f"Block {header_hash} at height {sub_block.sub_block_height} is invalid with code {error_code}."
+            )
             raise ConsensusError(error_code, header_hash)
 
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
-            self.log.info(f"Disconnected block {header_hash} at height {sub_block.height}")
-            peak_height = -1 if self.blockchain.get_peak() is None else self.blockchain.get_peak().height
+            self.log.info(f"Disconnected block {header_hash} at height {sub_block.sub_block_height}")
+            peak_height = -1 if self.blockchain.get_peak() is None else self.blockchain.get_peak().sub_block_height
 
-            if sub_block.height > peak_height + self.config["sync_blocks_behind_threshold"]:
+            if sub_block.sub_block_height > peak_height + self.config["sync_blocks_behind_threshold"]:
                 async with self.blockchain.lock:
                     if self.sync_store.get_sync_mode():
                         return
@@ -457,7 +459,7 @@ class FullNode:
                     self.sync_store.set_sync_mode(True)
                 self.log.info(
                     f"We are too far behind this block. Our height is {peak_height} and block is at "
-                    f"{sub_block.height}"
+                    f"{sub_block.sub_block_height}"
                 )
                 try:
                     # Performs sync, and catch exceptions so we don't close the connection
@@ -470,16 +472,16 @@ class FullNode:
                 finally:
                     await self._finish_sync()
 
-            elif sub_block.height >= peak_height - 5:
+            elif sub_block.sub_block_height >= peak_height - 5:
                 # Allows shallow reorgs by simply requesting the previous height repeatedly
                 # TODO: replace with fetching multiple blocks at once
                 self.log.info(
-                    f"We have received a disconnected block at height {sub_block.height}, "
+                    f"We have received a disconnected block at height {sub_block.sub_block_height}, "
                     f"current peak is {peak_height}"
                 )
                 msg = Message(
                     "request_sub_block",
-                    full_node_protocol.RequestSubBlock(uint32(sub_block.height - 1), True),
+                    full_node_protocol.RequestSubBlock(uint32(sub_block.sub_block_height - 1), True),
                 )
                 self.full_node_store.add_disconnected_block(sub_block)
                 return msg
@@ -488,7 +490,8 @@ class FullNode:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
             new_peak: SubBlockRecord = self.blockchain.get_peak()
             self.log.info(
-                f"🌱 Updated peak to height {new_peak.height}, weight {new_peak.weight}, hh {new_peak.header_hash}, "
+                f"🌱 Updated peak to height {new_peak.sub_block_height}, weight {new_peak.weight}, "
+                f"hh {new_peak.header_hash}, "
                 f"forked at {fork_height}, rh: {new_peak.reward_infusion_new_challenge}"
             )
 
@@ -501,7 +504,7 @@ class FullNode:
                 new_peak,
                 sp_sub_slot,
                 ip_sub_slot,
-                fork_height != sub_block.height - 1,
+                fork_height != sub_block.sub_block_height - 1,
                 self.blockchain.sub_blocks,
             )
             # TODO: maybe broadcast new SP/IPs as well?
@@ -517,7 +520,7 @@ class FullNode:
                 msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
                 await self.server.send_to_all([msg], NodeType.FullNode)
 
-            if new_peak.height % 1000 == 0:
+            if new_peak.sub_block_height % 1000 == 0:
                 # Occasionally clear the seen list to keep it small
                 self.full_node_store.clear_seen_unfinished_blocks()
 
@@ -528,7 +531,7 @@ class FullNode:
                 "new_peak",
                 full_node_protocol.NewPeak(
                     sub_block.header_hash,
-                    sub_block.height,
+                    sub_block.sub_block_height,
                     sub_block.weight,
                     fork_height,
                     sub_block.reward_chain_sub_block.get_unfinished().get_hash(),
@@ -541,7 +544,7 @@ class FullNode:
                 "new_peak",
                 wallet_protocol.NewPeak(
                     sub_block.header_hash,
-                    sub_block.height,
+                    sub_block.sub_block_height,
                     sub_block.weight,
                     fork_height,
                 ),
@@ -550,7 +553,8 @@ class FullNode:
 
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
             self.log.warning(
-                f"Received orphan block of height {sub_block.height} rh {sub_block.reward_chain_sub_block.get_hash()}"
+                f"Received orphan block of height {sub_block.sub_block_height} rh "
+                f"{sub_block.reward_chain_sub_block.get_hash()}"
             )
         else:
             # Should never reach here, all the cases are covered
@@ -564,7 +568,7 @@ class FullNode:
             await self.respond_sub_block(full_node_protocol.RespondSubBlock(next_block))
 
         # Removes all temporary data for old blocks
-        clear_height = uint32(max(0, self.blockchain.get_peak().height - 50))
+        clear_height = uint32(max(0, self.blockchain.get_peak().sub_block_height - 50))
         self.full_node_store.clear_candidate_blocks_below(clear_height)
         self.full_node_store.clear_disconnected_blocks_below(clear_height)
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
@@ -598,7 +602,7 @@ class FullNode:
             block.prev_header_hash
         ):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
-            self.log.info(f"Received a disconnected unfinished block at height {block.height}")
+            self.log.info(f"Received a disconnected unfinished block")
             return
 
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
@@ -620,14 +624,14 @@ class FullNode:
             return
 
         if block.prev_header_hash == self.constants.GENESIS_PREV_HASH:
-            height = uint32(0)
+            sub_height = uint32(0)
         else:
-            height = self.blockchain.sub_blocks[block.prev_header_hash].height + 1
+            sub_height = self.blockchain.sub_blocks[block.prev_header_hash].sub_block_height + 1
 
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
             self.constants,
             self.blockchain.sub_blocks,
-            self.blockchain.height_to_hash,
+            self.blockchain.sub_height_to_hash,
             block.reward_chain_sub_block.signage_point_index,
             required_iters,
             block,
@@ -637,7 +641,7 @@ class FullNode:
             # No overflow sub-blocks in new epoch
             return
 
-        self.full_node_store.add_unfinished_block(height, block)
+        self.full_node_store.add_unfinished_block(sub_height, block)
         self.log.info(f"Added unfinished_block {block.partial_hash}")
 
         prev_sb = (
@@ -648,7 +652,7 @@ class FullNode:
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants,
             block,
-            self.blockchain.height_to_hash,
+            self.blockchain.sub_height_to_hash,
             prev_sb,
             self.blockchain.sub_blocks,
         )

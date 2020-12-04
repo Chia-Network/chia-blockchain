@@ -17,7 +17,7 @@ from src.util.condition_tools import (
 )
 from src.util.json_util import dict_to_json_str
 from src.util.ints import uint8, uint64, uint32
-from src.wallet.block_record import BlockRecord
+from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.cc_wallet.cc_info import CCInfo
 from src.wallet.transaction_record import TransactionRecord
 from src.wallet.util.wallet_types import WalletType
@@ -358,7 +358,7 @@ class CCWallet:
     ):
         """ Notification that wallet has received a generator it asked for. """
         block: Optional[
-            BlockRecord
+            HeaderBlockRecord
         ] = await self.wallet_state_manager.wallet_store.get_block_record(header_hash)
         assert block is not None
         if block.removals is not None:

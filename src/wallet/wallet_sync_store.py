@@ -3,26 +3,27 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
 
 log = logging.getLogger(__name__)
 
 
-class SyncStore:
+class WalletSyncStore:
     # Whether or not we are syncing
     sync_mode: bool
     # Whether we are waiting for peaks (at the start of sync) or already syncing
     waiting_for_peaks: bool
     # Potential new peaks that we have received from others.
-    potential_peaks: Dict[bytes32, FullBlock]
+    potential_peaks: Dict[bytes32, HeaderBlock]
     # Blocks received from other peers during sync
-    potential_blocks: Dict[uint32, FullBlock]
+    potential_blocks: Dict[uint32, HeaderBlock]
     # Event to signal when blocks are received at each height
     potential_blocks_received: Dict[uint32, asyncio.Event]
     # Blocks that we have finalized during sync, queue them up for adding after sync is done
-    potential_future_blocks: List[FullBlock]
-    # A map from sub height to header hash of sub-blocks added to the chain
+    potential_future_blocks: List[HeaderBlock]
+    # A map from height to header hash of sub-blocks added to the chain
     header_hashes_added: Dict[uint32, bytes32]
 
     @classmethod
@@ -52,16 +53,16 @@ class SyncStore:
         self.header_hashes_added.clear()
         self.waiting_for_peaks = True
 
-    def get_potential_peaks_tuples(self) -> List[Tuple[bytes32, FullBlock]]:
+    def get_potential_peaks_tuples(self) -> List[Tuple[bytes32, HeaderBlock]]:
         return list(self.potential_peaks.items())
 
     def add_potential_peak(self, block: FullBlock) -> None:
         self.potential_peaks[block.header_hash] = block
 
-    def get_potential_peak(self, header_hash: bytes32) -> Optional[FullBlock]:
+    def get_potential_peak(self, header_hash: bytes32) -> Optional[HeaderBlock]:
         return self.potential_peaks.get(header_hash, None)
 
-    def add_potential_future_block(self, block: FullBlock):
+    def add_potential_future_block(self, block: HeaderBlock):
         self.potential_future_blocks.append(block)
 
     def get_potential_future_blocks(self):

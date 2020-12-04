@@ -32,7 +32,6 @@ class TestCoinStore:
         reward_ph = wallet_a.get_new_puzzlehash()
 
         # Generate some coins
-        print("paying to ph", reward_ph)
         blocks = bt.get_consecutive_blocks(
             10, [], farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
         )
@@ -63,14 +62,24 @@ class TestCoinStore:
         # Adding blocks to the coin store
         should_be_included_prev: Set[Coin] = set()
         should_be_included: Set[Coin] = set()
+        last_block_height = -1
         for block in blocks:
-            farmer_coin, pool_coin = block.get_future_reward_coins()
+            print(f"Block {block.sub_block_height} {block.is_block()}")
+            farmer_coin, pool_coin = block.get_future_reward_coins(last_block_height)
             should_be_included.add(farmer_coin)
             should_be_included.add(pool_coin)
             if block.is_block():
+                last_block_height = block.height
                 removals, additions = await block.tx_removals_and_additions()
+
+                print(len(block.get_included_reward_coins()), len(should_be_included_prev))
+                print([c.amount for c in block.get_included_reward_coins()])
+                print([c.amount for c in should_be_included_prev])
+
                 assert block.get_included_reward_coins() == should_be_included_prev
+
                 await coin_store.new_block(block)
+
                 for expected_coin in should_be_included_prev:
                     # Check that the coinbase rewards are added
                     record = await coin_store.get_coin_record(expected_coin.name())
@@ -148,17 +157,18 @@ class TestCoinStore:
         reorg_index = 8
         await coin_store.rollback_to_block(reorg_index)
 
-        for c, block in enumerate(blocks):
-            coins = block.get_included_reward_coins()
-            records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
+        for block in blocks:
+            if block.is_block():
+                coins = block.get_included_reward_coins()
+                records: List[Optional[CoinRecord]] = [await coin_store.get_coin_record(coin.name()) for coin in coins]
 
-            if c <= reorg_index:
-                for record in records:
-                    assert record is not None
-                    assert record.spent
-            else:
-                for record in records:
-                    assert record is None
+                if block.height <= reorg_index:
+                    for record in records:
+                        assert record is not None
+                        assert record.spent
+                else:
+                    for record in records:
+                        assert record is None
 
         await connection.close()
         Path("fndb_test.db").unlink()
@@ -179,7 +189,7 @@ class TestCoinStore:
 
             for block in blocks:
                 await b.receive_block(block)
-            assert b.get_peak().height == initial_block_count - 1
+            assert b.get_peak().sub_block_height == initial_block_count - 1
 
             for c, block in enumerate(blocks):
                 if block.is_block():
@@ -196,12 +206,12 @@ class TestCoinStore:
 
             for reorg_block in blocks_reorg_chain:
                 result, error_code, _ = await b.receive_block(reorg_block)
-                print(f"Height {reorg_block.height} {initial_block_count - 10} result {result}")
-                if reorg_block.height < initial_block_count - 10:
+                print(f"Height {reorg_block.sub_block_height} {initial_block_count - 10} result {result}")
+                if reorg_block.sub_block_height < initial_block_count - 10:
                     assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
-                elif reorg_block.height < initial_block_count - 1:
+                elif reorg_block.sub_block_height < initial_block_count - 1:
                     assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
-                elif reorg_block.height >= initial_block_count:
+                elif reorg_block.sub_block_height >= initial_block_count:
                     assert result == ReceiveBlockResult.NEW_PEAK
                     if reorg_block.is_block():
                         coins = reorg_block.get_included_reward_coins()
@@ -213,7 +223,7 @@ class TestCoinStore:
                             assert record.confirmed_block_index == reorg_block.height
                             assert record.spent_block_index == 0
                 assert error_code is None
-            assert b.get_peak().height == initial_block_count - 10 + reorg_length - 1
+            assert b.get_peak().sub_block_height == initial_block_count - 10 + reorg_length - 1
         except Exception as e:
             await connection.close()
             Path("blockchain_test.db").unlink()
@@ -235,20 +245,22 @@ class TestCoinStore:
         coin_store = await CoinStore.create(connection)
         store = await BlockStore.create(connection)
         b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
-        try:
-            for block in blocks:
-                await b.receive_block(block)
-            assert b.get_peak().height == num_blocks - 1
+        last_block_height = 0
+        for block in blocks:
+            print(
+                f"Trying to add block {block.sub_block_height} {block.height if block.is_block() else 'not'} {block.is_block()}"
+            )
+            res, err, _ = await b.receive_block(block)
+            assert err is None
+            assert res == ReceiveBlockResult.NEW_PEAK
+            if block.is_block() and block.header_hash != blocks[-1].header_hash:
+                last_block_height = block.height
+        assert b.get_peak().sub_block_height == num_blocks - 1
 
-            farmer_coin, pool_coin = blocks[-1].get_future_reward_coins()
+        farmer_coin, pool_coin = blocks[-1].get_future_reward_coins(last_block_height)
 
-            coins = await coin_store.get_coin_records_by_puzzle_hash(farmer_coin.puzzle_hash)
-            assert len(coins) > 2
-        except Exception as e:
-            await connection.close()
-            Path("blockchain_test.db").unlink()
-            b.shut_down()
-            raise e
+        coins = await coin_store.get_coin_records_by_puzzle_hash(farmer_coin.puzzle_hash)
+        assert len(coins) > 2
 
         await connection.close()
         Path("blockchain_test.db").unlink()
