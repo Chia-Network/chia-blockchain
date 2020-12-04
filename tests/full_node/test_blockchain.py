@@ -43,7 +43,7 @@ class TestGenesisBlock:
         result, err, _ = await empty_blockchain.receive_block(genesis, False)
         assert err is None
         assert result == ReceiveBlockResult.NEW_PEAK
-        assert empty_blockchain.get_peak().height == 0
+        assert empty_blockchain.get_peak().sub_block_height == 0
 
     @pytest.mark.asyncio
     async def test_overflow_genesis(self, empty_blockchain):
@@ -144,9 +144,9 @@ class TestBlockHeaderValidation:
             assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
             print(
-                f"Added block {block.height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
+                f"Added block {block.sub_block_height} total iters {block.total_iters} new slot? {len(block.finished_sub_slots)}"
             )
-        assert empty_blockchain.get_peak().height == len(blocks) - 1
+        assert empty_blockchain.get_peak().sub_block_height == len(blocks) - 1
 
     @pytest.mark.asyncio
     async def test_unfinished_blocks(self, empty_blockchain):
@@ -205,7 +205,7 @@ class TestBlockHeaderValidation:
         for block in blocks[10:]:
             result, err, _ = await blockchain.receive_block(block)
             assert err is None
-        assert blockchain.get_peak().height == 19
+        assert blockchain.get_peak().sub_block_height == 19
 
     @pytest.mark.asyncio
     async def test_one_sb_per_slot(self, empty_blockchain):
@@ -216,7 +216,7 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
-        assert blockchain.get_peak().height == num_blocks - 1
+        assert blockchain.get_peak().sub_block_height == num_blocks - 1
 
     @pytest.mark.asyncio
     async def test_one_sb_per_two_slots(self, empty_blockchain):
@@ -227,7 +227,7 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=2)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
-        assert blockchain.get_peak().height == num_blocks - 1
+        assert blockchain.get_peak().sub_block_height == num_blocks - 1
 
     @pytest.mark.asyncio
     async def test_one_sb_per_five_slots(self, empty_blockchain):
@@ -238,7 +238,7 @@ class TestBlockHeaderValidation:
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=5)
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert result == ReceiveBlockResult.NEW_PEAK
-        assert blockchain.get_peak().height == num_blocks - 1
+        assert blockchain.get_peak().sub_block_height == num_blocks - 1
 
     @pytest.mark.asyncio
     async def test_basic_chain_overflow(self, empty_blockchain):
@@ -247,8 +247,8 @@ class TestBlockHeaderValidation:
             result, err, _ = await empty_blockchain.receive_block(block)
             assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
-            print(f"added {block.height} {block.total_iters}")
-        assert empty_blockchain.get_peak().height == len(blocks) - 1
+            print(f"added {block.sub_block_height} {block.total_iters}")
+        assert empty_blockchain.get_peak().sub_block_height == len(blocks) - 1
 
     @pytest.mark.asyncio
     async def test_one_sb_per_two_slots_force_overflow(self, empty_blockchain):
@@ -260,7 +260,7 @@ class TestBlockHeaderValidation:
             result, err, _ = await blockchain.receive_block(blocks[-1])
             assert err is None
             assert result == ReceiveBlockResult.NEW_PEAK
-        assert blockchain.get_peak().height == num_blocks - 1
+        assert blockchain.get_peak().sub_block_height == num_blocks - 1
 
     @pytest.mark.asyncio
     async def test_invalid_prev(self, empty_blockchain):
@@ -1398,19 +1398,19 @@ class TestReorgs:
 
         for block in blocks:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
-        assert b.get_peak().height == 14
+        assert b.get_peak().sub_block_height == 14
 
         blocks_reorg_chain = bt.get_consecutive_blocks(7, blocks[:10], seed=b"2")
         for reorg_block in blocks_reorg_chain:
             result, error_code, fork_height = await b.receive_block(reorg_block)
-            if reorg_block.height < 10:
+            if reorg_block.sub_block_height < 10:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
-            elif reorg_block.height < 14:
+            elif reorg_block.sub_block_height < 14:
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN
-            elif reorg_block.height >= 15:
+            elif reorg_block.sub_block_height >= 15:
                 assert result == ReceiveBlockResult.NEW_PEAK
             assert error_code is None
-        assert b.get_peak().height == 16
+        assert b.get_peak().sub_block_height == 16
 
     @pytest.mark.asyncio
     async def test_long_reorg(self, empty_blockchain):
@@ -1425,8 +1425,8 @@ class TestReorgs:
 
         for block in blocks:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
-        chain_1_height = b.get_peak().height
-        chain_1_weight = b.get_peak().weight
+        chain_1_height = b.get_peak().sub_block_height
+        chain_1_weight = b.get_peak().sub_block_height
         assert chain_1_height == (num_blocks_chain_1 - 1)
 
         # These blocks will have less time between them (timestamp) and therefore will make difficulty go up
@@ -1441,7 +1441,7 @@ class TestReorgs:
         found_orphan = False
         for reorg_block in blocks_reorg_chain:
             result, error_code, fork_height = await b.receive_block(reorg_block)
-            if reorg_block.height < num_blocks_chain_2_start:
+            if reorg_block.sub_block_height < num_blocks_chain_2_start:
                 assert result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             if reorg_block.weight <= chain_1_weight:
                 if result == ReceiveBlockResult.ADDED_AS_ORPHAN:
@@ -1449,13 +1449,13 @@ class TestReorgs:
                 assert error_code is None
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN or result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
             elif reorg_block.weight > chain_1_weight:
-                assert reorg_block.height < chain_1_height
+                assert reorg_block.sub_block_height < chain_1_height
                 assert result == ReceiveBlockResult.NEW_PEAK
             assert error_code is None
         assert found_orphan
 
         assert b.get_peak().weight > chain_1_weight
-        assert b.get_peak().height < chain_1_height
+        assert b.get_peak().sub_block_height < chain_1_height
 
     @pytest.mark.asyncio
     async def test_reorg_from_genesis(self, empty_blockchain):
@@ -1464,19 +1464,19 @@ class TestReorgs:
 
         for block in blocks:
             assert (await b.receive_block(block))[0] == ReceiveBlockResult.NEW_PEAK
-        assert b.get_peak().height == 14
+        assert b.get_peak().sub_block_height == 14
 
         # Reorg to alternate chain that is 1 height longer
         found_orphan = False
         blocks_reorg_chain = bt.get_consecutive_blocks(16, [], seed=b"2")
         for reorg_block in blocks_reorg_chain:
             result, error_code, fork_height = await b.receive_block(reorg_block)
-            print(reorg_block.height, result)
-            if reorg_block.height < 14:
+            print(reorg_block.sub_block_height, result)
+            if reorg_block.sub_block_height < 14:
                 if result == ReceiveBlockResult.ADDED_AS_ORPHAN:
                     found_orphan = True
                 assert result == ReceiveBlockResult.ADDED_AS_ORPHAN or result == ReceiveBlockResult.ALREADY_HAVE_BLOCK
-            elif reorg_block.height >= 15:
+            elif reorg_block.sub_block_height >= 15:
                 assert result == ReceiveBlockResult.NEW_PEAK
             assert error_code is None
 
@@ -1492,4 +1492,4 @@ class TestReorgs:
         result, error_code, fork_height = await b.receive_block(blocks_reorg_chain_2[-1])
         assert result == ReceiveBlockResult.NEW_PEAK
         assert found_orphan
-        assert b.get_peak().height == 17
+        assert b.get_peak().sub_block_height == 17

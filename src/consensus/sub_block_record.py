@@ -22,6 +22,7 @@ class SubBlockRecord(Streamable):
     header_hash: bytes32
     prev_hash: bytes32  # Header hash of the previous sub-block
     sub_block_height: uint32
+    prev_block_height: uint32
     weight: uint128  # Total cumulative difficulty of all ancestor blocks since genesis
     total_iters: uint128  # Total number of VDF iterations since genesis, including this sub-block
     signage_point_index: uint8
@@ -50,10 +51,6 @@ class SubBlockRecord(Streamable):
 
     # Sub-epoch (present iff this is the first SB after sub-epoch)
     sub_epoch_summary_included: Optional[SubEpochSummary]
-
-    @property
-    def height(self) -> uint32:
-        return self.sub_block_height
 
     @property
     def is_block(self) -> bool:

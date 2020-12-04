@@ -61,10 +61,10 @@ class FullNodeStore:
     def add_candidate_block(
         self,
         quality_string: bytes32,
-        height: uint32,
+        sub_height: uint32,
         unfinished_block: UnfinishedBlock,
     ):
-        self.candidate_blocks[quality_string] = (height, unfinished_block)
+        self.candidate_blocks[quality_string] = (sub_height, unfinished_block)
 
     def get_candidate_block(self, quality_string: bytes32) -> Optional[UnfinishedBlock]:
         result = self.candidate_blocks.get(quality_string, None)
@@ -72,10 +72,10 @@ class FullNodeStore:
             return None
         return result[1]
 
-    def clear_candidate_blocks_below(self, height: uint32) -> None:
+    def clear_candidate_blocks_below(self, sub_height: uint32) -> None:
         del_keys = []
         for key, value in self.candidate_blocks.items():
-            if value[0] < height:
+            if value[0] < sub_height:
                 del_keys.append(key)
         for key in del_keys:
             try:
@@ -104,13 +104,13 @@ class FullNodeStore:
     def get_disconnected_block(self, header_hash: bytes32) -> Optional[FullBlock]:
         return self.disconnected_blocks.get(header_hash, None)
 
-    def clear_disconnected_blocks_below(self, height: uint32) -> None:
+    def clear_disconnected_blocks_below(self, sub_height: uint32) -> None:
         for key in list(self.disconnected_blocks.keys()):
-            if self.disconnected_blocks[key].height < height:
+            if self.disconnected_blocks[key].sub_block_height < sub_height:
                 del self.disconnected_blocks[key]
 
-    def add_unfinished_block(self, height: uint32, unfinished_block: UnfinishedBlock) -> None:
-        self.unfinished_blocks[unfinished_block.partial_hash] = (height, unfinished_block)
+    def add_unfinished_block(self, sub_height: uint32, unfinished_block: UnfinishedBlock) -> None:
+        self.unfinished_blocks[unfinished_block.partial_hash] = (sub_height, unfinished_block)
 
     def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
         result = self.unfinished_blocks.get(unfinished_reward_hash, None)
@@ -121,10 +121,10 @@ class FullNodeStore:
     def get_unfinished_blocks(self) -> Dict[bytes32, Tuple[uint32, UnfinishedBlock]]:
         return self.unfinished_blocks
 
-    def clear_unfinished_blocks_below(self, height: uint32) -> None:
+    def clear_unfinished_blocks_below(self, sub_height: uint32) -> None:
         del_keys: List[bytes32] = []
         for partial_reward_hash, (unf_height, unfinished_block) in self.unfinished_blocks.items():
-            if unf_height < height:
+            if unf_height < sub_height:
                 del_keys.append(partial_reward_hash)
         for del_key in del_keys:
             del self.unfinished_blocks[del_key]
@@ -267,7 +267,7 @@ class FullNodeStore:
         Returns true if sp successfully added
         """
 
-        if peak is None or peak.height < 2:
+        if peak is None or peak.sub_block_height < 2:
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
         else:
             sub_slot_iters = peak.sub_slot_iters
@@ -490,7 +490,7 @@ class FullNodeStore:
                     final_index = index
 
         if pos_index is None or final_index is None:
-            log.error(f"{pos_ss_challenge_hash} {len(self.finished_sub_slots)} {prev_sb.height}")
+            log.error(f"{pos_ss_challenge_hash} {len(self.finished_sub_slots)} {prev_sb.sub_block_height}")
             raise ValueError(
                 f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index} {len(sub_block_records)}"
             )

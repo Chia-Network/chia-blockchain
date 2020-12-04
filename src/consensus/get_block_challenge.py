@@ -52,8 +52,7 @@ def get_block_challenge(
             while len(reversed_challenge_hashes) < challenges_to_look_for:
                 if curr.first_in_sub_slot:
                     reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
-                if curr.height == 0:
-                    assert len(curr.finished_challenge_slot_hashes) > 0
+                if curr.sub_block_height == 0:
                     break
                 curr = sub_blocks[curr.prev_hash]
             challenge = reversed_challenge_hashes[challenges_to_look_for - 1]

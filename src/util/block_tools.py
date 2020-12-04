@@ -265,10 +265,11 @@ class BlockTools:
         while not curr.is_block:
             curr = sub_blocks[curr.prev_hash]
         start_timestamp = curr.timestamp
-        start_height = curr.height
+        start_height = curr.sub_block_height
 
         curr = latest_sub_block
         sub_blocks_added_this_sub_slot = 1
+
         while not curr.first_in_sub_slot:
             curr = sub_blocks[curr.prev_hash]
             sub_blocks_added_this_sub_slot += 1
@@ -298,7 +299,7 @@ class BlockTools:
                     while curr.total_iters > sub_slot_start_total_iters + calculate_sp_iters(
                         constants, sub_slot_iters, uint8(signage_point_index)
                     ):
-                        if curr.height == 0:
+                        if curr.sub_block_height == 0:
                             break
                         curr = sub_blocks[curr.prev_hash]
                     if curr.total_iters > sub_slot_start_total_iters:
@@ -344,6 +345,7 @@ class BlockTools:
                         assert latest_sub_block.header_hash in sub_blocks
                         if transaction_data_included:
                             transaction_data = None
+
                         full_block, sub_block_record = get_full_block_and_sub_record(
                             constants,
                             sub_slot_start_total_iters,
@@ -381,9 +383,9 @@ class BlockTools:
 
                         sub_blocks[full_block.header_hash] = sub_block_record
                         print(
-                            f"Created block {sub_block_record.height} ove=False, iters {sub_block_record.total_iters}"
+                            f"Created block {sub_block_record.sub_block_height} ove=False, iters {sub_block_record.total_iters}"
                         )
-                        height_to_hash[uint32(full_block.height)] = full_block.header_hash
+                        height_to_hash[uint32(full_block.sub_block_height)] = full_block.header_hash
                         latest_sub_block = sub_blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
                         num_blocks -= 1
@@ -583,13 +585,13 @@ class BlockTools:
 
                         block_list.append(full_block)
                         sub_blocks_added_this_sub_slot += 1
-                        print(f"Created block {sub_block_record.height } ov=True, iters {sub_block_record.total_iters}")
+                        print(f"Created block {sub_block_record.sub_block_height } ov=True, iters {sub_block_record.total_iters}")
                         num_blocks -= 1
                         if num_blocks == 0:
                             return block_list
 
                         sub_blocks[full_block.header_hash] = sub_block_record
-                        height_to_hash[uint32(full_block.height)] = full_block.header_hash
+                        height_to_hash[uint32(full_block.sub_block_height)] = full_block.header_hash
                         latest_sub_block = sub_blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
 
@@ -917,7 +919,7 @@ def finish_sub_block(
     )
     cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
     deficit = calculate_deficit(
-        constants, latest_sub_block.height + 1, latest_sub_block, is_overflow, len(finished_sub_slots) > 0
+        constants, latest_sub_block.sub_block_height + 1, latest_sub_block, is_overflow, len(finished_sub_slots) > 0
     )
 
     icc_ip_vdf, icc_ip_proof = get_icc(
@@ -997,10 +999,10 @@ def load_block_list(
     height_to_hash: Dict[uint32, bytes32] = {}
     sub_blocks: Dict[uint32, SubBlockRecord] = {}
     for full_block in block_list:
-        if full_block.height == 0:
+        if full_block.sub_block_height == 0:
             difficulty = uint64(constants.DIFFICULTY_STARTING)
         else:
-            difficulty = full_block.weight - block_list[full_block.height - 1].weight
+            difficulty = full_block.weight - block_list[full_block.sub_block_height - 1].weight
         if full_block.reward_chain_sub_block.signage_point_index == 0:
             challenge = full_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
             sp_hash = challenge
@@ -1025,7 +1027,7 @@ def load_block_list(
             full_block,
             None,
         )
-        height_to_hash[uint32(full_block.height)] = full_block.header_hash
+        height_to_hash[uint32(full_block.sub_block_height)] = full_block.header_hash
     return height_to_hash, difficulty, sub_blocks
 
 
@@ -1124,7 +1126,7 @@ def get_full_block_and_sub_record(
         get_plot_signature,
         get_pool_signature,
         signage_point,
-        uint64(start_timestamp + int((prev_sub_block.height + 1 - start_height) * time_per_sub_block)),
+        uint64(start_timestamp + int((prev_sub_block.sub_block_height + 1 - start_height) * time_per_sub_block)),
         seed,
         transaction_data,
         prev_sub_block,
@@ -1152,4 +1154,5 @@ def get_full_block_and_sub_record(
         sub_slot_iters,
         difficulty,
     )
+
     return full_block, sub_block_record

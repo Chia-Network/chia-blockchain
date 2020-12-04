@@ -50,7 +50,7 @@ def get_signage_point_vdf_info(
     elif new_sub_slot and overflow and len(finished_sub_slots) == 1:
         # Case 4: Starting at prev will put us in the previous, sub-slot, since case 2 handled more empty slots
         curr: SubBlockRecord = prev_sb
-        while not curr.first_in_sub_slot and curr.height > 0 and curr.total_iters > sp_total_iters:
+        while not curr.first_in_sub_slot and curr.sub_block_height > 0 and curr.total_iters > sp_total_iters:
             curr = sub_blocks[curr.prev_hash]
         if curr.total_iters < sp_total_iters:
             sp_vdf_iters = sp_total_iters - curr.total_iters
@@ -75,7 +75,7 @@ def get_signage_point_vdf_info(
             else []
         )
         sp_pre_sb: Optional[SubBlockRecord] = None
-        while len(found_sub_slots) < 2 and curr.height > 0:
+        while len(found_sub_slots) < 2 and curr.sub_block_height > 0:
             if sp_pre_sb is None and curr.total_iters < sp_total_iters:
                 sp_pre_sb = curr
             curr = sub_blocks[curr.prev_hash]
@@ -99,7 +99,7 @@ def get_signage_point_vdf_info(
         # Case 6: prev is in the same sub slot. Starting at prev does not skip any sub slots. We do not need
         # to go back another sub slot, because it's not overflow, so the VDF to signage point is this sub-slot.
         curr: SubBlockRecord = prev_sb
-        while not curr.first_in_sub_slot and curr.height > 0 and curr.total_iters > sp_total_iters:
+        while not curr.first_in_sub_slot and curr.sub_block_height > 0 and curr.total_iters > sp_total_iters:
             curr = sub_blocks[curr.prev_hash]
         if curr.total_iters < sp_total_iters:
             sp_vdf_iters = sp_total_iters - curr.total_iters
