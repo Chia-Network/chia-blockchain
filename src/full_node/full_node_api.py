@@ -631,93 +631,99 @@ class FullNodeAPI:
     @api_request
     async def new_infusion_point_vdf(self, request: timelord_protocol.NewInfusionPointVDF) -> Optional[Message]:
         # Lookup unfinished blocks
-        unfinished_block: Optional[UnfinishedBlock] = self.full_node.full_node_store.get_unfinished_block(
-            request.unfinished_reward_hash
-        )
 
-        if unfinished_block is None:
-            self.log.warning(
-                f"Do not have unfinished reward chain block {request.unfinished_reward_hash}, cannot finish."
+        async with self.full_node.timelord_lock:
+            unfinished_block: Optional[UnfinishedBlock] = self.full_node.full_node_store.get_unfinished_block(
+                request.unfinished_reward_hash
             )
 
-        prev_sb: Optional[SubBlockRecord] = None
-        if request.reward_chain_ip_vdf.challenge == self.full_node.constants.FIRST_RC_CHALLENGE:
-            # Genesis
-            assert request.challenge_chain_ip_vdf.challenge == self.full_node.constants.FIRST_RC_CHALLENGE
-        else:
-            # Find the prev block
-            curr: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
-            if curr is None:
-                self.log.warning(f"Have no blocks in chain, so can not complete block {unfinished_block.height}")
-                return
-            for _ in range(10):
-                if curr.reward_infusion_new_challenge == request.reward_chain_ip_vdf.challenge:
-                    # Found our prev block
-                    prev_sb = curr
-                    break
-                if self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None) is None:
+            if unfinished_block is None:
+                self.log.warning(
+                    f"Do not have unfinished reward chain block {request.unfinished_reward_hash}, cannot finish."
+                )
+
+            prev_sb: Optional[SubBlockRecord] = None
+            if request.reward_chain_ip_vdf.challenge == self.full_node.constants.FIRST_RC_CHALLENGE:
+                # Genesis
+                assert request.challenge_chain_ip_vdf.challenge == self.full_node.constants.FIRST_RC_CHALLENGE
+            else:
+                # Find the prev block
+                curr: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
+                if curr is None:
+                    self.log.warning(f"Have no blocks in chain, so can not complete block {unfinished_block.height}")
+                    return
+                for _ in range(10):
+                    if curr.reward_infusion_new_challenge == request.reward_chain_ip_vdf.challenge:
+                        # Found our prev block
+                        prev_sb = curr
+                        break
+                    if self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None) is None:
+                        self.log.warning(
+                            f"Did not find previous reward chain hash {request.reward_chain_ip_vdf.challenge}"
+                        )
+                        return
+
+                # If not found, cache keyed on prev block
+                if prev_sb is None:
+                    self.full_node.full_node_store.add_to_future_ip(request)
+                    self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
                     return
 
-            # If not found, cache keyed on prev block
-            if prev_sb is None:
-                self.full_node.full_node_store.add_to_future_ip(request)
-                return
-
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-            self.full_node.constants,
-            unfinished_block,
-            self.full_node.blockchain.height_to_hash,
-            prev_sb,
-            self.full_node.blockchain.sub_blocks,
-        )
-        overflow = is_overflow_sub_block(
-            self.full_node.constants, unfinished_block.reward_chain_sub_block.signage_point_index
-        )
-        if overflow:
-            finished_sub_slots = self.full_node.full_node_store.get_finished_sub_slots(
+            sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+                self.full_node.constants,
+                unfinished_block,
+                self.full_node.blockchain.height_to_hash,
                 prev_sb,
                 self.full_node.blockchain.sub_blocks,
-                unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf.challenge,
-                True,
             )
-        else:
-            finished_sub_slots = unfinished_block.finished_sub_slots
-
-        if (
-            unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
-            == self.full_node.constants.FIRST_CC_CHALLENGE
-        ):
-            sub_slot_start_iters = uint128(0)
-        else:
-            ss_res = self.full_node.full_node_store.get_sub_slot(
-                unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
+            overflow = is_overflow_sub_block(
+                self.full_node.constants, unfinished_block.reward_chain_sub_block.signage_point_index
             )
-            if ss_res is None:
-                self.log.warning(
-                    f"Do not have sub slot {unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}"
+            if overflow:
+                finished_sub_slots = self.full_node.full_node_store.get_finished_sub_slots(
+                    prev_sb,
+                    self.full_node.blockchain.sub_blocks,
+                    unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf.challenge,
+                    True,
                 )
-                return
-            _, _, sub_slot_start_iters = ss_res
-        sp_total_iters = sub_slot_start_iters + calculate_sp_iters(
-            self.full_node.constants, sub_slot_iters, unfinished_block.reward_chain_sub_block.signage_point_index
-        )
+            else:
+                finished_sub_slots = unfinished_block.finished_sub_slots
 
-        block: FullBlock = unfinished_block_to_full_block(
-            unfinished_block,
-            request.challenge_chain_ip_vdf,
-            request.challenge_chain_ip_proof,
-            request.reward_chain_ip_vdf,
-            request.reward_chain_ip_proof,
-            request.infused_challenge_chain_ip_vdf,
-            request.infused_challenge_chain_ip_proof,
-            finished_sub_slots,
-            prev_sb,
-            self.full_node.blockchain.sub_blocks,
-            sp_total_iters,
-            difficulty,
-        )
+            if (
+                unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
+                == self.full_node.constants.FIRST_CC_CHALLENGE
+            ):
+                sub_slot_start_iters = uint128(0)
+            else:
+                ss_res = self.full_node.full_node_store.get_sub_slot(
+                    unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
+                )
+                if ss_res is None:
+                    self.log.warning(
+                        f"Do not have sub slot {unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}"
+                    )
+                    return
+                _, _, sub_slot_start_iters = ss_res
+            sp_total_iters = sub_slot_start_iters + calculate_sp_iters(
+                self.full_node.constants, sub_slot_iters, unfinished_block.reward_chain_sub_block.signage_point_index
+            )
 
-        await self.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            block: FullBlock = unfinished_block_to_full_block(
+                unfinished_block,
+                request.challenge_chain_ip_vdf,
+                request.challenge_chain_ip_proof,
+                request.reward_chain_ip_vdf,
+                request.reward_chain_ip_proof,
+                request.infused_challenge_chain_ip_vdf,
+                request.infused_challenge_chain_ip_proof,
+                finished_sub_slots,
+                prev_sb,
+                self.full_node.blockchain.sub_blocks,
+                sp_total_iters,
+                difficulty,
+            )
+
+            await self.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
     @peer_required
     @api_request

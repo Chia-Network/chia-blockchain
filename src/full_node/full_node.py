@@ -10,6 +10,8 @@ import aiosqlite
 import src.server.ws_connection as ws
 
 from src.consensus.constants import ConsensusConstants
+from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
+from src.consensus.pot_iterations import is_overflow_sub_block
 
 from src.full_node.block_store import BlockStore
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
@@ -60,6 +62,7 @@ class FullNode:
     _shut_down: bool
     root_path: Path
     state_changed_callback: Optional[Callable]
+    timelord_lock: asyncio.Lock
 
     def __init__(
         self,
@@ -93,6 +96,7 @@ class FullNode:
         self.full_node_store = await FullNodeStore.create(self.constants)
         self.sync_store = await SyncStore.create()
         self.coin_store = await CoinStore.create(self.connection)
+        self.timelord_lock = asyncio.Lock()
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
@@ -488,7 +492,7 @@ class FullNode:
             new_peak: SubBlockRecord = self.blockchain.get_peak()
             self.log.info(
                 f"🌱 Updated peak to height {new_peak.height}, weight {new_peak.weight}, hh {new_peak.header_hash}, "
-                f"forked at {fork_height}"
+                f"forked at {fork_height}, rh: {new_peak.reward_infusion_new_challenge}"
             )
 
             difficulty = self.blockchain.get_next_difficulty(new_peak.header_hash, False)
@@ -548,7 +552,9 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.WALLET)
 
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
-            self.log.info(f"Received orphan block of height {sub_block.height}")
+            self.log.warning(
+                f"Received orphan block of height {sub_block.height} rh {sub_block.reward_chain_sub_block.get_hash()}"
+            )
         else:
             # Should never reach here, all the cases are covered
             raise RuntimeError(f"Invalid result from receive_block {added}")
@@ -620,22 +626,43 @@ class FullNode:
         else:
             height = self.blockchain.sub_blocks[block.prev_header_hash].height + 1
 
+        ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
+            self.constants,
+            self.blockchain.sub_blocks,
+            self.blockchain.height_to_hash,
+            block.reward_chain_sub_block.signage_point_index,
+            required_iters,
+            block,
+        )
+        is_overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
+        if ses is not None and ses.new_difficulty is not None and is_overflow:
+            # No overflow sub-blocks in new epoch
+            return
+
         self.full_node_store.add_unfinished_block(height, block)
         self.log.info(f"Added unfinished_block {block.partial_hash}")
 
+        prev_sb = (
+            None
+            if block.prev_header_hash == self.constants.GENESIS_PREV_HASH
+            else self.blockchain.sub_blocks[block.prev_header_hash]
+        )
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+            self.constants,
+            block,
+            self.blockchain.height_to_hash,
+            prev_sb,
+            self.blockchain.sub_blocks,
+        )
+
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
             block.reward_chain_sub_block,
+            difficulty,
+            sub_slot_iters,
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,
             block.foliage_sub_block,
-            next_sub_epoch_summary(
-                self.constants,
-                self.blockchain.sub_blocks,
-                self.blockchain.height_to_hash,
-                block.reward_chain_sub_block.signage_point_index,
-                required_iters,
-                block,
-            ),
+            ses,
         )
 
         msg = Message("new_unfinished_sub_block", timelord_request)

@@ -25,17 +25,21 @@ class NewPeak:
     difficulty: uint64
     deficit: uint8
     sub_slot_iters: uint64  # SSi in the slot where NewPeak has been infused
-    sub_epoch_summary: Optional[SubEpochSummary]  # If NewPeak is the last sub-block, the next slot should include this
+    sub_epoch_summary: Optional[
+        SubEpochSummary
+    ]  # If NewPeak is the last slot in epoch, the next slot should include this
 
 
 @dataclass(frozen=True)
 @cbor_message
 class NewUnfinishedSubBlock:
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
+    difficulty: uint64
+    sub_slot_iters: uint64  # SSi in the slot where block is infused
     challenge_chain_sp_proof: VDFProof
     reward_chain_sp_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
-    sub_epoch_summary: Optional[SubEpochSummary]  # If this is the last sub-block, the next slot should include this
+    sub_epoch_summary: Optional[SubEpochSummary]  # If this is the last slot in epoch, the next slot should include this
 
 
 @dataclass(frozen=True)

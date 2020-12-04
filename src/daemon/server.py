@@ -753,7 +753,6 @@ async def async_run_daemon(root_path):
 
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     create_server_for_daemon(root_path)
-    log.info("before start")
     ws_server = WebSocketServer(root_path)
     await ws_server.start()
 
