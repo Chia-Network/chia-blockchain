@@ -125,7 +125,6 @@ class FullNodeStore:
         del_keys: List[bytes32] = []
         for partial_reward_hash, (unf_height, unfinished_block) in self.unfinished_blocks.items():
             if unf_height < sub_height:
-                log.error("Cleared!")
                 del_keys.append(partial_reward_hash)
         for del_key in del_keys:
             del self.unfinished_blocks[del_key]
@@ -350,8 +349,6 @@ class FullNodeStore:
 
                 sp_arr[index] = signage_point
                 return True
-        log.warning(f"{self.finished_sub_slots}")
-        log.warning("No cc found...")
         return False
 
     def get_signage_point(self, cc_signage_point: bytes32) -> Optional[SignagePoint]:
