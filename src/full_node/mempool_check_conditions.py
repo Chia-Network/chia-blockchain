@@ -149,19 +149,20 @@ def equal_ignore_order(a, b):
 def get_name_puzzle_conditions2(block_program):
     cost, result = GENERATOR_MOD.run_with_cost(block_program)
     npc_list = []
-    opcodes = [bytes([i]) for i in range(49, 59)]
+    opcodes = set(item.value for item in ConditionOpcode)
     for res in result.as_python():
         conditions_list = []
         name = res[0]
         puzzle_hash = bytes32(res[1])
         for cond in res[2]:
-            if cond[0] not in opcodes:
-                breakpoint()
-            c = ConditionOpcode(cond[0])
-            if len(cond) == 3:
-                cvp = ConditionVarPair(c, cond[1], cond[2])
+            if cond[0] in opcodes:
+                opcode = ConditionOpcode(cond[0])
             else:
-                cvp = ConditionVarPair(c, cond[1], None)
+                opcode = ConditionOpcode.UNKNOWN
+            if len(cond) == 3:
+                cvp = ConditionVarPair(opcode, cond[1], cond[2])
+            else:
+                cvp = ConditionVarPair(opcode, cond[1], None)
             conditions_list.append(cvp)
         conditions_dict = conditions_by_opcode(conditions_list)
         if conditions_dict is None:
