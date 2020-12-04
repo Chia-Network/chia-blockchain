@@ -385,6 +385,8 @@ async def validate_unfinished_header_block(
 
     # 5a. Check proof of space
     if challenge != header_block.reward_chain_sub_block.pos_ss_cc_challenge_hash:
+        log.error(f"Data: {genesis_block} {overflow} {skip_overflow_last_ss_validation} {header_block.total_iters}")
+        log.error(f"Challenge {challenge} provided {header_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}")
         return None, ValidationError(Err.INVALID_CC_CHALLENGE)
 
     # 5b. Check proof of space
