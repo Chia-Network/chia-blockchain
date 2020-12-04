@@ -108,7 +108,7 @@ class DIDWallet:
             fee_amount=uint64(0),
             incoming=True,
             confirmed=False,
-            sent=uint32(10),
+            sent=uint32(0),
             spend_bundle=None,
             additions=spend_bundle.additions(),
             removals=spend_bundle.removals(),

@@ -455,7 +455,7 @@ class WalletRpcApi:
             pending_balance = await wallet.get_unconfirmed_balance()
             spendable_balance = await wallet.get_spendable_balance()
             pending_change = await wallet.get_pending_change_balance()
-            if wallet.type() == WalletType.COLOURED_COIN:
+            if wallet.type() == WalletType.COLOURED_COIN or wallet.type() == WalletType.DISTRIBUTED_ID:
                 frozen_balance = 0
             else:
                 frozen_balance = await wallet.get_frozen_amount()

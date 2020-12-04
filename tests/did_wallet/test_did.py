@@ -101,6 +101,7 @@ class TestDIDWallet:
 
         await self.time_out_assert(15, did_wallet.get_confirmed_balance, 100)
         await self.time_out_assert(15, did_wallet.get_unconfirmed_balance, 100)
+        await self.time_out_assert(15, did_wallet.get_pending_change_balance, 0)
         # Wallet1 sets up DIDWallet2 with DIDWallet1 as backup
         backup_ids = [bytes.fromhex(did_wallet.get_my_DID())]
         did_wallet_2: DIDWallet = await DIDWallet.create_new_did_wallet(
@@ -112,6 +113,7 @@ class TestDIDWallet:
 
         await self.time_out_assert(15, did_wallet_2.get_confirmed_balance, 200)
         await self.time_out_assert(15, did_wallet_2.get_unconfirmed_balance, 200)
+        await self.time_out_assert(15, did_wallet_2.get_pending_change_balance, 0)
 
         filename = "test.backup"
         did_wallet_2.create_backup(filename)
