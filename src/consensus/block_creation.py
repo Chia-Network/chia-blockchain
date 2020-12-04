@@ -192,7 +192,6 @@ def create_foliage(
         foliage_block = None
         transactions_info = None
     assert (foliage_block_hash is None) == (foliage_block_signature is None)
-    log.warning(f"MAking block with {foliage_block_hash} {foliage_block_signature}")
 
     foliage_sub_block = FoliageSubBlock(
         prev_sub_block_hash,
