@@ -32,10 +32,6 @@ from src.util.merkle_set import MerkleSet
 from src.util.prev_block import get_prev_block
 from tests.recursive_replace import recursive_replace
 
-import logging
-
-log = logging.getLogger(__name__)
-
 
 def create_foliage(
     constants: ConsensusConstants,

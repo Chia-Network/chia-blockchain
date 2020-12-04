@@ -395,6 +395,7 @@ class Blockchain:
             self.height_to_hash,
             unfinished_header_block,
             False,
+            True,
         )
 
         if error_code is not None:
