@@ -52,9 +52,14 @@ def create_foliage(
     random.seed(seed)
     extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
     if prev_sub_block is None:
+        sub_block_height: uint32 = uint32(0)
+    else:
+        sub_block_height = uint32(prev_sub_block.sub_block_height + 1)
+
+    if prev_block is None:
         height: uint32 = uint32(0)
     else:
-        height = uint32(prev_sub_block.height + 1)
+        height = uint32(prev_block.sub_block_height + 1)
 
     # Create filter
     byte_array_tx: List[bytes32] = []
@@ -79,7 +84,7 @@ def create_foliage(
     )
 
     prev_sub_block_hash: bytes32 = constants.GENESIS_PREV_HASH
-    if height != 0:
+    if sub_block_height != 0:
         prev_sub_block_hash = prev_sub_block.header_hash
 
     solution_program: Optional[Program] = None
@@ -97,10 +102,19 @@ def create_foliage(
         if solution_program is not None:
             _, _, cost = calculate_cost_of_program(solution_program, constants.CLVM_COST_RATIO_CONSTANT)
         # TODO: prev generators root
-        reward_claims_incorporated = []
-        if height > 0:
+        pool_coin = create_pool_coin(sub_block_height, pool_target.puzzle_hash, calculate_pool_reward(height))
+        farmer_coin = create_farmer_coin(
+            uint32(sub_block_height), farmer_reward_puzzlehash, calculate_base_farmer_reward(uint32(height)) + spend_bundle_fees
+        )
+        reward_claims_incorporated = [pool_coin, farmer_coin]
+        if sub_block_height > 0:
             curr: SubBlockRecord = prev_sub_block
             while not curr.is_block:
+                pool_coin = create_pool_coin(curr.sub_block_height, curr.pool_puzzle_hash, calculate_pool_reward(height))
+                farmer_coin = create_farmer_coin(
+                    curr.sub_block_height, curr.farmer_puzzle_hash, calculate_base_farmer_reward(height)
+                )
+                reward_claims_incorporated += [pool_coin, farmer_coin]
                 curr = sub_blocks[curr.prev_hash]
             pool_coin = create_pool_coin(curr.height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height))
             farmer_coin = create_farmer_coin(
@@ -176,6 +190,7 @@ def create_foliage(
             additions_root,
             removals_root,
             transactions_info.get_hash(),
+            height
         )
         foliage_block_hash: Optional[bytes32] = foliage_block.get_hash()
         foliage_block_signature: Optional[G2Element] = get_plot_signature(
@@ -320,7 +335,7 @@ def unfinished_block_to_full_block(
     if prev_sub_block is None:
         is_block = True
         new_weight = uint128(difficulty)
-        new_height = uint32(0)
+        new_sub_height = uint32(0)
         new_foliage_sub_block = unfinished_block.foliage_sub_block
         new_foliage_block = unfinished_block.foliage_block
         new_tx_info = unfinished_block.transactions_info
@@ -328,7 +343,7 @@ def unfinished_block_to_full_block(
     else:
         is_block, _ = get_prev_block(prev_sub_block, sub_blocks, total_iters_sp)
         new_weight = uint128(prev_sub_block.weight + difficulty)
-        new_height = uint32(prev_sub_block.height + 1)
+        new_sub_height = uint32(prev_sub_block.sub_block_height + 1)
         if is_block:
             new_fbh = unfinished_block.foliage_sub_block.foliage_block_hash
             new_fbs = unfinished_block.foliage_sub_block.foliage_block_signature
@@ -352,7 +367,7 @@ def unfinished_block_to_full_block(
         finished_sub_slots,
         RewardChainSubBlock(
             new_weight,
-            new_height,
+            new_sub_height,
             unfinished_block.reward_chain_sub_block.total_iters,
             unfinished_block.reward_chain_sub_block.signage_point_index,
             unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash,

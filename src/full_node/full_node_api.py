@@ -186,10 +186,10 @@ class FullNodeAPI:
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
-        if request.height not in self.full_node.blockchain.height_to_hash:
+        if request.sub_height not in self.full_node.blockchain.sub_height_to_hash:
             return
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-            self.full_node.blockchain.height_to_hash[request.height]
+            self.full_node.blockchain.sub_height_to_hash[request.sub_height]
         )
         if block is not None:
             if not request.include_transaction_block:
@@ -317,7 +317,7 @@ class FullNodeAPI:
         self, request: full_node_protocol.RespondSignagePoint, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
         peak = self.full_node.blockchain.get_peak()
-        if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+        if peak is not None and peak.sub_block_height > self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
             sub_slot_iters = peak.sub_slot_iters
             difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
             next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
@@ -362,7 +362,7 @@ class FullNodeAPI:
             msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
-            if peak is not None and peak.height > self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+            if peak is not None and peak.sub_block_height > self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
                 # Makes sure to potentially update the difficulty if we are past the peak (into a new sub-slot)
                 assert ip_sub_slot is not None
                 if request.challenge_chain_vdf.challenge != ip_sub_slot.challenge_chain.get_hash():
@@ -407,7 +407,7 @@ class FullNodeAPI:
             return Message("request_signage_point_or_end_of_sub_slot", full_node_request)
 
         peak = self.full_node.blockchain.get_peak()
-        if peak is not None and peak.height > 2:
+        if peak is not None and peak.sub_block_height > 2:
             next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
             next_difficulty = self.full_node.blockchain.get_next_difficulty(peak.header_hash, True)
         else:
@@ -519,7 +519,7 @@ class FullNodeAPI:
                 spend_bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(
                     peak.header_hash
                 )
-        if peak is None or peak.height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+        if peak is None or peak.sub_block_height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
             difficulty = self.full_node.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
         else:
@@ -581,7 +581,7 @@ class FullNodeAPI:
             unfinished_block.prev_header_hash, None
         )
         if prev_sb is not None:
-            height = prev_sb.height + 1
+            height = prev_sb.sub_block_height + 1
         else:
             height = 0
         self.full_node.full_node_store.add_candidate_block(quality_string, height, unfinished_block)
@@ -669,10 +669,18 @@ class FullNodeAPI:
                     self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
                     return
 
-            sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-                self.full_node.constants,
-                unfinished_block,
-                self.full_node.blockchain.height_to_hash,
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+            self.full_node.constants,
+            unfinished_block,
+            self.full_node.blockchain.sub_height_to_hash,
+            prev_sb,
+            self.full_node.blockchain.sub_blocks,
+        )
+        overflow = is_overflow_sub_block(
+            self.full_node.constants, unfinished_block.reward_chain_sub_block.signage_point_index
+        )
+        if overflow:
+            finished_sub_slots = self.full_node.full_node_store.get_finished_sub_slots(
                 prev_sb,
                 self.full_node.blockchain.sub_blocks,
             )

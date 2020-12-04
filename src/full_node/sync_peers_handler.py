@@ -178,19 +178,19 @@ class SyncPeersHandler:
         header_hash: bytes32 = block.header_hash
         if not isinstance(block, FullBlock):
             return
-        if block.height >= self.peak_height:
+        if block.sub_block_height >= self.peak_height:
             # This block is wrong, so ignore
-            log.info(f"Received header hash that is not in sync path {header_hash} at height {block.height}")
+            log.info(f"Received header hash that is not in sync path {header_hash} at height {block.sub_block_height}")
             return
 
         # save block to DB
-        self.potential_blocks[block.height] = block
+        self.potential_blocks[block.sub_block_height] = block
         if not self.sync_store.get_sync_mode():
             return
 
-        assert block.height in self.potential_blocks_received
+        assert block.sub_block_height in self.potential_blocks_received
 
-        self.potential_blocks_received[block.height].set()
+        self.potential_blocks_received[block.sub_block_height].set()
 
         # remove block from request set
         for node_id, request_set in self.current_outbound_sets.items():

@@ -37,7 +37,7 @@ from src.wallet.wallet_action_store import WalletActionStore
 from src.wallet.wallet_blockchain import WalletBlockchain
 from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_coin_store import WalletCoinStore
-from src.wallet.wallet_header_store import WalletBlockStore
+from src.wallet.wallet_block_store import WalletBlockStore
 from src.wallet.wallet_info import WalletInfo, WalletInfoBackup
 from src.wallet.wallet_puzzle_store import WalletPuzzleStore
 from src.wallet.wallet_sync_store import WalletSyncStore
