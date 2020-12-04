@@ -586,12 +586,11 @@ class FullNodeAPI:
             height = 0
         self.full_node.full_node_store.add_candidate_block(quality_string, height, unfinished_block)
 
+        foliage_sb_data_hash = unfinished_block.foliage_sub_block.foliage_sub_block_data.get_hash()
         if unfinished_block.is_block():
-            foliage_sb_data_hash = unfinished_block.foliage_sub_block.foliage_sub_block_data.get_hash()
             foliage_block_hash = unfinished_block.foliage_sub_block.foliage_block_hash
         else:
-            foliage_sb_data_hash = bytes([1] * 32)
-            foliage_block_hash = bytes([1] * 32)
+            foliage_block_hash = bytes([0] * 32)
 
         message = farmer_protocol.RequestSignedValues(
             quality_string,
@@ -618,8 +617,10 @@ class FullNodeAPI:
             candidate.foliage_sub_block,
             foliage_sub_block_signature=farmer_request.foliage_sub_block_signature,
         )
-        fsb3 = dataclasses.replace(fsb2, foliage_block_signature=farmer_request.foliage_block_signature)
-        new_candidate = dataclasses.replace(candidate, foliage_sub_block=fsb3)
+        if candidate.is_block():
+            fsb2 = dataclasses.replace(fsb2, foliage_block_signature=farmer_request.foliage_block_signature)
+
+        new_candidate = dataclasses.replace(candidate, foliage_sub_block=fsb2)
 
         # Propagate to ourselves (which validates and does further propagations)
         request = full_node_protocol.RespondUnfinishedSubBlock(new_candidate)
