@@ -50,7 +50,7 @@ def get_prev_ses_block(sub_blocks, last_hash) -> (SubBlockRecord, int):
     curr = sub_blocks[last_hash]
     blocks = 0
     while True:
-        assert curr.height != 0
+        assert curr.sub_block_height != 0
         # next sub block
         curr = sub_blocks[curr.prev_hash]
         # if end of sub-epoch
@@ -80,7 +80,7 @@ def load_blocks_dont_validate(blocks):
         plot_id = block.reward_chain_sub_block.proof_of_space.get_plot_id()
         q_str: Optional[bytes32] = block.reward_chain_sub_block.proof_of_space.get_quality_string(plot_id)
 
-        if block.height > 0:
+        if block.sub_block_height > 0:
             difficulty = block.reward_chain_sub_block.weight - prev_block.weight
 
         required_iters: uint64 = calculate_iterations_quality(
@@ -93,7 +93,7 @@ def load_blocks_dont_validate(blocks):
         sub_blocks[block.header_hash] = full_block_to_sub_block_record(
             test_constants, sub_blocks, height_to_hash, required_iters, block, None
         )
-        height_to_hash[block.height] = block.header_hash
+        height_to_hash[block.sub_block_height] = block.header_hash
         header_cache[block.header_hash] = block.get_block_header()
         prev_block = block
     return header_cache, height_to_hash, sub_blocks
@@ -107,7 +107,7 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
     orig_summaries: Dict[int, SubEpochSummary] = {}
     while True:
         if curr.sub_epoch_summary_included is not None:
-            print(f"ses height {curr.height} prev overflows {curr.sub_epoch_summary_included.num_sub_blocks_overflow}")
+            print(f"ses height {curr.sub_block_height} prev overflows {curr.sub_epoch_summary_included.num_sub_blocks_overflow}")
             orig_summaries[sub_epochs_left - 1] = curr.sub_epoch_summary_included
             sub_epochs_left -= 1
 
@@ -118,7 +118,7 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
         num_of_blocks += 1
     num_of_blocks += 1
     curr = sub_blocks[curr.prev_hash]
-    print(f"fork point is {curr.height} (not included)")
+    print(f"fork point is {curr.sub_block_height} (not included)")
     print(f"num of blocks in proof: {num_of_blocks}")
     print(f"num of full sub epochs in proof: {sub_epochs}")
     print("last ses end of challenge slot")
@@ -152,11 +152,11 @@ class TestWeightProof:
     async def test_get_sub_epoch_block_num_basic(self, default_400_blocks):
         header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_400_blocks)
         sub_epoch_end, _ = get_prev_ses_block(sub_blocks, default_400_blocks[-1].header_hash)
-        print("first block of last sub epoch ", sub_epoch_end.height)
+        print("first block of last sub epoch ", sub_epoch_end.sub_block_height)
         sub_epoch_blocks_n: uint32 = get_sub_epoch_block_num(sub_epoch_end, sub_blocks)
         print("sub epoch before last has ", sub_epoch_blocks_n, "blocks")
         prev_sub_epoch_end, _ = get_prev_ses_block(sub_blocks, sub_epoch_end.header_hash)
-        assert sub_epoch_blocks_n == sub_epoch_end.height - prev_sub_epoch_end.height
+        assert sub_epoch_blocks_n == sub_epoch_end.sub_block_height - prev_sub_epoch_end.sub_block_height
 
     @pytest.mark.asyncio
     async def test_get_last_ses_block_idx(self, default_400_blocks):
@@ -167,7 +167,7 @@ class TestWeightProof:
             recent_blocks.append(ProofBlockHeader(block.finished_sub_slots, block.reward_chain_sub_block))
         block = get_last_ses_block_idx(test_constants, recent_blocks)
         assert block is not None
-        assert block.reward_chain_sub_block.sub_block_height == sub_epoch_end.height
+        assert block.reward_chain_sub_block.sub_block_height == sub_epoch_end.sub_block_height
 
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_1(self, default_400_blocks):
@@ -206,7 +206,7 @@ class TestWeightProof:
             num_of_blocks += 1
         num_of_blocks += 1
         curr = sub_blocks[curr.prev_hash]
-        print(f"fork point is {curr.height} (not included)")
+        print(f"fork point is {curr.sub_block_height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
         wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
@@ -216,8 +216,6 @@ class TestWeightProof:
 
         assert wp is not None
         assert len(wp.sub_epochs) == sub_epochs
-        # todo for each sampled sub epoch, validate number of segments
-        # todo validate with different factory
         ses_block, _ = get_prev_ses_block(sub_blocks, curr.header_hash)
         assert wpf.validate_sub_epoch_summaries(wp, curr, ses_block.sub_epoch_summary_included)
 
@@ -240,7 +238,7 @@ class TestWeightProof:
             curr = sub_blocks[curr.prev_hash]
             num_of_blocks += 1
         num_of_blocks += 1
-        print(f"fork point is {curr.height} (not included)")
+        print(f"fork point is {curr.sub_block_height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
         wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
@@ -275,7 +273,7 @@ class TestWeightProof:
             num_of_blocks += 1
         num_of_blocks += 1
         curr = sub_blocks[curr.prev_hash]
-        print(f"fork point is {curr.height} (not included)")
+        print(f"fork point is {curr.sub_block_height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
         wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
@@ -286,6 +284,5 @@ class TestWeightProof:
         assert wp is not None
         assert len(wp.sub_epochs) == sub_epochs
         # todo for each sampled sub epoch, validate number of segments
-        # todo validate with different factory
         ses_block, _ = get_prev_ses_block(sub_blocks, curr.header_hash)
         assert wpf.validate_weight_proof(wp, curr)
