@@ -381,6 +381,27 @@ class FullNodeStore:
                 return None
         return None
 
+    def have_newer_signage_point(self, challenge_hash: bytes32, index: uint8, last_rc_infusion: bytes32) -> bool:
+        """
+        Returns true if we have a signage point at this index which is based on a newer infusion.
+        """
+        for sub_slot, sps, _ in self.finished_sub_slots:
+            if sub_slot is not None:
+                cc_hash = sub_slot.challenge_chain.get_hash()
+            else:
+                cc_hash = self.constants.FIRST_CC_CHALLENGE
+
+            if cc_hash == challenge_hash:
+                found_rc_hash = False
+                for i in range(0, index):
+                    sp: Optional[SignagePoint] = sps[i]
+                    if sp is not None and sp.rc_vdf.challenge == last_rc_infusion:
+                        found_rc_hash = True
+                sp: Optional[SignagePoint] = sps[index]
+                if found_rc_hash and sp is not None and sp.rc_vdf.challenge != last_rc_infusion:
+                    return True
+        return False
+
     def new_peak(
         self,
         peak: SubBlockRecord,
@@ -389,10 +410,12 @@ class FullNodeStore:
         reorg: bool,
         sub_blocks: Dict[bytes32, SubBlockRecord],
     ) -> Tuple[Optional[EndOfSubSlotBundle], List[SignagePoint], List[timelord_protocol.NewInfusionPointVDF]]:
+
         """
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
         the prev sub-slot (since we still might get more sub-blocks with an sp in the previous sub-slot)
         """
+
         new_finished_sub_slots = []
         total_iters = peak.ip_sub_slot_total_iters(self.constants)
         if not reorg:
@@ -406,7 +429,7 @@ class FullNodeStore:
 
                 if sub_slot == ip_sub_slot:
                     new_finished_sub_slots.append((sub_slot, sps, total_iters))
-                    self.finished_sub_slots = new_finished_sub_slots
+            self.finished_sub_slots = new_finished_sub_slots
         if reorg or len(new_finished_sub_slots) == 0:
             # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current
             # cache, delete the entire cache and add this sub slot.
