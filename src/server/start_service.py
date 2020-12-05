@@ -51,6 +51,7 @@ class Service:
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
+        self._rpc_task = None
 
         proctitle_name = f"chia_{service_name}"
         setproctitle(proctitle_name)
@@ -116,7 +117,6 @@ class Service:
             start_reconnect_task(self._server, _, self._log, self._auth_connect_peers) for _ in self._connect_peers
         ]
 
-        self._rpc_task = None
         self._rpc_close_task = None
         if self._rpc_info:
             rpc_api, rpc_port = self._rpc_info
@@ -160,7 +160,7 @@ class Service:
 
             self._log.info("Calling service stop callback")
 
-            if self._rpc_task:
+            if self._rpc_task is not None:
                 self._log.info("Closing RPC server")
 
                 async def close_rpc_server():

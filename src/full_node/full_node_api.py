@@ -395,11 +395,11 @@ class FullNodeAPI:
     async def respond_end_of_sub_slot(
         self, request: full_node_protocol.RespondEndOfSubSlot, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
+        fetched_ss = self.full_node.full_node_store.get_sub_slot(
+            request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+        )
         if (
-            self.full_node.full_node_store.get_sub_slot(
-                request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-            )
-            is None
+            (fetched_ss is None)
             and request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
             != self.full_node.constants.FIRST_CC_CHALLENGE
         ):
@@ -425,9 +425,11 @@ class FullNodeAPI:
         )
         # It may be an empty list, even if it's not None. Not None means added successfully
         if new_infusions is not None:
-            self.log.info(
+            self.log.warning(
                 f"Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}, number of sub-slots: "
-                f"{len(self.full_node.full_node_store.finished_sub_slots)}"
+                f"{len(self.full_node.full_node_store.finished_sub_slots)}, "
+                f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
+                f"Deficit {request.end_of_slot_bundle.reward_chain.deficit}"
             )
             # Notify full nodes of the new sub-slot
             broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
@@ -690,24 +692,28 @@ class FullNodeAPI:
                 )
 
             prev_sb: Optional[SubBlockRecord] = None
-            if request.reward_chain_ip_vdf.challenge == self.full_node.constants.FIRST_RC_CHALLENGE:
-                # Genesis
-                assert request.challenge_chain_ip_vdf.challenge == self.full_node.constants.FIRST_RC_CHALLENGE
+
+            target_rc_hash = request.reward_chain_ip_vdf.challenge
+
+            # Backtracks through end of slot objects, should work for multiple empty sub slots
+            for eos, _, _ in reversed(self.full_node.full_node_store.finished_sub_slots):
+                if eos is not None and eos.reward_chain.get_hash() == target_rc_hash:
+                    target_rc_hash = eos.reward_chain.end_of_slot_vdf.challenge
+                    self.log.warning("We are based on an EOS. the prev block will be the one before that EOS")
+            if target_rc_hash == self.full_node.constants.FIRST_RC_CHALLENGE:
+                prev_sb = None
             else:
-                # Find the prev block
+                # Find the prev block, starts looking backwards from the peak
+                # TODO: should we look at end of slots too?
                 curr: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
-                if curr is None:
-                    self.log.warning(f"Have no blocks in chain, so can not complete block {unfinished_block.height}")
-                    return
+
                 for _ in range(10):
-                    if curr.reward_infusion_new_challenge == request.reward_chain_ip_vdf.challenge:
+                    if curr.reward_infusion_new_challenge == target_rc_hash:
                         # Found our prev block
                         prev_sb = curr
                         break
                     if self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None) is None:
-                        self.log.warning(
-                            f"Did not find previous reward chain hash {request.reward_chain_ip_vdf.challenge}"
-                        )
+                        self.log.warning(f"Did not find previous reward chain hash {target_rc_hash}")
                         return
 
                 # If not found, cache keyed on prev block
@@ -715,19 +721,6 @@ class FullNodeAPI:
                     self.full_node.full_node_store.add_to_future_ip(request)
                     self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
                     return
-
-                # # We should also find the prev block from the signage point, in the path. If not found, that means
-                # # it was based on a reorged block.
-                # curr = prev_sb
-                # attempts = 0
-                # while curr is not None and curr.header_hash != unfinished_block.prev_header_hash and attempts < 10:
-                #     curr = self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None)
-                #     attempts += 1
-                # if attempts == 10 or (
-                #     curr is None and unfinished_block.prev_header_hash != self.full_node.constants.GENESIS_PREV_HASH
-                # ):
-                #     self.log.error("Have IP VDF that does not match SP VDF")
-                #     return
 
             sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
                 self.full_node.constants,
@@ -739,15 +732,12 @@ class FullNodeAPI:
             overflow = is_overflow_sub_block(
                 self.full_node.constants, unfinished_block.reward_chain_sub_block.signage_point_index
             )
-            if overflow:
-                finished_sub_slots = self.full_node.full_node_store.get_finished_sub_slots(
-                    prev_sb,
-                    self.full_node.blockchain.sub_blocks,
-                    unfinished_block.reward_chain_sub_block.challenge_chain_sp_vdf.challenge,
-                    True,
-                )
-            else:
-                finished_sub_slots = unfinished_block.finished_sub_slots
+            finished_sub_slots = self.full_node.full_node_store.get_finished_sub_slots(
+                prev_sb,
+                self.full_node.blockchain.sub_blocks,
+                unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash,
+                overflow,
+            )
 
             if (
                 unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash

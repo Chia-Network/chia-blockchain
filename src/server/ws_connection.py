@@ -52,7 +52,10 @@ class WSChiaConnection:
         # Remote properties
         self.peer_host = peer_host
 
-        connection_host, connection_port = self.ws._writer.transport.get_extra_info("peername")
+        peername = self.ws._writer.transport.get_extra_info("peername")
+        if peername is None:
+            raise ValueError(f"Was not able to get peername from {self.ws_witer} at {self.peer_host}")
+        connection_host, connection_port = peername
 
         self.peer_port = connection_port
         self.peer_server_port: Optional[uint16] = None

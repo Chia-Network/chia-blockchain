@@ -18,26 +18,18 @@ else:
 
 
 def is_type_List(f_type: Type) -> bool:
-    return (
-        get_origin(f_type) is not None and get_origin(f_type) == list
-    ) or f_type == list
+    return (get_origin(f_type) is not None and get_origin(f_type) == list) or f_type == list
 
 
 def is_type_SpecificOptional(f_type) -> bool:
     """
     Returns true for types such as Optional[T], but not Optional, or T.
     """
-    return (
-        get_origin(f_type) is not None
-        and f_type.__origin__ == Union
-        and get_args(f_type)[1]() is None
-    )
+    return get_origin(f_type) is not None and f_type.__origin__ == Union and get_args(f_type)[1]() is None
 
 
 def is_type_Tuple(f_type: Type) -> bool:
-    return (
-        get_origin(f_type) is not None and get_origin(f_type) == tuple
-    ) or f_type == tuple
+    return (get_origin(f_type) is not None and get_origin(f_type) == tuple) or f_type == tuple
 
 
 def strictdataclass(cls: Any):
@@ -74,9 +66,7 @@ def strictdataclass(cls: Any):
                 for i in range(len(item)):
                     inner_type = get_args(f_type)[i]
                     tuple_item = item[i]
-                    collected_list.append(
-                        self.parse_item(tuple_item, f_name, inner_type)
-                    )
+                    collected_list.append(self.parse_item(tuple_item, f_name, inner_type))
                 return tuple(collected_list)
             if not isinstance(item, f_type):
                 try:
@@ -96,9 +86,7 @@ def strictdataclass(cls: Any):
             for (f_name, f_type) in fields.items():
                 if f_name not in data:
                     raise ValueError(f"Field {f_name} not present")
-                object.__setattr__(
-                    self, f_name, self.parse_item(data[f_name], f_name, f_type)
-                )
+                object.__setattr__(self, f_name, self.parse_item(data[f_name], f_name, f_type))
 
     class NoTypeChecking:
         __no_type_check__ = True

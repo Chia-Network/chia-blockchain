@@ -235,7 +235,7 @@ def create_unfinished_block(
     spend_bundle: Optional[SpendBundle] = None,
     prev_sub_block: Optional[SubBlockRecord] = None,
     sub_blocks=None,
-    finished_sub_slots=None,
+    finished_sub_slots=[],
 ) -> UnfinishedBlock:
     overflow = sp_iters > ip_iters
     total_iters_sp = sub_slot_start_total_iters + sp_iters
@@ -306,7 +306,7 @@ def create_unfinished_block(
     )
 
     return UnfinishedBlock(
-        [],
+        finished_sub_slots,
         rc_sub_block,
         signage_point.cc_proof,
         signage_point.rc_proof,

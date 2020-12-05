@@ -29,6 +29,7 @@ class NewPeak:
         SubEpochSummary
     ]  # If NewPeak is the last slot in epoch, the next slot should include this
     previous_reward_challenges: List[Tuple[bytes32, uint128]]
+    last_challenge_sb_or_eos_total_iters: uint128
 
 
 @dataclass(frozen=True)
@@ -37,10 +38,10 @@ class NewUnfinishedSubBlock:
     reward_chain_sub_block: RewardChainSubBlockUnfinished  # Reward chain trunk data
     difficulty: uint64
     sub_slot_iters: uint64  # SSi in the slot where block is infused
-    challenge_chain_sp_proof: VDFProof
-    reward_chain_sp_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     sub_epoch_summary: Optional[SubEpochSummary]  # If this is the last slot in epoch, the next slot should include this
+    # This is the last thing infused in the reward chain before this signage point.
+    # The challenge that the SP reward chain VDF is based off of, or in the case of sp index 0, the previous infusion
     rc_prev: bytes32
 
 

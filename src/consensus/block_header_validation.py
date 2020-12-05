@@ -101,6 +101,7 @@ async def validate_unfinished_header_block(
                 if genesis_block:
                     # 2a. check sub-slot challenge hash for genesis block
                     if challenge_hash != constants.FIRST_CC_CHALLENGE:
+                        log.error(f"1 {challenge_hash} {constants.FIRST_CC_CHALLENGE}")
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
                 else:
                     curr: SubBlockRecord = prev_sb
@@ -109,6 +110,7 @@ async def validate_unfinished_header_block(
 
                     # 2b. check sub-slot challenge hash for non-genesis block
                     if not curr.finished_challenge_slot_hashes[-1] == challenge_hash:
+                        log.error(f"2 {challenge_hash} {curr.finished_challenge_slot_hashes[-1]}")
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
             else:
                 # 2c. check sub-slot challenge hash for empty slot
@@ -116,6 +118,9 @@ async def validate_unfinished_header_block(
                     not header_block.finished_sub_slots[finished_sub_slot_n - 1].challenge_chain.get_hash()
                     == challenge_hash
                 ):
+                    log.error(
+                        f"3 {challenge_hash} {header_block.finished_sub_slots[finished_sub_slot_n - 1].challenge_chain.get_hash()}"
+                    )
                     return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
 
             if genesis_block:
@@ -128,7 +133,7 @@ async def validate_unfinished_header_block(
                 icc_challenge_hash: Optional[bytes32] = None
                 icc_vdf_input = None
                 if prev_sb.deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-                    # There should be no ICC chain if the last sub block's deficit is 5
+                    # There should be no ICC chain if the last sub block's deficit is 16
                     # Prev sb's deficit is 0, 1, 2, 3, or 4
                     if finished_sub_slot_n == 0:
                         # This is the first sub slot after the last sb, which must have deficit 1-4, and thus an ICC
@@ -175,14 +180,19 @@ async def validate_unfinished_header_block(
                         target_vdf_info,
                         number_of_iterations=icc_iters_committed,
                     ):
+                        log.error(f"ICC: {sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf}")
+                        log.error(
+                            f"Should be: {dataclasses.replace(target_vdf_info, number_of_iterations=icc_iters_committed)}"
+                        )
                         return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
                     if not sub_slot.proofs.infused_challenge_chain_slot_proof.is_valid(
                         constants, icc_vdf_input, target_vdf_info, None
                     ):
+                        log.error(f"ICC bad proof :(")
                         return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
 
                     if sub_slot.reward_chain.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-                        # 2g. Check infused challenge sub-slot hash in challenge chain, deficit 5
+                        # 2g. Check infused challenge sub-slot hash in challenge chain, deficit 16
                         if (
                             sub_slot.infused_challenge_chain.get_hash()
                             != sub_slot.challenge_chain.infused_challenge_chain_sub_slot_hash
@@ -304,21 +314,22 @@ async def validate_unfinished_header_block(
                 return None, ValidationError(Err.INVALID_CC_EOS_VDF)
 
             if genesis_block:
-                # 2r. Check deficit (5 deficit edge case for genesis block)
+                # 2r. Check deficit (MIN_SUB.. deficit edge case for genesis block)
                 if sub_slot.reward_chain.deficit != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                     return None, ValidationError(
                         Err.INVALID_DEFICIT, f"genesis, expected deficit {constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK}"
                     )
             else:
                 if prev_sb.deficit == 0:
-                    # 2s. If prev sb had deficit 0, resets deficit to 5
+                    # 2s. If prev sb had deficit 0, resets deficit to MIN_SUB_BLOCK_PER_CHALLENGE_BLOCK
                     if sub_slot.reward_chain.deficit != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                         log.error(
                             constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
                         )
                         return None, ValidationError(
                             Err.INVALID_DEFICIT,
-                            f"expected deficit  {constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK}",
+                            f"expected deficit {constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK}, saw "
+                            f"{sub_slot.reward_chain.deficit}",
                         )
                 else:
                     # 2t. Otherwise, deficit stays the same at the slot ends, cannot reset until 0
@@ -387,7 +398,10 @@ async def validate_unfinished_header_block(
 
     # 5a. Check proof of space
     if challenge != header_block.reward_chain_sub_block.pos_ss_cc_challenge_hash:
-        log.error(f"Data: {genesis_block} {overflow} {skip_overflow_last_ss_validation} {header_block.total_iters}")
+        log.error(f"Finished slots: {header_block.finished_sub_slots}")
+        log.error(
+            f"Data: {genesis_block} {overflow} {skip_overflow_last_ss_validation} {header_block.total_iters} {header_block.reward_chain_sub_block.signage_point_index}"
+        )
         log.error(f"Challenge {challenge} provided {header_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}")
         return None, ValidationError(Err.INVALID_CC_CHALLENGE)
 
