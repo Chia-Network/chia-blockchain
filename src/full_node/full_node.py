@@ -121,6 +121,7 @@ class FullNode:
                 False,
                 self.blockchain.sub_blocks,
             )
+            self.log.warning(f"Set new Sub slots to {self.full_node_store.finished_sub_slots}")
         try:
             """
             self.full_node_peers = FullNodePeers(
@@ -169,9 +170,9 @@ class FullNode:
         Sends current peak to timelords
         """
         peak_block = await self.blockchain.get_full_peak()
-        peak = self.blockchain.sub_blocks[peak_block.header_hash]
-        difficulty = self.blockchain.get_next_difficulty(peak.header_hash, False)
-        if peak is not None:
+        if peak_block is not None:
+            peak = self.blockchain.sub_blocks[peak_block.header_hash]
+            difficulty = self.blockchain.get_next_difficulty(peak.header_hash, False)
             ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
                 self.constants,
                 self.blockchain.sub_blocks,
@@ -229,14 +230,14 @@ class FullNode:
                     peak.sub_block_height,
                     peak_full.reward_chain_sub_block.get_unfinished().get_hash(),
                 )
-                return Message("new_peak", request_node)
+                await connection.send_message(Message("new_peak", request_node))
 
             elif connection.connection_type is NodeType.WALLET:
                 # If connected to a wallet, send the LCA
                 request_wallet = wallet_protocol.NewPeak(
                     peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height
                 )
-                return Message("new_peak", request_wallet)
+                await connection.send_message(Message("new_peak", request_wallet))
             elif connection.connection_type is NodeType.TIMELORD:
                 await self._send_peak_to_timelords()
 
@@ -293,7 +294,7 @@ class FullNode:
                 highest_weight = potential_peak_block.weight
                 peak_height = potential_peak_block.sub_block_height
 
-        if highest_weight <= self.blockchain.get_peak().weight:
+        if self.blockchain.get_peak() is None or highest_weight <= self.blockchain.get_peak().weight:
             self.log.info("Not performing sync, already caught up.")
             return
 

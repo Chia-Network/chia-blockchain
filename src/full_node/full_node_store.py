@@ -165,6 +165,7 @@ class FullNodeStore:
         """
 
         if len(self.finished_sub_slots) == 0:
+            log.warning("no fini sub slots")
             return None
 
         last_slot, _, last_slot_iters = self.finished_sub_slots[-1]
@@ -177,11 +178,13 @@ class FullNodeStore:
         # Skip if already present
         for slot, _, _ in self.finished_sub_slots:
             if slot == eos:
+                log.warning("Already")
                 return []
 
         if eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge != last_slot_ch:
             # This slot does not append to our next slot
             # This prevent other peers from appending fake VDFs to our cache
+            log.warning("Not append")
             return None
 
         # TODO: Fix
@@ -212,8 +215,12 @@ class FullNodeStore:
                 if rc_challenge not in self.future_eos_cache:
                     self.future_eos_cache[rc_challenge] = []
                 self.future_eos_cache[rc_challenge].append(eos)
+                log.warning("Dont have ch")
                 return None
             if peak.total_iters + eos.reward_chain.end_of_slot_vdf.number_of_iterations != total_iters:
+                log.warning(
+                    f"Bad iters {peak.total_iters} {eos.reward_chain.end_of_slot_vdf.number_of_iterations} {total_iters}"
+                )
                 return None
 
             if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
@@ -230,10 +237,12 @@ class FullNodeStore:
                         eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
                         != icc_start_challenge_hash
                     ):
+                        log.warning("Bad icc")
                         return None
         else:
             # Empty slot after the peak
             if eos.reward_chain.end_of_slot_vdf.challenge != last_slot_rc_hash:
+                log.warning("empty slot after peak")
                 return None
 
             if (
@@ -245,6 +254,7 @@ class FullNodeStore:
                     eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
                     != last_slot.infused_challenge_chain.get_hash()
                 ):
+                    log.warning("ANother bad icc")
                     return None
 
         self.finished_sub_slots.append((eos, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
@@ -417,7 +427,7 @@ class FullNodeStore:
         """
 
         new_finished_sub_slots = []
-        total_iters = peak.ip_sub_slot_total_iters(self.constants)
+        total_iters_peak = peak.ip_sub_slot_total_iters(self.constants)
         if not reorg:
             # This is a new peak that adds to the last peak. We can clear data in old sub-slots. (and new ones)
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
@@ -436,10 +446,11 @@ class FullNodeStore:
             self.clear_slots()
             if peak.overflow and sp_sub_slot is not None:
                 prev_sub_slot_total_iters = peak.sp_sub_slot_total_iters(self.constants)
+                assert total_iters_peak != prev_sub_slot_total_iters
                 self.finished_sub_slots = [
                     (sp_sub_slot, [None] * self.constants.NUM_SPS_SUB_SLOT, prev_sub_slot_total_iters)
                 ]
-            self.finished_sub_slots.append((ip_sub_slot, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
+            self.finished_sub_slots.append((ip_sub_slot, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters_peak))
 
         new_eos: Optional[EndOfSubSlotBundle] = None
         new_sps: List[SignagePoint] = []
