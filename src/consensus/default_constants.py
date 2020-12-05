@@ -7,10 +7,10 @@ testnet_kwargs = {
     "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 16,
     "MAX_SUB_SLOT_SUB_BLOCKS": 128,
     "NUM_SPS_SUB_SLOT": 64,
-    "SUB_SLOT_ITERS_STARTING": 2 ** 25,
+    "SUB_SLOT_ITERS_STARTING": 2 ** 27,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of 2^25, to be used in the VDF iter calculation formula.
-    "DIFFICULTY_STARTING": 2 ** 14,
+    "DIFFICULTY_STARTING": 2 ** 15,
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
     "SUB_EPOCH_SUB_BLOCKS": 128,  # The number of sub-blocks per sub-epoch, mainnet 284

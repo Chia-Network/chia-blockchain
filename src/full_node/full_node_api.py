@@ -36,6 +36,7 @@ from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required
+from src.util.errors import ConsensusError
 from src.util.ints import uint64, uint128, uint8
 from src.types.peer_info import PeerInfo
 
@@ -253,6 +254,10 @@ class FullNodeAPI:
             is not None
         ):
             return
+        if self.full_node.full_node_store.have_newer_signage_point(
+            new_sp.challenge_hash, new_sp.index_from_challenge, new_sp.last_rc_infusion
+        ):
+            return
 
         if new_sp.index_from_challenge == 0 and new_sp.prev_challenge_hash is not None:
             if self.full_node.full_node_store.get_sub_slot(new_sp.prev_challenge_hash) is None:
@@ -344,8 +349,8 @@ class FullNodeAPI:
         )
 
         if added:
-            self.log.info(
-                f"Finished signage point {request.index_from_challenge}/{self.full_node.constants.NUM_SPS_SUB_SLOT}"
+            self.log.warning(
+                f"Finished signage point {request.index_from_challenge}/{self.full_node.constants.NUM_SPS_SUB_SLOT}: {request.challenge_chain_vdf.output.get_hash()}"
             )
             sub_slot_tuple = self.full_node.full_node_store.get_sub_slot(request.challenge_chain_vdf.challenge)
             if sub_slot_tuple is not None:
@@ -481,6 +486,11 @@ class FullNodeAPI:
         if sp_vdfs is None:
             self.log.warning(f"Received proof of space for an unknown signage point {request.challenge_chain_sp}")
             return
+        if request.signage_point_index > 0 and sp_vdfs.rc_vdf.output.get_hash() != request.reward_chain_sp:
+            self.log.info(
+                f"Received proof of space for a potentially old signage point {request.challenge_chain_sp}. Current sp: {sp_vdfs.rc_vdf.output.get_hash()}"
+            )
+            return
 
         if request.signage_point_index == 0:
             cc_challenge_hash: bytes32 = request.challenge_chain_sp
@@ -552,9 +562,48 @@ class FullNodeAPI:
         def get_pool_sig(to_sign, _) -> G2Element:
             return request.pool_signature
 
+        # Get the previous sub block at the signage point
+        if peak is not None:
+            curr = peak
+            while curr.total_iters > (total_iters_pos_slot + sp_iters) and curr.sub_block_height > 0:
+                curr = self.full_node.blockchain.sub_blocks[curr.prev_hash]
+            if curr.total_iters > (total_iters_pos_slot + sp_iters):
+                prev_sb = None
+            else:
+                prev_sb = curr
+        else:
+            prev_sb = None
+
         finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node.full_node_store.get_finished_sub_slots(
-            peak, self.full_node.blockchain.sub_blocks, cc_challenge_hash
+            prev_sb, self.full_node.blockchain.sub_blocks, cc_challenge_hash
         )
+        if len(finished_sub_slots) == 0:
+            if prev_sb is not None:
+                if request.signage_point_index == 0:
+                    # No need to get correct block since SP RC is not validated for this sub block
+                    pass
+                else:
+                    found = False
+                    attempts = 0
+                    while prev_sb is not None and attempts < 10:
+                        if prev_sb.reward_infusion_new_challenge == sp_vdfs.rc_vdf.challenge:
+                            found = True
+                            break
+                        if (
+                            prev_sb.finished_reward_slot_hashes is not None
+                            and len(prev_sb.finished_reward_slot_hashes) > 0
+                        ):
+                            if prev_sb.finished_reward_slot_hashes[-1] == sp_vdfs.rc_vdf.challenge:
+                                prev_sb = self.full_node.blockchain.sub_blocks.get(prev_sb.prev_hash, None)
+                                found = True
+                                break
+                        prev_sb = self.full_node.blockchain.sub_blocks.get(prev_sb.prev_hash, None)
+                        attempts += 1
+                    if not found:
+                        self.log.error("Did not find a previous block with the correct reward chain hash")
+                        return
+        elif request.signage_point_index > 0:
+            assert finished_sub_slots[-1].reward_chain.get_hash() == sp_vdfs.rc_vdf.challenge
 
         unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(
             self.full_node.constants,
@@ -573,12 +622,9 @@ class FullNodeAPI:
             uint64(int(time.time())),
             b"",
             spend_bundle,
-            peak,
+            prev_sb,
             self.full_node.blockchain.sub_blocks,
             finished_sub_slots,
-        )
-        prev_sb: Optional[SubBlockRecord] = self.full_node.blockchain.sub_blocks.get(
-            unfinished_block.prev_header_hash, None
         )
         if prev_sb is not None:
             height = prev_sb.sub_block_height + 1
@@ -609,6 +655,7 @@ class FullNodeAPI:
         candidate: Optional[UnfinishedBlock] = self.full_node.full_node_store.get_candidate_block(
             farmer_request.quality_string
         )
+
         if candidate is None:
             self.log.warning(f"Quality string {farmer_request.quality_string} not found in database")
             return
@@ -669,18 +716,23 @@ class FullNodeAPI:
                     self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
                     return
 
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-            self.full_node.constants,
-            unfinished_block,
-            self.full_node.blockchain.sub_height_to_hash,
-            prev_sb,
-            self.full_node.blockchain.sub_blocks,
-        )
-        overflow = is_overflow_sub_block(
-            self.full_node.constants, unfinished_block.reward_chain_sub_block.signage_point_index
-        )
-        if overflow:
-            finished_sub_slots = self.full_node.full_node_store.get_finished_sub_slots(
+                # We should also find the prev block from the signage point, in the path. If not found, that means
+                # it was based on a reorged block.
+                curr = prev_sb
+                attempts = 0
+                while curr is not None and curr.header_hash != unfinished_block.prev_header_hash and attempts < 10:
+                    curr = self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None)
+                    attempts += 1
+                if attempts == 10 or (
+                    curr is None and unfinished_block.prev_header_hash != self.full_node.constants.GENESIS_PREV_HASH
+                ):
+                    self.log.error("Have IP VDF that does not match SP VDF")
+                    return
+
+            sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
+                self.full_node.constants,
+                unfinished_block,
+                self.full_node.blockchain.sub_height_to_hash,
                 prev_sb,
                 self.full_node.blockchain.sub_blocks,
             )
@@ -730,8 +782,10 @@ class FullNodeAPI:
                 sp_total_iters,
                 difficulty,
             )
-
-            await self.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            try:
+                await self.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            except ConsensusError as e:
+                self.log.warning("Consensus error validating sub-block: {e}")
 
     @peer_required
     @api_request
