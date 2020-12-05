@@ -121,7 +121,6 @@ class FullNode:
                 False,
                 self.blockchain.sub_blocks,
             )
-            self.log.warning(f"Set new Sub slots to {self.full_node_store.finished_sub_slots}")
         try:
             """
             self.full_node_peers = FullNodePeers(
@@ -294,7 +293,7 @@ class FullNode:
                 highest_weight = potential_peak_block.weight
                 peak_height = potential_peak_block.sub_block_height
 
-        if self.blockchain.get_peak() is None or highest_weight <= self.blockchain.get_peak().weight:
+        if self.blockchain.get_peak() is not None and highest_weight <= self.blockchain.get_peak().weight:
             self.log.info("Not performing sync, already caught up.")
             return
 
@@ -401,12 +400,13 @@ class FullNode:
         await self._send_peak_to_timelords()
 
         peak: SubBlockRecord = self.blockchain.get_peak()
-        request_wallet = wallet_protocol.NewPeak(
-            peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height
-        )
-        msg = Message("new_peak", request_wallet)
-        await self.server.send_to_all([msg], NodeType.WALLET)
-        self._state_changed("sub_block")
+        if peak is not None:
+            request_wallet = wallet_protocol.NewPeak(
+                peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height
+            )
+            msg = Message("new_peak", request_wallet)
+            await self.server.send_to_all([msg], NodeType.WALLET)
+            self._state_changed("sub_block")
 
     async def respond_sub_block(
         self, respond_sub_block: full_node_protocol.RespondSubBlock
