@@ -78,9 +78,15 @@ def next_sub_epoch_summary(
         prev_sb.sp_total_iters(constants),
     )
     overflow = is_overflow_sub_block(constants, signage_point_index)
-    deficit = calculate_deficit(constants, prev_sb.sub_block_height + 1, prev_sb, overflow, len(block.finished_sub_slots) > 0)
+    deficit = calculate_deficit(
+        constants, prev_sb.sub_block_height + 1, prev_sb, overflow, len(block.finished_sub_slots) > 0
+    )
     can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
-        constants, prev_sb.sub_block_height + 1, deficit, sub_blocks, prev_sb.header_hash if prev_sb is not None else None
+        constants,
+        prev_sb.sub_block_height + 1,
+        deficit,
+        sub_blocks,
+        prev_sb.header_hash if prev_sb is not None else None,
     )
 
     # can't finish se, no summary
@@ -100,7 +106,7 @@ def next_sub_epoch_summary(
             height_to_hash,
             block.prev_header_hash,
             prev_sb.sub_block_height + 1,
-            uint64(block.weight - prev_sb.weight),
+            uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight),
             deficit,
             True,
             uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
