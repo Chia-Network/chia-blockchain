@@ -600,7 +600,7 @@ class FullNodeAPI:
                         prev_sb = self.full_node.blockchain.sub_blocks.get(prev_sb.prev_hash, None)
                         attempts += 1
                     if not found:
-                        self.log.error("Did not find a previous block with the correct reward chain hash")
+                        self.log.info("Did not find a previous block with the correct reward chain hash")
                         return
         elif request.signage_point_index > 0:
             assert finished_sub_slots[-1].reward_chain.get_hash() == sp_vdfs.rc_vdf.challenge
@@ -716,18 +716,18 @@ class FullNodeAPI:
                     self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
                     return
 
-                # We should also find the prev block from the signage point, in the path. If not found, that means
-                # it was based on a reorged block.
-                curr = prev_sb
-                attempts = 0
-                while curr is not None and curr.header_hash != unfinished_block.prev_header_hash and attempts < 10:
-                    curr = self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None)
-                    attempts += 1
-                if attempts == 10 or (
-                    curr is None and unfinished_block.prev_header_hash != self.full_node.constants.GENESIS_PREV_HASH
-                ):
-                    self.log.error("Have IP VDF that does not match SP VDF")
-                    return
+                # # We should also find the prev block from the signage point, in the path. If not found, that means
+                # # it was based on a reorged block.
+                # curr = prev_sb
+                # attempts = 0
+                # while curr is not None and curr.header_hash != unfinished_block.prev_header_hash and attempts < 10:
+                #     curr = self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None)
+                #     attempts += 1
+                # if attempts == 10 or (
+                #     curr is None and unfinished_block.prev_header_hash != self.full_node.constants.GENESIS_PREV_HASH
+                # ):
+                #     self.log.error("Have IP VDF that does not match SP VDF")
+                #     return
 
             sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
                 self.full_node.constants,
@@ -785,7 +785,7 @@ class FullNodeAPI:
             try:
                 await self.respond_sub_block(full_node_protocol.RespondSubBlock(block))
             except ConsensusError as e:
-                self.log.warning("Consensus error validating sub-block: {e}")
+                self.log.warning(f"Consensus error validating sub-block: {e}")
 
     @peer_required
     @api_request
