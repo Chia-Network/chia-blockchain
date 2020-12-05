@@ -231,7 +231,7 @@ class FullNodeAPI:
         )
         if unfinished_block is not None:
             msg = Message(
-                "respond_unfinished_block",
+                "respond_unfinished_sub_block",
                 full_node_protocol.RespondUnfinishedSubBlock(unfinished_block),
             )
             return msg
