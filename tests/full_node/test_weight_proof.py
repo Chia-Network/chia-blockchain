@@ -250,7 +250,6 @@ class TestWeightProof:
         assert len(wp.sub_epochs) == sub_epochs
         # todo for each sampled sub epoch, validate number of segments
         # todo validate with different factory
-        print(f"wtf {curr.sub_epoch_summary_included}")
         assert wpf.validate_segments(wp, orig_summaries, curr)
 
     @pytest.mark.asyncio
