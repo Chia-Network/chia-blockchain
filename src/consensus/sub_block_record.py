@@ -36,7 +36,7 @@ class SubBlockRecord(Streamable):
     pool_puzzle_hash: bytes32  # Need to keep track of these because Coins are created in a future block
     farmer_puzzle_hash: bytes32
     required_iters: uint64  # The number of iters required for this proof of space
-    deficit: uint8  # A deficit of 5 is an overflow block after an infusion. Deficit of 4 is a challenge block
+    deficit: uint8  # A deficit of 16 is an overflow block after an infusion. Deficit of 15 is a challenge block
     overflow: bool
 
     # Block (present iff is_block)
