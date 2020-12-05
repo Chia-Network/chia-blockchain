@@ -30,9 +30,10 @@ class FarmerAPI:
         if new_proof_of_space.sp_hash not in self.farmer.number_of_responses:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] = 0
 
-        if self.farmer.number_of_responses[new_proof_of_space.sp_hash] >= 5:
+        max_pos_per_sp = 10
+        if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
             self.farmer.log.warning(
-                f"Surpassed 5 PoSpace for one SP, no longer submitting PoSpace for signage point "
+                f"Surpassed {max_pos_per_sp} PoSpace for one SP, no longer submitting PoSpace for signage point "
                 f"{new_proof_of_space.sp_hash}"
             )
             return
@@ -43,58 +44,58 @@ class FarmerAPI:
             )
             return
 
-        sp = self.farmer.sps[new_proof_of_space.sp_hash]
-
-        computed_quality_string = new_proof_of_space.proof.verify_and_get_quality_string(
-            self.farmer.constants, new_proof_of_space.challenge_hash, new_proof_of_space.sp_hash
-        )
-        if computed_quality_string is None:
-            self.farmer.log.error(f"Invalid proof of space {new_proof_of_space.proof}")
-            return
-
-        self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1
-
-        required_iters: uint64 = calculate_iterations_quality(
-            computed_quality_string,
-            new_proof_of_space.proof.size,
-            sp.difficulty,
-            new_proof_of_space.sp_hash,
-        )
-        # Double check that the iters are good
-        assert required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters)
-
-        self.farmer.state_changed("proof")
-
-        # Proceed at getting the signatures for this PoSpace
-        request = harvester_protocol.RequestSignatures(
-            new_proof_of_space.plot_identifier,
-            new_proof_of_space.challenge_hash,
-            new_proof_of_space.sp_hash,
-            [sp.challenge_chain_sp, sp.reward_chain_sp],
-        )
-
-        if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
-            self.farmer.proofs_of_space[new_proof_of_space.sp_hash] = [
-                (
-                    new_proof_of_space.plot_identifier,
-                    new_proof_of_space.proof,
-                )
-            ]
-        else:
-            self.farmer.proofs_of_space[new_proof_of_space.sp_hash].append(
-                (
-                    new_proof_of_space.plot_identifier,
-                    new_proof_of_space.proof,
-                )
+        sps = self.farmer.sps[new_proof_of_space.sp_hash]
+        for sp in sps:
+            computed_quality_string = new_proof_of_space.proof.verify_and_get_quality_string(
+                self.farmer.constants, new_proof_of_space.challenge_hash, new_proof_of_space.sp_hash
             )
-        self.farmer.quality_str_to_identifiers[computed_quality_string] = (
-            new_proof_of_space.plot_identifier,
-            new_proof_of_space.challenge_hash,
-            new_proof_of_space.sp_hash,
-        )
+            if computed_quality_string is None:
+                self.farmer.log.error(f"Invalid proof of space {new_proof_of_space.proof}")
+                return
 
-        msg = Message("request_signatures", request)
-        return msg
+            self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1
+
+            required_iters: uint64 = calculate_iterations_quality(
+                computed_quality_string,
+                new_proof_of_space.proof.size,
+                sp.difficulty,
+                new_proof_of_space.sp_hash,
+            )
+            # Double check that the iters are good
+            assert required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters)
+
+            self.farmer.state_changed("proof")
+
+            # Proceed at getting the signatures for this PoSpace
+            request = harvester_protocol.RequestSignatures(
+                new_proof_of_space.plot_identifier,
+                new_proof_of_space.challenge_hash,
+                new_proof_of_space.sp_hash,
+                [sp.challenge_chain_sp, sp.reward_chain_sp],
+            )
+
+            if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
+                self.farmer.proofs_of_space[new_proof_of_space.sp_hash] = [
+                    (
+                        new_proof_of_space.plot_identifier,
+                        new_proof_of_space.proof,
+                    )
+                ]
+            else:
+                self.farmer.proofs_of_space[new_proof_of_space.sp_hash].append(
+                    (
+                        new_proof_of_space.plot_identifier,
+                        new_proof_of_space.proof,
+                    )
+                )
+            self.farmer.quality_str_to_identifiers[computed_quality_string] = (
+                new_proof_of_space.plot_identifier,
+                new_proof_of_space.challenge_hash,
+                new_proof_of_space.sp_hash,
+            )
+
+            msg = Message("request_signatures", request)
+            return msg
 
     @api_request
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures):
@@ -105,10 +106,16 @@ class FarmerAPI:
             self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
             return
         is_sp_signatures: bool = False
-        sp = self.farmer.sps[response.sp_hash]
-        if response.sp_hash == response.message_signatures[0][0]:
-            assert sp.reward_chain_sp == response.message_signatures[1][0]
-            is_sp_signatures = True
+        sps = self.farmer.sps[response.sp_hash]
+        signage_point_index = sps[0].signage_point_index
+        found_sp_hash_debug = False
+        for sp_candidate in sps:
+            if response.sp_hash == response.message_signatures[0][0]:
+                found_sp_hash_debug = True
+                if sp_candidate.reward_chain_sp == response.message_signatures[1][0]:
+                    is_sp_signatures = True
+        if found_sp_hash_debug:
+            assert is_sp_signatures
 
         pospace = None
         for plot_identifier, candidate_pospace in self.farmer.proofs_of_space[response.sp_hash]:
@@ -117,7 +124,7 @@ class FarmerAPI:
         assert pospace is not None
 
         computed_quality_string = pospace.verify_and_get_quality_string(
-            self.farmer.constants, sp.challenge_hash, sp.challenge_chain_sp
+            self.farmer.constants, response.challenge_hash, response.sp_hash
         )
         if computed_quality_string is None:
             self.farmer.log.warning(f"Have invalid PoSpace {pospace}")
@@ -156,7 +163,7 @@ class FarmerAPI:
                     request = farmer_protocol.DeclareProofOfSpace(
                         response.challenge_hash,
                         challenge_chain_sp,
-                        sp.signage_point_index,
+                        signage_point_index,
                         reward_chain_sp,
                         pospace,
                         agg_sig_cc_sp,
@@ -221,7 +228,9 @@ class FarmerAPI:
 
         msg = Message("new_signage_point", message)
         await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
-        self.farmer.sps[new_signage_point.challenge_chain_sp] = new_signage_point
+        if new_signage_point.challenge_chain_sp not in self.farmer.sps:
+            self.farmer.sps[new_signage_point.challenge_chain_sp] = []
+        self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
         self.farmer.state_changed("signage_point")
 
     @api_request

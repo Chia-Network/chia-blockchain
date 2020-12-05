@@ -18,7 +18,7 @@ from src.consensus.sub_block_record import SubBlockRecord
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import Err
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32, uint64, uint128
 from src.consensus.find_fork_point import find_fork_point_in_chain
 from src.consensus.block_header_validation import (
     validate_finished_header_block,
@@ -347,6 +347,21 @@ class Blockchain:
         if len(curr.finished_sub_slots) == 0:
             return None, ip_sub_slot
         return curr.finished_sub_slots[-1], ip_sub_slot
+
+    def get_recent_reward_challenges(self) -> List[Tuple[bytes32, uint128]]:
+        if self.get_peak() is None:
+            return []
+        recent_rc: List[Tuple[bytes32, uint128]] = []
+        curr = self.sub_blocks.get(self.get_peak().prev_hash, None)
+        while curr is not None and len(recent_rc) < 2 * self.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+            recent_rc.append((curr.reward_infusion_new_challenge, curr.total_iters))
+            if curr.first_in_sub_slot:
+                sub_slot_total_iters = curr.ip_sub_slot_total_iters(self.constants)
+                # Start from the most recent
+                for rc in reversed(curr.finished_reward_slot_hashes):
+                    recent_rc.append((rc, sub_slot_total_iters))
+                    sub_slot_total_iters -= curr.sub_slot_iters
+        return recent_rc
 
     async def pre_validate_blocks_mulpeakrocessing(
         self, blocks: List[FullBlock]

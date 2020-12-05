@@ -166,7 +166,7 @@ class FullNode:
 
     async def _send_peak_to_timelords(self):
         """
-        Sends all of the current peaks (as well as unfinished blocks) to timelords
+        Sends current peak to timelords
         """
         peak_block = await self.blockchain.get_full_peak()
         peak = self.blockchain.sub_blocks[peak_block.header_hash]
@@ -180,11 +180,11 @@ class FullNode:
                 peak.required_iters,
                 peak_block,
             )
+            recent_rc = self.blockchain.get_recent_reward_challenges()
             timelord_new_peak: timelord_protocol.NewPeak = timelord_protocol.NewPeak(
-                peak_block.reward_chain_sub_block, difficulty, peak.deficit, peak.sub_slot_iters, ses
+                peak_block.reward_chain_sub_block, difficulty, peak.deficit, peak.sub_slot_iters, ses, recent_rc
             )
 
-            # Tell timelord about the new peak
             msg = Message("new_peak", timelord_new_peak)
             await self.server.send_to_all([msg], NodeType.TIMELORD)
 
@@ -505,7 +505,7 @@ class FullNode:
                 new_peak,
                 sp_sub_slot,
                 ip_sub_slot,
-                fork_height != sub_block.sub_block_height - 1,
+                fork_height != sub_block.sub_block_height - 1 and sub_block.sub_block_height != 0,
                 self.blockchain.sub_blocks,
             )
             # TODO: maybe broadcast new SP/IPs as well?
@@ -641,6 +641,12 @@ class FullNode:
             self.blockchain.sub_blocks,
         )
 
+        if block.reward_chain_sub_block.signage_point_index == 0:
+            res = self.full_node_store.get_sub_slot(block.reward_chain_sub_block.pos_ss_cc_challenge_hash)
+            assert res is not None
+            rc_prev = res[0].reward_chain.get_hash()
+        else:
+            rc_prev = block.reward_chain_sub_block.reward_chain_sp_vdf.challenge
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
             block.reward_chain_sub_block,
             difficulty,
@@ -648,14 +654,8 @@ class FullNode:
             block.challenge_chain_sp_proof,
             block.reward_chain_sp_proof,
             block.foliage_sub_block,
-            next_sub_epoch_summary(
-                self.constants,
-                self.blockchain.sub_blocks,
-                self.blockchain.sub_height_to_hash,
-                block.reward_chain_sub_block.signage_point_index,
-                required_iters,
-                block,
-            ),
+            ses,
+            rc_prev,
         )
 
         msg = Message("new_unfinished_sub_block", timelord_request)
