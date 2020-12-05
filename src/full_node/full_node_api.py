@@ -294,8 +294,6 @@ class FullNodeAPI:
             )
             if sub_slot is not None:
                 return Message("respond_end_of_sub_slot", full_node_protocol.RespondEndOfSubSlot(sub_slot[0]))
-            else:
-                self.log.warning("Don't have sub slot")
         else:
             if self.full_node.full_node_store.get_sub_slot(request.challenge_hash) is None:
                 if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
