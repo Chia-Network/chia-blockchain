@@ -358,11 +358,8 @@ class Timelord:
 
         if new_block_iters > 0:
             return new_block_iters
-        else:
-            log.warning("Negative iters, can not infuse")
 
     async def _reset_chains(self):
-        log.warning("Resetting chain")
         # First, stop all chains.
         ip_iters = self.last_state.get_last_ip()
         sub_slot_iters = self.last_state.get_sub_slot_iters()
@@ -465,7 +462,6 @@ class Timelord:
                     if iteration in self.iters_submitted[chain]:
                         continue
                     assert iteration > 0
-                    log.warning(f"Submitting iters to {chain}")
                     prefix = str(len(str(iteration)))
                     if len(str(iteration)) < 10:
                         prefix = "0" + prefix

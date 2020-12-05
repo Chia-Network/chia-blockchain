@@ -487,11 +487,9 @@ class FullNodeStore:
             final_sub_slot_in_chain: bytes32 = self.constants.FIRST_CC_CHALLENGE
 
         pos_index: Optional[int] = None
-        final_index: Optional[int] = None
+        final_index: int = 0
         if pos_ss_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
             pos_index = 0
-        if final_sub_slot_in_chain == self.constants.FIRST_CC_CHALLENGE:
-            final_index = 0
         if prev_sb is None:
             if len(self.finished_sub_slots) < 1:
                 raise ValueError("Should have finished sub slots")
@@ -510,7 +508,7 @@ class FullNodeStore:
                 if sub_slot.challenge_chain.get_hash() == final_sub_slot_in_chain:
                     final_index = index
 
-        if pos_index is None or final_index is None:
+        if pos_index is None:
             log.error(f"{pos_ss_challenge_hash} {len(self.finished_sub_slots)} {prev_sb.sub_block_height}")
             raise ValueError(
                 f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index} {len(sub_block_records)}"
