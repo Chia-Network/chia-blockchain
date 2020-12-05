@@ -699,7 +699,6 @@ class FullNodeAPI:
             for eos, _, _ in reversed(self.full_node.full_node_store.finished_sub_slots):
                 if eos is not None and eos.reward_chain.get_hash() == target_rc_hash:
                     target_rc_hash = eos.reward_chain.end_of_slot_vdf.challenge
-                    self.log.warning("We are based on an EOS. the prev block will be the one before that EOS")
             if target_rc_hash == self.full_node.constants.FIRST_RC_CHALLENGE:
                 prev_sb = None
             else:

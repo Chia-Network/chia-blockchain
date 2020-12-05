@@ -361,7 +361,8 @@ class Blockchain:
                 for rc in reversed(curr.finished_reward_slot_hashes):
                     recent_rc.append((rc, sub_slot_total_iters))
                     sub_slot_total_iters -= curr.sub_slot_iters
-        return recent_rc
+            curr = self.sub_blocks.get(curr.prev_hash, None)
+        return list(reversed(recent_rc))
 
     async def pre_validate_blocks_mulpeakrocessing(
         self, blocks: List[FullBlock]
