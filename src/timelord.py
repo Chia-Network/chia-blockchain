@@ -134,7 +134,7 @@ class LastState:
                 self.sub_slot_iters = state.challenge_chain.new_sub_slot_iters
 
         self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))
-        log.warning(f"Updated peak to {self.peak.reward_chain_sub_block.get_hash()}")
+        log.info(f"Updated timelord peak to {self.get_challenge(Chain.REWARD_CHAIN)}, total iters: {self.total_iters}")
         while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_SUB_BLOCKS:
             self.reward_challenge_cache.pop(0)
 
@@ -315,14 +315,53 @@ class Timelord:
             self.allows_iters.remove(chain)
         self.unspawned_chains.append(chain)
 
+    def _can_infuse_unfinished_block(self, block: timelord_protocol.NewUnfinishedSubBlock) -> Optional[uint64]:
+        sub_slot_iters = self.last_state.get_sub_slot_iters()
+        difficulty = self.last_state.get_difficulty()
+        ip_iters = self.last_state.get_last_ip()
+        rc_block = block.reward_chain_sub_block
+        block_sp_iters, block_ip_iters = iters_from_sub_block(
+            self.constants,
+            rc_block,
+            sub_slot_iters,
+            difficulty,
+        )
+        block_sp_total_iters = self.last_state.total_iters - ip_iters + block_sp_iters
+        found_index = -1
+        for index, (rc, total_iters) in enumerate(self.last_state.reward_challenge_cache):
+            if rc == block.rc_prev:
+                found_index = index
+                break
+        if found_index == -1:
+            log.warning(f"Will not infuse {block.rc_prev} because it's reward chain challenge is not in the chain")
+            return None
+
+        new_block_iters = block_ip_iters - ip_iters
+        if len(self.last_state.reward_challenge_cache) > found_index + 1:
+            if self.last_state.reward_challenge_cache[found_index + 1][1] < block_sp_total_iters:
+                log.warning(
+                    f"Will not infuse unfinished block {block.rc_prev} total iters {block_sp_total_iters}, "
+                    f"because there is another infusion before it's SP"
+                )
+                return None
+            if self.last_state.reward_challenge_cache[found_index][1] > block_sp_total_iters:
+                log.error(
+                    f"Will not infuse unfinished block {block.rc_prev}, total iters: {block_sp_total_iters}, "
+                    f"because it's iters are too low"
+                )
+                return None
+
+        if new_block_iters > 0:
+            return new_block_iters
+
     async def _reset_chains(self):
         # First, stop all chains.
         ip_iters = self.last_state.get_last_ip()
         sub_slot_iters = self.last_state.get_sub_slot_iters()
-        difficulty = self.last_state.get_difficulty()
-        # print(ip_iters, sub_slot_iters, difficulty)
+
         for chain in self.chain_type_to_stream.keys():
             await self._stop_chain(chain)
+
         # Adjust all signage points iterations to the peak.
         iters_per_signage = uint64(sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
         self.signage_point_iters = [
@@ -341,30 +380,8 @@ class Timelord:
             self.iters_submitted[chain] = []
         self.iteration_to_proof_type = {}
         for block in self.unfinished_blocks:
-            found_index = -1
-            for index, (rc, total_iters) in enumerate(self.last_state.reward_challenge_cache):
-                if rc == block.rc_prev:
-                    found_index = index
-                    break
-            if found_index == -1:
-                log.error(f"INVALID unfinished block will not infuse it {block.rc_prev}")
-                continue
-
-            rc_block = block.reward_chain_sub_block
-            block_sp_iters, block_ip_iters = iters_from_sub_block(
-                self.constants,
-                rc_block,
-                sub_slot_iters,
-                difficulty,
-            )
-            block_sp_total_iters = self.last_state.total_iters - ip_iters + block_sp_iters
-            if len(self.last_state.reward_challenge_cache) > found_index + 1:
-                if self.last_state.reward_challenge_cache[found_index + 1][1] < block_sp_total_iters:
-                    log.error(f"INVALID2 unfinished block will not infuse it {block.rc_prev}")
-                    continue
-
-            new_block_iters = block_ip_iters - ip_iters
-            if new_block_iters > 0:
+            new_block_iters: Optional[uint64] = self._can_infuse_unfinished_block(block)
+            if new_block_iters:
                 new_unfinished_blocks.append(block)
                 for chain in Chain:
                     self.iters_to_submit[chain].append(new_block_iters)
@@ -514,6 +531,8 @@ class Timelord:
                     next_iters_count += 1
                     if next_iters_count == 3:
                         break
+
+                # Break so we alternate between checking SP and IP
                 break
         for r in to_remove:
             self.signage_point_iters.remove(r)
@@ -646,6 +665,7 @@ class Timelord:
                         self.last_state.reward_challenge_cache,
                     )
                     await self._handle_new_peak()
+                    # Break so we alternate between checking SP and IP
                     break
 
     async def _check_for_end_of_subslot(self):
