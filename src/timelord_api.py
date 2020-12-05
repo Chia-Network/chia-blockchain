@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 import logging
 from src.protocols import timelord_protocol
 from src.timelord import Timelord, iters_from_sub_block, Chain, IterationType
@@ -44,7 +44,9 @@ class TimelordAPI:
             if sp_iters > ip_iters:
                 self.timelord.overflow_blocks.append(new_unfinished_subblock)
             elif ip_iters > last_ip_iters:
-                self.timelord.unfinished_blocks.append(new_unfinished_subblock)
-                for chain in Chain:
-                    self.timelord.iters_to_submit[chain].append(uint64(ip_iters - last_ip_iters))
-                self.timelord.iteration_to_proof_type[ip_iters - last_ip_iters] = IterationType.INFUSION_POINT
+                new_block_iters: Optional[uint64] = self.timelord._can_infuse_unfinished_block(new_unfinished_subblock)
+                if new_block_iters:
+                    self.timelord.unfinished_blocks.append(new_unfinished_subblock)
+                    for chain in Chain:
+                        self.timelord.iters_to_submit[chain].append(new_block_iters)
+                    self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
