@@ -22,8 +22,11 @@ class TimelordAPI:
     async def new_peak(self, new_peak: timelord_protocol.NewPeak):
         async with self.timelord.lock:
             if new_peak.reward_chain_sub_block.weight > self.timelord.last_state.get_weight():
-                log.warning("Not skipping peak, don't have. Maybe we are not the fastest timelord")
-                log.warning(f"New peak{new_peak}")
+                log.info("Not skipping peak, don't have. Maybe we are not the fastest timelord")
+                log.info(
+                    f"New peak: height: {new_peak.reward_chain_sub_block.sub_block_height} weight: "
+                    f"{new_peak.reward_chain_sub_block.weight} "
+                )
                 self.timelord.new_peak = new_peak
             elif (
                 self.timelord.last_state.peak is not None
@@ -53,6 +56,11 @@ class TimelordAPI:
                 new_block_iters: Optional[uint64] = self.timelord._can_infuse_unfinished_block(new_unfinished_subblock)
                 if new_block_iters:
                     self.timelord.unfinished_blocks.append(new_unfinished_subblock)
-                    for chain in Chain:
+                    for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
                         self.timelord.iters_to_submit[chain].append(new_block_iters)
+                    if (
+                        self.timelord.last_state.get_deficit()
+                        < self.timelord.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+                    ):
+                        self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
                     self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
