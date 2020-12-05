@@ -358,8 +358,11 @@ class Timelord:
 
         if new_block_iters > 0:
             return new_block_iters
+        else:
+            log.warning("Negative iters, can not infuse")
 
     async def _reset_chains(self):
+        log.warning("Resetting chain")
         # First, stop all chains.
         ip_iters = self.last_state.get_last_ip()
         sub_slot_iters = self.last_state.get_sub_slot_iters()
@@ -388,8 +391,10 @@ class Timelord:
             new_block_iters: Optional[uint64] = self._can_infuse_unfinished_block(block)
             if new_block_iters:
                 new_unfinished_blocks.append(block)
-                for chain in Chain:
+                for chain in [Chain.REWARD_CHAIN, Chain.CHALLENGE_CHAIN]:
                     self.iters_to_submit[chain].append(new_block_iters)
+                if self.last_state.get_deficit() < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                    self.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
                 self.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
         # Remove all unfinished blocks that have already passed.
         self.unfinished_blocks = new_unfinished_blocks
@@ -459,6 +464,8 @@ class Timelord:
                 for iteration in self.iters_to_submit[chain]:
                     if iteration in self.iters_submitted[chain]:
                         continue
+                    assert iteration > 0
+                    log.warning(f"Submitting iters to {chain}")
                     prefix = str(len(str(iteration)))
                     if len(str(iteration)) < 10:
                         prefix = "0" + prefix
@@ -657,8 +664,10 @@ class Timelord:
                         icc_info,
                         is_block,
                     )
-                    if overflow:
-                        new_deficit = self.last_state.deficit
+                    if overflow and self.last_state.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                        # Do not handle this case, as we don't know whether we are in a new slot overflow, or same slot
+                        # TODO: try to handle this case
+                        break
                     else:
                         new_deficit = max(self.last_state.deficit - 1, 0)
 
@@ -746,7 +755,6 @@ class Timelord:
                 if self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK > self.last_state.get_deficit() > 0
                 else self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
             )
-            log.error(f"SETTING DEFICIT: {eos_deficit}")
             rc_sub_slot = RewardChainSubSlot(
                 rc_vdf,
                 cc_sub_slot.get_hash(),

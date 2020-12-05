@@ -21,12 +21,18 @@ class TimelordAPI:
     @api_request
     async def new_peak(self, new_peak: timelord_protocol.NewPeak):
         async with self.timelord.lock:
-            if self.timelord.last_state.peak == new_peak:
+            if new_peak.reward_chain_sub_block.weight > self.timelord.last_state.get_weight():
+                log.warning("Not skipping peak, don't have. Maybe we are not the fastest timelord")
+                log.warning(f"New peak{new_peak}")
+                self.timelord.new_peak = new_peak
+            elif (
+                self.timelord.last_state.peak is not None
+                and self.timelord.last_state.peak.reward_chain_sub_block == new_peak.reward_chain_sub_block
+            ):
                 log.info("Skipping peak, already have.")
                 return
-            elif new_peak.reward_chain_sub_block.weight > self.timelord.last_state.get_weight():
-                log.warning("Not skipping peak, don't have. Maybe we are not the fastest timelord")
-                log.warning(f"Our peak: {self.timelord.last_state.peak} new peak{new_peak}")
+            elif self.timelord.last_state.get_weight() == new_peak.reward_chain_sub_block.weight:
+                log.warning("Different sub-block at same weight, changing to it.")
                 self.timelord.new_peak = new_peak
             else:
                 log.info("Peak at smaller weight, skipping")
