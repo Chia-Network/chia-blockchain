@@ -181,8 +181,24 @@ class FullNode:
                 peak_block,
             )
             recent_rc = self.blockchain.get_recent_reward_challenges()
+
+            curr = peak
+            while not curr.is_challenge_sub_block(self.constants) and not curr.first_in_sub_slot:
+                curr = self.blockchain.sub_blocks[curr.prev_hash]
+
+            if curr.is_challenge_sub_block(self.constants):
+                last_csb_or_eos = curr.total_iters
+            else:
+                last_csb_or_eos = curr.ip_sub_slot_total_iters(self.constants)
+
             timelord_new_peak: timelord_protocol.NewPeak = timelord_protocol.NewPeak(
-                peak_block.reward_chain_sub_block, difficulty, peak.deficit, peak.sub_slot_iters, ses, recent_rc
+                peak_block.reward_chain_sub_block,
+                difficulty,
+                peak.deficit,
+                peak.sub_slot_iters,
+                ses,
+                recent_rc,
+                last_csb_or_eos,
             )
 
             msg = Message("new_peak", timelord_new_peak)
@@ -492,8 +508,12 @@ class FullNode:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
             new_peak: SubBlockRecord = self.blockchain.get_peak()
             self.log.info(
-                f"Updated peak to sub height {new_peak.sub_block_height}, weight {new_peak.weight}, hh {new_peak.header_hash}, "
-                f"forked at {fork_height}"
+                f"🌱 Updated peak to height {new_peak.sub_block_height}, weight {new_peak.weight}, "
+                f"hh {new_peak.header_hash}, "
+                f"forked at {fork_height}, rh: {new_peak.reward_infusion_new_challenge}, "
+                f"total iters: {new_peak.total_iters}, "
+                f"overflow: {new_peak.overflow}, "
+                f"deficit: {new_peak.deficit}"
             )
 
             difficulty = self.blockchain.get_next_difficulty(new_peak.header_hash, False)
@@ -647,12 +667,11 @@ class FullNode:
             rc_prev = res[0].reward_chain.get_hash()
         else:
             rc_prev = block.reward_chain_sub_block.reward_chain_sp_vdf.challenge
+
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
             block.reward_chain_sub_block,
             difficulty,
             sub_slot_iters,
-            block.challenge_chain_sp_proof,
-            block.reward_chain_sp_proof,
             block.foliage_sub_block,
             ses,
             rc_prev,

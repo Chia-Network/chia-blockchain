@@ -62,12 +62,14 @@ class ChiaServer:
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
         self.tasks: Set[asyncio.Task] = set()
 
-        self.connection_by_type: Dict[NodeType, Dict[bytes32, WSChiaConnection]] = {NodeType.FULL_NODE: {},
-                                                                                    NodeType.WALLET: {},
-                                                                                    NodeType.HARVESTER: {},
-                                                                                    NodeType.FARMER: {},
-                                                                                    NodeType.TIMELORD: {},
-                                                                                    NodeType.INTRODUCER: {}}
+        self.connection_by_type: Dict[NodeType, Dict[bytes32, WSChiaConnection]] = {
+            NodeType.FULL_NODE: {},
+            NodeType.WALLET: {},
+            NodeType.HARVESTER: {},
+            NodeType.FARMER: {},
+            NodeType.TIMELORD: {},
+            NodeType.INTRODUCER: {},
+        }
 
         self._port = port  # TCP port to identify our node
         self._local_type: NodeType = local_type
@@ -104,6 +106,7 @@ class ChiaServer:
 
         self.incoming_task = asyncio.create_task(self.incoming_api_task())
         self.app: Optional[Application] = None
+        self.runner: Optional[web.AppRunner] = None
         self.site: Optional[TCPSite] = None
 
         self.connection_close_task: Optional[asyncio.Task] = None
@@ -353,8 +356,10 @@ class ChiaServer:
 
     def close_all(self):
         self.connection_close_task = asyncio.create_task(self.close_all_connections())
-        self.site_shutdown_task = asyncio.create_task(self.runner.cleanup())
-        self.app_shut_down_task = asyncio.create_task(self.app.shutdown())
+        if self.runner is not None:
+            self.site_shutdown_task = asyncio.create_task(self.runner.cleanup())
+        if self.app is not None:
+            self.app_shut_down_task = asyncio.create_task(self.app.shutdown())
 
         self.shut_down_event.set()
         if self.incoming_task is not None:
