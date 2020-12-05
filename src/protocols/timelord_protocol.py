@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List, Tuple
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.foliage import FoliageSubBlock
@@ -11,7 +11,7 @@ from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.vdf import VDFInfo, VDFProof
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint8, uint64
+from src.util.ints import uint8, uint64, uint128
 
 """
 Protocol between timelord and full node.
@@ -28,6 +28,7 @@ class NewPeak:
     sub_epoch_summary: Optional[
         SubEpochSummary
     ]  # If NewPeak is the last slot in epoch, the next slot should include this
+    previous_reward_challenges: List[Tuple[bytes32, uint128]]
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ class NewUnfinishedSubBlock:
     reward_chain_sp_proof: VDFProof
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     sub_epoch_summary: Optional[SubEpochSummary]  # If this is the last slot in epoch, the next slot should include this
+    rc_prev: bytes32
 
 
 @dataclass(frozen=True)

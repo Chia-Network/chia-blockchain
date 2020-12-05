@@ -35,7 +35,7 @@ class Farmer:
     ):
         self.config = farmer_config
         # Keep track of all sps, keyed on challenge chain signage point hash
-        self.sps: Dict[bytes32, farmer_protocol.NewSignagePoint] = {}
+        self.sps: Dict[bytes32, List[farmer_protocol.NewSignagePoint]] = {}
 
         # Keep track of harvester plot identifier (str), target sp index, and PoSpace for each challenge
         self.proofs_of_space: Dict[bytes32, List[Tuple[str, ProofOfSpace]]] = {}

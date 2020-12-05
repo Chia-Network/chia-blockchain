@@ -95,8 +95,10 @@ class LastState:
         self.first_sub_slot_no_peak: bool = True
         self.difficulty: uint64 = constants.DIFFICULTY_STARTING
         self.sub_slot_iters: uint64 = constants.SUB_SLOT_ITERS_STARTING
+        self.reward_challenge_cache: List[Tuple[bytes32, uint128]] = [(constants.FIRST_RC_CHALLENGE, uint128(0))]
 
     def set_state(self, state: Union[timelord_protocol.NewPeak, EndOfSubSlotBundle]):
+        self.first_sub_slot_no_peak = False
         if isinstance(state, timelord_protocol.NewPeak):
             self.peak = state
             self.subslot_end = None
@@ -116,8 +118,13 @@ class LastState:
             self.sub_slot_iters = state.sub_slot_iters
             if state.reward_chain_sub_block.is_block:
                 self.last_block_total_iters = self.total_iters
+            self.reward_challenge_cache = state.previous_reward_challenges
 
         if isinstance(state, EndOfSubSlotBundle):
+            if self.peak is not None:
+                self.total_iters = self.total_iters - self.get_last_ip() + self.sub_slot_iters
+            else:
+                self.total_iters += self.sub_slot_iters
             self.peak = None
             self.subslot_end = state
             self.last_ip = 0
@@ -125,7 +132,11 @@ class LastState:
             if state.challenge_chain.new_difficulty is not None:
                 self.difficulty = state.challenge_chain.new_difficulty
                 self.sub_slot_iters = state.challenge_chain.new_sub_slot_iters
-        self.first_sub_slot_no_peak = False
+
+        self.reward_challenge_cache.append((self.get_challenge(Chain.REWARD_CHAIN), self.total_iters))
+        log.warning(f"Updated peak to {self.peak.reward_chain_sub_block.get_hash()}")
+        while len(self.reward_challenge_cache) > 2 * self.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+            self.reward_challenge_cache.pop(0)
 
     def get_sub_slot_iters(self) -> uint64:
         return self.sub_slot_iters
@@ -330,6 +341,15 @@ class Timelord:
             self.iters_submitted[chain] = []
         self.iteration_to_proof_type = {}
         for block in self.unfinished_blocks:
+            found_index = -1
+            for index, (rc, total_iters) in enumerate(self.last_state.reward_challenge_cache):
+                if rc == block.rc_prev:
+                    found_index = index
+                    break
+            if found_index == -1:
+                log.error(f"INVALID unfinished block will not infuse it {block.rc_prev}")
+                continue
+
             rc_block = block.reward_chain_sub_block
             block_sp_iters, block_ip_iters = iters_from_sub_block(
                 self.constants,
@@ -337,6 +357,12 @@ class Timelord:
                 sub_slot_iters,
                 difficulty,
             )
+            block_sp_total_iters = self.last_state.total_iters - ip_iters + block_sp_iters
+            if len(self.last_state.reward_challenge_cache) > found_index + 1:
+                if self.last_state.reward_challenge_cache[found_index + 1][1] < block_sp_total_iters:
+                    log.error(f"INVALID2 unfinished block will not infuse it {block.rc_prev}")
+                    continue
+
             new_block_iters = block_ip_iters - ip_iters
             if new_block_iters > 0:
                 new_unfinished_blocks.append(block)
@@ -357,7 +383,6 @@ class Timelord:
                     break
         # TODO: handle the special case when infusion point is the end of subslot.
         left_subslot_iters = sub_slot_iters - ip_iters
-        log.info(f"Left subslot iters: {left_subslot_iters}.")
 
         if self.last_state.get_deficit() < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
             self.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(left_subslot_iters)
@@ -458,6 +483,12 @@ class Timelord:
                     log.error(f"Insufficient signage point data {signage_iter}")
                     continue
 
+                if rc_info.challenge != self.last_state.get_challenge(Chain.REWARD_CHAIN):
+                    log.warning(
+                        f"SP: Do not have correct challenge {self.last_state.get_challenge(Chain.REWARD_CHAIN).hex()} has {rc_info.challenge}"
+                    )
+                    # This proof is on an outdated challenge, so don't use it
+                    continue
                 iters_from_sub_slot_start = cc_info.number_of_iterations + self.last_state.get_last_ip()
                 response = timelord_protocol.NewSignagePointVDF(
                     signage_point_index,
@@ -483,6 +514,7 @@ class Timelord:
                     next_iters_count += 1
                     if next_iters_count == 3:
                         break
+                break
         for r in to_remove:
             self.signage_point_iters.remove(r)
 
@@ -514,8 +546,8 @@ class Timelord:
                         block = unfinished_block
                         break
                 if block is not None:
+
                     ip_total_iters = self.last_state.get_total_iters() + iteration
-                    self.unfinished_blocks.remove(block)
                     challenge = block.reward_chain_sub_block.get_hash()
                     icc_info: Optional[VDFInfo] = None
                     icc_proof: Optional[VDFProof] = None
@@ -536,6 +568,15 @@ class Timelord:
                     if cc_info is None or cc_proof is None or rc_info is None or rc_proof is None:
                         log.error(f"Insufficient VDF proofs for infusion point ch: {challenge} iterations:{iteration}")
                         return
+
+                    if rc_info.challenge != self.last_state.get_challenge(Chain.REWARD_CHAIN):
+                        log.warning(
+                            f"Do not have correct challenge {self.last_state.get_challenge(Chain.REWARD_CHAIN).hex()} has {rc_info.challenge}, partial hash {block.reward_chain_sub_block.get_hash()}"
+                        )
+                        # This proof is on an outdated challenge, so don't use it
+                        continue
+
+                    self.unfinished_blocks.remove(block)
                     log.info(f"Generated infusion point for challenge: {challenge} iterations: {iteration}.")
                     cc_info = dataclasses.replace(cc_info, number_of_iterations=ip_iters)
                     response = timelord_protocol.NewInfusionPointVDF(
@@ -553,7 +594,10 @@ class Timelord:
 
                     self.proofs_finished = self._clear_proof_list(iteration)
 
-                    if self.last_state.get_last_block_total_iters() is None:
+                    if (
+                        self.last_state.get_last_block_total_iters() is None
+                        and not self.last_state.first_sub_slot_no_peak
+                    ):
                         # We don't know when the last block was, so we can't make peaks
                         return
 
@@ -566,11 +610,16 @@ class Timelord:
                         )
                         - (block.sub_slot_iters if overflow else 0)
                     )
-                    is_block = self.last_state.get_last_block_total_iters() < sp_total_iters
+                    if self.last_state.first_sub_slot_no_peak:
+                        is_block = True
+                        sub_block_height: uint32 = uint32(0)
+                    else:
+                        is_block = self.last_state.get_last_block_total_iters() < sp_total_iters
+                        sub_block_height: uint32 = self.last_state.get_height() + 1
 
                     new_reward_chain_sub_block = RewardChainSubBlock(
                         self.last_state.get_weight() + block.difficulty,
-                        self.last_state.get_height() + 1,
+                        sub_block_height,
                         ip_total_iters,
                         block.reward_chain_sub_block.signage_point_index,
                         block.reward_chain_sub_block.pos_ss_cc_challenge_hash,
@@ -594,8 +643,10 @@ class Timelord:
                         new_deficit,
                         block.sub_slot_iters,
                         block.sub_epoch_summary,
+                        self.last_state.reward_challenge_cache,
                     )
                     await self._handle_new_peak()
+                    break
 
     async def _check_for_end_of_subslot(self):
         left_subslot_iters = [
@@ -720,7 +771,7 @@ class Timelord:
                 writer.write(b"N")
             else:
                 # Run two-wesolowski (slow) algorithm.
-                writer.write(b"N")
+                writer.write(b"T")
             await writer.drain()
 
             prefix = str(len(str(disc)))
