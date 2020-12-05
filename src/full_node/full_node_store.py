@@ -421,7 +421,7 @@ class FullNodeStore:
         if not reorg:
             # This is a new peak that adds to the last peak. We can clear data in old sub-slots. (and new ones)
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
-                if peak.overflow and sp_sub_slot is not None:
+                if peak.overflow:
                     if sub_slot == sp_sub_slot:
                         # In the case of a peak overflow sub-block, the previous sub-slot is added
                         new_finished_sub_slots.append((sub_slot, sps, total_iters))
