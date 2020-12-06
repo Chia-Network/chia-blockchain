@@ -294,10 +294,6 @@ def get_next_difficulty(
         return max([uint64(1), new_difficulty, min_diff])
 
 
-def cc_sp_hash(args):
-    pass
-
-
 def get_sub_slot_iters_and_difficulty(
     constants: ConsensusConstants,
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
