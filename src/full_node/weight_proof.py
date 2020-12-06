@@ -14,6 +14,7 @@ from src.consensus.pot_iterations import (
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
+from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeChainSubSlot, RewardChainSubSlot
@@ -37,10 +38,9 @@ class BlockCache:
         self._header_cache = blockchain.block_store
         self._sub_height_to_hash = blockchain.sub_height_to_hash
 
-    def header_block(self, hash: bytes32) -> Optional[HeaderBlock]:
-        # block: FullBlock =  self._header_cache.get_full_block(hash)
-        # return block.get_block_header()
-        return None
+    async def header_block(self, hash: bytes32) -> Optional[HeaderBlock]:
+        block: FullBlock = await self._header_cache.get_full_block(hash)
+        return block.get_block_header()
 
     def height_to_hash(self, height: uint32) -> bytes32:
         return self._sub_height_to_hash[height]
@@ -94,7 +94,9 @@ class WeightProofHandler:
         else:
             self.log = logging.getLogger(__name__)
 
-    def make_weight_proof(self, recent_blocks_n: uint32, total_number_of_blocks: uint32, tip: bytes32) -> WeightProof:
+    def create_proof_of_weight(
+        self, recent_blocks_n: uint32, total_number_of_blocks: uint32, tip: bytes32
+    ) -> WeightProof:
         """
         Creates a weight proof object
         """
