@@ -213,23 +213,23 @@ msgstr "Veľkosť"
 msgid "Block.weightTooltip"
 msgstr "Veľkosť je celková pridaná obtiažnosť všetkých blokov až po tento"
 
-#: src/components/fullNode/FullNode.jsx:407
+#: src/components/fullNode/FullNode.jsx:404
 msgid "BlocksCard.expectedFinishTime"
 msgstr "Očakávaný čas dokončenia"
 
-#: src/components/fullNode/FullNode.jsx:398
+#: src/components/fullNode/FullNode.jsx:395
 msgid "BlocksCard.headerHash"
 msgstr "Poradie hlavičky"
 
-#: src/components/fullNode/FullNode.jsx:401
+#: src/components/fullNode/FullNode.jsx:398
 msgid "BlocksCard.height"
 msgstr "Poradie"
 
-#: src/components/fullNode/FullNode.jsx:404
+#: src/components/fullNode/FullNode.jsx:401
 msgid "BlocksCard.timeCreated"
 msgstr "Čas vytvorenia"
 
-#: src/components/fullNode/FullNode.jsx:389
+#: src/components/fullNode/FullNode.jsx:386
 msgid "BlocksCard.title"
 msgstr "Bloky"
 
@@ -470,51 +470,51 @@ msgstr "Poplatok"
 msgid "CreateNewCCWallet.generateNewColour"
 msgstr "Vytvoriť nový colour"
 
-#: src/components/trading/CreateOffer.jsx:223
+#: src/components/trading/CreateOffer.jsx:222
 msgid "CreateOffer.add"
 msgstr "Pridať"
 
-#: src/components/trading/CreateOffer.jsx:110
+#: src/components/trading/CreateOffer.jsx:109
 msgid "CreateOffer.addTradePair"
 msgstr "Prosím pridajte obchodný pár"
 
-#: src/components/trading/CreateOffer.jsx:214
+#: src/components/trading/CreateOffer.jsx:213
 msgid "CreateOffer.amount"
 msgstr "Suma"
 
-#: src/components/trading/CreateOffer.jsx:133
+#: src/components/trading/CreateOffer.jsx:132
 msgid "CreateOffer.availableOnlyFromElectron"
 msgstr "Táto možnosť je dostupná iba z Electron aplikácie"
 
-#: src/components/trading/CreateOffer.jsx:175
+#: src/components/trading/CreateOffer.jsx:174
 msgid "CreateOffer.buyOrSell"
 msgstr "Kúpiť alebo predať"
 
-#: src/components/trading/CreateOffer.jsx:154
+#: src/components/trading/CreateOffer.jsx:153
 msgid "CreateOffer.cancel"
 msgstr "Zrušiť"
 
-#: src/components/trading/CreateOffer.jsx:193
+#: src/components/trading/CreateOffer.jsx:192
 msgid "CreateOffer.colour"
 msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:161
+#: src/components/trading/CreateOffer.jsx:160
 msgid "CreateOffer.save"
 msgstr "Uložiť"
 
-#: src/components/trading/CreateOffer.jsx:76
+#: src/components/trading/CreateOffer.jsx:75
 msgid "CreateOffer.selectAmount"
 msgstr "Prosím vyberte sumu"
 
-#: src/components/trading/CreateOffer.jsx:86
+#: src/components/trading/CreateOffer.jsx:85
 msgid "CreateOffer.selectBuyOrSell"
 msgstr "Prosím vyberte kúpiť alebo predať"
 
-#: src/components/trading/CreateOffer.jsx:64
+#: src/components/trading/CreateOffer.jsx:63
 msgid "CreateOffer.selectCoinType"
 msgstr "Prosím vyberte typ mince"
 
-#: src/components/trading/CreateOffer.jsx:147
+#: src/components/trading/CreateOffer.jsx:146
 msgid "CreateOffer.title"
 msgstr "Vytvorte obchodnú ponuku"
 
@@ -734,7 +734,7 @@ msgstr "Vyzbierané poplatky TXCH"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
 msgid "FarmCardLastHeightFarmed.noBlocksFarmedYet"
-msgstr ""
+msgstr "Zatiaľ neboli vyťažené žiadne bloky"
 
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:13
 msgid "FarmCardLastHeightFarmed.title"
@@ -758,7 +758,7 @@ msgstr "Celková veľkosť siete"
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
 msgid "FarmCardTotalNetworkSpace.tooltip"
-msgstr "Najlepší odhad za poslednú 1 hodinu"
+msgstr "Najlepší odhad za poslednú hodinu"
 
 #: src/components/farm/card/FarmCardTotalSizeOfPlots.tsx:14
 msgid "FarmCardTotalSizeOfPlots.title"
@@ -774,7 +774,7 @@ msgstr "Akcie"
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr "Stav pripojenia"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:11
+#: src/components/farm/FarmLastAttemptedProof.tsx:17
 msgid "FarmFullNodeConnections.date"
 msgstr "Dátum"
 
@@ -783,7 +783,7 @@ msgstr "Dátum"
 msgid "FarmFullNodeConnections.description"
 msgstr "Kombajn je služba bežiaca na stroji, kde sú skutočne uložené polia. Nižšie si pozrite svoju sieť prepojených kombajnov. Viac informácií"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:7
+#: src/components/farm/FarmLastAttemptedProof.tsx:11
 msgid "FarmFullNodeConnections.height"
 msgstr "Pozícia"
 
@@ -802,7 +802,7 @@ msgstr ""
 msgid "FarmFullNodeConnections.port"
 msgstr "Port"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:15
+#: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "FarmFullNodeConnections.time"
 msgstr "Čas"
 
@@ -815,19 +815,27 @@ msgstr "Vaše pripojenie k sieti"
 msgid "FarmFullNodeConnections.upDown"
 msgstr "Odoslané/Stiahnuté"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:21
-msgid "FarmLastAttemptedProof.title"
+#: src/components/farm/FarmLastAttemptedProof.tsx:38
+msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:23
+#: src/components/farm/FarmLastAttemptedProof.tsx:42
+msgid "FarmLastAttemptedProof.emptySubDescription"
+msgstr ""
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:31
+msgid "FarmLastAttemptedProof.title"
+msgstr "Posledný pokus o dôkaz"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:33
 msgid "FarmLastAttemptedProof.tooltip"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:41
+#: src/components/farm/FarmLatestBlockChallenges.tsx:40
 msgid "FarmLatestBlockChallenges.bestEstimate"
 msgstr "Najlepší odhad"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:46
+#: src/components/farm/FarmLatestBlockChallenges.tsx:45
 msgid "FarmLatestBlockChallenges.bestEstimateTooltip"
 msgstr "Najlepší odhad je, koľko sekúnd musí byť preukázaních pre vaše dôkazy."
 
@@ -836,8 +844,8 @@ msgstr "Najlepší odhad je, koľko sekúnd musí byť preukázaních pre vaše 
 msgid "FarmLatestBlockChallenges.challengeHash"
 msgstr "Hash"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:61
-#: src/components/farm/FarmLatestBlockChallenges.tsx:67
+#: src/components/farm/FarmLatestBlockChallenges.tsx:60
+#: src/components/farm/FarmLatestBlockChallenges.tsx:66
 msgid "FarmLatestBlockChallenges.description"
 msgstr ""
 
@@ -845,11 +853,11 @@ msgstr ""
 msgid "FarmLatestBlockChallenges.height"
 msgstr "Pozícia"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:75
+#: src/components/farm/FarmLatestBlockChallenges.tsx:74
 msgid "FarmLatestBlockChallenges.subDescription"
 msgstr "* Chcete viac preskúmať Chia bloky? Vyskúšajte aplikáciu <0>Chia Explorer</0> vytvorenú open source vývojárom."
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:59
+#: src/components/farm/FarmLatestBlockChallenges.tsx:58
 msgid "FarmLatestBlockChallenges.title"
 msgstr "Najnovšie blokové výzvy"
 
@@ -923,11 +931,11 @@ msgstr "Pripojené"
 msgid "FormatConnectionStatus.notConnected"
 msgstr "Nepripojené"
 
-#: src/components/fullNode/FullNode.jsx:508
+#: src/components/fullNode/FullNode.jsx:505
 msgid "FullNode.title"
 msgstr "Sieť"
 
-#: src/components/fullNode/FullNode.jsx:363
+#: src/components/fullNode/FullNode.jsx:360
 msgid "FullNodeStatus.title"
 msgstr "Stav siete"
 
@@ -967,11 +975,11 @@ msgstr ""
 msgid "MainWalletList.title"
 msgstr "Vyberte typ peňaženky"
 
-#: src/components/trading/ViewOffer.jsx:191
+#: src/components/trading/ViewOffer.jsx:183
 msgid "OfferDropView.dragAndDropOfferFile"
 msgstr "Súbor s ponukami presuňte tu"
 
-#: src/components/trading/ViewOffer.jsx:181
+#: src/components/trading/ViewOffer.jsx:173
 msgid "OfferDropView.selectOffer"
 msgstr ""
 
@@ -987,26 +995,23 @@ msgstr ""
 #~ msgid "OfferRow.sell"
 #~ msgstr "Predať"
 
-#: src/components/trading/ViewOffer.jsx:251
+#: src/components/trading/ViewOffer.jsx:232
 msgid "OfferView.accept"
 msgstr "Akceptovať"
 
 #: src/components/trading/TradesTable.tsx:16
-#: src/components/trading/ViewOffer.jsx:209
 msgid "OfferView.amount"
 msgstr "Suma"
 
-#: src/components/trading/ViewOffer.jsx:244
+#: src/components/trading/ViewOffer.jsx:225
 msgid "OfferView.cancel"
 msgstr "Zrušiť"
 
 #: src/components/trading/TradesTable.tsx:19
-#: src/components/trading/ViewOffer.jsx:212
 msgid "OfferView.colour"
 msgstr ""
 
 #: src/components/trading/TradesTable.tsx:13
-#: src/components/trading/ViewOffer.jsx:206
 msgid "OfferView.side"
 msgstr "Strana"
 
@@ -1014,11 +1019,11 @@ msgstr "Strana"
 #~ msgid "OfferView.title"
 #~ msgstr "Ponuka"
 
-#: src/components/trading/ViewOffer.jsx:237
+#: src/components/trading/ViewOffer.jsx:218
 msgid "OfferView.title2"
 msgstr "Ponuka"
 
-#: src/components/trading/TradingOverview.jsx:425
+#: src/components/trading/TradingOverview.jsx:424
 msgid "PendingTrades.title"
 msgstr "Vytvorené ponuky"
 
@@ -1041,17 +1046,17 @@ msgstr "Naozaj chcete odstrániť pole? Pole nie je možné obnoviť."
 msgid "PlotAction.deleteTitle"
 msgstr "Zmazať pole"
 
-#: src/components/plot/add/PlotAdd.tsx:54
+#: src/components/plot/add/PlotAdd.tsx:64
 msgid "PlotAdd.createPlot"
 msgstr "Vytvoriť pole"
 
-#: src/components/plot/add/PlotAdd.tsx:42
+#: src/components/plot/add/PlotAdd.tsx:52
 msgid "PlotAdd.title"
 msgstr "Pridať pole"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:19
 msgid "PlotAddChooseSize.description"
-msgstr ""
+msgstr "Počas procesu vytvárania polí sa vytvárajú dočasné súbory. To presahuje veľkosť konečných súborov polí. Uistite sa, že máte dostatok miesta. <0>Ďalšie informácie</0>"
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:37
 msgid "PlotAddChooseSize.kLow"
@@ -1067,23 +1072,23 @@ msgstr "Vyberte veľkosť poľa"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:57
 msgid "PlotAddNumberOfPlots.delay"
-msgstr ""
+msgstr "Oneskorenie"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:53
 msgid "PlotAddNumberOfPlots.delayTitle"
-msgstr ""
+msgstr "Chcete oneskoriť vytváranie ďalšieho poľa?"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:35
 msgid "PlotAddNumberOfPlots.parallelDescription"
-msgstr ""
+msgstr "Paralelné vytváranie polí môže ušetriť čas. V opačnom prípade sa pridá do frontu."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "PlotAddNumberOfPlots.parallelTitle"
-msgstr ""
+msgstr "Podporuje váše zariadenie paralelné vytváranie polí?"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "PlotAddNumberOfPlots.plotCount"
-msgstr ""
+msgstr "Počet polí"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:73
 msgid "PlotAddNumberOfPlots.ramMaxUsage"
@@ -1091,143 +1096,143 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:13
 msgid "PlotAddNumberOfPlots.title"
-msgstr ""
+msgstr "Vyberte počet polí"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "PlotAddSelectFinalDirectory.description"
-msgstr ""
+msgstr "Vyberte cieľový adresár, do ktorého chcete uložiť pole. Odporúčame vám používať veľký pomalý pevný disk (napríklad externý pevný disk)."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "PlotAddSelectFinalDirectory.finalFolderLocation"
-msgstr ""
+msgstr "Cieľový adresár"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:44
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:48
 msgid "PlotAddSelectFinalDirectory.specifyFinalDirectory"
-msgstr ""
+msgstr "Prosím, vyberte cieľový adresár"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:29
 msgid "PlotAddSelectFinalDirectory.title"
-msgstr ""
+msgstr "Vyberte cieľový adresár"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:73
 msgid "PlotAddSelectTemporaryDirectory.browse"
-msgstr ""
+msgstr "Vybrať"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:77
 msgid "PlotAddSelectTemporaryDirectory.defaultIsFinal"
-msgstr ""
+msgstr "Ak nie je vybraný žiadny, použije sa predvolený dočasný adresár."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:33
 msgid "PlotAddSelectTemporaryDirectory.description"
-msgstr ""
+msgstr "Vyberte dočasný adresár, do ktorého chcete uložiť pole. Odporúčame vám použiť rýchly SSD disk."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:62
 msgid "PlotAddSelectTemporaryDirectory.selectSecondTemporaryDirectory"
-msgstr ""
+msgstr "Vyberte druhý dočasný adresár"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:55
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:73
 msgid "PlotAddSelectTemporaryDirectory.selected"
-msgstr ""
+msgstr "Vybrané"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:47
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:51
 msgid "PlotAddSelectTemporaryDirectory.specifyTemporaryDirectory"
-msgstr ""
+msgstr "Prosím, vyberte dočasný adresár"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:31
 msgid "PlotAddSelectTemporaryDirectory.title"
-msgstr ""
+msgstr "Vyberte dočasný adresár"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:40
 msgid "PlotAddSelectTemporaryDirectory.workspaceLocation"
-msgstr ""
+msgstr "Dočasný adresár"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:67
 msgid "PlotAddSelectTemporaryDirectory.workspaceLocation2"
-msgstr ""
+msgstr "Druhý dočasný adresár"
 
 #: src/components/plot/PlotHeader.tsx:33
 msgid "PlotHeader.addAPlot"
-msgstr ""
+msgstr "Pridať pole"
 
 #: src/components/plot/PlotHeader.tsx:51
 msgid "PlotHeader.addPlotDirectory"
-msgstr ""
+msgstr "Pridať adresár polí"
 
 #: src/components/plot/PlotHeader.tsx:43
 msgid "PlotHeader.refreshPlots"
-msgstr ""
+msgstr "Obnoviť polia"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:29
 msgid "PlotHero.addAPlot"
-msgstr ""
+msgstr "Pridať pole"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:23
 msgid "PlotHero.description"
-msgstr ""
+msgstr "Polia sú pridelené priestory na vašom pevnom disku používanom na ťažbu a zarábanie Chia. <0>Ďalšie informácie</0>"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:35
 msgid "PlotHero.doYouHavePlot"
-msgstr ""
+msgstr "Máte na tomto zariadení už nejaké polia? <0>Pridať adresár polí</0>"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:59
+#: src/components/plot/overview/PlotOverviewPlots.tsx:58
 msgid "PlotOverviewPlots.action"
-msgstr ""
+msgstr "Akcia"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:78
+#: src/components/plot/overview/PlotOverviewPlots.tsx:73
 msgid "PlotOverviewPlots.description"
-msgstr ""
+msgstr "Chcete zarobiť viac Chia? Pridajte na svoju farmu ďalšie polia."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:36
+#: src/components/plot/overview/PlotOverviewPlots.tsx:35
 msgid "PlotOverviewPlots.harversterId"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+#: src/components/plot/overview/PlotOverviewPlots.tsx:45
 msgid "PlotOverviewPlots.plotKey"
-msgstr ""
+msgstr "Kľúč poľa"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:31
+#: src/components/plot/overview/PlotOverviewPlots.tsx:30
 msgid "PlotOverviewPlots.plotName"
-msgstr ""
+msgstr "Meno poľa"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:41
+#: src/components/plot/overview/PlotOverviewPlots.tsx:40
 msgid "PlotOverviewPlots.plotSeed"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:51
+#: src/components/plot/overview/PlotOverviewPlots.tsx:50
 msgid "PlotOverviewPlots.poolKey"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:26
+#: src/components/plot/overview/PlotOverviewPlots.tsx:25
 msgid "PlotOverviewPlots.size"
-msgstr ""
+msgstr "Veľkosť K"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:54
 msgid "PlotOverviewPlots.status"
-msgstr ""
+msgstr "Stav"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:72
+#: src/components/plot/overview/PlotOverviewPlots.tsx:67
 msgid "PlotOverviewPlots.title"
-msgstr ""
+msgstr "Zoznam polí"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:85
+#: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "PlotOverviewPlots.totalPlotSize"
-msgstr ""
+msgstr "Celková veľkosť poľa"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "PlotQueueIndicator.plotting"
-msgstr ""
+msgstr "Vytváranie poľa"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:11
 msgid "PlotQueueIndicator.queued"
-msgstr ""
+msgstr "V poradí"
 
 #: src/components/plot/PlotStatus.tsx:25
 msgid "PlotStatus.error"
-msgstr ""
+msgstr "Chyba"
 
 #: src/components/plot/PlotStatus.tsx:19
 msgid "PlotStatus.farming"
@@ -1235,7 +1240,7 @@ msgstr ""
 
 #: src/components/plot/PlotStatus.tsx:22
 msgid "PlotStatus.synching"
-msgstr ""
+msgstr "Synchronizácia"
 
 #: src/components/farmer/Farmer.jsx:581
 #~ msgid "Plots.back"
@@ -1313,7 +1318,7 @@ msgstr ""
 #: src/components/plot/PlotsFailed.tsx:14
 #: src/components/plot/PlotsNotFound.tsx:14
 msgid "PlotsNotFound.action"
-msgstr ""
+msgstr "Akcia"
 
 #: src/components/plot/PlotsNotFound.tsx:26
 msgid "PlotsNotFound.description"
@@ -1338,7 +1343,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 msgid "PlotterFinalLocation.browse"
-msgstr ""
+msgstr "Vybrať"
 
 #: src/components/plotter/Plotter.jsx:318
 #~ msgid "PlotterFinalLocation.finalFolderLocation"
@@ -1350,7 +1355,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 msgid "PlotterFinalLocation.selected"
-msgstr ""
+msgstr "Vybrané"
 
 #: src/components/plotter/Plotter.jsx:646
 #~ msgid "PlotterProgress.cancel"
@@ -1556,15 +1561,15 @@ msgstr ""
 msgid "RTIncompleteCard.userPubkey"
 msgstr "Používateľov verejný kľúč"
 
-#: src/components/fullNode/FullNode.jsx:471
+#: src/components/fullNode/FullNode.jsx:468
 msgid "SearchBlock.blockHash"
 msgstr "Hash bloku"
 
-#: src/components/fullNode/FullNode.jsx:482
+#: src/components/fullNode/FullNode.jsx:479
 msgid "SearchBlock.search"
 msgstr "Vyhľadať"
 
-#: src/components/fullNode/FullNode.jsx:465
+#: src/components/fullNode/FullNode.jsx:462
 msgid "SearchBlock.title"
 msgstr "Vyhľadať blok podľa hashu"
 
@@ -1681,11 +1686,11 @@ msgstr "Nepripojené"
 msgid "StatusItem.difficulty"
 msgstr "Zložitosť"
 
-#: src/components/fullNode/FullNode.jsx:310
+#: src/components/fullNode/FullNode.jsx:307
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "Odhadovaná velkosť siete"
 
-#: src/components/fullNode/FullNode.jsx:316
+#: src/components/fullNode/FullNode.jsx:313
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ťažiarov v sieti"
 
@@ -1740,7 +1745,7 @@ msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:167
 msgid "StatusItem.statusTooltip"
-msgstr ""
+msgstr "Uzol sa synchronizuje, čo znamená, že sťahuje bloky z iných uzlov, aby sa dostal k najnovšiemu bloku v reťazci"
 
 #: src/components/fullNode/FullNode.jsx:161
 msgid "StatusItem.statusValue"
@@ -1752,7 +1757,7 @@ msgstr "Akceptované o"
 
 #: src/components/trading/TradingOverview.jsx:234
 msgid "TradeDetail.acceptedAtTimeTooltip"
-msgstr ""
+msgstr "Čas, v akom bola táto ponuka prijatá"
 
 #: src/components/trading/TradingOverview.jsx:410
 msgid "TradeDetail.cancel"
@@ -1760,7 +1765,7 @@ msgstr "Zrušiť"
 
 #: src/components/trading/TradingOverview.jsx:399
 msgid "TradeDetail.cancelAndSpend"
-msgstr ""
+msgstr "Zrušiť a minúť"
 
 #: src/components/trading/TradingOverview.jsx:376
 msgid "TradeDetail.coins"
@@ -1772,7 +1777,7 @@ msgstr "Potvrdené v bloku:"
 
 #: src/components/trading/TradingOverview.jsx:206
 msgid "TradeDetail.confirmedAtBlockTooltip"
-msgstr ""
+msgstr "Tento obchod bol zahrnutý v blockchaine na tejto pozícii"
 
 #: src/components/trading/TradingOverview.jsx:188
 msgid "TradeDetail.createdAt"
@@ -1780,7 +1785,7 @@ msgstr "Vytvorené o"
 
 #: src/components/trading/TradingOverview.jsx:192
 msgid "TradeDetail.createdAtTooltip"
-msgstr ""
+msgstr "Čas, kedy sa tento obchod vytvoril"
 
 #: src/components/trading/TradingOverview.jsx:214
 msgid "TradeDetail.createdByUs"
@@ -1788,7 +1793,7 @@ msgstr "Vytvorené nami:"
 
 #: src/components/trading/TradingOverview.jsx:218
 msgid "TradeDetail.createdByUsTooltip"
-msgstr ""
+msgstr "Identifikátor zobrazujúci či bola táto ponuka vytvorená nami"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "TradeDetail.no"
@@ -1808,7 +1813,7 @@ msgstr "Stav:"
 
 #: src/components/trading/TradingOverview.jsx:184
 msgid "TradeDetail.statusTooltip"
-msgstr ""
+msgstr "Aktuálny stav obchodu"
 
 #: src/components/trading/TradingOverview.jsx:360
 msgid "TradeDetail.title"
@@ -1820,7 +1825,7 @@ msgstr "Id obchodu:"
 
 #: src/components/trading/TradingOverview.jsx:177
 msgid "TradeDetail.tradeIdTooltip"
-msgstr ""
+msgstr "Jedinečný identifikátor"
 
 #: src/components/trading/TradingOverview.jsx:212
 msgid "TradeDetail.yes"
@@ -1852,7 +1857,7 @@ msgstr "Prehľad ponúk"
 
 #: src/components/trading/TradeManager.tsx:27
 msgid "TradeManager.viewOffer"
-msgstr ""
+msgstr "Zobraziť ponuku"
 
 #: src/components/trading/TradeManager.tsx:73
 #~ msgid "TradeManager.viewTrade"
@@ -1884,13 +1889,13 @@ msgstr "Id ponuky"
 
 #: src/components/trading/TradesTable.tsx:32
 msgid "TradesTable.buy"
-msgstr ""
+msgstr "Kúpiť"
 
 #: src/components/trading/TradesTable.tsx:31
 msgid "TradesTable.sell"
-msgstr ""
+msgstr "Predať"
 
-#: src/components/trading/TradingOverview.jsx:437
+#: src/components/trading/TradingOverview.jsx:435
 msgid "TradingHistory.title"
 msgstr "História ponúk"
 
@@ -1920,7 +1925,7 @@ msgstr "Odchádzajúci"
 
 #: src/components/wallet/standard/WalletStandard.tsx:425
 msgid "TransactionTable.pending"
-msgstr ""
+msgstr "Spracúva sa"
 
 #: src/components/wallet/standard/WalletStandard.tsx:441
 msgid "TransactionTable.status"
@@ -2000,8 +2005,8 @@ msgstr "Peňaženky"
 
 #: src/hooks/useSelectDirectory.tsx:26
 msgid "useSelectDirectory.availableOnlyFromElectron"
-msgstr ""
+msgstr "Táto možnosť je dostupná iba z Electron aplikácie"
 
 #: src/hooks/useSelectFile.tsx:26
 msgid "useSelectFile.availableOnlyFromElectron"
-msgstr ""
+msgstr "Táto možnosť je dostupná iba z Electron aplikácie"
