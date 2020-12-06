@@ -72,22 +72,12 @@ class ExtendedPeerInfo:
 
     def get_tried_bucket(self, key: int) -> int:
         hash1 = int.from_bytes(
-            bytes(
-                std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_key())[
-                    :8
-                ]
-            ),
+            bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_key())[:8]),
             byteorder="big",
         )
         hash1 = hash1 % TRIED_BUCKETS_PER_GROUP
         hash2 = int.from_bytes(
-            bytes(
-                std_hash(
-                    key.to_bytes(32, byteorder="big")
-                    + self.peer_info.get_group()
-                    + bytes([hash1])
-                )[:8]
-            ),
+            bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_group() + bytes([hash1]))[:8]),
             byteorder="big",
         )
         return hash2 % TRIED_BUCKET_COUNT
@@ -97,24 +87,12 @@ class ExtendedPeerInfo:
             src_peer = self.src
         assert src_peer is not None
         hash1 = int.from_bytes(
-            bytes(
-                std_hash(
-                    key.to_bytes(32, byteorder="big")
-                    + self.peer_info.get_group()
-                    + src_peer.get_group()
-                )[:8]
-            ),
+            bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_group() + src_peer.get_group())[:8]),
             byteorder="big",
         )
         hash1 = hash1 % NEW_BUCKETS_PER_SOURCE_GROUP
         hash2 = int.from_bytes(
-            bytes(
-                std_hash(
-                    key.to_bytes(32, byteorder="big")
-                    + src_peer.get_group()
-                    + bytes([hash1])
-                )[:8]
-            ),
+            bytes(std_hash(key.to_bytes(32, byteorder="big") + src_peer.get_group() + bytes([hash1]))[:8]),
             byteorder="big",
         )
         return hash2 % NEW_BUCKET_COUNT
@@ -154,10 +132,7 @@ class ExtendedPeerInfo:
             return True
 
         # N successive failures in the last week
-        if (
-            now - self.last_success > MIN_FAIL_DAYS * 24 * 60 * 60
-            and self.num_attempts >= MAX_FAILURES
-        ):
+        if now - self.last_success > MIN_FAIL_DAYS * 24 * 60 * 60 and self.num_attempts >= MAX_FAILURES:
             return True
 
         return False
@@ -199,12 +174,8 @@ class AddressManager:
         self.id_count = 0
         self.key = randbits(256)
         self.random_pos = []
-        self.tried_matrix = [
-            [-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)
-        ]
-        self.new_matrix = [
-            [-1 for x in range(BUCKET_SIZE)] for y in range(NEW_BUCKET_COUNT)
-        ]
+        self.tried_matrix = [[-1 for x in range(BUCKET_SIZE)] for y in range(TRIED_BUCKET_COUNT)]
+        self.new_matrix = [[-1 for x in range(BUCKET_SIZE)] for y in range(NEW_BUCKET_COUNT)]
         self.tried_count = 0
         self.new_count = 0
         self.map_addr = {}
@@ -212,9 +183,7 @@ class AddressManager:
         self.last_good = 1
         self.tried_collisions = []
 
-    def create_(
-        self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]
-    ) -> Tuple[ExtendedPeerInfo, int]:
+    def create_(self, addr: TimestampedPeerInfo, addr_src: Optional[PeerInfo]) -> Tuple[ExtendedPeerInfo, int]:
         self.id_count += 1
         node_id = self.id_count
         self.map_info[node_id] = ExtendedPeerInfo(addr, addr_src)
@@ -310,9 +279,7 @@ class AddressManager:
         new_bucket = -1
         for n in range(NEW_BUCKET_COUNT):
             cur_new_bucket = (n + bucket_rand) % NEW_BUCKET_COUNT
-            cur_new_bucket_pos = info.get_bucket_position(
-                self.key, True, cur_new_bucket
-            )
+            cur_new_bucket_pos = info.get_bucket_position(self.key, True, cur_new_bucket)
             if self.new_matrix[cur_new_bucket][cur_new_bucket_pos] == node_id:
                 new_bucket = cur_new_bucket
                 break
@@ -328,10 +295,7 @@ class AddressManager:
         tried_bucket_pos = info.get_bucket_position(self.key, False, tried_bucket)
 
         # Will moving this address into tried evict another entry?
-        if (
-            test_before_evict
-            and self.tried_matrix[tried_bucket][tried_bucket_pos] != -1
-        ):
+        if test_before_evict and self.tried_matrix[tried_bucket][tried_bucket_pos] != -1:
             if len(self.tried_collisions) < TRIED_COLLISION_SIZE:
                 if node_id not in self.tried_collisions:
                     self.tried_collisions.append(node_id)
@@ -348,9 +312,7 @@ class AddressManager:
         del self.map_info[node_id]
         self.new_count -= 1
 
-    def add_to_new_table_(
-        self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int
-    ) -> bool:
+    def add_to_new_table_(self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int) -> bool:
         is_unique = False
         peer_info = PeerInfo(
             addr.host,
@@ -359,11 +321,7 @@ class AddressManager:
         if not peer_info.is_valid():
             return False
         (info, node_id) = self.find_(peer_info)
-        if (
-            info is not None
-            and info.peer_info.host == addr.host
-            and info.peer_info.port == addr.port
-        ):
+        if info is not None and info.peer_info.host == addr.host and info.peer_info.port == addr.port:
             penalty = 0
 
         if info is not None:
@@ -371,15 +329,12 @@ class AddressManager:
             currently_online = time.time() - addr.timestamp < 24 * 60 * 60
             update_interval = 60 * 60 if currently_online else 24 * 60 * 60
             if addr.timestamp > 0 and (
-                info.timestamp > 0
-                or info.timestamp < addr.timestamp - update_interval - penalty
+                info.timestamp > 0 or info.timestamp < addr.timestamp - update_interval - penalty
             ):
                 info.timestamp = max(0, addr.timestamp - penalty)
 
             # do not update if no new information is present
-            if addr.timestamp == 0 or (
-                info.timestamp > 0 and addr.timestamp <= info.timestamp
-            ):
+            if addr.timestamp == 0 or (info.timestamp > 0 and addr.timestamp <= info.timestamp):
                 return False
 
             # do not update if the entry was already in the "tried" table
@@ -405,12 +360,8 @@ class AddressManager:
         if self.new_matrix[new_bucket][new_bucket_pos] != node_id:
             add_to_new = self.new_matrix[new_bucket][new_bucket_pos] == -1
             if not add_to_new:
-                info_existing = self.map_info[
-                    self.new_matrix[new_bucket][new_bucket_pos]
-                ]
-                if info_existing.is_terrible() or (
-                    info_existing.ref_count > 1 and info.ref_count == 0
-                ):
+                info_existing = self.map_info[self.new_matrix[new_bucket][new_bucket_pos]]
+                if info_existing.is_terrible() or (info_existing.ref_count > 1 and info.ref_count == 0):
                     add_to_new = True
             if add_to_new:
                 self.clear_new_(new_bucket, new_bucket_pos)
@@ -444,22 +395,14 @@ class AddressManager:
             return None
 
         # Use a 50% chance for choosing between tried and new table entries.
-        if (
-            not new_only
-            and self.tried_count > 0
-            and (self.new_count == 0 or randrange(2) == 0)
-        ):
+        if not new_only and self.tried_count > 0 and (self.new_count == 0 or randrange(2) == 0):
             chance = 1.0
             while True:
                 tried_bucket = randrange(TRIED_BUCKET_COUNT)
                 tried_buket_pos = randrange(BUCKET_SIZE)
                 while self.tried_matrix[tried_bucket][tried_buket_pos] == -1:
-                    tried_bucket = (
-                        tried_bucket + randbits(LOG_TRIED_BUCKET_COUNT)
-                    ) % TRIED_BUCKET_COUNT
-                    tried_buket_pos = (
-                        tried_buket_pos + randbits(LOG_BUCKET_SIZE)
-                    ) % BUCKET_SIZE
+                    tried_bucket = (tried_bucket + randbits(LOG_TRIED_BUCKET_COUNT)) % TRIED_BUCKET_COUNT
+                    tried_buket_pos = (tried_buket_pos + randbits(LOG_BUCKET_SIZE)) % BUCKET_SIZE
                 node_id = self.tried_matrix[tried_bucket][tried_buket_pos]
                 info = self.map_info[node_id]
                 if randbits(30) < (chance * info.get_selection_chance() * (1 << 30)):
@@ -471,12 +414,8 @@ class AddressManager:
                 new_bucket = randrange(NEW_BUCKET_COUNT)
                 new_bucket_pos = randrange(BUCKET_SIZE)
                 while self.new_matrix[new_bucket][new_bucket_pos] == -1:
-                    new_bucket = (
-                        new_bucket + randbits(LOG_NEW_BUCKET_COUNT)
-                    ) % NEW_BUCKET_COUNT
-                    new_bucket_pos = (
-                        new_bucket_pos + randbits(LOG_BUCKET_SIZE)
-                    ) % BUCKET_SIZE
+                    new_bucket = (new_bucket + randbits(LOG_NEW_BUCKET_COUNT)) % NEW_BUCKET_COUNT
+                    new_bucket_pos = (new_bucket_pos + randbits(LOG_BUCKET_SIZE)) % BUCKET_SIZE
                 node_id = self.new_matrix[new_bucket][new_bucket_pos]
                 info = self.map_info[node_id]
                 if randbits(30) < chance * info.get_selection_chance() * (1 << 30):
@@ -492,9 +431,7 @@ class AddressManager:
                 info = self.map_info[node_id]
                 peer = info.peer_info
                 tried_bucket = info.get_tried_bucket(self.key)
-                tried_bucket_pos = info.get_bucket_position(
-                    self.key, False, tried_bucket
-                )
+                tried_bucket_pos = info.get_bucket_position(self.key, False, tried_bucket)
                 if self.tried_matrix[tried_bucket][tried_bucket_pos] != -1:
                     old_id = self.tried_matrix[tried_bucket][tried_bucket_pos]
                     old_info = self.map_info[old_id]
