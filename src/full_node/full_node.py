@@ -3,41 +3,40 @@ import dataclasses
 import logging
 import time
 import traceback
-
 from pathlib import Path
 from typing import AsyncGenerator, Optional, Dict, Callable, List, Tuple, Any
-import aiosqlite
-import src.server.ws_connection as ws
 
+import aiosqlite
+
+import src.server.ws_connection as ws
+from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
+from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.pot_iterations import is_overflow_sub_block
-
+from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.block_store import BlockStore
-from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.full_node.coin_store import CoinStore
 from src.full_node.full_node_store import FullNodeStore
-from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.full_node.mempool_manager import MempoolManager
-from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
+from src.full_node.weight_proof import WeightProofHandler, BlockCache, BlockCacheMock
 from src.protocols import (
     full_node_protocol,
     timelord_protocol,
     wallet_protocol,
 )
-
 from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.server.ws_connection import WSChiaConnection
 from src.types.full_block import FullBlock
-
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
+from src.types.weight_proof import WeightProof
 from src.util.errors import ConsensusError, Err
 from src.util.ints import uint32, uint128, uint8
 from src.util.path import mkdir, path_from_root
@@ -100,6 +99,7 @@ class FullNode:
         self.log.info("Initializing blockchain from disk")
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
+        self.weight_proof_handler = WeightProofHandler(self.constants, BlockCache(self.blockchain))
         if self.blockchain.get_peak() is None:
             self.log.info("Initialized with empty blockchain")
         else:
@@ -299,8 +299,13 @@ class FullNode:
 
         self.log.info(f"Peak height {peak_height}")
 
-        # TODO (almog): verify weight proof here
-        # Finding the fork point allows us to only download headers and blocks from the fork point
+        # todo weight proof almog
+        # find fork point
+        # send weight proof message
+        # await for return
+        # if validated continue else fail
+
+        # # Finding the fork point allows us to only download headers and blocks from the fork point
 
         fork_point_height: uint32 = uint32(0)
         self.log.info(f"Fork point at height {fork_point_height}")
