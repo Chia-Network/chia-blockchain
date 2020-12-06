@@ -1,4 +1,4 @@
-import Fingerprint from "./Fingerprint";
+import Fingerprint from './Fingerprint';
 
 type PlotAdd = {
   plotSize: number;

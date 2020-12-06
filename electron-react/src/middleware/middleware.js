@@ -12,7 +12,7 @@ import {
   service_simulator,
   service_plotter,
   service_farmer,
-  service_harvester
+  service_harvester,
 } from '../util/service_names';
 
 const crypto = require('crypto');

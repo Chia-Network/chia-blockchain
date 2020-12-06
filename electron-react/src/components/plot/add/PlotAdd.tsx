@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useHistory } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
@@ -13,6 +13,7 @@ import PlotAddSelectTemporaryDirectory from './PlotAddSelectTemporaryDirectory';
 import PlotAddSelectFinalDirectory from './PlotAddSelectFinalDirectory';
 import { plotQueueAdd } from '../../../modules/plotQueue';
 import PlotAddConfig from '../../../types/PlotAdd';
+import plotSizes, { defaultPlotSize } from '../../../constants/plotSizes';
 import type { RootState } from '../../../modules/rootReducer';
 
 type FormData = PlotAddConfig;
@@ -25,9 +26,9 @@ export default function PlotAdd() {
   const methods = useForm<FormData>({
     shouldUnregister: false,
     defaultValues: {
-      plotSize: 32,
+      plotSize: defaultPlotSize.value,
       plotCount: 1,
-      maxRam: 3072,
+      maxRam: defaultPlotSize.defaultRam,
       numThreads: 2,
       numBuckets: 0,
       stripeSize: 65536,
@@ -38,6 +39,16 @@ export default function PlotAdd() {
       parallel: false,
     },
   });
+
+  const { watch, setValue } = methods;
+  const plotSize = watch('plotSize');
+
+  useEffect(() => {
+    const plotSizeConfig = plotSizes.find(item => item.value === plotSize);
+    if (plotSizeConfig) {
+      setValue('maxRam', plotSizeConfig.defaultRam);
+    }
+  }, [plotSize, setValue]);
 
   const handleSubmit: SubmitHandler<FormData> = (data) => {
     dispatch(plotQueueAdd(fingerprint ? {
