@@ -5,13 +5,14 @@ from typing import Dict, Optional, List
 import pytest
 
 from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
-from src.consensus.pot_iterations import calculate_iterations_quality, is_overflow_sub_block
+from src.consensus.pot_iterations import calculate_iterations_quality
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.weight_proof import (
-    get_sub_epoch_block_num,
-    WeightProofFactory,
+    WeightProofHandler,
     get_last_ses_block_idx,
     map_summaries,
+    BlockCacheMock,
+    get_sub_epoch_block_num,
 )
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
@@ -33,13 +34,13 @@ def event_loop():
 
 
 def count_sub_epochs(blockchain, last_hash) -> int:
-    curr = blockchain.sub_blocks[last_hash]
+    curr = blockchain._sub_blocks[last_hash]
     count = 0
     while True:
         if curr.height == 0:
             break
         # next sub block
-        curr = blockchain.sub_blocks[curr.prev_hash]
+        curr = blockchain._sub_blocks[curr.prev_hash]
         # if end of sub-epoch
         if curr.sub_epoch_summary_included is not None:
             count += 1
@@ -107,7 +108,9 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
     orig_summaries: Dict[int, SubEpochSummary] = {}
     while True:
         if curr.sub_epoch_summary_included is not None:
-            print(f"ses height {curr.sub_block_height} prev overflows {curr.sub_epoch_summary_included.num_sub_blocks_overflow}")
+            print(
+                f"ses height {curr.sub_block_height} prev overflows {curr.sub_epoch_summary_included.num_sub_blocks_overflow}"
+            )
             orig_summaries[sub_epochs_left - 1] = curr.sub_epoch_summary_included
             sub_epochs_left -= 1
 
@@ -125,7 +128,7 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
     # print(f"{header_cache[height_to_hash[9810]].finished_sub_slots[-1].challenge_chain}")
     print("last ses end of challenge summary")
     # print(f"{sub_blocks[height_to_hash[9810]].sub_epoch_summary_included}")
-    wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
+    wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
     wpf.log.setLevel(logging.INFO)
     initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
     wp = wpf.make_weight_proof(uint32(len(header_cache)), uint32(num_of_blocks), blocks[-1].header_hash)
@@ -153,7 +156,9 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_400_blocks)
         sub_epoch_end, _ = get_prev_ses_block(sub_blocks, default_400_blocks[-1].header_hash)
         print("first block of last sub epoch ", sub_epoch_end.sub_block_height)
-        sub_epoch_blocks_n: uint32 = get_sub_epoch_block_num(sub_epoch_end, sub_blocks)
+        sub_epoch_blocks_n: uint32 = get_sub_epoch_block_num(
+            sub_epoch_end, BlockCacheMock(sub_blocks, height_to_hash, header_cache)
+        )
         print("sub epoch before last has ", sub_epoch_blocks_n, "blocks")
         prev_sub_epoch_end, _ = get_prev_ses_block(sub_blocks, sub_epoch_end.header_hash)
         assert sub_epoch_blocks_n == sub_epoch_end.sub_block_height - prev_sub_epoch_end.sub_block_height
@@ -168,6 +173,7 @@ class TestWeightProof:
         block = get_last_ses_block_idx(test_constants, recent_blocks)
         assert block is not None
         assert block.reward_chain_sub_block.sub_block_height == sub_epoch_end.sub_block_height
+        assert sub_blocks[height_to_hash[block.reward_chain_sub_block.sub_block_height]].sub_epoch_summary_included
 
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_1(self, default_400_blocks):
@@ -209,7 +215,7 @@ class TestWeightProof:
         print(f"fork point is {curr.sub_block_height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
-        wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
+        wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
         wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
         wp = wpf.make_weight_proof(uint32(len(header_cache)), uint32(num_of_blocks), blocks[-1].header_hash)
@@ -241,7 +247,7 @@ class TestWeightProof:
         print(f"fork point is {curr.sub_block_height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
-        wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
+        wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
         wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
         wp = wpf.make_weight_proof(uint32(len(header_cache)), uint32(num_of_blocks), blocks[-1].header_hash)
@@ -275,7 +281,7 @@ class TestWeightProof:
         print(f"fork point is {curr.sub_block_height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
-        wpf = WeightProofFactory(test_constants, sub_blocks, header_cache, height_to_hash)
+        wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
         wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
         wp = wpf.make_weight_proof(uint32(len(header_cache)), uint32(num_of_blocks), blocks[-1].header_hash)
