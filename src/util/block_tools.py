@@ -70,6 +70,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_SUB_BLOCKS": 140,
         "EPOCH_SUB_BLOCKS": 280,
+        "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
         "SUB_SLOT_ITERS_STARTING": 2 ** 10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "MAX_FUTURE_TIME": 3600
@@ -920,7 +921,7 @@ def finish_sub_block(
     )
     cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
     deficit = calculate_deficit(
-        constants, latest_sub_block.sub_block_height + 1, latest_sub_block, is_overflow, len(finished_sub_slots) > 0
+        constants, latest_sub_block.sub_block_height + 1, latest_sub_block, is_overflow, len(finished_sub_slots)
     )
 
     icc_ip_vdf, icc_ip_proof = get_icc(

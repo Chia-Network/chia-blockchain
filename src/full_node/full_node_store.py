@@ -215,10 +215,10 @@ class FullNodeStore:
                 if rc_challenge not in self.future_eos_cache:
                     self.future_eos_cache[rc_challenge] = []
                 self.future_eos_cache[rc_challenge].append(eos)
-                log.warning("Dont have ch")
+                log.error(f"Dont have challenge hash {rc_challenge}")
                 return None
             if peak.total_iters + eos.reward_chain.end_of_slot_vdf.number_of_iterations != total_iters:
-                log.warning(
+                log.error(
                     f"Bad iters {peak.total_iters} {eos.reward_chain.end_of_slot_vdf.number_of_iterations} {total_iters}"
                 )
                 return None
@@ -237,12 +237,12 @@ class FullNodeStore:
                         eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
                         != icc_start_challenge_hash
                     ):
-                        log.warning("Bad icc")
+                        log.error("Bad icc")
                         return None
         else:
             # Empty slot after the peak
             if eos.reward_chain.end_of_slot_vdf.challenge != last_slot_rc_hash:
-                log.warning("empty slot after peak")
+                log.error("empty slot after peak")
                 return None
 
             if (

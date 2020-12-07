@@ -14,11 +14,11 @@ testnet_kwargs = {
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
     "SUB_EPOCH_SUB_BLOCKS": 128,  # The number of sub-blocks per sub-epoch, mainnet 284
-    "EPOCH_SUB_BLOCKS": 4096,  # The number of sub-blocks per epoch, mainnet 32256
+    "EPOCH_SUB_BLOCKS": 256,  # The number of sub-blocks per epoch, mainnet 32256
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_PLOT_FILTER": 9,  # H(plot signature of the challenge) must start with these many zeroes
-    "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot
+    "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
     "NUM_SP_INTERVALS_EXTRA": 3,  # The number of sp intervals to add to the signage point
     "MAX_FUTURE_TIME": 7200,  # The next block can have a timestamp of at most these many seconds more
     "NUMBER_OF_TIMESTAMPS": 11,  # Than the average of the last NUMBER_OF_TIMESTAMPS blocks
