@@ -92,65 +92,7 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
     return None
 
 
-def get_name_puzzle_conditions(
-    block_program: Program,
-) -> Tuple[Optional[Err], List[NPC], uint64]:
-    """
-    Returns an error if it's unable to evaluate, otherwise
-    returns a list of NPC (coin_name, solved_puzzle_hash, conditions_dict)
-    """
-    cost_sum = 0
-    try:
-        cost_run, sexp = block_program.run_with_cost([])
-        cost_sum += cost_run
-    except Program.EvalError:
-        return Err.INVALID_COIN_SOLUTION, [], uint64(0)
-
-    npc_list = []
-    for name_solution in sexp.as_iter():
-        _ = name_solution.as_python()
-        if len(_) != 2:
-            return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
-        if not isinstance(_[0], bytes) or len(_[0]) != 32:
-            return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
-        coin_name = bytes32(_[0])
-        if not isinstance(_[1], list) or len(_[1]) != 2:
-            return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
-        puzzle_solution_program = name_solution.rest().first()
-        puzzle_program = puzzle_solution_program.first()
-        puzzle_hash = Program.to(puzzle_program).get_tree_hash()
-        try:
-            error, conditions_dict, cost_run = conditions_dict_for_solution(
-                puzzle_solution_program
-            )
-            cost_sum += cost_run
-            if error:
-                return error, [], uint64(cost_sum)
-        except Program.EvalError:
-            return Err.INVALID_COIN_SOLUTION, [], uint64(cost_sum)
-        if conditions_dict is None:
-            conditions_dict = {}
-        npc: NPC = NPC(coin_name, puzzle_hash, conditions_dict)
-        npc_list.append(npc)
-    cost2, npc_list2 = get_name_puzzle_conditions2(block_program)
-    assert equal_ignore_order(npc_list2, npc_list)
-    return None, npc_list, uint64(cost_sum)
-
-
-# taken from StackOverflow for testing purposes
-# https://stackoverflow.com/questions/8866652/determine-if-2-lists-have-the-same-elements-regardless-of-order
-def equal_ignore_order(a, b):
-    """ Use only when elements are neither hashable nor sortable! """
-    unmatched = list(b)
-    for element in a:
-        try:
-            unmatched.remove(element)
-        except ValueError:
-            return False
-    return not unmatched
-
-
-def get_name_puzzle_conditions2(block_program):
+def get_name_puzzle_conditions(block_program):
     cost, result = GENERATOR_MOD.run_with_cost(block_program)
     npc_list = []
     opcodes = set(item.value for item in ConditionOpcode)
@@ -172,7 +114,7 @@ def get_name_puzzle_conditions2(block_program):
         if conditions_dict is None:
             conditions_dict = {}
         npc_list.append(NPC(name, puzzle_hash, conditions_dict))
-    return cost, npc_list
+    return None, npc_list, uint64(cost)
 
 
 def mempool_check_conditions_dict(
