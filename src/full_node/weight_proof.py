@@ -66,10 +66,10 @@ class BlockCacheMock:
     def height_to_header_block(self, height: uint32) -> HeaderBlock:
         return self._header_cache[self._height_to_hash(height)]
 
-    def sub_block_rec(self, hash: bytes32) -> SubBlockRecord:
+    def sub_block_record(self, hash: bytes32) -> SubBlockRecord:
         return self._sub_blocks[hash]
 
-    def height_to_sub_block_rec(self, height: uint32) -> SubBlockRecord:
+    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
         return self._sub_blocks[self._height_to_hash(height)]
 
     def max_height(self) -> uint32:
@@ -117,10 +117,10 @@ class WeightProofHandler:
         blocks_left = total_number_of_blocks
         curr_height = sub_block_height - total_number_of_blocks
         total_overflow_blocks = 0
-        while blocks_left != 0:
+        while curr_height < sub_block_height:
             # next sub block
-            sub_block = self.block_cache.sub_block_record(curr_height)
-            header_block = self.block_cache.header_block(curr_height)
+            sub_block = self.block_cache.height_to_sub_block_record(curr_height)
+            header_block = self.block_cache.height_to_header_block(curr_height)
             if is_overflow_sub_block(self.constants, header_block.reward_chain_sub_block.signage_point_index):
                 total_overflow_blocks += 1
                 self.log.debug(f"overflow block at height {curr_height}  ")
@@ -558,8 +558,8 @@ def get_last_ses_block_idx(
             idx = len(recent_reward_chain) - 1 - idx  # reverse
             # find first block after sub slot end
             curr = recent_reward_chain[idx]
-            while True :
-                if len(curr.finished_sub_slots) >0:
+            while True:
+                if len(curr.finished_sub_slots) > 0:
                     for slot in curr.finished_sub_slots:
                         if slot.challenge_chain.subepoch_summary_hash != None:
                             return curr
