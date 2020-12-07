@@ -104,21 +104,21 @@ class WalletTool:
         for con_list in condition_dic.values():
             for cvp in con_list:
                 if cvp.opcode == ConditionOpcode.CREATE_COIN:
-                    ret.append(make_create_coin_condition(cvp.var1, cvp.var2))
+                    ret.append(make_create_coin_condition(cvp.vars[0], cvp.vars[1]))
                 if cvp.opcode == ConditionOpcode.AGG_SIG:
-                    ret.append(make_assert_aggsig_condition(cvp.var1))
+                    ret.append(make_assert_aggsig_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_COIN_CONSUMED:
-                    ret.append(make_assert_coin_consumed_condition(cvp.var1))
+                    ret.append(make_assert_coin_consumed_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_TIME_EXCEEDS:
-                    ret.append(make_assert_time_exceeds_condition(cvp.var1))
+                    ret.append(make_assert_time_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
-                    ret.append(make_assert_my_coin_id_condition(cvp.var1))
+                    ret.append(make_assert_my_coin_id_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                    ret.append(make_assert_block_index_exceeds_condition(cvp.var1))
+                    ret.append(make_assert_block_index_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                    ret.append(make_assert_block_age_exceeds_condition(cvp.var1))
+                    ret.append(make_assert_block_age_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_FEE:
-                    ret.append(make_assert_fee_condition(cvp.var1))
+                    ret.append(make_assert_fee_condition(cvp.vars[0]))
 
         return solution_for_conditions(Program.to(ret))
 
@@ -146,7 +146,7 @@ class WalletTool:
         )
         condition_dic[output.opcode].append(output)
         amount_total = sum(
-            int_from_bytes(cvp.var2)
+            int_from_bytes(cvp.vars[1])
             for cvp in condition_dic[ConditionOpcode.CREATE_COIN]
         )
         change = spend_value - amount_total - fee

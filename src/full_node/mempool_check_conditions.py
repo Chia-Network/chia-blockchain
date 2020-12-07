@@ -28,7 +28,7 @@ def mempool_assert_coin_consumed(
     Returns None if conditions are met, if not returns the reason why it failed
     """
     bundle_removals = spend_bundle.removal_names()
-    coin_name = condition.var1
+    coin_name = condition.vars[0]
     if coin_name not in bundle_removals:
         return Err.ASSERT_COIN_CONSUMED_FAILED
     return None
@@ -40,7 +40,7 @@ def mempool_assert_my_coin_id(
     """
     Checks if CoinID matches the id from the condition
     """
-    if unspent.coin.name() != condition.var1:
+    if unspent.coin.name() != condition.vars[0]:
         return Err.ASSERT_MY_COIN_ID_FAILED
     return None
 
@@ -52,7 +52,7 @@ def mempool_assert_block_index_exceeds(
     Checks if the next block index exceeds the block index from the condition
     """
     try:
-        expected_block_index = int_from_bytes(condition.var1)
+        expected_block_index = int_from_bytes(condition.vars[0])
     except ValueError:
         return Err.INVALID_CONDITION
     # + 1 because min block it can be included is +1 from current
@@ -68,7 +68,7 @@ def mempool_assert_block_age_exceeds(
     Checks if the coin age exceeds the age from the condition
     """
     try:
-        expected_block_age = int_from_bytes(condition.var1)
+        expected_block_age = int_from_bytes(condition.vars[0])
         expected_block_index = expected_block_age + unspent.confirmed_block_index
     except ValueError:
         return Err.INVALID_CONDITION
@@ -82,7 +82,7 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
     Check if the current time in millis exceeds the time specified by condition
     """
     try:
-        expected_mili_time = int_from_bytes(condition.var1)
+        expected_mili_time = int_from_bytes(condition.vars[0])
     except ValueError:
         return Err.INVALID_CONDITION
 
@@ -166,7 +166,7 @@ def get_name_puzzle_conditions2(block_program):
             if len(cond) == 3:
                 cvp = ConditionVarPair(opcode, cond[1], cond[2])
             else:
-                cvp = ConditionVarPair(opcode, cond[1], None)
+                cvp = ConditionVarPair(opcode, cond[1])
             conditions_list.append(cvp)
         conditions_dict = conditions_by_opcode(conditions_list)
         if conditions_dict is None:
