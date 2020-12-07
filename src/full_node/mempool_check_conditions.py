@@ -8,7 +8,11 @@ from src.types.name_puzzle_condition import NPC
 from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
-from src.util.condition_tools import ConditionOpcode, conditions_dict_for_solution, conditions_by_opcode
+from src.util.condition_tools import (
+    ConditionOpcode,
+    conditions_dict_for_solution,
+    conditions_by_opcode,
+)
 from src.util.errors import Err
 import time
 
