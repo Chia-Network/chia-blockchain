@@ -75,11 +75,11 @@ def pkm_pairs_for_conditions_dict(
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         # TODO: check types
         # assert len(_) == 3
-        assert cvp.var2 is not None
-        ret.append((G1Element.from_bytes(cvp.var1), cvp.var2))
+        assert cvp.vars[1] is not None
+        ret.append((G1Element.from_bytes(cvp.vars[0]), cvp.vars[1]))
     if coin_name is not None:
         for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG_ME, []):
-            ret.append((G1Element.from_bytes(cvp.var1), cvp.var2 + coin_name))
+            ret.append((G1Element.from_bytes(cvp.vars[0]), cvp.vars[1] + coin_name))
     return ret
 
 
@@ -102,7 +102,7 @@ def created_outputs_for_conditions_dict(
         # (ensure there are the correct number and type of parameters)
         # maybe write a type-checking framework for conditions
         # and don't just fail with asserts
-        puzzle_hash, amount_bin = cvp.var1, cvp.var2
+        puzzle_hash, amount_bin = cvp.vars[0], cvp.vars[1]
         amount = int_from_bytes(amount_bin)
         coin = Coin(input_coin_name, puzzle_hash, amount)
         output_coins.append(coin)

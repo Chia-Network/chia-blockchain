@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 
 from src.types.condition_opcodes import ConditionOpcode
 
@@ -12,5 +12,19 @@ class ConditionVarPair:
     """
 
     opcode: ConditionOpcode
-    var1: Optional[bytes]
-    var2: Optional[bytes]
+    vars: List[bytes]
+
+    def __init__(
+        self,
+        opc: ConditionOpcode,
+        *args
+    ):
+        i = 0
+        var_list = []
+        for arg in args:
+            if arg is not None:
+                assert isinstance(arg, bytes)
+                var_list.append(bytes(arg))
+            i = i + 1
+        object.__setattr__(self, "opcode", opc)
+        object.__setattr__(self, "vars", var_list)

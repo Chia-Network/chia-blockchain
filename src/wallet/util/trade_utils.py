@@ -58,7 +58,7 @@ def get_output_amount_for_puzzle_and_solution(puzzle, solution):
     total = 0
     if conditions:
         for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
-            total += Program.to(_.var2).as_int()
+            total += Program.to(_.vars[1]).as_int()
     return total
 
 

@@ -77,6 +77,9 @@ vdf_bench
 # Offer Files
 *.offer
 
+# Backup Files
+*.backup
+
 # Compiled CLVM
 main.sym
 

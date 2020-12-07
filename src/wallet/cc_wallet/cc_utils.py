@@ -151,7 +151,7 @@ def spend_bundle_for_spendable_ccs(
         total = 0
         if conditions:
             for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
-                total += Program.to(_.var2).as_int()
+                total += Program.to(_.vars[1]).as_int()
         output_amounts.append(total)
 
     coin_solutions = []

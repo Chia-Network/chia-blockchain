@@ -821,7 +821,7 @@ class Blockchain:
                     ConditionOpcode.ASSERT_FEE
                 ]
                 for cvp in fee_list:
-                    fee = int_from_bytes(cvp.var1)
+                    fee = int_from_bytes(cvp.vars[0])
                     assert_fee_sum = assert_fee_sum + fee
 
         if fees < assert_fee_sum:
