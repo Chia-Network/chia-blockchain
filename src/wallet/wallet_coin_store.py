@@ -67,7 +67,6 @@ class WalletCoinStore:
             "CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)"
         )
 
-
         await self.db_connection.commit()
         self.coin_record_cache = dict()
         return self

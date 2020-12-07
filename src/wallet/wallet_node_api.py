@@ -172,6 +172,14 @@ class WalletNodeAPI:
                 wrapper.height, wrapper.header_hash, wrapper.generator
             )
 
+    @peer_required
+    @api_request
+    async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
+        """
+        The full node sent as a new peak
+        """
+        await self.wallet_node.new_peak(peak, peer)
+
     @api_request
     async def reject_generator(self, response: wallet_protocol.RejectGeneratorRequest):
         """
