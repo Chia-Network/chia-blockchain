@@ -443,7 +443,6 @@ class BlockTools:
                     constants,
                     sub_blocks,
                     height_to_hash,
-                    latest_sub_block.signage_point_index,
                     latest_sub_block.required_iters,
                     block_list[-1],
                 )
@@ -517,8 +516,8 @@ class BlockTools:
             )
             sub_blocks_added_this_sub_slot = 0  # Sub slot ended, overflows are in next sub slot
 
-            if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots:
-                # No overflows on new epoch
+            # Handle overflows: No overflows on new epoch
+            if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and new_difficulty is None:
                 for signage_point_index in range(
                     constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA, constants.NUM_SPS_SUB_SLOT
                 ):
@@ -585,7 +584,9 @@ class BlockTools:
 
                         block_list.append(full_block)
                         sub_blocks_added_this_sub_slot += 1
-                        print(f"Created block {sub_block_record.sub_block_height } ov=True, iters {sub_block_record.total_iters}")
+                        print(
+                            f"Created block {sub_block_record.sub_block_height } ov=True, iters {sub_block_record.total_iters} Finish sub slots: {full_block.finished_sub_slots}"
+                        )
                         num_blocks -= 1
                         if num_blocks == 0:
                             return block_list
@@ -682,7 +683,7 @@ class BlockTools:
                         signage_point,
                         timestamp,
                         seed,
-                        finished_sub_slots=finished_sub_slots,
+                        finished_sub_slots_input=finished_sub_slots,
                     )
                     assert unfinished_block is not None
                     if not is_overflow_block:
@@ -956,12 +957,7 @@ def finish_sub_block(
     )
 
     sub_block_record = full_block_to_sub_block_record(
-        constants,
-        sub_blocks,
-        height_to_hash,
-        required_iters,
-        full_block,
-        None
+        constants, sub_blocks, height_to_hash, required_iters, full_block, None
     )
     return full_block, sub_block_record
 

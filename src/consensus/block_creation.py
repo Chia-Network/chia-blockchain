@@ -1,6 +1,6 @@
 import random
 from dataclasses import replace
-from typing import Optional, Callable, Union, Dict, List
+from typing import Optional, Callable, Dict, List
 
 import blspy
 from blspy import G2Element, G1Element
@@ -35,12 +35,11 @@ from tests.recursive_replace import recursive_replace
 
 def create_foliage(
     constants: ConsensusConstants,
-    reward_sub_block: Union[RewardChainSubBlock, RewardChainSubBlockUnfinished],
+    reward_sub_block: RewardChainSubBlockUnfinished,
     spend_bundle: Optional[SpendBundle],
     prev_sub_block: Optional[SubBlockRecord],
-    prev_block: Optional[SubBlockRecord],
     sub_blocks: Dict[bytes32, SubBlockRecord],
-    is_block: bool,
+    total_iters_sp: uint128,
     timestamp: uint64,
     farmer_reward_puzzlehash: bytes32,
     pool_target: PoolTarget,
@@ -48,8 +47,36 @@ def create_foliage(
     get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
     seed: bytes32 = b"",
 ) -> (FoliageSubBlock, Optional[FoliageBlock], Optional[TransactionsInfo], Optional[Program]):
-    # Use the extension data to create different blocks based on header hash
+    """
+    Creates a foliage for a given reward chain sub block. This may or may not be a block. In the case of a block,
+    the return values are not None. This is called at the signage point, so some of this information may be
+    tweaked at the infusion point.
+
+    Args:
+        constants: consensus constants being used for this chain
+        reward_sub_block: the reward sub block to look at, potentially at the signage point
+        spend_bundle: the spend bundle including all transactions
+        prev_sub_block: the previous sub-block at the signage point
+        sub_blocks: dict from header hash to sub-blocks, of all ancestor sub-blocks
+        total_iters_sp: total iters at the signage point
+        timestamp: timestamp to put into the foliage block
+        farmer_reward_puzzlehash: where to pay out farming reward
+        pool_target: where to pay out pool reward
+        get_plot_signature: retrieve the signature corresponding to the plot public key
+        get_pool_signature: retrieve the signature corresponding to the pool public key
+        seed: seed to randomize block
+
+    """
+
+    if prev_sub_block is not None:
+        is_block, prev_block = get_prev_block(prev_sub_block, sub_blocks, total_iters_sp)
+    else:
+        # Genesis is a block
+        prev_block = None
+        is_block = True
+
     random.seed(seed)
+    # Use the extension data to create different blocks based on header hash
     extension_data: bytes32 = random.randint(0, 100000000).to_bytes(32, "big")
     if prev_sub_block is None:
         sub_block_height: uint32 = uint32(0)
@@ -234,20 +261,44 @@ def create_unfinished_block(
     seed: bytes32 = b"",
     spend_bundle: Optional[SpendBundle] = None,
     prev_sub_block: Optional[SubBlockRecord] = None,
-    sub_blocks=None,
-    finished_sub_slots=[],
+    sub_blocks: Dict[bytes32, SubBlockRecord] = None,
+    finished_sub_slots_input: List[EndOfSubSlotBundle] = None,
 ) -> UnfinishedBlock:
+    """
+    Creates a new unfinished block using all the information available at the signage point. This will have to be
+    modified using information from the infusion point.
+
+    Args:
+        constants: consensus constants being used for this chain
+        sub_slot_start_total_iters: the starting sub-slot iters at the signage point sub-slot
+        sub_slot_iters: sub-slot-iters at the infusion point epoch
+        signage_point_index: signage point index of the sub-block to create
+        sp_iters: sp_iters of the sub-block to create
+        ip_iters: ip_iters of the sub-block to create
+        proof_of_space: proof of space of the sub-block to create
+        slot_cc_challenge: challenge hash at the sp sub-slot
+        farmer_reward_puzzle_hash: where to pay out farmer rewards
+        pool_target: where to pay out pool rewards
+        get_plot_signature: function that returns signature corresponding to plot public key
+        get_pool_signature: function that returns signature corresponding to pool public key
+        signage_point: signage point information (VDFs)
+        timestamp: timestamp to add to the foliage block, if created
+        seed: seed to randomize chain
+        spend_bundle: transactions to add to the foliage block, if created
+        prev_sub_block: previous sub-block (already in chain) from the signage point
+        sub_blocks: dictionary from header hash to SBR of all included SBR
+        finished_sub_slots_input: finished_sub_slots at the signage point
+
+    Returns:
+
+    """
+    if finished_sub_slots_input is None:
+        finished_sub_slots = []
+    else:
+        finished_sub_slots = finished_sub_slots_input.copy()
     overflow = sp_iters > ip_iters
     total_iters_sp = sub_slot_start_total_iters + sp_iters
-    prev_block: Optional[SubBlockRecord] = None  # Set this if we are a block
-    is_genesis = False
-    if prev_sub_block is not None:
-        curr = prev_sub_block
-        is_block, prev_block = get_prev_block(curr, sub_blocks, total_iters_sp)
-    else:
-        # Genesis is a block
-        is_genesis = True
-        is_block = True
+    is_genesis = prev_sub_block is None
 
     new_sub_slot: bool = len(finished_sub_slots) > 0
 
@@ -294,9 +345,8 @@ def create_unfinished_block(
         rc_sub_block,
         spend_bundle,
         prev_sub_block,
-        prev_block,
         sub_blocks,
-        is_block,
+        total_iters_sp,
         timestamp,
         farmer_reward_puzzle_hash,
         pool_target,
@@ -331,6 +381,25 @@ def unfinished_block_to_full_block(
     total_iters_sp: uint128,
     difficulty: uint64,
 ) -> FullBlock:
+    """
+    Converts an unfinished sub block to a finished sub block. Includes all the infusion point VDFs as well as tweaking
+    other properties (height, weight, sub-slots, etc)
+
+    Args:
+        unfinished_block: the unfinished sub-block to finish
+        cc_ip_vdf: the challenge chain vdf info at the infusion point
+        cc_ip_proof: the challenge chain proof
+        rc_ip_vdf: the reward chain vdf info at the infusion point
+        rc_ip_proof: the reward chain proof
+        icc_ip_vdf: the infused challenge chain vdf info at the infusion point
+        icc_ip_proof: the infused challenge chain proof
+        finished_sub_slots: finished sub slots from the prev sub block to the infusion point
+        prev_sub_block: prev sub block from the infusion point
+        sub_blocks: dictionary from header hash to SBR of all included SBR
+        total_iters_sp: total iters at the signage point
+        difficulty: difficulty at the infusion point
+
+    """
     # Replace things that need to be replaced, since foliage blocks did not necessarily have the latest information
     if prev_sub_block is None:
         is_block = True
