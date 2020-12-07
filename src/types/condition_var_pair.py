@@ -14,11 +14,7 @@ class ConditionVarPair:
     opcode: ConditionOpcode
     vars: List[bytes]
 
-    def __init__(
-        self,
-        opc: ConditionOpcode,
-        *args
-    ):
+    def __init__(self, opc: ConditionOpcode, *args):
         i = 0
         var_list = []
         for arg in args:
