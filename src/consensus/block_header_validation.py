@@ -831,7 +831,7 @@ async def validate_finished_header_block(
     if not genesis_block:
         overflow = is_overflow_sub_block(constants, header_block.reward_chain_sub_block.signage_point_index)
         deficit = calculate_deficit(
-            constants, header_block.sub_block_height, prev_sb, overflow, len(header_block.finished_sub_slots) > 0
+            constants, header_block.sub_block_height, prev_sb, overflow, len(header_block.finished_sub_slots)
         )
 
         if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:

@@ -780,7 +780,7 @@ class FullNodeAPI:
     @api_request
     async def new_signage_point_vdf(
         self, request: timelord_protocol.NewSignagePointVDF, peer: ws.WSChiaConnection
-    ) -> Optional[Message]:
+    ) -> None:
         full_node_message = full_node_protocol.RespondSignagePoint(
             request.index_from_challenge,
             request.challenge_chain_sp_vdf,
@@ -788,7 +788,7 @@ class FullNodeAPI:
             request.reward_chain_sp_vdf,
             request.reward_chain_sp_proof,
         )
-        return await self.respond_signage_point(full_node_message, peer)
+        await self.respond_signage_point(full_node_message, peer)
 
     @peer_required
     @api_request
@@ -797,7 +797,7 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         # Calls our own internal message to handle the end of sub slot, and potentially broadcasts to other peers.
         full_node_message = full_node_protocol.RespondEndOfSubSlot(request.end_of_sub_slot_bundle)
-        return await self.respond_end_of_sub_slot(full_node_message, peer)
+        await self.respond_end_of_sub_slot(full_node_message, peer)
 
 
     # @api_request
