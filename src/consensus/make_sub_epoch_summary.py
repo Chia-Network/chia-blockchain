@@ -102,7 +102,7 @@ def next_sub_epoch_summary(
     )
     overflow = is_overflow_sub_block(constants, signage_point_index)
     deficit = calculate_deficit(
-        constants, prev_sb.sub_block_height + 1, prev_sb, overflow, len(block.finished_sub_slots) > 0
+        constants, prev_sb.sub_block_height + 1, prev_sb, overflow, len(block.finished_sub_slots)
     )
     can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
         constants,
