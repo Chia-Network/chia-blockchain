@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List
 
 from src.types.condition_opcodes import ConditionOpcode
 
