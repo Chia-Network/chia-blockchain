@@ -195,7 +195,7 @@ class ChiaServer:
         """
         if (target_node.host == "127.0.0.1" or target_node.host == "localhost") and target_node.port == self._port:
             # Don't connect to self
-            self.log.info(f"Not connecting to {target_node}")
+            self.log.debug(f"Not connecting to {target_node}")
             return False
 
         ssl_context = ssl_context_for_client(self._private_cert_path, self._private_key_path, auth)
@@ -203,8 +203,14 @@ class ChiaServer:
         try:
             timeout = aiohttp.ClientTimeout(total=10)
             session = aiohttp.ClientSession(timeout=timeout)
+
+            # ipv6 localhost format
+            # todo fix ipv6 in a less patchy way
+            if target_node.host == "::1":
+                target_node = PeerInfo("[::1]", target_node.port)
+
             url = f"wss://{target_node.host}:{target_node.port}/ws"
-            self.log.info(f"Connecting: {url}")
+            self.log.info(f"Connecting: {url}, Peer info: {target_node}")
             ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
             if ws is not None:
                 connection = WSChiaConnection(
