@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Tuple, List, Optional, Set
 
+from chiabip158 import PyBIP158
+
 from src.types.header_block import HeaderBlock
 from src.types.name_puzzle_condition import NPC
 from src.types.coin import Coin
@@ -83,7 +85,25 @@ class FullBlock(Streamable):
         )
         return pool_coin, farmer_coin
 
-    def get_block_header(self) -> HeaderBlock:
+    async def get_block_header(self) -> HeaderBlock:
+        # Create filter
+        if self.is_block():
+            byte_array_tx: List[bytes32] = []
+            removals_names, addition_coins = await self.tx_removals_and_additions()
+
+            for coin in addition_coins:
+                byte_array_tx.append(bytearray(coin.puzzle_hash))
+            for name in removals_names:
+                byte_array_tx.append(bytearray(name))
+
+            for coin in self.get_included_reward_coins():
+                byte_array_tx.append(bytearray(coin.puzzle_hash))
+
+            bip158: PyBIP158 = PyBIP158(byte_array_tx)
+            encoded_filter: bytes = bytes(bip158.GetEncoded())
+        else:
+            encoded_filter = b""
+
         return HeaderBlock(
             self.finished_sub_slots,
             self.reward_chain_sub_block,
@@ -94,7 +114,7 @@ class FullBlock(Streamable):
             self.infused_challenge_chain_ip_proof,
             self.foliage_sub_block,
             self.foliage_block,
-            b"",  # No filter #todo
+            encoded_filter,
         )
 
     def get_included_reward_coins(self) -> Set[Coin]:

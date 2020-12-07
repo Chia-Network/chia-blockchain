@@ -1,9 +1,10 @@
-from typing import Dict
+from typing import Dict, Union
 
 from src.consensus.sub_block_record import SubBlockRecord
+from src.types.header_block import HeaderBlock
 
 
-def find_fork_point_in_chain(hash_to_block: Dict, sub_block_1: SubBlockRecord, sub_block_2: SubBlockRecord) -> int:
+def find_fork_point_in_chain(hash_to_block: Dict, sub_block_1: Union[SubBlockRecord, HeaderBlock], sub_block_2: Union[SubBlockRecord, HeaderBlock]) -> int:
     """Tries to find height where new chain (sub_block_2) diverged from sub_block_1 (assuming prev blocks
     are all included in chain)
     Returns -1 if chains have no common ancestor

@@ -10,7 +10,7 @@ from src.consensus.block_body_validation import validate_block_body
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.consensus.difficulty_adjustment import get_next_difficulty, get_next_sub_slot_iters
-from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
+from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
@@ -179,7 +179,7 @@ class Blockchain:
             self.constants,
             self.sub_blocks,
             self.sub_height_to_hash,
-            block.get_block_header(),
+            await block.get_block_header(),
             False,
         )
 
@@ -195,13 +195,8 @@ class Blockchain:
         if error_code is not None:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
-        sub_block = full_block_to_sub_block_record(
-            self.constants,
-            self.sub_blocks,
-            self.sub_height_to_hash,
-            required_iters,
-            block,
-            None
+        sub_block = block_to_sub_block_record(
+            self.constants, self.sub_blocks, self.sub_height_to_hash, required_iters, block, None
         )
 
         # Always add the block to the database
