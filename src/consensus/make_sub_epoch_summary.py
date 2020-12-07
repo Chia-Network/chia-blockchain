@@ -30,8 +30,16 @@ def make_sub_epoch_summary(
 ) -> SubEpochSummary:
     """
     Creates a sub-epoch-summary object, assuming that the first sub-block in the new sub-epoch is at height
-    "blocks_included_height". Prev_sb is the last sub block in the previous sub-epoch. On a new epoch,
+    "blocks_included_height". Prev_prev_sb is the second to last sub block in the previous sub-epoch. On a new epoch,
     new_difficulty and new_sub_slot_iters are also added.
+
+    Args:
+        constants: consensus constants being used for this chain
+        sub_blocks: dictionary from header hash to SBR of all included SBR
+        blocks_included_height: sub_block height in which the SES will be included
+        prev_prev_sub_block: second to last sub-block in epoch
+        new_difficulty: difficulty in new epoch
+        new_sub_slot_iters: sub slot iters in new epoch
     """
     assert prev_prev_sub_block.sub_block_height == blocks_included_height - 2
 
@@ -56,10 +64,25 @@ def next_sub_epoch_summary(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
-    signage_point_index: uint8,
     required_iters: uint64,
     block: Union[UnfinishedBlock, FullBlock],
 ) -> Optional[SubEpochSummary]:
+    """
+    Returns the sub-epoch summary that can be included in the sub-block after block. If it should include one. Block
+    must be eligible to be the last sub-block in the epoch. If not, returns None. Assumes that there is a new slot
+    ending after block.
+
+    Args:
+        constants: consensus constants being used for this chain
+        sub_blocks: dictionary from header hash to SBR of all included SBR
+        height_to_hash: dictionary from sub-block height to header hash
+        required_iters: required iters of the proof of space in block
+        block: the (potentially) last sub-block in the new epoch
+
+    Returns:
+        object: the new sub-epoch summary
+    """
+    signage_point_index = block.reward_chain_sub_block.signage_point_index
     prev_sb: Optional[SubBlockRecord] = sub_blocks.get(block.prev_header_hash, None)
     if prev_sb is None or prev_sb.sub_block_height == 0:
         return None

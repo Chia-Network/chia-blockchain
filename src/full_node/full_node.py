@@ -176,7 +176,6 @@ class FullNode:
                 self.constants,
                 self.blockchain.sub_blocks,
                 self.blockchain.sub_height_to_hash,
-                peak.signage_point_index,
                 peak.required_iters,
                 peak_block,
             )
@@ -650,6 +649,18 @@ class FullNode:
             sub_height = uint32(0)
         else:
             sub_height = self.blockchain.sub_blocks[block.prev_header_hash].sub_block_height + 1
+
+        ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
+            self.constants,
+            self.blockchain.sub_blocks,
+            self.blockchain.sub_height_to_hash,
+            required_iters,
+            block,
+        )
+        is_overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
+        if ses is not None and ses.new_difficulty is not None and is_overflow:
+            # No overflow sub-blocks in new epoch
+            return
 
         self.full_node_store.add_unfinished_block(sub_height, block)
         self.log.info(f"Added unfinished_block {block.partial_hash}")
