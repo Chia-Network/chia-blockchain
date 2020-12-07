@@ -28,6 +28,7 @@ from src.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
+from src.server.connection_utils import send_all_first_reply
 from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -36,7 +37,6 @@ from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.weight_proof import WeightProof
 from src.util.errors import ConsensusError, Err
 from src.util.ints import uint32, uint128, uint8
 from src.util.path import mkdir, path_from_root
@@ -289,7 +289,7 @@ class FullNode:
 
         for header_hash, potential_peak_block in potential_peaks:
             if potential_peak_block.weight > highest_weight:
-                highest_weight = potential_peak_block.weight
+                highest_weight = potential_peak_block.weightc
                 peak_height = potential_peak_block.sub_block_height
 
         if self.blockchain.get_peak() is not None and highest_weight <= self.blockchain.get_peak().weight:
@@ -297,32 +297,35 @@ class FullNode:
             return
 
         self.log.info(f"Peak height {peak_height}")
-
-        # todo weight proof almog
-        # find fork point
-        # send weight proof message
-        # await for return
-        # if validated continue else fail
-
-        # # Finding the fork point allows us to only download headers and blocks from the fork point
-
-        fork_point_height: uint32 = uint32(0)
-        self.log.info(f"Fork point at height {fork_point_height}")
-
         peers: List[WSChiaConnection] = self.server.get_full_node_connections()
+
+        # find last ses
+        curr = self.blockchain.sub_blocks[self.blockchain.sub_height_to_hash[self.blockchain.peak_height]]
+        while True:
+            if self.blockchain.sub_blocks[curr.header_hash].sub_epoch_summary_included is not None:
+                break
+            curr = self.blockchain.sub_blocks[curr.prev_hash]
+
+        # Finding the fork point allows us to only download headers and blocks from the fork point
+        fork_point_height: uint32 = curr.sub_block_height
+        self.log.info(f"Fork point at height {fork_point_height}")
+        total_proof_blocks = peak_height - curr.sub_block_height
+        # send weight proof message, continue on first response
+        response = await send_all_first_reply(
+            "request_proof_of_weight", full_node_protocol.RequestProofOfWeight(total_proof_blocks, peak_height), peers
+        )
+        # weight proof is from our latest known ses
+        # if validated continue else fail
+        if not self.weight_proof_handler.validate_weight_proof(response[0], curr):
+            self.log.error(f"invalid weight proof {response}")
+            return
 
         self.sync_peers_handler = SyncPeersHandler(
             self.sync_store, peers, fork_point_height, self.blockchain, peak_height, self.server
         )
 
         # Start processing blocks that we have received (no block yet)
-        block_processor = SyncBlocksProcessor(
-            self.sync_store,
-            fork_point_height,
-            uint32(peak_height),
-            self.blockchain,
-        )
-
+        block_processor = SyncBlocksProcessor(self.sync_store, fork_point_height, uint32(peak_height), self.blockchain)
         block_processor_task = asyncio.create_task(block_processor.process())
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
         while not self.sync_peers_handler.done():

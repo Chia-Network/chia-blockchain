@@ -5,9 +5,7 @@ from typing import List, Any, Tuple, Optional
 from src.server.ws_connection import WSChiaConnection
 
 
-async def send_all_first_reply(
-    func, arg, peers: List[WSChiaConnection]
-) -> Optional[Tuple[Any, WSChiaConnection]]:
+async def send_all_first_reply(func, arg, peers: List[WSChiaConnection]) -> Optional[Tuple[Any, WSChiaConnection]]:
     """performs an API request to peers and returns the result of the first response and the peer that sent it."""
 
     async def do_func(peer, func, arg):
