@@ -558,10 +558,13 @@ def get_last_ses_block_idx(
             idx = len(recent_reward_chain) - 1 - idx  # reverse
             # find first block after sub slot end
             curr = recent_reward_chain[idx]
-            while len(curr.finished_sub_slots) == 0:
+            while True :
+                if len(curr.finished_sub_slots) >0:
+                    for slot in curr.finished_sub_slots:
+                        if slot.challenge_chain.subepoch_summary_hash != None:
+                            return curr
                 idx += 1
                 curr = recent_reward_chain[idx]
-            return curr
     return None
 
 
