@@ -57,7 +57,7 @@ export default function FarmLastAttemptedProof() {
               None of your plots have passed the plot filter yet.
             </Trans>
             
-            {size && (
+            {!!size && (
               <>
                 {' '}
                 <Trans id="FarmLastAttemptedProof.emptySubDescription">
