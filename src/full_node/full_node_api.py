@@ -179,8 +179,7 @@ class FullNodeAPI:
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         self.log.info(f"got weight proof request {request}")
         wp = self.full_node.weight_proof_handler.create_proof_of_weight(request.total_number_of_blocks, request.tip)
-        msg = Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp))
-        return msg
+        return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp))
 
     @api_request
     async def respond_proof_of_weight(self, response: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
