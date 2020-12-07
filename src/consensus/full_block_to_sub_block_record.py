@@ -14,7 +14,7 @@ from src.util.ints import uint64, uint32
 from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 
 
-def full_block_to_sub_block_record(
+def block_to_sub_block_record(
     constants: ConsensusConstants,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],

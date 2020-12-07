@@ -4,7 +4,7 @@ from typing import Dict, Optional, List
 
 import pytest
 
-from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
+from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.weight_proof import (
@@ -91,11 +91,11 @@ def load_blocks_dont_validate(blocks):
             cc_challenge,
         )
 
-        sub_blocks[block.header_hash] = full_block_to_sub_block_record(
+        sub_blocks[block.header_hash] = block_to_sub_block_record(
             test_constants, sub_blocks, height_to_hash, required_iters, block, None
         )
         height_to_hash[block.sub_block_height] = block.header_hash
-        header_cache[block.header_hash] = block.get_block_header()
+        header_cache[block.header_hash] = await block.get_block_header()
         prev_block = block
     return header_cache, height_to_hash, sub_blocks
 
