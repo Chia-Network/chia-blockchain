@@ -57,10 +57,13 @@ export default function FarmLastAttemptedProof() {
               None of your plots have passed the plot filter yet.
             </Trans>
             
-            {!!size && (
-              <Trans id="FarmLastAttemptedProof.emptySubDescription">
-                But you are currently farming <FormatBytes value={size} precision={3} />
-              </Trans>
+            {size && (
+              <>
+                {' '}
+                <Trans id="FarmLastAttemptedProof.emptySubDescription">
+                  But you are currently farming <FormatBytes value={size} precision={3} />
+                </Trans>
+              </>
             )}
           </Typography>
         )}
