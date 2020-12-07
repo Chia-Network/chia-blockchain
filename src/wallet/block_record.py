@@ -17,8 +17,8 @@ class HeaderBlockRecord(Streamable):
     """
 
     header: HeaderBlock
-    additions: Optional[List[Coin]]  # A block record without additions is not finished
-    removals: Optional[List[Coin]]  # A block record without removals is not finished
+    additions: List[Coin]  # A block record without additions is not finished
+    removals: List[Coin]  # A block record without removals is not finished
 
     @property
     def header_hash(self):
@@ -31,6 +31,10 @@ class HeaderBlockRecord(Streamable):
     @property
     def height(self):
         return self.header.height
+
+    @property
+    def sub_block_height(self):
+        return self.header.sub_block_height
 
     @property
     def transactions_filter(self):

@@ -20,16 +20,13 @@ from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.weight_proof import init_block_block_cache_mock
 
-from src.protocols import (
-    introducer_protocol,
-    farmer_protocol,
-    full_node_protocol,
-    timelord_protocol,
-    wallet_protocol)
+from src.protocols import introducer_protocol, farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
+from src.protocols.wallet_protocol import RejectHeaderRequest
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
+from src.types.header_block import HeaderBlock
 
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
@@ -846,18 +843,24 @@ class FullNodeAPI:
         full_node_message = full_node_protocol.RespondEndOfSubSlot(request.end_of_sub_slot_bundle)
         await self.respond_end_of_sub_slot(full_node_message, peer)
 
+    @api_request
+    async def request_sub_block_header(self, request: wallet_protocol.RequestSubBlockHeader) -> Optional[Message]:
+        if request.sub_height not in self.full_node.blockchain.sub_height_to_hash:
+            msg = Message("reject_sub_block_header", RejectHeaderRequest(request.sub_height, request.hea))
+            return msg
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
+            self.full_node.blockchain.sub_height_to_hash[request.height]
+        )
+        if block is not None:
+            header_block: HeaderBlock = await block.get_block_header()
+            msg = Message("respond_sub_block_header", wallet_protocol.RespondSubBlockHeader(header_block))
+            return msg
+        return None
 
-    # @api_request
-    # async def request_sub_block_header(self, request: wallet_protocol.RequestSubBlockHeader) -> Optional[Message]:
-    #     if request.height not in self.full_node.blockchain.height_to_hash:
-    #         return
-    #     block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-    #         self.full_node.blockchain.height_to_hash[request.height]
-    #     )
-    #     header_block =
-    #     if block is not None:
-    #         if not request.include_transaction_block:
-    #             block = dataclasses.replace(block, transactions_generator=None)
-    #         msg = Message("respond_sub_block_header", wallet_protocol.RespondSubBlockHeader(block))
-    #         return msg
-    #     return
+    @api_request
+    async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
+        pass
+
+    @api_request
+    async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:
+        pass

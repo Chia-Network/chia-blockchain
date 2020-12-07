@@ -50,9 +50,7 @@ class NewPeak:
 @dataclass(frozen=True)
 @cbor_message
 class RequestSubBlockHeader:
-    height: uint32
-    include_transaction_block: bool
-    transaction_block_height: uint32
+    sub_height: uint32
 
 
 @dataclass(frozen=True)
@@ -65,7 +63,6 @@ class RespondSubBlockHeader:
 @cbor_message
 class RejectHeaderRequest:
     height: uint32
-    header_hash: bytes32
 
 
 @dataclass(frozen=True)
