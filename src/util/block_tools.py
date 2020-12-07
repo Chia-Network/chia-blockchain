@@ -26,7 +26,7 @@ from src.consensus.pot_iterations import (
     calculate_sp_interval_iters,
     is_overflow_sub_block,
 )
-from src.consensus.full_block_to_sub_block_record import full_block_to_sub_block_record
+from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
@@ -957,8 +957,13 @@ def finish_sub_block(
         difficulty,
     )
 
-    sub_block_record = full_block_to_sub_block_record(
-        constants, sub_blocks, height_to_hash, required_iters, full_block, None
+    sub_block_record = block_to_sub_block_record(
+        constants,
+        sub_blocks,
+        height_to_hash,
+        required_iters,
+        full_block,
+        None
     )
     return full_block, sub_block_record
 
@@ -1016,7 +1021,7 @@ def load_block_list(
             sp_hash,
         )
 
-        sub_blocks[full_block.header_hash] = full_block_to_sub_block_record(
+        sub_blocks[full_block.header_hash] = block_to_sub_block_record(
             constants,
             sub_blocks,
             height_to_hash,
