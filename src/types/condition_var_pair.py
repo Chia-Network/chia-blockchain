@@ -24,7 +24,7 @@ class ConditionVarPair:
         for arg in args:
             if arg is not None:
                 assert isinstance(arg, bytes)
-                var_list.append(bytes(arg))
+                var_list.append(arg)
             i = i + 1
         object.__setattr__(self, "opcode", opc)
         object.__setattr__(self, "vars", var_list)
