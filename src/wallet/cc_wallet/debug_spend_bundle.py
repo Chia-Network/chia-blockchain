@@ -83,11 +83,11 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
                 for condition_programs in conditions.values():
                     print()
                     for c in condition_programs:
-                        as_prog = Program.to([c.opcode, c.var1, c.var2])
+                        as_prog = Program.to([c.opcode, c.vars[0], c.vars[1]])
                         print(f"  {disassemble(as_prog)}")
                 print()
                 for _ in conditions.get(ConditionOpcode.ASSERT_COIN_CONSUMED, []):
-                    assert_consumed_set.add(bytes32(_.var1))
+                    assert_consumed_set.add(bytes32(c.vars[0]))
             else:
                 print("(no output conditions generated)")
         print()
