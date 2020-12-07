@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useHistory } from 'react-router';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
 import { Button } from '@material-ui/core';
 import { ChevronRight as ChevronRightIcon } from '@material-ui/icons';
@@ -13,19 +13,22 @@ import PlotAddSelectTemporaryDirectory from './PlotAddSelectTemporaryDirectory';
 import PlotAddSelectFinalDirectory from './PlotAddSelectFinalDirectory';
 import { plotQueueAdd } from '../../../modules/plotQueue';
 import PlotAddConfig from '../../../types/PlotAdd';
+import plotSizes, { defaultPlotSize } from '../../../constants/plotSizes';
+import type { RootState } from '../../../modules/rootReducer';
 
 type FormData = PlotAddConfig;
 
 export default function PlotAdd() {
   const history = useHistory();
   const dispatch = useDispatch();
+  const fingerprint = useSelector((state: RootState) => state.wallet_state.selected_fingerprint);
 
   const methods = useForm<FormData>({
     shouldUnregister: false,
     defaultValues: {
-      plotSize: 32,
+      plotSize: defaultPlotSize.value,
       plotCount: 1,
-      maxRam: 3072,
+      maxRam: defaultPlotSize.defaultRam,
       numThreads: 2,
       numBuckets: 0,
       stripeSize: 65536,
@@ -37,8 +40,21 @@ export default function PlotAdd() {
     },
   });
 
+  const { watch, setValue } = methods;
+  const plotSize = watch('plotSize');
+
+  useEffect(() => {
+    const plotSizeConfig = plotSizes.find(item => item.value === plotSize);
+    if (plotSizeConfig) {
+      setValue('maxRam', plotSizeConfig.defaultRam);
+    }
+  }, [plotSize, setValue]);
+
   const handleSubmit: SubmitHandler<FormData> = (data) => {
-    dispatch(plotQueueAdd(data));
+    dispatch(plotQueueAdd(fingerprint ? {
+      ...data,
+      fingerprint,
+    } : data));
 
     history.push('/dashboard/plot');
   }

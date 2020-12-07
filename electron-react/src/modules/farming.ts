@@ -1,13 +1,11 @@
 import { service_farmer, service_harvester } from '../util/service_names';
 import type Plot from '../types/Plot';
+import type Challenge from '../types/Challenge';
 
 type FarmingState = {
   farmer: {
-    latest_challenges?: {
-      challenge: string;
-      height: number;
-      estimates: number[];
-    }[];
+    latest_challenges?: Challenge[];
+    last_attempted_proofs?: Challenge[];
     connections: {
       bytes_read: number;
       bytes_written: number;
@@ -62,11 +60,14 @@ export default function farmingReducer(
         if (data.success === false) {
           return state;
         }
+
+        const { latest_challenges } = data;
+
         return {
           ...state,
           farmer: {
             ...state.farmer,
-            latest_challenges: data.latest_challenges,
+            latest_challenges,
           },
         };
       }
@@ -102,11 +103,15 @@ export default function farmingReducer(
         if (data.success !== true) {
           return state;
         }
+
+        const { plots } = data;
+        const sortedPlots = plots && [...plots].sort((a, b) => b.size - a.size);
+
         return {
           ...state,
           harvester: {
             ...state.harvester,
-            plots: data.plots,
+            plots: sortedPlots,
             failed_to_open_filenames: data.failed_to_open_filenames,
             not_found_filenames: data.not_found_filenames,
           },

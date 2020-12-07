@@ -1,12 +1,9 @@
-import React, { useMemo } from 'react';
-import { sumBy } from 'lodash';
+import React from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import { Card, Flex, Table, FormatBytes } from '@chia/core';
 import { TableCell, TableRow } from '@material-ui/core';
-import { useSelector } from 'react-redux';
 import Typography from '@material-ui/core/Typography';
-import { RootState } from '../../../modules/rootReducer';
 import type Plot from '../../../types/Plot';
 import PlotStatus from '../PlotStatus';
 import PlotAction from '../PlotAction';
@@ -14,6 +11,7 @@ import PlotHeader from '../PlotHeader';
 import PlotQueueSize from '../queue/PlotQueueSize';
 import PlotQueueActions from '../queue/PlotQueueActions';
 import PlotQueueIndicator from '../queue/PlotQueueIndicator';
+import usePlots from '../../../hooks/usePlots';
 
 const StyledTableRowQueue = styled(TableRow)`
   background-color: ${({ theme }) => theme.palette.type === 'dark' 
@@ -66,21 +64,10 @@ const cols = [{
 }];
 
 export default function PlotOverviewPlots() {
-  const plots = useSelector(
-    (state: RootState) => state.farming_state.harvester.plots ?? [],
-  );
-
-  const sortedPlots = useMemo(() => {
-    return [...plots].sort((a, b) => b.size - a.size);
-  }, [plots]);
-
-  const totalPlotsSize = useMemo(() => {
-    return sumBy(plots, (plot) => plot.file_size);
-  }, [plots]);
-
-  const plotQueue = useSelector(
-    (state: RootState) => state.plot_queue.queue ?? [],
-  );
+  const { plots, size, queue } = usePlots();
+  if (!plots) {
+    return null;
+  }
 
   return (
     <>
@@ -107,13 +94,13 @@ export default function PlotOverviewPlots() {
             </Trans>
             {' '}
             <strong>
-              <FormatBytes value={totalPlotsSize} precision={3} />
+              <FormatBytes value={size} precision={3} />
             </strong>
           </Typography>
         </Flex>
 
-        <Table cols={cols} rows={sortedPlots} pages>
-          {plotQueue.map((item) => {
+        <Table cols={cols} rows={plots} pages>
+          {queue ? queue.map((item) => {
             const { id } = item;
 
             return (
@@ -134,7 +121,7 @@ export default function PlotOverviewPlots() {
                 </TableCell>
               </StyledTableRowQueue>
             );
-          })}
+          }) : null}
         </Table>
       </Card>
     </>

@@ -213,23 +213,23 @@ msgstr "Weight"
 msgid "Block.weightTooltip"
 msgstr "Weight is the total added difficulty of all blocks up to and including this one"
 
-#: src/components/fullNode/FullNode.jsx:407
+#: src/components/fullNode/FullNode.jsx:404
 msgid "BlocksCard.expectedFinishTime"
 msgstr "Expected finish time"
 
-#: src/components/fullNode/FullNode.jsx:398
+#: src/components/fullNode/FullNode.jsx:395
 msgid "BlocksCard.headerHash"
 msgstr "Header Hash"
 
-#: src/components/fullNode/FullNode.jsx:401
+#: src/components/fullNode/FullNode.jsx:398
 msgid "BlocksCard.height"
 msgstr "Height"
 
-#: src/components/fullNode/FullNode.jsx:404
+#: src/components/fullNode/FullNode.jsx:401
 msgid "BlocksCard.timeCreated"
 msgstr "Time Created"
 
-#: src/components/fullNode/FullNode.jsx:389
+#: src/components/fullNode/FullNode.jsx:386
 msgid "BlocksCard.title"
 msgstr "Blocks"
 
@@ -470,51 +470,51 @@ msgstr "Fee"
 msgid "CreateNewCCWallet.generateNewColour"
 msgstr "Generate New Colour"
 
-#: src/components/trading/CreateOffer.jsx:223
+#: src/components/trading/CreateOffer.jsx:222
 msgid "CreateOffer.add"
 msgstr "Add"
 
-#: src/components/trading/CreateOffer.jsx:110
+#: src/components/trading/CreateOffer.jsx:109
 msgid "CreateOffer.addTradePair"
 msgstr "Please add trade pair"
 
-#: src/components/trading/CreateOffer.jsx:214
+#: src/components/trading/CreateOffer.jsx:213
 msgid "CreateOffer.amount"
 msgstr "Amount"
 
-#: src/components/trading/CreateOffer.jsx:133
+#: src/components/trading/CreateOffer.jsx:132
 msgid "CreateOffer.availableOnlyFromElectron"
 msgstr "This feature is available only from electron app"
 
-#: src/components/trading/CreateOffer.jsx:175
+#: src/components/trading/CreateOffer.jsx:174
 msgid "CreateOffer.buyOrSell"
 msgstr "Side"
 
-#: src/components/trading/CreateOffer.jsx:154
+#: src/components/trading/CreateOffer.jsx:153
 msgid "CreateOffer.cancel"
 msgstr "Cancel"
 
-#: src/components/trading/CreateOffer.jsx:193
+#: src/components/trading/CreateOffer.jsx:192
 msgid "CreateOffer.colour"
 msgstr "Colour"
 
-#: src/components/trading/CreateOffer.jsx:161
+#: src/components/trading/CreateOffer.jsx:160
 msgid "CreateOffer.save"
 msgstr "Save"
 
-#: src/components/trading/CreateOffer.jsx:76
+#: src/components/trading/CreateOffer.jsx:75
 msgid "CreateOffer.selectAmount"
 msgstr "Please select amount"
 
-#: src/components/trading/CreateOffer.jsx:86
+#: src/components/trading/CreateOffer.jsx:85
 msgid "CreateOffer.selectBuyOrSell"
 msgstr "Please select buy or sell"
 
-#: src/components/trading/CreateOffer.jsx:64
+#: src/components/trading/CreateOffer.jsx:63
 msgid "CreateOffer.selectCoinType"
 msgstr "Please select coin type"
 
-#: src/components/trading/CreateOffer.jsx:147
+#: src/components/trading/CreateOffer.jsx:146
 msgid "CreateOffer.title"
 msgstr "Create Trade Offer"
 
@@ -774,7 +774,7 @@ msgstr "Actions"
 msgid "FarmFullNodeConnections.connectionStatus"
 msgstr "Connection Status:"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:11
+#: src/components/farm/FarmLastAttemptedProof.tsx:17
 msgid "FarmFullNodeConnections.date"
 msgstr "Date"
 
@@ -783,7 +783,7 @@ msgstr "Date"
 msgid "FarmFullNodeConnections.description"
 msgstr "A harvester is a service running on a machine where plot(s) are actually stored. View your network of connected harvesters below Learn more"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:7
+#: src/components/farm/FarmLastAttemptedProof.tsx:11
 msgid "FarmFullNodeConnections.height"
 msgstr "Height"
 
@@ -802,7 +802,7 @@ msgstr "Node Id"
 msgid "FarmFullNodeConnections.port"
 msgstr "Port"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:15
+#: src/components/farm/FarmLastAttemptedProof.tsx:23
 msgid "FarmFullNodeConnections.time"
 msgstr "Time"
 
@@ -815,19 +815,27 @@ msgstr "Your Full Node Connnection"
 msgid "FarmFullNodeConnections.upDown"
 msgstr "Up/Down"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:21
+#: src/components/farm/FarmLastAttemptedProof.tsx:38
+msgid "FarmLastAttemptedProof.emptyDescription"
+msgstr "None of your plots have passed the plot filter yet."
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:42
+msgid "FarmLastAttemptedProof.emptySubDescription"
+msgstr "But you are currently farming <0/>"
+
+#: src/components/farm/FarmLastAttemptedProof.tsx:31
 msgid "FarmLastAttemptedProof.title"
 msgstr "Last Attempted Proof"
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:23
+#: src/components/farm/FarmLastAttemptedProof.tsx:33
 msgid "FarmLastAttemptedProof.tooltip"
 msgstr "This table shows you the last time your farm attempted to win a block a block challenge."
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:41
+#: src/components/farm/FarmLatestBlockChallenges.tsx:40
 msgid "FarmLatestBlockChallenges.bestEstimate"
 msgstr "Best Estimate"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:46
+#: src/components/farm/FarmLatestBlockChallenges.tsx:45
 msgid "FarmLatestBlockChallenges.bestEstimateTooltip"
 msgstr "Best Estimate is how many seconds of time must be proved for your proofs."
 
@@ -836,8 +844,8 @@ msgstr "Best Estimate is how many seconds of time must be proved for your proofs
 msgid "FarmLatestBlockChallenges.challengeHash"
 msgstr "Challenge Hash"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:61
-#: src/components/farm/FarmLatestBlockChallenges.tsx:67
+#: src/components/farm/FarmLatestBlockChallenges.tsx:60
+#: src/components/farm/FarmLatestBlockChallenges.tsx:66
 msgid "FarmLatestBlockChallenges.description"
 msgstr "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 
@@ -845,11 +853,11 @@ msgstr "Below are the current block challenges. You may or may not have a proof 
 msgid "FarmLatestBlockChallenges.height"
 msgstr "Height"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:75
+#: src/components/farm/FarmLatestBlockChallenges.tsx:74
 msgid "FarmLatestBlockChallenges.subDescription"
 msgstr "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:59
+#: src/components/farm/FarmLatestBlockChallenges.tsx:58
 msgid "FarmLatestBlockChallenges.title"
 msgstr "Latest Block Challenges"
 
@@ -923,11 +931,11 @@ msgstr "Connected"
 msgid "FormatConnectionStatus.notConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:508
+#: src/components/fullNode/FullNode.jsx:505
 msgid "FullNode.title"
 msgstr "Full Node"
 
-#: src/components/fullNode/FullNode.jsx:363
+#: src/components/fullNode/FullNode.jsx:360
 msgid "FullNodeStatus.title"
 msgstr "Full Node Status"
 
@@ -967,11 +975,11 @@ msgstr "Rate Limited"
 msgid "MainWalletList.title"
 msgstr "Select Wallet Type"
 
-#: src/components/trading/ViewOffer.jsx:191
+#: src/components/trading/ViewOffer.jsx:183
 msgid "OfferDropView.dragAndDropOfferFile"
 msgstr "Drag and drop offer file"
 
-#: src/components/trading/ViewOffer.jsx:181
+#: src/components/trading/ViewOffer.jsx:173
 msgid "OfferDropView.selectOffer"
 msgstr "Select Offer"
 
@@ -987,26 +995,23 @@ msgstr "Select Offer"
 #~ msgid "OfferRow.sell"
 #~ msgstr "Sell"
 
-#: src/components/trading/ViewOffer.jsx:251
+#: src/components/trading/ViewOffer.jsx:232
 msgid "OfferView.accept"
 msgstr "Accept"
 
 #: src/components/trading/TradesTable.tsx:16
-#: src/components/trading/ViewOffer.jsx:209
 msgid "OfferView.amount"
 msgstr "Amount"
 
-#: src/components/trading/ViewOffer.jsx:244
+#: src/components/trading/ViewOffer.jsx:225
 msgid "OfferView.cancel"
 msgstr "Cancel"
 
 #: src/components/trading/TradesTable.tsx:19
-#: src/components/trading/ViewOffer.jsx:212
 msgid "OfferView.colour"
 msgstr "Colour"
 
 #: src/components/trading/TradesTable.tsx:13
-#: src/components/trading/ViewOffer.jsx:206
 msgid "OfferView.side"
 msgstr "Side"
 
@@ -1014,11 +1019,11 @@ msgstr "Side"
 #~ msgid "OfferView.title"
 #~ msgstr "View Offer"
 
-#: src/components/trading/ViewOffer.jsx:237
+#: src/components/trading/ViewOffer.jsx:218
 msgid "OfferView.title2"
 msgstr "Offer"
 
-#: src/components/trading/TradingOverview.jsx:425
+#: src/components/trading/TradingOverview.jsx:424
 msgid "PendingTrades.title"
 msgstr "Offers Created"
 
@@ -1041,11 +1046,11 @@ msgstr "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgid "PlotAction.deleteTitle"
 msgstr "Delete Plot"
 
-#: src/components/plot/add/PlotAdd.tsx:54
+#: src/components/plot/add/PlotAdd.tsx:64
 msgid "PlotAdd.createPlot"
 msgstr "Create Plot"
 
-#: src/components/plot/add/PlotAdd.tsx:42
+#: src/components/plot/add/PlotAdd.tsx:52
 msgid "PlotAdd.title"
 msgstr "Add a Plot"
 
@@ -1173,47 +1178,47 @@ msgstr "Plots are allocated space on your hard drive used to farm and earn Chia.
 msgid "PlotHero.doYouHavePlot"
 msgstr "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:59
+#: src/components/plot/overview/PlotOverviewPlots.tsx:58
 msgid "PlotOverviewPlots.action"
 msgstr "Action"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:78
+#: src/components/plot/overview/PlotOverviewPlots.tsx:73
 msgid "PlotOverviewPlots.description"
 msgstr "Want to earn more Chia? Add more plots to your farm."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:36
+#: src/components/plot/overview/PlotOverviewPlots.tsx:35
 msgid "PlotOverviewPlots.harversterId"
 msgstr "Harvester ID"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:46
+#: src/components/plot/overview/PlotOverviewPlots.tsx:45
 msgid "PlotOverviewPlots.plotKey"
 msgstr "Plot Key"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:31
+#: src/components/plot/overview/PlotOverviewPlots.tsx:30
 msgid "PlotOverviewPlots.plotName"
 msgstr "Plot Name"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:41
+#: src/components/plot/overview/PlotOverviewPlots.tsx:40
 msgid "PlotOverviewPlots.plotSeed"
 msgstr "Plot Seed"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:51
+#: src/components/plot/overview/PlotOverviewPlots.tsx:50
 msgid "PlotOverviewPlots.poolKey"
 msgstr "Pool Key"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:26
+#: src/components/plot/overview/PlotOverviewPlots.tsx:25
 msgid "PlotOverviewPlots.size"
 msgstr "K-Size"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:55
+#: src/components/plot/overview/PlotOverviewPlots.tsx:54
 msgid "PlotOverviewPlots.status"
 msgstr "Status"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:72
+#: src/components/plot/overview/PlotOverviewPlots.tsx:67
 msgid "PlotOverviewPlots.title"
 msgstr "Local Harvester Plots"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:85
+#: src/components/plot/overview/PlotOverviewPlots.tsx:80
 msgid "PlotOverviewPlots.totalPlotSize"
 msgstr "Total Plot Size:"
 
@@ -1556,15 +1561,15 @@ msgstr "Rate Limited User Wallet Setup"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "User Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:471
+#: src/components/fullNode/FullNode.jsx:468
 msgid "SearchBlock.blockHash"
 msgstr "Block hash"
 
-#: src/components/fullNode/FullNode.jsx:482
+#: src/components/fullNode/FullNode.jsx:479
 msgid "SearchBlock.search"
 msgstr "Search"
 
-#: src/components/fullNode/FullNode.jsx:465
+#: src/components/fullNode/FullNode.jsx:462
 msgid "SearchBlock.title"
 msgstr "Search block by header hash"
 
@@ -1681,11 +1686,11 @@ msgstr "Not connected"
 msgid "StatusItem.difficulty"
 msgstr "Difficulty"
 
-#: src/components/fullNode/FullNode.jsx:310
+#: src/components/fullNode/FullNode.jsx:307
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "Estimated network space"
 
-#: src/components/fullNode/FullNode.jsx:316
+#: src/components/fullNode/FullNode.jsx:313
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "Estimated sum of all the plotted disk space of all farmers in the network"
 
@@ -1890,7 +1895,7 @@ msgstr "Buy"
 msgid "TradesTable.sell"
 msgstr "Sell"
 
-#: src/components/trading/TradingOverview.jsx:437
+#: src/components/trading/TradingOverview.jsx:435
 msgid "TradingHistory.title"
 msgstr "Trading History"
 

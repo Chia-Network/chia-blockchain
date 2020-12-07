@@ -1,6 +1,12 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 import { Trans } from '@lingui/macro';
-import { Table, Card } from '@chia/core';
+import moment from 'moment';
+import { Table, Card, FormatBytes } from '@chia/core';
+import { Typography } from '@material-ui/core';
+import type { Row } from '../core/Table/Table';
+import usePlots from '../../hooks/usePlots';
+import { RootState } from '../../modules/rootReducer';
 
 const cols = [
   {
@@ -8,18 +14,25 @@ const cols = [
     title: <Trans id="FarmFullNodeConnections.height">Height</Trans>,
   },
   {
-    field: 'date',
+    field(row: Row) {
+      return moment(row.timestamp).format('L');
+    },
     title: <Trans id="FarmFullNodeConnections.date">Date</Trans>,
   },
   {
-    field: 'time',
+    field(row: Row) {
+      return moment(row.timestamp).format('LTS');
+    },
     title: <Trans id="FarmFullNodeConnections.time">Time</Trans>,
   },
 ];
 
 export default function FarmLastAttemptedProof() {
-  const lastAttemtedProof: Object[] = []; // TODO use real data when it is available
+  const { size } = usePlots();
+
+  const lastAttemtedProof = useSelector((state: RootState) => state.local_storage.lastAttepmtedProof ?? []);
   const reducedLastAttemtedProof = lastAttemtedProof.slice(0, 3);
+  const isEmpty = !reducedLastAttemtedProof.length;
 
   return (
     <Card 
@@ -35,7 +48,26 @@ export default function FarmLastAttemptedProof() {
         </Trans>
       )}
     >
-      <Table cols={cols} rows={reducedLastAttemtedProof} />
+      <Table
+        cols={cols}
+        rows={reducedLastAttemtedProof}
+        caption={isEmpty && (
+          <Typography>
+            <Trans id="FarmLastAttemptedProof.emptyDescription">
+              None of your plots have passed the plot filter yet.
+            </Trans>
+            
+            {!!size && (
+              <>
+                {' '}
+                <Trans id="FarmLastAttemptedProof.emptySubDescription">
+                  But you are currently farming <FormatBytes value={size} precision={3} />
+                </Trans>
+              </>
+            )}
+          </Typography>
+        )}
+      />
     </Card>
   );
 }
