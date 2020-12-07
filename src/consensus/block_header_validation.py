@@ -63,6 +63,14 @@ async def validate_unfinished_header_block(
     if genesis_block and header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
         return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
 
+    overflow = is_overflow_sub_block(constants, header_block.reward_chain_sub_block.signage_point_index)
+    if skip_overflow_last_ss_validation and overflow:
+        finished_sub_slots_since_prev = len(header_block.finished_sub_slots) + 1
+    else:
+        finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
+
+    new_sub_slot: bool = finished_sub_slots_since_prev > 0
+
     can_finish_se: bool = False
     can_finish_epoch: bool = False
     if genesis_block:
@@ -74,19 +82,13 @@ async def validate_unfinished_header_block(
         can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
             constants, prev_sb.sub_block_height, prev_sb.deficit, sub_blocks, prev_sb.prev_hash
         )
+        can_finish_se = can_finish_se and new_sub_slot
+        can_finish_epoch = can_finish_epoch and new_sub_slot
 
         # Gets the difficulty and SSI for this sub-block
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             constants, header_block, height_to_hash, prev_sb, sub_blocks
         )
-
-    overflow = is_overflow_sub_block(constants, header_block.reward_chain_sub_block.signage_point_index)
-    if skip_overflow_last_ss_validation and overflow:
-        finished_sub_slots_since_prev = len(header_block.finished_sub_slots) + 1
-    else:
-        finished_sub_slots_since_prev = len(header_block.finished_sub_slots)
-
-    new_sub_slot: bool = finished_sub_slots_since_prev > 0
 
     # 2. Check finished slots that have been crossed since prev_sb
     ses_hash: Optional[bytes32] = None

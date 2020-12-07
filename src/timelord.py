@@ -660,10 +660,25 @@ class Timelord:
                         icc_info,
                         is_block,
                     )
-                    if overflow and self.last_state.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-                        # Do not handle this case, as we don't know whether we are in a new slot overflow, or same slot
-                        # TODO: try to handle this case
-                        break
+                    if self.last_state.first_sub_slot_no_peak:
+                        # Genesis
+                        new_deficit = self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
+                    elif overflow and self.last_state.deficit == self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                        if self.last_state.peak is not None:
+                            assert self.last_state.subslot_end is None
+                            # This means the previous sub-block is also an overflow sub-block, and did not manage
+                            # to lower the deficit, therefore we cannot lower it either. (new slot)
+                            new_deficit = self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+                        else:
+                            # This means we are the first infusion in this sub-slot. This may be a new slot or not.
+                            assert self.last_state.subslot_end is not None
+                            if self.last_state.subslot_end.infused_challenge_chain is None:
+                                # There is no ICC, which means we are not finishing a slot. We can reduce the deficit.
+                                new_deficit = self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1
+                            else:
+                                # There is an ICC, which means we are finishing a slot. Different slot, so can't change
+                                # the deficit
+                                new_deficit = self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
                     else:
                         new_deficit = max(self.last_state.deficit - 1, 0)
 

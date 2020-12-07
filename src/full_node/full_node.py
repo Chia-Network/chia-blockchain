@@ -175,7 +175,6 @@ class FullNode:
                 self.constants,
                 self.blockchain.sub_blocks,
                 self.blockchain.sub_height_to_hash,
-                peak.signage_point_index,
                 peak.required_iters,
                 peak_block,
             )
@@ -657,7 +656,6 @@ class FullNode:
             self.constants,
             self.blockchain.sub_blocks,
             self.blockchain.sub_height_to_hash,
-            block.reward_chain_sub_block.signage_point_index,
             required_iters,
             block,
         )
