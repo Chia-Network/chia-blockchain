@@ -19,21 +19,34 @@ def _get_blocks_at_height(
     height_to_hash: Dict[uint32, bytes32],
     sub_blocks: Dict[bytes32, SubBlockRecord],
     prev_sb: SubBlockRecord,
-    target_height: uint32,
-    max_num_blocks: uint32 = 1,
+    target_sub_block_height: uint32,
+    max_num_sub_blocks: uint32 = 1,
 ) -> List[SubBlockRecord]:
+    """
+    Return a consecutive list of SubBlockRecords starting at target_sub_block_height, returning a maximum of
+    max_num_sub_blocks. Assumes all sub-block records are present. Does a slot linear search, if the sub-blocks are not
+    in the path of the peak.
+
+    Args:
+        height_to_hash: dict from sub_block_height to header hash (for path to peak)
+        sub_blocks: dict from header hash to SubBlockRecord.
+        prev_sb: prev_sb (to start backwards search).
+        target_sub_block_height: target sub-block to start
+        max_num_sub_blocks: max number of sub-blocks to fetch (although less might be fetched)
+
+    """
     if height_to_hash[prev_sb.sub_block_height] == prev_sb.header_hash:
         # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain
         return [
             sub_blocks[height_to_hash[uint32(h)]]
-            for h in range(target_height, target_height + max_num_blocks)
+            for h in range(target_sub_block_height, target_sub_block_height + max_num_sub_blocks)
             if h in height_to_hash
         ]
     # slow fetching, goes back one by one
     curr_b: SubBlockRecord = prev_sb
     target_blocks = []
-    while curr_b.sub_block_height >= target_height:
-        if curr_b.sub_block_height < target_height + max_num_blocks:
+    while curr_b.sub_block_height >= target_sub_block_height:
+        if curr_b.sub_block_height < target_sub_block_height + max_num_sub_blocks:
             target_blocks.append(curr_b)
         if curr_b.sub_block_height == 0:
             break
@@ -48,14 +61,26 @@ def _get_last_block_in_previous_epoch(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     prev_sb: SubBlockRecord,
 ) -> SubBlockRecord:
+    """
+    Retrieves the last block (not sub-block) in the previous epoch, which is infused before the last sub-block in
+    the epoch. This will be used for difficulty adjustment.
 
-    #       prev epoch surpassed  prev epoch started                  epoch sur.  epoch started
-    #        v                       v                                v         v
-    #  |.B...B....B. B....B...|......B....B.....B...B.|.B.B.B..|..B...B.B.B...|.B.B.B. B.|........
+    Args:
+        constants: consensus constants being used for this chain
+        next_sub_height: sub-block height of the first sub-block in the new epoch
+        sub_height_to_hash: sub-block height to header hash map for sub-blocks in peak path
+        sub_blocks: dict from header hash to sub-block of all relevant sub-blocks
+        prev_sb: last-sub-block in the current epoch.
 
-    # The sub-blocks selected for the timestamps are the last sub-block which is also a block, and which is infused
-    # before the final sub-block in the epoch. Block at height 0 is an exception.
+           prev epoch surpassed  prev epoch started                  epoch sur.  epoch started
+            v                       v                                v         v
+      |.B...B....B. B....B...|......B....B.....B...B.|.B.B.B..|..B...B.B.B...|.B.B.B. B.|........
+            PREV EPOCH                 CURR EPOCH                               NEW EPOCH
+
+     The sub-blocks selected for the timestamps are the last sub-block which is also a block, and which is infused
+     before the final sub-block in the epoch. Block at height 0 is an exception.
     # TODO: check edge cases here
+    """
     height_epoch_surpass: uint32 = next_sub_height - (next_sub_height % constants.EPOCH_SUB_BLOCKS)
     height_prev_epoch_surpass: uint32 = height_epoch_surpass - constants.EPOCH_SUB_BLOCKS
     if (next_sub_height - height_epoch_surpass) > constants.MAX_SUB_SLOT_SUB_BLOCKS:
@@ -105,19 +130,26 @@ def _get_last_block_in_previous_epoch(
 
 def can_finish_sub_and_full_epoch(
     constants: ConsensusConstants,
-    height: uint32,
+    sub_block_height: uint32,
     deficit: uint8,
     sub_blocks: Dict[bytes32, SubBlockRecord],
     prev_header_hash: Optional[bytes32],
 ) -> (bool, bool):
     """
     Returns a bool tuple
-    first bool is true if the next sub-slot after height will form part of a new sub-epoch and epoch.
-    second bool is true if the next sub-slot after height will form part of a new sub-epoch and epoch.
+    first bool is true if the next sub-slot after sub_block_height will form part of a new sub-epoch.
+    second bool is true if the next sub-slot after sub_block_height will form part of a new sub-epoch and epoch.
     Warning: This assumes the previous sub-block did not finish a sub-epoch. TODO: check
+
+    Args:
+        constants: consensus constants being used for this chain
+        sub_block_height: sub-block height of the (potentially) last sub-block in the sub-epoch
+        deficit: deficit of the sub-block at sub_block_height
+        sub_blocks: dictionary from header hash to SBR of all included SBR
+        prev_header_hash: prev_header hash of the sub-block at sub_block_height, assuming not genesis
     """
 
-    if height < constants.SUB_EPOCH_SUB_BLOCKS - 1:
+    if sub_block_height < constants.SUB_EPOCH_SUB_BLOCKS - 1:
         return False, False
 
     assert prev_header_hash is not None
@@ -128,11 +160,11 @@ def can_finish_sub_and_full_epoch(
 
     # Disqualify blocks which are too far past in height
     # The maximum possible height which includes sub epoch summary
-    if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
+    if (sub_block_height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS:
         return False, False
 
     # For sub-blocks which equal 0 or 1, we assume that the sub-epoch has not been finished yet
-    if (height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > 1:
+    if (sub_block_height + 1) % constants.SUB_EPOCH_SUB_BLOCKS > 1:
         already_included_ses = False
         curr: SubBlockRecord = sub_blocks[prev_header_hash]
         while curr.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS > 0:
@@ -145,7 +177,7 @@ def can_finish_sub_and_full_epoch(
             return False, False
 
     # For checking new epoch, make sure the epoch sub blocks are aligned
-    if (height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SLOT_SUB_BLOCKS:
+    if (sub_block_height + 1) % constants.EPOCH_SUB_BLOCKS > constants.MAX_SUB_SLOT_SUB_BLOCKS:
         return True, False
 
     return True, True
@@ -156,19 +188,30 @@ def get_next_sub_slot_iters(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
     prev_header_hash: bytes32,
-    height: uint32,
+    sub_block_height: uint32,
     curr_sub_slot_iters: uint64,
     deficit: uint8,
     new_slot: bool,
     signage_point_total_iters: uint128,
 ) -> uint64:
     """
-    Returns the slot iterations required for the next block after header hash, where new_slot is true iff
-    the next block will be in the next slot.
-    """
-    next_height: uint32 = uint32(height + 1)
+    Returns the slot iterations required for the next block after the one at sub_block_height, where new_slot is true
+    iff the next block will be in the next slot.
 
-    if next_height < constants.EPOCH_SUB_BLOCKS:
+    Args:
+        constants: consensus constants being used for this chain
+        sub_blocks: dictionary from header hash to SBR of all included SBR
+        height_to_hash: sub-block height to header hash map for sub-blocks in peak path
+        prev_header_hash: header hash of the previous sub-block
+        sub_block_height: the sub-block height of the sub-block to look at
+        curr_sub_slot_iters: sub-slot iters at the infusion point of the sub_block at sub_block_height
+        deficit: deficit of the sub_block at sub_block_height
+        new_slot: whether or not there is a new slot after sub_block_height
+        signage_point_total_iters: signage point iters of the sub_block at sub_block_height
+    """
+    next_sub_block_height: uint32 = uint32(sub_block_height + 1)
+
+    if next_sub_block_height < constants.EPOCH_SUB_BLOCKS:
         return uint64(constants.SUB_SLOT_ITERS_STARTING)
 
     if prev_header_hash not in sub_blocks:
@@ -177,12 +220,14 @@ def get_next_sub_slot_iters(
     prev_sb: SubBlockRecord = sub_blocks[prev_header_hash]
 
     # If we are in the same epoch, return same ssi
-    _, can_finish_epoch = can_finish_sub_and_full_epoch(constants, height, deficit, sub_blocks, prev_header_hash)
+    _, can_finish_epoch = can_finish_sub_and_full_epoch(
+        constants, sub_block_height, deficit, sub_blocks, prev_header_hash
+    )
     if not new_slot or not can_finish_epoch:
         return curr_sub_slot_iters
 
     last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(
-        constants, next_height, height_to_hash, sub_blocks, prev_sb
+        constants, next_sub_block_height, height_to_hash, sub_blocks, prev_sb
     )
 
     # Ensure we get a block for the last block as well, and that it is before the signage point
@@ -226,7 +271,7 @@ def get_next_difficulty(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     height_to_hash: Dict[uint32, bytes32],
     prev_header_hash: bytes32,
-    height: uint32,
+    sub_block_height: uint32,
     current_difficulty: uint64,
     deficit: uint8,
     new_slot: bool,
@@ -236,10 +281,21 @@ def get_next_difficulty(
     Returns the difficulty of the next sub-block that extends onto sub-block.
     Used to calculate the number of iterations. When changing this, also change the implementation
     in wallet_state_manager.py.
-    """
-    next_height: uint32 = uint32(height + 1)
 
-    if next_height < constants.EPOCH_SUB_BLOCKS:
+    Args:
+        constants: consensus constants being used for this chain
+        sub_blocks: dictionary from header hash to SBR of all included SBR
+        height_to_hash: sub-block height to header hash map for sub-blocks in peak path
+        prev_header_hash: header hash of the previous sub-block
+        sub_block_height: the sub-block height of the sub-block to look at
+        current_difficulty: difficulty at the infusion point of the sub_block at sub_block_height
+        deficit: deficit of the sub_block at sub_block_height
+        new_slot: whether or not there is a new slot after sub_block_height
+        signage_point_total_iters: signage point iters of the sub_block at sub_block_height
+    """
+    next_sub_block_height: uint32 = uint32(sub_block_height + 1)
+
+    if next_sub_block_height < constants.EPOCH_SUB_BLOCKS:
         # We are in the first epoch
         return uint64(constants.DIFFICULTY_STARTING)
 
@@ -249,12 +305,14 @@ def get_next_difficulty(
     prev_sb: SubBlockRecord = sub_blocks[prev_header_hash]
 
     # If we are in the same slot as previous sub-block, return same difficulty
-    can_finish_se, _ = can_finish_sub_and_full_epoch(constants, height, deficit, sub_blocks, prev_header_hash)
-    if not new_slot or not can_finish_se:
+    _, can_finish_epoch = can_finish_sub_and_full_epoch(
+        constants, sub_block_height, deficit, sub_blocks, prev_header_hash
+    )
+    if not new_slot or not can_finish_epoch:
         return current_difficulty
 
     last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(
-        constants, next_height, height_to_hash, sub_blocks, prev_sb
+        constants, next_sub_block_height, height_to_hash, sub_blocks, prev_sb
     )
 
     # Ensure we get a block for the last block as well, and that it is before the signage point
@@ -301,6 +359,19 @@ def get_sub_slot_iters_and_difficulty(
     prev_sb: SubBlockRecord,
     sub_blocks: Dict[bytes32, SubBlockRecord],
 ) -> (uint64, uint64):
+    """
+    Retrieves the current sub_slot iters and difficulty of the sub_block header_block. Note, this is the current
+    difficulty, not the next one.
+
+    Args:
+        constants: consensus constants being used for this chain
+        header_block: the current sub-block
+        height_to_hash: sub-block height to header hash map for sub-blocks in peak path
+        prev_sb: the previous sub-block before header_block
+        sub_blocks: dictionary from header hash to SBR of all included SBR
+
+    """
+
     # genesis
     if prev_sb is None:
         return constants.SUB_SLOT_ITERS_STARTING, constants.DIFFICULTY_STARTING
