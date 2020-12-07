@@ -56,7 +56,7 @@ class WalletSyncStore:
     def get_potential_peaks_tuples(self) -> List[Tuple[bytes32, HeaderBlock]]:
         return list(self.potential_peaks.items())
 
-    def add_potential_peak(self, block: FullBlock) -> None:
+    def add_potential_peak(self, block: HeaderBlock) -> None:
         self.potential_peaks[block.header_hash] = block
 
     def get_potential_peak(self, header_hash: bytes32) -> Optional[HeaderBlock]:
