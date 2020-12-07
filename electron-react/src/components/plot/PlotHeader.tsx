@@ -42,7 +42,7 @@ export default function PlotHeader() {
       <Flex alignItems="center">
         <Flex flexGrow={1} />
         <div>
-          <Button color="primary" onClick={handleAddPlot} startIcon={<AddIcon />}>
+          <Button color="primary" variant="contained" onClick={handleAddPlot} startIcon={<AddIcon />}>
             <Trans id="PlotHeader.addAPlot">Add a Plot</Trans>
           </Button>
           {' '}

@@ -65,10 +65,11 @@ type Props = {
   rowsPerPageOptions?: number[];
   rowsPerPage?: number;
   hideHeader?: boolean;
+  caption?: ReactNode;
 };
 
 export default function Table(props: Props) {
-  const { cols, rows, children, pages, rowsPerPageOptions, rowsPerPage: defaultRowsPerPage, hideHeader } = props;
+  const { cols, rows, children, pages, rowsPerPageOptions, rowsPerPage: defaultRowsPerPage, hideHeader, caption } = props;
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(defaultRowsPerPage ?? 10);
 
@@ -111,6 +112,9 @@ export default function Table(props: Props) {
   return (
     <TableContainer component={Paper}>
       <TableBase>
+        {caption && (
+          <caption>{caption}</caption>
+        )}
         {!hideHeader && (
           <StyledTableHead>
             <TableRow>
@@ -194,4 +198,6 @@ Table.defaultProps = {
   rowsPerPageOptions: [10, 25, 100],
   rowsPerPage: 10,
   hideHeader: false,
+  caption: undefined,
+  children: undefined,
 };

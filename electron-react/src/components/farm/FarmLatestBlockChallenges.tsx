@@ -43,7 +43,7 @@ const cols = [
     width: '200px',
     field(row: Row) {
       if (row.estimates.length > 0) {
-        const seconds = Math.min(...row.estimates) ?? 12312312313;
+        const seconds = Math.min(...row.estimates);
         return moment.duration({ seconds }).humanize();
       }
 

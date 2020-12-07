@@ -1,3 +1,5 @@
+import Fingerprint from './Fingerprint';
+
 type PlotAdd = {
   plotSize: number;
   plotCount: number;
@@ -8,9 +10,9 @@ type PlotAdd = {
   finalLocation: string;
   workspaceLocation: string;
   workspaceLocation2: string;
-
   parallel: boolean;
   delay: number;
+  fingerprint?: Fingerprint;
 };
 
 export default PlotAdd;

@@ -264,6 +264,7 @@ class WebSocketServer:
         u = request["u"]
         r = request["r"]
         s = request["s"]
+        a = request["a"]
 
         command_args: List[str] = []
         command_args += service_name.split(" ")
@@ -276,6 +277,9 @@ class WebSocketServer:
         command_args.append(f"-u={u}")
         command_args.append(f"-r={r}")
         command_args.append(f"-s={s}")
+
+        if a is not None:
+            command_args.append(f"-a={a}")
 
         error = None
         success = False

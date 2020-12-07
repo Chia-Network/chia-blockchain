@@ -23,6 +23,7 @@ function plotNow(
     numBuckets,
     numThreads,
     stripeSize,
+    fingerprint,
   } = config;
 
   return dispatch(
@@ -36,6 +37,7 @@ function plotNow(
       numBuckets,
       numThreads,
       stripeSize,
+      fingerprint,
     ),
   );
 }
