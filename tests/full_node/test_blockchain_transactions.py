@@ -3,11 +3,9 @@ import time
 from typing import Optional
 import pytest
 
-from src.consensus.block_rewards import calculate_base_fee
 from src.consensus.blockchain import ReceiveBlockResult
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.types.header import HeaderData, Header
 from src.types.sized_bytes import bytes32
 from src.full_node.bundle_tools import best_solution_program
 from src.protocols import full_node_protocol
@@ -831,156 +829,156 @@ class TestBlockchainTransactions:
 
         assert error is None
 
-    @pytest.mark.asyncio
-    async def test_invalid_filter(self, two_nodes):
-        num_blocks = 10
-        wallet_a = WALLET_A
-        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
-        receiver_puzzlehash = BURN_PUZZLE_HASH
-
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
-
-        for block in blocks:
-            await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-
-        spent_block = blocks[1]
-
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spent_block.get_coinbase())
-
-        assert spend_bundle is not None
-        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-        await full_node_api_1.respond_transaction(tx)
-
-        sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
-        assert sb is spend_bundle
-
-        last_block = blocks[10]
-        next_spendbundle = await full_node_1.mempool_manager.create_bundle_from_mempool(last_block.header)
-        assert next_spendbundle is not None
-
-        program = best_solution_program(next_spendbundle)
-        aggsig = next_spendbundle.aggregated_signature
-
-        dic_h = {11: (program, aggsig)}
-        new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h)
-
-        next_block = new_blocks[11]
-
-        bad_header = HeaderData(
-            next_block.header.data.height,
-            next_block.header.data.prev_header_hash,
-            next_block.header.data.timestamp,
-            bytes32(bytes([3] * 32)),
-            next_block.header.data.proof_of_space_hash,
-            next_block.header.data.weight,
-            next_block.header.data.total_iters,
-            next_block.header.data.additions_root,
-            next_block.header.data.removals_root,
-            next_block.header.data.farmer_rewards_puzzle_hash,
-            next_block.header.data.total_transaction_fees,
-            next_block.header.data.pool_target,
-            next_block.header.data.aggregated_signature,
-            next_block.header.data.cost,
-            next_block.header.data.extension_data,
-            next_block.header.data.generator_hash,
-        )
-        bad_block = FullBlock(
-            next_block.proof_of_space,
-            next_block.proof_of_time,
-            Header(
-                bad_header,
-                bt.get_plot_signature(bad_header, next_block.proof_of_space.plot_public_key),
-            ),
-            next_block.transactions_generator,
-            next_block.transactions_filter,
-        )
-        result, removed, error_code = await full_node_1.blockchain.receive_block(bad_block)
-        assert result == ReceiveBlockResult.INVALID_BLOCK
-        assert error_code == Err.INVALID_TRANSACTIONS_FILTER_HASH
-
-        result, removed, error_code = await full_node_1.blockchain.receive_block(next_block)
-        assert result == ReceiveBlockResult.NEW_TIP
-
-    @pytest.mark.asyncio
-    async def test_assert_fee_condition(self, two_nodes):
-
-        num_blocks = 10
-        wallet_a = WALLET_A
-        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
-        receiver_puzzlehash = BURN_PUZZLE_HASH
-
-        # Farm blocks
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
-
-        for block in blocks:
-            await full_node_api_1.respond_block(full_node_protocol.RespondSubBlock(block))
-
-        # Coinbase that gets spent
-        block1 = blocks[1]
-
-        # This condition requires fee to be 10 mojo
-        cvp_fee = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None)
-        block1_dic = {cvp_fee.opcode: [cvp_fee]}
-        # This spendbundle has 9 mojo as fee
-        invalid_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block1.get_coinbase(), block1_dic, 9
-        )
-
-        assert invalid_spend_bundle is not None
-        program = best_solution_program(invalid_spend_bundle)
-        aggsig = invalid_spend_bundle.aggregated_signature
-
-        # Create another block that includes our transaction
-        dic_h = {11: (program, aggsig)}
-        invalid_new_blocks = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks,
-            10,
-            b"",
-            coinbase_puzzlehash,
-            dic_h,
-            fees=uint64(9),
-        )
-
-        # Try to validate that block at index 11
-        next_block = invalid_new_blocks[11]
-        error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
-
-        assert error is Err.ASSERT_FEE_CONDITION_FAILED
-
-        # This condition requires fee to be 10 mojo
-        cvp_fee = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None)
-        condition_dict = {cvp_fee.opcode: [cvp_fee]}
-        valid_spend_bundle = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, block1.get_coinbase(), condition_dict, 10
-        )
-
-        assert valid_spend_bundle is not None
-        valid_program = best_solution_program(valid_spend_bundle)
-        aggsig = valid_spend_bundle.aggregated_signature
-
-        dic_h = {11: (valid_program, aggsig)}
-        valid_new_blocks = bt.get_consecutive_blocks(
-            test_constants,
-            1,
-            blocks[:11],
-            10,
-            b"",
-            coinbase_puzzlehash,
-            dic_h,
-            fees=uint64(10),
-        )
-
-        next_block = valid_new_blocks[11]
-        fee_base = calculate_base_fee(next_block.height)
-        error = await full_node_1.blockchain._validate_transactions(next_block, fee_base)
-
-        assert error is None
-
-        for block in valid_new_blocks:
-            await full_node_api_1.respond_block(full_node_protocol.RespondSubBlock(block))
+    # @pytest.mark.asyncio
+    # async def test_invalid_filter(self, two_nodes):
+    #     num_blocks = 10
+    #     wallet_a = WALLET_A
+    #     coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+    #     receiver_puzzlehash = BURN_PUZZLE_HASH
+    #
+    #     blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+    #     full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
+    #     full_node_1 = full_node_api_1.full_node
+    #
+    #     for block in blocks:
+    #         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+    #
+    #     spent_block = blocks[1]
+    #
+    #     spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spent_block.get_coinbase())
+    #
+    #     assert spend_bundle is not None
+    #     tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
+    #     await full_node_api_1.respond_transaction(tx)
+    #
+    #     sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
+    #     assert sb is spend_bundle
+    #
+    #     last_block = blocks[10]
+    #     next_spendbundle = await full_node_1.mempool_manager.create_bundle_from_mempool(last_block.header)
+    #     assert next_spendbundle is not None
+    #
+    #     program = best_solution_program(next_spendbundle)
+    #     aggsig = next_spendbundle.aggregated_signature
+    #
+    #     dic_h = {11: (program, aggsig)}
+    #     new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h)
+    #
+    #     next_block = new_blocks[11]
+    #
+    #     bad_header = HeaderData(
+    #         next_block.header.data.height,
+    #         next_block.header.data.prev_header_hash,
+    #         next_block.header.data.timestamp,
+    #         bytes32(bytes([3] * 32)),
+    #         next_block.header.data.proof_of_space_hash,
+    #         next_block.header.data.weight,
+    #         next_block.header.data.total_iters,
+    #         next_block.header.data.additions_root,
+    #         next_block.header.data.removals_root,
+    #         next_block.header.data.farmer_rewards_puzzle_hash,
+    #         next_block.header.data.total_transaction_fees,
+    #         next_block.header.data.pool_target,
+    #         next_block.header.data.aggregated_signature,
+    #         next_block.header.data.cost,
+    #         next_block.header.data.extension_data,
+    #         next_block.header.data.generator_hash,
+    #     )
+    #     bad_block = FullBlock(
+    #         next_block.proof_of_space,
+    #         next_block.proof_of_time,
+    #         Header(
+    #             bad_header,
+    #             bt.get_plot_signature(bad_header, next_block.proof_of_space.plot_public_key),
+    #         ),
+    #         next_block.transactions_generator,
+    #         next_block.transactions_filter,
+    #     )
+    #     result, removed, error_code = await full_node_1.blockchain.receive_block(bad_block)
+    #     assert result == ReceiveBlockResult.INVALID_BLOCK
+    #     assert error_code == Err.INVALID_TRANSACTIONS_FILTER_HASH
+    #
+    #     result, removed, error_code = await full_node_1.blockchain.receive_block(next_block)
+    #     assert result == ReceiveBlockResult.NEW_TIP
+    #
+    # @pytest.mark.asyncio
+    # async def test_assert_fee_condition(self, two_nodes):
+    #
+    #     num_blocks = 10
+    #     wallet_a = WALLET_A
+    #     coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+    #     receiver_puzzlehash = BURN_PUZZLE_HASH
+    #
+    #     # Farm blocks
+    #     blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+    #     full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
+    #     full_node_1 = full_node_api_1.full_node
+    #
+    #     for block in blocks:
+    #         await full_node_api_1.respond_block(full_node_protocol.RespondSubBlock(block))
+    #
+    #     # Coinbase that gets spent
+    #     block1 = blocks[1]
+    #
+    #     # This condition requires fee to be 10 mojo
+    #     cvp_fee = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None)
+    #     block1_dic = {cvp_fee.opcode: [cvp_fee]}
+    #     # This spendbundle has 9 mojo as fee
+    #     invalid_spend_bundle = wallet_a.generate_signed_transaction(
+    #         1000, receiver_puzzlehash, block1.get_coinbase(), block1_dic, 9
+    #     )
+    #
+    #     assert invalid_spend_bundle is not None
+    #     program = best_solution_program(invalid_spend_bundle)
+    #     aggsig = invalid_spend_bundle.aggregated_signature
+    #
+    #     # Create another block that includes our transaction
+    #     dic_h = {11: (program, aggsig)}
+    #     invalid_new_blocks = bt.get_consecutive_blocks(
+    #         test_constants,
+    #         1,
+    #         blocks,
+    #         10,
+    #         b"",
+    #         coinbase_puzzlehash,
+    #         dic_h,
+    #         fees=uint64(9),
+    #     )
+    #
+    #     # Try to validate that block at index 11
+    #     next_block = invalid_new_blocks[11]
+    #     error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
+    #
+    #     assert error is Err.ASSERT_FEE_CONDITION_FAILED
+    #
+    #     # This condition requires fee to be 10 mojo
+    #     cvp_fee = ConditionVarPair(ConditionOpcode.ASSERT_FEE, int_to_bytes(10), None)
+    #     condition_dict = {cvp_fee.opcode: [cvp_fee]}
+    #     valid_spend_bundle = wallet_a.generate_signed_transaction(
+    #         1000, receiver_puzzlehash, block1.get_coinbase(), condition_dict, 10
+    #     )
+    #
+    #     assert valid_spend_bundle is not None
+    #     valid_program = best_solution_program(valid_spend_bundle)
+    #     aggsig = valid_spend_bundle.aggregated_signature
+    #
+    #     dic_h = {11: (valid_program, aggsig)}
+    #     valid_new_blocks = bt.get_consecutive_blocks(
+    #         test_constants,
+    #         1,
+    #         blocks[:11],
+    #         10,
+    #         b"",
+    #         coinbase_puzzlehash,
+    #         dic_h,
+    #         fees=uint64(10),
+    #     )
+    #
+    #     next_block = valid_new_blocks[11]
+    #     fee_base = calculate_base_fee(next_block.height)
+    #     error = await full_node_1.blockchain._validate_transactions(next_block, fee_base)
+    #
+    #     assert error is None
+    #
+    #     for block in valid_new_blocks:
+    #         await full_node_api_1.respond_block(full_node_protocol.RespondSubBlock(block))
