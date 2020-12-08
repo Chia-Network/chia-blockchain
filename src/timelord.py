@@ -346,13 +346,16 @@ class Timelord:
                         break
 
     async def _stop_chain(self, chain: Chain):
-        stop_ip, _, stop_writer = self.chain_type_to_stream[chain]
-        self.potential_free_clients.append((stop_ip, time.time()))
-        stop_writer.write(b"010")
-        await stop_writer.drain()
-        if chain in self.allows_iters:
-            self.allows_iters.remove(chain)
-        self.unspawned_chains.append(chain)
+        try:
+            stop_ip, _, stop_writer = self.chain_type_to_stream[chain]
+            self.potential_free_clients.append((stop_ip, time.time()))
+            stop_writer.write(b"010")
+            await stop_writer.drain()
+            if chain in self.allows_iters:
+                self.allows_iters.remove(chain)
+            self.unspawned_chains.append(chain)
+        except ConnectionResetError as e:
+            log.error(f"{e}")
 
     def _can_infuse_unfinished_block(self, block: timelord_protocol.NewUnfinishedSubBlock) -> Optional[uint64]:
         sub_slot_iters = self.last_state.get_sub_slot_iters()
@@ -546,7 +549,8 @@ class Timelord:
 
                 if rc_info.challenge != self.last_state.get_challenge(Chain.REWARD_CHAIN):
                     log.warning(
-                        f"SP: Do not have correct challenge {self.last_state.get_challenge(Chain.REWARD_CHAIN).hex()} has {rc_info.challenge}"
+                        f"SP: Do not have correct challenge {self.last_state.get_challenge(Chain.REWARD_CHAIN).hex()}"
+                        f" has {rc_info.challenge}"
                     )
                     # This proof is on an outdated challenge, so don't use it
                     continue
@@ -634,7 +638,8 @@ class Timelord:
 
                     if rc_info.challenge != self.last_state.get_challenge(Chain.REWARD_CHAIN):
                         log.warning(
-                            f"Do not have correct challenge {self.last_state.get_challenge(Chain.REWARD_CHAIN).hex()} has {rc_info.challenge}, partial hash {block.reward_chain_sub_block.get_hash()}"
+                            f"Do not have correct challenge {self.last_state.get_challenge(Chain.REWARD_CHAIN).hex()} "
+                            f"has {rc_info.challenge}, partial hash {block.reward_chain_sub_block.get_hash()}"
                         )
                         # This proof is on an outdated challenge, so don't use it
                         continue
@@ -645,6 +650,8 @@ class Timelord:
                         log.warning("Too many sub-blocks, cannot infuse, discarding")
                         # Too many sub blocks
                         return
+                    overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
+
                     cc_info = dataclasses.replace(cc_info, number_of_iterations=ip_iters)
                     response = timelord_protocol.NewInfusionPointVDF(
                         challenge,
@@ -668,7 +675,6 @@ class Timelord:
                         # We don't know when the last block was, so we can't make peaks
                         return
 
-                    overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
                     sp_total_iters = (
                         ip_total_iters
                         - ip_iters
@@ -778,6 +784,14 @@ class Timelord:
                     icc_ip_vdf = info
                     icc_ip_proof = proof
             assert cc_proof is not None and rc_proof is not None and cc_vdf is not None and rc_vdf is not None
+
+            if rc_vdf.challenge != self.last_state.get_challenge(Chain.REWARD_CHAIN):
+                log.warning(
+                    f"Do not have correct challenge {self.last_state.get_challenge(Chain.REWARD_CHAIN).hex()} has"
+                    f" {rc_vdf.challenge}"
+                )
+                # This proof is on an outdated challenge, so don't use it
+                return
             log.info("Collected end of subslot vdfs.")
             iters_from_sub_slot_start = cc_vdf.number_of_iterations + self.last_state.get_last_ip()
             cc_vdf = dataclasses.replace(cc_vdf, number_of_iterations=iters_from_sub_slot_start)
@@ -834,10 +848,7 @@ class Timelord:
                 f"{eos_bundle.challenge_chain.new_difficulty} New ssi: {eos_bundle.challenge_chain.new_sub_slot_iters}"
             )
 
-            if (
-                self.last_state.get_infused_sub_epoch_summary() is None
-                or self.last_state.get_infused_sub_epoch_summary().new_difficulty is None
-            ):
+            if next_ses is None or next_ses.new_difficulty is None:
                 self.unfinished_blocks = self.overflow_blocks
             else:
                 # No overflow blocks in a new epoch
