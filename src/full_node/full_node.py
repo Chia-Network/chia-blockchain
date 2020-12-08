@@ -654,7 +654,7 @@ class FullNode:
         first_ss_new_epoch = False
         if len(block.finished_sub_slots) > 0:
             num_sub_blocks_in_ss = 1  # Curr
-            if block.finished_sub_slots[-1].challenge_chain.new_difficulty is not None:
+            if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
                 first_ss_new_epoch = True
         else:
             curr = self.blockchain.sub_blocks.get(block.prev_header_hash, None)
