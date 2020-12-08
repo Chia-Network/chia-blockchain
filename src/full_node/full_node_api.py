@@ -354,8 +354,8 @@ class FullNodeAPI:
         )
 
         if added:
-            self.log.warning(
-                f"Finished signage point {request.index_from_challenge}/{self.full_node.constants.NUM_SPS_SUB_SLOT}: "
+            self.log.info(
+                f"⏲️  Finished signage point {request.index_from_challenge}/{self.full_node.constants.NUM_SPS_SUB_SLOT}: "
                 f"{request.challenge_chain_vdf.output.get_hash()} "
             )
             sub_slot_tuple = self.full_node.full_node_store.get_sub_slot(request.challenge_chain_vdf.challenge)
@@ -392,7 +392,7 @@ class FullNodeAPI:
             msg = Message("new_signage_point", broadcast_farmer)
             await self.server.send_to_all([msg], NodeType.FARMER)
         else:
-            self.log.info("Signage point not added")
+            self.log.warning(f"Signage point not added {request}")
 
         return
 
@@ -431,8 +431,8 @@ class FullNodeAPI:
         )
         # It may be an empty list, even if it's not None. Not None means added successfully
         if new_infusions is not None:
-            self.log.warning(
-                f"Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}, number of sub-slots: "
+            self.log.info(
+                f"⏲️  Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}, number of sub-slots: "
                 f"{len(self.full_node.full_node_store.finished_sub_slots)}, "
                 f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
                 f"Deficit {request.end_of_slot_bundle.reward_chain.deficit}"
@@ -462,7 +462,7 @@ class FullNodeAPI:
             msg = Message("new_signage_point", broadcast_farmer)
             await self.server.send_to_all([msg], NodeType.FARMER)
         else:
-            self.log.info("End of slot not added")
+            self.log.warning(f"End of slot not added {request}")
 
     @peer_required
     @api_request
