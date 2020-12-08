@@ -117,10 +117,8 @@ class SyncPeersHandler:
         # Refresh the fully_validated_up_to pointer
         for height in range(self.fully_validated_up_to + 1, self.peak_height + 1):
             if self.sync_store.get_header_hashes_added(uint32(height)) is not None:
-                log.info(f"FV: {height}")
                 self.fully_validated_up_to = uint32(height)
             else:
-                log.info(f"NOT FV: {height}")
                 break
 
         # Number of request slots
@@ -170,7 +168,6 @@ class SyncPeersHandler:
             node_id, request_set = outbound_sets_list[index % len(outbound_sets_list)]
             request_set[uint32(height)] = uint64(int(time.time()))
             request = full_node_protocol.RequestSubBlock(height, True)
-            log.warning(f"Requesting sb: {height}")
             msg = Message("request_sub_block", request)
             await self.server.send_to_specific([msg], node_id)
 
@@ -181,7 +178,7 @@ class SyncPeersHandler:
         header_hash: bytes32 = block.header_hash
         if not isinstance(block, FullBlock):
             return
-        if block.sub_block_height >= self.peak_height:
+        if block.sub_block_height > self.peak_height:
             # This block is wrong, so ignore
             log.info(f"Received header hash that is not in sync path {header_hash} at height {block.sub_block_height}")
             return

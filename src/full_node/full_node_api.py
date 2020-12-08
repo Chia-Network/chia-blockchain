@@ -211,6 +211,9 @@ class FullNodeAPI:
     async def new_unfinished_sub_block(
         self, new_unfinished_sub_block: full_node_protocol.NewUnfinishedSubBlock
     ) -> Optional[Message]:
+        # Ignore if syncing
+        if self.full_node.sync_store.get_sync_mode():
+            return None
         if (
             self.full_node.full_node_store.get_unfinished_block(new_unfinished_sub_block.unfinished_reward_hash)
             is not None
@@ -248,6 +251,9 @@ class FullNodeAPI:
     async def new_signage_point_or_end_of_sub_slot(
         self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot
     ) -> Optional[Message]:
+        # Ignore if syncing
+        if self.full_node.sync_store.get_sync_mode():
+            return None
         if (
             self.full_node.full_node_store.get_signage_point_by_index(
                 new_sp.challenge_hash, new_sp.index_from_challenge, new_sp.last_rc_infusion
