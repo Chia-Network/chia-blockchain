@@ -31,22 +31,22 @@ async def empty_blockchain():
     bc1.shut_down()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def default_400_blocks():
     yield persistent_blocks(400, "test_blocks_400.db")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def default_1000_blocks():
     yield persistent_blocks(1000, "test_blocks_1000.db")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def default_10000_blocks():
     yield persistent_blocks(10000, "test_blocks_10000.db")
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def default_20000_blocks():
     yield persistent_blocks(20000, "test_blocks_20000.db")
 

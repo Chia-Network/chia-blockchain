@@ -306,7 +306,11 @@ class FullNode:
         peers: List[WSChiaConnection] = self.server.get_full_node_connections()
 
         # send weight proof message, continue on first response
-        fork_point_height = await self._fetch_and_validate_weight_proof(peak_hash, peers, target_peak_sb_height)
+        # fork_point_height = await self._fetch_and_validate_weight_proof(peak_hash, peers, target_peak_sb_height)
+        # if fork_point_height is None:
+        #     self.log.error("failed to validate weight proof")
+        #     return
+        fork_point_height = -1
 
         self.sync_peers_handler = SyncPeersHandler(
             self.sync_store, peers, fork_point_height, self.blockchain, target_peak_sb_height, self.server
@@ -375,17 +379,23 @@ class FullNode:
             f"{round((time.time() - sync_start_time)/60, 2)} minutes."
         )
 
-    async def _fetch_and_validate_weight_proof(self, peak_hash, peers, target_peak_sb_height):
+    async def _fetch_and_validate_weight_proof(self, peak_hash, peers, target_peak_sb_height) -> Optional[uint32]:
         response: Optional[Tuple[Any, WSChiaConnection]] = await send_all_first_reply(
             "request_proof_of_weight", full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash), peers
         )
         if response is None:
             self.log.error("response was None")
+            return None
+
         # if validated continue else fail
         weight_proof: WeightProof = response[0].wp
         if not self.weight_proof_handler.validate_weight_proof(weight_proof):
-            self.log.error(f"invalid weight proof {response}")
-            # return
+            self.log.error(
+                f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
+                f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
+            )
+            return None
+
         # iterate through sub epoch summaries to find fork point
         # todo change so we dont have to sort the dict
         fork_point_height = -1
