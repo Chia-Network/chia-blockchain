@@ -78,7 +78,7 @@ class TestGenesisBlock:
 class TestBlockHeaderValidation:
     @pytest.mark.asyncio
     async def test_long_chain(self, empty_blockchain, default_1000_blocks):
-        blocks = bt.get_consecutive_blocks(380)
+        blocks = default_1000_blocks
         for block in blocks:
             if (
                 len(block.finished_sub_slots) > 0
