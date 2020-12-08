@@ -30,7 +30,7 @@ class TestFullSync:
     @pytest.mark.asyncio
     async def test_basic_sync(self, two_nodes):
         # Must be larger than "sync_block_behind_threshold" in the config
-        num_blocks = 40
+        num_blocks = 60
         blocks = bt.get_consecutive_blocks(num_blocks)
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
@@ -41,13 +41,13 @@ class TestFullSync:
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
-        await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 3)
+        await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
 
     @pytest.mark.asyncio
     async def test_short_sync(self, two_nodes):
         # Must be below "sync_block_behind_threshold" in the config
-        num_blocks = 12
-        num_blocks_2 = 9
+        num_blocks = 7
+        num_blocks_2 = 3
         blocks = bt.get_consecutive_blocks(num_blocks)
         blocks_2 = bt.get_consecutive_blocks(num_blocks_2, seed=b"123")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -63,7 +63,4 @@ class TestFullSync:
         await server_2.start_client(
             PeerInfo("localhost", uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
         )
-        for i in range(10):
-            await asyncio.sleep(1)
-            print(full_node_2.full_node.blockchain.get_peak())
         await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
