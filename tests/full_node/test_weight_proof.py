@@ -258,6 +258,20 @@ class TestWeightProof:
         assert wpf.validate_segments(wp, orig_summaries, curr)
 
     @pytest.mark.asyncio
+    async def test_weight_proof_from_genesis(self, default_400_blocks):
+        blocks = default_400_blocks
+        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
+        sub_epoch_end, num_of_blocks = get_prev_ses_block(sub_blocks, blocks[-1].header_hash)
+        print("num of blocks to first ses: ", num_of_blocks)
+        curr = sub_epoch_end
+        wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
+        wpf.log.setLevel(logging.INFO)
+        initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
+        wp = wpf.create_proof_of_weight(uint32(len(header_cache)), uint32(len(blocks)), blocks[-1].header_hash)
+        assert wp is not None
+        assert wpf.validate_weight_proof(wp, sub_blocks[height_to_hash[0]])
+
+    @pytest.mark.asyncio
     async def test_weight_proof(self, default_10000_blocks):
 
         sub_epochs = 1

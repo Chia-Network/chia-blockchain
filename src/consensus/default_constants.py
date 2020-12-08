@@ -49,6 +49,7 @@ testnet_kwargs = {
     # Max block cost in clvm cost units (MAX_BLOCK_COST * CLVM_COST_RATIO_CONSTANT)
     "MAX_BLOCK_COST_CLVM": 225359496,
     "WEIGHT_PROOF_THRESHOLD": 2,
+    "WEIGHT_PROOF_RECENT_BLOCKS": 200,
 }
 
 

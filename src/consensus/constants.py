@@ -53,6 +53,7 @@ class ConsensusConstants:
     MAX_BLOCK_COST_CLVM: int
 
     WEIGHT_PROOF_THRESHOLD: uint8
+    WEIGHT_PROOF_RECENT_BLOCKS: uint8
 
     def replace(self, **changes):
         return dataclasses.replace(self, **changes)

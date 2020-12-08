@@ -18,6 +18,7 @@ from src.consensus.pot_iterations import (
 from src.full_node.full_node import FullNode
 from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
+from src.full_node.weight_proof import init_block_block_cache_mock
 
 from src.protocols import introducer_protocol, farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from src.server.outbound_message import Message, NodeType, OutboundMessage
@@ -32,7 +33,7 @@ from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required
 from src.util.errors import ConsensusError
-from src.util.ints import uint64, uint128, uint8
+from src.util.ints import uint64, uint128, uint8, uint32
 from src.types.peer_info import PeerInfo
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -173,7 +174,11 @@ class FullNodeAPI:
     @api_request
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         self.log.info(f"got weight proof request {request}")
-        wp = self.full_node.weight_proof_handler.create_proof_of_weight(request.total_number_of_blocks, request.tip)
+        cache = await init_block_block_cache_mock(self.full_node.blockchain, uint32(0), request.total_number_of_blocks)
+        self.full_node.weight_proof_handler.set_block_cache(cache)
+        wp = self.full_node.weight_proof_handler.create_proof_of_weight(
+            self.full_node.constants.WEIGHT_PROOF_RECENT_BLOCKS, request.total_number_of_blocks, request.tip
+        )
         return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp))
 
     @api_request
