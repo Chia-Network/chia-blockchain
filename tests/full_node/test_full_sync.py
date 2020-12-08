@@ -7,6 +7,7 @@ from src.protocols import full_node_protocol
 from src.util.ints import uint16
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.time_out_assert import time_out_assert
+from tests.full_node.fixtures import empty_blockchain, default_400_blocks, default_10000_blocks
 
 
 def node_height_at_least(node, h):
@@ -42,6 +43,22 @@ class TestFullSync:
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
         await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
+
+    # @pytest.mark.asyncio
+    # async def test_sync_with_sub_epochs(self, two_nodes, default_400_blocks):
+    #     # Must be larger than "sync_block_behind_threshold" in the config
+    #     num_blocks = len(default_400_blocks)
+    #     blocks = default_400_blocks
+    #     full_node_1, full_node_2, server_1, server_2 = two_nodes
+    #
+    #     for block in blocks:
+    #         await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+    #
+    #     await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+    #
+    #     # The second node should eventually catch up to the first one, and have the
+    #     # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
+    #     await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
 
     @pytest.mark.asyncio
     async def test_short_sync(self, two_nodes):

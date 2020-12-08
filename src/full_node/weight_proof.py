@@ -146,15 +146,20 @@ class WeightProofHandler:
         rng: random.Random = random.Random(tip)
         # ses_hash from the latest sub epoch summary before this part of the chain
         sub_block_height = self.block_cache.sub_block_record(tip).sub_block_height
-        self.log.info(f"build weight proofs, peak : {sub_block_height} num of blocks: {total_number_of_blocks}")
 
         assert sub_block_height >= total_number_of_blocks - 1
         sub_epoch_n: uint32 = uint32(0)
 
         blocks_left = total_number_of_blocks
         curr_height = sub_block_height - (total_number_of_blocks - 1)
+
+        self.log.info(
+            f"build weight proofs, peak : {sub_block_height} num of blocks: {total_number_of_blocks}, start from {curr_height}"
+        )
+
         total_overflow_blocks = 0
         while curr_height < sub_block_height:
+            self.log.info(f"handle {curr_height}")
             # next sub block
             sub_block = self.block_cache.height_to_sub_block_record(curr_height)
             header_block = self.block_cache.height_to_header_block(curr_height)
