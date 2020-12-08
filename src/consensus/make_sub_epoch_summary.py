@@ -19,6 +19,10 @@ from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.ints import uint32, uint64, uint8, uint128
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def make_sub_epoch_summary(
     constants: ConsensusConstants,
@@ -42,14 +46,13 @@ def make_sub_epoch_summary(
         new_sub_slot_iters: sub slot iters in new epoch
     """
     assert prev_prev_sub_block.sub_block_height == blocks_included_height - 2
-
-    # If first sub_epoch
-    if blocks_included_height // constants.SUB_EPOCH_SUB_BLOCKS == 1:
+    # If first sub_epoch. Adds MAX_SUB_SLOT_SUB_BLOCKS because blocks_included_height might be behind
+    if (blocks_included_height + constants.MAX_SUB_SLOT_SUB_BLOCKS) // constants.SUB_EPOCH_SUB_BLOCKS == 1:
         return SubEpochSummary(constants.GENESIS_SES_HASH, constants.FIRST_RC_CHALLENGE, uint8(0), None, None)
     curr: SubBlockRecord = prev_prev_sub_block
     while curr.sub_epoch_summary_included is None:
-        curr = sub_blocks[curr.prev_hash]
-    assert curr.sub_epoch_summary_included is not None
+        curr = sub_blocks.get(curr.prev_hash, None)
+    assert curr is not None
     prev_ses = curr.sub_epoch_summary_included.get_hash()
     return SubEpochSummary(
         prev_ses,
@@ -66,6 +69,7 @@ def next_sub_epoch_summary(
     height_to_hash: Dict[uint32, bytes32],
     required_iters: uint64,
     block: Union[UnfinishedBlock, FullBlock],
+    can_finish_soon: bool = False,
 ) -> Optional[SubEpochSummary]:
     """
     Returns the sub-epoch summary that can be included in the sub-block after block. If it should include one. Block
@@ -78,6 +82,8 @@ def next_sub_epoch_summary(
         height_to_hash: dictionary from sub-block height to header hash
         required_iters: required iters of the proof of space in block
         block: the (potentially) last sub-block in the new epoch
+        can_finish_soon: this is useful when sending SES to timelords. We might not be able to finish it, but we will
+            soon (within MAX_SUB_SLOT_SUB_BLOCKS)
 
     Returns:
         object: the new sub-epoch summary
@@ -85,6 +91,10 @@ def next_sub_epoch_summary(
     signage_point_index = block.reward_chain_sub_block.signage_point_index
     prev_sb: Optional[SubBlockRecord] = sub_blocks.get(block.prev_header_hash, None)
     if prev_sb is None or prev_sb.sub_block_height == 0:
+        return None
+
+    if len(block.finished_sub_slots) > 0 and block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+        # We just included a sub-epoch summary
         return None
 
     assert prev_sb is not None
@@ -110,6 +120,7 @@ def next_sub_epoch_summary(
         deficit,
         sub_blocks,
         prev_sb.header_hash if prev_sb is not None else None,
+        can_finish_soon,
     )
 
     # can't finish se, no summary
@@ -133,6 +144,7 @@ def next_sub_epoch_summary(
             deficit,
             True,
             uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
+            True,
         )
         next_sub_slot_iters = get_next_sub_slot_iters(
             constants,
@@ -144,6 +156,7 @@ def next_sub_epoch_summary(
             deficit,
             True,
             uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
+            True,
         )
 
     return make_sub_epoch_summary(

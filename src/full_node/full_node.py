@@ -11,7 +11,7 @@ import aiosqlite
 import src.server.ws_connection as ws
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
-from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
+from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty, can_finish_sub_and_full_epoch
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.pot_iterations import is_overflow_sub_block
 from src.consensus.sub_block_record import SubBlockRecord
@@ -178,6 +178,7 @@ class FullNode:
                 self.blockchain.sub_height_to_hash,
                 peak.required_iters,
                 peak_block,
+                True,
             )
             recent_rc = self.blockchain.get_recent_reward_challenges()
 
@@ -189,7 +190,6 @@ class FullNode:
                 last_csb_or_eos = curr.total_iters
             else:
                 last_csb_or_eos = curr.ip_sub_slot_total_iters(self.constants)
-
             timelord_new_peak: timelord_protocol.NewPeak = timelord_protocol.NewPeak(
                 peak_block.reward_chain_sub_block,
                 difficulty,
@@ -633,6 +633,54 @@ class FullNode:
                 # This means this unfinished block is pretty far behind, it will not add weight to our chain
                 return
 
+        prev_sb = (
+            None
+            if block.prev_header_hash == self.constants.GENESIS_PREV_HASH
+            else self.blockchain.sub_blocks[block.prev_header_hash]
+        )
+
+        is_overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
+
+        # Count the sub-blocks in sub slot, and check if it's a new epoch
+        first_ss_new_epoch = False
+        if len(block.finished_sub_slots) > 0:
+            num_sub_blocks_in_ss = 1  # Curr
+            if block.finished_sub_slots[-1].challenge_chain.new_difficulty is not None:
+                first_ss_new_epoch = True
+        else:
+            curr = self.blockchain.sub_blocks.get(block.prev_header_hash, None)
+            num_sub_blocks_in_ss = 2  # Curr and prev
+            while (curr is not None) and not curr.first_in_sub_slot:
+                curr = self.blockchain.sub_blocks.get(curr.prev_hash, None)
+                num_sub_blocks_in_ss += 1
+            if (
+                curr is not None
+                and curr.first_in_sub_slot
+                and curr.sub_epoch_summary_included is not None
+                and curr.sub_epoch_summary_included.new_difficulty is not None
+            ):
+                first_ss_new_epoch = True
+            elif prev_sb is not None:
+                # If the prev can finish an epoch, then we are in a new epoch
+                prev_prev = self.blockchain.sub_blocks.get(prev_sb.prev_hash, None)
+                _, can_finish_epoch = can_finish_sub_and_full_epoch(
+                    self.constants,
+                    prev_sb.sub_block_height,
+                    prev_sb.deficit,
+                    self.blockchain.sub_blocks,
+                    prev_sb.header_hash if prev_prev is not None else None,
+                    False,
+                )
+                if can_finish_epoch:
+                    first_ss_new_epoch = True
+
+        if is_overflow and first_ss_new_epoch:
+            # No overflow sub-blocks in new epoch
+            return
+        if num_sub_blocks_in_ss > self.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+            self.log.warning("Too many sub-blocks added, not adding sub-block")
+            return
+
         async with self.blockchain.lock:
             # TODO: pre-validate VDFs outside of lock
             required_iters, error_code = await self.blockchain.validate_unfinished_block(block)
@@ -651,25 +699,12 @@ class FullNode:
             sub_height = self.blockchain.sub_blocks[block.prev_header_hash].sub_block_height + 1
 
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-            self.constants,
-            self.blockchain.sub_blocks,
-            self.blockchain.sub_height_to_hash,
-            required_iters,
-            block,
+            self.constants, self.blockchain.sub_blocks, self.blockchain.sub_height_to_hash, required_iters, block, True
         )
-        is_overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
-        if ses is not None and ses.new_difficulty is not None and is_overflow:
-            # No overflow sub-blocks in new epoch
-            return
 
         self.full_node_store.add_unfinished_block(sub_height, block)
         self.log.info(f"Added unfinished_block {block.partial_hash}")
 
-        prev_sb = (
-            None
-            if block.prev_header_hash == self.constants.GENESIS_PREV_HASH
-            else self.blockchain.sub_blocks[block.prev_header_hash]
-        )
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants,
             block,
