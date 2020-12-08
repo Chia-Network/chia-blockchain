@@ -2,19 +2,18 @@ from .constants import ConsensusConstants
 
 
 testnet_kwargs = {
-    # TODO(mariano): write comments here
     "SLOT_SUB_BLOCKS_TARGET": 7,
-    "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 3,
-    "MAX_SUB_SLOT_SUB_BLOCKS": 12,
-    "NUM_SPS_SUB_SLOT": 16,
-    "SUB_SLOT_ITERS_STARTING": 2 ** 22,
+    "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 3,  # Must be less than half of SLOT_SUB_BLOCKS_TARGET
+    "MAX_SUB_SLOT_SUB_BLOCKS": 20,  # Must be less than half of SUB_EPOCH_SUB_BLOCKS
+    "NUM_SPS_SUB_SLOT": 16,  # Must be a power of 2
+    "SUB_SLOT_ITERS_STARTING": 2 ** 23,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of 2^25, to be used in the VDF iter calculation formula.
-    "DIFFICULTY_STARTING": 2 ** 14,
+    "DIFFICULTY_STARTING": 2 ** 16,
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
-    "SUB_EPOCH_SUB_BLOCKS": 32,  # The number of sub-blocks per sub-epoch, mainnet 284
-    "EPOCH_SUB_BLOCKS": 64,  # The number of sub-blocks per epoch, mainnet 32256
+    "SUB_EPOCH_SUB_BLOCKS": 64,  # The number of sub-blocks per sub-epoch, mainnet 284
+    "EPOCH_SUB_BLOCKS": 128,  # The number of sub-blocks per epoch, mainnet 32256. Must be multiple of SUB_EPOCH_SB
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_PLOT_FILTER": 9,  # H(plot signature of the challenge) must start with these many zeroes
@@ -27,8 +26,8 @@ testnet_kwargs = {
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
         "7a916bdc50d3d0337b0998668a4f439670339467d7e9039b8650ba7b1d4fc1a0"
     ),
-    "GENESIS_PREV_HASH": bytes([0] * 32),
-    "GENESIS_SES_HASH": bytes([0] * 32),
+    "GENESIS_PREV_HASH": bytes([0x00] * 32),
+    "GENESIS_SES_HASH": bytes([0x00] * 32),
     "MAX_VDF_WITNESS_SIZE": 64,
     # Target tx count per sec
     "TX_PER_SEC": 20,
