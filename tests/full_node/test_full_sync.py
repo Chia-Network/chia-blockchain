@@ -30,37 +30,36 @@ class TestFullSync:
     @pytest.mark.asyncio
     async def test_basic_sync(self, two_nodes):
         num_blocks = 40
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
+        blocks = bt.get_consecutive_blocks(num_blocks)
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
-        for i in range(1, num_blocks):
-            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
+        for block in blocks:
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         # The second node should eventually catch up to the first one, and have the
-        # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to a
-        # worse tip)
+        # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
         await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 3)
 
     @pytest.mark.asyncio
     async def test_short_sync(self, two_nodes):
-        num_blocks = 10
-        num_blocks_2 = 4
-        blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10)
-        blocks_2 = bt.get_consecutive_blocks(test_constants, num_blocks_2, [], 10, seed=b"123")
+        num_blocks = 15
+        num_blocks_2 = 12
+        blocks = bt.get_consecutive_blocks(num_blocks)
+        blocks_2 = bt.get_consecutive_blocks(num_blocks_2, seed=b"123")
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
-        # 10 blocks to node_1
-        for i in range(1, num_blocks):
-            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
+        # 15 blocks to node_1
+        for block in blocks:
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        # 4 different blocks to node_2
-        for i in range(1, num_blocks_2):
-            await full_node_2.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks_2[i]))
+        # 12 different blocks to node_2
+        for block in blocks_2:
+            await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        # 6th block from node_1 to node_2
-        await full_node_2.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[5]))
+        # 13th block from node_1 to node_2
+        # await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[-1]))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)

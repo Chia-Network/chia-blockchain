@@ -257,7 +257,11 @@ class FullNodeDiscovery:
                     empty_tables = False
                 initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
                 if addr is not None and initiate_connection:
-                    asyncio.create_task(self.server.start_client(addr, is_feeler=disconnect_after_handshake))
+                    asyncio.create_task(
+                        self.server.start_client(
+                            addr, is_feeler=disconnect_after_handshake, on_connect=self.server.on_connect
+                        )
+                    )
                 sleep_interval = 1 + len(groups) * 0.5
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
                 await asyncio.sleep(sleep_interval)
