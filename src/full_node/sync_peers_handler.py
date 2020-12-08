@@ -6,7 +6,7 @@ from typing import Any, AsyncGenerator, Dict, List, Union
 from src.consensus.blockchain import Blockchain
 from src.full_node.sync_store import SyncStore
 from src.protocols import full_node_protocol
-from src.server.outbound_message import Delivery, Message, NodeType, OutboundMessage
+from src.server.outbound_message import Message, OutboundMessage
 from src.server.server import ChiaServer
 from src.server.ws_connection import WSChiaConnection
 from src.types.full_block import FullBlock
@@ -32,7 +32,7 @@ class SyncPeersHandler:
     # and the time the request was sent.
     current_outbound_sets: Dict[bytes32, Dict[uint32, uint64]]
     sync_store: SyncStore
-    fully_validated_up_to: uint32
+    fully_validated_up_to: int
     potential_blocks_received: Dict[uint32, asyncio.Event]
     potential_blocks: Dict[uint32, Any]
 
@@ -40,7 +40,7 @@ class SyncPeersHandler:
         self,
         sync_store: SyncStore,
         peers: List[WSChiaConnection],
-        fork_height: uint32,
+        fork_height: int,
         blockchain: Blockchain,
         peak_height: uint32,
         server: ChiaServer,
@@ -117,8 +117,10 @@ class SyncPeersHandler:
         # Refresh the fully_validated_up_to pointer
         for height in range(self.fully_validated_up_to + 1, self.peak_height + 1):
             if self.sync_store.get_header_hashes_added(uint32(height)) is not None:
+                log.info(f"FV: {height}")
                 self.fully_validated_up_to = uint32(height)
             else:
+                log.info(f"NOT FV: {height}")
                 break
 
         # Number of request slots
@@ -127,6 +129,7 @@ class SyncPeersHandler:
             free_slots += self.MAX_REQUESTS_PER_PEER - len(request_set)
 
         to_send: List[uint32] = []
+
         # Finds a block height
         for height in range(
             self.fully_validated_up_to + 1,
@@ -166,8 +169,8 @@ class SyncPeersHandler:
             # Add to peer request
             node_id, request_set = outbound_sets_list[index % len(outbound_sets_list)]
             request_set[uint32(height)] = uint64(int(time.time()))
-
             request = full_node_protocol.RequestSubBlock(height, True)
+            log.warning(f"Requesting sb: {height}")
             msg = Message("request_sub_block", request)
             await self.server.send_to_specific([msg], node_id)
 
@@ -194,7 +197,7 @@ class SyncPeersHandler:
 
         # remove block from request set
         for node_id, request_set in self.current_outbound_sets.items():
-            request_set.pop(header_hash, None)
+            request_set.pop(block.sub_block_height, None)
 
         # add to request sets
         await self.add_to_request_sets()
