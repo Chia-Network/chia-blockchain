@@ -13,7 +13,7 @@ class FarmerRpcApi:
         return {"/get_latest_challenges": self.get_latest_challenges}
 
     async def _state_changed(self, change: str) -> List[Dict]:
-        if change == "challenge":
+        if change == "signage_point":
             data = await self.get_latest_challenges({})
             return [
                 create_payload(
@@ -26,7 +26,7 @@ class FarmerRpcApi:
             ]
         return []
 
-    async def get_latest_challenges(self, request: Dict) -> Dict:
+    async def get_signage_point(self, request: Dict) -> Dict:
         response = []
         seen_challenges: Set = set()
         if self.service.current_weight == 0:
