@@ -95,7 +95,7 @@ class FarmerAPI:
             )
 
             msg = Message("request_signatures", request)
-            return msg
+            await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
 
     @api_request
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures):
