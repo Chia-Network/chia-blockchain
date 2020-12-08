@@ -462,10 +462,9 @@ class FullNode:
         elif added == ReceiveBlockResult.INVALID_BLOCK:
             self.log.error(f"Block {header_hash} at height {sub_block.sub_block_height} is invalid with code {error_code}.")
             assert error_code is not None
-            if error_code == Err.TOO_MANY_SUB_BLOCKS:
-                self.log.info(f"Reached the limit of sub_blocks in sub_slot {self.constants.MAX_SUB_SLOT_SUB_BLOCKS}")
-                return
-            self.log.error(f"Block {header_hash} at height {sub_block.height} is invalid with code {error_code}.")
+            self.log.error(
+                f"Block {header_hash} at height {sub_block.sub_block_height} is invalid with code {error_code}."
+            )
             raise ConsensusError(error_code, header_hash)
 
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
@@ -678,6 +677,7 @@ class FullNode:
             # No overflow sub-blocks in new epoch
             return
         if num_sub_blocks_in_ss > self.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+            # TODO: count overflow blocks separately (also in validation)
             self.log.warning("Too many sub-blocks added, not adding sub-block")
             return
 

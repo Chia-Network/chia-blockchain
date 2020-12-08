@@ -799,7 +799,7 @@ class Timelord:
             icc_sub_slot_hash = icc_sub_slot.get_hash() if self.last_state.get_deficit() == 0 else None
             next_ses: Optional[SubEpochSummary] = self.last_state.get_next_sub_epoch_summary()
             if next_ses is not None:
-                log.error(f"INCLUDING SUB EPOCH SUMMARY {next_ses}")
+                log.info(f"Including sub epoch summary{next_ses}")
                 ses_hash = next_ses.get_hash()
                 new_sub_slot_iters = next_ses.new_sub_slot_iters
                 new_difficulty = next_ses.new_difficulty
