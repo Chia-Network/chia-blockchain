@@ -159,7 +159,6 @@ class WeightProofHandler:
 
         total_overflow_blocks = 0
         while curr_height < sub_block_height:
-            self.log.info(f"handle {curr_height}")
             # next sub block
             sub_block = self.block_cache.height_to_sub_block_record(curr_height)
             header_block = self.block_cache.height_to_header_block(curr_height)
@@ -176,20 +175,21 @@ class WeightProofHandler:
                 sub_epoch_blocks_n = get_sub_epoch_block_num(sub_block, self.block_cache)
                 #   sample sub epoch
                 if choose_sub_epoch(sub_epoch_blocks_n, rng, total_number_of_blocks):
-                    self.log.info(f"sub epoch {sub_epoch_n} chosen")
-                    self.log.info(f"sub epoch {sub_epoch_n} has {sub_epoch_blocks_n} blocks")
-                    self.log.info(f"rc_hash in summary {sub_block.finished_reward_slot_hashes[-1]}")
-                    self.log.info(f"rc_hash in prev slot {header_block.finished_sub_slots[-1].reward_chain.get_hash()}")
+                    self.log.debug(f"sub epoch {sub_epoch_n} chosen")
+                    self.log.debug(f"sub epoch {sub_epoch_n} has {sub_epoch_blocks_n} blocks")
+                    self.log.debug(f"rc_hash in summary {sub_block.finished_reward_slot_hashes[-1]}")
+                    self.log.debug(
+                        f"rc_hash in prev slot {header_block.finished_sub_slots[-1].reward_chain.get_hash()}"
+                    )
                     sub_epoch_segments.extend(
                         self.__create_sub_epoch_segments(sub_block, sub_epoch_blocks_n, sub_epoch_n)
                     )
 
-            if recent_blocks_n > 0:
+            if sub_block_height - curr_height <= recent_blocks_n:
                 # add to needed reward chain recent blocks
                 proof_blocks.append(
                     ProofBlockHeader(header_block.finished_sub_slots, header_block.reward_chain_sub_block)
                 )
-                recent_blocks_n -= 1
 
             blocks_left -= 1
             curr_height += 1
@@ -244,6 +244,8 @@ class WeightProofHandler:
         summaries, sub_epoch_data_weight = map_summaries(
             self.constants.SUB_EPOCH_SUB_BLOCKS, prev_ses_hash, weight_proof.sub_epochs, fork_point_difficulty
         )
+
+        self.log.debug(f"validating {len(summaries)} summaries")
 
         last_ses = summaries[uint32(len(summaries) - 1)]
         last_ses_block = get_last_ses_block_idx(self.constants, weight_proof.recent_chain_data)
@@ -619,7 +621,7 @@ def get_last_ses_block_idx(
             while True:
                 if len(curr.finished_sub_slots) > 0:
                     for slot in curr.finished_sub_slots:
-                        if slot.challenge_chain.subepoch_summary_hash != None:
+                        if slot.challenge_chain.subepoch_summary_hash is not None:
                             return curr
                 idx += 1
                 curr = recent_reward_chain[idx]
