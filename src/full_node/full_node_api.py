@@ -777,6 +777,24 @@ class FullNodeAPI:
                 sp_total_iters,
                 difficulty,
             )
+            first_ss_new_epoch = False
+            if len(block.finished_sub_slots) > 0:
+                if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
+                    first_ss_new_epoch = True
+            else:
+                curr = prev_sb
+                while (curr is not None) and not curr.first_in_sub_slot:
+                    curr = self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None)
+                if (
+                    curr is not None
+                    and curr.first_in_sub_slot
+                    and curr.sub_epoch_summary_included is not None
+                    and curr.sub_epoch_summary_included.new_difficulty is not None
+                ):
+                    first_ss_new_epoch = True
+            if first_ss_new_epoch and overflow:
+                # No overflow sub-blocks in the first sub-slot of each epoch
+                return
             try:
                 await self.respond_sub_block(full_node_protocol.RespondSubBlock(block))
             except ConsensusError as e:
