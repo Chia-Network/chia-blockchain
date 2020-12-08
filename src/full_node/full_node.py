@@ -553,7 +553,7 @@ class FullNode:
                     added_eos.reward_chain.end_of_slot_vdf.challenge,
                 )
                 msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
-                await self.server.send_to_all([msg], NodeType.FullNode)
+                await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
             if new_peak.sub_block_height % 1000 == 0:
                 # Occasionally clear the seen list to keep it small
