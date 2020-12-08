@@ -79,9 +79,12 @@ async def validate_unfinished_header_block(
         difficulty = constants.DIFFICULTY_STARTING
     else:
         height: uint32 = uint32(prev_sb.sub_block_height + 1)
-        can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
-            constants, prev_sb.sub_block_height, prev_sb.deficit, sub_blocks, prev_sb.prev_hash
-        )
+        if prev_sb.sub_epoch_summary_included is not None:
+            can_finish_se, can_finish_epoch = False, False
+        else:
+            can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
+                constants, prev_sb.sub_block_height, prev_sb.deficit, sub_blocks, prev_sb.prev_hash, False
+            )
         can_finish_se = can_finish_se and new_sub_slot
         can_finish_epoch = can_finish_epoch and new_sub_slot
 
@@ -103,7 +106,6 @@ async def validate_unfinished_header_block(
                 if genesis_block:
                     # 2a. check sub-slot challenge hash for genesis block
                     if challenge_hash != constants.FIRST_CC_CHALLENGE:
-                        log.error(f"1 {challenge_hash} {constants.FIRST_CC_CHALLENGE}")
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
                 else:
                     curr: SubBlockRecord = prev_sb
@@ -112,7 +114,6 @@ async def validate_unfinished_header_block(
 
                     # 2b. check sub-slot challenge hash for non-genesis block
                     if not curr.finished_challenge_slot_hashes[-1] == challenge_hash:
-                        log.error(f"2 {challenge_hash} {curr.finished_challenge_slot_hashes[-1]}")
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
             else:
                 # 2c. check sub-slot challenge hash for empty slot
@@ -120,9 +121,6 @@ async def validate_unfinished_header_block(
                     not header_block.finished_sub_slots[finished_sub_slot_n - 1].challenge_chain.get_hash()
                     == challenge_hash
                 ):
-                    log.error(
-                        f"3 {challenge_hash} {header_block.finished_sub_slots[finished_sub_slot_n - 1].challenge_chain.get_hash()}"
-                    )
                     return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
 
             if genesis_block:
@@ -366,6 +364,7 @@ async def validate_unfinished_header_block(
                 )
                 expected_hash = expected_sub_epoch_summary.get_hash()
                 if expected_hash != ses_hash:
+                    log.error(f"{expected_sub_epoch_summary}")
                     return None, ValidationError(
                         Err.INVALID_SUB_EPOCH_SUMMARY, f"expected ses hash: {expected_hash} got {ses_hash} "
                     )

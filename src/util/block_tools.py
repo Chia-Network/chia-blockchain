@@ -69,6 +69,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "DIFFICULTY_STARTING": 2 ** 9,
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_SUB_BLOCKS": 140,
+        "MAX_SUB_SLOT_SUB_BLOCKS": 50,
         "EPOCH_SUB_BLOCKS": 280,
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
         "SUB_SLOT_ITERS_STARTING": 2 ** 10,  # Must be a multiple of 64
@@ -441,11 +442,7 @@ class BlockTools:
                 sub_epoch_summary: Optional[SubEpochSummary] = None
             else:
                 sub_epoch_summary: Optional[SubEpochSummary] = next_sub_epoch_summary(
-                    constants,
-                    sub_blocks,
-                    height_to_hash,
-                    latest_sub_block.required_iters,
-                    block_list[-1],
+                    constants, sub_blocks, height_to_hash, latest_sub_block.required_iters, block_list[-1], False
                 )
                 pending_ses = True
 

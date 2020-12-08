@@ -350,7 +350,8 @@ class FullNodeAPI:
 
         if added:
             self.log.warning(
-                f"Finished signage point {request.index_from_challenge}/{self.full_node.constants.NUM_SPS_SUB_SLOT}: {request.challenge_chain_vdf.output.get_hash()}"
+                f"Finished signage point {request.index_from_challenge}/{self.full_node.constants.NUM_SPS_SUB_SLOT}: "
+                f"{request.challenge_chain_vdf.output.get_hash()} "
             )
             sub_slot_tuple = self.full_node.full_node_store.get_sub_slot(request.challenge_chain_vdf.challenge)
             if sub_slot_tuple is not None:
