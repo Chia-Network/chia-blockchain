@@ -37,6 +37,7 @@ from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
+from src.types.weight_proof import WeightProof
 from src.util.errors import ConsensusError, Err
 from src.util.ints import uint32, uint128, uint8
 from src.util.path import mkdir, path_from_root
@@ -280,6 +281,7 @@ class FullNode:
         highest_weight: uint128 = uint128(0)
         target_peak_sb_height: uint32 = uint32(0)
         sync_start_time = time.time()
+        peak_hash: bytes32 = None
 
         # Based on responses from peers about the current heads, see which head is the heaviest
         # (similar to longest chain rule).
@@ -294,6 +296,7 @@ class FullNode:
             if potential_peak_block.weight > highest_weight:
                 highest_weight = potential_peak_block.weight
                 target_peak_sb_height = potential_peak_block.sub_block_height
+                peak_hash = header_hash
 
         if self.blockchain.get_peak() is not None and highest_weight <= self.blockchain.get_peak().weight:
             self.log.info("Not performing sync, already caught up.")
@@ -302,34 +305,8 @@ class FullNode:
         self.log.info(f"Peak height {target_peak_sb_height}")
         peers: List[WSChiaConnection] = self.server.get_full_node_connections()
 
-        # find last ses
-        if self.blockchain.get_peak() is not None:
-            curr = self.blockchain.sub_blocks[self.blockchain.sub_height_to_hash[self.blockchain.peak_height]]
-            while curr.sub_block_height > 1:
-                if self.blockchain.sub_blocks[curr.header_hash].sub_epoch_summary_included is not None:
-                    break
-                curr = self.blockchain.sub_blocks[curr.prev_hash]
-
-            # Finding the fork point allows us to only download headers and blocks from the fork point
-            # TODO (almog): fix
-            fork_point_height: int = -1
-            self.log.info(f"Fork point at height {fork_point_height}")
-            total_proof_sub_blocks = target_peak_sb_height - curr.sub_block_height
-        else:
-            fork_point_height: int = -1
-
-        # TODO: almog
         # send weight proof message, continue on first response
-        # response = await send_all_first_reply(
-        #     "request_proof_of_weight",
-        #     full_node_protocol.RequestProofOfWeight(total_proof_sub_blocks, target_peak_sb_height),
-        #     peers,
-        # )
-        # # weight proof is from our latest known ses
-        # # if validated continue else fail
-        # if not self.weight_proof_handler.validate_weight_proof(response[0], curr):
-        #     self.log.error(f"invalid weight proof {response}")
-        #     return
+        fork_point_height = await self._fetch_and_validate_weight_proof(peak_hash, peers, target_peak_sb_height)
 
         self.sync_peers_handler = SyncPeersHandler(
             self.sync_store, peers, fork_point_height, self.blockchain, target_peak_sb_height, self.server
@@ -397,6 +374,25 @@ class FullNode:
             f"Finished sync up to height {target_peak_sb_height}. Total time: "
             f"{round((time.time() - sync_start_time)/60, 2)} minutes."
         )
+
+    async def _fetch_and_validate_weight_proof(self, peak_hash, peers, target_peak_sb_height):
+        response: Optional[Tuple[Any, WSChiaConnection]] = await send_all_first_reply(
+            "request_proof_of_weight", full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash), peers
+        )
+        if response is None:
+            self.log.error("response was None")
+        # if validated continue else fail
+        weight_proof: WeightProof = response[0].wp
+        if not self.weight_proof_handler.validate_weight_proof(weight_proof):
+            self.log.error(f"invalid weight proof {response}")
+            # return
+        # iterate through sub epoch summaries to find fork point
+        # todo change so we dont have to sort the dict
+        fork_point_height = -1
+        for idx, fork_point_height in enumerate(sorted(self.blockchain.sub_epoch_summaries.keys())):
+            if self.blockchain.sub_epoch_summaries[fork_point_height].get_hash() != weight_proof.sub_epochs[idx]:
+                break
+        return fork_point_height
 
     async def _finish_sync(self):
         """
