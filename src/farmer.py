@@ -117,7 +117,7 @@ class Farmer:
     async def _periodically_clear_cache_task(self):
         time_slept: uint64 = uint64(0)
         while not self._shut_down:
-            if time_slept > self.constants.SUB_SLOT_TIME_TARGET * 10:
+            if time_slept > self.constants.SUB_SLOT_TIME_TARGET * 3:
                 removed_keys: List[bytes32] = []
                 for key, add_time in self.cache_add_time.items():
                     self.sps.pop(key, None)
