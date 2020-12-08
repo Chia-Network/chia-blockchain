@@ -20,22 +20,21 @@ class BlockStore:
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db = connection
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, sub_height bigint, height bigint, is_block tinyint, block blob)"
+            f"CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, sub_height bigint, is_block tinyint, "
+            f"block blob)"
         )
 
         # Sub block records
         await self.db.execute(
             "CREATE TABLE IF NOT EXISTS sub_block_records(header_hash "
-            "text PRIMARY KEY, prev_hash text, sub_height bigint, height bigint, weight bigint, total_iters text,"
+            "text PRIMARY KEY, prev_hash text, sub_height bigint,"
             "sub_block blob, is_peak tinyint, is_block tinyint)"
         )
 
         # Height index so we can look up in order of height for sync purposes
         await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_sub_height on full_blocks(sub_height)")
-        await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_height on full_blocks(height)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS is_block on full_blocks(is_block)")
 
-        await self.db.execute("CREATE INDEX IF NOT EXISTS sub_block_height on sub_block_records(height)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS sub_block_sub_height on sub_block_records(sub_height)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS hh on sub_block_records(header_hash)")
@@ -47,23 +46,23 @@ class BlockStore:
         return self
 
     async def add_full_block(self, block: FullBlock, sub_block: SubBlockRecord) -> None:
-        if block.is_block():
-            height = block.height
-        else:
-            height = sub_block.prev_block_height + 1
-
-        cursor_1 = await self.db.execute("INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
-                       (block.header_hash.hex(), block.sub_block_height, height, int(block.is_block()), bytes(block)),
-                    )
+        cursor_1 = await self.db.execute(
+            "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?)",
+            (block.header_hash.hex(), block.sub_block_height, int(block.is_block()), bytes(block)),
+        )
 
         await cursor_1.close()
-        #  proof_hash = std_hash(block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash())
-        weight = block.weight.to_bytes(128 // 8, "big", signed=False).hex()
-        total_iters = block.total_iters.to_bytes(128 // 8, "big", signed=False).hex()
 
-        cursor_2 = await self.db.execute(f"INSERT OR REPLACE INTO sub_block_records VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-             (block.header_hash.hex(), block.prev_header_hash.hex(), block.sub_block_height, height,
-              weight, total_iters, bytes(sub_block), False, block.is_block())
+        cursor_2 = await self.db.execute(
+            f"INSERT OR REPLACE INTO sub_block_records VALUES(?, ?, ?, ?, ?, ?)",
+            (
+                block.header_hash.hex(),
+                block.prev_header_hash.hex(),
+                block.sub_block_height,
+                bytes(sub_block),
+                False,
+                block.is_block(),
+            ),
         )
         await cursor_2.close()
         await self.db.commit()
@@ -111,8 +110,8 @@ class BlockStore:
         peak: Optional[bytes32] = None
         for row in rows:
             header_hash = bytes.fromhex(row[0])
-            ret[header_hash] = SubBlockRecord.from_bytes(row[6])
-            if row[7]:
+            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
+            if row[4]:
                 assert peak is None  # Sanity check, only one peak
                 peak = header_hash
         return ret, peak
