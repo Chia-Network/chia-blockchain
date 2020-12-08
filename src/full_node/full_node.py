@@ -306,11 +306,11 @@ class FullNode:
         peers: List[WSChiaConnection] = self.server.get_full_node_connections()
 
         # send weight proof message, continue on first response
-        # fork_point_height = await self._fetch_and_validate_weight_proof(peak_hash, peers, target_peak_sb_height)
-        # if fork_point_height is None:
-        #     self.log.error("failed to validate weight proof")
-        #     return
-        fork_point_height = -1
+        fork_point_height = await self._fetch_and_validate_weight_proof(peak_hash, peers, target_peak_sb_height)
+        if fork_point_height is None:
+            self.log.error("failed to validate weight proof")
+            return
+        # fork_point_height = -1
 
         self.sync_peers_handler = SyncPeersHandler(
             self.sync_store, peers, fork_point_height, self.blockchain, target_peak_sb_height, self.server
