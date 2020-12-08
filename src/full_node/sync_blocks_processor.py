@@ -17,14 +17,14 @@ class SyncBlocksProcessor:
     def __init__(
         self,
         sync_store: SyncStore,
-        fork_height: uint32,
+        fork_height: int,
         peak_height: uint32,
         blockchain: Blockchain,
     ):
-        self.sync_store = sync_store
-        self.blockchain = blockchain
-        self.fork_height = fork_height
-        self.peak_height = peak_height
+        self.sync_store: SyncStore = sync_store
+        self.blockchain: Blockchain = blockchain
+        self.fork_height: int = fork_height
+        self.peak_height: uint32 = peak_height
         self._shut_down = False
         self.BATCH_SIZE = 10
         self.SLEEP_INTERVAL = 10
@@ -90,6 +90,7 @@ class SyncBlocksProcessor:
                         raise RuntimeError(f"Invalid block {block.header_hash}")
                 assert self.blockchain.get_peak().sub_block_height >= block.sub_block_height
                 del self.sync_store.potential_blocks[block.sub_block_height]
+
                 self.sync_store.add_header_hashes_added(block.sub_block_height, block.header_hash)
 
             log.info(
