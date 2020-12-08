@@ -178,13 +178,11 @@ class FullNodeStore:
         # Skip if already present
         for slot, _, _ in self.finished_sub_slots:
             if slot == eos:
-                log.warning("Already")
                 return []
 
         if eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge != last_slot_ch:
             # This slot does not append to our next slot
             # This prevent other peers from appending fake VDFs to our cache
-            log.warning("Not append")
             return None
 
         # TODO: Fix
@@ -237,12 +235,10 @@ class FullNodeStore:
                         eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
                         != icc_start_challenge_hash
                     ):
-                        log.error("Bad icc")
                         return None
         else:
             # Empty slot after the peak
             if eos.reward_chain.end_of_slot_vdf.challenge != last_slot_rc_hash:
-                log.error("empty slot after peak")
                 return None
 
             if (
@@ -254,12 +250,11 @@ class FullNodeStore:
                     eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
                     != last_slot.infused_challenge_chain.get_hash()
                 ):
-                    log.warning("ANother bad icc")
                     return None
 
         self.finished_sub_slots.append((eos, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters))
 
-        new_ips = []
+        new_ips: List[timelord_protocol.NewInfusionPointVDF] = []
         for ip in self.future_ip_cache.get(eos.reward_chain.get_hash(), []):
             new_ips.append(ip)
 
