@@ -124,9 +124,7 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
     print(f"fork point is {curr.sub_block_height} (not included)")
     print(f"num of blocks in proof: {num_of_blocks}")
     print(f"num of full sub epochs in proof: {sub_epochs}")
-    print("last ses end of challenge slot")
     # print(f"{header_cache[height_to_hash[9810]].finished_sub_slots[-1].challenge_chain}")
-    print("last ses end of challenge summary")
     # print(f"{sub_blocks[height_to_hash[9810]].sub_epoch_summary_included}")
     wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
     wpf.log.setLevel(logging.INFO)
@@ -237,6 +235,7 @@ class TestWeightProof:
         orig_summaries: Dict[uint32, SubEpochSummary] = {}
         while True:
             if curr.sub_epoch_summary_included is not None:
+                orig_summaries[sub_epochs - 1 - sub_epochs_left] = curr.sub_epoch_summary_included
                 sub_epochs_left -= 1
             if sub_epochs_left <= 0:
                 break
@@ -248,7 +247,7 @@ class TestWeightProof:
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
         wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
-        wpf.log.setLevel(logging.INFO)
+        wpf.log.setLevel(logging.DEBUG)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
         wp = wpf.create_proof_of_weight(uint32(len(header_cache)), uint32(num_of_blocks), blocks[-1].header_hash)
 
@@ -261,7 +260,7 @@ class TestWeightProof:
     @pytest.mark.asyncio
     async def test_weight_proof(self, default_10000_blocks):
 
-        sub_epochs = 3
+        sub_epochs = 1
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
         sub_epoch_end, num_of_blocks = get_prev_ses_block(sub_blocks, blocks[-1].header_hash)
