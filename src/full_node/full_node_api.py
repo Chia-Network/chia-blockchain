@@ -213,7 +213,8 @@ class FullNodeAPI:
         """
         Receive a full block from a peer full node (or ourselves).
         """
-        return await self.full_node.respond_sub_block(respond_sub_block, peer)
+        async with self.full_node.timelord_lock:
+            return await self.full_node.respond_sub_block(respond_sub_block, peer)
 
     @api_request
     async def new_unfinished_sub_block(
@@ -409,68 +410,70 @@ class FullNodeAPI:
     async def respond_end_of_sub_slot(
         self, request: full_node_protocol.RespondEndOfSubSlot, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
-        fetched_ss = self.full_node.full_node_store.get_sub_slot(
-            request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-        )
-        if (
-            (fetched_ss is None)
-            and request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-            != self.full_node.constants.FIRST_CC_CHALLENGE
-        ):
-            # If we don't have the prev, request the prev instead
-            full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
-                request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-                uint8(0),
-                bytes([0] * 32),
-            )
-            return Message("request_signage_point_or_end_of_sub_slot", full_node_request)
 
-        peak = self.full_node.blockchain.get_peak()
-        if peak is not None and peak.sub_block_height > 2:
-            next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
-            next_difficulty = self.full_node.blockchain.get_next_difficulty(peak.header_hash, True)
-        else:
-            next_sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
-            next_difficulty = self.full_node.constants.DIFFICULTY_STARTING
-
-        # Adds the sub slot and potentially get new infusions
-        new_infusions = self.full_node.full_node_store.new_finished_sub_slot(
-            request.end_of_slot_bundle, self.full_node.blockchain.sub_blocks, self.full_node.blockchain.get_peak()
-        )
-        # It may be an empty list, even if it's not None. Not None means added successfully
-        if new_infusions is not None:
-            self.log.info(
-                f"⏲️  Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}, number of sub-slots: "
-                f"{len(self.full_node.full_node_store.finished_sub_slots)}, "
-                f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
-                f"Deficit {request.end_of_slot_bundle.reward_chain.deficit}"
+        async with self.full_node.timelord_lock:
+            fetched_ss = self.full_node.full_node_store.get_sub_slot(
+                request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
             )
-            # Notify full nodes of the new sub-slot
-            broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
-                request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-                request.end_of_slot_bundle.challenge_chain.get_hash(),
-                uint8(0),
-                request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
-            )
-            msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
-            await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            if (
+                (fetched_ss is None)
+                and request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                != self.full_node.constants.FIRST_CC_CHALLENGE
+            ):
+                # If we don't have the prev, request the prev instead
+                full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
+                    request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                    uint8(0),
+                    bytes([0] * 32),
+                )
+                return Message("request_signage_point_or_end_of_sub_slot", full_node_request)
 
-            for infusion in new_infusions:
-                await self.new_infusion_point_vdf(infusion)
+            peak = self.full_node.blockchain.get_peak()
+            if peak is not None and peak.sub_block_height > 2:
+                next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
+                next_difficulty = self.full_node.blockchain.get_next_difficulty(peak.header_hash, True)
+            else:
+                next_sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+                next_difficulty = self.full_node.constants.DIFFICULTY_STARTING
 
-            # Notify farmers of the new sub-slot
-            broadcast_farmer = farmer_protocol.NewSignagePoint(
-                request.end_of_slot_bundle.challenge_chain.get_hash(),
-                request.end_of_slot_bundle.challenge_chain.get_hash(),
-                request.end_of_slot_bundle.reward_chain.get_hash(),
-                next_difficulty,
-                next_sub_slot_iters,
-                uint8(0),
+            # Adds the sub slot and potentially get new infusions
+            new_infusions = self.full_node.full_node_store.new_finished_sub_slot(
+                request.end_of_slot_bundle, self.full_node.blockchain.sub_blocks, self.full_node.blockchain.get_peak()
             )
-            msg = Message("new_signage_point", broadcast_farmer)
-            await self.server.send_to_all([msg], NodeType.FARMER)
-        else:
-            self.log.warning(f"End of slot not added {request}")
+            # It may be an empty list, even if it's not None. Not None means added successfully
+            if new_infusions is not None:
+                self.log.info(
+                    f"⏲️  Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}, number of sub-slots: "
+                    f"{len(self.full_node.full_node_store.finished_sub_slots)}, "
+                    f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
+                    f"Deficit {request.end_of_slot_bundle.reward_chain.deficit}"
+                )
+                # Notify full nodes of the new sub-slot
+                broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
+                    request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                    request.end_of_slot_bundle.challenge_chain.get_hash(),
+                    uint8(0),
+                    request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
+                )
+                msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
+                await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+
+                for infusion in new_infusions:
+                    await self.new_infusion_point_vdf(infusion)
+
+                # Notify farmers of the new sub-slot
+                broadcast_farmer = farmer_protocol.NewSignagePoint(
+                    request.end_of_slot_bundle.challenge_chain.get_hash(),
+                    request.end_of_slot_bundle.challenge_chain.get_hash(),
+                    request.end_of_slot_bundle.reward_chain.get_hash(),
+                    next_difficulty,
+                    next_sub_slot_iters,
+                    uint8(0),
+                )
+                msg = Message("new_signage_point", broadcast_farmer)
+                await self.server.send_to_all([msg], NodeType.FARMER)
+            else:
+                self.log.warning(f"End of slot not added {request}")
 
     @peer_required
     @api_request
@@ -494,174 +497,182 @@ class FullNodeAPI:
         Creates a block body and header, with the proof of space, coinbase, and fee targets provided
         by the farmer, and sends the hash of the header data back to the farmer.
         """
-        if request.pool_target is None or request.pool_signature is None:
-            raise ValueError("Adaptable pool protocol not yet available.")
+        async with self.full_node.timelord_lock:
+            if request.pool_target is None or request.pool_signature is None:
+                raise ValueError("Adaptable pool protocol not yet available.")
 
-        sp_vdfs: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point(request.challenge_chain_sp)
-
-        if sp_vdfs is None:
-            self.log.warning(f"Received proof of space for an unknown signage point {request.challenge_chain_sp}")
-            return
-        if request.signage_point_index > 0 and sp_vdfs.rc_vdf.output.get_hash() != request.reward_chain_sp:
-            self.log.info(
-                f"Received proof of space for a potentially old signage point {request.challenge_chain_sp}. Current sp: {sp_vdfs.rc_vdf.output.get_hash()}"
+            sp_vdfs: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point(
+                request.challenge_chain_sp
             )
-            return
 
-        if request.signage_point_index == 0:
-            cc_challenge_hash: bytes32 = request.challenge_chain_sp
-        else:
-            cc_challenge_hash: bytes32 = sp_vdfs.cc_vdf.challenge
-
-        pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int]] = None
-        if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
-            # Checks that the proof of space is a response to a recent challenge and valid SP
-            pos_sub_slot = self.full_node.full_node_store.get_sub_slot(cc_challenge_hash)
-            if pos_sub_slot is None:
-                self.log.warning(f"Received proof of space for an unknown sub slot: {request}")
+            if sp_vdfs is None:
+                self.log.warning(f"Received proof of space for an unknown signage point {request.challenge_chain_sp}")
                 return
-            total_iters_pos_slot: uint128 = pos_sub_slot[2]
-        else:
-            total_iters_pos_slot: uint128 = uint128(0)
-        assert cc_challenge_hash == request.challenge_hash
-
-        # Now we know that the proof of space has a signage point either:
-        # 1. In the previous sub-slot of the peak (overflow)
-        # 2. In the same sub-slot as the peak
-        # 3. In a future sub-slot that we already know of
-
-        # Checks that the proof of space is valid
-        quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
-            self.full_node.constants, cc_challenge_hash, request.challenge_chain_sp
-        )
-        assert quality_string is not None and len(quality_string) == 32
-
-        # Grab best transactions from Mempool for given tip target
-        async with self.full_node.blockchain.lock:
-            peak: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
-            if peak is None:
-                spend_bundle: Optional[SpendBundle] = None
-            else:
-                spend_bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(
-                    peak.header_hash
+            if request.signage_point_index > 0 and sp_vdfs.rc_vdf.output.get_hash() != request.reward_chain_sp:
+                self.log.info(
+                    f"Received proof of space for a potentially old signage point {request.challenge_chain_sp}. "
+                    f"Current sp: {sp_vdfs.rc_vdf.output.get_hash()}"
                 )
-        if peak is None or peak.sub_block_height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
-            difficulty = self.full_node.constants.DIFFICULTY_STARTING
-            sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
-        else:
-            assert pos_sub_slot is not None
-            if pos_sub_slot[0].challenge_chain.new_difficulty is not None:
-                difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
-                sub_slot_iters = pos_sub_slot[0].challenge_chain.new_sub_slot_iters
+                return
+
+            if request.signage_point_index == 0:
+                cc_challenge_hash: bytes32 = request.challenge_chain_sp
             else:
-                difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
-                sub_slot_iters = peak.sub_slot_iters
+                cc_challenge_hash: bytes32 = sp_vdfs.cc_vdf.challenge
 
-        required_iters: uint64 = calculate_iterations_quality(
-            quality_string,
-            request.proof_of_space.size,
-            difficulty,
-            request.challenge_chain_sp,
-        )
-        sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
-        ip_iters: uint64 = calculate_ip_iters(
-            self.full_node.constants, sub_slot_iters, request.signage_point_index, required_iters
-        )
-
-        def get_plot_sig(to_sign, _) -> G2Element:
-            if to_sign == request.challenge_chain_sp:
-                return request.challenge_chain_sp_signature
-            elif to_sign == request.reward_chain_sp:
-                return request.reward_chain_sp_signature
-            return G2Element.infinity()
-
-        def get_pool_sig(to_sign, _) -> G2Element:
-            return request.pool_signature
-
-        # Get the previous sub block at the signage point
-        if peak is not None:
-            pool_target = request.pool_target
-            curr = peak
-            while curr.total_iters > (total_iters_pos_slot + sp_iters) and curr.sub_block_height > 0:
-                curr = self.full_node.blockchain.sub_blocks[curr.prev_hash]
-            if curr.total_iters > (total_iters_pos_slot + sp_iters):
-                prev_sb = None
+            pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int]] = None
+            if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
+                # Checks that the proof of space is a response to a recent challenge and valid SP
+                pos_sub_slot = self.full_node.full_node_store.get_sub_slot(cc_challenge_hash)
+                if pos_sub_slot is None:
+                    self.log.warning(f"Received proof of space for an unknown sub slot: {request}")
+                    return
+                total_iters_pos_slot: uint128 = pos_sub_slot[2]
             else:
-                prev_sb = curr
-        else:
-            pool_target = PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
-            prev_sb = None
+                total_iters_pos_slot: uint128 = uint128(0)
+            assert cc_challenge_hash == request.challenge_hash
 
-        finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node.full_node_store.get_finished_sub_slots(
-            prev_sb, self.full_node.blockchain.sub_blocks, cc_challenge_hash
-        )
-        if len(finished_sub_slots) == 0:
-            if prev_sb is not None:
-                if request.signage_point_index == 0:
-                    # No need to get correct block since SP RC is not validated for this sub block
-                    pass
+            # Now we know that the proof of space has a signage point either:
+            # 1. In the previous sub-slot of the peak (overflow)
+            # 2. In the same sub-slot as the peak
+            # 3. In a future sub-slot that we already know of
+
+            # Checks that the proof of space is valid
+            quality_string: Optional[bytes32] = request.proof_of_space.verify_and_get_quality_string(
+                self.full_node.constants, cc_challenge_hash, request.challenge_chain_sp
+            )
+            assert quality_string is not None and len(quality_string) == 32
+
+            # Grab best transactions from Mempool for given tip target
+            async with self.full_node.blockchain.lock:
+                peak: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
+                if peak is None:
+                    spend_bundle: Optional[SpendBundle] = None
                 else:
-                    found = False
-                    attempts = 0
-                    while prev_sb is not None and attempts < 10:
-                        if prev_sb.reward_infusion_new_challenge == sp_vdfs.rc_vdf.challenge:
-                            found = True
-                            break
-                        if (
-                            prev_sb.finished_reward_slot_hashes is not None
-                            and len(prev_sb.finished_reward_slot_hashes) > 0
-                        ):
-                            if prev_sb.finished_reward_slot_hashes[-1] == sp_vdfs.rc_vdf.challenge:
-                                prev_sb = self.full_node.blockchain.sub_blocks.get(prev_sb.prev_hash, None)
+                    spend_bundle: Optional[
+                        SpendBundle
+                    ] = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+            if peak is None or peak.sub_block_height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+                difficulty = self.full_node.constants.DIFFICULTY_STARTING
+                sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+            else:
+                assert pos_sub_slot is not None
+                if pos_sub_slot[0].challenge_chain.new_difficulty is not None:
+                    difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
+                    sub_slot_iters = pos_sub_slot[0].challenge_chain.new_sub_slot_iters
+                else:
+                    difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
+                    sub_slot_iters = peak.sub_slot_iters
+
+            required_iters: uint64 = calculate_iterations_quality(
+                quality_string,
+                request.proof_of_space.size,
+                difficulty,
+                request.challenge_chain_sp,
+            )
+            sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
+            ip_iters: uint64 = calculate_ip_iters(
+                self.full_node.constants, sub_slot_iters, request.signage_point_index, required_iters
+            )
+
+            def get_plot_sig(to_sign, _) -> G2Element:
+                if to_sign == request.challenge_chain_sp:
+                    return request.challenge_chain_sp_signature
+                elif to_sign == request.reward_chain_sp:
+                    return request.reward_chain_sp_signature
+                return G2Element.infinity()
+
+            def get_pool_sig(to_sign, _) -> G2Element:
+                return request.pool_signature
+
+            # Get the previous sub block at the signage point
+            if peak is not None:
+                curr = peak
+                while curr.total_iters > (total_iters_pos_slot + sp_iters) and curr.sub_block_height > 0:
+                    curr = self.full_node.blockchain.sub_blocks[curr.prev_hash]
+                if curr.total_iters > (total_iters_pos_slot + sp_iters):
+                    pool_target = PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
+                    prev_sb = None
+                else:
+                    pool_target = request.pool_target
+                    prev_sb = curr
+            else:
+                pool_target = PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
+                prev_sb = None
+            try:
+                finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node.full_node_store.get_finished_sub_slots(
+                    prev_sb, self.full_node.blockchain.sub_blocks, cc_challenge_hash
+                )
+            except ValueError as e:
+                self.log.warning(f"Value Error: {e}")
+                return
+            if len(finished_sub_slots) == 0:
+                if prev_sb is not None:
+                    if request.signage_point_index == 0:
+                        # No need to get correct block since SP RC is not validated for this sub block
+                        pass
+                    else:
+                        found = False
+                        attempts = 0
+                        while prev_sb is not None and attempts < 10:
+                            if prev_sb.reward_infusion_new_challenge == sp_vdfs.rc_vdf.challenge:
                                 found = True
                                 break
-                        prev_sb = self.full_node.blockchain.sub_blocks.get(prev_sb.prev_hash, None)
-                        attempts += 1
-                    if not found:
-                        self.log.info("Did not find a previous block with the correct reward chain hash")
-                        return
-        elif request.signage_point_index > 0:
-            assert finished_sub_slots[-1].reward_chain.get_hash() == sp_vdfs.rc_vdf.challenge
+                            if (
+                                prev_sb.finished_reward_slot_hashes is not None
+                                and len(prev_sb.finished_reward_slot_hashes) > 0
+                            ):
+                                if prev_sb.finished_reward_slot_hashes[-1] == sp_vdfs.rc_vdf.challenge:
+                                    prev_sb = self.full_node.blockchain.sub_blocks.get(prev_sb.prev_hash, None)
+                                    found = True
+                                    break
+                            prev_sb = self.full_node.blockchain.sub_blocks.get(prev_sb.prev_hash, None)
+                            attempts += 1
+                        if not found:
+                            self.log.info("Did not find a previous block with the correct reward chain hash")
+                            return
+            elif request.signage_point_index > 0:
+                assert finished_sub_slots[-1].reward_chain.get_hash() == sp_vdfs.rc_vdf.challenge
 
-        unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(
-            self.full_node.constants,
-            total_iters_pos_slot,
-            sub_slot_iters,
-            request.signage_point_index,
-            sp_iters,
-            ip_iters,
-            request.proof_of_space,
-            cc_challenge_hash,
-            request.farmer_puzzle_hash,
-            pool_target,
-            get_plot_sig,
-            get_pool_sig,
-            sp_vdfs,
-            uint64(int(time.time())),
-            b"",
-            spend_bundle,
-            prev_sb,
-            self.full_node.blockchain.sub_blocks,
-            finished_sub_slots,
-        )
-        if prev_sb is not None:
-            height = prev_sb.sub_block_height + 1
-        else:
-            height = 0
-        self.full_node.full_node_store.add_candidate_block(quality_string, height, unfinished_block)
+            unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(
+                self.full_node.constants,
+                total_iters_pos_slot,
+                sub_slot_iters,
+                request.signage_point_index,
+                sp_iters,
+                ip_iters,
+                request.proof_of_space,
+                cc_challenge_hash,
+                request.farmer_puzzle_hash,
+                pool_target,
+                get_plot_sig,
+                get_pool_sig,
+                sp_vdfs,
+                uint64(int(time.time())),
+                b"",
+                spend_bundle,
+                prev_sb,
+                self.full_node.blockchain.sub_blocks,
+                finished_sub_slots,
+            )
+            if prev_sb is not None:
+                height = prev_sb.sub_block_height + 1
+            else:
+                height = 0
+            self.full_node.full_node_store.add_candidate_block(quality_string, height, unfinished_block)
 
-        foliage_sb_data_hash = unfinished_block.foliage_sub_block.foliage_sub_block_data.get_hash()
-        if unfinished_block.is_block():
-            foliage_block_hash = unfinished_block.foliage_sub_block.foliage_block_hash
-        else:
-            foliage_block_hash = bytes([0] * 32)
+            foliage_sb_data_hash = unfinished_block.foliage_sub_block.foliage_sub_block_data.get_hash()
+            if unfinished_block.is_block():
+                foliage_block_hash = unfinished_block.foliage_sub_block.foliage_block_hash
+            else:
+                foliage_block_hash = bytes([0] * 32)
 
-        message = farmer_protocol.RequestSignedValues(
-            quality_string,
-            foliage_sb_data_hash,
-            foliage_block_hash,
-        )
-        return Message("request_signed_values", message)
+            message = farmer_protocol.RequestSignedValues(
+                quality_string,
+                foliage_sb_data_hash,
+                foliage_block_hash,
+            )
+            return Message("request_signed_values", message)
 
     @api_request
     async def signed_values(self, farmer_request: farmer_protocol.SignedValues) -> Optional[Message]:
@@ -678,6 +689,14 @@ class FullNodeAPI:
             self.log.warning(f"Quality string {farmer_request.quality_string} not found in database")
             return
 
+        if not AugSchemeMPL.verify(
+            candidate.reward_chain_sub_block.proof_of_space.plot_public_key,
+            candidate.foliage_sub_block.foliage_sub_block_data.get_hash(),
+            farmer_request.foliage_sub_block_signature,
+        ):
+            self.log.warning("Signature not valid. There might be a collision in plots. Ignore this during tests.")
+            return
+
         fsb2 = dataclasses.replace(
             candidate.foliage_sub_block,
             foliage_sub_block_signature=farmer_request.foliage_sub_block_signature,
@@ -686,6 +705,9 @@ class FullNodeAPI:
             fsb2 = dataclasses.replace(fsb2, foliage_block_signature=farmer_request.foliage_block_signature)
 
         new_candidate = dataclasses.replace(candidate, foliage_sub_block=fsb2)
+        if not self.full_node.has_valid_pool_sig(new_candidate):
+            self.log.warning("Trying to make a pre-farm block but height is not 0")
+            return
 
         # Propagate to ourselves (which validates and does further propagations)
         request = full_node_protocol.RespondUnfinishedSubBlock(new_candidate)
@@ -788,18 +810,9 @@ class FullNodeAPI:
                 difficulty,
             )
             first_ss_new_epoch = False
-            if (
-                block.foliage_sub_block.foliage_sub_block_data.pool_target
-                == PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
-                and block.sub_block_height != 0
-            ):
-                if not AugSchemeMPL.verify(
-                    block.reward_chain_sub_block.proof_of_space.pool_public_key,
-                    bytes(block.foliage_sub_block.foliage_sub_block_data.pool_target),
-                    block.foliage_sub_block.foliage_sub_block_data.pool_signature,
-                ):
-                    self.log.warning("Trying to make a pre-farm block but height is not 0")
-                    return
+            if not self.full_node.has_valid_pool_sig(block):
+                self.log.warning("Trying to make a pre-farm block but height is not 0")
+                return
             if len(block.finished_sub_slots) > 0:
                 if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
                     first_ss_new_epoch = True
@@ -861,17 +874,13 @@ class FullNodeAPI:
 
     @api_request
     async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-            request.header_hash
-        )
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
         if (
-                block is None
-                or block.is_block() is False
-                or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
+            block is None
+            or block.is_block() is False
+            or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
         ):
-            reject = wallet_protocol.RejectAdditionsRequest(
-                request.height, request.header_hash
-            )
+            reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)
 
             msg = Message("reject_additions_request", reject)
             return msg
@@ -891,9 +900,7 @@ class FullNodeAPI:
         if request.puzzle_hashes is None:
             for puzzle_hash, coins in puzzlehash_coins_map.items():
                 coins_map.append((puzzle_hash, coins))
-            response = wallet_protocol.RespondAdditions(
-                block.sub_block_height, block.header_hash, coins_map, None
-            )
+            response = wallet_protocol.RespondAdditions(block.sub_block_height, block.header_hash, coins_map, None)
         else:
             # Create addition Merkle set
             addition_merkle_set = MerkleSet()
@@ -904,15 +911,11 @@ class FullNodeAPI:
 
             assert addition_merkle_set.get_root() == block.foliage_block.additions_root
             for puzzle_hash in request.puzzle_hashes:
-                result, proof = addition_merkle_set.is_included_already_hashed(
-                    puzzle_hash
-                )
+                result, proof = addition_merkle_set.is_included_already_hashed(puzzle_hash)
                 if puzzle_hash in puzzlehash_coins_map:
                     coins_map.append((puzzle_hash, puzzlehash_coins_map[puzzle_hash]))
                     hash_coin_str = hash_coin_list(puzzlehash_coins_map[puzzle_hash])
-                    result_2, proof_2 = addition_merkle_set.is_included_already_hashed(
-                        hash_coin_str
-                    )
+                    result_2, proof_2 = addition_merkle_set.is_included_already_hashed(hash_coin_str)
                     assert result
                     assert result_2
                     proofs_map.append((puzzle_hash, proof, proof_2))
@@ -926,23 +929,17 @@ class FullNodeAPI:
         msg = Message("respond_additions", response)
         return msg
 
-
-
     @api_request
     async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-            request.header_hash
-        )
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
         if (
-                block is None
-                or block.is_block() is False
-                or block.sub_block_height != request.sub_height
-                or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
-                or self.full_node.blockchain.sub_height_to_hash[block.sub_block_height] != block.header_hash
+            block is None
+            or block.is_block() is False
+            or block.sub_block_height != request.sub_height
+            or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
+            or self.full_node.blockchain.sub_height_to_hash[block.sub_block_height] != block.header_hash
         ):
-            reject = wallet_protocol.RejectRemovalsRequest(
-                request.sub_height, request.header_hash
-            )
+            reject = wallet_protocol.RejectRemovalsRequest(request.sub_height, request.header_hash)
             msg = Message("reject_removals_request", reject)
             return msg
 
@@ -959,17 +956,13 @@ class FullNodeAPI:
                 proofs = None
             else:
                 proofs = []
-            response = wallet_protocol.RespondRemovals(
-                block.height, block.header_hash, [], proofs
-            )
+            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, [], proofs)
         elif request.coin_names is None or len(request.coin_names) == 0:
             for removal in all_removals:
                 cr = await self.full_node.coin_store.get_coin_record(removal)
                 assert cr is not None
                 coins_map.append((cr.coin.name(), cr.coin))
-            response = wallet_protocol.RespondRemovals(
-                block.height, block.header_hash, coins_map, None
-            )
+            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, None)
         else:
             assert block.transactions_generator
             removal_merkle_set = MerkleSet()
@@ -987,9 +980,7 @@ class FullNodeAPI:
                 else:
                     coins_map.append((coin_name, None))
                     assert not result
-            response = wallet_protocol.RespondRemovals(
-                block.height, block.header_hash, coins_map, proofs_map
-            )
+            response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, proofs_map)
 
         msg = Message("respond_removals", response)
         return msg

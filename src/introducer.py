@@ -33,16 +33,19 @@ class Introducer:
             if self._shut_down:
                 return
             try:
+                for i in range(5):
+                    if self._shut_down:
+                        return
+                    await asyncio.sleep(1)
                 self.log.info("Vetting random peers.")
-                await asyncio.sleep(60)
                 if self.server.introducer_peers is None:
                     continue
-                rawpeers = self.server.introducer_peers.get_peers(100, True, 3 * self.recent_peer_threshold)
+                raw_peers = self.server.introducer_peers.get_peers(100, True, 3 * self.recent_peer_threshold)
 
-                if len(rawpeers) == 0:
+                if len(raw_peers) == 0:
                     continue
 
-                for peer in rawpeers:
+                for peer in raw_peers:
                     if self._shut_down:
                         return
                     if peer.get_hash() in self.vetted_timestamps:

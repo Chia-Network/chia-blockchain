@@ -102,6 +102,9 @@ class FarmerAPI:
         """
         There are two cases: receiving signatures for sps, or receiving signatures for the block.
         """
+        import time
+
+        start = time.time()
         if response.sp_hash not in self.farmer.sps:
             self.farmer.log.warning(f"Do not have challenge hash {response.challenge_hash}")
             return
