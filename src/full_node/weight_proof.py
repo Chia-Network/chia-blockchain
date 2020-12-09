@@ -309,6 +309,7 @@ class WeightProofHandler:
         ses_hash: bytes32,
         new_sub_slot_iters: Optional[uint64],
         new_difficulty: Optional[uint64],
+        summaries: Dict[uint32, SubEpochSummary],
     ) -> RewardChainSubSlot:
 
         first_slot = segment.sub_slots[0]
@@ -321,12 +322,15 @@ class WeightProofHandler:
             new_sub_slot_iters,
             new_difficulty,
         )
+        deficit = self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
+        if summaries[segment.sub_epoch_n + 1].num_sub_blocks_overflow == 0:
+            deficit -= 1  # no overflow in start of sub epoch
 
         rc_sub_slot = RewardChainSubSlot(
             segment.last_reward_chain_vdf_info,
             cc_sub_slot.get_hash(),
             icc_sub_slot.get_hash(),
-            uint8(0),  # todo correct deficit
+            uint8(deficit),  # -1 if no overflows in start of sub_epoch
         )
         self.log.info(f"recreated rc sub slot \n {rc_sub_slot}")
         self.log.info(f"------------------------------------------------------------")
