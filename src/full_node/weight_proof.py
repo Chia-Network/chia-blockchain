@@ -286,7 +286,7 @@ class WeightProofHandler:
 
                 # recreate RewardChainSubSlot for next ses rc_hash
                 rc_sub_slot_hash = self.get_rc_sub_slot(
-                    segment, ses.get_hash(), ses.new_sub_slot_iters, ses.new_difficulty
+                    segment, ses.get_hash(), ses.new_sub_slot_iters, ses.new_difficulty, summaries
                 ).get_hash()
 
             if not self.__validate_segment_slots():
