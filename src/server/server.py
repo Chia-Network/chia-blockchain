@@ -282,7 +282,7 @@ class ChiaServer:
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [full_message.function])
 
                     if not hasattr(f, "api_function"):
-                        self.log.error("Peer trying to call non api function")
+                        self.log.error(f"Peer trying to call non api function {full_message.function}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [full_message.function])
 
                     if hasattr(f, "peer_required"):

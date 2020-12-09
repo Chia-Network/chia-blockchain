@@ -146,7 +146,7 @@
 #         all_blocks = await full_node_api_0.get_current_blocks(full_node_api_0.get_tip())
 #
 #         for block in all_blocks:
-#             await full_node_api_2.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         funds = sum(
 #             [calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i)) for i in range(1, num_blocks - 2)]

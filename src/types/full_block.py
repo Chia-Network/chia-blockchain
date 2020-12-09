@@ -65,9 +65,9 @@ class FullBlock(Streamable):
     def is_block(self):
         return self.foliage_sub_block.foliage_block_hash is not None
 
-    def get_future_reward_coins(self) -> Tuple[Coin, Coin]:
-        pool_amount = calculate_pool_reward(self.height)
-        farmer_amount = calculate_base_farmer_reward(self.height)
+    def get_future_reward_coins(self, prev_block_height: uint32) -> Tuple[Coin, Coin]:
+        pool_amount = calculate_pool_reward(prev_block_height + 1, self.sub_block_height == 0)
+        farmer_amount = calculate_base_farmer_reward(prev_block_height + 1)
         if self.is_block():
             assert self.transactions_info is not None
             farmer_amount += self.transactions_info.fees

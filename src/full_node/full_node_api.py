@@ -4,7 +4,7 @@ import time
 import src.server.ws_connection as ws
 from typing import AsyncGenerator, List, Optional, Tuple, Callable
 from chiabip158 import PyBIP158
-from blspy import G2Element
+from blspy import G2Element, AugSchemeMPL
 
 from src.consensus.block_creation import unfinished_block_to_full_block, create_unfinished_block
 from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
@@ -32,12 +32,13 @@ from src.types.full_block import FullBlock
 
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
+from src.types.pool_target import PoolTarget
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required
 from src.util.errors import ConsensusError
-from src.util.ints import uint64, uint128, uint8
+from src.util.ints import uint64, uint128, uint8, uint32
 from src.types.peer_info import PeerInfo
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
@@ -201,11 +202,14 @@ class FullNodeAPI:
         return
 
     @api_request
-    async def respond_sub_block(self, respond_sub_block: full_node_protocol.RespondSubBlock) -> Optional[Message]:
+    @peer_required
+    async def respond_sub_block(
+        self, respond_sub_block: full_node_protocol.RespondSubBlock, peer: ws.WSChiaConnection
+    ) -> Optional[Message]:
         """
         Receive a full block from a peer full node (or ourselves).
         """
-        return await self.full_node.respond_sub_block(respond_sub_block)
+        return await self.full_node.respond_sub_block(respond_sub_block, peer)
 
     @api_request
     async def new_unfinished_sub_block(
@@ -572,6 +576,7 @@ class FullNodeAPI:
 
         # Get the previous sub block at the signage point
         if peak is not None:
+            pool_target = request.pool_target
             curr = peak
             while curr.total_iters > (total_iters_pos_slot + sp_iters) and curr.sub_block_height > 0:
                 curr = self.full_node.blockchain.sub_blocks[curr.prev_hash]
@@ -580,6 +585,7 @@ class FullNodeAPI:
             else:
                 prev_sb = curr
         else:
+            pool_target = PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
             prev_sb = None
 
         finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node.full_node_store.get_finished_sub_slots(
@@ -623,7 +629,7 @@ class FullNodeAPI:
             request.proof_of_space,
             cc_challenge_hash,
             request.farmer_puzzle_hash,
-            request.pool_target,
+            pool_target,
             get_plot_sig,
             get_pool_sig,
             sp_vdfs,
@@ -713,13 +719,13 @@ class FullNodeAPI:
                 curr: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
 
                 for _ in range(10):
+                    if curr is None:
+                        break
                     if curr.reward_infusion_new_challenge == target_rc_hash:
                         # Found our prev block
                         prev_sb = curr
                         break
-                    if self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None) is None:
-                        self.log.warning(f"Did not find previous reward chain hash {target_rc_hash}")
-                        return
+                    curr = self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None)
 
                 # If not found, cache keyed on prev block
                 if prev_sb is None:
@@ -778,6 +784,18 @@ class FullNodeAPI:
                 difficulty,
             )
             first_ss_new_epoch = False
+            if (
+                block.foliage_sub_block.foliage_sub_block_data.pool_target
+                == PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
+                and block.sub_block_height != 0
+            ):
+                if not AugSchemeMPL.verify(
+                    block.reward_chain_sub_block.proof_of_space.pool_public_key,
+                    bytes(block.foliage_sub_block.foliage_sub_block_data.pool_target),
+                    block.foliage_sub_block.foliage_sub_block_data.pool_signature,
+                ):
+                    self.log.warning("Trying to make a pre-farm block but height is not 0")
+                    return
             if len(block.finished_sub_slots) > 0:
                 if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
                     first_ss_new_epoch = True
@@ -796,7 +814,7 @@ class FullNodeAPI:
                 # No overflow sub-blocks in the first sub-slot of each epoch
                 return
             try:
-                await self.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+                await self.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
             except ConsensusError as e:
                 self.log.warning(f"Consensus error validating sub-block: {e}")
 
