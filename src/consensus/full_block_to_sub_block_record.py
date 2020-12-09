@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import is_overflow_sub_block
@@ -56,22 +56,8 @@ def block_to_sub_block_record(
     prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
     timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
     fees = block.transactions_info.fees if block.foliage_block is not None else None
-    if len(block.finished_sub_slots) > 0:
-        finished_challenge_slot_hashes = [sub_slot.challenge_chain.get_hash() for sub_slot in block.finished_sub_slots]
-        finished_reward_slot_hashes = [sub_slot.reward_chain.get_hash() for sub_slot in block.finished_sub_slots]
-        finished_infused_challenge_slot_hashes = [
-            sub_slot.infused_challenge_chain.get_hash()
-            for sub_slot in block.finished_sub_slots
-            if sub_slot.infused_challenge_chain is not None
-        ]
-    elif block.sub_block_height == 0:
-        finished_challenge_slot_hashes = [constants.FIRST_CC_CHALLENGE]
-        finished_reward_slot_hashes = [constants.FIRST_RC_CHALLENGE]
-        finished_infused_challenge_slot_hashes = None
-    else:
-        finished_challenge_slot_hashes = None
-        finished_reward_slot_hashes = None
-        finished_infused_challenge_slot_hashes = None
+
+    finished_cc_slot_hashes, finished_icc_slot_hashes, finished_rc_slot_hashes = _get_finished_slots(block, constants)
 
     found_ses_hash: Optional[bytes32] = None
     ses: Optional[SubEpochSummary] = None
@@ -123,8 +109,31 @@ def block_to_sub_block_record(
         timestamp,
         prev_block_hash,
         fees,
-        finished_challenge_slot_hashes,
-        finished_infused_challenge_slot_hashes,
-        finished_reward_slot_hashes,
+        finished_cc_slot_hashes,
+        finished_icc_slot_hashes,
+        finished_rc_slot_hashes,
         ses,
     )
+
+
+def _get_finished_slots(
+    block, constants
+) -> (Optional[List[bytes32]], Optional[List[bytes32]], Optional[List[bytes32]]):
+
+    # genesis
+    if block.sub_block_height == 0:
+        return [constants.FIRST_CC_CHALLENGE], None, [constants.FIRST_RC_CHALLENGE]
+
+    # no finished slots
+    if len(block.finished_sub_slots) == 0:
+        return None, None, None
+
+    finished_cc_slot_hashes = [sub_slot.challenge_chain.get_hash() for sub_slot in block.finished_sub_slots]
+    finished_rc_slot_hashes = [sub_slot.reward_chain.get_hash() for sub_slot in block.finished_sub_slots]
+    finished_icc_slot_hashes = [
+        sub_slot.infused_challenge_chain.get_hash()
+        for sub_slot in block.finished_sub_slots
+        if sub_slot.infused_challenge_chain is not None
+    ]
+
+    return finished_cc_slot_hashes, finished_icc_slot_hashes, finished_rc_slot_hashes
