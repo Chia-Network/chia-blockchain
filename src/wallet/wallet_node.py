@@ -17,7 +17,9 @@ from src.protocols.wallet_protocol import (
     RequestRemovals,
     RespondAdditions,
     RespondRemovals,
-    RejectRemovalsRequest, RejectAdditionsRequest)
+    RejectRemovalsRequest,
+    RejectAdditionsRequest,
+)
 from src.server.connection_utils import send_all_first_reply
 from src.server.ws_connection import WSChiaConnection
 from src.types.coin import hash_coin_list, Coin
@@ -30,7 +32,11 @@ from src.server.outbound_message import OutboundMessage, NodeType, Message
 from src.server.node_discovery import WalletPeers
 from src.util.ints import uint32, uint128
 from src.types.sized_bytes import bytes32
-from src.util.merkle_set import confirm_included_already_hashed, confirm_not_included_already_hashed, MerkleSet
+from src.util.merkle_set import (
+    confirm_included_already_hashed,
+    confirm_not_included_already_hashed,
+    MerkleSet,
+)
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.derivation_record import DerivationRecord
 from src.wallet.settings.settings_objects import BackupInitialized
@@ -375,12 +381,16 @@ class WalletNode:
     #
 
     async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
-        if (self.wallet_state_manager.blockchain.get_peak() is not None and
-                self.wallet_state_manager.blockchain.get_peak().weight > peak.weight):
+        if (
+            self.wallet_state_manager.blockchain.get_peak() is not None
+            and self.wallet_state_manager.blockchain.get_peak().weight > peak.weight
+        ):
             return
 
         request = wallet_protocol.RequestSubBlockHeader(peak.sub_block_height)
-        response: Optional[RespondSubBlockHeader] = await peer.request_sub_block_header(request)
+        response: Optional[RespondSubBlockHeader] = await peer.request_sub_block_header(
+            request
+        )
         header_block = response.header_block
 
         if header_block is not None:
@@ -394,7 +404,9 @@ class WalletNode:
 
     async def check_new_peak(self):
         await asyncio.sleep(1)
-        current_peak: Optional[SubBlockRecord] = self.wallet_state_manager.blockchain.get_peak()
+        current_peak: Optional[
+            SubBlockRecord
+        ] = self.wallet_state_manager.blockchain.get_peak()
         if current_peak is None:
             return
         potential_peaks: List[
@@ -443,7 +455,10 @@ class WalletNode:
                 highest_weight = potential_peak_block.weight
                 peak_height = potential_peak_block.height
 
-        if self.wallet_state_manager.peak is not None and highest_weight <= self.wallet_state_manager.peak.weight:
+        if (
+            self.wallet_state_manager.peak is not None
+            and highest_weight <= self.wallet_state_manager.peak.weight
+        ):
             self.log.info("Not performing sync, already caught up.")
             return
 
@@ -464,7 +479,9 @@ class WalletNode:
             peer: WSChiaConnection = peer
             res: RespondSubBlockHeader = response
             block_i: HeaderBlock = res.header_block
-            self.log.error(f"Received block {block_i.sub_block_height}, {block_i.height}, {block_i.is_block}")
+            self.log.error(
+                f"Received block {block_i.sub_block_height}, {block_i.height}, {block_i.is_block}"
+            )
             if block_i is None:
                 continue
 
@@ -483,7 +500,9 @@ class WalletNode:
                     raise ValueError("Failed to fetch additions")
 
                 # Get removals
-                removed_coins = await self.get_removals(peer, block_i, added_coins, removals)
+                removed_coins = await self.get_removals(
+                    peer, block_i, added_coins, removals
+                )
                 if removed_coins is None:
                     raise ValueError("Failed to fetch removals")
 
@@ -499,11 +518,18 @@ class WalletNode:
                 result,
                 error,
                 fork_h,
-            ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record)
+            ) = await self.wallet_state_manager.blockchain.receive_block(
+                header_block_record
+            )
             if result == ReceiveBlockResult.NEW_PEAK:
                 self.wallet_state_manager.state_changed("new_block")
 
-    async def validate_additions(self, coins: List[Tuple[bytes32, List[Coin]]], proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]], root):
+    async def validate_additions(
+        self,
+        coins: List[Tuple[bytes32, List[Coin]]],
+        proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
+        root,
+    ):
         if proofs is None:
             # Verify root
             additions_merkle_set = MerkleSet()
@@ -602,17 +628,25 @@ class WalletNode:
                         return False
         return True
 
-    async def get_additions(self, peer: WSChiaConnection, block_i, additions) -> Optional[List[Coin]]:
+    async def get_additions(
+        self, peer: WSChiaConnection, block_i, additions
+    ) -> Optional[List[Coin]]:
         if len(additions) > 0:
-            additions_request = RequestAdditions(block_i.sub_block_height, block_i.header_hash, additions)
-            additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.request_additions(
-                additions_request
+            additions_request = RequestAdditions(
+                block_i.sub_block_height, block_i.header_hash, additions
             )
+            additions_res: Optional[
+                Union[RespondAdditions, RejectAdditionsRequest]
+            ] = await peer.request_additions(additions_request)
             if additions_res is None:
                 await peer.close()
                 return None
             elif isinstance(additions_res, RespondAdditions):
-                validated = await self.validate_additions(additions_res.coins, additions_res.proofs, block_i.foliage_block.additions_root)
+                validated = await self.validate_additions(
+                    additions_res.coins,
+                    additions_res.proofs,
+                    block_i.foliage_block.additions_root,
+                )
                 if not validated:
                     await peer.close()
                     return None
@@ -629,7 +663,9 @@ class WalletNode:
             added_coins = []
             return added_coins
 
-    async def get_removals(self, peer: WSChiaConnection, block_i, additions, removals) -> Optional[List[Coin]]:
+    async def get_removals(
+        self, peer: WSChiaConnection, block_i, additions, removals
+    ) -> Optional[List[Coin]]:
         request_all_removals = False
         # Check if we need all removals
         for coin in additions:
@@ -640,8 +676,8 @@ class WalletNode:
                 coin.puzzle_hash.hex()
             )
             if (
-                    record_info is not None
-                    and record_info.wallet_type == WalletType.COLOURED_COIN
+                record_info is not None
+                and record_info.wallet_type == WalletType.COLOURED_COIN
             ):
                 request_all_removals = True
                 break
@@ -655,13 +691,17 @@ class WalletNode:
                 removals_request = wallet_protocol.RequestRemovals(
                     block_i.sub_block_height, block_i.header_hash, removals
                 )
-            removals_res: Optional[Union[RespondRemovals, RejectRemovalsRequest]] = await peer.request_removals(
-                removals_request
-            )
+            removals_res: Optional[
+                Union[RespondRemovals, RejectRemovalsRequest]
+            ] = await peer.request_removals(removals_request)
             if removals_res is None:
                 return None
             elif isinstance(removals_res, RespondRemovals):
-                validated = self.validate_removals(removals_res.coins, removals_res.proofs, block_i.foliage_block.removals_root)
+                validated = self.validate_removals(
+                    removals_res.coins,
+                    removals_res.proofs,
+                    block_i.foliage_block.removals_root,
+                )
                 if validated is False:
                     await peer.close()
                     return None

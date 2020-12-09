@@ -153,7 +153,6 @@ class WalletNodeAPI:
             return
         self.wallet_node.log.error("Additions request rejected")
 
-
     @peer_required
     @api_request
     async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
@@ -178,7 +177,9 @@ class WalletNodeAPI:
         self.wallet_node.log.error("Header request rejected")
 
     @api_request
-    async def respond_sub_block_header(self, response: wallet_protocol.RespondSubBlockHeader):
+    async def respond_sub_block_header(
+        self, response: wallet_protocol.RespondSubBlockHeader
+    ):
         pass
 
     @peer_required
