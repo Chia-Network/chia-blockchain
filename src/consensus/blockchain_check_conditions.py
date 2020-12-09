@@ -60,7 +60,7 @@ def blockchain_assert_block_age_exceeds(
     return None
 
 
-def blockchain_assert_time_exceeds(condition: ConditionVarPair):
+def blockchain_assert_time_exceeds(condition: ConditionVarPair, timestamp):
     """
     Checks if current time in millis exceeds the time specified in condition
     """
@@ -69,17 +69,31 @@ def blockchain_assert_time_exceeds(condition: ConditionVarPair):
     except ValueError:
         return Err.INVALID_CONDITION
 
-    current_time = uint64(int(time.time() * 1000))
+    current_time = timestamp
     if current_time <= expected_mili_time:
         return Err.ASSERT_TIME_EXCEEDS_FAILED
     return None
 
+def blockchain_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: CoinRecord, timestamp):
+    """
+    Checks if time since unspent creation in millis exceeds the time specified in condition
+    """
+    try:
+        expected_mili_time = int_from_bytes(condition.var1)
+    except ValueError:
+        return Err.INVALID_CONDITION
+
+    current_time = timestamp
+    if current_time <= expected_mili_time + unspent.timestamp:
+        return Err.ASSERT_RELATIVE_TIME_EXCEEDS_FAILED
+    return None
 
 def blockchain_check_conditions_dict(
     unspent: CoinRecord,
     removed: Dict[bytes32, CoinRecord],
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     height: uint32,
+    timestamp: uint64
 ) -> Optional[Err]:
     """
     Check all conditions against current state.
@@ -97,8 +111,9 @@ def blockchain_check_conditions_dict(
             elif cvp.opcode is ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
                 error = blockchain_assert_block_age_exceeds(cvp, unspent, height)
             elif cvp.opcode is ConditionOpcode.ASSERT_TIME_EXCEEDS:
-                error = blockchain_assert_time_exceeds(cvp)
-
+                error = blockchain_assert_time_exceeds(cvp, timestamp)
+            elif cvp.opcode is ConditionOpcode.ASSERT_RELATIVE_TIME_EXCEEDS:
+                error = blockchain_assert_relative_time_exceeds(cvp, unspent, timestamp)
             if error:
                 return error
 
