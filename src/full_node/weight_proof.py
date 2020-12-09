@@ -552,7 +552,7 @@ class WeightProofHandler:
                 q_str = self.__get_quality_string(segment, summaries[segment.sub_epoch_n], curr_ssi)
                 if q_str is None:
                     self.log.info(f"failed to validate {segment} segment space proof")
-                    # return False
+                    return False
                 required_iters: uint64 = calculate_iterations_quality(
                     q_str,
                     sub_slot.proof_of_space.size,
