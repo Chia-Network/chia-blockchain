@@ -353,7 +353,6 @@ class WalletTransactionStore:
         return records
 
     async def rollback_to_block(self, block_index):
-
         # Delete from storage
         c1 = await self.db_connection.execute(
             "DELETE FROM transaction_record WHERE confirmed_at_index>?", (block_index,)
