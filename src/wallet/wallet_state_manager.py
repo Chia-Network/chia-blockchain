@@ -122,7 +122,11 @@ class WalletStateManager:
 
         self.user_settings = await UserSettings.create(self.basic_store)
         self.block_store = await WalletBlockStore.create(self.db_connection)
-        self.blockchain = await WalletBlockchain.create(self.block_store, self.constants, self.coins_of_interest_received, self.reorg_rollback
+        self.blockchain = await WalletBlockchain.create(
+            self.block_store,
+            self.constants,
+            self.coins_of_interest_received,
+            self.reorg_rollback,
         )
 
         self.sync_mode = False
@@ -761,7 +765,6 @@ class WalletStateManager:
         #         if record is None:
         #             continue
         #         unspent_coin_names.remove(removal)
-
 
         my_puzzle_hashes = self.puzzle_store.all_puzzle_hashes
 
