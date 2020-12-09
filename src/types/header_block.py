@@ -5,7 +5,7 @@ from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.util.streamable import Streamable, streamable
 from src.types.vdf import VDFProof
 from src.types.reward_chain_sub_block import RewardChainSubBlock
-from src.types.foliage import FoliageSubBlock, FoliageBlock
+from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
 
 
 @dataclass(frozen=True)
@@ -22,9 +22,14 @@ class HeaderBlock(Streamable):
     foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
     foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
     transactions_filter: bytes  # Filter for block transactions
+    transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
 
     @property
     def prev_header_hash(self):
+        return self.foliage_sub_block.prev_sub_block_hash
+
+    @property
+    def prev_hash(self):
         return self.foliage_sub_block.prev_sub_block_hash
 
     @property

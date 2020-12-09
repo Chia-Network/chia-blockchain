@@ -2,7 +2,7 @@ import dataclasses
 import time
 
 import src.server.ws_connection as ws
-from typing import AsyncGenerator, List, Optional, Tuple, Callable
+from typing import AsyncGenerator, List, Optional, Tuple, Callable, Dict
 from chiabip158 import PyBIP158
 from blspy import G2Element, AugSchemeMPL
 
@@ -23,6 +23,7 @@ from src.full_node.weight_proof import init_block_block_cache_mock
 from src.protocols import introducer_protocol, farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from src.protocols.wallet_protocol import RejectHeaderRequest
 from src.server.outbound_message import Message, NodeType, OutboundMessage
+from src.types.coin import Coin, hash_coin_list
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
@@ -38,6 +39,7 @@ from src.util.api_decorators import api_request, peer_required
 from src.util.errors import ConsensusError
 from src.util.ints import uint64, uint128, uint8, uint32
 from src.types.peer_info import PeerInfo
+from src.util.merkle_set import MerkleSet
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
@@ -846,10 +848,10 @@ class FullNodeAPI:
     @api_request
     async def request_sub_block_header(self, request: wallet_protocol.RequestSubBlockHeader) -> Optional[Message]:
         if request.sub_height not in self.full_node.blockchain.sub_height_to_hash:
-            msg = Message("reject_sub_block_header", RejectHeaderRequest(request.sub_height, request.hea))
+            msg = Message("reject_sub_block_header", RejectHeaderRequest(request.sub_height, request.header_hash))
             return msg
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-            self.full_node.blockchain.sub_height_to_hash[request.height]
+            self.full_node.blockchain.sub_height_to_hash[request.sub_height]
         )
         if block is not None:
             header_block: HeaderBlock = await block.get_block_header()
@@ -859,8 +861,135 @@ class FullNodeAPI:
 
     @api_request
     async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
-        pass
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
+            request.header_hash
+        )
+        if (
+                block is None
+                or block.is_block() is False
+                or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
+        ):
+            reject = wallet_protocol.RejectAdditionsRequest(
+                request.height, request.header_hash
+            )
+
+            msg = Message("reject_additions_request", reject)
+            return msg
+
+        assert block is not None
+        _, additions = await block.tx_removals_and_additions()
+        puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
+        for coin in additions + list(block.get_included_reward_coins()):
+            if coin.puzzle_hash in puzzlehash_coins_map:
+                puzzlehash_coins_map[coin.puzzle_hash].append(coin)
+            else:
+                puzzlehash_coins_map[coin.puzzle_hash] = [coin]
+
+        coins_map: List[Tuple[bytes32, List[Coin]]] = []
+        proofs_map: List[Tuple[bytes32, bytes, Optional[bytes]]] = []
+
+        if request.puzzle_hashes is None:
+            for puzzle_hash, coins in puzzlehash_coins_map.items():
+                coins_map.append((puzzle_hash, coins))
+            response = wallet_protocol.RespondAdditions(
+                block.sub_block_height, block.header_hash, coins_map, None
+            )
+        else:
+            # Create addition Merkle set
+            addition_merkle_set = MerkleSet()
+            # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
+            for puzzle, coins in puzzlehash_coins_map.items():
+                addition_merkle_set.add_already_hashed(puzzle)
+                addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+
+            assert addition_merkle_set.get_root() == block.foliage_block.additions_root
+            for puzzle_hash in request.puzzle_hashes:
+                result, proof = addition_merkle_set.is_included_already_hashed(
+                    puzzle_hash
+                )
+                if puzzle_hash in puzzlehash_coins_map:
+                    coins_map.append((puzzle_hash, puzzlehash_coins_map[puzzle_hash]))
+                    hash_coin_str = hash_coin_list(puzzlehash_coins_map[puzzle_hash])
+                    result_2, proof_2 = addition_merkle_set.is_included_already_hashed(
+                        hash_coin_str
+                    )
+                    assert result
+                    assert result_2
+                    proofs_map.append((puzzle_hash, proof, proof_2))
+                else:
+                    coins_map.append((puzzle_hash, []))
+                    assert not result
+                    proofs_map.append((puzzle_hash, proof, None))
+            response = wallet_protocol.RespondAdditions(
+                block.sub_block_height, block.header_hash, coins_map, proofs_map
+            )
+        msg = Message("respond_additions", response)
+        return msg
+
+
 
     @api_request
     async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:
-        pass
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
+            request.header_hash
+        )
+        if (
+                block is None
+                or block.is_block() is False
+                or block.sub_block_height != request.sub_height
+                or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
+                or self.full_node.blockchain.sub_height_to_hash[block.sub_block_height] != block.header_hash
+        ):
+            reject = wallet_protocol.RejectRemovalsRequest(
+                request.sub_height, request.header_hash
+            )
+            msg = Message("reject_removals_request", reject)
+            return msg
+
+        assert block is not None
+        all_removals, _ = await block.tx_removals_and_additions()
+
+        coins_map: List[Tuple[bytes32, Optional[Coin]]] = []
+        proofs_map: List[Tuple[bytes32, bytes]] = []
+
+        # If there are no transactions, respond with empty lists
+        if block.transactions_generator is None:
+            proofs: Optional[List]
+            if request.coin_names is None:
+                proofs = None
+            else:
+                proofs = []
+            response = wallet_protocol.RespondRemovals(
+                block.height, block.header_hash, [], proofs
+            )
+        elif request.coin_names is None or len(request.coin_names) == 0:
+            for removal in all_removals:
+                cr = await self.full_node.coin_store.get_coin_record(removal)
+                assert cr is not None
+                coins_map.append((cr.coin.name(), cr.coin))
+            response = wallet_protocol.RespondRemovals(
+                block.height, block.header_hash, coins_map, None
+            )
+        else:
+            assert block.transactions_generator
+            removal_merkle_set = MerkleSet()
+            for coin_name in all_removals:
+                removal_merkle_set.add_already_hashed(coin_name)
+            assert removal_merkle_set.get_root() == block.header.data.removals_root
+            for coin_name in request.coin_names:
+                result, proof = removal_merkle_set.is_included_already_hashed(coin_name)
+                proofs_map.append((coin_name, proof))
+                if coin_name in all_removals:
+                    cr = await self.full_node.coin_store.get_coin_record(coin_name)
+                    assert cr is not None
+                    coins_map.append((coin_name, cr.coin))
+                    assert result
+                else:
+                    coins_map.append((coin_name, None))
+                    assert not result
+            response = wallet_protocol.RespondRemovals(
+                block.height, block.header_hash, coins_map, proofs_map
+            )
+
+        msg = Message("respond_removals", response)
+        return msg
