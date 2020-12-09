@@ -14,7 +14,7 @@ from src.util.ints import uint64, uint32
 
 
 def mempool_assert_coin_consumed(
-    condition: ConditionVarPair, spend_bundle: SpendBundle
+        condition: ConditionVarPair, spend_bundle: SpendBundle
 ) -> Optional[Err]:
     """
     Checks coin consumed conditions
@@ -28,7 +28,7 @@ def mempool_assert_coin_consumed(
 
 
 def mempool_assert_my_coin_id(
-    condition: ConditionVarPair, unspent: CoinRecord
+        condition: ConditionVarPair, unspent: CoinRecord
 ) -> Optional[Err]:
     """
     Checks if CoinID matches the id from the condition
@@ -39,7 +39,7 @@ def mempool_assert_my_coin_id(
 
 
 def mempool_assert_block_index_exceeds(
-    condition: ConditionVarPair, peak_height: uint32
+        condition: ConditionVarPair, peak_height: uint32
 ) -> Optional[Err]:
     """
     Checks if the next block index exceeds the block index from the condition
@@ -55,7 +55,7 @@ def mempool_assert_block_index_exceeds(
 
 
 def mempool_assert_block_age_exceeds(
-    condition: ConditionVarPair, unspent: CoinRecord, peak_height: uint32
+        condition: ConditionVarPair, unspent: CoinRecord, peak_height: uint32
 ) -> Optional[Err]:
     """
     Checks if the coin age exceeds the age from the condition
@@ -85,8 +85,35 @@ def mempool_assert_time_exceeds(condition: ConditionVarPair):
     return None
 
 
-def get_name_puzzle_conditions(block_program):
-    cost, result = GENERATOR_MOD.run_with_cost(block_program)
+def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: CoinRecord):
+    """
+    Check if the current time in millis exceeds the time specified by condition
+    """
+    try:
+        expected_mili_time = int_from_bytes(condition.var1)
+    except ValueError:
+        return Err.INVALID_CONDITION
+
+    current_time = uint64(int(time.time() * 1000))
+    if current_time <= expected_mili_time + unspent.timestamp:
+        return Err.ASSERT_TIME_EXCEEDS_FAILED
+    return None
+
+
+def get_name_puzzle_conditions(
+        block_program: Program,
+) -> Tuple[Optional[Err], List[NPC], uint64]:
+    """
+    Returns an error if it's unable to evaluate, otherwise
+    returns a list of NPC (coin_name, solved_puzzle_hash, conditions_dict)
+    """
+    cost_sum = 0
+    try:
+        cost_run, sexp = block_program.run_with_cost([])
+        cost_sum += cost_run
+    except Program.EvalError:
+        return Err.INVALID_COIN_SOLUTION, [], uint64(0)
+
     npc_list = []
     for name_solution in sexp.as_iter():
         _ = name_solution.as_python()
@@ -116,10 +143,10 @@ def get_name_puzzle_conditions(block_program):
 
 
 def mempool_check_conditions_dict(
-    unspent: CoinRecord,
-    spend_bundle: SpendBundle,
-    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
-    peak_height: uint32,
+        unspent: CoinRecord,
+        spend_bundle: SpendBundle,
+        conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+        peak_height: uint32,
 ) -> Optional[Err]:
     """
     Check all conditions against current state.
@@ -138,7 +165,8 @@ def mempool_check_conditions_dict(
                 error = mempool_assert_block_age_exceeds(cvp, unspent, peak_height)
             elif cvp.opcode is ConditionOpcode.ASSERT_TIME_EXCEEDS:
                 error = mempool_assert_time_exceeds(cvp)
-
+            elif cvp.opcode is ConditionOpcode.ASSERT_RELATIVE_TIME_EXCEEDS:
+                error = mempool_assert_relative_time_exceeds(cvp, unspent)
             if error:
                 return error
 
