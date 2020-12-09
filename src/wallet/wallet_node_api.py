@@ -153,24 +153,6 @@ class WalletNodeAPI:
             return
         self.wallet_node.log.error("Additions request rejected")
 
-    @api_request
-    async def respond_generator(self, response: wallet_protocol.RespondGenerator):
-        """
-        The full node respond with transaction generator
-        """
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
-            return
-        wrapper = response.generatorResponse
-        if wrapper.generator is not None:
-            self.wallet_node.log.info(
-                f"generator received {wrapper.header_hash} {wrapper.generator.get_tree_hash()} {wrapper.height}"
-            )
-            await self.wallet_node.wallet_state_manager.generator_received(
-                wrapper.height, wrapper.header_hash, wrapper.generator
-            )
 
     @peer_required
     @api_request
@@ -179,19 +161,6 @@ class WalletNodeAPI:
         The full node sent as a new peak
         """
         await self.wallet_node.new_peak(peak, peer)
-
-    @api_request
-    async def reject_generator(self, response: wallet_protocol.RejectGeneratorRequest):
-        """
-        The full node rejected our request for generator
-        """
-        # TODO (Straya): implement
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
-            return
-        self.wallet_node.log.info("generator rejected")
 
     @api_request
     async def reject_header_request(
@@ -208,15 +177,38 @@ class WalletNodeAPI:
             return
         self.wallet_node.log.error("Header request rejected")
 
-    # @peer_required
-    # @api_request
-    # async def respond_additions(
-    #     self, response: wallet_protocol.RespondAdditions, peer: WSChiaConnection
-    # ):
-    #     """
-    #     The full node has responded with the additions for a block. We will use this
-    #     to try to finish the block, and add it to the state.
-    #     """
+    @api_request
+    async def respond_sub_block_header(self, response: wallet_protocol.RespondSubBlockHeader):
+        pass
+
+    @peer_required
+    @api_request
+    async def respond_additions(
+        self, response: wallet_protocol.RespondAdditions, peer: WSChiaConnection
+    ):
+        pass
+
+    @peer_required
+    @api_request
+    async def reject_additions_request(
+        self, response: wallet_protocol.RejectAdditionsRequest, peer: WSChiaConnection
+    ):
+        pass
+
+    @peer_required
+    @api_request
+    async def respond_removals(
+        self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection
+    ):
+        pass
+
+    @peer_required
+    @api_request
+    async def reject_removals_request(
+        self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection
+    ):
+        pass
+
     #     if (
     #         self.wallet_node.wallet_state_manager is None
     #         or self.wallet_node.backup_initialized is False

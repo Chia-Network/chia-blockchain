@@ -3,7 +3,7 @@ import logging
 from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 import multiprocessing
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any, Callable
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
@@ -26,6 +26,7 @@ from src.consensus.block_header_validation import (
     validate_finished_header_block,
 )
 from src.wallet.block_record import HeaderBlockRecord
+from src.wallet.wallet_coin_record import WalletCoinRecord
 from src.wallet.wallet_coin_store import WalletCoinStore
 from src.wallet.wallet_block_store import WalletBlockStore
 
@@ -71,12 +72,16 @@ class WalletBlockchain:
 
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
+    coins_of_interest_received: Callable
+    reorg_rollback: Callable
+    log: logging.Logger
 
     @staticmethod
     async def create(
-        coin_store: WalletCoinStore,
         block_store: WalletBlockStore,
         consensus_constants: ConsensusConstants,
+        coins_of_interest_received: Callable, # coins_of_interest_received(removals: List[Coin], additions: List[Coin], height: uint32)
+        reorg_rollback: Callable
     ):
         """
         Initializes a blockchain with the SubBlockRecords from disk, assuming they have all been
@@ -90,9 +95,11 @@ class WalletBlockchain:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
         self.pool = ProcessPoolExecutor(max_workers=max(cpu_count - 2, 1))
         self.constants = consensus_constants
-        self.coin_store = coin_store
         self.block_store = block_store
         self._shut_down = False
+        self.coins_of_interest_received = coins_of_interest_received
+        self.reorg_rollback = reorg_rollback
+        self.log = logging.getLogger(__name__)
         await self._load_chain_from_store()
         return self
 
@@ -198,7 +205,7 @@ class WalletBlockchain:
             self.constants,
             self.sub_blocks,
             self.sub_height_to_hash,
-            block.get_block_header(),
+            block,
             False,
         )
 
@@ -218,8 +225,8 @@ class WalletBlockchain:
         )
 
         # Always add the block to the database
-        header_block_record = HeaderBlockRecord(block, additions, removals)
-        await self.block_store.add_block_record(header_block_record, sub_block)
+
+        await self.block_store.add_block_record(block_record, sub_block)
         self.sub_blocks[sub_block.header_hash] = sub_block
 
         fork_height: Optional[uint32] = await self._reconsider_peak(sub_block, genesis)
@@ -245,7 +252,9 @@ class WalletBlockchain:
                     sub_block.header_hash
                 )
                 assert block is not None
-                await self.coin_store.new_block(block)
+                for removed in block.removals:
+                    self.log.info(f"Removed: {removed.name()}")
+                await self.coins_of_interest_received(block.removals, block.additions, block.height)
                 self.sub_height_to_hash[uint32(0)] = block.header_hash
                 self.peak_height = uint32(0)
                 return uint32(0)
@@ -255,12 +264,16 @@ class WalletBlockchain:
         if sub_block.weight > self.get_peak().weight:
             # Find the fork. if the block is just being appended, it will return the peak
             # If no blocks in common, returns -1, and reverts all blocks
+            peak = self.get_peak()
             fork_h: int = find_fork_point_in_chain(
-                self.sub_blocks, sub_block, self.get_peak()
+                self.sub_blocks, sub_block, peak
             )
 
             # Rollback to fork
-            await self.coin_store.rollback_to_block(fork_h)
+            self.log.info(f"fork_h: {fork_h}, {sub_block.height}, {sub_block.sub_block_height}, {peak.sub_block_height}, {peak.height}")
+            fork_hash = self.sub_height_to_hash[fork_h]
+            fork_block = self.sub_blocks[fork_hash]
+            await self.reorg_rollback(fork_block.height)
 
             # Rollback sub_epoch_summaries
             heights_to_delete = []
@@ -283,25 +296,25 @@ class WalletBlockchain:
                 assert fetched_block is not None
                 assert fetched_sub_block is not None
                 blocks_to_add.append((fetched_block, fetched_sub_block))
-                if fetched_block.height == 0:
+                if fetched_block.sub_block_height == 0:
                     # Doing a full reorg, starting at height 0
                     break
                 curr = fetched_sub_block.prev_hash
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
                 self.sub_height_to_hash[
-                    fetched_sub_block.height
+                    fetched_sub_block.sub_block_height
                 ] = fetched_sub_block.header_hash
                 if fetched_sub_block.is_block:
-                    await self.coin_store.new_block(fetched_block)
+                    await self.coins_of_interest_received(fetched_block.removals, fetched_block.additions, fetched_block.height)
                 if fetched_sub_block.sub_epoch_summary_included is not None:
                     self.sub_epoch_summaries[
-                        fetched_sub_block.height
+                        fetched_sub_block.sub_block_height
                     ] = fetched_sub_block.sub_epoch_summary_included
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(sub_block.header_hash)
-            self.peak_height = sub_block.height
+            self.peak_height = sub_block.sub_block_height
             return uint32(min(fork_h, 0))
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set

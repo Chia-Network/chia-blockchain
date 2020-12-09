@@ -115,13 +115,23 @@ async def validate_block_body(
             curr_sb = sub_blocks[curr_sb.prev_hash]
         assert curr_sb.header_hash == block.foliage_block.prev_block_hash
 
+        if curr_sb.sub_block_height == 0:
+            height = 0
+        else:
+            if curr_sb.is_block:
+                height = curr_sb.height + 1
+            else:
+                height = curr_sb.height
+
         pool_coin = create_pool_coin(
             curr_sb.height,
             curr_sb.pool_puzzle_hash,
-            calculate_pool_reward(curr_sb.height),
+            calculate_pool_reward(height, curr_sb.sub_block_height == 0),
         )
         farmer_coin = create_farmer_coin(
-            curr_sb.height, curr_sb.farmer_puzzle_hash, calculate_base_farmer_reward(curr_sb.height) + curr_sb.fees
+            curr_sb.sub_block_height,
+            curr_sb.farmer_puzzle_hash,
+            calculate_base_farmer_reward(height) + curr_sb.fees,
         )
         # Adds the previous block
         expected_reward_coins.add(pool_coin)
@@ -132,11 +142,17 @@ async def validate_block_body(
             curr_sb = sub_blocks[curr_sb.prev_hash]
             while not curr_sb.is_block:
                 expected_reward_coins.add(
-                    create_pool_coin(curr_sb.height, curr_sb.pool_puzzle_hash, calculate_pool_reward(curr_sb.height))
+                    create_pool_coin(
+                        curr_sb.sub_block_height,
+                        curr_sb.pool_puzzle_hash,
+                        calculate_pool_reward(block.height, sub_height == 0),
+                    )
                 )
                 expected_reward_coins.add(
                     create_farmer_coin(
-                        curr_sb.height, curr_sb.farmer_puzzle_hash, calculate_base_farmer_reward(curr_sb.height)
+                        curr_sb.sub_block_height,
+                        curr_sb.farmer_puzzle_hash,
+                        calculate_base_farmer_reward(block.height),
                     )
                 )
                 curr_sb = sub_blocks[curr_sb.prev_hash]

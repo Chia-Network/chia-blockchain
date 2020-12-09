@@ -5,21 +5,14 @@ from typing import List
 import pytest
 
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
-from src.protocols import full_node_protocol
-from src.server.outbound_message import NodeType
-from src.server.ws_connection import WSChiaConnection
+from src.server.server import ChiaServer
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
-    test_constants,
-    setup_full_node,
-    setup_wallet_node,
-    setup_introducer,
-    _teardown_nodes,
 )
-from tests.time_out_assert import time_out_assert
+from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 
 @pytest.fixture(scope="module")
@@ -54,8 +47,10 @@ class TestWalletSimulator:
         num_blocks = 4
         full_nodes, wallets = wallet_node
         full_node_api = full_nodes[0]
-        server_1 = full_node_api.full_node.server
+        server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
+
+        await server_2.start_client(PeerInfo("127.0.0.1", server_1._port))
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
@@ -64,8 +59,9 @@ class TestWalletSimulator:
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(0, num_blocks)]
+            [calculate_pool_reward(uint32(i), False) + calculate_base_farmer_reward(uint32(i)) for i in range(0, num_blocks - 1)]
         )
+
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
     #
     # @pytest.mark.asyncio

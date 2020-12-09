@@ -30,28 +30,16 @@ def block_to_sub_block_record(
     else:
         raise ValueError("full_block or header_block must be given")
 
-    prev_block: Optional[SubBlockRecord] = None
-    loop_hash = block.prev_header_hash
-    while True:
-        if loop_hash in sub_blocks:
-            prev = sub_blocks[loop_hash]
-            if prev.is_block:
-                prev_block = prev
-                break
-            else:
-                loop_hash = prev.prev_hash
-        else:
-            break
-    if prev_block is None:
-        prev_tx_height = 0
-    else:
-        prev_tx_height = prev_block.prev_block_height + 1
-
     if block.sub_block_height == 0:
         prev_sb = None
         sub_slot_iters: uint64 = uint64(constants.SUB_SLOT_ITERS_STARTING)
+        height = 0
     else:
         prev_sb: Optional[SubBlockRecord] = sub_blocks[block.prev_header_hash]
+        if prev_sb.is_block:
+            height = prev_sb.height + 1
+        else:
+            height = prev_sb.height
         sub_slot_iters: uint64 = get_next_sub_slot_iters(
             constants,
             sub_blocks,
@@ -118,7 +106,7 @@ def block_to_sub_block_record(
         block.header_hash,
         block.prev_header_hash,
         block.sub_block_height,
-        prev_tx_height,
+        uint32(height),
         block.weight,
         block.total_iters,
         block.reward_chain_sub_block.signage_point_index,
