@@ -4,9 +4,10 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from typing import AsyncGenerator, Optional, Dict, Callable, List, Tuple, Any
+from typing import AsyncGenerator, Optional, Dict, Callable, List, Tuple, Any, Union
 
 import aiosqlite
+from blspy import AugSchemeMPL
 
 import src.server.ws_connection as ws
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
@@ -34,6 +35,7 @@ from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
 from src.server.ws_connection import WSChiaConnection
 from src.types.full_block import FullBlock
+from src.types.pool_target import PoolTarget
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
@@ -435,6 +437,20 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.WALLET)
             self._state_changed("sub_block")
 
+    def has_valid_pool_sig(self, block: Union[UnfinishedBlock, FullBlock]):
+        if (
+            block.foliage_sub_block.foliage_sub_block_data.pool_target
+            == PoolTarget(self.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
+            and block.foliage_sub_block.prev_sub_block_hash != self.constants.GENESIS_PREV_HASH
+        ):
+            if not AugSchemeMPL.verify(
+                block.reward_chain_sub_block.proof_of_space.pool_public_key,
+                bytes(block.foliage_sub_block.foliage_sub_block_data.pool_target),
+                block.foliage_sub_block.foliage_sub_block_data.pool_signature,
+            ):
+                return False
+        return True
+
     async def respond_sub_block(
         self, respond_sub_block: full_node_protocol.RespondSubBlock, peer: Optional[ws.WSChiaConnection] = None
     ):
@@ -734,7 +750,9 @@ class FullNode:
 
         if block.reward_chain_sub_block.signage_point_index == 0:
             res = self.full_node_store.get_sub_slot(block.reward_chain_sub_block.pos_ss_cc_challenge_hash)
-            assert res is not None
+            if res is None:
+                self.log.warning(f"Do not have sub slot {block.reward_chain_sub_block.pos_ss_cc_challenge_hash}")
+                return
             rc_prev = res[0].reward_chain.get_hash()
         else:
             rc_prev = block.reward_chain_sub_block.reward_chain_sp_vdf.challenge
