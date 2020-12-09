@@ -80,8 +80,8 @@ class WalletBlockchain:
     async def create(
         block_store: WalletBlockStore,
         consensus_constants: ConsensusConstants,
-        coins_of_interest_received: Callable, # coins_of_interest_received(removals: List[Coin], additions: List[Coin], height: uint32)
-        reorg_rollback: Callable
+        coins_of_interest_received: Callable,  # coins_of_interest_received(removals: List[Coin], additions: List[Coin], height: uint32)
+        reorg_rollback: Callable,
     ):
         """
         Initializes a blockchain with the SubBlockRecords from disk, assuming they have all been
@@ -254,7 +254,9 @@ class WalletBlockchain:
                 assert block is not None
                 for removed in block.removals:
                     self.log.info(f"Removed: {removed.name()}")
-                await self.coins_of_interest_received(block.removals, block.additions, block.height)
+                await self.coins_of_interest_received(
+                    block.removals, block.additions, block.height
+                )
                 self.sub_height_to_hash[uint32(0)] = block.header_hash
                 self.peak_height = uint32(0)
                 return uint32(0)
@@ -265,12 +267,12 @@ class WalletBlockchain:
             # Find the fork. if the block is just being appended, it will return the peak
             # If no blocks in common, returns -1, and reverts all blocks
             peak = self.get_peak()
-            fork_h: int = find_fork_point_in_chain(
-                self.sub_blocks, sub_block, peak
-            )
+            fork_h: int = find_fork_point_in_chain(self.sub_blocks, sub_block, peak)
 
             # Rollback to fork
-            self.log.info(f"fork_h: {fork_h}, {sub_block.height}, {sub_block.sub_block_height}, {peak.sub_block_height}, {peak.height}")
+            self.log.info(
+                f"fork_h: {fork_h}, {sub_block.height}, {sub_block.sub_block_height}, {peak.sub_block_height}, {peak.height}"
+            )
             fork_hash = self.sub_height_to_hash[fork_h]
             fork_block = self.sub_blocks[fork_hash]
             await self.reorg_rollback(fork_block.height)
@@ -306,7 +308,11 @@ class WalletBlockchain:
                     fetched_sub_block.sub_block_height
                 ] = fetched_sub_block.header_hash
                 if fetched_sub_block.is_block:
-                    await self.coins_of_interest_received(fetched_block.removals, fetched_block.additions, fetched_block.height)
+                    await self.coins_of_interest_received(
+                        fetched_block.removals,
+                        fetched_block.additions,
+                        fetched_block.height,
+                    )
                 if fetched_sub_block.sub_epoch_summary_included is not None:
                     self.sub_epoch_summaries[
                         fetched_sub_block.sub_block_height
