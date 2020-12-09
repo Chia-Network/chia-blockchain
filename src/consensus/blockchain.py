@@ -236,15 +236,23 @@ class Blockchain:
         if sub_block.weight > self.get_peak().weight:
             # Find the fork. if the block is just being appended, it will return the peak
             # If no blocks in common, returns -1, and reverts all blocks
-            fork_h: int = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_peak())
+            fork_sub_block_height: int = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_peak())
+            if fork_sub_block_height == -1:
+                coin_store_reorg_height = -1
+            else:
+                last_sb_in_common = self.sub_blocks[self.sub_height_to_hash[uint32(fork_sub_block_height)]]
+                if last_sb_in_common.is_block:
+                    coin_store_reorg_height = last_sb_in_common.prev_block_height + 1
+                else:
+                    coin_store_reorg_height = last_sb_in_common.prev_block_height
 
             # Rollback to fork
-            await self.coin_store.rollback_to_block(fork_h)
+            await self.coin_store.rollback_to_block(coin_store_reorg_height)
 
             # Rollback sub_epoch_summaries
             heights_to_delete = []
             for ses_included_height in self.sub_epoch_summaries.keys():
-                if ses_included_height > fork_h:
+                if ses_included_height > fork_sub_block_height:
                     heights_to_delete.append(ses_included_height)
             for sub_height in heights_to_delete:
                 del self.sub_epoch_summaries[sub_height]
@@ -252,7 +260,7 @@ class Blockchain:
             # Collect all blocks from fork point to new peak
             blocks_to_add: List[Tuple[FullBlock, SubBlockRecord]] = []
             curr = sub_block.header_hash
-            while fork_h < 0 or curr != self.sub_height_to_hash[uint32(fork_h)]:
+            while fork_sub_block_height < 0 or curr != self.sub_height_to_hash[uint32(fork_sub_block_height)]:
                 fetched_block: Optional[FullBlock] = await self.block_store.get_full_block(curr)
                 fetched_sub_block: Optional[SubBlockRecord] = await self.block_store.get_sub_block_record(curr)
                 assert fetched_block is not None
@@ -273,7 +281,7 @@ class Blockchain:
             # Changes the peak to be the new peak
             await self.block_store.set_peak(sub_block.header_hash)
             self.peak_height = sub_block.sub_block_height
-            return uint32(max(fork_h, 0))
+            return uint32(max(fork_sub_block_height, 0))
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
         return None

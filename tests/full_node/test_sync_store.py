@@ -3,7 +3,6 @@ import sqlite3
 
 import pytest
 from src.full_node.sync_store import SyncStore
-from src.types.full_block import FullBlock
 from tests.setup_nodes import test_constants, bt
 
 
@@ -17,7 +16,7 @@ class TestStore:
     @pytest.mark.asyncio
     async def test_basic_store(self):
         assert sqlite3.threadsafety == 1
-        blocks = bt.get_consecutive_blocks(9, b"0")
+        blocks = bt.get_consecutive_blocks(2)
         db = await SyncStore.create()
         await SyncStore.create()
 
@@ -25,11 +24,10 @@ class TestStore:
         for sync_mode in (False, True):
             db.set_sync_mode(sync_mode)
             assert sync_mode == db.get_sync_mode()
-        FullBlock.from_bytes(test_constants.GENESIS_BLOCK)
 
         # clear sync info
         await db.clear_sync_info()
 
         # add/get potential tip, get potential tips num
-        db.add_potential_peak(blocks[6])
-        assert blocks[6] == db.get_potential_peak(blocks[6].header_hash)
+        db.add_potential_peak(blocks[1])
+        assert blocks[1] == db.get_potential_peak(blocks[1].header_hash)

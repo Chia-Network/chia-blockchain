@@ -227,7 +227,7 @@ class TestCoinStore:
     @pytest.mark.asyncio
     async def test_get_puzzle_hash(self):
         num_blocks = 10
-        blocks = bt.get_consecutive_blocks(num_blocks)
+        blocks = bt.get_consecutive_blocks(num_blocks, guarantee_block=True)
         db_path = Path("blockchain_test.db")
         if db_path.exists():
             db_path.unlink()
@@ -235,20 +235,21 @@ class TestCoinStore:
         coin_store = await CoinStore.create(connection)
         store = await BlockStore.create(connection)
         b: Blockchain = await Blockchain.create(coin_store, store, test_constants)
-        try:
-            for block in blocks:
-                await b.receive_block(block)
-            assert b.get_peak().height == num_blocks - 1
+        last_block_height = 0
+        for block in blocks:
+            res, err, _ = await b.receive_block(block)
+            assert err is None
+            assert res == ReceiveBlockResult.NEW_PEAK
+            if block.is_block() and block.header_hash != blocks[-1].header_hash:
+                last_block_height = block.height
+        assert b.get_peak().sub_block_height == num_blocks - 1
 
-            farmer_coin, pool_coin = blocks[-1].get_future_reward_coins()
+        pool_coin, farmer_coin = blocks[-2].get_future_reward_coins(last_block_height)
 
-            coins = await coin_store.get_coin_records_by_puzzle_hash(farmer_coin.puzzle_hash)
-            assert len(coins) > 2
-        except Exception as e:
-            await connection.close()
-            Path("blockchain_test.db").unlink()
-            b.shut_down()
-            raise e
+        coins_farmer = await coin_store.get_coin_records_by_puzzle_hash(farmer_coin.puzzle_hash)
+        coins_pool = await coin_store.get_coin_records_by_puzzle_hash(pool_coin.puzzle_hash)
+        assert len(coins_farmer) == num_blocks - 1
+        assert len(coins_pool) == num_blocks - 2
 
         await connection.close()
         Path("blockchain_test.db").unlink()

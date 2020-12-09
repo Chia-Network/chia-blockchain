@@ -1084,8 +1084,20 @@ class TestBlockHeaderValidation:
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.OLD_POOL_TARGET
 
     @pytest.mark.asyncio
+    async def test_pool_target_pre_farm(self, empty_blockchain):
+        # 20a
+        blocks = bt.get_consecutive_blocks(1)
+        block_bad: FullBlock = recursive_replace(
+            blocks[-1], "foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash", std_hash(b"12")
+        )
+        new_m = block_bad.foliage_sub_block.foliage_sub_block_data.get_hash()
+        new_fsb_sig = bt.get_plot_signature(new_m, blocks[-1].reward_chain_sub_block.proof_of_space.plot_public_key)
+        block_bad = recursive_replace(block_bad, "foliage_sub_block.foliage_sub_block_signature", new_fsb_sig)
+        assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_PREFARM
+
+    @pytest.mark.asyncio
     async def test_pool_target_signature(self, empty_blockchain):
-        # 18
+        # 20b
         blocks = bt.get_consecutive_blocks(3)
         assert (await empty_blockchain.receive_block(blocks[0]))[0] == ReceiveBlockResult.NEW_PEAK
         assert (await empty_blockchain.receive_block(blocks[1]))[0] == ReceiveBlockResult.NEW_PEAK
