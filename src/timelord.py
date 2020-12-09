@@ -613,7 +613,6 @@ class Timelord:
                         block = unfinished_block
                         break
                 if block is not None:
-
                     ip_total_iters = self.last_state.get_total_iters() + iteration
                     challenge = block.reward_chain_sub_block.get_hash()
                     icc_info: Optional[VDFInfo] = None
@@ -653,6 +652,7 @@ class Timelord:
                     overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
 
                     cc_info = dataclasses.replace(cc_info, number_of_iterations=ip_iters)
+                    log.warning(f"Sending infusion point VDF cc: {cc_info}")
                     response = timelord_protocol.NewInfusionPointVDF(
                         challenge,
                         cc_info,
@@ -808,8 +808,13 @@ class Timelord:
                         + self.last_state.get_sub_slot_iters()
                     )
                 else:
-                    total_iters = self.last_state.get_total_iters() + self.last_state.get_total_iters()
+                    total_iters = self.last_state.get_total_iters() + self.last_state.get_sub_slot_iters()
                 iters_from_cb = uint64(total_iters - self.last_state.last_challenge_sb_or_eos_total_iters)
+                if iters_from_cb > self.last_state.sub_slot_iters:
+                    log.error(f"{self.last_state.peak}")
+                    log.error(f"{self.last_state.subslot_end}")
+                    assert False
+                assert iters_from_cb <= self.last_state.sub_slot_iters
                 icc_ip_vdf = dataclasses.replace(icc_ip_vdf, number_of_iterations=iters_from_cb)
 
             icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = (

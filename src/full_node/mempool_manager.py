@@ -178,11 +178,7 @@ class MempoolManager:
             elif name in additions_dict:
                 removal_coin = additions_dict[name]
                 removal_record = CoinRecord(
-                    removal_coin,
-                    self.peak.height + 1,
-                    uint32(0),
-                    False,
-                    False,
+                    removal_coin, self.peak.height + 1, uint32(0), False, False, removal_record.timestamp
                 )
 
             assert removal_record is not None
@@ -263,9 +259,7 @@ class MempoolManager:
                 log.warning(f"{npc.puzzle_hash} != {coin_record.coin.puzzle_hash}")
                 return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 
-            error = mempool_check_conditions_dict(
-                coin_record, new_spend, npc.condition_dict, self.peak.height + 1
-            )
+            error = mempool_check_conditions_dict(coin_record, new_spend, npc.condition_dict, self.peak.height + 1)
 
             if error:
                 if error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED:

@@ -59,7 +59,10 @@ class TestWalletSimulator:
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i), False) + calculate_base_farmer_reward(uint32(i)) for i in range(0, num_blocks - 1)]
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(0, num_blocks - 1)
+            ]
         )
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)

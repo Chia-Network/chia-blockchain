@@ -57,6 +57,10 @@ class Farmer:
         self.keychain = keychain
         self.state_changed_callback: Optional[Callable] = None
         self.log = log
+        all_sks = self.keychain.get_all_private_keys()
+        self._private_keys = [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [
+            master_sk_to_pool_sk(sk) for sk, _ in all_sks
+        ]
 
         if len(self.get_public_keys()) == 0:
             error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
@@ -108,11 +112,10 @@ class Farmer:
             self.state_changed_callback(change)
 
     def get_public_keys(self):
-        return [child_sk.get_g1() for child_sk in self.get_private_keys()]
+        return [child_sk.get_g1() for child_sk in self._private_keys]
 
     def get_private_keys(self):
-        all_sks = self.keychain.get_all_private_keys()
-        return [master_sk_to_farmer_sk(sk) for sk, _ in all_sks] + [master_sk_to_pool_sk(sk) for sk, _ in all_sks]
+        return self._private_keys
 
     async def _periodically_clear_cache_task(self):
         time_slept: uint64 = uint64(0)

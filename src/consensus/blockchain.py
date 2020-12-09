@@ -237,9 +237,9 @@ class Blockchain:
             else:
                 last_sb_in_common = self.sub_blocks[self.sub_height_to_hash[uint32(fork_sub_block_height)]]
                 if last_sb_in_common.is_block:
-                    coin_store_reorg_height = last_sb_in_common.prev_block_height + 1
+                    coin_store_reorg_height = last_sb_in_common.height
                 else:
-                    coin_store_reorg_height = last_sb_in_common.prev_block_height
+                    coin_store_reorg_height = last_sb_in_common.height - 1
 
             # Rollback to fork
             await self.coin_store.rollback_to_block(coin_store_reorg_height)

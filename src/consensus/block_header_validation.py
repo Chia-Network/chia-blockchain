@@ -644,6 +644,7 @@ async def validate_unfinished_header_block(
             header_block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash
             != constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH
         ):
+            log.error(f"Pool target {header_block.foliage_sub_block.foliage_sub_block_data.pool_target}")
             return None, ValidationError(Err.INVALID_PREFARM)
     else:
         # 20b. Check pool target signature. Should not check this for genesis sub-block.
@@ -805,6 +806,12 @@ async def validate_finished_header_block(
         cc_target_vdf_info,
         number_of_iterations=ip_iters,
     ):
+        expected = dataclasses.replace(
+            cc_target_vdf_info,
+            number_of_iterations=ip_iters,
+        )
+        log.error(f"{header_block.reward_chain_sub_block.challenge_chain_ip_vdf }. expected {expected}")
+        log.error(f"Block: {header_block}")
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
     if not header_block.challenge_chain_ip_proof.is_valid(
         constants,
@@ -812,6 +819,8 @@ async def validate_finished_header_block(
         cc_target_vdf_info,
         None,
     ):
+        log.error(f"Did not validate, output {cc_vdf_output}")
+        log.error(f"Block: {header_block}")
         return None, ValidationError(Err.INVALID_CC_IP_VDF)
 
     # 30. Check reward chain infusion point VDF

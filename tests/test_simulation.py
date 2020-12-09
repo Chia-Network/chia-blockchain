@@ -1,45 +1,47 @@
-# import asyncio
-# import pytest
-# from typing import List
-#
-# from tests.full_node.test_full_sync import node_height_at_least
-# from tests.setup_nodes import setup_full_system, test_constants
-# from src.util.ints import uint16, uint32
-# from src.types.full_block import FullBlock
-# from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
-# from src.types.peer_info import PeerInfo
-# from src.consensus.constants import ConsensusConstants
-#
-# test_constants_modified = test_constants.replace(
-#     **{
-#         "DIFFICULTY_STARTING": 2 ** 8,
-#         "DISCRIMINANT_SIZE_BITS": 1024,
-#         "SUB_EPOCH_SUB_BLOCKS": 140,
-#         "MAX_SUB_SLOT_SUB_BLOCKS": 50,
-#         "EPOCH_SUB_BLOCKS": 280,
-#         "SUB_SLOT_ITERS_STARTING": 2 ** 14,
-#         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,
-#     }
-# )
-#
-#
-# class TestSimulation:
-#     @pytest.fixture(scope="function")
-#     async def simulation(self):
-#         async for _ in setup_full_system(test_constants):
-#             yield _
-#
-#     @pytest.mark.asyncio
-#     async def test_simulation_1(self, simulation):
-#         node1, node2, _, _, _, _, _, server1 = simulation
-#         # await asyncio.sleep(1)
-#         await server1.start_client(PeerInfo("localhost", uint16(21238)))
-#         # Use node2 to test node communication, since only node1 extends the chain.
-#         await time_out_assert(500, node_height_at_least, True, node2, 10)
-#
-#         # Wait additional 2 minutes to get a compact block.
-#         # max_height = node1.full_node.blockchain.lca_block.height
-#
+import asyncio
+import pytest
+from typing import List
+
+from tests.full_node.test_full_sync import node_height_at_least
+from tests.setup_nodes import setup_full_system, test_constants
+from src.util.ints import uint16, uint32
+from src.types.full_block import FullBlock
+from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from src.types.peer_info import PeerInfo
+from src.consensus.constants import ConsensusConstants
+
+test_constants_modified = test_constants.replace(
+    **{
+        "DIFFICULTY_STARTING": 2 ** 8,
+        "DISCRIMINANT_SIZE_BITS": 1024,
+        "SUB_EPOCH_SUB_BLOCKS": 140,
+        "MAX_SUB_SLOT_SUB_BLOCKS": 50,
+        "NUM_SPS_SUB_SLOT": 64,  # Must be a power of 2
+        "EPOCH_SUB_BLOCKS": 280,
+        "SUB_SLOT_ITERS_STARTING": 2 ** 24,
+        "NUMBER_ZERO_BITS_PLOT_FILTER": 4,
+    }
+)
+
+
+class TestSimulation:
+    @pytest.fixture(scope="function")
+    async def simulation(self):
+        async for _ in setup_full_system(test_constants_modified):
+            yield _
+
+    @pytest.mark.asyncio
+    async def test_simulation_1(self, simulation):
+        node1, node2, _, _, _, _, _, server1 = simulation
+        # await asyncio.sleep(1)
+        await server1.start_client(PeerInfo("localhost", uint16(21238)))
+        # Use node2 to test node communication, since only node1 extends the chain.
+        await time_out_assert(500, node_height_at_least, True, node2, 10)
+
+        # Wait additional 2 minutes to get a compact block.
+        # max_height = node1.full_node.blockchain.lca_block.height
+
+
 #         # async def has_compact(node1, node2, max_height):
 #         #     for h in range(1, max_height):
 #         #         blocks_1: List[FullBlock] = await node1.full_node.block_store.get_full_blocks_at([uint32(h)])
