@@ -652,7 +652,6 @@ class Timelord:
                     overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
 
                     cc_info = dataclasses.replace(cc_info, number_of_iterations=ip_iters)
-                    log.warning(f"Sending infusion point VDF cc: {cc_info}")
                     response = timelord_protocol.NewInfusionPointVDF(
                         challenge,
                         cc_info,
