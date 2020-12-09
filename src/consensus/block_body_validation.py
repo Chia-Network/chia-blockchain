@@ -267,7 +267,7 @@ async def validate_block_body(
         if rem in additions_dic:
             # Ephemeral coin
             rem_coin: Coin = additions_dic[rem]
-            new_unspent: CoinRecord = CoinRecord(rem_coin, sub_height, uint32(0), False, False)
+            new_unspent: CoinRecord = CoinRecord(rem_coin, sub_height, uint32(0), False, False, block.foliage_block.timestamp)
             removal_coin_records[new_unspent.name] = new_unspent
         else:
             unspent = await coin_store.get_coin_record(rem)
@@ -299,6 +299,7 @@ async def validate_block_body(
                     uint32(0),
                     False,
                     (rem in coinbases_since_fork),
+                    block.foliage_block.timestamp
                 )
                 removal_coin_records[new_coin_record.name] = new_coin_record
 
@@ -354,6 +355,7 @@ async def validate_block_body(
             removal_coin_records,
             npc.condition_dict,
             height,
+            block.foliage_block.timestamp
         )
         if error:
             return error
