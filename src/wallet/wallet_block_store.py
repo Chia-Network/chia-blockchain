@@ -84,22 +84,24 @@ class WalletBlockStore:
         to the chain, but it may or may not be in the LCA path.
         """
         cursor = await self.db.execute(
-            "INSERT OR REPLACE INTO header_blocks VALUES(?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO header_blocks VALUES(?, ?, ?, ?, ?)",
             (
                 block_record.header_hash.hex(),
                 block_record.sub_block_height,
-                block_record.timestamp,
+                block_record.height,
+                block_record.header.foliage_block.timestamp,
                 bytes(block_record),
             ),
         )
 
         await cursor.close()
         cursor_2 = await self.db.execute(
-            "INSERT OR REPLACE INTO sub_block_records VALUES(?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO sub_block_records VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 block_record.header.header_hash.hex(),
                 block_record.header.prev_header_hash.hex(),
                 block_record.header.sub_block_height,
+                block_record.header.height,
                 block_record.header.weight.to_bytes(
                     128 // 8, "big", signed=False
                 ).hex(),

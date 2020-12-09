@@ -328,7 +328,7 @@ class WalletCoinStore:
                 delete_queue.append(coin_name)
 
         for coin_name in delete_queue:
-            del self.coin_record_cache[coin_name]
+            self.coin_record_cache.pop(coin_name)
 
         # Delete from storage
         c1 = await self.db_connection.execute(
@@ -341,7 +341,3 @@ class WalletCoinStore:
         )
         await c2.close()
         await self.db_connection.commit()
-
-    async def new_block(self, block: HeaderBlockRecord):
-        # TODO add additions removals to db
-        pass

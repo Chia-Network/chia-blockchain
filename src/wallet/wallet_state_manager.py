@@ -122,8 +122,7 @@ class WalletStateManager:
 
         self.user_settings = await UserSettings.create(self.basic_store)
         self.block_store = await WalletBlockStore.create(self.db_connection)
-        self.blockchain = await WalletBlockchain.create(
-            self.coin_store, self.block_store, self.constants
+        self.blockchain = await WalletBlockchain.create(self.block_store, self.constants, self.coins_of_interest_received, self.reorg_rollback
         )
 
         self.sync_mode = False
@@ -419,7 +418,6 @@ class WalletStateManager:
             WalletCoinRecord
         ] = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
         amount: uint64 = uint64(0)
-
         for record in record_list:
             amount = uint64(amount + record.coin.amount)
         self.log.info(f"Confirmed balance amount is {amount}")
@@ -714,17 +712,21 @@ class WalletStateManager:
         self, new_block: HeaderBlock, transactions_filter: bytes
     ) -> Tuple[List[bytes32], List[bytes32]]:
         """ Returns a list of our coin ids, and a list of puzzle_hashes that positively match with provided filter. """
-        assert new_block.prev_header_hash in self.blockchain.sub_blocks
+        # assert new_block.prev_header_hash in self.blockchain.sub_blocks
 
         tx_filter = PyBIP158([b for b in transactions_filter])
 
         # Find fork point
-        # TODO: handle returning of -1
-        fork_h = find_fork_point_in_chain(
-            self.blockchain.sub_blocks,
-            self.blockchain.sub_blocks[self.peak.header_hash],
-            new_block,
-        )
+        if new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH:
+            self.log.info("not genesis")
+            # TODO: handle returning of -1
+            fork_h = find_fork_point_in_chain(
+                self.blockchain.sub_blocks,
+                self.blockchain.sub_blocks[self.peak.header_hash],
+                new_block,
+            )
+        else:
+            fork_h = 0
 
         # Get all unspent coins
         my_coin_records_lca: Set[
@@ -737,32 +739,29 @@ class WalletStateManager:
             if coin.confirmed_block_index <= fork_h:
                 unspent_coin_names.add(coin.name())
 
-        # Get all blocks after fork point up to but not including this block
-        curr: SubBlockRecord = self.blockchain.sub_blocks[new_block.prev_header_hash]
-        reorg_blocks: List[HeaderBlockRecord] = []
-        while curr.height > fork_h:
-            header_block_record = await self.block_store.get_header_block_record(
-                curr.header_hash
-            )
-            reorg_blocks.append(header_block_record)
-            curr = self.blockchain.sub_blocks[curr.prev_header_hash]
-        reorg_blocks.reverse()
+        # # Get all blocks after fork point up to but not including this block
+        # curr: SubBlockRecord = self.blockchain.sub_blocks[new_block.prev_header_hash]
+        # reorg_blocks: List[HeaderBlockRecord] = []
+        # while curr.height > fork_h:
+        #     header_block_record = await self.block_store.get_header_block_record(
+        #         curr.header_hash
+        #     )
+        #     reorg_blocks.append(header_block_record)
+        #     curr = self.blockchain.sub_blocks[curr.prev_header_hash]
+        # reorg_blocks.reverse()
 
         # For each block, process additions to get all Coins, then process removals to get unspent coins
-        for reorg_block in reorg_blocks:
-            for addition in reorg_block.additions:
-                unspent_coin_names.add(addition.name())
-            for removal in reorg_block.removals:
-                record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
-                    removal.puzzle_hash
-                )
-                if record is None:
-                    continue
-                unspent_coin_names.remove(removal)
+        # for reorg_block in reorg_blocks:
+        #     for addition in reorg_block.additions:
+        #         unspent_coin_names.add(addition.name())
+        #     for removal in reorg_block.removals:
+        #         record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(
+        #             removal.puzzle_hash
+        #         )
+        #         if record is None:
+        #             continue
+        #         unspent_coin_names.remove(removal)
 
-        if new_block.additions is not None:
-            for addition in new_block.additions:
-                unspent_coin_names.add(addition.name())
 
         my_puzzle_hashes = self.puzzle_store.all_puzzle_hashes
 
@@ -839,6 +838,9 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
+        self.log.info(f"Rolling back to {index}")
+        all_coins = await self.coin_store.get_all_coins()
+        self.log.info(f"all coins: {all_coins}")
         await self.coin_store.rollback_to_block(index)
 
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(
