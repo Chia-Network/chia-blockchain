@@ -6,7 +6,7 @@ from blspy import AugSchemeMPL
 
 from src.consensus.blockchain import Blockchain
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import is_overflow_sub_block
+from src.consensus.pot_iterations import is_overflow_sub_block, calculate_iterations_quality, calculate_ip_iters
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
@@ -104,7 +104,7 @@ async def init_block_block_cache_mock(blockchain: Blockchain, start: uint32, sto
     # convert to FullBlocks HeaderBlocks
     header_blocks: Dict[bytes32, HeaderBlock] = {}
     for block in full_blocks:
-        header_blocks[block.header_hash] = block.get_block_header()
+        header_blocks[block.header_hash] = await block.get_block_header()
 
     return BlockCacheMock(blockchain.sub_blocks, blockchain.sub_height_to_hash, header_blocks)
 
@@ -268,8 +268,6 @@ class WeightProofHandler:
         total_slot_iters, total_slots = uint64(0), uint64(0)
         # validate sub epoch samples
 
-        # segments = map_segments_by_sub_epoch(weight_proof.sub_epoch_segments)
-
         curr_sub_epoch_n = -1
 
         for idx, segment in enumerate(weight_proof.sub_epoch_segments):
@@ -281,7 +279,6 @@ class WeightProofHandler:
                 if not ses.reward_chain_hash == rc_sub_slot_hash:
                     self.log.error(f"failed reward_chain_hash validation sub_epoch {segment.sub_epoch_n}")
                     self.log.error(f"rc slot hash  {rc_sub_slot_hash}")
-                    # self.log.error(f"rc_sub_slot_hash {rc_sub_slot_hash}")
                     return False
 
                 # recreate RewardChainSubSlot for next ses rc_hash
@@ -289,7 +286,9 @@ class WeightProofHandler:
                     segment, ses.get_hash(), ses.new_sub_slot_iters, ses.new_difficulty, summaries
                 ).get_hash()
 
-            if not self.__validate_segment_slots():
+            if not self.__validate_segment_slots(
+                summaries, segment, curr_ssi, total_slot_iters, total_slots, total_ip_iters, rc_sub_slot_hash
+            ):
                 self.log.error(f"failed to validate segment {idx} of sub_epoch {segment.sub_epoch_n} slots")
                 return False
 
@@ -440,6 +439,7 @@ class WeightProofHandler:
 
         # find sub slot end
         curr = block
+        next_slot_height = 0
         cc_slot_end_vdf: List[VDFProof] = []
         icc_slot_end_vdf: List[VDFProof] = []
         while True:
@@ -525,42 +525,51 @@ class WeightProofHandler:
             cc_sp_hash,
         )
 
-    def __validate_segment_slots(self) -> bool:
-        # self.log.debug(f"handle slots in segment {idx}")
-        # ses = summaries[segment.sub_epoch_n]
-        # if ses.new_sub_slot_iters is not None:
-        #     curr_ssi: uint64 = ses.new_sub_slot_iters
-        # for sub_slot in segment.sub_slots:
-        #     total_slot_iters += curr_ssi
-        #     total_slots += 1
-        #
-        #     # todo uncomment after vdf merging is done
-        #     # if not validate_sub_slot_vdfs(self.constants, sub_slot, vdf_info, sub_slot.is_challenge()):
-        #     #     self.log.info(f"failed to validate {idx} sub slot vdfs")
-        #     #     return False
-        #
-        #     if sub_slot.is_challenge():
-        #         q_str = self.__get_quality_string(segment, summaries[segment.sub_epoch_n], curr_ssi)
-        #         if q_str is None:
-        #             self.log.info(f"failed to validate {idx} segment space proof")
-        #             # return False
-        #         required_iters: uint64 = calculate_iterations_quality(
-        #             q_str,
-        #             sub_slot.proof_of_space.size,
-        #             challenge,
-        #             sub_slot.cc_signage_point.get_hash(),
-        #         )
-        #         total_ip_iters += calculate_ip_iters(
-        #             self.constants, curr_ssi, sub_slot.cc_signage_point_index, required_iters
-        #         )
-        #         total_challenge_blocks += 1
-        #
-        #     if sub_slot.cc_slot_end_info is not None:
-        #         challenge = sub_slot.cc_slot_end_info.get_hash()
-        #     else:
-        #         self.log.error("implement")
+    def __validate_segment_slots(
+        self,
+        summaries: Dict[uint32, SubEpochSummary],
+        segment: SubEpochChallengeSegment,
+        curr_ssi: uint64,
+        total_slot_iters: uint64,
+        total_slots: uint64,
+        total_ip_iters: uint64,
+        challenge: bytes32,
+    ) -> (bool, uint64, uint64, int):
+        ses = summaries[segment.sub_epoch_n]
+        challenge_blocks = 0
+        if ses.new_sub_slot_iters is not None:
+            curr_ssi: uint64 = ses.new_sub_slot_iters
+        for sub_slot in segment.sub_slots:
+            total_slot_iters += curr_ssi
+            total_slots += 1
 
-        return True
+            # todo uncomment after vdf merging is done
+            # if not validate_sub_slot_vdfs(self.constants, sub_slot, vdf_info, sub_slot.is_challenge()):
+            #     self.log.info(f"failed to validate {idx} sub slot vdfs")
+            #     return False
+
+            if sub_slot.is_challenge():
+                q_str = self.__get_quality_string(segment, summaries[segment.sub_epoch_n], curr_ssi)
+                if q_str is None:
+                    self.log.info(f"failed to validate {segment} segment space proof")
+                    # return False
+                required_iters: uint64 = calculate_iterations_quality(
+                    q_str,
+                    sub_slot.proof_of_space.size,
+                    challenge,
+                    sub_slot.cc_signage_point.get_hash(),
+                )
+                total_ip_iters += calculate_ip_iters(
+                    self.constants, curr_ssi, sub_slot.cc_signage_point_index, required_iters
+                )
+                challenge_blocks += 1
+
+            if sub_slot.cc_slot_end_info is not None:
+                challenge = sub_slot.cc_slot_end_info.get_hash()
+            else:
+                self.log.error("implement")
+
+        return True, total_slot_iters, total_slots, challenge_blocks
 
 
 def combine_proofs(proofs: List[VDFProof]) -> VDFProof:
