@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
 from src.util.streamable import Streamable, streamable
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 
 
 @dataclass(frozen=True)
@@ -19,6 +19,7 @@ class CoinRecord(Streamable):
     spent_block_index: uint32
     spent: bool
     coinbase: bool
+    timestamp: uint64
 
     @property
     def name(self) -> bytes32:

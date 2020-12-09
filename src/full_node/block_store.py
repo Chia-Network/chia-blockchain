@@ -46,6 +46,7 @@ class BlockStore:
         return self
 
     async def add_full_block(self, block: FullBlock, sub_block: SubBlockRecord) -> None:
+
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?)",
             (block.header_hash.hex(), block.sub_block_height, int(block.is_block()), bytes(block)),

@@ -100,18 +100,22 @@ async def validate_block_body(
         assert curr_sb.header_hash == block.foliage_block.prev_block_hash
 
         if curr_sb.sub_block_height == 0:
-            prev_block_height = 0
+            height = 0
         else:
-            prev_block_height = curr_sb.prev_block_height + 1
+            if curr_sb.is_block:
+                height = curr_sb.height + 1
+            else:
+                height = curr_sb.height
+
         pool_coin = create_pool_coin(
             curr_sb.sub_block_height,
             curr_sb.pool_puzzle_hash,
-            calculate_pool_reward(prev_block_height, curr_sb.sub_block_height == 0),
+            calculate_pool_reward(height, curr_sb.sub_block_height == 0),
         )
         farmer_coin = create_farmer_coin(
             curr_sb.sub_block_height,
             curr_sb.farmer_puzzle_hash,
-            calculate_base_farmer_reward(prev_block_height) + curr_sb.fees,
+            calculate_base_farmer_reward(height) + curr_sb.fees,
         )
         # Adds the previous block
         expected_reward_coins.add(pool_coin)
@@ -125,14 +129,14 @@ async def validate_block_body(
                     create_pool_coin(
                         curr_sb.sub_block_height,
                         curr_sb.pool_puzzle_hash,
-                        calculate_pool_reward(curr_sb.prev_block_height, sub_height == 0),
+                        calculate_pool_reward(block.height, sub_height == 0),
                     )
                 )
                 expected_reward_coins.add(
                     create_farmer_coin(
                         curr_sb.sub_block_height,
                         curr_sb.farmer_puzzle_hash,
-                        calculate_base_farmer_reward(curr_sb.prev_block_height),
+                        calculate_base_farmer_reward(block.height),
                     )
                 )
                 curr_sb = sub_blocks[curr_sb.prev_hash]
@@ -247,7 +251,7 @@ async def validate_block_body(
         if rem in additions_dic:
             # Ephemeral coin
             rem_coin: Coin = additions_dic[rem]
-            new_unspent: CoinRecord = CoinRecord(rem_coin, sub_height, uint32(0), False, False)
+            new_unspent: CoinRecord = CoinRecord(rem_coin, sub_height, uint32(0), False, False, block.foliage_block.timestamp)
             removal_coin_records[new_unspent.name] = new_unspent
         else:
             unspent = await coin_store.get_coin_record(rem)
@@ -279,6 +283,7 @@ async def validate_block_body(
                     uint32(0),
                     False,
                     (rem in coinbases_since_fork),
+                    block.foliage_block.timestamp
                 )
                 removal_coin_records[new_coin_record.name] = new_coin_record
 
@@ -334,6 +339,7 @@ async def validate_block_body(
             removal_coin_records,
             npc.condition_dict,
             height,
+            block.foliage_block.timestamp
         )
         if error:
             return error

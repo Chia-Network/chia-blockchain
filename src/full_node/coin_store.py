@@ -33,7 +33,8 @@ class CoinStore:
                 " coinbase int,"
                 " puzzle_hash text,"
                 " coin_parent text,"
-                " amount bigint)"
+                " amount bigint,"
+                " timestamp bigint)"
             )
         )
 
@@ -57,10 +58,12 @@ class CoinStore:
         """
         Only called for sub-blocks which are blocks (and thus have rewards and transactions)
         """
+        if block.is_block() is False:
+            return
         removals, additions = await block.tx_removals_and_additions()
 
         for coin in additions:
-            record: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, False)
+            record: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, False, block.foliage_block.timestamp)
             await self._add_coin_record(record)
 
         for coin_name in removals:
@@ -73,7 +76,7 @@ class CoinStore:
             assert len(included_reward_coins) >= 2
 
         for coin in included_reward_coins:
-            reward_coin_r: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, True)
+            reward_coin_r: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, True, block.foliage_block.timestamp)
             await self._add_coin_record(reward_coin_r)
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
@@ -85,7 +88,7 @@ class CoinStore:
         await cursor.close()
         if row is not None:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
-            return CoinRecord(coin, row[1], row[2], row[3], row[4])
+            return CoinRecord(coin, row[1], row[2], row[3], row[4], row[8])
         return None
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
@@ -99,7 +102,7 @@ class CoinStore:
         await cursor.close()
         for row in rows:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
-            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4]))
+            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
         return list(coins)
 
     async def rollback_to_block(self, block_index: int):
@@ -141,13 +144,13 @@ class CoinStore:
         await cursor.close()
         for row in rows:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
-            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4]))
+            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
         return list(coins)
 
     # Store CoinRecord in DB and ram cache
     async def _add_coin_record(self, record: CoinRecord) -> None:
         cursor = await self.coin_record_db.execute(
-            "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 record.coin.name().hex(),
                 record.confirmed_block_index,
@@ -157,6 +160,7 @@ class CoinStore:
                 str(record.coin.puzzle_hash.hex()),
                 str(record.coin.parent_coin_info.hex()),
                 record.coin.amount,
+                record.timestamp
             ),
         )
         await cursor.close()
@@ -178,5 +182,6 @@ class CoinStore:
             index,
             True,
             current.coinbase,
+            current.timestamp
         )  # type: ignore # noqa
         await self._add_coin_record(spent)

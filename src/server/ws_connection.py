@@ -209,7 +209,7 @@ class WSChiaConnection:
                 req_annotations = ret_attr.__annotations__
                 req = None
                 for key in req_annotations:
-                    if key == "return":
+                    if key == "return" or key == "peer":
                         continue
                     else:
                         req = req_annotations[key]

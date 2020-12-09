@@ -128,6 +128,7 @@ class Err(Enum):
     TOO_MANY_SUB_BLOCKS = 102
     INVALID_CC_CHALLENGE = 103
     INVALID_PREFARM = 104
+    ASSERT_RELATIVE_TIME_EXCEEDS_FAILED = 105
 
 
 class ValidationError(Exception):

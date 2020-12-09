@@ -50,9 +50,7 @@ class NewPeak:
 @dataclass(frozen=True)
 @cbor_message
 class RequestSubBlockHeader:
-    height: uint32
-    include_transaction_block: bool
-    transaction_block_height: uint32
+    sub_height: uint32
 
 
 @dataclass(frozen=True)
@@ -65,13 +63,12 @@ class RespondSubBlockHeader:
 @cbor_message
 class RejectHeaderRequest:
     height: uint32
-    header_hash: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
 class RequestRemovals:
-    height: uint32
+    sub_height: uint32
     header_hash: bytes32
     coin_names: Optional[List[bytes32]]
 
@@ -79,7 +76,7 @@ class RequestRemovals:
 @dataclass(frozen=True)
 @cbor_message
 class RespondRemovals:
-    height: uint32
+    sub_height: uint32
     header_hash: bytes32
     coins: List[Tuple[bytes32, Optional[Coin]]]
     proofs: Optional[List[Tuple[bytes32, bytes]]]
@@ -88,14 +85,14 @@ class RespondRemovals:
 @dataclass(frozen=True)
 @cbor_message
 class RejectRemovalsRequest:
-    height: uint32
+    sub_height: uint32
     header_hash: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
 class RequestAdditions:
-    height: uint32
+    sub_height: uint32
     header_hash: bytes32
     puzzle_hashes: Optional[List[bytes32]]
 
@@ -103,7 +100,7 @@ class RequestAdditions:
 @dataclass(frozen=True)
 @cbor_message
 class RespondAdditions:
-    height: uint32
+    sub_height: uint32
     header_hash: bytes32
     coins: List[Tuple[bytes32, List[Coin]]]
     proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]]
@@ -112,25 +109,6 @@ class RespondAdditions:
 @dataclass(frozen=True)
 @cbor_message
 class RejectAdditionsRequest:
-    height: uint32
+    sub_height: uint32
     header_hash: bytes32
 
-
-@dataclass(frozen=True)
-@cbor_message
-class RequestGenerator:
-    height: uint32
-    header_hash: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RespondGenerator:
-    generatorResponse: GeneratorResponse
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RejectGeneratorRequest:
-    height: uint32
-    header_hash: bytes32
