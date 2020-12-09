@@ -1,18 +1,13 @@
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict
 
 from src.types.condition_var_pair import ConditionVarPair
-from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.coin_record import CoinRecord
 from src.types.name_puzzle_condition import NPC
 from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
-from src.util.condition_tools import (
-    ConditionOpcode,
-    conditions_dict_for_solution,
-    conditions_by_opcode,
-)
+from src.util.condition_tools import ConditionOpcode, conditions_by_opcode
 from src.util.errors import Err
 import time
 
