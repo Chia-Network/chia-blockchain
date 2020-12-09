@@ -407,13 +407,15 @@ class BlockTools:
                 eos_iters = sub_slot_iters
                 cc_input = ClassgroupElement.get_default_element()
                 rc_challenge = slot_rc_challenge
-
-            cc_vdf, cc_proof = get_vdf_info_and_proof(
-                constants,
-                cc_input,
-                slot_cc_challenge,
-                eos_iters,
-            )
+            try:
+                cc_vdf, cc_proof = get_vdf_info_and_proof(
+                    constants,
+                    cc_input,
+                    slot_cc_challenge,
+                    eos_iters,
+                )
+            except Exception:
+                print("Bad")
             rc_vdf, rc_proof = get_vdf_info_and_proof(
                 constants,
                 ClassgroupElement.get_default_element(),
@@ -958,12 +960,7 @@ def finish_sub_block(
     )
 
     sub_block_record = block_to_sub_block_record(
-        constants,
-        sub_blocks,
-        height_to_hash,
-        required_iters,
-        full_block,
-        None
+        constants, sub_blocks, height_to_hash, required_iters, full_block, None
     )
     return full_block, sub_block_record
 
