@@ -84,9 +84,9 @@ class TestPotIterations:
         farmer_ks = {
             uint8(32): 400,
             uint8(33): 300,
-            uint8(34): 150,
-            uint8(35): 150,
-            uint8(36): 150,
+            uint8(34): 300,
+            uint8(35): 300,
+            uint8(36): 300,
         }
         farmer_space = {k: _expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
         total_space = sum(farmer_space.values())
