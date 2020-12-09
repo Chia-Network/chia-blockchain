@@ -222,7 +222,9 @@ async def setup_introducer(port):
 
 
 async def setup_vdf_clients(port):
-    vdf_task = asyncio.create_task(spawn_process(self_hostname, port, 1))
+    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1))
+    vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2))
+    vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3))
 
     def stop():
         asyncio.create_task(kill_processes())
@@ -230,7 +232,7 @@ async def setup_vdf_clients(port):
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
 
-    yield vdf_task
+    yield vdf_task_1, vdf_task_2, vdf_task_3
 
     await kill_processes()
 
@@ -348,10 +350,10 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         setup_farmer(21235, consensus_constants, uint16(21237)),
         setup_vdf_clients(8000),
         setup_timelord(21236, 21237, False, consensus_constants),
-        setup_full_node(consensus_constants, "blockchain_test.db", 21237, 21232, False, 10),
-        setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, 21232, False, 10),
-        setup_vdf_clients(7999),
-        setup_timelord(21239, 21238, True, consensus_constants),
+        setup_full_node(consensus_constants, "blockchain_test.db", 21237, 21233, False, 10),
+        setup_full_node(consensus_constants, "blockchain_test_2.db", 21238, 21233, False, 10),
+        # setup_vdf_clients(7999),
+        # setup_timelord(21239, 21238, True, consensus_constants),
     ]
 
     introducer, introducer_server = await node_iters[0].__anext__()
@@ -364,12 +366,12 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
 
     await time_out_assert_custom_interval(10, 3, num_connections, 1)
 
-    vdf = await node_iters[3].__anext__()
+    vdf_clients = await node_iters[3].__anext__()
     timelord, timelord_server = await node_iters[4].__anext__()
     node_api_1 = await node_iters[5].__anext__()
     node_api_2 = await node_iters[6].__anext__()
-    vdf_sanitizer = await node_iters[7].__anext__()
-    sanitizer, sanitizer_server = await node_iters[8].__anext__()
+    # vdf_sanitizer = await node_iters[7].__anext__()
+    # sanitizer, sanitizer_server = await node_iters[8].__anext__()
 
     yield (
         node_api_1,
@@ -378,9 +380,7 @@ async def setup_full_system(consensus_constants: ConsensusConstants):
         farmer,
         introducer,
         timelord,
-        vdf,
-        sanitizer,
-        vdf_sanitizer,
+        vdf_clients,
         node_api_1.full_node.server,
     )
 

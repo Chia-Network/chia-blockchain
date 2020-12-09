@@ -35,6 +35,7 @@ from src.util.merkle_set import (
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
 from src.util.clvm import int_to_bytes
+from tests.full_node.test_full_sync import node_height_at_least
 from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
 from src.protocols.shared_protocol import protocol_version
 
@@ -93,7 +94,7 @@ def event_loop():
     yield loop
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def two_nodes():
     zero_free_constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
     async for _ in setup_two_nodes(zero_free_constants):
@@ -107,18 +108,25 @@ async def two_empty_nodes():
         yield _
 
 
-async def wb(num_blocks, two_nodes):
+async def wb(num_blocks, two_nodes, guarantee_block=False):
     full_node_1, _, _, _ = two_nodes
     wallet_a = bt.get_pool_wallet_tool()
     wallet_receiver = WalletTool()
-    blocks = bt.get_consecutive_blocks(num_blocks)
+    farmer_ph = wallet_a.get_new_puzzlehash()
+    pool_ph = wallet_a.get_new_puzzlehash()
+    blocks = bt.get_consecutive_blocks(
+        num_blocks,
+        guarantee_block=guarantee_block,
+        farmer_reward_puzzle_hash=farmer_ph,
+        pool_reward_puzzle_hash=pool_ph,
+    )
     for block in blocks:
         await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
 
     return wallet_a, wallet_receiver, blocks
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def wallet_blocks(two_nodes):
     """
     Sets up the node with 3 blocks, and returns a payer and payee wallet.
@@ -126,9 +134,14 @@ async def wallet_blocks(two_nodes):
     return await wb(3, two_nodes)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 async def wallet_blocks_five(two_nodes):
     return await wb(5, two_nodes)
+
+
+@pytest.fixture(scope="function")
+async def wallet_blocks_five_blocks(two_nodes):
+    return await wb(5, two_nodes, True)
 
 
 class TestFullNodeProtocol:
@@ -161,16 +174,17 @@ class TestFullNodeProtocol:
 
         incoming_queue, _ = await add_dummy_connection(server_1, 12312)
         await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+        peer = await connect_and_get_peer(server_1, server_2)
         blocks = bt.get_consecutive_blocks(1)
         for block in blocks[:1]:
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
 
         await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 1))
 
         assert full_node_1.full_node.blockchain.get_peak().height == 0
 
         for block in bt.get_consecutive_blocks(30):
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
 
         assert full_node_1.full_node.blockchain.get_peak().height == 29
 
@@ -203,7 +217,7 @@ class TestFullNodeProtocol:
         # Add some blocks
         blocks = bt.get_consecutive_blocks(5)
         for block in blocks:
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
         await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 5))
         blocks = bt.get_consecutive_blocks(1, skip_slots=2, block_list_input=blocks)
 
@@ -222,6 +236,7 @@ class TestFullNodeProtocol:
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
 
         await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+        peer = await connect_and_get_peer(server_1, server_2)
 
         blocks = bt.get_consecutive_blocks(10)
         blocks_reorg = bt.get_consecutive_blocks(10, seed=b"214")  # Alternate chain
@@ -237,7 +252,7 @@ class TestFullNodeProtocol:
             message = await full_node_1.new_peak(new_peak)
             assert message is not None
 
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
             # Ignores, already have
             message = await full_node_1.new_peak(new_peak)
             assert message is None
@@ -265,10 +280,10 @@ class TestFullNodeProtocol:
         assert message is not None
 
     @pytest.mark.asyncio
-    async def test_new_transaction(self, two_nodes, wallet_blocks_five):
+    async def test_new_transaction(self, two_nodes, wallet_blocks_five_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        wallet_a, wallet_receiver, blocks = wallet_blocks_five
-        assert full_node_1.full_node.blockchain.get_peak().height == 4
+        wallet_a, wallet_receiver, blocks = wallet_blocks_five_blocks
+        assert full_node_1.full_node.blockchain.get_peak().sub_block_height == 4
         conditions_dict: Dict = {ConditionOpcode.CREATE_COIN: []}
 
         peer = await connect_and_get_peer(server_1, server_2)
@@ -304,7 +319,7 @@ class TestFullNodeProtocol:
         await full_node_1.respond_transaction(respond_transaction_2, peer)
 
         blocks_new = bt.get_consecutive_blocks(
-            1, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
+            2, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
         )
 
         # Already seen
@@ -312,7 +327,9 @@ class TestFullNodeProtocol:
         assert msg is None
         # Farm one block
         for block in blocks_new:
-            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block))
+            await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
+
+        await time_out_assert(10, node_height_at_least, True, full_node_1, 6)
 
         spend_bundles = []
         # Fill mempool
@@ -344,7 +361,7 @@ class TestFullNodeProtocol:
             guarantee_block=True,
         )
         # Farm one block to clear mempool
-        await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]))
+        await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]), peer)
 
         # No longer full
         new_transaction = fnp.NewTransaction(token_bytes(32), uint64(1000000), uint64(1))
@@ -352,13 +369,14 @@ class TestFullNodeProtocol:
         assert msg is not None
 
     @pytest.mark.asyncio
-    async def test_request_respond_transaction(self, two_nodes, wallet_blocks_five):
+    async def test_request_respond_transaction(self, two_nodes, wallet_blocks_five_blocks):
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        wallet_a, wallet_receiver, blocks = wallet_blocks_five
+        wallet_a, wallet_receiver, blocks = wallet_blocks_five_blocks
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
 
         await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+        await time_out_assert(10, time_out_messages(incoming_queue, "new_peak"))
 
         peer = await connect_and_get_peer(server_1, server_2)
 
@@ -368,8 +386,11 @@ class TestFullNodeProtocol:
         assert msg is None
 
         receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        await time_out_assert(60, node_height_at_least, True, full_node_2, 4)
+        await asyncio.sleep(4)
         spend_bundle = wallet_a.generate_signed_transaction(
-            100, receiver_puzzlehash, blocks[2].get_future_reward_coins()[0]
+            100, receiver_puzzlehash, list(blocks[2].get_included_reward_coins())[0]
         )
         assert spend_bundle is not None
         respond_transaction = fnp.RespondTransaction(spend_bundle)
@@ -644,7 +665,7 @@ class TestFullNodeProtocol:
 #         assert res.data == fnp.RejectBlockRequest(uint32(1), bytes([0] * 32))
 #
 #     @pytest.mark.asyncio
-#     async def test_respond_sub_block(self, two_nodes, wallet_blocks):
+#     async def testrespond_sub_block(self, two_nodes, wallet_blocks):
 #         full_node_1, full_node_2, server_1, server_2 = two_nodes
 #         wallet_a, wallet_receiver, blocks = wallet_blocks
 #

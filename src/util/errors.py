@@ -127,6 +127,7 @@ class Err(Enum):
     INVALID_SP_INDEX = 101
     TOO_MANY_SUB_BLOCKS = 102
     INVALID_CC_CHALLENGE = 103
+    INVALID_PREFARM = 104
 
 
 class ValidationError(Exception):

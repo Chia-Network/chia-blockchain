@@ -430,7 +430,7 @@ class FullNode:
             self._state_changed("sub_block")
 
     async def respond_sub_block(
-        self, respond_sub_block: full_node_protocol.RespondSubBlock
+        self, respond_sub_block: full_node_protocol.RespondSubBlock, peer: Optional[ws.WSChiaConnection] = None
     ):
         """
         Receive a full block from a peer full node (or ourselves).
@@ -572,7 +572,10 @@ class FullNode:
                     sub_block.reward_chain_sub_block.get_unfinished().get_hash(),
                 ),
             )
-            await self.server.send_to_all([msg], NodeType.FULL_NODE)
+            if peer is not None:
+                await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+            else:
+                await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
             # Tell wallets about the new peak
             msg = Message(

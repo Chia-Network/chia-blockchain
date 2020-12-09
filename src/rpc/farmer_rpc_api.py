@@ -10,20 +10,21 @@ class FarmerRpcApi:
         self.service_name = "chia_farmer"
 
     def get_routes(self) -> Dict[str, Callable]:
-        return {"/get_latest_challenges": self.get_latest_challenges}
+        # return {"/get_latest_challenges": self.get_latest_challenges}
+        return {}
 
     async def _state_changed(self, change: str) -> List[Dict]:
-        if change == "signage_point":
-            data = await self.get_latest_challenges({})
-            return [
-                create_payload(
-                    "get_latest_challenges",
-                    data,
-                    self.service_name,
-                    "wallet_ui",
-                    string=False,
-                )
-            ]
+        # if change == "signage_point":
+        #     data = await self.get_latest_challenges({})
+        #     return [
+        #         create_payload(
+        #             "get_latest_challenges",
+        #             data,
+        #             self.service_name,
+        #             "wallet_ui",
+        #             string=False,
+        #         )
+        #     ]
         return []
 
     async def get_signage_point(self, request: Dict) -> Dict:

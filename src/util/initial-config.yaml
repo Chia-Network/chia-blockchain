@@ -82,6 +82,8 @@ timelord:
   vdf_clients:
     ip:
       - *self_hostname
+      - localhost
+      - 127.0.0.1
     ips_estimate:
       - 150000
   full_node_peer:

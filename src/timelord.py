@@ -690,6 +690,11 @@ class Timelord:
                         is_block = self.last_state.get_last_block_total_iters() < sp_total_iters
                         sub_block_height: uint32 = self.last_state.get_height() + 1
 
+                    if sub_block_height < 10:
+                        # Don't directly update our state for the first few sub-blocks, because we cannot validate
+                        # whether the pre-farm is correct
+                        return
+
                     new_reward_chain_sub_block = RewardChainSubBlock(
                         self.last_state.get_weight() + block.difficulty,
                         sub_block_height,
