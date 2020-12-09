@@ -82,11 +82,11 @@ class TestPotIterations:
         with the assumption that all farmers have access to the same VDF speed.
         """
         farmer_ks = {
-            uint8(32): 200,
-            uint8(33): 200,
-            uint8(34): 120,
-            uint8(35): 120,
-            uint8(36): 120,
+            uint8(32): 400,
+            uint8(33): 300,
+            uint8(34): 150,
+            uint8(35): 150,
+            uint8(36): 150,
         }
         farmer_space = {k: _expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
         total_space = sum(farmer_space.values())
