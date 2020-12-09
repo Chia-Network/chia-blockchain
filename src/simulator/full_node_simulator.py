@@ -25,6 +25,7 @@ OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
 bt = BlockTools(constants=test_constants)
 
+
 class FullNodeSimulator(FullNodeAPI):
     def __init__(self, full_node, bt):
         super().__init__(full_node)
@@ -59,14 +60,19 @@ class FullNodeSimulator(FullNodeAPI):
             await self.full_node.blockchain.receive_block(genesis)
 
         peak = self.full_node.blockchain.get_peak()
-        bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+        bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(
+            peak.header_hash
+        )
         current_blocks = await self.get_all_full_blocks()
         target = request.puzzle_hash
-        more = bt.get_consecutive_blocks(1, transaction_data=bundle,
-                                         farmer_reward_puzzle_hash=target,
-                                         pool_reward_puzzle_hash=target,
-                                         block_list_input=current_blocks,
-                                         force_overflow=True,
-                                         guarantee_block=True)
+        more = bt.get_consecutive_blocks(
+            1,
+            transaction_data=bundle,
+            farmer_reward_puzzle_hash=target,
+            pool_reward_puzzle_hash=target,
+            block_list_input=current_blocks,
+            force_overflow=True,
+            guarantee_block=True,
+        )
         rr = RespondSubBlock(more[-1])
-        await self.respond_sub_block(rr)
+        await self.full_node.respond_sub_block(rr)
