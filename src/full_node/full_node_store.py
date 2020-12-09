@@ -146,6 +146,7 @@ class FullNodeStore:
         self.finished_sub_slots.clear()
 
     def get_sub_slot(self, challenge_hash: bytes32) -> Optional[Tuple[EndOfSubSlotBundle, int, uint128]]:
+        assert len(self.finished_sub_slots) >= 1
         for index, (sub_slot, _, total_iters) in enumerate(self.finished_sub_slots):
             if sub_slot is not None and sub_slot.challenge_chain.get_hash() == challenge_hash:
                 return sub_slot, index, total_iters
@@ -163,6 +164,7 @@ class FullNodeStore:
         on this sub slot
         TODO: do full validation here
         """
+        assert len(self.finished_sub_slots) >= 1
 
         if len(self.finished_sub_slots) == 0:
             log.warning("no fini sub slots")
@@ -213,7 +215,7 @@ class FullNodeStore:
                 if rc_challenge not in self.future_eos_cache:
                     self.future_eos_cache[rc_challenge] = []
                 self.future_eos_cache[rc_challenge].append(eos)
-                log.error(f"Dont have challenge hash {rc_challenge}")
+                log.warning(f"Don't have challenge hash {rc_challenge}")
                 return None
             if peak.total_iters + eos.reward_chain.end_of_slot_vdf.number_of_iterations != total_iters:
                 log.error(
@@ -271,6 +273,7 @@ class FullNodeStore:
         """
         Returns true if sp successfully added
         """
+        assert len(self.finished_sub_slots) >= 1
 
         if peak is None or peak.sub_block_height < 2:
             sub_slot_iters = self.constants.SUB_SLOT_ITERS_STARTING
@@ -357,6 +360,7 @@ class FullNodeStore:
         return False
 
     def get_signage_point(self, cc_signage_point: bytes32) -> Optional[SignagePoint]:
+        assert len(self.finished_sub_slots) >= 1
         if cc_signage_point == self.constants.FIRST_CC_CHALLENGE:
             return SignagePoint(None, None, None, None)
 
@@ -371,6 +375,7 @@ class FullNodeStore:
     def get_signage_point_by_index(
         self, challenge_hash: bytes32, index: uint8, last_rc_infusion: bytes32
     ) -> Optional[SignagePoint]:
+        assert len(self.finished_sub_slots) >= 1
         for sub_slot, sps, _ in self.finished_sub_slots:
             if sub_slot is not None:
                 cc_hash = sub_slot.challenge_chain.get_hash()
@@ -390,6 +395,7 @@ class FullNodeStore:
         """
         Returns true if we have a signage point at this index which is based on a newer infusion.
         """
+        assert len(self.finished_sub_slots) >= 1
         for sub_slot, sps, _ in self.finished_sub_slots:
             if sub_slot is not None:
                 cc_hash = sub_slot.challenge_chain.get_hash()
@@ -420,7 +426,7 @@ class FullNodeStore:
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
         the prev sub-slot (since we still might get more sub-blocks with an sp in the previous sub-slot)
         """
-
+        assert len(self.finished_sub_slots) >= 1
         new_finished_sub_slots = []
         total_iters_peak = peak.ip_sub_slot_total_iters(self.constants)
         if not reorg:
@@ -484,6 +490,7 @@ class FullNodeStore:
         NOTE: In the case of the overflow, passing in extra_sub_slot=True will add the necessary sub-slot. This might
         not be available until later though.
         """
+        assert len(self.finished_sub_slots) >= 1
         if prev_sb is not None:
             curr: SubBlockRecord = prev_sb
             while not curr.first_in_sub_slot:
@@ -497,10 +504,6 @@ class FullNodeStore:
         if pos_ss_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
             pos_index = 0
         if prev_sb is None:
-            if len(self.finished_sub_slots) < 1:
-                raise ValueError("Should have finished sub slots")
-            if self.finished_sub_slots[0][0] is not None:
-                raise ValueError("First sub slot should be None")
             final_index = 0
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                 if sub_slot is not None and sub_slot.challenge_chain.get_hash() == pos_ss_challenge_hash:
@@ -515,7 +518,6 @@ class FullNodeStore:
                     final_index = index
 
         if pos_index is None:
-            log.error(f"{pos_ss_challenge_hash} {len(self.finished_sub_slots)} {prev_sb.sub_block_height}")
             raise ValueError(
                 f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index} {len(sub_block_records)}"
             )

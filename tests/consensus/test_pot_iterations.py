@@ -29,13 +29,13 @@ class TestPotIterations:
             assert is_overflow_sub_block(test_constants, uint8(32))
 
     def test_calculate_sp_iters(self):
-        ssi: uint64 = uint64(100001) * 300
+        ssi: uint64 = uint64(100001 * 64 * 4)
         with raises(ValueError):
             calculate_sp_iters(test_constants, ssi, uint8(32))
         calculate_sp_iters(test_constants, ssi, uint8(31))
 
     def test_calculate_ip_iters(self):
-        ssi: uint64 = uint64(100001) * 300
+        ssi: uint64 = uint64(100001 * 64 * 4)
         sp_interval_iters = ssi // test_constants.NUM_SPS_SUB_SLOT
 
         with raises(ValueError):
@@ -84,15 +84,15 @@ class TestPotIterations:
         farmer_ks = {
             uint8(32): 200,
             uint8(33): 200,
-            uint8(34): 100,
-            uint8(35): 100,
-            uint8(36): 100,
+            uint8(34): 120,
+            uint8(35): 120,
+            uint8(36): 120,
         }
         farmer_space = {k: _expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
         total_space = sum(farmer_space.values())
         percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
-        total_slots = 400
+        total_slots = 600
         num_sps = 16
         sp_interval_iters = uint64(100000000 // 32)
         difficulty = uint64(500000000000)

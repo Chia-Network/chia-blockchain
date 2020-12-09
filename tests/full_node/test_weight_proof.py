@@ -60,7 +60,7 @@ def get_prev_ses_block(sub_blocks, last_hash) -> (SubBlockRecord, int):
         blocks += 1
 
 
-def load_blocks_dont_validate(blocks):
+async def load_blocks_dont_validate(blocks):
     header_cache: Dict[bytes32, HeaderBlock] = {}
     height_to_hash: Dict[uint32, bytes32] = {}
     sub_blocks: Dict[bytes32, SubBlockRecord] = {}
@@ -143,7 +143,7 @@ def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, sub_ep
 class TestWeightProof:
     @pytest.mark.asyncio
     async def test_get_sub_epoch_block_num_basic(self, default_400_blocks):
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_400_blocks)
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_400_blocks)
         sub_epoch_end, _ = get_prev_ses_block(sub_blocks, default_400_blocks[-1].header_hash)
         print("first block of last sub epoch ", sub_epoch_end.sub_block_height)
         sub_epoch_blocks_n: uint32 = get_sub_epoch_block_num(
@@ -155,7 +155,7 @@ class TestWeightProof:
 
     @pytest.mark.asyncio
     async def test_get_last_ses_block_idx(self, default_400_blocks):
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_400_blocks)
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_400_blocks)
         sub_epoch_end, _ = get_prev_ses_block(sub_blocks, default_400_blocks[-1].prev_header_hash)
         recent_blocks: List[ProofBlockHeader] = []
         for block in header_cache.values():
@@ -167,19 +167,19 @@ class TestWeightProof:
 
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_1(self, default_400_blocks):
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_400_blocks)
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_400_blocks)
         sub_epochs = 1
         _test_map_summaries(default_400_blocks, header_cache, height_to_hash, sub_blocks, sub_epochs)
 
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_2(self, default_400_blocks):
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_400_blocks)
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_400_blocks)
         sub_epochs = 2
         _test_map_summaries(default_400_blocks, header_cache, height_to_hash, sub_blocks, sub_epochs)
 
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_3(self, default_10000_blocks):
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(default_10000_blocks)
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_10000_blocks)
         sub_epochs = 10
         _test_map_summaries(default_10000_blocks, header_cache, height_to_hash, sub_blocks, sub_epochs)
 
@@ -187,7 +187,7 @@ class TestWeightProof:
     async def test_weight_proof_summaries(self, default_10000_blocks):
         sub_epochs = 3
         blocks = default_10000_blocks
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
         sub_epoch_end, num_of_blocks = get_prev_ses_block(sub_blocks, blocks[-1].header_hash)
         print("num of blocks to first ses: ", num_of_blocks)
         sub_epochs_left = sub_epochs
@@ -219,7 +219,7 @@ class TestWeightProof:
     async def test_weight_proof_validate_segments(self, default_10000_blocks):
         sub_epochs = 3
         blocks = default_10000_blocks
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
         sub_epoch_end, num_of_blocks = get_prev_ses_block(sub_blocks, blocks[-1].header_hash)
         print("num of blocks to first ses: ", num_of_blocks)
         sub_epochs_left = sub_epochs
@@ -252,7 +252,7 @@ class TestWeightProof:
     @pytest.mark.asyncio
     async def test_weight_proof_from_genesis(self, default_400_blocks):
         blocks = default_400_blocks
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
         wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
@@ -265,7 +265,7 @@ class TestWeightProof:
 
         sub_epochs = 1
         blocks = default_10000_blocks
-        header_cache, height_to_hash, sub_blocks = load_blocks_dont_validate(blocks)
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
         sub_epoch_end, num_of_blocks = get_prev_ses_block(sub_blocks, blocks[-1].header_hash)
         print("num of blocks to first ses: ", num_of_blocks)
         sub_epochs_left = sub_epochs

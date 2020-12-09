@@ -1,13 +1,13 @@
 from src.util.ints import uint32, uint64
 
 
-def calculate_pool_reward(height: uint32, genesis: bool) -> uint64:
+def calculate_pool_reward(height: uint32) -> uint64:
     """
     Returns the coinbase reward at a certain block height.
     1 Chia coin = 1,000,000,000,000 = 1 trillion mojo.
     These are temporary testnet numbers to test halvings
     """
-    if height == 0 and genesis:
+    if height == 0:
         return uint64(500000000000000000)
     if height < 2000:
         return uint64(875000000000)

@@ -76,7 +76,9 @@ class CoinStore:
             assert len(included_reward_coins) >= 2
 
         for coin in included_reward_coins:
-            reward_coin_r: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, True, block.foliage_block.timestamp)
+            reward_coin_r: CoinRecord = CoinRecord(
+                coin, block.height, uint32(0), False, True, block.foliage_block.timestamp
+            )
             await self._add_coin_record(reward_coin_r)
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
@@ -119,6 +121,7 @@ class CoinStore:
                     coin_record.spent_block_index,
                     False,
                     coin_record.coinbase,
+                    coin_record.timestamp,
                 )
                 self.coin_record_cache[coin_record.coin.name().hex()] = new_record
             if int(coin_record.confirmed_block_index) > block_index:
@@ -160,7 +163,7 @@ class CoinStore:
                 str(record.coin.puzzle_hash.hex()),
                 str(record.coin.parent_coin_info.hex()),
                 record.coin.amount,
-                record.timestamp
+                record.timestamp,
             ),
         )
         await cursor.close()
@@ -177,11 +180,6 @@ class CoinStore:
         if current is None:
             return
         spent: CoinRecord = CoinRecord(
-            current.coin,
-            current.confirmed_block_index,
-            index,
-            True,
-            current.coinbase,
-            current.timestamp
+            current.coin, current.confirmed_block_index, index, True, current.coinbase, current.timestamp
         )  # type: ignore # noqa
         await self._add_coin_record(spent)
