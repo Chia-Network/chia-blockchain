@@ -8,6 +8,7 @@ from src.server.outbound_message import Message, NodeType
 from src.types.peer_info import PeerInfo
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.ints import uint16
+from tests.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from tests.time_out_assert import time_out_assert
 from tests.full_node.test_full_sync import node_height_at_least
@@ -30,7 +31,8 @@ class TestNodeLoad:
         num_blocks = 50
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = bt.get_consecutive_blocks(num_blocks)
-        await full_node_1.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[0]))
+        peer = await connect_and_get_peer(server_1, server_2)
+        await full_node_1.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[0]), peer)
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 

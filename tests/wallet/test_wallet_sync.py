@@ -44,7 +44,7 @@ class TestWalletSync:
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
         for i in range(1, len(blocks)):
-            await full_node_api.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
+            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
@@ -55,7 +55,7 @@ class TestWalletSync:
         # Tests a reorg with the wallet
         blocks_reorg = bt.get_consecutive_blocks(test_constants, 15, blocks[:-5])
         for i in range(1, len(blocks_reorg)):
-            await full_node_api.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks_reorg[i]))
+            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks_reorg[i]))
 
         await time_out_assert(200, wallet_height_at_least, True, wallet_node, 33)
 
@@ -66,7 +66,7 @@ class TestWalletSync:
         full_node_1, wallet_node, server_1, server_2 = wallet_node_starting_height
 
         for i in range(1, len(blocks)):
-            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
@@ -79,7 +79,7 @@ class TestWalletSync:
         full_node_1, wallet_node, server_1, server_2 = wallet_node
 
         for i in range(1, len(blocks)):
-            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks[i]))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 3)
@@ -97,7 +97,7 @@ class TestWalletSync:
 
         blocks = bt.get_consecutive_blocks(test_constants, 3, [], 10, b"", coinbase_puzzlehash)
         for block in blocks:
-            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 1)
@@ -121,7 +121,7 @@ class TestWalletSync:
         blocks = bt.get_consecutive_blocks(test_constants, 13, blocks, 10, b"", coinbase_puzzlehash_rest, dic_h)
         # Move chain to height 16, with consecutive transactions in blocks 4 to 14
         for block in blocks:
-            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         # Do a short sync from 0 to 14
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -169,7 +169,7 @@ class TestWalletSync:
 
         # Move chain to height 34, with consecutive transactions in blocks 4 to 14
         for block in blocks:
-            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         # Do a sync from 0 to 22
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
@@ -227,7 +227,7 @@ class TestWalletSync:
             dic_h,
         )
         for block in blocks:
-            await full_node_1.full_node._respond_sub_block(full_node_protocol.RespondSubBlock(block))
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 38)

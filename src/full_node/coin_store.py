@@ -95,6 +95,7 @@ class CoinStore:
             "SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),)
         )
         rows = await cursor.fetchall()
+
         await cursor.close()
         for row in rows:
             coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
