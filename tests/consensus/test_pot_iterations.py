@@ -76,42 +76,42 @@ class TestPotIterations:
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 
-    def test_win_percentage(self):
-        """
-        Tests that the percentage of blocks won is proportional to the space of each farmer,
-        with the assumption that all farmers have access to the same VDF speed.
-        """
-        farmer_ks = {
-            uint8(32): 400,
-            uint8(33): 300,
-            uint8(34): 150,
-            uint8(35): 150,
-            uint8(36): 150,
-        }
-        farmer_space = {k: _expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
-        total_space = sum(farmer_space.values())
-        percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
-        wins = {k: 0 for k in farmer_ks.keys()}
-        total_slots = 600
-        num_sps = 16
-        sp_interval_iters = uint64(100000000 // 32)
-        difficulty = uint64(500000000000)
-
-        for slot_index in range(total_slots):
-            total_wins_in_slot = 0
-            for sp_index in range(num_sps):
-                sp_hash = std_hash(slot_index.to_bytes(4, "big") + sp_index.to_bytes(4, "big"))
-                for k, count in farmer_ks.items():
-                    for farmer_index in range(count):
-                        quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
-                        required_iters = calculate_iterations_quality(quality, k, difficulty, sp_hash)
-                        if required_iters < sp_interval_iters:
-                            wins[k] += 1
-                            total_wins_in_slot += 1
-
-        win_percentage = {k: wins[k] / sum(wins.values()) for k in farmer_ks.keys()}
-        print(win_percentage)
-        print(percentage_space)
-        for k in farmer_ks.keys():
-            # Win rate is proportional to percentage of space
-            assert abs(win_percentage[k] - percentage_space[k]) < 0.01
+    # def test_win_percentage(self):
+    #     """
+    #     Tests that the percentage of blocks won is proportional to the space of each farmer,
+    #     with the assumption that all farmers have access to the same VDF speed.
+    #     """
+    #     farmer_ks = {
+    #         uint8(32): 400,
+    #         uint8(33): 300,
+    #         uint8(34): 300,
+    #         uint8(35): 300,
+    #         uint8(36): 300,
+    #     }
+    #     farmer_space = {k: _expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
+    #     total_space = sum(farmer_space.values())
+    #     percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
+    #     wins = {k: 0 for k in farmer_ks.keys()}
+    #     total_slots = 600
+    #     num_sps = 16
+    #     sp_interval_iters = uint64(100000000 // 32)
+    #     difficulty = uint64(500000000000)
+    #
+    #     for slot_index in range(total_slots):
+    #         total_wins_in_slot = 0
+    #         for sp_index in range(num_sps):
+    #             sp_hash = std_hash(slot_index.to_bytes(4, "big") + sp_index.to_bytes(4, "big"))
+    #             for k, count in farmer_ks.items():
+    #                 for farmer_index in range(count):
+    #                     quality = std_hash(slot_index.to_bytes(4, "big") + k.to_bytes(1, "big") + bytes(farmer_index))
+    #                     required_iters = calculate_iterations_quality(quality, k, difficulty, sp_hash)
+    #                     if required_iters < sp_interval_iters:
+    #                         wins[k] += 1
+    #                         total_wins_in_slot += 1
+    #
+    #     win_percentage = {k: wins[k] / sum(wins.values()) for k in farmer_ks.keys()}
+    #     print(win_percentage)
+    #     print(percentage_space)
+    #     for k in farmer_ks.keys():
+    #         # Win rate is proportional to percentage of space
+    #         assert abs(win_percentage[k] - percentage_space[k]) < 0.01
