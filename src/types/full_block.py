@@ -9,7 +9,7 @@ from src.types.coin import Coin
 from src.types.sized_bytes import bytes32
 from src.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from src.util.condition_tools import created_outputs_for_conditions_dict
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 from src.util.streamable import Streamable, streamable
 from src.types.vdf import VDFProof
 from src.types.reward_chain_sub_block import RewardChainSubBlock
@@ -73,7 +73,7 @@ class FullBlock(Streamable):
         farmer_amount = calculate_base_farmer_reward(height)
         if self.is_block():
             assert self.transactions_info is not None
-            farmer_amount += self.transactions_info.fees
+            farmer_amount = uint64(farmer_amount + self.transactions_info.fees)
         pool_coin: Coin = create_pool_coin(
             self.sub_block_height,
             self.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
@@ -122,6 +122,7 @@ class FullBlock(Streamable):
     def get_included_reward_coins(self) -> Set[Coin]:
         if not self.is_block():
             return set()
+        assert self.transactions_info is not None
         return set(self.transactions_info.reward_claims_incorporated)
 
     def additions(self) -> List[Coin]:

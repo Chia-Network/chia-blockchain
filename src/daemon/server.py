@@ -495,7 +495,7 @@ async def kill_service(root_path, services, service_name, delay_before_kill=15) 
         log.info("sending term signal to %s", service_name)
         process.terminate()
 
-    count = 0
+    count: float = 0
     while count < delay_before_kill:
         if process.poll() is not None:
             break

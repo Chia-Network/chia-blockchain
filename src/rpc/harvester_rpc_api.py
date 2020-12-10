@@ -1,6 +1,6 @@
 from typing import Callable, Dict, List
 
-from src.harvester import Harvester
+from src.harvester.harvester import Harvester
 from src.util.ws_message import create_payload
 
 

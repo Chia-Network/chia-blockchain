@@ -231,10 +231,10 @@ class FullNodeStore:
                 curr = peak
                 while not curr.first_in_sub_slot and not curr.is_challenge_sub_block(self.constants):
                     curr = sub_blocks[curr.prev_hash]
-                assert curr.finished_infused_challenge_slot_hashes is not None
                 if curr.is_challenge_sub_block(self.constants):
                     icc_start_challenge_hash = curr.challenge_block_info_hash
                 else:
+                    assert curr.finished_infused_challenge_slot_hashes is not None
                     icc_start_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
                 if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                     assert eos.infused_challenge_chain is not None

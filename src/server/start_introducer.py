@@ -2,8 +2,8 @@ import pathlib
 
 from typing import Dict
 
-from src.introducer import Introducer
-from src.introducer_api import IntroducerAPI
+from src.introducer.introducer import Introducer
+from src.introducer.introducer_api import IntroducerAPI
 from src.server.outbound_message import NodeType
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
@@ -11,7 +11,7 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 from src.server.start_service import run_service
 
 # See: https://bugs.python.org/issue29288
-u"".encode("idna")
+"".encode("idna")
 
 SERVICE_NAME = "introducer"
 
@@ -20,9 +20,7 @@ def service_kwargs_for_introducer(
     root_path: pathlib.Path,
     config: Dict,
 ) -> Dict:
-    introducer = Introducer(
-        config["max_peers_to_send"], config["recent_peer_threshold"]
-    )
+    introducer = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
     node__api = IntroducerAPI(introducer)
 
     kwargs = dict(

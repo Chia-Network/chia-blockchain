@@ -29,6 +29,7 @@ class Harvester:
     _is_shutdown: bool
     executor: ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
+    cached_challenges: List
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
 

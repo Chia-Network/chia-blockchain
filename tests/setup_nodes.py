@@ -5,7 +5,7 @@ from secrets import token_bytes
 from typing import Dict, List, Optional
 from src.consensus.constants import ConsensusConstants
 from src.full_node.full_node_api import FullNodeAPI
-from src.timelord_launcher import spawn_process, kill_processes
+from src.timelord.timelord_launcher import spawn_process, kill_processes
 from src.util.block_tools import BlockTools, test_constants
 from src.types.peer_info import PeerInfo
 from src.util.keychain import Keychain, bytes_to_mnemonic
