@@ -109,7 +109,6 @@ class WalletNodeAPI:
         # if respond_header_msg is not None:
         #     await self.respond_header(respond_header_msg, peer)
 
-    @api_request
     async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection):
         """
         The full node has rejected our request for removals.
@@ -156,20 +155,21 @@ class WalletNodeAPI:
     async def respond_additions(self, response: wallet_protocol.RespondAdditions, peer: WSChiaConnection):
         pass
 
-    @peer_required
-    @api_request
-    async def reject_additions_request(self, response: wallet_protocol.RejectAdditionsRequest, peer: WSChiaConnection):
-        pass
+    # @peer_required
+    # @api_request
+    # async def reject_additions_request(self, response: wallet_protocol.RejectAdditionsRequest,
+    # peer: WSChiaConnection):
+    #     pass
 
-    @peer_required
-    @api_request
-    async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection):
-        pass
+    # @peer_required
+    # @api_request
+    # async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection):
+    #     pass
 
-    @peer_required
-    @api_request
-    async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection):
-        pass
+    # @peer_required
+    # @api_request
+    # async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection):
+    #     pass
 
     #     if (
     #         self.wallet_node.wallet_state_manager is None

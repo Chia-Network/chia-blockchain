@@ -180,15 +180,10 @@ async def validate_unfinished_header_block(
                         target_vdf_info,
                         number_of_iterations=icc_iters_committed,
                     ):
-                        log.error(f"ICC: {sub_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf}")
-                        log.error(
-                            f"Should be: {dataclasses.replace(target_vdf_info, number_of_iterations=icc_iters_committed)}"
-                        )
                         return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
                     if not sub_slot.proofs.infused_challenge_chain_slot_proof.is_valid(
                         constants, icc_vdf_input, target_vdf_info, None
                     ):
-                        log.error(f"ICC bad proof :(")
                         return None, ValidationError(Err.INVALID_ICC_EOS_VDF)
 
                     if sub_slot.reward_chain.deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
@@ -401,7 +396,8 @@ async def validate_unfinished_header_block(
     if challenge != header_block.reward_chain_sub_block.pos_ss_cc_challenge_hash:
         log.error(f"Finished slots: {header_block.finished_sub_slots}")
         log.error(
-            f"Data: {genesis_block} {overflow} {skip_overflow_last_ss_validation} {header_block.total_iters} {header_block.reward_chain_sub_block.signage_point_index}"
+            f"Data: {genesis_block} {overflow} {skip_overflow_last_ss_validation} {header_block.total_iters} "
+            f"{header_block.reward_chain_sub_block.signage_point_index}"
         )
         log.error(f"Challenge {challenge} provided {header_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}")
         return None, ValidationError(Err.INVALID_CC_CHALLENGE)

@@ -638,7 +638,7 @@ class FullNode:
             block.prev_header_hash
         ):
             # No need to request the parent, since the peer will send it to us anyway, via NewPeak
-            self.log.info(f"Received a disconnected unfinished block at height {block.height}")
+            self.log.info("Received a disconnected unfinished block")
             return
 
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()

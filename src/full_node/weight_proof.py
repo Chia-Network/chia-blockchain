@@ -149,7 +149,8 @@ class WeightProofHandler:
         curr_height = sub_block_height - (total_number_of_blocks - 1)
 
         self.log.info(
-            f"build weight proofs, peak : {sub_block_height} num of blocks: {total_number_of_blocks}, start from {curr_height}"
+            f"build weight proofs, peak : {sub_block_height} num of blocks: {total_number_of_blocks}, "
+            f"start from {curr_height}"
         )
 
         total_overflow_blocks = 0
@@ -192,7 +193,7 @@ class WeightProofHandler:
 
     def validate_weight_proof(self, weight_proof: WeightProof, fork_point: Optional[SubBlockRecord] = None) -> bool:
         # sub epoch summaries validate hashes
-        self.log.info(f"validate summaries")
+        self.log.info("validate summaries")
         prev_ses_hash = self.constants.GENESIS_SES_HASH
 
         # last find latest ses
@@ -215,7 +216,7 @@ class WeightProofHandler:
             # if not self._validate_segments(weight_proof, summaries, curr):
             #     return False
 
-        self.log.info(f"validate weight proof recent blocks")
+        self.log.info("validate weight proof recent blocks")
         if not self._validate_recent_blocks(weight_proof):
             return False
 
@@ -244,15 +245,15 @@ class WeightProofHandler:
         last_ses = summaries[uint32(len(summaries) - 1)]
         last_ses_block = get_last_ses_block_idx(self.constants, weight_proof.recent_chain_data)
         if last_ses_block is None:
-            self.log.error(f"could not find first block after last sub epoch end")
+            self.log.error("could not find first block after last sub epoch end")
             return None
         # validate weight
 
         # validate last ses_hash
         if last_ses.get_hash() != last_ses_block.finished_sub_slots[-1].challenge_chain.subepoch_summary_hash:
             self.log.error(
-                f"failed to validate ses hashes block height {last_ses_block.reward_chain_sub_block.sub_block_height} {last_ses.get_hash()} "
-                f" {last_ses_block.finished_sub_slots[-1].challenge_chain.subepoch_summary_hash}"
+                f"failed to validate ses hashes block height {last_ses_block.reward_chain_sub_block.sub_block_height}"
+                f"{last_ses.get_hash()}  {last_ses_block.finished_sub_slots[-1].challenge_chain.subepoch_summary_hash}"
             )
             return None
         return summaries
@@ -264,8 +265,9 @@ class WeightProofHandler:
         curr_ssi: uint64,
         rc_sub_slot_hash: bytes32,
     ):
-        total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
+        # total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
         total_slot_iters, total_slots = uint64(0), uint64(0)
+        total_ip_iters = uint64(0)
         # validate sub epoch samples
 
         curr_sub_epoch_n = -1
@@ -332,9 +334,9 @@ class WeightProofHandler:
             uint8(deficit),  # -1 if no overflows in start of sub_epoch
         )
         self.log.info(f"recreated rc sub slot \n {rc_sub_slot}")
-        self.log.info(f"------------------------------------------------------------")
+        self.log.info("------------------------------------------------------------")
         self.log.info(f"recreated  cc sub slot \n {cc_sub_slot}")
-        self.log.info(f"------------------------------------------------------------")
+        self.log.info("------------------------------------------------------------")
         self.log.info(f"recreated  icc sub slot  \n {icc_sub_slot}")
 
         return rc_sub_slot
@@ -351,9 +353,9 @@ class WeightProofHandler:
 
         last_slot = self.block_cache.header_block(block.header_hash).finished_sub_slots[-1]
         self.log.info(f"rc sub slot  \n {last_slot.reward_chain}")
-        self.log.info(f"------------------------------------------------------------")
+        self.log.info("------------------------------------------------------------")
         self.log.info(f"cc sub slot \n {last_slot.challenge_chain}")
-        self.log.info(f"------------------------------------------------------------")
+        self.log.info("------------------------------------------------------------")
         self.log.info(f"icc sub slot \n {last_slot.infused_challenge_chain}")
 
         count = sub_epoch_blocks_n
@@ -362,7 +364,7 @@ class WeightProofHandler:
             if curr.is_challenge_sub_block(self.constants):
                 self.log.debug(f"sub epoch {sub_epoch_n} challenge segment, starts at {curr.sub_block_height} ")
                 challenge_sub_block = self.block_cache.header_block(curr.header_hash)
-                # prepend as we are steping backwards in the chain
+                # prepend as we are stepping backwards in the chain
                 seg = self._handle_challenge_segment(challenge_sub_block, sub_epoch_n)
                 segments.insert(0, seg)
 
