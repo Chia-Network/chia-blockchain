@@ -262,7 +262,7 @@ class WalletRpcApi:
         # ca = self.service.wallet_state_manager.lca
         # height = self.service.wallet_state_manager.block_records[lca].height
 
-        return {"height": height}
+        return {}
 
     async def farm_block(self, request):
         raw_puzzle_hash = decode_puzzle_hash(request["address"])
