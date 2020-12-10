@@ -13,7 +13,9 @@ export default function PlotOverview() {
   return (
     <Flex flexDirection="column" gap={3}>
       {loading && (
-        <Loading />
+        <Flex alignItems="center" justifyContent="center">
+          <Loading />
+        </Flex>
       )}
 
       {!loading && (

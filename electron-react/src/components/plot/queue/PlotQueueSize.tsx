@@ -7,15 +7,15 @@ type Props = {
 };
 
 export default function PlotQueueSize(props: Props) {
-  const { queueItem: { config: { plotSize } } } = props;
-  const item = plotSizes.find((item) => item.value === plotSize);
+  const { queueItem: { size } } = props;
+  const item = plotSizes.find((item) => item.value === size);
   if (!item) {
     return null;
   }
 
   return (
     <>
-      {`K-${plotSize}, ${item.label}`}
+      {`K-${size}, ${item.label}`}
     </>
   );
 }

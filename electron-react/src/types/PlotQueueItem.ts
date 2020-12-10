@@ -1,12 +1,13 @@
 import PlotStatus from '../constants/PlotStatus';
-import type PlotAdd from './PlotAdd';
 
 type PlotQueueItem = {
-  id: number;
-  config: PlotAdd;
-  status: PlotStatus;
-  added: number; // timestamp when added
-  log: string;
+  id: string;
+  size: number;
+  parallel: boolean;
+  delay: number;
+  state: PlotStatus;
+  error?: string;
+  log?: string;
 };
 
 export default PlotQueueItem;

@@ -1,4 +1,4 @@
-import React, { ChangeEvent, ReactElement, ReactNode } from 'react';
+import React, { ChangeEvent, ReactElement, ReactNode, forwardRef } from 'react';
 import { Controller, ControllerProps, useFormContext } from 'react-hook-form';
 import { RadioGroup as MaterialRadioGroup, RadioGroupProps } from '@material-ui/core';
 
@@ -32,7 +32,7 @@ type Props = RadioGroupProps & {
   boolean?: boolean,
 };
 
-function ParseBoolean(props: RadioGroupProps) {
+const ParseBoolean = forwardRef((props: RadioGroupProps, ref) => {
   const { onChange, ...rest } = props;
   const { name } = rest;
   const { setValue } = useFormContext();
@@ -47,8 +47,8 @@ function ParseBoolean(props: RadioGroupProps) {
     }
   }
 
-  return <MaterialRadioGroup onChange={handleChange} {...rest} />;
-};
+  return <MaterialRadioGroup onChange={handleChange} ref={ref} {...rest} />;
+});
 
 export default function RadioGroup(props: Props) {
   const { name, boolean, ...rest } = props;
