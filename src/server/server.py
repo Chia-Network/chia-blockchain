@@ -110,6 +110,7 @@ class ChiaServer:
         self.connection_close_task: Optional[asyncio.Task] = None
         self.site_shutdown_task: Optional[asyncio.Task] = None
         self.app_shut_down_task: Optional[asyncio.Task] = None
+        self.api_tasks: List[asyncio.Task] = []
 
     async def start_server(self, on_connect: Callable = None):
         self.app = web.Application()
@@ -310,7 +311,7 @@ class ChiaServer:
                         pass
                     await connection.close()
 
-            asyncio.create_task(api_call(payload_inc, connection_inc))
+            self.api_tasks.append(asyncio.create_task(api_call(payload_inc, connection_inc)))
 
     async def send_to_others(
         self,
@@ -390,6 +391,10 @@ class ChiaServer:
             await self.app_shut_down_task
         if self.site_shutdown_task is not None:
             await self.site_shutdown_task
+
+        _, pending = await asyncio.wait(self.api_tasks, timeout=3, return_when=asyncio.ALL_COMPLETED)
+        for task in pending:
+            task.cancel()
 
     async def get_peer_info(self) -> Optional[PeerInfo]:
         ip = None
