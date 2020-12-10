@@ -49,6 +49,7 @@ class PlotState(str, Enum):
     ERROR = 'ERROR'
     FINISHED = 'FINISHED'
 
+
 # determine if application is a script file or frozen exe
 if getattr(sys, "frozen", False):
     name_map = {
@@ -373,7 +374,7 @@ class WebSocketServer:
 
         if a is not None:
             command_args.append(f"-a={a}")
-        
+
         return command_args
 
     def _is_serial_plotting_running(self):
@@ -382,7 +383,7 @@ class WebSocketServer:
             if item["parallel"] is False and item["state"] is PlotState.RUNNING:
                 response = True
         return response
-    
+
     def _get_plots_queue_item(self, id: str):
         config = next(item for item in self.plots_queue if item["id"] == id)
         return config
@@ -434,7 +435,7 @@ class WebSocketServer:
 
             await self._track_plotting_progress(id, loop)
 
-            # (output, err) = process.communicate() 
+            # (output, err) = process.communicate()
             # await process.wait()
 
             config["state"] = PlotState.FINISHED
@@ -442,7 +443,7 @@ class WebSocketServer:
 
         except (subprocess.SubprocessError, IOError):
             log.exception(f"problem starting {service_name}")
-            error = Exception(f"Start plotting failed")
+            error = Exception("Start plotting failed")
             config["state"] = PlotState.ERROR
             config["error"] = error
             self.state_changed(service_plotter, "state")
@@ -481,7 +482,7 @@ class WebSocketServer:
             loop = asyncio.get_event_loop()
             loop.create_task(self._start_plotting(id, loop))
         else:
-            log.info(f"Plotting will start automatically when previous plotting finish")
+            log.info("Plotting will start automatically when previous plotting finish")
 
         response = {
             "success": True,
@@ -577,8 +578,8 @@ class WebSocketServer:
             process = self.services.get(service_name)
             is_running = process is not None and process.poll() is None
             response = {
-                "success": True, 
-                "service_name": service_name, 
+                "success": True,
+                "service_name": service_name,
                 "is_running": is_running,
             }
 
