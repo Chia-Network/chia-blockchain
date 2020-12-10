@@ -1,7 +1,6 @@
 from typing import Dict, Optional, List, Set
 import aiosqlite
 from src.types.coin import Coin
-from src.wallet.block_record import HeaderBlockRecord
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
 from src.wallet.util.wallet_types import WalletType
@@ -18,9 +17,7 @@ class WalletCoinStore:
     cache_size: uint32
 
     @classmethod
-    async def create(
-        cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)
-    ):
+    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
         self = cls()
 
         self.cache_size = cache_size
@@ -47,25 +44,15 @@ class WalletCoinStore:
             "CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)"
         )
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_spent on coin_record(spent)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS coin_puzzlehash on coin_record(puzzle_hash)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_puzzlehash on coin_record(puzzle_hash)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS wallet_type on coin_record(wallet_type)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_type on coin_record(wallet_type)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)")
 
         await self.db_connection.commit()
         self.coin_record_cache = dict()
@@ -123,25 +110,17 @@ class WalletCoinStore:
         """ Returns CoinRecord with specified coin id. """
         if coin_name.hex() in self.coin_record_cache:
             return self.coin_record_cache[coin_name.hex()]
-        cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),)
-        )
+        cursor = await self.db_connection.execute("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
-            )
-            return WalletCoinRecord(
-                coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
-            )
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            return WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9])
         return None
 
     async def get_first_coin_height(self) -> Optional[uint32]:
         """ Returns height of first confirmed coin"""
-        cursor = await self.db_connection.execute(
-            "SELECT MIN(confirmed_index) FROM coin_record;"
-        )
+        cursor = await self.db_connection.execute("SELECT MIN(confirmed_index) FROM coin_record;")
         row = await cursor.fetchone()
         await cursor.close()
 
@@ -150,9 +129,7 @@ class WalletCoinStore:
 
         return None
 
-    async def get_unspent_coins_at_height(
-        self, height: Optional[uint32] = None
-    ) -> Set[WalletCoinRecord]:
+    async def get_unspent_coins_at_height(self, height: Optional[uint32] = None) -> Set[WalletCoinRecord]:
         """
         Returns set of CoinRecords that have not been spent yet. If a height is specified,
         We can also return coins that were unspent at this height (but maybe spent later).
@@ -165,25 +142,15 @@ class WalletCoinStore:
                 (0, height, height),
             )
         else:
-            cursor = await self.db_connection.execute(
-                "SELECT * from coin_record WHERE spent=?", (0,)
-            )
+            cursor = await self.db_connection.execute("SELECT * from coin_record WHERE spent=?", (0,))
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
-            )
-            coins.add(
-                WalletCoinRecord(
-                    coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
-                )
-            )
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
         return coins
 
-    async def get_unspent_coins_for_wallet(
-        self, wallet_id: int
-    ) -> Set[WalletCoinRecord]:
+    async def get_unspent_coins_for_wallet(self, wallet_id: int) -> Set[WalletCoinRecord]:
         """ Returns set of CoinRecords that have not been spent yet for a wallet. """
         coins = set()
 
@@ -194,14 +161,8 @@ class WalletCoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
-            )
-            coins.add(
-                WalletCoinRecord(
-                    coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
-                )
-            )
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
         return coins
 
     async def get_all_coins(self) -> Set[WalletCoinRecord]:
@@ -212,19 +173,11 @@ class WalletCoinStore:
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
-            )
-            coins.add(
-                WalletCoinRecord(
-                    coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
-                )
-            )
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
         return coins
 
-    async def get_spendable_for_index(
-        self, index: int, wallet_id: int
-    ) -> Set[WalletCoinRecord]:
+    async def get_spendable_for_index(self, index: int, wallet_id: int) -> Set[WalletCoinRecord]:
         """
         Returns set of unspent coin records that are not coinbases, or if they are coinbases,
         must have been confirmed at or before index.
@@ -252,56 +205,32 @@ class WalletCoinStore:
         await cursor_regular_coins.close()
 
         for row in list(coinbase_rows) + list(regular_rows):
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
-            )
-            coins.add(
-                WalletCoinRecord(
-                    coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
-                )
-            )
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
         return coins
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
-    async def get_coin_records_by_puzzle_hash(
-        self, puzzle_hash: bytes32
-    ) -> List[WalletCoinRecord]:
+    async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:
         """Returns a list of all coin records with the given puzzle hash"""
         coins = set()
-        cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),)
-        )
+        cursor = await self.db_connection.execute("SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),))
         rows = await cursor.fetchall()
         await cursor.close()
         for row in rows:
-            coin = Coin(
-                bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
-            )
-            coins.add(
-                WalletCoinRecord(
-                    coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
-                )
-            )
+            coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+            coins.add(WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]))
         return list(coins)
 
-    async def get_coin_record_by_coin_id(
-        self, coin_id: bytes32
-    ) -> Optional[WalletCoinRecord]:
+    async def get_coin_record_by_coin_id(self, coin_id: bytes32) -> Optional[WalletCoinRecord]:
         """Returns a coin records with the given name, if it exists"""
-        cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE coin_name=?", (coin_id.hex(),)
-        )
+        cursor = await self.db_connection.execute("SELECT * from coin_record WHERE coin_name=?", (coin_id.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is None:
             return None
 
-        coin = Coin(
-            bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7]
-        )
-        coin_record = WalletCoinRecord(
-            coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9]
-        )
+        coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), row[7])
+        coin_record = WalletCoinRecord(coin, row[1], row[2], row[3], row[4], WalletType(row[8]), row[9])
         return coin_record
 
     async def rollback_to_block(self, block_index):
@@ -331,9 +260,7 @@ class WalletCoinStore:
             self.coin_record_cache.pop(coin_name)
 
         # Delete from storage
-        c1 = await self.db_connection.execute(
-            "DELETE FROM coin_record WHERE confirmed_index>?", (block_index,)
-        )
+        c1 = await self.db_connection.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
         await c1.close()
         c2 = await self.db_connection.execute(
             "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?",

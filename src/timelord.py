@@ -889,7 +889,7 @@ class Timelord:
                     await self._check_for_new_ip()
                     # Check for end of subslot, respawn chains and build EndOfSubslotBundle.
                     await self._check_for_end_of_subslot()
-            except Exception as e:
+            except Exception:
                 tb = traceback.format_exc()
                 log.error(f"Error while handling message: {tb}")
 
@@ -952,7 +952,7 @@ class Timelord:
                 msg = ""
                 try:
                     msg = data.decode()
-                except Exception as e:
+                except Exception:
                     pass
                 if msg == "STOP":
                     log.info(f"Stopped client running on ip {ip}.")
@@ -1010,4 +1010,4 @@ class Timelord:
                     async with self.lock:
                         self.proofs_finished.append((chain, vdf_info, vdf_proof))
         except ConnectionResetError as e:
-            log.info(f"Connection reset with VDF client")
+            log.info(f"Connection reset with VDF client {e}")
