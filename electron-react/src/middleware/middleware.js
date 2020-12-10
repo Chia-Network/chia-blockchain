@@ -2,7 +2,6 @@ import * as actions from '../modules/websocket';
 import {
   registerService,
   startService,
-  isServiceRunning,
   startServiceTest,
 } from '../modules/daemon_messages';
 import { handle_message } from './middleware_api';
@@ -36,10 +35,9 @@ const socketMiddleware = () => {
   const onOpen = (store) => (event) => {
     connected = true;
     store.dispatch(actions.wsConnected(event.target.url));
-    const register_action = registerService();
-    store.dispatch(register_action);
+    store.dispatch(registerService('wallet_ui'));
+    store.dispatch(registerService(service_plotter));
 
-    store.dispatch(isServiceRunning(service_plotter));
     store.dispatch(startServiceTest(service_wallet));
 
     if (config.local_test) {

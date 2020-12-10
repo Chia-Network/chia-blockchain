@@ -10,7 +10,7 @@ import {
 import useOpenDialog from '../../../hooks/useOpenDialog';
 import type PlotQueueItem from '../../../types/PlotQueueItem';
 import PlotStatus from '../../../constants/PlotStatus';
-import { plotQueueDelete } from '../../../modules/plotQueue';
+import { stopPlotting } from '../../../modules/plotter_messages';
 import PlotQueueLogDialog from './PlotQueueLogDialog';
 
 type Props = {
@@ -21,7 +21,7 @@ export default function PlotQueueAction(props: Props) {
   const {
     queueItem: {
       id,
-      status,
+      state,
     }
   } = props;
 
@@ -43,7 +43,7 @@ export default function PlotQueueAction(props: Props) {
 
     // @ts-ignore
     if (canDelete) {
-      dispatch(plotQueueDelete(id));
+      dispatch(stopPlotting(id));
     }
   }
 
@@ -57,7 +57,7 @@ export default function PlotQueueAction(props: Props) {
     <More>
       {({ onClose }) => (
         <Box>
-          {status === PlotStatus.IN_PROGRESS && (
+          {state === PlotStatus.RUNNING && (
             <MenuItem onClick={() => { onClose(); handleViewLog(); }}>
               <ListItemIcon>
                 <InfoIcon fontSize="small" />
