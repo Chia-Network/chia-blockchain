@@ -41,7 +41,7 @@ def bech32_hrp_expand(hrp):
     return [ord(x) >> 5 for x in hrp] + [0] + [ord(x) & 31 for x in hrp]
 
 
-M = 0x3FFFFFFF
+M = 0x2BC830A3
 
 
 def bech32_verify_checksum(hrp, data):
