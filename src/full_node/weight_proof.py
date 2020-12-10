@@ -276,23 +276,21 @@ class WeightProofHandler:
             if curr_sub_epoch_n < segment.sub_epoch_n:
                 self.log.info(f"handle new sub epoch {segment.sub_epoch_n}")
 
-                # todo  validate vdfs
-                ses = summaries[segment.sub_epoch_n]
-                if not ses.reward_chain_hash == rc_sub_slot_hash:
+                # recreate RewardChainSubSlot for next ses rc_hash
+                # get last slot of prev segment
+                if curr_sub_epoch_n != -1:
+                    rc_sub_slot_hash = self.get_rc_sub_slot_hash(weight_proof.sub_epoch_segments[idx - 1], summaries)
+
+                if not summaries[segment.sub_epoch_n].reward_chain_hash == rc_sub_slot_hash:
                     self.log.error(f"failed reward_chain_hash validation sub_epoch {segment.sub_epoch_n}")
                     self.log.error(f"rc slot hash  {rc_sub_slot_hash}")
                     return False
 
-                # recreate RewardChainSubSlot for next ses rc_hash
-                rc_sub_slot_hash = self.get_rc_sub_slot(
-                    segment, ses.get_hash(), ses.new_sub_slot_iters, ses.new_difficulty, summaries
-                ).get_hash()
-
-            if not self.__validate_segment_slots(
-                summaries, segment, curr_ssi, total_slot_iters, total_slots, total_ip_iters, rc_sub_slot_hash
-            ):
-                self.log.error(f"failed to validate segment {idx} of sub_epoch {segment.sub_epoch_n} slots")
-                return False
+                # if not self.__validate_segment_slots(
+                #     summaries, segment, curr_ssi, total_slot_iters, total_slots, total_ip_iters, rc_sub_slot_hash
+                # ):
+                # self.log.error(f"failed to validate segment {idx} of sub_epoch {segment.sub_epoch_n} slots")
+                # return False
 
             curr_sub_epoch_n = segment.sub_epoch_n
         # todo floats
@@ -304,24 +302,22 @@ class WeightProofHandler:
 
         return True
 
-    def get_rc_sub_slot(
+    def get_rc_sub_slot_hash(
         self,
         segment: SubEpochChallengeSegment,
-        ses_hash: bytes32,
-        new_sub_slot_iters: Optional[uint64],
-        new_difficulty: Optional[uint64],
         summaries: Dict[uint32, SubEpochSummary],
     ) -> RewardChainSubSlot:
 
+        ses = summaries[segment.sub_epoch_n]
         first_slot = segment.sub_slots[0]
         icc_sub_slot = InfusedChallengeChainSubSlot(first_slot.icc_slot_end_info)
 
         cc_sub_slot = ChallengeChainSubSlot(
             first_slot.cc_slot_end_info,
             icc_sub_slot.get_hash(),
-            ses_hash,
-            new_sub_slot_iters,
-            new_difficulty,
+            ses.get_hash(),
+            ses.new_sub_slot_iters,
+            ses.new_difficulty,
         )
         deficit = self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
         if summaries[segment.sub_epoch_n + 1].num_sub_blocks_overflow == 0:
@@ -339,7 +335,7 @@ class WeightProofHandler:
         self.log.info("------------------------------------------------------------")
         self.log.info(f"recreated  icc sub slot  \n {icc_sub_slot}")
 
-        return rc_sub_slot
+        return rc_sub_slot.get_hash()
 
     def __create_sub_epoch_segments(
         self, block: SubBlockRecord, sub_epoch_blocks_n: uint32, sub_epoch_n: uint32
