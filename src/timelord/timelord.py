@@ -219,7 +219,6 @@ class Timelord:
         self.iters_to_submit[Chain.CHALLENGE_CHAIN].append(left_subslot_iters)
         self.iters_to_submit[Chain.REWARD_CHAIN].append(left_subslot_iters)
         self.iteration_to_proof_type[left_subslot_iters] = IterationType.END_OF_SUBSLOT
-        log.warning(f"Iters to submit {self.iters_to_submit}")
 
         for chain, iters in self.iters_to_submit.items():
             for iteration in iters:
