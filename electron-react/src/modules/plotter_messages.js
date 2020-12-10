@@ -5,7 +5,31 @@ export const plotControl = () => ({
   type: 'PLOTTER_CONTROL',
 });
 
-export const startPlotting = (k, n, t, t2, d, b, u, r, s, a) => {
+export const stopPlotting = (id) => {
+  const action = daemonMessage();
+  action.message.command = 'stop_plotting';
+  action.message.data = {
+    service: service_plotter,
+    id,
+  };
+
+  return action;
+};
+
+export const startPlotting = (
+  k,
+  n,
+  t,
+  t2,
+  d,
+  b,
+  u,
+  r,
+  s,
+  a,
+  parallel,
+  delay,
+) => {
   const action = daemonMessage();
   action.message.command = 'start_plotting';
 
@@ -20,6 +44,8 @@ export const startPlotting = (k, n, t, t2, d, b, u, r, s, a) => {
     u,
     r,
     s,
+    parallel,
+    delay,
   };
 
   if (a) {

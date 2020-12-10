@@ -5,6 +5,7 @@ import { Card, Flex, Table, FormatBytes } from '@chia/core';
 import { TableCell, TableRow } from '@material-ui/core';
 import Typography from '@material-ui/core/Typography';
 import type Plot from '../../../types/Plot';
+import PlotStatusEnum from '../../../constants/PlotStatus';
 import PlotStatus from '../PlotStatus';
 import PlotAction from '../PlotAction';
 import PlotHeader from '../PlotHeader';
@@ -69,6 +70,8 @@ export default function PlotOverviewPlots() {
     return null;
   }
 
+  const queuePlots = queue?.filter(item => [PlotStatusEnum.SUBMITTED, PlotStatusEnum.RUNNING].includes(item.state));
+
   return (
     <>
       <PlotHeader />
@@ -100,9 +103,8 @@ export default function PlotOverviewPlots() {
         </Flex>
 
         <Table cols={cols} rows={plots} pages>
-          {queue ? queue.map((item) => {
+          {queuePlots ? queuePlots.map((item) => {
             const { id } = item;
-
             return (
               <StyledTableRowQueue key={id}>
                 <TableCell>

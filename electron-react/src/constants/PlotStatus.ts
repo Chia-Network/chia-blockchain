@@ -1,7 +1,8 @@
 enum PlotStatus {
-  WAITING,
-  IN_PROGRESS,
-  DONE,
+  SUBMITTED = 'SUBMITTED',
+  RUNNING = 'RUNNING',
+  ERROR = 'ERROR',
+  FINISHED = 'FINISHED',
 }
 
 export default PlotStatus;

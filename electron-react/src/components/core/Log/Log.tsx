@@ -6,8 +6,7 @@ const StyledPaper = styled(Paper)`
   background-color: #272c34;
   color: white;
   width: 100%;
-  min-height: 200px;
-  max-height: 400px;
+  height: 40vh;
   padding: ${({ theme }) => `${theme.spacing(1)}px ${theme.spacing(2)}px`};
   overflow: auto;
 
