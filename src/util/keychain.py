@@ -194,9 +194,7 @@ class Keychain:
         )
         return key
 
-    def get_first_private_key(
-        self, passphrases: List[str] = [""]
-    ) -> Optional[Tuple[PrivateKey, bytes]]:
+    def get_first_private_key(self, passphrases: List[str] = [""]) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
@@ -236,9 +234,7 @@ class Keychain:
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
         return None
 
-    def get_all_private_keys(
-        self, passphrases: List[str] = [""]
-    ) -> List[Tuple[PrivateKey, bytes]]:
+    def get_all_private_keys(self, passphrases: List[str] = [""]) -> List[Tuple[PrivateKey, bytes]]:
         """
         Returns all private keys which can be retrieved, with the given passphrases.
         A tuple of key, and entropy bytes (i.e. mnemonic) is returned for each key.
@@ -301,9 +297,7 @@ class Keychain:
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    keyring.delete_password(
-                        self._get_service(), self._get_private_key_user(index)
-                    )
+                    keyring.delete_password(self._get_service(), self._get_private_key_user(index))
             index += 1
             pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
 
@@ -318,9 +312,7 @@ class Keychain:
         while True:
             try:
                 pkent = self._get_pk_and_entropy(self._get_private_key_user(index))
-                keyring.delete_password(
-                    self._get_service(), self._get_private_key_user(index)
-                )
+                keyring.delete_password(self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True
@@ -338,9 +330,7 @@ class Keychain:
                 pkent = self._get_pk_and_entropy(
                     self._get_private_key_user(index)
                 )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                keyring.delete_password(
-                    self._get_service(), self._get_private_key_user(index)
-                )
+                keyring.delete_password(self._get_service(), self._get_private_key_user(index))
             except Exception:
                 # Some platforms might throw on no existing key
                 delete_exception = True

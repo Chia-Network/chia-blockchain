@@ -52,9 +52,7 @@ class ReceiveBlockResult(Enum):
     ADDED_AS_ORPHAN = 2  # Added as an orphan/stale block (block that is not a head or ancestor of a head)
     INVALID_BLOCK = 3  # Block was not added because it was invalid
     ALREADY_HAVE_BLOCK = 4  # Block is already present in this blockchain
-    DISCONNECTED_BLOCK = (
-        5  # Block's parent (previous pointer) is not in this blockchain
-    )
+    DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
 
 
 class Blockchain:
@@ -100,9 +98,7 @@ class Blockchain:
         cpu_count = multiprocessing.cpu_count()
         if cpu_count > 61:
             cpu_count = 61  # Windows Server 2016 has an issue https://bugs.python.org/issue26903
-        self.pool = concurrent.futures.ProcessPoolExecutor(
-            max_workers=max(cpu_count - 2, 1)
-        )
+        self.pool = concurrent.futures.ProcessPoolExecutor(max_workers=max(cpu_count - 2, 1))
         self.constants = consensus_constants
         self.tips = []
         self.height_to_hash = {}
@@ -132,9 +128,7 @@ class Blockchain:
 
         assert (lca_db is None) == (len(tips_db) == 0) == (len(headers_db) == 0)
         if lca_db is None:
-            result, removed, error_code = await self.receive_block(
-                self.genesis, sync_mode=False
-            )
+            result, removed, error_code = await self.receive_block(self.genesis, sync_mode=False)
             if result != ReceiveBlockResult.ADDED_TO_HEAD:
                 if error_code is not None:
                     raise ConsensusError(error_code)
@@ -225,19 +219,13 @@ class Blockchain:
         prev_challenge_hash = block.proof_of_space.challenge_hash
 
         new_difficulty: Optional[uint64]
-        if (
-            block.height + 1
-        ) % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
-            new_difficulty = get_next_difficulty(
-                self.constants, self.headers, self.height_to_hash, block.header
-            )
+        if (block.height + 1) % self.constants.DIFFICULTY_EPOCH == self.constants.DIFFICULTY_DELAY:
+            new_difficulty = get_next_difficulty(self.constants, self.headers, self.height_to_hash, block.header)
         else:
             new_difficulty = None
         return Challenge(
             prev_challenge_hash,
-            std_hash(
-                block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()
-            ),
+            std_hash(block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()),
             new_difficulty,
         )
 
@@ -245,9 +233,7 @@ class Blockchain:
         challenge: Optional[Challenge] = self.get_challenge(block)
         if challenge is None or block.proof_of_time is None:
             return None
-        return HeaderBlock(
-            block.proof_of_space, block.proof_of_time, challenge, block.header
-        )
+        return HeaderBlock(block.proof_of_space, block.proof_of_time, challenge, block.header)
 
     def get_header_hashes(self, tip_header_hash: bytes32) -> List[bytes32]:
         if tip_header_hash not in self.headers:
@@ -360,9 +346,7 @@ class Blockchain:
         else:
             return ReceiveBlockResult.ADDED_AS_ORPHAN, None, None
 
-    async def _reconsider_heads(
-        self, block: Header, genesis: bool, sync_mode: bool
-    ) -> Tuple[bool, Optional[Header]]:
+    async def _reconsider_heads(self, block: Header, genesis: bool, sync_mode: bool) -> Tuple[bool, Optional[Header]]:
         """
         When a new block is added, this is called, to check if the new block is heavier
         than one of the heads.
@@ -402,9 +386,7 @@ class Blockchain:
         await self.block_store.set_lca(self.lca_block.header_hash)
 
         if old_lca is None:
-            full: Optional[FullBlock] = await self.block_store.get_block(
-                self.lca_block.header_hash
-            )
+            full: Optional[FullBlock] = await self.block_store.get_block(self.lca_block.header_hash)
             assert full is not None
             await self.coin_store.new_lca(full)
             await self._create_diffs_for_tips(self.lca_block)
@@ -496,14 +478,10 @@ class Blockchain:
         await self.coin_store.add_lcas(blocks)
 
     def get_next_difficulty(self, header_hash: bytes32) -> uint64:
-        return get_next_difficulty(
-            self.constants, self.headers, self.height_to_hash, header_hash
-        )
+        return get_next_difficulty(self.constants, self.headers, self.height_to_hash, header_hash)
 
     def get_next_min_iters(self, header_hash: bytes32) -> uint64:
-        return get_next_min_iters(
-            self.constants, self.headers, self.height_to_hash, header_hash
-        )
+        return get_next_min_iters(self.constants, self.headers, self.height_to_hash, header_hash)
 
     async def pre_validate_blocks_multiprocessing(
         self, blocks: List[FullBlock]
@@ -558,10 +536,7 @@ class Blockchain:
         # target reward_fee = 1/8 coinbase reward + tx fees
         if block.transactions_generator is not None:
             # 14. Make sure transactions generator hash is valid (or all 0 if not present)
-            if (
-                block.transactions_generator.get_tree_hash()
-                != block.header.data.generator_hash
-            ):
+            if block.transactions_generator.get_tree_hash() != block.header.data.generator_hash:
                 return Err.INVALID_TRANSACTIONS_GENERATOR_HASH
 
             # 15. If not genesis, the transactions must be valid and fee must be valid
@@ -637,9 +612,7 @@ class Blockchain:
 
         return None
 
-    async def _validate_transactions(
-        self, block: FullBlock, fee_base: uint64
-    ) -> Optional[Err]:
+    async def _validate_transactions(self, block: FullBlock, fee_base: uint64) -> Optional[Err]:
         # TODO(straya): review, further test the code, and number all the validation steps
 
         # 1. Check that transactions generator is present
@@ -718,9 +691,7 @@ class Blockchain:
         additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
         removals_since_fork: Set[bytes32] = set()
         coinbases_since_fork: Dict[bytes32, uint32] = {}
-        curr: Optional[FullBlock] = await self.block_store.get_block(
-            block.prev_header_hash
-        )
+        curr: Optional[FullBlock] = await self.block_store.get_block(block.prev_header_hash)
         assert curr is not None
 
         while curr.height > fork_h:
@@ -750,9 +721,7 @@ class Blockchain:
             if rem in additions_dic:
                 # Ephemeral coin
                 rem_coin: Coin = additions_dic[rem]
-                new_unspent: CoinRecord = CoinRecord(
-                    rem_coin, block.height, uint32(0), False, False
-                )
+                new_unspent: CoinRecord = CoinRecord(rem_coin, block.height, uint32(0), False, False)
                 removal_coin_records[new_unspent.name] = new_unspent
             else:
                 assert prev_header is not None
@@ -765,10 +734,7 @@ class Blockchain:
                         return Err.DOUBLE_SPEND
                     # If it's a coinbase, check that it's not frozen
                     if unspent.coinbase == 1:
-                        if (
-                            block.height
-                            < unspent.confirmed_block_index + self.coinbase_freeze
-                        ):
+                        if block.height < unspent.confirmed_block_index + self.coinbase_freeze:
                             return Err.COINBASE_NOT_YET_SPENDABLE
                     removal_coin_records[unspent.name] = unspent
                 else:
@@ -779,10 +745,7 @@ class Blockchain:
                         return Err.UNKNOWN_UNSPENT
                     if rem in coinbases_since_fork:
                         # This coin is a coinbase coin
-                        if (
-                            block.height
-                            < coinbases_since_fork[rem] + self.coinbase_freeze
-                        ):
+                        if block.height < coinbases_since_fork[rem] + self.coinbase_freeze:
                             return Err.COINBASE_NOT_YET_SPENDABLE
                     new_coin, confirmed_height = additions_since_fork[rem]
                     new_coin_record: CoinRecord = CoinRecord(
@@ -817,9 +780,7 @@ class Blockchain:
 
         for npc in npc_list:
             if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
-                fee_list: List[ConditionVarPair] = npc.condition_dict[
-                    ConditionOpcode.ASSERT_FEE
-                ]
+                fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
                 for cvp in fee_list:
                     fee = int_from_bytes(cvp.vars[0])
                     assert_fee_sum = assert_fee_sum + fee
@@ -853,9 +814,7 @@ class Blockchain:
             )
             if error:
                 return error
-            for pk, m in pkm_pairs_for_conditions_dict(
-                npc.condition_dict, npc.coin_name
-            ):
+            for pk, m in pkm_pairs_for_conditions_dict(npc.condition_dict, npc.coin_name):
                 pairs_pks.append(pk)
                 pairs_msgs.append(m)
 
@@ -864,9 +823,7 @@ class Blockchain:
         if not block.header.data.aggregated_signature:
             return Err.BAD_AGGREGATE_SIGNATURE
 
-        validates = AugSchemeMPL.aggregate_verify(
-            pairs_pks, pairs_msgs, block.header.data.aggregated_signature
-        )
+        validates = AugSchemeMPL.aggregate_verify(pairs_pks, pairs_msgs, block.header.data.aggregated_signature)
         if not validates:
             return Err.BAD_AGGREGATE_SIGNATURE
 

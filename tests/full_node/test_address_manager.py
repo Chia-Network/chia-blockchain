@@ -297,9 +297,7 @@ class TestPeerManager:
         for i in range(1, 8 * 256):
             octet1 = i % 256
             octet2 = i >> 8 % 256
-            peer = TimestampedPeerInfo(
-                str(octet1) + "." + str(octet2) + ".1.23", 8444, time.time()
-            )
+            peer = TimestampedPeerInfo(str(octet1) + "." + str(octet2) + ".1.23", 8444, time.time())
             await addrman.add_to_new_table([peer])
             if i % 8 == 0:
                 await addrman.mark_good(PeerInfo(peer.host, peer.port))
@@ -392,9 +390,7 @@ class TestPeerManager:
         for i in range(4 * 255):
             src = PeerInfo("251.4.1.1", 8444)
             peer = PeerInfo(str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8444)
-            t_peer = TimestampedPeerInfo(
-                str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8444, 0
-            )
+            t_peer = TimestampedPeerInfo(str(250 + i // 255) + "." + str(i % 256) + ".1.1", 8444, 0)
             extended_peer_info = ExtendedPeerInfo(t_peer, src)
             bucket = extended_peer_info.get_new_bucket(key1)
             if bucket not in buckets:
@@ -571,10 +567,7 @@ class TestPeerManager:
         recovered = 0
         for target_peer in wanted_peers:
             for current_peer in retrieved_peers:
-                if (
-                    current_peer.peer_info == target_peer.peer_info
-                    and current_peer.src == target_peer.src
-                ):
+                if current_peer.peer_info == target_peer.peer_info and current_peer.src == target_peer.src:
                     recovered += 1
         assert recovered == 3
         await connection.close()

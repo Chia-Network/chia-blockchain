@@ -27,10 +27,7 @@ def check_plots(args, root_path):
     log.info("Loading plots in config.yaml using plot_tools loading code\n")
     kc: Keychain = Keychain()
     pks = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()]
-    pool_public_keys = [
-        G1Element.from_bytes(bytes.fromhex(pk))
-        for pk in config["farmer"]["pool_public_keys"]
-    ]
+    pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in config["farmer"]["pool_public_keys"]]
     _, provers, failed_to_open_filenames, no_key_filenames = load_plots(
         {},
         {},
@@ -58,14 +55,10 @@ def check_plots(args, root_path):
         try:
             for i in range(num):
                 challenge = std_hash(i.to_bytes(32, "big"))
-                for index, quality_str in enumerate(
-                    pr.get_qualities_for_challenge(challenge)
-                ):
+                for index, quality_str in enumerate(pr.get_qualities_for_challenge(challenge)):
                     proof = pr.get_full_proof(challenge, index)
                     total_proofs += 1
-                    ver_quality_str = v.validate_proof(
-                        pr.get_id(), pr.get_size(), challenge, proof
-                    )
+                    ver_quality_str = v.validate_proof(pr.get_id(), pr.get_size(), challenge, proof)
                     assert quality_str == ver_quality_str
         except BaseException as e:
             if isinstance(e, KeyboardInterrupt):
@@ -73,23 +66,17 @@ def check_plots(args, root_path):
                 return
             log.error(f"{type(e)}: {e} error in proving/verifying for plot {plot_path}")
         if total_proofs > 0:
-            log.info(
-                f"\tProofs {total_proofs} / {num}, {round(total_proofs/float(num), 4)}"
-            )
+            log.info(f"\tProofs {total_proofs} / {num}, {round(total_proofs/float(num), 4)}")
             total_good_plots[pr.get_size()] += 1
             total_size += plot_path.stat().st_size
         else:
             total_bad_plots += 1
-            log.error(
-                f"\tProofs {total_proofs} / {num}, {round(total_proofs/float(num), 4)}"
-            )
+            log.error(f"\tProofs {total_proofs} / {num}, {round(total_proofs/float(num), 4)}")
     log.info("")
     log.info("")
     log.info("Summary")
     total_plots: int = sum(list(total_good_plots.values()))
-    log.info(
-        f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB"
-    )
+    log.info(f"Found {total_plots} valid plots, total size {total_size / (1024 * 1024 * 1024 * 1024):.5f} TiB")
     for (k, count) in sorted(dict(total_good_plots).items()):
         log.info(f"{count} plots of size {k}")
     grand_total_bad = total_bad_plots + len(failed_to_open_filenames)

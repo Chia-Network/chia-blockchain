@@ -35,9 +35,7 @@ class PeerInfo(Streamable):
             ip = ipaddress.IPv6Address(self.host)
         except ValueError:
             ip_v4 = ipaddress.IPv4Address(self.host)
-            ip = ipaddress.IPv6Address(
-                int(ipaddress.IPv6Address("2002::")) | (int(ip_v4) << 80)
-            )
+            ip = ipaddress.IPv6Address(int(ipaddress.IPv6Address("2002::")) | (int(ip_v4) << 80))
         key = ip.packed
         key += bytes(
             [
