@@ -186,7 +186,6 @@ class Blockchain:
         )
 
         if error is not None:
-            log.error(f"block {block.header_hash} failed validation {error.code} {error.error_msg}")
             return ReceiveBlockResult.INVALID_BLOCK, error.code, None
         assert required_iters is not None
 
