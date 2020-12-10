@@ -124,7 +124,6 @@ def create_foliage(
 
     solution_program: Optional[Program] = None
     if is_block:
-        assert prev_block is not None
         spend_bundle_fees: int = 0
         aggregate_sig: G2Element = G2Element.infinity()
         cost = uint64(0)
@@ -140,6 +139,7 @@ def create_foliage(
         # TODO: prev generators root
         reward_claims_incorporated = []
         if sub_height > 0:
+            assert prev_block is not None
             assert prev_sub_block is not None
             curr: SubBlockRecord = prev_sub_block
             while not curr.is_block:
