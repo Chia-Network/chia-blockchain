@@ -339,10 +339,12 @@ class MempoolManager:
             return self.mempool.spends[bundle_hash].spend_bundle
         return None
 
-    async def new_peak(self, new_peak: SubBlockRecord):
+    async def new_peak(self, new_peak: Optional[SubBlockRecord]):
         """
         Called when a new peak is available, we try to recreate a mempool for the new tip.
         """
+        if new_peak is None:
+            return
         if self.peak == new_peak:
             return
         self.peak = new_peak
