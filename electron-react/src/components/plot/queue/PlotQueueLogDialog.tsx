@@ -5,7 +5,7 @@ import { Log } from '@chia/core';
 import type { RootState } from '../../../modules/rootReducer';
 
 type Props = {
-  id: number;
+  id: string;
   open: boolean;
   onClose: () => void;
 };
@@ -16,8 +16,8 @@ export default function PlotQueueLogDialog(props: Props) {
   const [log, setLog] = useState<string>('Loading...');
 
   useEffect(() => {
-    if (queueItem) {
-      setLog(queueItem?.log);
+    if (queueItem && queueItem.log) {
+      setLog(queueItem.log.trim());
     }
   }, [queueItem]);
 
