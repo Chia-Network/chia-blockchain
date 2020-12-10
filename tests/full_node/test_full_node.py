@@ -5,33 +5,22 @@ import pytest
 import random
 import time
 import logging
-from typing import Dict, Tuple, Callable
+from typing import Dict, Tuple
 from secrets import token_bytes
 
 from src.full_node.full_node_api import FullNodeAPI
-from src.protocols import full_node_protocol as fnp, wallet_protocol
+from src.protocols import full_node_protocol as fnp
 from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_client, ChiaServer
 from src.server.ws_connection import WSChiaConnection
-from src.types.coin import hash_coin_list
-from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
-from src.types.full_block import FullBlock
-from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
-from src.full_node.bundle_tools import best_solution_program
-from src.util.errors import ConsensusError, Err
 from src.util.hash import std_hash
-from src.util.ints import uint16, uint32, uint64, uint8
+from src.util.ints import uint16, uint32, uint64
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.util.merkle_set import (
-    confirm_not_included_already_hashed,
-    MerkleSet,
-    confirm_included_already_hashed,
-)
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
 from src.util.clvm import int_to_bytes
@@ -44,7 +33,8 @@ log = logging.getLogger(__name__)
 
 async def get_block_path(full_node: FullNodeAPI):
     blocks_list = [await full_node.full_node.blockchain.get_full_peak()]
-    while blocks_list[0].height != 0:
+    assert blocks_list[0] is not None
+    while blocks_list[0].sub_block_height != 0:
         b = await full_node.full_node.block_store.get_full_block(blocks_list[0].prev_header_hash)
         assert b is not None
         blocks_list.insert(0, b)

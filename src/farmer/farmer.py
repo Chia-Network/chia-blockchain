@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict, List, Optional, Callable, Tuple
+from typing import Dict, List, Optional, Callable, Tuple, Any
 
 from blspy import G1Element
 
@@ -53,7 +53,7 @@ class Farmer:
         self.cache_clear_task: asyncio.Task
         self.constants = consensus_constants
         self._shut_down = False
-        self.server = None
+        self.server: Any = None
         self.keychain = keychain
         self.state_changed_callback: Optional[Callable] = None
         self.log = log

@@ -69,7 +69,9 @@ def create_foliage(
     """
 
     if prev_sub_block is not None:
-        is_block, prev_block = get_prev_block(prev_sub_block, sub_blocks, total_iters_sp)
+        res = get_prev_block(prev_sub_block, sub_blocks, total_iters_sp)
+        is_block: bool = res[0]
+        prev_block: Optional[SubBlockRecord] = res[1]
     else:
         # Genesis is a block
         prev_block = None
@@ -122,6 +124,7 @@ def create_foliage(
 
     solution_program: Optional[Program] = None
     if is_block:
+        assert prev_block is not None
         spend_bundle_fees: int = 0
         aggregate_sig: G2Element = G2Element.infinity()
         cost = uint64(0)

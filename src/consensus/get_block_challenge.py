@@ -28,12 +28,12 @@ def get_block_challenge(
                 # In this case, we are missing the final sub-slot bundle (it's not finished yet)
                 challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
             else:
-                challenge: bytes32 = header_block.finished_sub_slots[
+                challenge = header_block.finished_sub_slots[
                     -1
                 ].challenge_chain.challenge_chain_end_of_slot_vdf.challenge
         else:
             # No overflow, new slot with a new challenge
-            challenge: bytes32 = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
+            challenge = header_block.finished_sub_slots[-1].challenge_chain.get_hash()
     else:
         if genesis_block:
             challenge = constants.FIRST_CC_CHALLENGE
@@ -51,8 +51,11 @@ def get_block_challenge(
             curr: SubBlockRecord = sub_blocks[header_block.prev_header_hash]
             while len(reversed_challenge_hashes) < challenges_to_look_for:
                 if curr.first_in_sub_slot:
+                    assert curr.finished_challenge_slot_hashes is not None
                     reversed_challenge_hashes += reversed(curr.finished_challenge_slot_hashes)
                 if curr.sub_block_height == 0:
+                    assert curr.finished_challenge_slot_hashes is not None
+                    assert len(curr.finished_challenge_slot_hashes) > 0
                     break
                 curr = sub_blocks[curr.prev_hash]
             challenge = reversed_challenge_hashes[challenges_to_look_for - 1]

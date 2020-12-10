@@ -149,6 +149,8 @@ class Service:
     def stop(self):
         if not self._is_stopping.is_set():
             self._is_stopping.set()
+            for task in self._reconnect_tasks:
+                task.cancel()
 
             self._log.info("Cancelling reconnect task")
             for _ in self._reconnect_tasks:

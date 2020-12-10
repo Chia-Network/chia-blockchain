@@ -619,6 +619,9 @@ class FullNodeAPI:
                     pool_target = PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
                     prev_sb = None
                 else:
+                    self.log.warning(
+                        f"Making a non-genesis block. curr total iters{curr.total_iters} {total_iters_pos_slot + sp_iters}"
+                    )
                     pool_target = request.pool_target
                     prev_sb = curr
             else:

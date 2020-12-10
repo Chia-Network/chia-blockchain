@@ -37,7 +37,7 @@ def calculate_ip_iters(
             f"{sub_slot_iters} or not >0."
         )
 
-    return (sp_iters + constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % sub_slot_iters
+    return uint64((sp_iters + constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % sub_slot_iters)
 
 
 def calculate_iterations_quality(
