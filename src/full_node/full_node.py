@@ -23,7 +23,7 @@ from src.full_node.mempool_manager import MempoolManager
 from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
-from src.full_node.weight_proof import WeightProofHandler, BlockCache
+from src.full_node.weight_proof import WeightProofHandler, init_block_block_cache_mock
 from src.protocols import (
     full_node_protocol,
     timelord_protocol,
@@ -102,7 +102,6 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
-        self.weight_proof_handler = WeightProofHandler(self.constants, BlockCache(self.blockchain))
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
             self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
@@ -361,6 +360,7 @@ class FullNode:
         )
 
     async def _fetch_and_validate_weight_proof(self, peak_hash, peers, target_peak_sb_height) -> Optional[uint32]:
+        wpf = WeightProofHandler(self.constants, init_block_block_cache_mock())
         response: Optional[Tuple[Any, ws.WSChiaConnection]] = await send_all_first_reply(
             "request_proof_of_weight", full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash), peers
         )
@@ -370,7 +370,7 @@ class FullNode:
 
         # if validated continue else fail
         weight_proof: WeightProof = response[0].wp
-        if not self.weight_proof_handler.validate_weight_proof(weight_proof):
+        if not wpf.validate_weight_proof(weight_proof):
             self.log.error(
                 f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
                 f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
