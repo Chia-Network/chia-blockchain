@@ -325,7 +325,6 @@ class FullNode:
         block_processor_task = asyncio.create_task(block_processor.process())
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
         while not self.sync_peers_handler.done():
-            self.log.info("Looping")
             # Periodically checks for done, timeouts, shutdowns, new peers or disconnected peers.
             if self._shut_down:
                 block_processor.shut_down()
