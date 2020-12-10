@@ -20,6 +20,7 @@ import AccordionDetails from '@material-ui/core/AccordionDetails';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import { Tooltip } from '@material-ui/core';
 import HelpIcon from '@material-ui/icons/Help';
+import { AlertDialog } from '@chia/core';
 import {
   send_transaction,
   rl_set_user_info_action,
@@ -703,9 +704,11 @@ const SendCard = (props) => {
     if (syncing) {
       dispatch(
         openDialog(
-          <Trans id="RLSendCard.waitForSyncing">
-            Please finish syncing before making a transaction
-          </Trans>,
+          <AlertDialog>
+            <Trans id="RLSendCard.waitForSyncing">
+              Please finish syncing before making a transaction
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -719,9 +722,11 @@ const SendCard = (props) => {
     ) {
       dispatch(
         openDialog(
-          <Trans id="RLSendCard.enterValidAmount">
-            Please enter a valid numeric amount
-          </Trans>,
+          <AlertDialog>
+            <Trans id="RLSendCard.enterValidAmount">
+              Please enter a valid numeric amount
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -729,9 +734,11 @@ const SendCard = (props) => {
     if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
       dispatch(
         openDialog(
-          <Trans id="RLSendCard.enterValidFee">
-            Please enter a valid numeric fee
-          </Trans>,
+          <AlertDialog>
+            <Trans id="RLSendCard.enterValidFee">
+              Please enter a valid numeric fee
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -748,9 +755,11 @@ const SendCard = (props) => {
     if (fee_value !== 0) {
       dispatch(
         openDialog(
-          <Trans id="RLSendCard.enter0fee">
-            Please enter 0 fee. Positive fees not supported yet for RL.
-          </Trans>,
+          <AlertDialog>
+            <Trans id="RLSendCard.enter0fee">
+              Please enter 0 fee. Positive fees not supported yet for RL.
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;

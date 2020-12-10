@@ -3,7 +3,7 @@ from blspy import G1Element, PrivateKey, G2Element, AugSchemeMPL
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64, uint32
 from src.types.coin import Coin
-from src.wallet.puzzles.p2_delegated_puzzle import puzzle_for_pk
+from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 from src.util.hash import std_hash
 
 

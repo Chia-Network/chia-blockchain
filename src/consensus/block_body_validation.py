@@ -315,7 +315,7 @@ async def validate_block_body(
         if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
             fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
             for cvp in fee_list:
-                fee = int_from_bytes(cvp.var1)
+                fee = int_from_bytes(cvp.vars[0])
                 assert_fee_sum = assert_fee_sum + fee
 
     # 17. Check that the assert fee sum <= fees

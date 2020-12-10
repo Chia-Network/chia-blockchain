@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Trans } from '@lingui/macro';
 import Grid from '@material-ui/core/Grid';
+import { AlertDialog } from '@chia/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -424,9 +425,11 @@ function SendCard(props: SendCardProps) {
     if (syncing) {
       dispatch(
         openDialog(
-          <Trans id="SendCard.finishSyncingBeforeTransaction">
-            Please finish syncing before making a transaction
-          </Trans>,
+          <AlertDialog>
+            <Trans id="SendCard.finishSyncingBeforeTransaction">
+              Please finish syncing before making a transaction
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -437,23 +440,27 @@ function SendCard(props: SendCardProps) {
       amount_input.value === '' ||
       Number(amount_input.value) === 0 ||
       !Number(amount_input.value) ||
-      isNaN(Number(amount_input.value))
+      Number.isNaN(Number(amount_input.value))
     ) {
       dispatch(
         openDialog(
-          <Trans id="SendCard.enterValidAmount">
-            Please enter a valid numeric amount
-          </Trans>,
+          <AlertDialog>
+            <Trans id="SendCard.enterValidAmount">
+              Please enter a valid numeric amount
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
     }
-    if (fee_input.value === '' || isNaN(Number(fee_input.value))) {
+    if (fee_input.value === '' || Number.isNaN(Number(fee_input.value))) {
       dispatch(
         openDialog(
-          <Trans id="SendCard.enterValidFee">
-            Please enter a valid numeric fee
-          </Trans>,
+          <AlertDialog>
+            <Trans id="SendCard.enterValidFee">
+              Please enter a valid numeric fee
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -464,10 +471,12 @@ function SendCard(props: SendCardProps) {
     if (address.includes('colour')) {
       dispatch(
         openDialog(
-          <Trans id="SendCard.enterValidAddress">
-            Error: Cannot send chia to coloured address. Please enter a chia
-            address.
-          </Trans>,
+          <AlertDialog>
+            <Trans id="SendCard.enterValidAddress">
+              Error: Cannot send chia to coloured address. Please enter a chia
+              address.
+            </Trans>
+          </AlertDialog>
         ),
       );
       return;
@@ -593,31 +602,6 @@ function SendCard(props: SendCardProps) {
   );
 }
 
-type HistoryCardProps = {
-  wallet_id: number;
-};
-
-function HistoryCard(props: HistoryCardProps) {
-  const id = props.wallet_id;
-  const classes = useStyles();
-  return (
-    <Paper className={classes.paper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="HistoryCard.title">History</Trans>
-            </Typography>
-          </div>
-        </Grid>
-        <Grid item xs={12}>
-          <TransactionTable wallet_id={id} />
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-}
-
 type TransactionTableProps = {
   wallet_id: number;
 };
@@ -711,6 +695,31 @@ function TransactionTable(props: TransactionTableProps) {
           ))}
         </TableBody>
       </Table>
+    </Paper>
+  );
+}
+
+type HistoryCardProps = {
+  wallet_id: number;
+};
+
+function HistoryCard(props: HistoryCardProps) {
+  const id = props.wallet_id;
+  const classes = useStyles();
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              <Trans id="HistoryCard.title">History</Trans>
+            </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <TransactionTable wallet_id={id} />
+        </Grid>
+      </Grid>
     </Paper>
   );
 }

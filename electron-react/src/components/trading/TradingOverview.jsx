@@ -11,7 +11,7 @@ import {
   Box,
   Typography,
 } from '@material-ui/core';
-
+import { Card, Flex } from '@chia/core';
 import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
 import Grid from '@material-ui/core/Grid';
 import HelpIcon from '@material-ui/icons/Help';
@@ -25,15 +25,6 @@ import {
 } from '../../modules/trade_messages';
 
 const useStyles = makeStyles((theme) => ({
-  root: {
-    display: 'flex',
-    paddingLeft: '0px',
-  },
-  content: {
-    flexGrow: 1,
-    height: 'calc(100vh - 64px)',
-    overflowX: 'hidden',
-  },
   paper: {
     padding: theme.spacing(0),
     display: 'flex',
@@ -101,7 +92,6 @@ const TradeRow = (props) => {
   const dispatch = useDispatch();
 
   function displayTrade() {
-    console.log('Show this trade');
     dispatch(presentTrade(props.trade));
   }
 
@@ -206,13 +196,7 @@ const getDetailItems = (trade) => {
   };
   let confirmed_string = '';
   const confirmed = trade.confirmed_at_index;
-  if (confirmed === 0) {
-    confirmed_string = (
-      <Trans id="TradeDetail.notConfirmedYet">Not confirmed yet</Trans>
-    );
-  } else {
-    confirmed_string = trade.confirmed_at_index;
-  }
+  confirmed_string = confirmed === 0 ? (<Trans id="TradeDetail.notConfirmedYet">Not confirmed yet</Trans>) : trade.confirmed_at_index;
 
   const executed_at_item = {
     label: <Trans id="TradeDetail.confirmedAtBlock">Confirmed at block:</Trans>,
@@ -225,11 +209,7 @@ const getDetailItems = (trade) => {
     ),
   };
   let our = '';
-  if (trade.my_offer === true) {
-    our = <Trans id="TradeDetail.yes">Yes</Trans>;
-  } else {
-    our = <Trans id="TradeDetail.no">No</Trans>;
-  }
+  our = trade.my_offer === true ? <Trans id="TradeDetail.yes">Yes</Trans> : <Trans id="TradeDetail.no">No</Trans>;
   const offer_creator_item = {
     label: <Trans id="TradeDetail.createdByUs">Created by us:</Trans>,
     value: our,
@@ -244,11 +224,7 @@ const getDetailItems = (trade) => {
   let accepted = '';
   const accepted_time = trade.accepted_at_time;
 
-  if (accepted_time === null) {
-    accepted = <Trans id="TradeDetail.notAcceptedYet">Not accepted yet</Trans>;
-  } else {
-    accepted = unix_to_short_date(trade.accepted_at_time);
-  }
+  accepted = accepted_time === null ? <Trans id="TradeDetail.notAcceptedYet">Not accepted yet</Trans> : unix_to_short_date(trade.accepted_at_time);
 
   const accepted_at_time = {
     label: <Trans id="TradeDetail.acceptedAtTime">Accepted at time:</Trans>,
@@ -442,57 +418,42 @@ export const TradeDetail = () => {
 };
 
 export const PendingTrades = () => {
-  const classes = useStyles();
   const trades = useSelector((state) => state.trade_state.pending_trades);
   return (
-    <Paper className={classes.paper}>
-      <div className={classes.pending_trades}>
-        <Typography component="h6" variant="h6">
-          <Trans id="PendingTrades.title">Offers Created</Trans>
-        </Typography>
-        <TradeTable trades={trades} />
-      </div>
-    </Paper>
+    <Card
+      title={<Trans id="PendingTrades.title">Offers Created</Trans>}
+    >
+      <TradeTable trades={trades} />
+    </Card>
   );
 };
 
 export const TradingHistory = () => {
-  const classes = useStyles();
   const trades = useSelector((state) => state.trade_state.trade_history);
   return (
-    <Paper className={classes.paper}>
-      <div className={classes.pending_trades}>
-        <Typography component="h6" variant="h6">
-          <Trans id="TradingHistory.title">Trading History</Trans>
-        </Typography>
-        <TradeTable trades={trades} />
-      </div>
-    </Paper>
+    <Card
+      title={<Trans id="TradingHistory.title">Trading History</Trans>}
+    >
+      <TradeTable trades={trades} />
+    </Card>
   );
 };
 
 export const TradingOverview = () => {
-  const classes = useStyles();
-  const showing_trade = useSelector((state) => state.trade_state.showing_trade);
+  const showingTrade = useSelector((state) => state.trade_state.showing_trade);
   const dispatch = useDispatch();
 
   dispatch(get_all_trades());
 
-  if (showing_trade === true) {
+  if (showingTrade === true) {
     return (
-      <div className={classes.root}>
-        <main className={classes.content}>
-          <TradeDetail />
-        </main>
-      </div>
+      <TradeDetail />
     );
   }
   return (
-    <div className={classes.root}>
-      <main className={classes.content}>
-        <PendingTrades />
-        <TradingHistory />
-      </main>
-    </div>
+    <Flex flexDirection="column" gap={3}>
+      <PendingTrades />
+      <TradingHistory />
+    </Flex>
   );
 };

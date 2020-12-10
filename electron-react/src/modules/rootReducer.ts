@@ -13,8 +13,10 @@ import { entranceReducer } from './entranceMenu';
 import fullNodeReducer from './fullNode';
 import farmingReducer from './farming';
 import plotControlReducer from './plotterControl';
+import plotQueueReducer from './plotQueue';
 import progressReducer from './progress';
 import backupReducer from './backup';
+import localStorageReducer from './localStorage';
 
 const reducers = {
   daemon_state: daemonReducer,
@@ -31,6 +33,8 @@ const reducers = {
   plot_control: plotControlReducer,
   progress: progressReducer,
   backup_state: backupReducer,
+  plot_queue: plotQueueReducer,
+  local_storage: localStorageReducer,
 };
 
 const rootReducerWithoutRouter = combineReducers(reducers);

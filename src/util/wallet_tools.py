@@ -15,9 +15,11 @@ from src.util.condition_tools import (
     conditions_for_solution,
 )
 from src.util.ints import uint32, uint64
-from src.wallet.puzzles.p2_delegated_puzzle import (
+from src.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     solution_for_conditions,
+    calculate_synthetic_secret_key,
+    DEFAULT_HIDDEN_PUZZLE_HASH,
 )
 from src.wallet.puzzles.puzzle_utils import (
     make_assert_coin_consumed_condition,
@@ -102,23 +104,23 @@ class WalletTool:
         for con_list in condition_dic.values():
             for cvp in con_list:
                 if cvp.opcode == ConditionOpcode.CREATE_COIN:
-                    ret.append(make_create_coin_condition(cvp.var1, cvp.var2))
+                    ret.append(make_create_coin_condition(cvp.vars[0], cvp.vars[1]))
                 if cvp.opcode == ConditionOpcode.AGG_SIG:
-                    ret.append(make_assert_aggsig_condition(cvp.var1))
+                    ret.append(make_assert_aggsig_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_COIN_CONSUMED:
-                    ret.append(make_assert_coin_consumed_condition(cvp.var1))
+                    ret.append(make_assert_coin_consumed_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_TIME_EXCEEDS:
-                    ret.append(make_assert_time_exceeds_condition(cvp.var1))
+                    ret.append(make_assert_time_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_MY_COIN_ID:
-                    ret.append(make_assert_my_coin_id_condition(cvp.var1))
+                    ret.append(make_assert_my_coin_id_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_BLOCK_INDEX_EXCEEDS:
-                    ret.append(make_assert_block_index_exceeds_condition(cvp.var1))
+                    ret.append(make_assert_block_index_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_BLOCK_AGE_EXCEEDS:
-                    ret.append(make_assert_block_age_exceeds_condition(cvp.var1))
+                    ret.append(make_assert_block_age_exceeds_condition(cvp.vars[0]))
                 if cvp.opcode == ConditionOpcode.ASSERT_FEE:
-                    ret.append(make_assert_fee_condition(cvp.var1))
+                    ret.append(make_assert_fee_condition(cvp.vars[0]))
 
-        return solution_for_conditions(ret)
+        return solution_for_conditions(Program.to(ret))
 
     def generate_unsigned_transaction(
         self,
@@ -144,7 +146,7 @@ class WalletTool:
         )
         condition_dic[output.opcode].append(output)
         amount_total = sum(
-            int_from_bytes(cvp.var2)
+            int_from_bytes(cvp.vars[1])
             for cvp in condition_dic[ConditionOpcode.CREATE_COIN]
         )
         change = spend_value - amount_total - fee
@@ -170,6 +172,9 @@ class WalletTool:
             secretkey = self.get_private_key_for_puzzle_hash(
                 coin_solution.coin.puzzle_hash
             )
+            synthetic_secret_key = calculate_synthetic_secret_key(
+                secretkey, DEFAULT_HIDDEN_PUZZLE_HASH
+            )
             err, con, cost = conditions_for_solution(coin_solution.solution)
             if not con:
                 raise ValueError(err)
@@ -178,7 +183,7 @@ class WalletTool:
             for _, msg in pkm_pairs_for_conditions_dict(
                 conditions_dict, bytes(coin_solution.coin.name())
             ):
-                signature = AugSchemeMPL.sign(secretkey, msg)
+                signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 sigs.append(signature)
         aggsig = AugSchemeMPL.aggregate(sigs)
         spend_bundle = SpendBundle(coin_solutions, aggsig)

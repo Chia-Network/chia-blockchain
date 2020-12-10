@@ -5,10 +5,11 @@ export const plotControl = () => ({
   type: 'PLOTTER_CONTROL',
 });
 
-export const startPlotting = (k, n, t, t2, d, b, u, r, s) => {
+export const startPlotting = (k, n, t, t2, d, b, u, r, s, a) => {
   const action = daemonMessage();
   action.message.command = 'start_plotting';
-  action.message.data = {
+
+  const data = {
     service: service_plotter,
     k,
     n,
@@ -20,9 +21,17 @@ export const startPlotting = (k, n, t, t2, d, b, u, r, s) => {
     r,
     s,
   };
+
+  if (a) {
+    data.a = a;
+  }
+
+  action.message.data = data;
+
   return action;
 };
 
+/*
 export const workspaceSelected = (location) => {
   const action = plotControl();
   action.command = 'workspace_location';
@@ -36,6 +45,7 @@ export const finalSelected = (location) => {
   action.location = location;
   return action;
 };
+*/
 
 export const plottingStarted = () => {
   const action = plotControl();

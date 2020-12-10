@@ -1,31 +1,40 @@
 import { service_farmer, service_harvester } from '../util/service_names';
+import type Plot from '../types/Plot';
+import type Challenge from '../types/Challenge';
 
 type FarmingState = {
   farmer: {
-    latest_challenges: string[];
-    connections: string[];
+    latest_challenges?: Challenge[];
+    last_attempted_proofs?: Challenge[];
+    connections: {
+      bytes_read: number;
+      bytes_written: number;
+      creation_time: number;
+      last_message_time: number;
+      local_host: string;
+      local_port: number;
+      node_id: string;
+      peer_host: string;
+      peer_port: number;
+      peer_server_port: number;
+      type: number;
+    }[];
     open_connection_error?: string;
   };
   harvester: {
-    plots: string[];
-    not_found_filenames: string[];
-    failed_to_open_filenames: string[];
-    plot_directories: string[];
+    plots?: Plot[];
+    not_found_filenames?: string[];
+    failed_to_open_filenames?: string[];
+    plot_directories?: string[];
   };
 };
 
 const initialState: FarmingState = {
   farmer: {
-    latest_challenges: [],
     connections: [],
     open_connection_error: '',
   },
-  harvester: {
-    plots: [],
-    not_found_filenames: [],
-    failed_to_open_filenames: [],
-    plot_directories: [],
-  },
+  harvester: {},
 };
 
 export default function farmingReducer(
@@ -51,11 +60,14 @@ export default function farmingReducer(
         if (data.success === false) {
           return state;
         }
+
+        const { latest_challenges } = data;
+
         return {
           ...state,
           farmer: {
             ...state.farmer,
-            latest_challenges: data.latest_challenges,
+            latest_challenges,
           },
         };
       }
@@ -91,11 +103,15 @@ export default function farmingReducer(
         if (data.success !== true) {
           return state;
         }
+
+        const { plots } = data;
+        const sortedPlots = plots && [...plots].sort((a, b) => b.size - a.size);
+
         return {
           ...state,
           harvester: {
             ...state.harvester,
-            plots: data.plots,
+            plots: sortedPlots,
             failed_to_open_filenames: data.failed_to_open_filenames,
             not_found_filenames: data.not_found_filenames,
           },

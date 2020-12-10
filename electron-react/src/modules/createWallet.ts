@@ -37,7 +37,7 @@ export default function createWalletReducer(
     case 'LOG_OUT':
       return { ...initialState };
     case 'CREATE_OPTIONS':
-      var { item } = action;
+      const { item } = action;
       return { ...state, view: item };
     case 'CREATE_STATE':
       return {

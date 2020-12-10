@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Typography } from '@material-ui/core';
+import { Flex } from '@chia/core';
 import { createTeleporter } from 'react-teleporter';
 
 const DashboardTitleTeleporter = createTeleporter();
@@ -13,7 +14,7 @@ export function DashboardTitleTarget() {
 }
 
 type Props = {
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 export default function DashboardTitle(props: Props) {
@@ -21,7 +22,13 @@ export default function DashboardTitle(props: Props) {
 
   return (
     <DashboardTitleTeleporter.Source>
-      {children}
+      <Flex alignItems="center">
+        {children}
+      </Flex>
     </DashboardTitleTeleporter.Source>
   );
 }
+
+DashboardTitle.defaultProps = {
+  children: undefined,
+};

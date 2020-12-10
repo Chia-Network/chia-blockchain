@@ -91,12 +91,21 @@ def rl_puzzle_for_pk(
         hexstr(opcode_create), args(1), subtract(args(2), add(args(4), args(8)))
     )
     CREATE_NEW_COIN = make_list(hexstr(opcode_create), args(3), args(4))
-    RATE_LIMIT_PUZZLE = make_list(
+    RATE_LIMIT_PUZZLE = make_if(
         TEMPLATE_SINGLETON_RL,
-        TEMPLATE_BLOCK_AGE,
-        CREATE_CHANGE,
-        TEMPLATE_MY_ID,
-        CREATE_NEW_COIN,
+        make_list(
+            TEMPLATE_SINGLETON_RL,
+            TEMPLATE_BLOCK_AGE,
+            CREATE_CHANGE,
+            TEMPLATE_MY_ID,
+            CREATE_NEW_COIN,
+        ),
+        make_list(
+            TEMPLATE_BLOCK_AGE,
+            CREATE_CHANGE,
+            TEMPLATE_MY_ID,
+            CREATE_NEW_COIN,
+        ),
     )
 
     TEMPLATE_MY_PARENT_ID_2 = sha256(args(8), args(1), args(7))
@@ -129,8 +138,15 @@ def rl_puzzle_for_pk(
         ),  # why?
         quote(0),
     )
-    MODE_TWO = make_list(
-        TEMPLATE_SINGLETON_RL_2, MODE_TWO_ME_STRING, CREATE_LOCK, CREATE_CONSOLIDATED
+    MODE_TWO = make_if(
+        TEMPLATE_SINGLETON_RL_2,
+        make_list(
+            TEMPLATE_SINGLETON_RL_2,
+            MODE_TWO_ME_STRING,
+            CREATE_LOCK,
+            CREATE_CONSOLIDATED,
+        ),
+        make_list(MODE_TWO_ME_STRING, CREATE_LOCK, CREATE_CONSOLIDATED),
     )
     AGGSIG_ENTIRE_SOLUTION = make_list(
         hexstr(opcode_aggsig), hexstr(hex_pk), sha256tree(args())

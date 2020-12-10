@@ -22,7 +22,7 @@
         )
     )
 
-    (defconstant AGG_SIG 50)
+    (defconstant AGG_SIG_ME 57)
 
     ;; hash a tree
     ;; This is used to calculate a puzzle hash given a puzzle program.
@@ -54,7 +54,7 @@
               (is_hidden_puzzle_correct synthetic_public_key original_public_key delegated_puzzle)
               conditions
           )
-          (c (list AGG_SIG synthetic_public_key (sha256tree1 delegated_puzzle)) conditions)
+          (c (list AGG_SIG_ME synthetic_public_key (sha256tree1 delegated_puzzle)) conditions)
       )
     )
 

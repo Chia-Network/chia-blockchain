@@ -11,6 +11,8 @@ import {
   service_full_node,
   service_simulator,
   service_plotter,
+  service_farmer,
+  service_harvester,
 } from '../util/service_names';
 
 const crypto = require('crypto');
@@ -37,18 +39,16 @@ const socketMiddleware = () => {
     const register_action = registerService();
     store.dispatch(register_action);
 
-    let start_wallet;
-    let start_node;
-    if (config.local_test) {
-      start_wallet = startServiceTest(service_wallet);
-      start_node = startService(service_simulator);
-    } else {
-      start_wallet = startService(service_wallet);
-      start_node = startService(service_full_node);
-    }
     store.dispatch(isServiceRunning(service_plotter));
-    store.dispatch(start_wallet);
-    store.dispatch(start_node);
+    store.dispatch(startServiceTest(service_wallet));
+
+    if (config.local_test) {
+      store.dispatch(startService(service_simulator));
+    } else {
+      store.dispatch(startService(service_full_node));
+      store.dispatch(startService(service_farmer));
+      store.dispatch(startService(service_harvester));
+    }
   };
 
   const onClose = (store) => () => {

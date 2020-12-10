@@ -22,7 +22,6 @@ class TransactionRecord(Streamable):
     to_puzzle_hash: bytes32
     amount: uint64
     fee_amount: uint64
-    incoming: bool
     confirmed: bool
     sent: uint32
     spend_bundle: Optional[SpendBundle]
@@ -34,6 +33,7 @@ class TransactionRecord(Streamable):
     # included it in the mempool, and what the error message (if any) was
     sent_to: List[Tuple[str, uint8, Optional[str]]]
     trade_id: Optional[bytes32]
+    type: uint32
 
     def name(self) -> bytes32:
         if self.spend_bundle:
