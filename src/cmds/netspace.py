@@ -69,15 +69,9 @@ async def netstorge_async(args, parser):
             older_block_header = await client.get_header_by_height(older_block_height)
             newer_block_header_hash = str(newer_block_header.get_hash())
             older_block_header_hash = str(older_block_header.get_hash())
-            elapsed_time = (
-                newer_block_header.data.timestamp - older_block_header.data.timestamp
-            )
-            newer_block_time_string = human_local_time(
-                newer_block_header.data.timestamp
-            )
-            older_block_time_string = human_local_time(
-                older_block_header.data.timestamp
-            )
+            elapsed_time = newer_block_header.data.timestamp - older_block_header.data.timestamp
+            newer_block_time_string = human_local_time(newer_block_header.data.timestamp)
+            older_block_time_string = human_local_time(older_block_header.data.timestamp)
             time_delta = datetime.timedelta(seconds=elapsed_time)
             network_space_bytes_estimate = await client.get_network_space(
                 newer_block_header_hash, older_block_header_hash
@@ -107,9 +101,7 @@ async def netstorge_async(args, parser):
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
-            print(
-                f"Connection error. Check if full node rpc is running at {args.rpc_port}"
-            )
+            print(f"Connection error. Check if full node rpc is running at {args.rpc_port}")
         else:
             print(f"Exception {e}")
 

@@ -19,9 +19,7 @@ def float_to_str(f):
         digits, exp_str = float_string.split("e")
         digits = digits.replace(".", "").replace("-", "")
         exp = int(exp_str)
-        zero_padding = "0" * (
-            abs(int(exp)) - 1
-        )  # minus 1 for decimal point in the sci notation
+        zero_padding = "0" * (abs(int(exp)) - 1)  # minus 1 for decimal point in the sci notation
         sign = "-" if f < 0 else ""
         if exp > 0:
             float_string = "{}{}{}.0".format(sign, digits, zero_padding)
@@ -76,38 +74,16 @@ def benchmark_all_operators():
     pubkey_for_exp_cost, pubkey_for_exp_time = run_and_return_cost_time(pubkey_for_exp)
 
     one_addition = 1
-    one_substraction = (
-        get_cost_compared_to_addition(addition_cost, addition_time, substraction_time)
-        / addition_cost
-    )
-    one_multiply = (
-        get_cost_compared_to_addition(addition_cost, addition_time, multiply_time)
-        / addition_cost
-    )
-    one_greater = (
-        get_cost_compared_to_addition(addition_cost, addition_time, greater_time)
-        / addition_cost
-    )
-    one_equal = (
-        get_cost_compared_to_addition(addition_cost, addition_time, equal_time)
-        / addition_cost
-    )
-    one_if = (
-        get_cost_compared_to_addition(addition_cost, addition_time, if_time)
-        / addition_cost
-    )
-    one_sha256 = (
-        get_cost_compared_to_addition(addition_cost, addition_time, sha256tree_time)
-        / addition_cost
-    )
+    one_substraction = get_cost_compared_to_addition(addition_cost, addition_time, substraction_time) / addition_cost
+    one_multiply = get_cost_compared_to_addition(addition_cost, addition_time, multiply_time) / addition_cost
+    one_greater = get_cost_compared_to_addition(addition_cost, addition_time, greater_time) / addition_cost
+    one_equal = get_cost_compared_to_addition(addition_cost, addition_time, equal_time) / addition_cost
+    one_if = get_cost_compared_to_addition(addition_cost, addition_time, if_time) / addition_cost
+    one_sha256 = get_cost_compared_to_addition(addition_cost, addition_time, sha256tree_time) / addition_cost
     one_pubkey_for_exp = (
-        get_cost_compared_to_addition(addition_cost, addition_time, pubkey_for_exp_time)
-        / addition_cost
+        get_cost_compared_to_addition(addition_cost, addition_time, pubkey_for_exp_time) / addition_cost
     )
-    one_point_add = (
-        get_cost_compared_to_addition(addition_cost, addition_time, point_add_time)
-        / addition_cost
-    )
+    one_point_add = get_cost_compared_to_addition(addition_cost, addition_time, point_add_time) / addition_cost
 
     print(f"cost of addition is: {one_addition}")
     print(f"cost of one_substraction is: {one_substraction}")
@@ -139,9 +115,7 @@ if __name__ == "__main__":
         solution = wallet_tool.make_solution(
             {
                 ConditionOpcode.ASSERT_MY_COIN_ID: [
-                    ConditionVarPair(
-                        ConditionOpcode.ASSERT_MY_COIN_ID, token_bytes(), None
-                    )
+                    ConditionVarPair(ConditionOpcode.ASSERT_MY_COIN_ID, token_bytes(), None)
                 ]
             }
         )

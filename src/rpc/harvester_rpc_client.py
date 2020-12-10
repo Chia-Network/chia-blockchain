@@ -27,6 +27,4 @@ class HarvesterRpcClient(RpcClient):
         return (await self.fetch("get_plot_directories", {}))["directories"]
 
     async def remove_plot_directory(self, dirname: str) -> bool:
-        return (await self.fetch("remove_plot_directory", {"dirname": dirname}))[
-            "success"
-        ]
+        return (await self.fetch("remove_plot_directory", {"dirname": dirname}))["success"]
