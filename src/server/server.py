@@ -391,10 +391,10 @@ class ChiaServer:
             await self.app_shut_down_task
         if self.site_shutdown_task is not None:
             await self.site_shutdown_task
-
-        _, pending = await asyncio.wait(self.api_tasks, timeout=3, return_when=asyncio.ALL_COMPLETED)
-        for task in pending:
-            task.cancel()
+        if len(self.api_tasks) > 0:
+            _, pending = await asyncio.wait(self.api_tasks, timeout=3, return_when=asyncio.ALL_COMPLETED)
+            for task in pending:
+                task.cancel()
 
     async def get_peer_info(self) -> Optional[PeerInfo]:
         ip = None

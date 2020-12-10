@@ -103,7 +103,6 @@ class Timelord:
         async with self.lock:
             client_ip = writer.get_extra_info("peername")[0]
             log.info(f"New timelord connection from client: {client_ip}.")
-            # print(client_ip, self.ip_whitelist)
             if client_ip in self.ip_whitelist:
                 self.free_clients.append((client_ip, reader, writer))
                 log.info(f"Added new VDF client {client_ip}.")
@@ -220,6 +219,7 @@ class Timelord:
         self.iters_to_submit[Chain.CHALLENGE_CHAIN].append(left_subslot_iters)
         self.iters_to_submit[Chain.REWARD_CHAIN].append(left_subslot_iters)
         self.iteration_to_proof_type[left_subslot_iters] = IterationType.END_OF_SUBSLOT
+        log.warning(f"Iters to submit {self.iters_to_submit}")
 
         for chain, iters in self.iters_to_submit.items():
             for iteration in iters:
@@ -697,7 +697,7 @@ class Timelord:
             # Send (a, b) from 'initial_form'.
             for num in [initial_form.a, initial_form.b]:
                 prefix_l = len(str(num))
-                prefix_len = len(str(prefix))
+                prefix_len = len(str(prefix_l))
                 writer.write((str(prefix_len) + str(prefix_l) + str(num)).encode())
                 await writer.drain()
             try:
