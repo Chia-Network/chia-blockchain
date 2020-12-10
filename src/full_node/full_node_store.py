@@ -189,7 +189,8 @@ class FullNodeStore:
 
         # TODO: Fix
         # if not eos.proofs.challenge_chain_slot_proof.is_valid(
-        #     self.constants, ClassgroupElement.get_default_element(), replace(eos.challenge_chain.challenge_chain_end_of_slot_vdf,
+        #     self.constants, ClassgroupElement.get_default_element(),
+        #     replace(eos.challenge_chain.challenge_chain_end_of_slot_vdf,
         # ):
         #     return False
         # if not eos.proofs.reward_chain_slot_proof.is_valid(
@@ -219,7 +220,8 @@ class FullNodeStore:
                 return None
             if peak.total_iters + eos.reward_chain.end_of_slot_vdf.number_of_iterations != total_iters:
                 log.error(
-                    f"Bad iters {peak.total_iters} {eos.reward_chain.end_of_slot_vdf.number_of_iterations} {total_iters}"
+                    f"Invalid iterations {peak.total_iters} {eos.reward_chain.end_of_slot_vdf.number_of_iterations} "
+                    f"{total_iters}"
                 )
                 return None
 

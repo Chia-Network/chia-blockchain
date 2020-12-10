@@ -20,8 +20,8 @@ class BlockStore:
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db = connection
         await self.db.execute(
-            f"CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, sub_height bigint, is_block tinyint, "
-            f"block blob)"
+            "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, sub_height bigint, is_block"
+            " tinyint, block blob)"
         )
 
         # Sub block records
@@ -55,7 +55,7 @@ class BlockStore:
         await cursor_1.close()
 
         cursor_2 = await self.db.execute(
-            f"INSERT OR REPLACE INTO sub_block_records VALUES(?, ?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO sub_block_records VALUES(?, ?, ?, ?, ?, ?)",
             (
                 block.header_hash.hex(),
                 block.prev_header_hash.hex(),

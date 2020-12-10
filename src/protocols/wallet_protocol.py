@@ -111,4 +111,3 @@ class RespondAdditions:
 class RejectAdditionsRequest:
     sub_height: uint32
     header_hash: bytes32
-
