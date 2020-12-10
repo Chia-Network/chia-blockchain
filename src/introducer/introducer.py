@@ -21,9 +21,11 @@ class Introducer:
 
     def _close(self):
         self._shut_down = True
+        self._vetting_task.cancel()
 
     async def _await_closed(self):
-        await self._vetting_task
+        pass
+        # await self._vetting_task
 
     def set_server(self, server: ChiaServer):
         self.server = server

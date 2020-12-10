@@ -4,9 +4,9 @@ from typing import Dict
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
-from src.timelord import Timelord
+from src.timelord.timelord import Timelord
 from src.server.outbound_message import NodeType
-from src.timelord_api import TimelordAPI
+from src.timelord.timelord_api import TimelordAPI
 from src.types.peer_info import PeerInfo
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH

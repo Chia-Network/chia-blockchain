@@ -258,8 +258,9 @@ class WalletRpcApi:
     async def get_height_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
-        lca = self.service.wallet_state_manager.lca
-        height = self.service.wallet_state_manager.block_records[lca].height
+        # TODO(straya)
+        # ca = self.service.wallet_state_manager.lca
+        # height = self.service.wallet_state_manager.block_records[lca].height
 
         return {"height": height}
 

@@ -51,8 +51,9 @@ def make_sub_epoch_summary(
         return SubEpochSummary(constants.GENESIS_SES_HASH, constants.FIRST_RC_CHALLENGE, uint8(0), None, None)
     curr: SubBlockRecord = prev_prev_sub_block
     while curr.sub_epoch_summary_included is None:
-        curr = sub_blocks.get(curr.prev_hash, None)
+        curr = sub_blocks[curr.prev_hash]
     assert curr is not None
+    assert curr.finished_reward_slot_hashes is not None
     prev_ses = curr.sub_epoch_summary_included.get_hash()
     return SubEpochSummary(
         prev_ses,
@@ -112,11 +113,11 @@ def next_sub_epoch_summary(
     )
     overflow = is_overflow_sub_block(constants, signage_point_index)
     deficit = calculate_deficit(
-        constants, prev_sb.sub_block_height + 1, prev_sb, overflow, len(block.finished_sub_slots)
+        constants, uint32(prev_sb.sub_block_height + 1), prev_sb, overflow, len(block.finished_sub_slots)
     )
     can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
         constants,
-        prev_sb.sub_block_height + 1,
+        uint32(prev_sb.sub_block_height + 1),
         deficit,
         sub_blocks,
         prev_sb.header_hash if prev_sb is not None else None,
@@ -139,7 +140,7 @@ def next_sub_epoch_summary(
             sub_blocks,
             height_to_hash,
             block.prev_header_hash,
-            prev_sb.sub_block_height + 1,
+            uint32(prev_sb.sub_block_height + 1),
             uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight),
             deficit,
             True,
@@ -151,7 +152,7 @@ def next_sub_epoch_summary(
             sub_blocks,
             height_to_hash,
             block.prev_header_hash,
-            prev_sb.sub_block_height + 1,
+            uint32(prev_sb.sub_block_height + 1),
             sub_slot_iters,
             deficit,
             True,
@@ -160,5 +161,5 @@ def next_sub_epoch_summary(
         )
 
     return make_sub_epoch_summary(
-        constants, sub_blocks, prev_sb.sub_block_height + 2, prev_sb, next_difficulty, next_sub_slot_iters
+        constants, sub_blocks, uint32(prev_sb.sub_block_height + 2), prev_sb, next_difficulty, next_sub_slot_iters
     )

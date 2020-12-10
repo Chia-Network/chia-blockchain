@@ -3,7 +3,7 @@ from typing import Callable
 from blspy import AugSchemeMPL, G2Element
 
 from src.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
-from src.farmer import Farmer
+from src.farmer.farmer import Farmer
 from src.protocols import harvester_protocol, farmer_protocol
 from src.server.outbound_message import Message, NodeType
 from src.types.pool_target import PoolTarget
@@ -150,6 +150,7 @@ class FarmerAPI:
                     agg_sig_rc_sp = AugSchemeMPL.aggregate([reward_chain_sp_harv_sig, farmer_share_rc_sp])
                     assert AugSchemeMPL.verify(agg_pk, reward_chain_sp, agg_sig_rc_sp)
 
+                    assert pospace.pool_public_key is not None
                     pool_pk = bytes(pospace.pool_public_key)
                     if pool_pk not in self.farmer.pool_sks_map:
                         self.farmer.log.error(
@@ -203,13 +204,13 @@ class FarmerAPI:
                     assert AugSchemeMPL.verify(agg_pk, foliage_sub_block_hash, foliage_sub_block_agg_sig)
                     assert AugSchemeMPL.verify(agg_pk, foliage_block_hash, foliage_block_agg_sig)
 
-                    request = farmer_protocol.SignedValues(
+                    request_to_nodes = farmer_protocol.SignedValues(
                         computed_quality_string,
                         foliage_sub_block_agg_sig,
                         foliage_block_agg_sig,
                     )
 
-                    msg = Message("signed_values", request)
+                    msg = Message("signed_values", request_to_nodes)
                     await self.farmer.server.send_to_all([msg], NodeType.FULL_NODE)
 
     """

@@ -49,44 +49,53 @@ def get_signage_point_vdf_info(
         cc_vdf_input = ClassgroupElement.get_default_element()
     elif new_sub_slot and overflow and len(finished_sub_slots) == 1:
         # Case 4: Starting at prev will put us in the previous, sub-slot, since case 2 handled more empty slots
+        assert prev_sb is not None
         curr: SubBlockRecord = prev_sb
-        while not curr.first_in_sub_slot and curr.sub_block_height > 0 and curr.total_iters > sp_total_iters:
+        while not curr.first_in_sub_slot and curr.total_iters > sp_total_iters:
             curr = sub_blocks[curr.prev_hash]
         if curr.total_iters < sp_total_iters:
-            sp_vdf_iters = sp_total_iters - curr.total_iters
+            sp_vdf_iters = uint64(sp_total_iters - curr.total_iters)
             cc_vdf_input = curr.challenge_vdf_output
             rc_vdf_challenge = curr.reward_infusion_new_challenge
         else:
+            assert curr.finished_reward_slot_hashes is not None
             sp_vdf_iters = sp_iters
             cc_vdf_input = ClassgroupElement.get_default_element()
             rc_vdf_challenge = curr.finished_reward_slot_hashes[-1]
 
         while not curr.first_in_sub_slot:
             curr = sub_blocks[curr.prev_hash]
+        assert curr.finished_challenge_slot_hashes is not None
         cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
     elif not new_sub_slot and overflow:
         # Case 5: prev is in the same sub slot and also overflow. Starting at prev does not skip any sub slots
-        curr: SubBlockRecord = prev_sb
+        assert prev_sb is not None
+        curr = prev_sb
 
         # Collects the last two finished slots
-        found_sub_slots = (
-            list(reversed(list(zip(curr.finished_challenge_slot_hashes, curr.finished_reward_slot_hashes))))
-            if curr.first_in_sub_slot
-            else []
-        )
+        if curr.first_in_sub_slot:
+            assert curr.finished_challenge_slot_hashes is not None
+            assert curr.finished_reward_slot_hashes is not None
+            found_sub_slots = list(
+                reversed(list(zip(curr.finished_challenge_slot_hashes, curr.finished_reward_slot_hashes)))
+            )
+        else:
+            found_sub_slots = []
         sp_pre_sb: Optional[SubBlockRecord] = None
         while len(found_sub_slots) < 2 and curr.sub_block_height > 0:
             if sp_pre_sb is None and curr.total_iters < sp_total_iters:
                 sp_pre_sb = curr
             curr = sub_blocks[curr.prev_hash]
             if curr.first_in_sub_slot:
+                assert curr.finished_challenge_slot_hashes is not None
+                assert curr.finished_reward_slot_hashes is not None
                 found_sub_slots += list(
                     reversed(list(zip(curr.finished_challenge_slot_hashes, curr.finished_reward_slot_hashes)))
                 )
         if sp_pre_sb is None and curr.total_iters < sp_total_iters:
             sp_pre_sb = curr
         if sp_pre_sb is not None:
-            sp_vdf_iters = sp_total_iters - sp_pre_sb.total_iters
+            sp_vdf_iters = uint64(sp_total_iters - sp_pre_sb.total_iters)
             cc_vdf_input = sp_pre_sb.challenge_vdf_output
             rc_vdf_challenge = sp_pre_sb.reward_infusion_new_challenge
         else:
@@ -98,20 +107,23 @@ def get_signage_point_vdf_info(
     elif not new_sub_slot and not overflow:
         # Case 6: prev is in the same sub slot. Starting at prev does not skip any sub slots. We do not need
         # to go back another sub slot, because it's not overflow, so the VDF to signage point is this sub-slot.
-        curr: SubBlockRecord = prev_sb
-        while not curr.first_in_sub_slot and curr.sub_block_height > 0 and curr.total_iters > sp_total_iters:
+        assert prev_sb is not None
+        curr = prev_sb
+        while not curr.first_in_sub_slot and curr.total_iters > sp_total_iters:
             curr = sub_blocks[curr.prev_hash]
         if curr.total_iters < sp_total_iters:
-            sp_vdf_iters = sp_total_iters - curr.total_iters
+            sp_vdf_iters = uint64(sp_total_iters - curr.total_iters)
             cc_vdf_input = curr.challenge_vdf_output
             rc_vdf_challenge = curr.reward_infusion_new_challenge
         else:
+            assert curr.finished_reward_slot_hashes is not None
             sp_vdf_iters = sp_iters
             cc_vdf_input = ClassgroupElement.get_default_element()
             rc_vdf_challenge = curr.finished_reward_slot_hashes[-1]
 
         while not curr.first_in_sub_slot:
             curr = sub_blocks[curr.prev_hash]
+        assert curr.finished_challenge_slot_hashes is not None
         cc_vdf_challenge = curr.finished_challenge_slot_hashes[-1]
     else:
         # All cases are handled above

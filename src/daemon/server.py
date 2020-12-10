@@ -627,7 +627,7 @@ async def kill_process(
         log.info("sending term signal to %s", service_name)
         process.terminate()
 
-    count = 0
+    count: float = 0
     while count < delay_before_kill:
         if process.poll() is not None:
             break
