@@ -3,6 +3,8 @@ import asyncio
 import logging
 import pathlib
 import socket
+import time
+
 import pkg_resources
 from src.util.logging import initialize_logging
 from src.util.config import load_config
@@ -40,6 +42,8 @@ async def spawn_process(host, port, counter):
     global stopped
     global active_processes
     path_to_vdf_client = find_vdf_client()
+    first_10_seconds = True
+    start_time = time.time()
     while not stopped:
         try:
             dirname = path_to_vdf_client.parent
@@ -58,9 +62,13 @@ async def spawn_process(host, port, counter):
             active_processes.append(proc)
         stdout, stderr = await proc.communicate()
         if stdout:
-            log.info(f"Stdout:\n{stdout.decode().rstrip()}")
+            log.info(f"VDF client {counter}: {stdout.decode().rstrip()}")
         if stderr:
-            log.error(f"Stderr:\n{stderr.decode().rstrip()}")
+            if first_10_seconds:
+                if time.time() - start_time > 10:
+                    first_10_seconds = False
+            else:
+                log.error(f"VDF client {counter}: {stderr.decode().rstrip()}")
         log.info(f"Process number {counter} ended.")
         async with lock:
             if proc in active_processes:

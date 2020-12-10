@@ -29,6 +29,8 @@ class FullNodeSimulator(FullNodeAPI):
             return []
         blocks = []
         peak_block = await self.full_node.blockchain.get_full_block(peak.header_hash)
+        if peak_block is None:
+            return []
         blocks.append(peak_block)
         current = peak_block
         while True:
@@ -51,6 +53,7 @@ class FullNodeSimulator(FullNodeAPI):
             await self.full_node.blockchain.receive_block(genesis)
 
         peak = self.full_node.blockchain.get_peak()
+        assert peak is not None
         bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(
             peak.header_hash
         )

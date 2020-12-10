@@ -269,15 +269,19 @@ class WSChiaConnection:
 
     async def _read_one_message(self) -> Optional[Payload]:
         message: WSMessage = await self.ws.receive()
+        if self.connection_type is not None:
+            connection_type_str = NodeType(self.connection_type).name.lower()
+        else:
+            connection_type_str = ""
         if message.type == WSMsgType.CLOSING:
             self.log.info(
-                f"Closing connection to {NodeType(self.connection_type).name.lower()} {self.peer_host}:"
+                f"Closing connection to {connection_type_str} {self.peer_host}:"
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
         elif message.type == WSMsgType.CLOSE:
             self.log.info(
-                f"Peer closed connection {NodeType(self.connection_type).name.lower()} {self.peer_host}:"
+                f"Peer closed connection {connection_type_str} {self.peer_host}:"
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )

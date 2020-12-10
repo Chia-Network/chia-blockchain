@@ -4,8 +4,8 @@ from typing import Dict
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
-from src.farmer import Farmer
-from src.farmer_api import FarmerAPI
+from src.farmer.farmer import Farmer
+from src.farmer.farmer_api import FarmerAPI
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.util.keychain import Keychain

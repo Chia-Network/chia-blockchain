@@ -19,19 +19,19 @@ def class_for_type(type: NodeType):
 
         return WalletNodeAPI
     elif type is NodeType.INTRODUCER:
-        from src.introducer_api import IntroducerAPI
+        from src.introducer.introducer_api import IntroducerAPI
 
         return IntroducerAPI
     elif type is NodeType.TIMELORD:
-        from src.timelord_api import TimelordAPI
+        from src.timelord.timelord_api import TimelordAPI
 
         return TimelordAPI
     elif type is NodeType.FARMER:
-        from src.farmer_api import FarmerAPI
+        from src.farmer.farmer_api import FarmerAPI
 
         return FarmerAPI
     elif type is NodeType.HARVESTER:
-        from src.harvester_api import HarvesterAPI
+        from src.harvester.harvester_api import HarvesterAPI
 
         return HarvesterAPI
     raise ValueError("No class for type")

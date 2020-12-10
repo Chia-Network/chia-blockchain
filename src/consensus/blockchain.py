@@ -142,9 +142,11 @@ class Blockchain:
         """
         True iff the block is the direct ancestor of the peak
         """
-        if self.peak_height is None:
+        peak = self.get_peak()
+        if peak is None:
             return False
-        return block.prev_header_hash == self.get_peak().header_hash
+
+        return block.prev_header_hash == peak.header_hash
 
     def contains_sub_block(self, header_hash: bytes32) -> bool:
         """
@@ -186,6 +188,7 @@ class Blockchain:
         if error is not None:
             log.error(f"block {block.header_hash} failed validation {error.code} {error.error_msg}")
             return ReceiveBlockResult.INVALID_BLOCK, error.code, None
+        assert required_iters is not None
 
         error_code = await validate_block_body(
             self.constants, self.sub_blocks, self.block_store, self.coin_store, self.get_peak(),
@@ -216,8 +219,9 @@ class Blockchain:
         It returns the height of the fork between the previous chain and the new chain, or returns
         None if there was no update to the heaviest chain.
         """
+        peak = self.get_peak()
         if genesis:
-            if self.get_peak() is None:
+            if peak is None:
                 block: Optional[FullBlock] = await self.block_store.get_full_block(sub_block.header_hash)
                 assert block is not None
                 await self.coin_store.new_block(block)
@@ -227,11 +231,11 @@ class Blockchain:
                 return uint32(0)
             return None
 
-        assert self.get_peak() is not None
-        if sub_block.weight > self.get_peak().weight:
+        assert peak is not None
+        if sub_block.weight > peak.weight:
             # Find the fork. if the block is just being appended, it will return the peak
             # If no blocks in common, returns -1, and reverts all blocks
-            fork_sub_block_height: int = find_fork_point_in_chain(self.sub_blocks, sub_block, self.get_peak())
+            fork_sub_block_height: int = find_fork_point_in_chain(self.sub_blocks, sub_block, peak)
             if fork_sub_block_height == -1:
                 coin_store_reorg_height = -1
             else:
@@ -319,11 +323,14 @@ class Blockchain:
         self, header_hash: bytes32
     ) -> Optional[Tuple[Optional[EndOfSubSlotBundle], Optional[EndOfSubSlotBundle]]]:
         block: Optional[FullBlock] = await self.block_store.get_full_block(header_hash)
+        if block is None:
+            return None
         is_overflow = self.sub_blocks[block.header_hash].overflow
         if block is None:
             return None
 
         curr: Optional[FullBlock] = block
+        assert curr is not None
         while len(curr.finished_sub_slots) == 0 and curr.sub_block_height > 0:
             curr = await self.block_store.get_full_block(curr.prev_header_hash)
             assert curr is not None
@@ -343,6 +350,7 @@ class Blockchain:
             return curr.finished_sub_slots[-2], ip_sub_slot
 
         curr = await self.block_store.get_full_block(curr.prev_header_hash)
+        assert curr is not None
         while len(curr.finished_sub_slots) == 0 and curr.sub_block_height > 0:
             curr = await self.block_store.get_full_block(curr.prev_header_hash)
             assert curr is not None
@@ -352,18 +360,20 @@ class Blockchain:
         return curr.finished_sub_slots[-1], ip_sub_slot
 
     def get_recent_reward_challenges(self) -> List[Tuple[bytes32, uint128]]:
-        if self.get_peak() is None:
+        peak = self.get_peak()
+        if peak is None:
             return []
         recent_rc: List[Tuple[bytes32, uint128]] = []
-        curr = self.sub_blocks.get(self.get_peak().prev_hash, None)
+        curr = self.sub_blocks.get(peak.prev_hash, None)
         while curr is not None and len(recent_rc) < 2 * self.constants.MAX_SUB_SLOT_SUB_BLOCKS:
             recent_rc.append((curr.reward_infusion_new_challenge, curr.total_iters))
             if curr.first_in_sub_slot:
+                assert curr.finished_reward_slot_hashes is not None
                 sub_slot_total_iters = curr.ip_sub_slot_total_iters(self.constants)
                 # Start from the most recent
                 for rc in reversed(curr.finished_reward_slot_hashes):
                     recent_rc.append((rc, sub_slot_total_iters))
-                    sub_slot_total_iters -= curr.sub_slot_iters
+                    sub_slot_total_iters = uint128(sub_slot_total_iters - curr.sub_slot_iters)
             curr = self.sub_blocks.get(curr.prev_hash, None)
         return list(reversed(recent_rc))
 
@@ -410,7 +420,7 @@ class Blockchain:
             b"",
         )
 
-        required_iters, error_code = await validate_unfinished_header_block(
+        required_iters, error = await validate_unfinished_header_block(
             self.constants,
             self.sub_blocks,
             self.sub_height_to_hash,
@@ -419,8 +429,8 @@ class Blockchain:
             True,
         )
 
-        if error_code is not None:
-            return None, error_code.code
+        if error is not None:
+            return None, error.code
 
         prev_sub_height = (
             -1
@@ -428,6 +438,11 @@ class Blockchain:
             else self.sub_blocks[block.prev_header_hash].sub_block_height
         )
 
+        if block.is_block():
+            assert block.foliage_block is not None
+            height: Optional[uint32] = block.foliage_block.height
+        else:
+            height = None
         error_code = await validate_block_body(
             self.constants,
             self.sub_blocks,
@@ -436,7 +451,7 @@ class Blockchain:
             self.get_peak(),
             block,
             uint32(prev_sub_height + 1),
-            block.foliage_block.height
+            height,
         )
 
         if error_code is not None:

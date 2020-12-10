@@ -1,6 +1,6 @@
 from typing import Callable, Set, Dict, List
 
-from src.farmer import Farmer
+from src.farmer.farmer import Farmer
 
 
 class FarmerRpcApi:
@@ -27,22 +27,20 @@ class FarmerRpcApi:
         return []
 
     async def get_signage_point(self, request: Dict) -> Dict:
-        response = []
-        seen_challenges: Set = set()
-        if self.service.current_weight == 0:
-            return {"latest_challenges": []}
-        for pospace_fin in self.service.challenges[self.service.current_weight]:
-            estimates = self.service.challenge_to_estimates.get(pospace_fin.challenge, [])
-            if pospace_fin.challenge in seen_challenges:
-                continue
-            response.append(
-                {
-                    "challenge": pospace_fin.challenge,
-                    "weight": pospace_fin.weight,
-                    "height": pospace_fin.height,
-                    "difficulty": pospace_fin.difficulty,
-                    "estimates": estimates,
-                }
-            )
-            seen_challenges.add(pospace_fin.challenge)
-        return {"latest_challenges": response}
+        # if self.service.current_weight == 0:
+        #     return {"latest_challenges": []}
+        # for pospace_fin in self.service.challenges[self.service.current_weight]:
+        #     estimates = self.service.challenge_to_estimates.get(pospace_fin.challenge, [])
+        #     if pospace_fin.challenge in seen_challenges:
+        #         continue
+        #     response.append(
+        #         {
+        #             "challenge": pospace_fin.challenge,
+        #             "weight": pospace_fin.weight,
+        #             "height": pospace_fin.height,
+        #             "difficulty": pospace_fin.difficulty,
+        #             "estimates": estimates,
+        #         }
+        #     )
+        #     seen_challenges.add(pospace_fin.challenge)
+        return {}

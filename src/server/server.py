@@ -176,9 +176,12 @@ class ChiaServer:
 
     async def connection_added(self, connection: WSChiaConnection, on_connect=None):
         self.all_connections[connection.peer_node_id] = connection
-        self.connection_by_type[connection.connection_type][connection.peer_node_id] = connection
-        if on_connect is not None:
-            await on_connect(connection)
+        if connection.connection_type is not None:
+            self.connection_by_type[connection.connection_type][connection.peer_node_id] = connection
+            if on_connect is not None:
+                await on_connect(connection)
+        else:
+            self.log.error(f"Invalid connection type for connection {connection}")
 
     async def start_client(
         self,
@@ -232,7 +235,10 @@ class ChiaServer:
                 )
                 assert handshake is True
                 await self.connection_added(connection, on_connect)
-                self.log.info(f"Connected with {connection.connection_type.name.lower()} {target_node}")
+                connection_type_str = ""
+                if connection.connection_type is not None:
+                    connection_type_str = connection.connection_type.name.lower()
+                self.log.info(f"Connected with {connection_type_str} {target_node}")
             return True
         except client_exceptions.ClientConnectorError as e:
             self.log.warning(f"{e}")
@@ -252,8 +258,11 @@ class ChiaServer:
         self.log.info(f"Connection closed: {connection.peer_host}")
         if connection.peer_node_id in self.all_connections:
             self.all_connections.pop(connection.peer_node_id)
-        if connection.peer_node_id in self.connection_by_type[connection.connection_type]:
-            self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
+        if connection.connection_type is not None:
+            if connection.peer_node_id in self.connection_by_type[connection.connection_type]:
+                self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
+        else:
+            self.log.error(f"Invalid connection type for connection {connection}, while closing")
 
     async def incoming_api_task(self):
         self.tasks = set()

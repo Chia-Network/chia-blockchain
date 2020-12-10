@@ -8,7 +8,7 @@ from blspy import AugSchemeMPL, G2Element
 from chiapos import DiskProver
 
 from src.consensus.pot_iterations import calculate_sp_interval_iters, calculate_iterations_quality
-from src.harvester import Harvester
+from src.harvester.harvester import Harvester
 from src.plotting.plot_tools import PlotInfo
 from src.protocols import harvester_protocol
 from src.server.outbound_message import Message
