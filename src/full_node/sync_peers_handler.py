@@ -182,6 +182,7 @@ class SyncPeersHandler:
             # This block is wrong, so ignore
             log.info(f"Received header hash that is not in sync path {header_hash} at height {block.sub_block_height}")
             return
+        log.info(f"Received block {block.sub_block_height}")
 
         # save block to DB
         self.potential_blocks[block.sub_block_height] = block
