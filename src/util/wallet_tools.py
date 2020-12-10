@@ -66,9 +66,7 @@ class WalletTool:
             return private
         else:
             for child in range(self.next_address):
-                pubkey = master_sk_to_wallet_sk(
-                    self.private_key, uint32(child)
-                ).get_g1()
+                pubkey = master_sk_to_wallet_sk(self.private_key, uint32(child)).get_g1()
                 if puzzle_hash == puzzle_for_pk(bytes(pubkey)).get_tree_hash():
                     return master_sk_to_wallet_sk(self.private_key, uint32(child))
         raise ValueError(f"Do not have the keys for puzzle hash {puzzle_hash}")
@@ -91,14 +89,10 @@ class WalletTool:
         return puzzle.get_tree_hash()
 
     def sign(self, value, pubkey) -> G2Element:
-        privatekey: PrivateKey = master_sk_to_wallet_sk(
-            self.private_key, self.pubkey_num_lookup[pubkey]
-        )
+        privatekey: PrivateKey = master_sk_to_wallet_sk(self.private_key, self.pubkey_num_lookup[pubkey])
         return AugSchemeMPL.sign(privatekey, value)
 
-    def make_solution(
-        self, condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]]
-    ) -> Program:
+    def make_solution(self, condition_dic: Dict[ConditionOpcode, List[ConditionVarPair]]) -> Program:
         ret = []
 
         for con_list in condition_dic.values():
@@ -141,20 +135,13 @@ class WalletTool:
         if ConditionOpcode.CREATE_COIN not in condition_dic:
             condition_dic[ConditionOpcode.CREATE_COIN] = []
 
-        output = ConditionVarPair(
-            ConditionOpcode.CREATE_COIN, newpuzzlehash, int_to_bytes(amount)
-        )
+        output = ConditionVarPair(ConditionOpcode.CREATE_COIN, newpuzzlehash, int_to_bytes(amount))
         condition_dic[output.opcode].append(output)
-        amount_total = sum(
-            int_from_bytes(cvp.vars[1])
-            for cvp in condition_dic[ConditionOpcode.CREATE_COIN]
-        )
+        amount_total = sum(int_from_bytes(cvp.vars[1]) for cvp in condition_dic[ConditionOpcode.CREATE_COIN])
         change = spend_value - amount_total - fee
         if change > 0:
             changepuzzlehash = self.get_new_puzzlehash()
-            change_output = ConditionVarPair(
-                ConditionOpcode.CREATE_COIN, changepuzzlehash, int_to_bytes(change)
-            )
+            change_output = ConditionVarPair(ConditionOpcode.CREATE_COIN, changepuzzlehash, int_to_bytes(change))
             condition_dic[output.opcode].append(change_output)
             solution = self.make_solution(condition_dic)
         else:
@@ -169,20 +156,14 @@ class WalletTool:
         solution: Program
         puzzle: Program
         for coin_solution in coin_solutions:  # type: ignore # noqa
-            secretkey = self.get_private_key_for_puzzle_hash(
-                coin_solution.coin.puzzle_hash
-            )
-            synthetic_secret_key = calculate_synthetic_secret_key(
-                secretkey, DEFAULT_HIDDEN_PUZZLE_HASH
-            )
+            secretkey = self.get_private_key_for_puzzle_hash(coin_solution.coin.puzzle_hash)
+            synthetic_secret_key = calculate_synthetic_secret_key(secretkey, DEFAULT_HIDDEN_PUZZLE_HASH)
             err, con, cost = conditions_for_solution(coin_solution.solution)
             if not con:
                 raise ValueError(err)
             conditions_dict = conditions_by_opcode(con)
 
-            for _, msg in pkm_pairs_for_conditions_dict(
-                conditions_dict, bytes(coin_solution.coin.name())
-            ):
+            for _, msg in pkm_pairs_for_conditions_dict(conditions_dict, bytes(coin_solution.coin.name())):
                 signature = AugSchemeMPL.sign(synthetic_secret_key, msg)
                 sigs.append(signature)
         aggsig = AugSchemeMPL.aggregate(sigs)
@@ -199,8 +180,6 @@ class WalletTool:
     ) -> SpendBundle:
         if condition_dic is None:
             condition_dic = {}
-        transaction = self.generate_unsigned_transaction(
-            amount, newpuzzlehash, coin, condition_dic, fee
-        )
+        transaction = self.generate_unsigned_transaction(amount, newpuzzlehash, coin, condition_dic, fee)
         assert transaction is not None
         return self.sign_transaction(transaction)

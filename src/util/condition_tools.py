@@ -83,9 +83,7 @@ def pkm_pairs_for_conditions_dict(
     return ret
 
 
-def aggsig_in_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]
-) -> List[ConditionVarPair]:
+def aggsig_in_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]]) -> List[ConditionVarPair]:
     agg_sig_conditions = []
     for _ in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
         agg_sig_conditions.append(_)
@@ -111,9 +109,7 @@ def created_outputs_for_conditions_dict(
 
 def conditions_dict_for_solution(
     solution,
-) -> Tuple[
-    Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionVarPair]]], uint64
-]:
+) -> Tuple[Optional[Err], Optional[Dict[ConditionOpcode, List[ConditionVarPair]]], uint64]:
     error, result, cost = conditions_for_solution(solution)
     if error or result is None:
         return error, None, uint64(0)

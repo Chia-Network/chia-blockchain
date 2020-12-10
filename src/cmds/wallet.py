@@ -30,32 +30,18 @@ async def print_balances(wallet_client):
         typ = WalletType(int(summary["type"])).name
         if "name" in summary:
             print(f"Wallet ID {wallet_id} type {typ} {summary['name']}")
-            print(
-                f"   -Confirmed: {balances['confirmed_wallet_balance']/units['colouredcoin']}"
-            )
-            print(
-                f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}"
-            )
-            print(
-                f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}"
-            )
+            print(f"   -Confirmed: {balances['confirmed_wallet_balance']/units['colouredcoin']}")
+            print(f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['colouredcoin']}")
+            print(f"   -Spendable: {balances['spendable_balance']/units['colouredcoin']}")
             print(f"   -Frozen: {balances['frozen_balance']/units['colouredcoin']}")
-            print(
-                f"   -Pending change: {balances['pending_change']/units['colouredcoin']}"
-            )
+            print(f"   -Pending change: {balances['pending_change']/units['colouredcoin']}")
         else:
             print(f"Wallet ID {wallet_id} type {typ}")
-            print(
-                f"   -Confirmed: {balances['confirmed_wallet_balance']/units['chia']} TXCH"
-            )
-            print(
-                f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['chia']} TXCH"
-            )
+            print(f"   -Confirmed: {balances['confirmed_wallet_balance']/units['chia']} TXCH")
+            print(f"   -Unconfirmed: {balances['unconfirmed_wallet_balance']/units['chia']} TXCH")
             print(f"   -Spendable: {balances['spendable_balance']/units['chia']} TXCH")
             print(f"   -Frozen: {balances['frozen_balance']/units['chia']} TXCH")
-            print(
-                f"   -Pending change: {balances['pending_change']/units['chia']} TXCH"
-            )
+            print(f"   -Pending change: {balances['pending_change']/units['chia']} TXCH")
 
 
 async def wallet_loop(wallet_client):
@@ -94,16 +80,10 @@ async def wallet_loop(wallet_client):
                 use_cloud = True
                 if "backup_path" in log_in_response:
                     path = log_in_response["backup_path"]
-                    print(
-                        f"Backup file from backup.chia.net downloaded and written to: {path}"
-                    )
-                    val = input(
-                        "Do you want to use this file to restore from backup? (Y/N) "
-                    )
+                    print(f"Backup file from backup.chia.net downloaded and written to: {path}")
+                    val = input("Do you want to use this file to restore from backup? (Y/N) ")
                     if val.lower() == "y":
-                        log_in_response = await wallet_client.log_in_and_restore(
-                            fingerprint, path
-                        )
+                        log_in_response = await wallet_client.log_in_and_restore(fingerprint, path)
                     else:
                         use_cloud = False
 
@@ -120,16 +100,10 @@ async def wallet_loop(wallet_client):
                         )
 
                     if val.lower() == "s":
-                        log_in_response = await wallet_client.log_in_and_skip(
-                            fingerprint
-                        )
+                        log_in_response = await wallet_client.log_in_and_skip(fingerprint)
                     elif val.lower() == "f":
-                        val = input(
-                            "Please provide the full path to your backup file: "
-                        )
-                        log_in_response = await wallet_client.log_in_and_restore(
-                            fingerprint, val
-                        )
+                        val = input("Please provide the full path to your backup file: ")
+                        log_in_response = await wallet_client.log_in_and_restore(fingerprint, val)
 
         if "success" not in log_in_response or log_in_response["success"] is False:
             if "error" in log_in_response:
@@ -153,9 +127,7 @@ async def show_async(args, parser):
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):
-            print(
-                f"Connection error. Check if wallet is running at {args.wallet_rpc_port}"
-            )
+            print(f"Connection error. Check if wallet is running at {args.wallet_rpc_port}")
         else:
             print(f"Exception from 'wallet' {e}")
 
