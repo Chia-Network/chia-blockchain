@@ -84,18 +84,18 @@ class WalletNode:
             self.log = logging.getLogger(__name__)
 
         # Normal operation data
-        self.cached_blocks = {}
-        self.future_block_hashes = {}
+        self.cached_blocks: Dict = {}
+        self.future_block_hashes: Dict = {}
         self.keychain = keychain
 
         # Sync data
         self._shut_down = False
-        self.proof_hashes = []
-        self.header_hashes = []
+        self.proof_hashes: List = []
+        self.header_hashes: List = []
         self.header_hashes_error = False
         self.short_sync_threshold = 15  # Change the test when changing this
-        self.potential_blocks_received = {}
-        self.potential_header_hashes = {}
+        self.potential_blocks_received: Dict = {}
+        self.potential_header_hashes: Dict = {}
         self.state_changed_callback = None
         self.wallet_state_manager = None
         self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
@@ -348,19 +348,17 @@ class WalletNode:
     #
 
     async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
-        if (
-            self.wallet_state_manager.blockchain.get_peak() is not None
-            and self.wallet_state_manager.blockchain.get_peak().weight > peak.weight
-        ):
+        assert self.wallet_state_manager is not None
+        curr_peak = self.wallet_state_manager.blockchain.get_peak()
+        if curr_peak is not None and curr_peak.weight > curr_peak.weight:
             return
 
         request = wallet_protocol.RequestSubBlockHeader(peak.sub_block_height)
         response: Optional[RespondSubBlockHeader] = await peer.request_sub_block_header(request)
-        header_block = response.header_block
 
-        if header_block is not None:
+        if response is not None and response.header_block is not None:
             # TODO validate weight
-            self.wallet_state_manager.sync_store.add_potential_peak(header_block)
+            self.wallet_state_manager.sync_store.add_potential_peak(response.header_block)
             await asyncio.sleep(1)
             self.start_sync()
 
@@ -432,7 +430,7 @@ class WalletNode:
 
         for i in range(0, peak_height + 1):
             self.log.info(f"Requesting block {i}")
-            request = RequestSubBlockHeader(i)
+            request = RequestSubBlockHeader(uint32(i))
             response, peer = await send_all_first_reply("request_sub_block_header", request, peers)
             peer: WSChiaConnection = peer
             res: RespondSubBlockHeader = response
@@ -483,9 +481,9 @@ class WalletNode:
             additions_merkle_set = MerkleSet()
 
             # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
-            for puzzle_hash, coins in coins:
+            for puzzle_hash, coins_l in coins:
                 additions_merkle_set.add_already_hashed(puzzle_hash)
-                additions_merkle_set.add_already_hashed(hash_coin_list(coins))
+                additions_merkle_set.add_already_hashed(hash_coin_list(coins_l))
 
             additions_root = additions_merkle_set.get_root()
             if root != additions_root:
@@ -608,6 +606,7 @@ class WalletNode:
             return added_coins
 
     async def get_removals(self, peer: WSChiaConnection, block_i, additions, removals) -> Optional[List[Coin]]:
+        assert self.wallet_state_manager is not None
         request_all_removals = False
         # Check if we need all removals
         for coin in additions:
@@ -640,7 +639,11 @@ class WalletNode:
                 if validated is False:
                     await peer.close()
                     return None
-                removed_coins = [coins for _, coins in removals_res.coins]
+                removed_coins = []
+                for _, coins_l in removals_res.coins:
+                    if coins_l is not None:
+                        removed_coins.append(coins_l)
+
                 return removed_coins
             elif isinstance(removals_res, RejectRemovalsRequest):
                 return None
@@ -648,5 +651,4 @@ class WalletNode:
                 return None
 
         else:
-            removed_coins = []
-            return removed_coins
+            return []

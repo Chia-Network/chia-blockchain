@@ -39,7 +39,7 @@ class WalletNodeAPI:
             return
 
         block_record, header_block, transaction_filter = self.wallet_node.cached_blocks[response.header_hash]
-        assert response.height == block_record.height
+        assert response.sub_height == block_record.sub_height
 
         all_coins: List[Coin] = []
         for coin_name, coin in response.coins:
