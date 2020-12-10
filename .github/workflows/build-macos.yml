@@ -7,7 +7,7 @@ jobs:
   build:
     name: MacOS-latest on Python 3.8, 3.9
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 4
