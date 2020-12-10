@@ -1,17 +1,6 @@
 from src.full_node.full_node import FullNode
 from typing import Callable, List, Optional, Dict
 
-from src.full_node.full_node_api import FullNodeAPI
-
-# from src.types.header import Header
-from src.types.full_block import FullBlock
-from src.util.ints import uint32, uint64, uint128
-from src.types.sized_bytes import bytes32
-from src.util.byte_types import hexstr_to_bytes
-
-# from src.consensus.pot_iterations import calculate_min_iters_from_iterations
-from src.util.ws_message import create_payload
-
 
 class FullNodeRpcApi:
     def __init__(self, api: FullNode):
@@ -33,7 +22,7 @@ class FullNodeRpcApi:
         }
 
     async def _state_changed(self, change: str) -> List[Dict]:
-        payloads = []
+        # payloads = []
         # if change == "sub_block":
         #     data = await self.get_latest_block_headers({})
         #     assert data is not None

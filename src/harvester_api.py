@@ -2,9 +2,9 @@ import asyncio
 import dataclasses
 import time
 from pathlib import Path
-from typing import Optional, Callable, List, Tuple
+from typing import Callable, List, Tuple
 
-from blspy import AugSchemeMPL, G2Element, G1Element
+from blspy import AugSchemeMPL, G2Element
 from chiapos import DiskProver
 
 from src.consensus.pot_iterations import calculate_sp_interval_iters, calculate_iterations_quality

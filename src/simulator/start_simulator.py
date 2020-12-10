@@ -39,15 +39,6 @@ def service_kwargs_for_full_node_simulator(
 
     peer_api = FullNodeSimulator(node, bt)
 
-    async def start_callback():
-        await node._start()
-
-    def stop_callback():
-        node._close()
-
-    async def await_closed_callback():
-        await node._await_closed()
-
     kwargs = dict(
         root_path=root_path,
         node=node,
