@@ -2,7 +2,7 @@ from typing import Optional
 from dataclasses import dataclass
 
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint8, uint64, uint128
+from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
 
 

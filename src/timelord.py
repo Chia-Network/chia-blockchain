@@ -4,7 +4,6 @@ import io
 import logging
 import time
 import traceback
-from asyncio import StreamReader, StreamWriter
 from enum import Enum
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -900,8 +899,8 @@ class Timelord:
         challenge: bytes32,
         initial_form: ClassgroupElement,
         ip: str,
-        reader: StreamReader,
-        writer: StreamWriter,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
     ):
         disc: int = create_discriminant(challenge, self.constants.DISCRIMINANT_SIZE_BITS)
 

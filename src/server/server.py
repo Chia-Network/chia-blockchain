@@ -1,14 +1,13 @@
 import asyncio
 import logging
 import ssl
-from asyncio import Queue
 from pathlib import Path
 from typing import Any, List, Dict, Tuple, Callable, Optional, Set
 
 import aiohttp
-from aiohttp import web
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
+from aiohttp import web
 
 from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload
@@ -93,7 +92,7 @@ class ChiaServer:
         self.root_path = root_path
         self.config = config
         self.on_connect: Optional[Callable] = None
-        self.incoming_messages: Queue[Tuple[Payload, WSChiaConnection]] = asyncio.Queue()
+        self.incoming_messages: asyncio.Queue[Tuple[Payload, WSChiaConnection]] = asyncio.Queue()
         self.shut_down_event = asyncio.Event()
 
         if self._local_type is NodeType.INTRODUCER:

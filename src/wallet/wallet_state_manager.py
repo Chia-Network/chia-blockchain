@@ -13,7 +13,6 @@ from chiabip158 import PyBIP158
 from blspy import PrivateKey, G1Element, AugSchemeMPL
 from cryptography.fernet import Fernet
 
-from src.consensus.blockchain import ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.coin import Coin

@@ -1,10 +1,8 @@
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 from src.types.coin import Coin
 from src.types.header_block import HeaderBlock
-from src.types.sized_bytes import bytes32
-from src.util.ints import uint128, uint32, uint64
 from src.util.streamable import Streamable, streamable
 
 
@@ -12,7 +10,7 @@ from src.util.streamable import Streamable, streamable
 @streamable
 class HeaderBlockRecord(Streamable):
     """
-    These are values that are stored in the wallet database, corresponding to infomation
+    These are values that are stored in the wallet database, corresponding to information
     that the wallet cares about in each block
     """
 
