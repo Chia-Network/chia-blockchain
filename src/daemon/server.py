@@ -268,6 +268,12 @@ class WebSocketServer:
         response = {"success": True, "value": "pong"}
         return response
 
+    def extract_plot_queue(self):
+        data = []
+        for item in self.plots_queue:
+            data.append(plot_queue_to_payload(item))
+        return data
+
     def plot_queue_to_payload(plot_queue_item):
         error = plot_queue_item.get("error")
         has_error = error is not None
@@ -292,7 +298,7 @@ class WebSocketServer:
         if service == service_plotter:
             message = {
                 "state": state,
-                "queue": list(map(WebSocketServer.plot_queue_to_payload, self.plots_queue)),
+                "queue": self.extract_plot_queue(),
             }
 
         if message is None:
@@ -613,7 +619,7 @@ class WebSocketServer:
             response = {
                 "success": True,
                 "service": service,
-                "queue": list(map(WebSocketServer.plot_queue_to_payload, self.plots_queue)),
+                "queue": self.extract_plot_queue(),
             }
         else:
             self.remote_address_map[websocket.remote_address[1]] = service
