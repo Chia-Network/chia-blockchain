@@ -268,12 +268,6 @@ class WebSocketServer:
         response = {"success": True, "value": "pong"}
         return response
 
-    def extract_plot_queue(self):
-        data = []
-        for item in self.plots_queue:
-            data.append(plot_queue_to_payload(item))
-        return data
-
     def plot_queue_to_payload(plot_queue_item):
         error = plot_queue_item.get("error")
         has_error = error is not None
@@ -287,6 +281,12 @@ class WebSocketServer:
             "error": str(error) if has_error else None,
             "log": plot_queue_item.get("log"),
         }
+
+    def extract_plot_queue(self):
+        data = []
+        for item in self.plots_queue:
+            data.append(WebSocketServer.plot_queue_to_payload(item))
+        return data
 
     async def _state_changed(self, service: str, state: str):
         if service not in self.connections:
