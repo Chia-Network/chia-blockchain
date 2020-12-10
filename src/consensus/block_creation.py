@@ -1,6 +1,6 @@
 import random
 from dataclasses import replace
-from typing import Optional, Callable, Dict, List
+from typing import Optional, Callable, Dict, List, Tuple
 
 import blspy
 from blspy import G2Element, G1Element
@@ -46,7 +46,7 @@ def create_foliage(
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
     seed: bytes32 = b"",
-) -> (FoliageSubBlock, Optional[FoliageBlock], Optional[TransactionsInfo], Optional[Program]):
+) -> Tuple[FoliageSubBlock, Optional[FoliageBlock], Optional[TransactionsInfo], Optional[Program]]:
     """
     Creates a foliage for a given reward chain sub block. This may or may not be a block. In the case of a block,
     the return values are not None. This is called at the signage point, so some of this information may be
@@ -89,9 +89,9 @@ def create_foliage(
         sub_height = uint32(prev_block.sub_block_height + 1)
         prev_is_block = prev_block.is_block
         if prev_is_block:
-            height: uint32 = uint32(prev_block.height + 1)
+            height = uint32(prev_block.height + 1)
         else:
-            height: uint32 = uint32(prev_block.height)
+            height = uint32(prev_block.height)
 
     # Create filter
     byte_array_tx: List[bytes32] = []
@@ -117,6 +117,7 @@ def create_foliage(
 
     prev_sub_block_hash: bytes32 = constants.GENESIS_PREV_HASH
     if sub_block_height != 0:
+        assert prev_sub_block is not None
         prev_sub_block_hash = prev_sub_block.header_hash
 
     solution_program: Optional[Program] = None
@@ -134,16 +135,14 @@ def create_foliage(
         if solution_program is not None:
             _, _, cost = calculate_cost_of_program(solution_program, constants.CLVM_COST_RATIO_CONSTANT)
         # TODO: prev generators root
-        pool_coin = create_pool_coin(sub_block_height, pool_target.puzzle_hash, calculate_pool_reward(height))
-        farmer_coin = create_farmer_coin(
-            uint32(sub_block_height), farmer_reward_puzzlehash, calculate_base_farmer_reward(uint32(height)) + spend_bundle_fees
-        )
-        reward_claims_incorporated = [pool_coin, farmer_coin]
-        if sub_block_height > 0:
+        reward_claims_incorporated = []
+        if sub_height > 0:
+            assert prev_sub_block is not None
             curr: SubBlockRecord = prev_sub_block
             while not curr.is_block:
                 curr = sub_blocks[curr.prev_hash]
 
+            assert curr.fees is not None
             pool_coin = create_pool_coin(
                 curr.sub_block_height,
                 curr.pool_puzzle_hash,
@@ -153,7 +152,7 @@ def create_foliage(
             farmer_coin = create_farmer_coin(
                 curr.sub_block_height,
                 curr.farmer_puzzle_hash,
-                calculate_base_farmer_reward(curr.height) + curr.fees,
+                uint64(calculate_base_farmer_reward(curr.height) + curr.fees),
             )
             assert curr.header_hash == prev_block.header_hash
             reward_claims_incorporated += [pool_coin, farmer_coin]
@@ -216,7 +215,7 @@ def create_foliage(
         generator_hash = solution_program.get_tree_hash() if solution_program is not None else bytes32([0] * 32)
         filter_hash: bytes32 = std_hash(encoded)
 
-        transactions_info = TransactionsInfo(
+        transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
             bytes([0] * 32), generator_hash, aggregate_sig, uint64(spend_bundle_fees), cost, reward_claims_incorporated
         )
         if prev_block is None:
@@ -224,7 +223,8 @@ def create_foliage(
         else:
             prev_block_hash = prev_block.header_hash
 
-        foliage_block = FoliageBlock(
+        assert transactions_info is not None
+        foliage_block: Optional[FoliageBlock] = FoliageBlock(
             prev_block_hash,
             timestamp,
             filter_hash,
@@ -233,6 +233,7 @@ def create_foliage(
             transactions_info.get_hash(),
             height
         )
+        assert foliage_block is not None
         foliage_block_hash: Optional[bytes32] = foliage_block.get_hash()
         foliage_block_signature: Optional[G2Element] = get_plot_signature(
             foliage_block_hash, reward_sub_block.proof_of_space.plot_public_key
@@ -271,11 +272,11 @@ def create_unfinished_block(
     get_plot_signature: Callable[[bytes32, G1Element], G2Element],
     get_pool_signature: Callable[[PoolTarget, G1Element], G2Element],
     signage_point: SignagePoint,
-    timestamp: Optional[uint64] = None,
+    timestamp: uint64,
     seed: bytes32 = b"",
     spend_bundle: Optional[SpendBundle] = None,
     prev_sub_block: Optional[SubBlockRecord] = None,
-    sub_blocks: Dict[bytes32, SubBlockRecord] = None,
+    sub_blocks: Dict[bytes32, SubBlockRecord] = {},
     finished_sub_slots_input: List[EndOfSubSlotBundle] = None,
 ) -> UnfinishedBlock:
     """
@@ -307,12 +308,12 @@ def create_unfinished_block(
 
     """
     if finished_sub_slots_input is None:
-        finished_sub_slots = []
+        finished_sub_slots: List[EndOfSubSlotBundle] = []
     else:
         finished_sub_slots = finished_sub_slots_input.copy()
-    overflow = sp_iters > ip_iters
-    total_iters_sp = sub_slot_start_total_iters + sp_iters
-    is_genesis = prev_sub_block is None
+    overflow: bool = sp_iters > ip_iters
+    total_iters_sp: uint128 = uint128(sub_slot_start_total_iters + sp_iters)
+    is_genesis: bool = prev_sub_block is None
 
     new_sub_slot: bool = len(finished_sub_slots) > 0
 
@@ -320,6 +321,7 @@ def create_unfinished_block(
 
     # Only enters this if statement if we are in testing mode (making VDF proofs here)
     if signage_point.cc_vdf is not None:
+        assert signage_point.rc_vdf is not None
         cc_sp_hash = signage_point.cc_vdf.output.get_hash()
         rc_sp_hash = signage_point.rc_vdf.output.get_hash()
     else:
@@ -329,9 +331,12 @@ def create_unfinished_block(
             if is_genesis:
                 rc_sp_hash = constants.FIRST_RC_CHALLENGE
             else:
+                assert prev_sub_block is not None
+                assert sub_blocks is not None
                 curr = prev_sub_block
                 while not curr.first_in_sub_slot:
                     curr = sub_blocks[curr.prev_hash]
+                assert curr.finished_reward_slot_hashes is not None
                 rc_sp_hash = curr.finished_reward_slot_hashes[-1]
         signage_point = SignagePoint(None, None, None, None)
 
