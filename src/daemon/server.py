@@ -43,6 +43,7 @@ log = logging.getLogger(__name__)
 
 service_plotter = "chia plots create"
 
+
 class PlotState(str, Enum):
     SUBMITTED = 'SUBMITTED'
     RUNNING = 'RUNNING'
@@ -631,7 +632,7 @@ def daemon_launch_lock_path(root_path):
     return root_path / "run" / "start-daemon.launching"
 
 
-def pid_path_for_service(root_path, service, id = ""):
+def pid_path_for_service(root_path, service, id=""):
     """
     Generate a path for a PID file for the given service name.
     """
