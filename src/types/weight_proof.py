@@ -4,7 +4,6 @@ from typing import List, Optional
 from blspy import G2Element
 
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.header_block import HeaderBlock
 from src.types.proof_of_space import ProofOfSpace
 from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.sized_bytes import bytes32

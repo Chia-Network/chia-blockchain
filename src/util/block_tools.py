@@ -386,7 +386,8 @@ class BlockTools:
 
                         sub_blocks[full_block.header_hash] = sub_block_record
                         print(
-                            f"Created block {sub_block_record.sub_block_height} ove=False, iters {sub_block_record.total_iters}"
+                            f"Created block {sub_block_record.sub_block_height} ove=False, iters "
+                            f"{sub_block_record.total_iters}"
                         )
                         height_to_hash[uint32(full_block.sub_block_height)] = full_block.header_hash
                         latest_sub_block = sub_blocks[full_block.header_hash]
@@ -407,15 +408,12 @@ class BlockTools:
                 eos_iters = sub_slot_iters
                 cc_input = ClassgroupElement.get_default_element()
                 rc_challenge = slot_rc_challenge
-            try:
-                cc_vdf, cc_proof = get_vdf_info_and_proof(
-                    constants,
-                    cc_input,
-                    slot_cc_challenge,
-                    eos_iters,
-                )
-            except Exception:
-                print("Bad")
+            cc_vdf, cc_proof = get_vdf_info_and_proof(
+                constants,
+                cc_input,
+                slot_cc_challenge,
+                eos_iters,
+            )
             rc_vdf, rc_proof = get_vdf_info_and_proof(
                 constants,
                 ClassgroupElement.get_default_element(),
@@ -588,7 +586,8 @@ class BlockTools:
                         block_list.append(full_block)
                         sub_blocks_added_this_sub_slot += 1
                         print(
-                            f"Created block {sub_block_record.sub_block_height } ov=True, iters {sub_block_record.total_iters} Finish sub slots: {full_block.finished_sub_slots}"
+                            f"Created block {sub_block_record.sub_block_height } ov=True, iters "
+                            f"{sub_block_record.total_iters} Finish sub slots: {full_block.finished_sub_slots}"
                         )
                         num_blocks -= 1
                         if num_blocks == 0:

@@ -181,7 +181,7 @@ class WSChiaConnection:
                 else:
                     break
         except asyncio.CancelledError:
-            self.log.info(f"task canceled")
+            self.log.info("task canceled")
         except Exception as e:
             error_stack = traceback.format_exc()
             self.log.error(f"Exception: {e}")

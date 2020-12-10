@@ -367,7 +367,8 @@ class FullNodeAPI:
 
         if added:
             self.log.info(
-                f"⏲️  Finished signage point {request.index_from_challenge}/{self.full_node.constants.NUM_SPS_SUB_SLOT}: "
+                f"⏲️  Finished signage point {request.index_from_challenge}/"
+                f"{self.full_node.constants.NUM_SPS_SUB_SLOT}: "
                 f"{request.challenge_chain_vdf.output.get_hash()} "
             )
             sub_slot_tuple = self.full_node.full_node_store.get_sub_slot(request.challenge_chain_vdf.challenge)
@@ -446,8 +447,8 @@ class FullNodeAPI:
             # It may be an empty list, even if it's not None. Not None means added successfully
             if new_infusions is not None:
                 self.log.info(
-                    f"⏲️  Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}, number of sub-slots: "
-                    f"{len(self.full_node.full_node_store.finished_sub_slots)}, "
+                    f"⏲️  Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}, "
+                    f"number of sub-slots: {len(self.full_node.full_node_store.finished_sub_slots)}, "
                     f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
                     f"Deficit {request.end_of_slot_bundle.reward_chain.deficit}"
                 )

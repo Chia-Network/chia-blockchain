@@ -2,7 +2,6 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32
