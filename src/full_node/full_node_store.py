@@ -206,7 +206,9 @@ class FullNodeStore:
         #     ):
         #         return False
 
-        total_iters = last_slot_iters + eos.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations
+        total_iters = uint128(
+            last_slot_iters + eos.challenge_chain.challenge_chain_end_of_slot_vdf.number_of_iterations
+        )
 
         if peak is not None and peak.total_iters > last_slot_iters:
             # Peak is in this slot
@@ -229,12 +231,13 @@ class FullNodeStore:
                 curr = peak
                 while not curr.first_in_sub_slot and not curr.is_challenge_sub_block(self.constants):
                     curr = sub_blocks[curr.prev_hash]
-
+                assert curr.finished_infused_challenge_slot_hashes is not None
                 if curr.is_challenge_sub_block(self.constants):
                     icc_start_challenge_hash = curr.challenge_block_info_hash
                 else:
                     icc_start_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
                 if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
+                    assert eos.infused_challenge_chain is not None
                     if (
                         eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
                         != icc_start_challenge_hash
@@ -249,6 +252,8 @@ class FullNodeStore:
                 last_slot is not None
                 and last_slot.reward_chain.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK
             ):
+                assert eos.infused_challenge_chain is not None
+                assert last_slot.infused_challenge_chain is not None
                 # Have infused challenge chain that must be verified
                 if (
                     eos.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf.challenge
@@ -285,8 +290,15 @@ class FullNodeStore:
         # If we don't have this slot, return False
         if index == 0 or index >= self.constants.NUM_SPS_SUB_SLOT:
             return False
+        assert (
+            signage_point.cc_vdf is not None
+            and signage_point.cc_proof is not None
+            and signage_point.rc_vdf is not None
+            and signage_point.rc_proof is not None
+        )
         for sub_slot, sp_arr, start_ss_total_iters in self.finished_sub_slots:
-            if sub_slot is None and start_ss_total_iters == 0:
+            if sub_slot is None:
+                assert start_ss_total_iters == 0
                 ss_challenge_hash = self.constants.FIRST_CC_CHALLENGE
                 ss_reward_hash = self.constants.FIRST_RC_CHALLENGE
             else:
@@ -297,12 +309,12 @@ class FullNodeStore:
                 if peak is not None and start_ss_total_iters > peak.total_iters:
                     # We are in a future sub slot from the peak, so maybe there is a new SSI
                     checkpoint_size: uint64 = uint64(next_sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
-                    delta_iters = checkpoint_size * index
-                    future_sub_slot = True
+                    delta_iters: uint64 = uint64(checkpoint_size * index)
+                    future_sub_slot: bool = True
                 else:
                     # We are not in a future sub slot from the peak, so there is no new SSI
-                    checkpoint_size: uint64 = uint64(sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
-                    delta_iters = checkpoint_size * index
+                    checkpoint_size = uint64(sub_slot_iters // self.constants.NUM_SPS_SUB_SLOT)
+                    delta_iters = uint64(checkpoint_size * index)
                     future_sub_slot = False
                 sp_total_iters = start_ss_total_iters + delta_iters
 
@@ -311,7 +323,11 @@ class FullNodeStore:
                     check_from_start_of_ss = True
                 else:
                     check_from_start_of_ss = False
-                    while curr.total_iters > start_ss_total_iters and curr.total_iters > sp_total_iters:
+                    while (
+                        curr is not None
+                        and curr.total_iters > start_ss_total_iters
+                        and curr.total_iters > sp_total_iters
+                    ):
                         if curr.first_in_sub_slot:
                             # Did not find a sub-block where it's iters are before our sp_total_iters, in this ss
                             check_from_start_of_ss = True
@@ -346,9 +362,14 @@ class FullNodeStore:
                     )
                 if not signage_point.cc_vdf == replace(cc_vdf_info_expected, number_of_iterations=delta_iters):
                     return False
+                if check_from_start_of_ss:
+                    start_ele = ClassgroupElement.get_default_element()
+                else:
+                    assert curr is not None
+                    start_ele = curr.challenge_vdf_output
                 if not signage_point.cc_proof.is_valid(
                     self.constants,
-                    ClassgroupElement.get_default_element() if check_from_start_of_ss else curr.challenge_vdf_output,
+                    start_ele,
                     cc_vdf_info_expected,
                 ):
                     return False
@@ -370,8 +391,10 @@ class FullNodeStore:
             if sub_slot is not None and sub_slot.challenge_chain.get_hash() == cc_signage_point:
                 return SignagePoint(None, None, None, None)
             for sp in sps:
-                if sp is not None and sp.cc_vdf.output.get_hash() == cc_signage_point:
-                    return sp
+                if sp is not None:
+                    assert sp.cc_vdf is not None
+                    if sp.cc_vdf.output.get_hash() == cc_signage_point:
+                        return sp
         return None
 
     def get_signage_point_by_index(
@@ -388,8 +411,10 @@ class FullNodeStore:
                 if index == 0:
                     return SignagePoint(None, None, None, None)
                 sp: Optional[SignagePoint] = sps[index]
-                if sp is not None and sp.rc_vdf.challenge == last_rc_infusion:
-                    return sp
+                if sp is not None:
+                    assert sp.rc_vdf is not None
+                    if sp.rc_vdf.challenge == last_rc_infusion:
+                        return sp
                 return None
         return None
 
@@ -408,10 +433,15 @@ class FullNodeStore:
                 found_rc_hash = False
                 for i in range(0, index):
                     sp: Optional[SignagePoint] = sps[i]
-                    if sp is not None and sp.rc_vdf.challenge == last_rc_infusion:
+                    if sp is not None and sp.rc_vdf is not None and sp.rc_vdf.challenge == last_rc_infusion:
                         found_rc_hash = True
-                sp: Optional[SignagePoint] = sps[index]
-                if found_rc_hash and sp is not None and sp.rc_vdf.challenge != last_rc_infusion:
+                sp = sps[index]
+                if (
+                    found_rc_hash
+                    and sp is not None
+                    and sp.rc_vdf is not None
+                    and sp.rc_vdf.challenge != last_rc_infusion
+                ):
                     return True
         return False
 
@@ -466,6 +496,7 @@ class FullNodeStore:
 
         # This cache is not currently being used
         for sp in self.future_sp_cache.get(peak.reward_infusion_new_challenge, []):
+            assert sp.cc_vdf is not None
             index = uint8(sp.cc_vdf.number_of_iterations // peak.sub_slot_iters)
             if self.new_signage_point(index, sub_blocks, peak, peak.sub_slot_iters, sp):
                 new_sps.append(sp)
@@ -497,9 +528,10 @@ class FullNodeStore:
             curr: SubBlockRecord = prev_sb
             while not curr.first_in_sub_slot:
                 curr = sub_block_records[curr.prev_hash]
+            assert curr.finished_challenge_slot_hashes is not None
             final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
         else:
-            final_sub_slot_in_chain: bytes32 = self.constants.FIRST_CC_CHALLENGE
+            final_sub_slot_in_chain = self.constants.FIRST_CC_CHALLENGE
 
         pos_index: Optional[int] = None
         final_index: int = 0
@@ -531,4 +563,8 @@ class FullNodeStore:
         if len(self.finished_sub_slots) < new_final_index + 1:
             raise ValueError("Don't have enough sub-slots")
 
-        return [sub_slot for sub_slot, _, _, in self.finished_sub_slots[final_index + 1 : new_final_index + 1]]
+        return [
+            sub_slot
+            for sub_slot, _, _, in self.finished_sub_slots[final_index + 1 : new_final_index + 1]
+            if sub_slot is not None
+        ]

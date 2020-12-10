@@ -63,19 +63,21 @@ class FullNodeAPI:
 
     @peer_required
     @api_request
-    async def request_peers(self, request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection):
+    async def request_peers(self, _request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection):
         if peer.peer_server_port is None:
             return None
         peer_info = PeerInfo(peer.peer_host, peer.peer_server_port)
-        msg = await self.full_node.full_node_peers.request_peers(peer_info)
-        return msg
+        if self.full_node.full_node_peers is not None:
+            msg = await self.full_node.full_node_peers.request_peers(peer_info)
+            return msg
 
     @peer_required
     @api_request
     async def respond_peers(
         self, request: introducer_protocol.RespondPeers, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
-        await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), False)
+        if self.full_node.full_node_peers is not None:
+            await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), False)
         await peer.close()
         return None
 
@@ -87,14 +89,12 @@ class FullNodeAPI:
         """
         # Check if we have this block in the blockchain
         if self.full_node.blockchain.contains_sub_block(request.header_hash):
-            return
+            return None
 
         # Not interested in less heavy peaks
-        if (
-            self.full_node.blockchain.get_peak() is not None
-            and self.full_node.blockchain.get_peak().weight > request.weight
-        ):
-            return
+        peak: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
+        if peak is not None and peak.weight > request.weight:
+            return None
 
         # TODO: potential optimization, don't request blocks that we have already sent out
         request_transactions: bool = (
@@ -123,16 +123,17 @@ class FullNodeAPI:
             request_tx = full_node_protocol.RequestTransaction(transaction.transaction_id)
             msg = Message("request_transaction", request_tx)
             return msg
+        return None
 
     @api_request
     async def request_transaction(self, request: full_node_protocol.RequestTransaction) -> Optional[Message]:
         """ Peer has requested a full transaction from us. """
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
-            return
+            return None
         spend_bundle = self.full_node.mempool_manager.get_spendbundle(request.transaction_id)
         if spend_bundle is None:
-            return
+            return None
 
         transaction = full_node_protocol.RespondTransaction(spend_bundle)
 
@@ -151,12 +152,12 @@ class FullNodeAPI:
         """
         # Ignore if syncing
         if self.full_node.sync_store.get_sync_mode():
-            return
+            return None
 
         async with self.full_node.blockchain.lock:
             # Ignore if we have already added this transaction
             if self.full_node.mempool_manager.get_spendbundle(tx.transaction.name()) is not None:
-                return
+                return None
             cost, status, error = await self.full_node.mempool_manager.add_spendbundle(tx.transaction)
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.info(f"Added transaction to mempool: {tx.transaction.name()}")
@@ -174,7 +175,7 @@ class FullNodeAPI:
                 self.log.warning(
                     f"Was not able to add transaction with id {tx.transaction.name()}, {status} error: {error}"
                 )
-                return
+        return None
 
     @api_request
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
@@ -194,7 +195,7 @@ class FullNodeAPI:
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
         if request.sub_height not in self.full_node.blockchain.sub_height_to_hash:
-            return
+            return None
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
             self.full_node.blockchain.sub_height_to_hash[request.sub_height]
         )
@@ -203,7 +204,7 @@ class FullNodeAPI:
                 block = dataclasses.replace(block, transactions_generator=None)
             msg = Message("respond_sub_block", full_node_protocol.RespondSubBlock(block))
             return msg
-        return
+        return None
 
     @api_request
     @peer_required
@@ -230,7 +231,7 @@ class FullNodeAPI:
             self.full_node.full_node_store.get_unfinished_block(new_unfinished_sub_block.unfinished_reward_hash)
             is not None
         ):
-            return
+            return None
 
         msg = Message(
             "request_unfinished_sub_block",
@@ -251,13 +252,15 @@ class FullNodeAPI:
                 full_node_protocol.RespondUnfinishedSubBlock(unfinished_block),
             )
             return msg
+        return None
 
     @peer_required
     @api_request
     async def respond_unfinished_sub_block(
         self, respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedSubBlock, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
-        return await self.full_node._respond_unfinished_sub_block(respond_unfinished_sub_block, peer)
+        await self.full_node.respond_unfinished_sub_block(respond_unfinished_sub_block, peer)
+        return None
 
     @api_request
     async def new_signage_point_or_end_of_sub_slot(
@@ -272,11 +275,11 @@ class FullNodeAPI:
             )
             is not None
         ):
-            return
+            return None
         if self.full_node.full_node_store.have_newer_signage_point(
             new_sp.challenge_hash, new_sp.index_from_challenge, new_sp.last_rc_infusion
         ):
-            return
+            return None
 
         if new_sp.index_from_challenge == 0 and new_sp.prev_challenge_hash is not None:
             if self.full_node.full_node_store.get_sub_slot(new_sp.prev_challenge_hash) is None:
@@ -308,7 +311,7 @@ class FullNodeAPI:
         self, request: full_node_protocol.RequestSignagePointOrEndOfSubSlot
     ) -> Optional[Message]:
         if request.index_from_challenge == 0:
-            sub_slot: Optional[Tuple[EndOfSubSlotBundle, int]] = self.full_node.full_node_store.get_sub_slot(
+            sub_slot: Optional[Tuple[EndOfSubSlotBundle, int, uint128]] = self.full_node.full_node_store.get_sub_slot(
                 request.challenge_hash
             )
             if sub_slot is not None:
@@ -322,6 +325,12 @@ class FullNodeAPI:
                 request.challenge_hash, request.index_from_challenge, request.last_rc_infusion
             )
             if sp is not None:
+                assert (
+                    sp.cc_vdf is not None
+                    and sp.cc_proof is not None
+                    and sp.rc_vdf is not None
+                    and sp.rc_proof is not None
+                )
                 full_node_response = full_node_protocol.RespondSignagePoint(
                     request.index_from_challenge,
                     sp.cc_vdf,
@@ -332,6 +341,7 @@ class FullNodeAPI:
                 return Message("respond_signage_point", full_node_response)
             else:
                 self.log.warning(f"Don't have signage point {request}")
+        return None
 
     @peer_required
     @api_request
@@ -344,7 +354,9 @@ class FullNodeAPI:
             difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
             next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
             next_difficulty = self.full_node.blockchain.get_next_difficulty(peak.header_hash, True)
-            _, ip_sub_slot = await self.full_node.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+            sub_slots_for_peak = await self.full_node.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
+            assert sub_slots_for_peak is not None
+            ip_sub_slot: Optional[EndOfSubSlotBundle] = sub_slots_for_peak[1]
         else:
             sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
             difficulty = self.full_node.constants.DIFFICULTY_STARTING
@@ -407,7 +419,7 @@ class FullNodeAPI:
         else:
             self.log.warning(f"Signage point not added {request}")
 
-        return
+        return None
 
     @peer_required
     @api_request
@@ -478,6 +490,7 @@ class FullNodeAPI:
                 await self.server.send_to_all([msg], NodeType.FARMER)
             else:
                 self.log.warning(f"End of slot not added {request}")
+        return None
 
     @peer_required
     @api_request
@@ -492,7 +505,7 @@ class FullNodeAPI:
             transaction = full_node_protocol.RespondTransaction(item.spend_bundle)
             msg = Message("respond_transaction", transaction)
             await peer.send_message(msg)
-        return
+        return None
 
     # FARMER PROTOCOL
     @api_request
@@ -511,29 +524,32 @@ class FullNodeAPI:
 
             if sp_vdfs is None:
                 self.log.warning(f"Received proof of space for an unknown signage point {request.challenge_chain_sp}")
-                return
-            if request.signage_point_index > 0 and sp_vdfs.rc_vdf.output.get_hash() != request.reward_chain_sp:
-                self.log.info(
-                    f"Received proof of space for a potentially old signage point {request.challenge_chain_sp}. "
-                    f"Current sp: {sp_vdfs.rc_vdf.output.get_hash()}"
-                )
-                return
+                return None
+            if request.signage_point_index > 0:
+                assert sp_vdfs.rc_vdf is not None
+                if sp_vdfs.rc_vdf.output.get_hash() != request.reward_chain_sp:
+                    self.log.info(
+                        f"Received proof of space for a potentially old signage point {request.challenge_chain_sp}. "
+                        f"Current sp: {sp_vdfs.rc_vdf.output.get_hash()}"
+                    )
+                    return None
 
             if request.signage_point_index == 0:
                 cc_challenge_hash: bytes32 = request.challenge_chain_sp
             else:
-                cc_challenge_hash: bytes32 = sp_vdfs.cc_vdf.challenge
+                assert sp_vdfs.cc_vdf is not None
+                cc_challenge_hash = sp_vdfs.cc_vdf.challenge
 
-            pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int]] = None
+            pos_sub_slot: Optional[Tuple[EndOfSubSlotBundle, int, uint128]] = None
             if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
                 # Checks that the proof of space is a response to a recent challenge and valid SP
                 pos_sub_slot = self.full_node.full_node_store.get_sub_slot(cc_challenge_hash)
                 if pos_sub_slot is None:
                     self.log.warning(f"Received proof of space for an unknown sub slot: {request}")
-                    return
+                    return None
                 total_iters_pos_slot: uint128 = pos_sub_slot[2]
             else:
-                total_iters_pos_slot: uint128 = uint128(0)
+                total_iters_pos_slot = uint128(0)
             assert cc_challenge_hash == request.challenge_hash
 
             # Now we know that the proof of space has a signage point either:
@@ -553,15 +569,14 @@ class FullNodeAPI:
                 if peak is None:
                     spend_bundle: Optional[SpendBundle] = None
                 else:
-                    spend_bundle: Optional[
-                        SpendBundle
-                    ] = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
+                    spend_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
             if peak is None or peak.sub_block_height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
                 difficulty = self.full_node.constants.DIFFICULTY_STARTING
                 sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
             else:
                 assert pos_sub_slot is not None
                 if pos_sub_slot[0].challenge_chain.new_difficulty is not None:
+                    assert pos_sub_slot[0].challenge_chain.new_sub_slot_iters is not None
                     difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
                     sub_slot_iters = pos_sub_slot[0].challenge_chain.new_sub_slot_iters
                 else:
@@ -586,7 +601,7 @@ class FullNodeAPI:
                     return request.reward_chain_sp_signature
                 return G2Element.infinity()
 
-            def get_pool_sig(to_sign, _) -> G2Element:
+            def get_pool_sig(_1, _2) -> G2Element:
                 return request.pool_signature
 
             # Get the previous sub block at the signage point
@@ -609,13 +624,14 @@ class FullNodeAPI:
                 )
             except ValueError as e:
                 self.log.warning(f"Value Error: {e}")
-                return
+                return None
             if len(finished_sub_slots) == 0:
                 if prev_sb is not None:
                     if request.signage_point_index == 0:
                         # No need to get correct block since SP RC is not validated for this sub block
                         pass
                     else:
+                        assert sp_vdfs.rc_vdf is not None
                         found = False
                         attempts = 0
                         while prev_sb is not None and attempts < 10:
@@ -634,11 +650,12 @@ class FullNodeAPI:
                             attempts += 1
                         if not found:
                             self.log.info("Did not find a previous block with the correct reward chain hash")
-                            return
+                            return None
             elif request.signage_point_index > 0:
+                assert sp_vdfs.rc_vdf is not None
                 assert finished_sub_slots[-1].reward_chain.get_hash() == sp_vdfs.rc_vdf.challenge
 
-            unfinished_block: Optional[UnfinishedBlock] = create_unfinished_block(
+            unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
                 total_iters_pos_slot,
                 sub_slot_iters,
@@ -660,9 +677,9 @@ class FullNodeAPI:
                 finished_sub_slots,
             )
             if prev_sb is not None:
-                height = prev_sb.sub_block_height + 1
+                height: uint32 = uint32(prev_sb.sub_block_height + 1)
             else:
-                height = 0
+                height = uint32(0)
             self.full_node.full_node_store.add_candidate_block(quality_string, height, unfinished_block)
 
             foliage_sb_data_hash = unfinished_block.foliage_sub_block.foliage_sub_block_data.get_hash()
@@ -691,7 +708,7 @@ class FullNodeAPI:
 
         if candidate is None:
             self.log.warning(f"Quality string {farmer_request.quality_string} not found in database")
-            return
+            return None
 
         if not AugSchemeMPL.verify(
             candidate.reward_chain_sub_block.proof_of_space.plot_public_key,
@@ -699,7 +716,7 @@ class FullNodeAPI:
             farmer_request.foliage_sub_block_signature,
         ):
             self.log.warning("Signature not valid. There might be a collision in plots. Ignore this during tests.")
-            return
+            return None
 
         fsb2 = dataclasses.replace(
             candidate.foliage_sub_block,
@@ -711,12 +728,13 @@ class FullNodeAPI:
         new_candidate = dataclasses.replace(candidate, foliage_sub_block=fsb2)
         if not self.full_node.has_valid_pool_sig(new_candidate):
             self.log.warning("Trying to make a pre-farm block but height is not 0")
-            return
+            return None
 
         # Propagate to ourselves (which validates and does further propagations)
         request = full_node_protocol.RespondUnfinishedSubBlock(new_candidate)
 
-        await self.full_node._respond_unfinished_sub_block(request, None)
+        await self.full_node.respond_unfinished_sub_block(request, None)
+        return None
 
     # TIMELORD PROTOCOL
     @api_request
@@ -732,6 +750,7 @@ class FullNodeAPI:
                 self.log.warning(
                     f"Do not have unfinished reward chain block {request.unfinished_reward_hash}, cannot finish."
                 )
+                return None
 
             prev_sb: Optional[SubBlockRecord] = None
 
@@ -761,7 +780,7 @@ class FullNodeAPI:
                 if prev_sb is None:
                     self.full_node.full_node_store.add_to_future_ip(request)
                     self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
-                    return
+                    return None
 
             sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
                 self.full_node.constants,
@@ -793,10 +812,15 @@ class FullNodeAPI:
                     self.log.warning(
                         f"Do not have sub slot {unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}"
                     )
-                    return
+                    return None
                 _, _, sub_slot_start_iters = ss_res
-            sp_total_iters = sub_slot_start_iters + calculate_sp_iters(
-                self.full_node.constants, sub_slot_iters, unfinished_block.reward_chain_sub_block.signage_point_index
+            sp_total_iters = uint128(
+                sub_slot_start_iters
+                + calculate_sp_iters(
+                    self.full_node.constants,
+                    sub_slot_iters,
+                    unfinished_block.reward_chain_sub_block.signage_point_index,
+                )
             )
 
             block: FullBlock = unfinished_block_to_full_block(
@@ -816,7 +840,7 @@ class FullNodeAPI:
             first_ss_new_epoch = False
             if not self.full_node.has_valid_pool_sig(block):
                 self.log.warning("Trying to make a pre-farm block but height is not 0")
-                return
+                return None
             if len(block.finished_sub_slots) > 0:
                 if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
                     first_ss_new_epoch = True
@@ -833,11 +857,12 @@ class FullNodeAPI:
                     first_ss_new_epoch = True
             if first_ss_new_epoch and overflow:
                 # No overflow sub-blocks in the first sub-slot of each epoch
-                return
+                return None
             try:
                 await self.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
             except ConsensusError as e:
                 self.log.warning(f"Consensus error validating sub-block: {e}")
+        return None
 
     @peer_required
     @api_request
@@ -861,11 +886,12 @@ class FullNodeAPI:
         # Calls our own internal message to handle the end of sub slot, and potentially broadcasts to other peers.
         full_node_message = full_node_protocol.RespondEndOfSubSlot(request.end_of_sub_slot_bundle)
         await self.respond_end_of_sub_slot(full_node_message, peer)
+        return None
 
     @api_request
     async def request_sub_block_header(self, request: wallet_protocol.RequestSubBlockHeader) -> Optional[Message]:
         if request.sub_height not in self.full_node.blockchain.sub_height_to_hash:
-            msg = Message("reject_sub_block_header", RejectHeaderRequest(request.sub_height, request.header_hash))
+            msg = Message("reject_sub_block_header", RejectHeaderRequest(request.sub_height))
             return msg
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
             self.full_node.blockchain.sub_height_to_hash[request.sub_height]
@@ -884,12 +910,12 @@ class FullNodeAPI:
             or block.is_block() is False
             or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
         ):
-            reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)
+            reject = wallet_protocol.RejectAdditionsRequest(request.sub_height, request.header_hash)
 
             msg = Message("reject_additions_request", reject)
             return msg
 
-        assert block is not None
+        assert block is not None and block.foliage_block is not None
         _, additions = await block.tx_removals_and_additions()
         puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
         for coin in additions + list(block.get_included_reward_coins()):
@@ -947,7 +973,7 @@ class FullNodeAPI:
             msg = Message("reject_removals_request", reject)
             return msg
 
-        assert block is not None
+        assert block is not None and block.foliage_block is not None
         all_removals, _ = await block.tx_removals_and_additions()
 
         coins_map: List[Tuple[bytes32, Optional[Coin]]] = []
@@ -972,7 +998,7 @@ class FullNodeAPI:
             removal_merkle_set = MerkleSet()
             for coin_name in all_removals:
                 removal_merkle_set.add_already_hashed(coin_name)
-            assert removal_merkle_set.get_root() == block.header.data.removals_root
+            assert removal_merkle_set.get_root() == block.foliage_block.additions_root
             for coin_name in request.coin_names:
                 result, proof = removal_merkle_set.is_included_already_hashed(coin_name)
                 proofs_map.append((coin_name, proof))

@@ -1,4 +1,5 @@
 import collections
+import time
 from typing import Dict, Optional, Tuple, List, Set
 import logging
 
@@ -177,8 +178,9 @@ class MempoolManager:
                 break
             elif name in additions_dict:
                 removal_coin = additions_dict[name]
+                # TODO(straya): what timestamp to use here?
                 removal_record = CoinRecord(
-                    removal_coin, self.peak.height + 1, uint32(0), False, False, removal_record.timestamp
+                    removal_coin, uint32(self.peak.height + 1), uint32(0), False, False, uint64(int(time.time()))
                 )
 
             assert removal_record is not None
@@ -259,7 +261,9 @@ class MempoolManager:
                 log.warning(f"{npc.puzzle_hash} != {coin_record.coin.puzzle_hash}")
                 return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 
-            error = mempool_check_conditions_dict(coin_record, new_spend, npc.condition_dict, self.peak.height + 1)
+            error = mempool_check_conditions_dict(
+                coin_record, new_spend, npc.condition_dict, uint32(self.peak.height + 1)
+            )
 
             if error:
                 if error is Err.ASSERT_BLOCK_INDEX_EXCEEDS_FAILED or error is Err.ASSERT_BLOCK_AGE_EXCEEDS_FAILED:
@@ -294,6 +298,7 @@ class MempoolManager:
         This function checks for double spends, unknown spends and conflicting transactions in mempool.
         Returns Error (if any), dictionary of Unspents, list of coins with conflict errors (if any any).
         """
+        assert self.peak is not None
         conflicts: List[Coin] = []
 
         for record in removals.values():

@@ -219,7 +219,7 @@ class FullNode:
                 await connection.send_message(Message("new_peak", request_node))
 
             elif connection.connection_type is NodeType.WALLET:
-                # If connected to a wallet, send the LCA
+                # If connected to a wallet, send the Peak
                 request_wallet = wallet_protocol.NewPeak(
                     peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height
                 )
@@ -228,7 +228,7 @@ class FullNode:
                 await self._send_peak_to_timelords()
 
     async def _on_disconnect(self, connection: ws.WSChiaConnection):
-        self.log.info("peer disconnected")
+        self.log.info(f"peer disconnected {connection.get_peer_info()}")
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None
@@ -525,7 +525,9 @@ class FullNode:
             return
         elif added == ReceiveBlockResult.NEW_PEAK:
             # Only propagate blocks which extend the blockchain (becomes one of the heads)
-            new_peak: SubBlockRecord = self.blockchain.get_peak()
+            new_peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
+            assert new_peak is not None
+            assert fork_height is not None
             self.log.info(
                 f"🌱 Updated peak to height {new_peak.sub_block_height}, weight {new_peak.weight}, "
                 f"hh {new_peak.header_hash}, "
@@ -539,11 +541,13 @@ class FullNode:
             sub_slot_iters = self.blockchain.get_next_slot_iters(new_peak.header_hash, False)
             self.log.info(f"Difficulty {difficulty} slot iterations {sub_slot_iters}")
 
-            sp_sub_slot, ip_sub_slot = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
+            sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
+            assert sub_slots is not None
+
             added_eos, added_sps, new_ips = self.full_node_store.new_peak(
                 new_peak,
-                sp_sub_slot,
-                ip_sub_slot,
+                sub_slots[0],
+                sub_slots[1],
                 fork_height != sub_block.sub_block_height - 1 and sub_block.sub_block_height != 0,
                 self.blockchain.sub_blocks,
             )
@@ -606,18 +610,21 @@ class FullNode:
         # Recursively process the next block if we have it
         if next_block is not None:
             await self.respond_sub_block(full_node_protocol.RespondSubBlock(next_block))
+        peak = self.blockchain.get_peak()
+        assert peak is not None
 
         # Removes all temporary data for old blocks
-        clear_height = uint32(max(0, self.blockchain.get_peak().sub_block_height - 50))
+        clear_height = uint32(max(0, peak.sub_block_height - 50))
         self.full_node_store.clear_candidate_blocks_below(clear_height)
         self.full_node_store.clear_disconnected_blocks_below(clear_height)
         self.full_node_store.clear_unfinished_blocks_below(clear_height)
         self._state_changed("sub_block")
 
-    async def _respond_unfinished_sub_block(
-        self, respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedSubBlock,
-            peer: Optional[ws.WSChiaConnection]
-    ) -> Optional[Message]:
+    async def respond_unfinished_sub_block(
+        self,
+        respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedSubBlock,
+        peer: Optional[ws.WSChiaConnection],
+    ):
         """
         We have received an unfinished sub-block, either created by us, or from another peer.
         We can validate it and if it's a good block, propagate it to other peers and
@@ -714,7 +721,7 @@ class FullNode:
         if block.prev_header_hash == self.constants.GENESIS_PREV_HASH:
             sub_height = uint32(0)
         else:
-            sub_height = self.blockchain.sub_blocks[block.prev_header_hash].sub_block_height + 1
+            sub_height = uint32(self.blockchain.sub_blocks[block.prev_header_hash].sub_block_height + 1)
 
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
             self.constants, self.blockchain.sub_blocks, self.blockchain.sub_height_to_hash, required_iters, block, True
@@ -738,6 +745,7 @@ class FullNode:
                 return
             rc_prev = res[0].reward_chain.get_hash()
         else:
+            assert block.reward_chain_sub_block.reward_chain_sp_vdf is not None
             rc_prev = block.reward_chain_sub_block.reward_chain_sp_vdf.challenge
 
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
