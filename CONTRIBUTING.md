@@ -57,6 +57,7 @@ workflow.
 3. Install BlackConnect plugin
 4. Set to run python black on save
 5. Set line length to 120
+6. Install mypy plugin
 
 ## Submit changes
 
