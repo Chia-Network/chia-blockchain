@@ -620,7 +620,8 @@ class FullNodeAPI:
                     prev_sb = None
                 else:
                     self.log.warning(
-                        f"Making a non-genesis block. curr total iters{curr.total_iters} {total_iters_pos_slot + sp_iters}"
+                        f"Making a non-genesis block. curr total iters{curr.total_iters} "
+                        f"{total_iters_pos_slot + sp_iters}"
                     )
                     pool_target = request.pool_target
                     prev_sb = curr
