@@ -51,7 +51,6 @@ class CoinStore:
 
         await self.coin_record_db.commit()
         self.coin_record_cache = dict()
-        self.head_diffs = dict()
         return self
 
     async def new_block(self, block: FullBlock):
@@ -60,6 +59,7 @@ class CoinStore:
         """
         if block.is_block() is False:
             return
+        assert block.foliage_block is not None
         removals, additions = await block.tx_removals_and_additions()
 
         for coin in additions:

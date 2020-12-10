@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Union, Optional, Tuple
 
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
@@ -20,7 +20,7 @@ def _get_blocks_at_height(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     prev_sb: SubBlockRecord,
     target_sub_block_height: uint32,
-    max_num_sub_blocks: uint32 = 1,
+    max_num_sub_blocks: uint32 = uint32(1),
 ) -> List[SubBlockRecord]:
     """
     Return a consecutive list of SubBlockRecords starting at target_sub_block_height, returning a maximum of
@@ -81,7 +81,7 @@ def _get_last_block_in_previous_epoch(
     """
     height_in_next_epoch = prev_sb.sub_block_height + constants.MAX_SUB_SLOT_SUB_BLOCKS + 3
     height_epoch_surpass: uint32 = uint32(height_in_next_epoch - (height_in_next_epoch % constants.EPOCH_SUB_BLOCKS))
-    height_prev_epoch_surpass: uint32 = height_epoch_surpass - constants.EPOCH_SUB_BLOCKS
+    height_prev_epoch_surpass: uint32 = uint32(height_epoch_surpass - constants.EPOCH_SUB_BLOCKS)
     if (height_in_next_epoch - height_epoch_surpass) > (3 * constants.MAX_SUB_SLOT_SUB_BLOCKS):
         raise ValueError(
             f"Height at {prev_sb.sub_block_height + 1} should not create a new epoch, it is far past the epoch barrier"
@@ -136,7 +136,7 @@ def can_finish_sub_and_full_epoch(
     sub_blocks: Dict[bytes32, SubBlockRecord],
     prev_header_hash: Optional[bytes32],
     can_finish_soon: bool = False,
-) -> (bool, bool):
+) -> Tuple[bool, bool]:
     """
     Returns a bool tuple
     first bool is true if the next sub-slot after sub_block_height will form part of a new sub-epoch. Therefore
@@ -266,6 +266,7 @@ def get_next_sub_slot_iters(
     last_block_curr = prev_sb
     while last_block_curr.total_iters > signage_point_total_iters or not last_block_curr.is_block:
         last_block_curr = sub_blocks[last_block_curr.prev_hash]
+    assert last_block_curr.timestamp is not None and last_block_prev.timestamp is not None
 
     # This is computed as the iterations per second in last epoch, times the target number of seconds per slot
     new_ssi_precise: uint64 = uint64(
@@ -291,7 +292,7 @@ def get_next_sub_slot_iters(
     if new_ssi >= last_block_curr.sub_slot_iters:
         new_ssi = min(new_ssi, max_ssi)
     else:
-        new_ssi = max([constants.NUM_SPS_SUB_SLOT, new_ssi, min_ssi])
+        new_ssi = uint64(max([constants.NUM_SPS_SUB_SLOT, new_ssi, min_ssi]))
 
     new_ssi = uint64(new_ssi - new_ssi % constants.NUM_SPS_SUB_SLOT)  # Must divide the sub slot
     assert count_significant_bits(new_ssi) <= constants.SIGNIFICANT_BITS
@@ -353,7 +354,10 @@ def get_next_difficulty(
     while last_block_curr.total_iters > signage_point_total_iters or not last_block_curr.is_block:
         last_block_curr = sub_blocks[last_block_curr.prev_hash]
 
-    actual_epoch_time = last_block_curr.timestamp - last_block_prev.timestamp
+    assert last_block_curr.timestamp is not None
+    assert last_block_prev.timestamp is not None
+    actual_epoch_time: uint64 = uint64(last_block_curr.timestamp - last_block_prev.timestamp)
+
     old_difficulty = uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight)
 
     # Terms are rearranged so there is only one division.
@@ -389,9 +393,9 @@ def get_sub_slot_iters_and_difficulty(
     constants: ConsensusConstants,
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
     height_to_hash: Dict[uint32, bytes32],
-    prev_sb: SubBlockRecord,
+    prev_sb: Optional[SubBlockRecord],
     sub_blocks: Dict[bytes32, SubBlockRecord],
-) -> (uint64, uint64):
+) -> Tuple[uint64, uint64]:
     """
     Retrieves the current sub_slot iters and difficulty of the sub_block header_block. Note, this is the current
     difficulty, not the next one.
@@ -413,7 +417,7 @@ def get_sub_slot_iters_and_difficulty(
         prev_difficulty: uint64 = uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight)
     else:
         # prev block is genesis
-        prev_difficulty: uint64 = uint64(prev_sb.weight)
+        prev_difficulty = uint64(prev_sb.weight)
 
     sp_total_iters = prev_sb.sp_total_iters(constants)
     difficulty: uint64 = get_next_difficulty(
