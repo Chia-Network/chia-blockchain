@@ -18,8 +18,8 @@ test_constants_modified = test_constants.replace(
         "MAX_SUB_SLOT_SUB_BLOCKS": 50,
         "NUM_SPS_SUB_SLOT": 64,  # Must be a power of 2
         "EPOCH_SUB_BLOCKS": 280,
-        "SUB_SLOT_ITERS_STARTING": 2 ** 24,
-        "NUMBER_ZERO_BITS_PLOT_FILTER": 4,
+        "SUB_SLOT_ITERS_STARTING": 2 ** 22,
+        "NUMBER_ZERO_BITS_PLOT_FILTER": 5,
     }
 )
 

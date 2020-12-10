@@ -30,9 +30,7 @@ def make_parser(parser: ArgumentParser):
     parser.set_defaults(function=init)
 
 
-def dict_add_new_default(
-    updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]
-):
+def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
     for k, v in default.items():
         if isinstance(v, dict) and k in updated:
             # If there is an intermediate key with empty string value, do not migrate all decendants
@@ -47,9 +45,7 @@ def check_keys(new_root):
     keychain: Keychain = Keychain()
     all_sks = keychain.get_all_private_keys()
     if len(all_sks) == 0:
-        print(
-            "No keys are present in the keychain. Generate them with 'chia keys generate'"
-        )
+        print("No keys are present in the keychain. Generate them with 'chia keys generate'")
         return
 
     config: Dict = load_config(new_root, "config.yaml")
@@ -62,11 +58,7 @@ def check_keys(new_root):
             break
         for sk, _ in all_sks:
             all_targets.append(
-                encode_puzzle_hash(
-                    create_puzzlehash_for_pk(
-                        master_sk_to_wallet_sk(sk, uint32(i)).get_g1()
-                    )
-                )
+                encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1()))
             )
             if all_targets[-1] == config["farmer"].get("xch_target_address"):
                 stop_searching_for_farmer = True
@@ -75,9 +67,7 @@ def check_keys(new_root):
 
     # Set the destinations
     if "xch_target_address" not in config["farmer"]:
-        print(
-            f"Setting the xch destination address for coinbase fees reward to {all_targets[0]}"
-        )
+        print(f"Setting the xch destination address for coinbase fees reward to {all_targets[0]}")
         config["farmer"]["xch_target_address"] = all_targets[0]
     elif config["farmer"]["xch_target_address"] not in all_targets:
         print(
@@ -90,9 +80,7 @@ def check_keys(new_root):
     if "pool" not in config:
         config["pool"] = {}
     if "xch_target_address" not in config["pool"]:
-        print(
-            f"Setting the xch destination address for coinbase reward to {all_targets[0]}"
-        )
+        print(f"Setting the xch destination address for coinbase reward to {all_targets[0]}")
         config["pool"]["xch_target_address"] = all_targets[0]
     elif config["pool"]["xch_target_address"] not in all_targets:
         print(
@@ -200,18 +188,14 @@ def chiaMinorReleaseNumber():
     # If this is a beta dev release - get which beta it is
     if "0b" in scm_minor_version:
         orignial_minor_ver_list = scm_minor_version.split("0b")
-        major_release_number = str(
-            1 - int(scm_major_version)
-        )  # decrement the major release for beta
+        major_release_number = str(1 - int(scm_major_version))  # decrement the major release for beta
         minor_release_number = scm_major_version
         patch_release_number = orignial_minor_ver_list[1]
         if smc_patch_version and "dev" in smc_patch_version:
             dev_release_number = "." + smc_patch_version
     elif "0rc" in version[1]:
         original_minor_ver_list = scm_minor_version.split("0rc")
-        major_release_number = str(
-            1 - int(scm_major_version)
-        )  # decrement the major release for release candidate
+        major_release_number = str(1 - int(scm_major_version))  # decrement the major release for release candidate
         minor_release_number = str(int(scm_major_version) + 1)  # RC is 0.2.1 for RC 1
         patch_release_number = original_minor_ver_list[1]
         if smc_patch_version and "dev" in smc_patch_version:
@@ -261,7 +245,7 @@ def chia_init(root_path: Path):
     # These are the files that will be migrated
     MANIFEST: List[str] = [
         "config",
-        "db/blockchain_v20.db",
+        "db/blockchain_v21.db",
         # "wallet",
     ]
 

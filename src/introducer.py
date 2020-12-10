@@ -33,7 +33,7 @@ class Introducer:
             if self._shut_down:
                 return
             try:
-                for i in range(5):
+                for i in range(60):
                     if self._shut_down:
                         return
                     await asyncio.sleep(1)
