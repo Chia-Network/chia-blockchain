@@ -1,12 +1,9 @@
-import traceback
-from typing import List, Optional
+from typing import List
 
 from src.protocols import wallet_protocol
-from src.server.outbound_message import Message
 from src.server.ws_connection import WSChiaConnection
-from src.types.coin import Coin, hash_coin_list
+from src.types.coin import Coin
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
-from src.types.sized_bytes import bytes32
 from src.util.api_decorators import api_request, peer_required
 from src.util.errors import Err
 from src.util.merkle_set import (
@@ -14,8 +11,6 @@ from src.util.merkle_set import (
     confirm_not_included_already_hashed,
     confirm_included_already_hashed,
 )
-from src.wallet.derivation_record import DerivationRecord
-from src.wallet.util.wallet_types import WalletType
 from src.wallet.wallet_node import WalletNode
 
 
@@ -27,17 +22,12 @@ class WalletNodeAPI:
 
     @peer_required
     @api_request
-    async def respond_removals(
-        self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection
-    ):
+    async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection):
         """
         The full node has responded with the removals for a block. We will use this
         to try to finish the block, and add it to the state.
         """
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
+        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
             return
         if self.wallet_node._shut_down:
             return
@@ -45,14 +35,10 @@ class WalletNodeAPI:
             response.header_hash not in self.wallet_node.cached_blocks
             or self.wallet_node.cached_blocks[response.header_hash][0].additions is None
         ):
-            self.wallet_node.log.warning(
-                "Do not have header for removals, or do not have additions"
-            )
+            self.wallet_node.log.warning("Do not have header for removals, or do not have additions")
             return
 
-        block_record, header_block, transaction_filter = self.wallet_node.cached_blocks[
-            response.header_hash
-        ]
+        block_record, header_block, transaction_filter = self.wallet_node.cached_blocks[response.header_hash]
         assert response.height == block_record.height
 
         all_coins: List[Coin] = []
@@ -124,32 +110,22 @@ class WalletNodeAPI:
         #     await self.respond_header(respond_header_msg, peer)
 
     @api_request
-    async def reject_removals_request(
-        self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection
-    ):
+    async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection):
         """
         The full node has rejected our request for removals.
         """
         # TODO(mariano): implement
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
+        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
             return
         self.wallet_node.log.error("Removals request rejected")
 
     @api_request
-    async def reject_additions_request(
-        self, response: wallet_protocol.RejectAdditionsRequest
-    ):
+    async def reject_additions_request(self, response: wallet_protocol.RejectAdditionsRequest):
         """
         The full node has rejected our request for additions.
         """
         # TODO(mariano): implement
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
+        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
             return
         self.wallet_node.log.error("Additions request rejected")
 
@@ -162,52 +138,37 @@ class WalletNodeAPI:
         await self.wallet_node.new_peak(peak, peer)
 
     @api_request
-    async def reject_header_request(
-        self, response: wallet_protocol.RejectHeaderRequest
-    ):
+    async def reject_header_request(self, response: wallet_protocol.RejectHeaderRequest):
         """
         The full node has rejected our request for a header.
         """
         # TODO(mariano): implement
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
+        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
             return
         self.wallet_node.log.error("Header request rejected")
 
     @api_request
-    async def respond_sub_block_header(
-        self, response: wallet_protocol.RespondSubBlockHeader
-    ):
+    async def respond_sub_block_header(self, response: wallet_protocol.RespondSubBlockHeader):
         pass
 
     @peer_required
     @api_request
-    async def respond_additions(
-        self, response: wallet_protocol.RespondAdditions, peer: WSChiaConnection
-    ):
+    async def respond_additions(self, response: wallet_protocol.RespondAdditions, peer: WSChiaConnection):
         pass
 
     @peer_required
     @api_request
-    async def reject_additions_request(
-        self, response: wallet_protocol.RejectAdditionsRequest, peer: WSChiaConnection
-    ):
+    async def reject_additions_request(self, response: wallet_protocol.RejectAdditionsRequest, peer: WSChiaConnection):
         pass
 
     @peer_required
     @api_request
-    async def respond_removals(
-        self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection
-    ):
+    async def respond_removals(self, response: wallet_protocol.RespondRemovals, peer: WSChiaConnection):
         pass
 
     @peer_required
     @api_request
-    async def reject_removals_request(
-        self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection
-    ):
+    async def reject_removals_request(self, response: wallet_protocol.RejectRemovalsRequest, peer: WSChiaConnection):
         pass
 
     #     if (
@@ -357,40 +318,25 @@ class WalletNodeAPI:
 
     @peer_required
     @api_request
-    async def transaction_ack(
-        self, ack: wallet_protocol.TransactionAck, peer: WSChiaConnection
-    ):
+    async def transaction_ack(self, ack: wallet_protocol.TransactionAck, peer: WSChiaConnection):
         """
         This is an ack for our previous SendTransaction call. This removes the transaction from
         the send queue if we have sent it to enough nodes.
         """
         assert peer.peer_node_id is not None
         name = peer.peer_node_id.hex()
-        if (
-            self.wallet_node.wallet_state_manager is None
-            or self.wallet_node.backup_initialized is False
-        ):
+        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
             return
         if ack.status == MempoolInclusionStatus.SUCCESS:
-            self.wallet_node.log.info(
-                f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}"
-            )
+            self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
         elif ack.status == MempoolInclusionStatus.PENDING:
-            self.wallet_node.log.info(
-                f"SpendBundle has been received (and is pending) by the FullNode. {ack}"
-            )
+            self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
         else:
-            self.wallet_node.log.warning(
-                f"SpendBundle has been rejected by the FullNode. {ack}"
-            )
+            self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
         if ack.error is not None:
-            await self.wallet_node.wallet_state_manager.remove_from_queue(
-                ack.txid, name, ack.status, Err[ack.error]
-            )
+            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, ack.status, Err[ack.error])
         else:
-            await self.wallet_node.wallet_state_manager.remove_from_queue(
-                ack.txid, name, ack.status, None
-            )
+            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, ack.status, None)
 
     # @api_request
     # async def respond_all_proof_hashes(

@@ -1,25 +1,16 @@
-from secrets import token_bytes
-
 from typing import AsyncGenerator, List, Optional
 
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.full_node_api import FullNodeAPI
-from src.protocols import (
-    full_node_protocol,
-)
 from src.protocols.full_node_protocol import RespondSubBlock
-from src.server.server import ChiaServer
-from src.server.ws_connection import WSChiaConnection
-from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from src.full_node.bundle_tools import best_solution_program
+from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.server.outbound_message import OutboundMessage
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 
-# from src.types.header import Header
 from src.util.api_decorators import api_request
 from src.util.block_tools import BlockTools, test_constants
-from src.util.ints import uint64
+from src.util.ints import uint8
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
@@ -27,10 +18,10 @@ bt = BlockTools(constants=test_constants)
 
 
 class FullNodeSimulator(FullNodeAPI):
-    def __init__(self, full_node, bt):
+    def __init__(self, full_node, block_tools):
         super().__init__(full_node)
         self.full_node = full_node
-        self.bt = bt
+        self.bt = block_tools
 
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
@@ -56,7 +47,7 @@ class FullNodeSimulator(FullNodeAPI):
         self.log.info("Farming new block!")
         current_blocks = await self.get_all_full_blocks()
         if len(current_blocks) == 0:
-            genesis = bt.get_consecutive_blocks(1, force_overflow=True)[0]
+            genesis = bt.get_consecutive_blocks(uint8(1), force_overflow=True)[0]
             await self.full_node.blockchain.receive_block(genesis)
 
         peak = self.full_node.blockchain.get_peak()

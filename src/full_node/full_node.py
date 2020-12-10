@@ -9,7 +9,7 @@ from typing import AsyncGenerator, Optional, Dict, Callable, List, Tuple, Any, U
 import aiosqlite
 from blspy import AugSchemeMPL
 
-import src.server.ws_connection as ws
+import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty, can_finish_sub_and_full_epoch
@@ -23,7 +23,7 @@ from src.full_node.mempool_manager import MempoolManager
 from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
-from src.full_node.weight_proof import WeightProofHandler, BlockCache, BlockCacheMock
+from src.full_node.weight_proof import WeightProofHandler, BlockCache
 from src.protocols import (
     full_node_protocol,
     timelord_protocol,
@@ -40,7 +40,7 @@ from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.weight_proof import WeightProof
-from src.util.errors import ConsensusError, Err
+from src.util.errors import ConsensusError
 from src.util.ints import uint32, uint128, uint8
 from src.util.path import mkdir, path_from_root
 
@@ -127,23 +127,6 @@ class FullNode:
                 False,
                 self.blockchain.sub_blocks,
             )
-        try:
-            """
-            self.full_node_peers = FullNodePeers(
-                self.server,
-                self.root_path,
-                self.global_connections,
-                self.config["target_peer_count"] - self.config["target_outbound_peer_count"],
-                self.config["target_outbound_peer_count"],
-                self.config["peer_db_path"],
-                self.config["introducer_peer"],
-                self.config["peer_connect_interval"],
-                self.log,
-            )
-            await self.full_node_peers.start()
-            """
-        except Exception as e:
-            self.log.error(f"Exception in peer discovery: {e}")
 
     def set_server(self, server: ChiaServer):
         self.server = server
@@ -283,7 +266,6 @@ class FullNode:
         highest_weight: uint128 = uint128(0)
         target_peak_sb_height: uint32 = uint32(0)
         sync_start_time = time.time()
-        peak_hash: bytes32 = None
 
         # Based on responses from peers about the current heads, see which head is the heaviest
         # (similar to longest chain rule).
@@ -298,7 +280,6 @@ class FullNode:
             if potential_peak_block.weight > highest_weight:
                 highest_weight = potential_peak_block.weight
                 target_peak_sb_height = potential_peak_block.sub_block_height
-                peak_hash = header_hash
 
         if self.blockchain.get_peak() is not None and highest_weight <= self.blockchain.get_peak().weight:
             self.log.info("Not performing sync, already caught up.")

@@ -10,7 +10,7 @@ from src.types.sized_bytes import bytes32
 from src.types.vdf import VDFInfo, VDFProof
 from src.types.weight_proof import WeightProof
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint8, uint32, uint64, uint128, int32
+from src.util.ints import uint8, uint32, uint64, uint128
 from src.types.peer_info import TimestampedPeerInfo
 
 """
