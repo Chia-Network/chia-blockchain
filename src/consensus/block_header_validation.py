@@ -540,14 +540,12 @@ async def validate_unfinished_header_block(
             header_block.reward_chain_sub_block.reward_chain_sp_vdf,
             target_vdf_info,
         ):
-            log.error("block %s failed validation, invalid rc vdf ", header_block.header_hash)
             return None, ValidationError(Err.INVALID_RC_SP_VDF)
         rc_sp_hash = header_block.reward_chain_sub_block.reward_chain_sp_vdf.output.get_hash()
     else:
         # Edge case of first sp (start of slot), where sp_iters == 0
         assert overflow is not None
         if header_block.reward_chain_sub_block.reward_chain_sp_vdf is not None:
-            log.error("block %s failed validation rc vdf is not None ", header_block.header_hash)
             return None, ValidationError(Err.INVALID_RC_SP_VDF)
         if new_sub_slot:
             rc_sp_hash = header_block.finished_sub_slots[-1].reward_chain.get_hash()
@@ -586,13 +584,10 @@ async def validate_unfinished_header_block(
         ):
             return None, ValidationError(Err.INVALID_CC_SP_VDF)
         if not header_block.challenge_chain_sp_proof.is_valid(constants, cc_vdf_input, target_vdf_info, None):
-            log.error("block %s failed validation, invalid cc vdf, ", header_block.header_hash)
-
             return None, ValidationError(Err.INVALID_CC_SP_VDF)
     else:
         assert overflow is not None
         if header_block.reward_chain_sub_block.challenge_chain_sp_vdf is not None:
-            log.error("block %s failed validation, overflow should not include cc vdf, ", header_block.header_hash)
             return None, ValidationError(Err.INVALID_CC_SP_VDF)
 
     # 14. Check cc sp sig

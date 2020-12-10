@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 import random
 import shutil
@@ -82,6 +83,9 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "CLVM_COST_RATIO_CONSTANT": 108,
     }
 )
+
+
+log = logging.getLogger(__name__)
 
 
 class BlockTools:
@@ -590,7 +594,7 @@ class BlockTools:
                         sub_blocks_added_this_sub_slot += 1
                         print(
                             f"Created block {sub_block_record.sub_block_height } ov=True, iters "
-                            f"{sub_block_record.total_iters} Finish sub slots: {full_block.finished_sub_slots}"
+                            f"{sub_block_record.total_iters}"
                         )
                         num_blocks -= 1
                         if num_blocks == 0:
