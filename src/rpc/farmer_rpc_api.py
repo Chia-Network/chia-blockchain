@@ -1,7 +1,6 @@
 from typing import Callable, Set, Dict, List
 
 from src.farmer import Farmer
-from src.util.ws_message import create_payload
 
 
 class FarmerRpcApi:

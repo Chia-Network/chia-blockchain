@@ -1,4 +1,4 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import is_overflow_sub_block

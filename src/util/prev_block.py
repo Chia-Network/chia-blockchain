@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict
 
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.sized_bytes import bytes32

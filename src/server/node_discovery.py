@@ -1,7 +1,6 @@
 import asyncio
 import time
 import math
-from asyncio import Queue
 from pathlib import Path
 
 import aiosqlite
@@ -43,7 +42,7 @@ class FullNodeDiscovery:
         log,
     ):
         self.server: ChiaServer = server
-        self.message_queue: Queue = asyncio.Queue()
+        self.message_queue: asyncio.Queue = asyncio.Queue()
         self.is_closed = False
         self.target_outbound_count = target_outbound_count
         self.peer_db_path = path_from_root(root_path, peer_db_path)
