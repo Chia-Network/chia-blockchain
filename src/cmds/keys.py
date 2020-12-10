@@ -38,16 +38,10 @@ def help_message():
     print("chia keys generate_and_print  (generates but does NOT add to keychain)")
     print("chia keys show (displays all the keys in keychain)")
     print("chia keys add -m [24 words] (add a private key through the mnemonic)")
-    print(
-        "chia keys delete -f [fingerprint] (delete a key by it's pk fingerprint in hex form)"
-    )
+    print("chia keys delete -f [fingerprint] (delete a key by it's pk fingerprint in hex form)")
     print("chia keys delete_all (delete all private keys in keychain)")
-    print(
-        "chia keys sign -f [fingerprint] -t [hd_path] -d [message] (sign a message with a private key)"
-    )
-    print(
-        "chia keys verify -p [public_key] -d [message] -s [signature] (verify a signature with a pk)"
-    )
+    print("chia keys sign -f [fingerprint] -t [hd_path] -d [message] (sign a message with a private key)")
+    print("chia keys verify -p [public_key] -d [message] -s [signature] (verify a signature with a pk)")
 
 
 def make_parser(parser):
@@ -127,9 +121,7 @@ def generate_and_print():
     mnemonic = generate_mnemonic()
     print("Generating private key. Mnemonic (24 secret words):")
     print(mnemonic)
-    print(
-        "Note that this key has not been added to the keychain. Run chia keys add_seed -m [MNEMONICS] to add"
-    )
+    print("Note that this key has not been added to the keychain. Run chia keys add_seed -m [MNEMONICS] to add")
     return mnemonic
 
 
@@ -152,9 +144,7 @@ def add_private_key_seed(mnemonic):
         passphrase = ""
         sk = keychain.add_private_key(mnemonic, passphrase)
         fingerprint = sk.get_g1().get_fingerprint()
-        print(
-            f"Added private key with public key fingerprint {fingerprint} and mnemonic"
-        )
+        print(f"Added private key with public key fingerprint {fingerprint} and mnemonic")
         print(mnemonic)
 
     except ValueError as e:
@@ -188,9 +178,7 @@ def show_all_keys():
         )
         print(
             "First wallet address:",
-            encode_puzzle_hash(
-                create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())
-            ),
+            encode_puzzle_hash(create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(0)).get_g1())),
         )
         assert seed is not None
         mnemonic = bytes_to_mnemonic(seed)
@@ -268,9 +256,7 @@ def handler(args, parser):
 
     root_path: Path = args.root_path
     if not root_path.is_dir():
-        raise RuntimeError(
-            "Please initialize (or migrate) your config directory with chia init."
-        )
+        raise RuntimeError("Please initialize (or migrate) your config directory with chia init.")
 
     command = args.command
     if command not in command_list:

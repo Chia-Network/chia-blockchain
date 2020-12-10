@@ -15,8 +15,7 @@ class StructStream(int):
         value = int(value)
         if value.bit_length() > bits:
             raise ValueError(
-                f"Value {value} of size {value.bit_length()} does not fit into "
-                f"{cls.__name__} of size {bits}"
+                f"Value {value} of size {value.bit_length()} does not fit into " f"{cls.__name__} of size {bits}"
             )
         return int.__new__(cls, value)  # type: ignore
 

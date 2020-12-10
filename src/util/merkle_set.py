@@ -197,17 +197,11 @@ class MiddleNode:
         elif children[1].is_empty() and children[0].is_double():
             self.hash = children[0].hash
         else:
-            if children[0].is_empty() and (
-                children[1].is_empty() or children[1].is_terminal()
-            ):
+            if children[0].is_empty() and (children[1].is_empty() or children[1].is_terminal()):
                 raise SetError()
             if children[1].is_empty() and children[0].is_terminal():
                 raise SetError
-            if (
-                children[0].is_terminal()
-                and children[1].is_terminal()
-                and children[0].hash >= children[1].hash
-            ):
+            if children[0].is_terminal() and children[1].is_terminal() and children[0].hash >= children[1].hash:
                 raise SetError
             self.hash = hashdown(children[0].get_hash() + children[1].get_hash())
 
@@ -256,14 +250,10 @@ class MiddleNode:
         p.append(MIDDLE)
         if get_bit(tocheck, depth) == 0:
             r = self.children[0].is_included(tocheck, depth + 1, p)
-            self.children[1].other_included(
-                tocheck, depth + 1, p, not self.children[0].is_empty()
-            )
+            self.children[1].other_included(tocheck, depth + 1, p, not self.children[0].is_empty())
             return r
         else:
-            self.children[0].other_included(
-                tocheck, depth + 1, p, not self.children[1].is_empty()
-            )
+            self.children[0].other_included(tocheck, depth + 1, p, not self.children[1].is_empty())
             return self.children[1].is_included(tocheck, depth + 1, p)
 
     def other_included(self, tocheck, depth, p, collapse):

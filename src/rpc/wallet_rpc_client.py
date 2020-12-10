@@ -61,16 +61,12 @@ class WalletRpcClient(RpcClient):
         return (await self.fetch("get_public_keys", {}))["public_key_fingerprints"]
 
     async def get_private_key(self, fingerprint: int) -> Dict:
-        return (await self.fetch("get_private_key", {"fingerprint": fingerprint}))[
-            "private_key"
-        ]
+        return (await self.fetch("get_private_key", {"fingerprint": fingerprint}))["private_key"]
 
     async def generate_mnemonic(self) -> List[str]:
         return (await self.fetch("generate_mnemonic", {}))["mnemonic"]
 
-    async def add_key(
-        self, mnemonic: List[str], request_type: str = "new_wallet"
-    ) -> None:
+    async def add_key(self, mnemonic: List[str], request_type: str = "new_wallet") -> None:
         return await self.fetch("add_key", {"mnemonic": mnemonic, "type": request_type})
 
     async def delete_key(self, fingerprint: int) -> None:
@@ -95,13 +91,9 @@ class WalletRpcClient(RpcClient):
 
     # Wallet APIs
     async def get_wallet_balance(self, wallet_id: str) -> Dict:
-        return (await self.fetch("get_wallet_balance", {"wallet_id": wallet_id}))[
-            "wallet_balance"
-        ]
+        return (await self.fetch("get_wallet_balance", {"wallet_id": wallet_id}))["wallet_balance"]
 
-    async def get_transaction(
-        self, wallet_id: str, transaction_id: bytes32
-    ) -> TransactionRecord:
+    async def get_transaction(self, wallet_id: str, transaction_id: bytes32) -> TransactionRecord:
         res = await self.fetch(
             "get_transaction",
             {"walled_id": wallet_id, "transaction_id": transaction_id.hex()},
@@ -119,17 +111,13 @@ class WalletRpcClient(RpcClient):
         reverted_tx: List[TransactionRecord] = []
         for modified_tx in res["transactions"]:
             # Server returns address instead of ph, but TransactionRecord requires ph
-            modified_tx["to_puzzle_hash"] = decode_puzzle_hash(
-                modified_tx["to_address"]
-            ).hex()
+            modified_tx["to_puzzle_hash"] = decode_puzzle_hash(modified_tx["to_address"]).hex()
             del modified_tx["to_address"]
             reverted_tx.append(TransactionRecord.from_json_dict(modified_tx))
         return reverted_tx
 
     async def get_next_address(self, wallet_id: str) -> str:
-        return (await self.fetch("get_next_address", {"wallet_id": wallet_id}))[
-            "address"
-        ]
+        return (await self.fetch("get_next_address", {"wallet_id": wallet_id}))["address"]
 
     async def send_transaction(
         self, wallet_id: str, amount: uint64, address: str, fee: uint64 = uint64(0)
@@ -142,9 +130,7 @@ class WalletRpcClient(RpcClient):
         return TransactionRecord.from_json_dict(res["transaction"])
 
     async def create_backup(self, file_path: Path) -> None:
-        return await self.fetch(
-            "create_backup", {"file_path": str(file_path.resolve())}
-        )
+        return await self.fetch("create_backup", {"file_path": str(file_path.resolve())})
 
 
 # TODO: add APIs for coloured coins and RL wallet
