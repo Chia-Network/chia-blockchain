@@ -239,16 +239,16 @@ class TestWeightProof:
     #         wp, orig_summaries, test_constants.SUB_SLOT_ITERS_STARTING, test_constants.FIRST_RC_CHALLENGE
     #     )
 
-    @pytest.mark.asyncio
-    async def test_weight_proof_from_genesis(self, default_400_blocks):
-        blocks = default_400_blocks
-        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
-        wpf.log.setLevel(logging.INFO)
-        initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
-        wp = wpf.create_proof_of_weight(uint32(len(header_cache)), uint32(len(blocks)), blocks[-1].header_hash)
-        assert wp is not None
-        assert wpf.validate_weight_proof(wp, sub_blocks[height_to_hash[0]])
+    # @pytest.mark.asyncio
+    # async def test_weight_proof_from_genesis(self, default_400_blocks):
+    #     blocks = default_400_blocks
+    #     header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
+    #     wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
+    #     wpf.log.setLevel(logging.INFO)
+    #     initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
+    #     wp = wpf.create_proof_of_weight(uint32(len(header_cache)), uint32(len(blocks)), blocks[-1].header_hash)
+    #     assert wp is not None
+    #     assert wpf.validate_weight_proof(wp, sub_blocks[height_to_hash[0]])
 
     # @pytest.mark.asyncio
     # async def test_weight_proof(self, default_10000_blocks):
