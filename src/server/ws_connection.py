@@ -268,8 +268,6 @@ class WSChiaConnection:
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Payload]:
-        if self.connection_type is None:
-            return None
         message: WSMessage = await self.ws.receive()
         if message.type == WSMsgType.CLOSING:
             self.log.info(

@@ -116,22 +116,23 @@ async def validate_block_body(
         assert curr_sb.header_hash == block.foliage_block.prev_block_hash
 
         if curr_sb.sub_block_height == 0:
-            height = 0
+            curr_height = uint32(0)
         else:
             if curr_sb.is_block:
-                height = curr_sb.height + 1
+                curr_height = uint32(curr_sb.height + 1)
             else:
-                height = curr_sb.height
+                curr_height = curr_sb.height
 
+        assert curr_sb.fees is not None
         pool_coin = create_pool_coin(
             curr_sb.height,
             curr_sb.pool_puzzle_hash,
-            calculate_pool_reward(height),
+            calculate_pool_reward(curr_height),
         )
         farmer_coin = create_farmer_coin(
             curr_sb.sub_block_height,
             curr_sb.farmer_puzzle_hash,
-            calculate_base_farmer_reward(height) + curr_sb.fees,
+            uint64(calculate_base_farmer_reward(curr_height) + curr_sb.fees),
         )
         # Adds the previous block
         expected_reward_coins.add(pool_coin)
@@ -238,7 +239,7 @@ async def validate_block_body(
     if peak is None or sub_height == 0:
         fork_h: int = -1
     else:
-        fork_h: int = find_fork_point_in_chain(sub_blocks, peak, sub_blocks[block.prev_header_hash])
+        fork_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks[block.prev_header_hash])
 
     # Get additions and removals since (after) fork_h but not including this block
     additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
@@ -352,6 +353,7 @@ async def validate_block_body(
     pairs_pks = []
     pairs_msgs = []
     for npc in npc_list:
+        assert height is not None
         unspent = removal_coin_records[npc.coin_name]
         error = blockchain_check_conditions_dict(
             unspent, removal_coin_records, npc.condition_dict, height, block.foliage_block.timestamp
