@@ -12,9 +12,17 @@ import time
 from typing import Dict, Any, List, Tuple, Optional
 from sys import platform
 from concurrent.futures import ThreadPoolExecutor
-io_pool_exc = ThreadPoolExecutor()
-
 from websockets import serve, ConnectionClosedOK, WebSocketException
+from src.cmds.init import chia_init
+from src.daemon.windows_signal import kill
+from src.util.ws_message import format_response, create_payload
+from src.util.json_util import dict_to_json_str
+from src.util.config import load_config
+from src.util.logging import initialize_logging
+from src.util.path import mkdir
+from src.util.service_groups import validate_service
+
+io_pool_exc = ThreadPoolExecutor()
 
 try:
     from aiohttp import web
@@ -24,23 +32,12 @@ except ModuleNotFoundError:
     )
     quit()
 
-
-from src.cmds.init import chia_init
-from src.daemon.windows_signal import kill
-from src.util.ws_message import format_response, create_payload
-from src.util.json_util import dict_to_json_str
-
 try:
     import fcntl
 
     has_fcntl = True
 except ImportError:
     has_fcntl = False
-
-from src.util.config import load_config
-from src.util.logging import initialize_logging
-from src.util.path import mkdir
-from src.util.service_groups import validate_service
 
 log = logging.getLogger(__name__)
 
@@ -279,7 +276,7 @@ class WebSocketServer:
             "parallel": plot_queue_item["parallel"],
             "delay": plot_queue_item["delay"],
             "state": plot_queue_item["state"],
-            "error": str(err) if has_error else None,
+            "error": str(error) if has_error else None,
             "log": plot_queue_item.get("log"),
         }
 
@@ -321,8 +318,8 @@ class WebSocketServer:
         config = self._get_plots_queue_item(id)
 
         if config is None:
-          raise Exception(f"Plot queue config with ID {id} is not defined")
-        
+            raise Exception(f"Plot queue config with ID {id} is not defined")
+
         words = ['Renamed final file']
         file_path = config["out_file"]
         fp = open(file_path, 'r')
@@ -343,7 +340,7 @@ class WebSocketServer:
         config = self._get_plots_queue_item(id)
 
         if config is None:
-          raise Exception(f"Plot queue config with ID {id} is not defined")
+            raise Exception(f"Plot queue config with ID {id} is not defined")
 
         async for hit_word, hit_sentence in self._watch_file_changes(id, loop):
             break
@@ -383,7 +380,7 @@ class WebSocketServer:
         response = False
         for item in self.plots_queue:
             if item["parallel"] is False and item["state"] is PlotState.RUNNING:
-              response = True
+                response = True
         return response
     
     def _get_plots_queue_item(self, id: str):
@@ -429,10 +426,10 @@ class WebSocketServer:
             config["out_file"] = plotter_log_path(self.root_path, id).absolute()
             config["process"] = process
             self.state_changed(service_plotter, "state")
-            
+
             if service_name not in self.services:
                 self.services[service_name] = []
-            
+
             self.services[service_name].append(process)
 
             await self._track_plotting_progress(id, loop)
@@ -442,7 +439,7 @@ class WebSocketServer:
 
             config["state"] = PlotState.FINISHED
             self.state_changed(service_plotter, "state")
-            
+
         except (subprocess.SubprocessError, IOError):
             log.exception(f"problem starting {service_name}")
             error = Exception(f"Start plotting failed")
@@ -577,7 +574,13 @@ class WebSocketServer:
                 "is_running": is_running,
             }
         else:
-            response = {"success": True, "service_name": service_name, "is_running": r}
+            process = self.services.get(service_name)
+            is_running = process is not None and process.poll() is None
+            response = {
+                "success": True, 
+                "service_name": service_name, 
+                "is_running": is_running,
+            }
 
         return response
 
