@@ -33,7 +33,6 @@ from src.server.connection_utils import send_all_first_reply
 from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
-from src.server.ws_connection import WSChiaConnection
 from src.types.full_block import FullBlock
 from src.types.pool_target import PoolTarget
 from src.types.sized_bytes import bytes32
@@ -79,7 +78,7 @@ class FullNode:
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
         self.sync_peers_handler = None
-        self.full_node_peers = None
+        self.full_node_peers: Optional[FullNodePeers] = None
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -192,7 +191,7 @@ class FullNode:
             msg = Message("new_peak", timelord_new_peak)
             await self.server.send_to_all([msg], NodeType.TIMELORD)
 
-    async def on_connect(self, connection: WSChiaConnection):
+    async def on_connect(self, connection: ws.WSChiaConnection):
         """
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
@@ -228,7 +227,7 @@ class FullNode:
             elif connection.connection_type is NodeType.TIMELORD:
                 await self._send_peak_to_timelords()
 
-    async def _on_disconnect(self, connection: WSChiaConnection):
+    async def _on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info("peer disconnected")
 
     def _num_needed_peers(self) -> int:
@@ -286,7 +285,7 @@ class FullNode:
             return
 
         self.log.info(f"Peak height {target_peak_sb_height}")
-        peers: List[WSChiaConnection] = self.server.get_full_node_connections()
+        peers: List[ws.WSChiaConnection] = self.server.get_full_node_connections()
 
         # send weight proof message, continue on first response
         # fork_point_height = await self._fetch_and_validate_weight_proof(peak_hash, peers, target_peak_sb_height)
@@ -314,7 +313,7 @@ class FullNode:
                 break
             await self.sync_peers_handler.monitor_timeouts()
 
-            cur_peers: List[WSChiaConnection] = [
+            cur_peers: List[ws.WSChiaConnection] = [
                 con
                 for _, con in self.server.all_connections.items()
                 if (con.peer_node_id is not None and con.connection_type == NodeType.FULL_NODE)
@@ -362,7 +361,7 @@ class FullNode:
         )
 
     async def _fetch_and_validate_weight_proof(self, peak_hash, peers, target_peak_sb_height) -> Optional[uint32]:
-        response: Optional[Tuple[Any, WSChiaConnection]] = await send_all_first_reply(
+        response: Optional[Tuple[Any, ws.WSChiaConnection]] = await send_all_first_reply(
             "request_proof_of_weight", full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash), peers
         )
         if response is None:
@@ -481,7 +480,11 @@ class FullNode:
 
         elif added == ReceiveBlockResult.DISCONNECTED_BLOCK:
             self.log.info(f"Disconnected block {header_hash} at height {sub_block.sub_block_height}")
-            peak_height = -1 if self.blockchain.get_peak() is None else self.blockchain.get_peak().sub_block_height
+            peak = self.blockchain.get_peak()
+            if peak is None:
+                peak_height = -1
+            else:
+                peak_height = peak.sub_block_height
 
             if sub_block.sub_block_height > peak_height + self.config["sync_blocks_behind_threshold"]:
                 async with self.blockchain.lock:

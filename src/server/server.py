@@ -4,10 +4,9 @@ import ssl
 from pathlib import Path
 from typing import Any, List, Dict, Tuple, Callable, Optional, Set
 
-import aiohttp
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
-from aiohttp import web
+from aiohttp import web, ClientSession, ClientTimeout, client_exceptions, ClientSession
 
 from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload
@@ -200,8 +199,8 @@ class ChiaServer:
         ssl_context = ssl_context_for_client(self._private_cert_path, self._private_key_path, auth)
         session = None
         try:
-            timeout = aiohttp.ClientTimeout(total=10)
-            session = aiohttp.ClientSession(timeout=timeout)
+            timeout = ClientTimeout(total=10)
+            session = ClientSession(timeout=timeout)
 
             # ipv6 localhost format
             # todo fix ipv6 in a less patchy way
@@ -235,7 +234,7 @@ class ChiaServer:
                 await self.connection_added(connection, on_connect)
                 self.log.info(f"Connected with {connection.connection_type.name.lower()} {target_node}")
             return True
-        except aiohttp.client_exceptions.ClientConnectorError as e:
+        except client_exceptions.ClientConnectorError as e:
             self.log.warning(f"{e}")
         except Exception as e:
             if isinstance(e, ProtocolError) and e.code == Err.SELF_CONNECTION:
@@ -385,7 +384,7 @@ class ChiaServer:
         port = self._port
 
         try:
-            async with aiohttp.ClientSession() as session:
+            async with ClientSession() as session:
                 async with session.get("https://checkip.amazonaws.com/") as resp:
                     if resp.status == 200:
                         ip = str(await resp.text())
