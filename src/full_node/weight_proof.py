@@ -170,8 +170,10 @@ class WeightProofHandler:
                 # get sub_epoch_blocks_n in sub_epoch
                 sub_epoch_blocks_n = get_sub_epoch_block_num(sub_block, self.block_cache)
                 #   sample sub epoch
-                if choose_sub_epoch(sub_epoch_blocks_n, rng, total_number_of_blocks):
-                    segments = await self.__create_sub_epoch_segments(sub_block, sub_epoch_blocks_n, sub_epoch_n)
+                if choose_sub_epoch(uint32(sub_epoch_blocks_n), rng, total_number_of_blocks):
+                    segments = await self.__create_sub_epoch_segments(
+                        sub_block, uint32(sub_epoch_blocks_n), sub_epoch_n
+                    )
                     self.log.debug(
                         f"sub epoch {sub_epoch_n}  chosen, has {len(segments)} challenge segments {sub_epoch_blocks_n} "
                         f"blocks probability of {sub_epoch_blocks_n / total_number_of_blocks}"
@@ -267,9 +269,9 @@ class WeightProofHandler:
         curr_ssi: uint64,
         rc_sub_slot_hash: bytes32,
     ):
-        total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
-        total_slot_iters, total_slots = uint64(0), uint64(0)
-        total_ip_iters = uint64(0)
+        # total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
+        total_slot_iters, total_slots = uint128(0), 0
+        total_ip_iters = uint128(0)
         # validate sub epoch samples
         cc_sub_slot: Optional[ChallengeChainSubSlot] = None
         curr_sub_epoch_n = -1
@@ -525,12 +527,25 @@ class WeightProofHandler:
         cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_vdf.get_hash(), None, None, None)
         challenge = cc_sub_slot.get_hash()
 
-        if challenge_sub_slot.cc_sp_vdf_info is None:
-            self.log.info(f"challenge from prev slot {challenge_sub_slot.cc_sp_vdf_info}")
+        # check filter
+        assert challenge_sub_slot is not None
+        assert challenge_sub_slot.proof_of_space is not None
+        if challenge_sub_slot.cc_signage_point is None:
             cc_sp_hash: bytes32 = cc_sub_slot.get_hash()
         else:
-            self.log.info(f"challenge from sp vdf {challenge_sub_slot.cc_sp_vdf_info}")
-            cc_sp_hash = challenge_sub_slot.cc_sp_vdf_info.output.get_hash()
+            assert challenge_sub_slot.cc_signage_point is not None
+            # cc_sp_hash = challenge_sub_slot.cc_signage_point.output.get_hash()
+            # TODO(almog): fix
+            cc_sp_hash = b""
+
+        if not AugSchemeMPL.verify(
+            challenge_sub_slot.proof_of_space.plot_public_key,
+            cc_sp_hash,
+            challenge_sub_slot.cc_sp_sig,
+        ):
+            self.log.error("did not pass filter")
+            return None
+
         # validate proof of space
         return challenge_sub_slot.proof_of_space.verify_and_get_quality_string(
             self.constants,
@@ -543,17 +558,17 @@ class WeightProofHandler:
         summaries: Dict[uint32, SubEpochSummary],
         segment: SubEpochChallengeSegment,
         curr_ssi: uint64,
-        total_slot_iters: uint64,
-        total_slots: uint64,
-        total_ip_iters: uint64,
-        cc_sub_slot: ChallengeChainSubSlot,
-    ) -> (bool, uint64, uint64, int):
+        total_slot_iters: uint128,
+        total_slots: int,
+        total_ip_iters: uint128,
+        challenge: bytes32,
+    ) -> Tuple[bool, uint128, int, int]:
         ses = summaries[segment.sub_epoch_n]
         challenge_blocks = 0
         if ses.new_sub_slot_iters is not None:
-            curr_ssi: uint64 = ses.new_sub_slot_iters
-        for idx, sub_slot in enumerate(segment.sub_slots):
-            total_slot_iters += curr_ssi
+            curr_ssi = ses.new_sub_slot_iters
+        for sub_slot in segment.sub_slots:
+            total_slot_iters = uint128(total_slot_iters + curr_ssi)
             total_slots += 1
 
             # todo uncomment after vdf merging is done
@@ -565,16 +580,21 @@ class WeightProofHandler:
                 self.log.info("validate proof of space")
                 q_str = self.__get_quality_string(segment, idx, ses)
                 if q_str is None:
-                    self.log.error(f"failed to validate segment space proof")
-                    return False, 0, 0, 0
+                    self.log.info(f"failed to validate {segment} segment space proof")
+                    return False, uint128(0), 0, 0
+
+                assert sub_slot.proof_of_space is not None
+                assert sub_slot.cc_signage_point is not None
+                assert sub_slot.cc_signage_point_index is not None
                 required_iters: uint64 = calculate_iterations_quality(
                     q_str,
                     sub_slot.proof_of_space.size,
                     cc_sub_slot.get_hash(),
                     sub_slot.cc_signage_point.get_hash(),
                 )
-                total_ip_iters += calculate_ip_iters(
-                    self.constants, curr_ssi, sub_slot.cc_signage_point_index, required_iters
+                total_ip_iters = uint128(
+                    total_ip_iters
+                    + calculate_ip_iters(self.constants, curr_ssi, sub_slot.cc_signage_point_index, required_iters)
                 )
                 challenge_blocks += 1
 
@@ -599,7 +619,7 @@ def make_sub_epoch_data(
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
 
-def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: BlockCacheMock) -> uint32:
+def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: Union[BlockCache, BlockCacheMock]) -> int:
     """
     returns the number of blocks in a sub epoch ending with
     """
@@ -608,7 +628,7 @@ def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: BlockCacheMock) -
         raise Exception("block does not finish a sub_epoch")
 
     curr = cache.sub_block_record(last_block.prev_hash)
-    count: uint32 = uint32(0)
+    count = 0
     while not curr.sub_epoch_summary_included:
         # todo skip overflows from last sub epoch
         if curr.sub_block_height == 0:
@@ -651,17 +671,21 @@ def validate_sub_slot_vdfs(
 ) -> bool:
     default = ClassgroupElement.get_default_element()
     if infused:
+        assert sub_slot.cc_signage_point is not None
+        assert sub_slot.cc_infusion_point is not None
+        assert sub_slot.cc_slot_end is not None
+        assert sub_slot.icc_slot_end is not None
         if not sub_slot.cc_signage_point.is_valid(constants, default, vdf_info):
             return False
         if not sub_slot.cc_infusion_point.is_valid(constants, default, vdf_info):
             return False
-        if not sub_slot.cc_infusion_to_slot_end_vdf.is_valid(constants, default, vdf_info):
+        if not sub_slot.cc_slot_end.is_valid(constants, default, vdf_info):
             return False
-        if not sub_slot.icc_infusion_to_slot_end_vdf.is_valid(constants, default, vdf_info):
+        if not sub_slot.icc_slot_end.is_valid(constants, default, vdf_info):
             return False
 
         return True
-
+    assert sub_slot.cc_slot_end is not None
     return sub_slot.cc_slot_end.is_valid(constants, ClassgroupElement.get_default_element(), vdf_info)
 
 
@@ -670,7 +694,7 @@ def map_summaries(
     ses_hash: bytes32,
     sub_epoch_data: List[SubEpochData],
     curr_difficulty: uint64,
-) -> (Dict[uint32, SubEpochSummary], uint128):
+) -> Tuple[Dict[uint32, SubEpochSummary], uint128]:
     sub_epoch_data_weight: uint128 = uint128(0)
     summaries: Dict[uint32, SubEpochSummary] = {}
 
@@ -685,12 +709,15 @@ def map_summaries(
 
         # if new epoch update diff and iters
         if data.new_sub_slot_iters is not None:
+            assert data.new_difficulty is not None
             curr_difficulty = data.new_difficulty
 
-        sub_epoch_data_weight += curr_difficulty * (sub_blocks_for_se + data.num_sub_blocks_overflow)
+        sub_epoch_data_weight = uint128(
+            sub_epoch_data_weight + curr_difficulty * (sub_blocks_for_se + data.num_sub_blocks_overflow)
+        )
 
         # add to dict
-        summaries[idx] = ses
+        summaries[uint32(idx)] = ses
         ses_hash = std_hash(ses)
     return summaries, sub_epoch_data_weight
 
@@ -715,7 +742,7 @@ def get_last_ses_block_idx(
 
 
 def empty_sub_slot_data(end_of_slot: EndOfSubSlotBundle):
-    icc_end_of_slot_info: Optional = None
+    icc_end_of_slot_info: Optional[VDFInfo] = None
     if end_of_slot.infused_challenge_chain is not None:
         icc_end_of_slot_info = end_of_slot.infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
     return SubSlotData(

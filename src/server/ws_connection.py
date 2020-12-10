@@ -307,4 +307,5 @@ class WSChiaConnection:
         if result is None:
             return None
         connection_host = result[0]
-        return PeerInfo(connection_host, self.peer_server_port)
+        port = self.peer_server_port if self.peer_server_port is not None else self.peer_port
+        return PeerInfo(connection_host, port)
