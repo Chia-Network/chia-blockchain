@@ -85,7 +85,7 @@ kwargs = dict(
             "chia_farmer = src.server.start_farmer:main",
             "chia_introducer = src.server.start_introducer:main",
             "chia_timelord = src.server.start_timelord:main",
-            "chia_timelord_launcher = src.timelord_launcher:main",
+            "chia_timelord_launcher = src.timelord.timelord_launcher:main",
             "chia_full_node_simulator = src.simulator.start_simulator:main",
         ]
     },
