@@ -1,8 +1,7 @@
 import logging
 import random
-from typing import Dict, Optional, List, Union, Tuple
+from typing import Dict, Optional, List, Tuple
 
-from blspy import AugSchemeMPL
 
 from src.consensus.blockchain import Blockchain
 from src.consensus.constants import ConsensusConstants
@@ -26,34 +25,33 @@ from src.types.weight_proof import (
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint8, uint128
 
-
-class BlockCache:
-    def __init__(self, blockchain: Blockchain):
-        # todo make these read only copies from here
-        self._sub_blocks = blockchain.sub_blocks
-        self._block_store = blockchain.block_store
-        self._sub_height_to_hash = blockchain.sub_height_to_hash
-
-    async def header_block(self, header_hash: bytes32) -> HeaderBlock:
-        block = await self._block_store.get_full_block(header_hash)
-        assert block is not None
-        return await block.get_block_header()
-
-    async def height_to_header_block(self, height: uint32) -> HeaderBlock:
-        block = await self._block_store.get_full_blocks_at([height])
-        return await block[0].get_block_header()
-
-    def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
-        return self._sub_blocks[header_hash]
-
-    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
-        return self._sub_blocks[self._height_to_hash(height)]
-
-    def max_height(self) -> uint32:
-        return uint32(len(self._sub_blocks) - 1)
-
-    def _height_to_hash(self, height: uint32) -> bytes32:
-        return self._sub_height_to_hash[height]
+#
+# class BlockCache:
+#     def __init__(self, blockchain: Blockchain):
+#         # todo make these read only copies from here
+#         self._sub_blocks = blockchain.sub_blocks
+#         self._block_store = blockchain.block_store
+#         self._sub_height_to_hash = blockchain.sub_height_to_hash
+#
+#     def header_block(self, header_hash: bytes32) -> HeaderBlock:
+#         block = await self._block_store.get_full_block(header_hash)
+#         assert block is not None
+#         return await block.get_block_header()
+#
+#     def height_to_header_block(self, height: uint32) -> HeaderBlock:
+#         return HeaderBlock()
+#
+#     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
+#         return self._sub_blocks[header_hash]
+#
+#     def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
+#         return self._sub_blocks[self._height_to_hash(height)]
+#
+#     def max_height(self) -> uint32:
+#         return uint32(len(self._sub_blocks) - 1)
+#
+#     def _height_to_hash(self, height: uint32) -> bytes32:
+#         return self._sub_height_to_hash[height]
 
 
 class BlockCacheMock:
@@ -114,7 +112,7 @@ class WeightProofHandler:
     def __init__(
         self,
         constants: ConsensusConstants,
-        block_cache: Union[BlockCache, BlockCacheMock],
+        block_cache: BlockCacheMock = None,
         name: str = None,
     ):
         self.constants = constants
@@ -228,10 +226,13 @@ class WeightProofHandler:
         return True
 
     def validate_sub_epoch_summaries(
-        self, weight_proof: WeightProof, fork_point: Optional[SubBlockRecord], prev_ses_hash: bytes32
+        self,
+        weight_proof: WeightProof,
+        fork_point: Optional[SubBlockRecord] = None,
+        prev_ses_hash: Optional[bytes32] = None,
     ):
-
-        if fork_point is None or fork_point.sub_block_height == 0:
+        if prev_ses_hash is None or fork_point.sub_block_height == 0:
+            prev_ses_hash = self.constants.GENESIS_SES_HASH
             fork_point_difficulty = self.constants.DIFFICULTY_STARTING
         else:
             fork_point_difficulty = uint64(
@@ -255,7 +256,6 @@ class WeightProofHandler:
         if last_ses.get_hash() != last_ses_block.finished_sub_slots[-1].challenge_chain.subepoch_summary_hash:
             self.log.error(
                 f"failed to validate ses hashes block height {last_ses_block.reward_chain_sub_block.sub_block_height}"
-                f"{last_ses.get_hash()}  {last_ses_block.finished_sub_slots[-1].challenge_chain.subepoch_summary_hash}"
             )
             return None
         return summaries
@@ -267,11 +267,11 @@ class WeightProofHandler:
         curr_ssi: uint64,
         rc_sub_slot_hash: bytes32,
     ):
-        # total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
+        total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
         total_slot_iters, total_slots = uint64(0), uint64(0)
         total_ip_iters = uint64(0)
         # validate sub epoch samples
-
+        cc_sub_slot: Optional[ChallengeChainSubSlot] = None
         curr_sub_epoch_n = -1
 
         for idx, segment in enumerate(weight_proof.sub_epoch_segments):
@@ -281,21 +281,29 @@ class WeightProofHandler:
                 # recreate RewardChainSubSlot for next ses rc_hash
                 # get last slot of prev segment
                 if curr_sub_epoch_n != -1:
-                    rc_sub_slot_hash = self.get_rc_sub_slot_hash(weight_proof.sub_epoch_segments[idx - 1], summaries)
+                    rc_sub_slot, cc_sub_slot, icc_sub_slot = self.get_rc_sub_slot_hash(
+                        weight_proof.sub_epoch_segments[idx - 1], summaries
+                    )
+                    rc_sub_slot_hash = rc_sub_slot.get_hash()
 
+                self.log.info(f"compare segment rc_sub_slot_hash with ses reward_chain_hash")
                 if not summaries[segment.sub_epoch_n].reward_chain_hash == rc_sub_slot_hash:
                     self.log.error(f"failed reward_chain_hash validation sub_epoch {segment.sub_epoch_n}")
                     self.log.error(f"rc slot hash  {rc_sub_slot_hash}")
                     return False
 
-                # if not self.__validate_segment_slots(
-                #     summaries, segment, curr_ssi, total_slot_iters, total_slots, total_ip_iters, rc_sub_slot_hash
-                # ):
-                # self.log.error(f"failed to validate segment {idx} of sub_epoch {segment.sub_epoch_n} slots")
-                # return False
+                self.log.info(f"validating segment {idx}")
+                valid_segment, total_slot_iters, total_slots, challenge_blocks = self._validate_segment_slots(
+                    summaries, segment, curr_ssi, total_slot_iters, total_slots, total_ip_iters, cc_sub_slot
+                )
 
+                # if not valid_segment:
+                #     self.log.error(f"failed to validate segment {idx} of sub_epoch {segment.sub_epoch_n} slots")
+                #     return False
+
+                # total_challenge_blocks += challenge_blocks
             curr_sub_epoch_n = segment.sub_epoch_n
-        # todo floats
+
         # avg_ip_iters = total_ip_iters / total_challenge_blocks
         # avg_slot_iters = total_slot_iters / total_slots
         # if avg_slot_iters / avg_ip_iters < float(self.constants.WEIGHT_PROOF_THRESHOLD):
@@ -308,7 +316,7 @@ class WeightProofHandler:
         self,
         segment: SubEpochChallengeSegment,
         summaries: Dict[uint32, SubEpochSummary],
-    ) -> RewardChainSubSlot:
+    ) -> (RewardChainSubSlot, ChallengeChainSubSlot, InfusedChallengeChainSubSlot):
 
         ses = summaries[segment.sub_epoch_n]
         first_slot = segment.sub_slots[0]
@@ -328,18 +336,13 @@ class WeightProofHandler:
             deficit = uint8(deficit - 1)  # no overflow in start of sub epoch
 
         rc_sub_slot = RewardChainSubSlot(
-            segment.last_reward_chain_vdf_info,
+            first_slot.rc_slot_end_info,
             cc_sub_slot.get_hash(),
             icc_sub_slot.get_hash(),
             uint8(deficit),  # -1 if no overflows in start of sub_epoch
         )
-        self.log.info(f"recreated rc sub slot \n {rc_sub_slot}")
-        self.log.info("------------------------------------------------------------")
-        self.log.info(f"recreated  cc sub slot \n {cc_sub_slot}")
-        self.log.info("------------------------------------------------------------")
-        self.log.info(f"recreated  icc sub slot  \n {icc_sub_slot}")
 
-        return rc_sub_slot.get_hash()
+        return rc_sub_slot, cc_sub_slot, icc_sub_slot
 
     async def __create_sub_epoch_segments(
         self, block: SubBlockRecord, sub_epoch_blocks_n: uint32, sub_epoch_n: uint32
@@ -354,11 +357,6 @@ class WeightProofHandler:
         last_slot_hb = await self.block_cache.header_block(block.header_hash)
         assert last_slot_hb.finished_sub_slots is not None
         last_slot = last_slot_hb.finished_sub_slots[-1]
-        self.log.info(f"rc sub slot  \n {last_slot.reward_chain}")
-        self.log.info("------------------------------------------------------------")
-        self.log.info(f"cc sub slot \n {last_slot.challenge_chain}")
-        self.log.info("------------------------------------------------------------")
-        self.log.info(f"icc sub slot \n {last_slot.infused_challenge_chain}")
 
         count: uint32 = sub_epoch_blocks_n
         while not count == 0:
@@ -386,10 +384,10 @@ class WeightProofHandler:
         first_sub_slots, end_height = await self.__first_sub_slots_data(block)
         sub_slots.extend(first_sub_slots)
 
-        # VDFs from slot after challenge block to end of slot
+        # # VDFs from slot after challenge block to end of slot
         self.log.debug(f"create slot end vdf for block {block.header_hash} height {block.sub_block_height} ")
 
-        end_height_hb = await self.block_cache.height_to_header_block(end_height)
+        end_height_hb = await self.block_cache.height_to_header_block(uint32(160))
         challenge_slot_end_sub_slots = await self.__get_slot_end_vdf(end_height_hb)
 
         sub_slots.extend(challenge_slot_end_sub_slots)
@@ -409,7 +407,17 @@ class WeightProofHandler:
                 # slot finished combine proofs and add slot data to list
                 sub_slots_data.append(
                     SubSlotData(
-                        None, None, None, None, None, combine_proofs(cc_proofs), combine_proofs(icc_proofs), None, None
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        combine_proofs(cc_proofs),
+                        combine_proofs(icc_proofs),
+                        None,
+                        None,
+                        None,
                     )
                 )
 
@@ -424,11 +432,12 @@ class WeightProofHandler:
                 cc_proofs = []
 
             # append sub slot proofs
-            assert curr.infused_challenge_chain_ip_proof is not None
-            assert curr.challenge_chain_sp_proof is not None
-            assert curr.challenge_chain_ip_proof is not None
-            icc_proofs.append(curr.infused_challenge_chain_ip_proof)
-            cc_proofs.extend([curr.challenge_chain_sp_proof, curr.challenge_chain_ip_proof])
+            if curr.infused_challenge_chain_ip_proof is not None:
+                icc_proofs.append(curr.infused_challenge_chain_ip_proof)
+            if curr.challenge_chain_sp_proof is not None:
+                cc_proofs.append(curr.challenge_chain_sp_proof)
+            if curr.challenge_chain_ip_proof is not None:
+                cc_proofs.append(curr.challenge_chain_ip_proof)
 
         return sub_slots_data
 
@@ -444,20 +453,25 @@ class WeightProofHandler:
                 sub_slots.append(empty_sub_slot_data(sub_slot))
 
         # find sub slot end
-        # curr = block
+        curr = block
         next_slot_height: uint32 = uint32(0)
         cc_slot_end_vdf: List[VDFProof] = []
         icc_slot_end_vdf: List[VDFProof] = []
         while True:
-            curr = self.block_cache.height_to_sub_block_record(block.sub_block_height + 1)
-            curr_header = await self.block_cache.header_block(curr.header_hash)
+            curr = self.block_cache.height_to_sub_block_record(curr.sub_block_height + 1)
+            curr_header = await self.block_cache.height_to_header_block(curr.sub_block_height + 1)
             assert curr_header.finished_sub_slots is not None
             if len(curr_header.finished_sub_slots) > 0:
-                # sub slot ended
+                icc_vdf: Optional[VDFInfo] = None
+                if curr_header.finished_sub_slots[-1].infused_challenge_chain is not None:
+                    icc_vdf = curr_header.finished_sub_slots[
+                        -1
+                    ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf
                 next_slot_height = uint32(curr.sub_block_height + 1)
-                assert curr_header.finished_sub_slots[-1].infused_challenge_chain is not None
+                assert curr_header.finished_sub_slots[-1] is not None
                 sub_slots.append(
                     SubSlotData(
+                        None,
                         None,
                         None,
                         None,
@@ -466,20 +480,20 @@ class WeightProofHandler:
                         combine_proofs(cc_slot_end_vdf),
                         combine_proofs(icc_slot_end_vdf),
                         curr_header.finished_sub_slots[-1].challenge_chain.challenge_chain_end_of_slot_vdf,
-                        curr_header.finished_sub_slots[
-                            -1
-                        ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
+                        icc_vdf,
+                        curr_header.finished_sub_slots[-1].reward_chain.end_of_slot_vdf,
                     )
                 )
 
             if curr.is_challenge_sub_block(self.constants):
                 break
 
-            assert curr_header.challenge_chain_sp_proof is not None
+            if curr_header.challenge_chain_sp_proof is not None:
+                cc_slot_end_vdf.append(curr_header.challenge_chain_sp_proof)
             assert curr_header.challenge_chain_ip_proof is not None
-            assert curr_header.infused_challenge_chain_ip_proof is not None
             cc_slot_end_vdf.extend([curr_header.challenge_chain_sp_proof, curr_header.challenge_chain_ip_proof])
-            icc_slot_end_vdf.append(curr_header.infused_challenge_chain_ip_proof)
+            if curr_header.infused_challenge_chain_ip_proof is not None:
+                icc_slot_end_vdf.append(curr_header.infused_challenge_chain_ip_proof)
 
         sub_slots.append(
             SubSlotData(
@@ -487,9 +501,11 @@ class WeightProofHandler:
                 block.reward_chain_sub_block.challenge_chain_sp_signature,
                 block.challenge_chain_sp_proof,
                 block.challenge_chain_ip_proof,
+                block.reward_chain_sub_block.challenge_chain_sp_vdf,
                 block.reward_chain_sub_block.signage_point_index,
                 combine_proofs(cc_slot_end_vdf),
                 combine_proofs(icc_slot_end_vdf),
+                None,
                 None,
                 None,
             )
@@ -498,48 +514,31 @@ class WeightProofHandler:
         return sub_slots, next_slot_height
 
     def __get_quality_string(
-        self, segment: SubEpochChallengeSegment, ses: SubEpochSummary, slot_iters: uint64
+        self, segment: SubEpochChallengeSegment, idx: int, ses: SubEpochSummary
     ) -> Optional[bytes32]:
 
         # find challenge block sub slot
-        challenge_sub_slot: Optional[SubSlotData] = None
-        idx = 0
-        for idx, slot in enumerate(segment.sub_slots):
-            if slot.proof_of_space is not None:
-                challenge_sub_slot = slot
-                break
-
+        challenge_sub_slot: Optional[SubSlotData] = segment.sub_slots[idx]
         cc_vdf = segment.sub_slots[idx - 1].cc_slot_end_info
         icc_vdf = segment.sub_slots[idx - 1].icc_slot_end_info
         assert cc_vdf is not None and icc_vdf is not None
         cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_vdf.get_hash(), None, None, None)
-        # get challenge
-        self.log.debug(f"cc_end_of_slot {cc_sub_slot}")
+        challenge = cc_sub_slot.get_hash()
 
-        # check filter
-        assert challenge_sub_slot is not None
-        if challenge_sub_slot.cc_signage_point is None:
+        if challenge_sub_slot.cc_sp_vdf_info is None:
+            self.log.info(f"challenge from prev slot {challenge_sub_slot.cc_sp_vdf_info}")
             cc_sp_hash: bytes32 = cc_sub_slot.get_hash()
         else:
-            assert challenge_sub_slot.cc_signage_point is not None
-            cc_sp_hash = challenge_sub_slot.cc_signage_point.output.get_hash()
-
-        if not AugSchemeMPL.verify(
-            challenge_sub_slot.proof_of_space.plot_public_key,
-            cc_sp_hash,
-            challenge_sub_slot.cc_sp_sig,
-        ):
-            self.log.error("did not pass filter")
-            return None
-
+            self.log.info(f"challenge from sp vdf {challenge_sub_slot.cc_sp_vdf_info}")
+            cc_sp_hash = challenge_sub_slot.cc_sp_vdf_info.output.get_hash()
         # validate proof of space
         return challenge_sub_slot.proof_of_space.verify_and_get_quality_string(
             self.constants,
-            cc_sub_slot.get_hash(),
+            challenge,
             cc_sp_hash,
         )
 
-    def __validate_segment_slots(
+    def _validate_segment_slots(
         self,
         summaries: Dict[uint32, SubEpochSummary],
         segment: SubEpochChallengeSegment,
@@ -547,13 +546,13 @@ class WeightProofHandler:
         total_slot_iters: uint64,
         total_slots: uint64,
         total_ip_iters: uint64,
-        challenge: bytes32,
+        cc_sub_slot: ChallengeChainSubSlot,
     ) -> (bool, uint64, uint64, int):
         ses = summaries[segment.sub_epoch_n]
         challenge_blocks = 0
         if ses.new_sub_slot_iters is not None:
             curr_ssi: uint64 = ses.new_sub_slot_iters
-        for sub_slot in segment.sub_slots:
+        for idx, sub_slot in enumerate(segment.sub_slots):
             total_slot_iters += curr_ssi
             total_slots += 1
 
@@ -563,25 +562,21 @@ class WeightProofHandler:
             #     return False
 
             if sub_slot.is_challenge():
-                q_str = self.__get_quality_string(segment, summaries[segment.sub_epoch_n], curr_ssi)
+                self.log.info("validate proof of space")
+                q_str = self.__get_quality_string(segment, idx, ses)
                 if q_str is None:
-                    self.log.info(f"failed to validate {segment} segment space proof")
-                    return False
+                    self.log.error(f"failed to validate segment space proof")
+                    return False, 0, 0, 0
                 required_iters: uint64 = calculate_iterations_quality(
                     q_str,
                     sub_slot.proof_of_space.size,
-                    challenge,
+                    cc_sub_slot.get_hash(),
                     sub_slot.cc_signage_point.get_hash(),
                 )
                 total_ip_iters += calculate_ip_iters(
                     self.constants, curr_ssi, sub_slot.cc_signage_point_index, required_iters
                 )
                 challenge_blocks += 1
-
-            if sub_slot.cc_slot_end_info is not None:
-                challenge = sub_slot.cc_slot_end_info.get_hash()
-            else:
-                self.log.error("implement")
 
         return True, total_slot_iters, total_slots, challenge_blocks
 
@@ -604,7 +599,7 @@ def make_sub_epoch_data(
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
 
-def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: Union[BlockCache, BlockCacheMock]) -> uint32:
+def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: BlockCacheMock) -> uint32:
     """
     returns the number of blocks in a sub epoch ending with
     """
@@ -704,7 +699,6 @@ def get_last_ses_block_idx(
     constants: ConsensusConstants, recent_reward_chain: List[ProofBlockHeader]
 ) -> Optional[ProofBlockHeader]:
     for idx, block in enumerate(reversed(recent_reward_chain)):
-        print(f"check block {block.reward_chain_sub_block.sub_block_height} for ses")
         if uint8(block.reward_chain_sub_block.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS) == 0:
             idx = len(recent_reward_chain) - 1 - idx  # reverse
             # find first block after sub slot end
@@ -713,7 +707,6 @@ def get_last_ses_block_idx(
                 if len(curr.finished_sub_slots) > 0:
                     for slot in curr.finished_sub_slots:
                         if slot.challenge_chain.subepoch_summary_hash is not None:
-                            print(f"last ses at {curr.reward_chain_sub_block.sub_block_height}")
                             return curr
                 idx += 1
                 curr = recent_reward_chain[idx]
@@ -731,8 +724,10 @@ def empty_sub_slot_data(end_of_slot: EndOfSubSlotBundle):
         None,
         None,
         None,
+        None,
         end_of_slot.proofs.challenge_chain_slot_proof,
         end_of_slot.proofs.infused_challenge_chain_slot_proof,
         end_of_slot.challenge_chain.challenge_chain_end_of_slot_vdf,
         icc_end_of_slot_info,
+        end_of_slot.reward_chain.end_of_slot_vdf,
     )

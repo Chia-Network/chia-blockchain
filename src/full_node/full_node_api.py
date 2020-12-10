@@ -18,7 +18,7 @@ from src.consensus.pot_iterations import (
 from src.full_node.full_node import FullNode
 from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.weight_proof import init_block_block_cache_mock
+from src.full_node.weight_proof import init_block_block_cache_mock, WeightProofHandler
 
 from src.protocols import introducer_protocol, farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from src.protocols.wallet_protocol import RejectHeaderRequest
@@ -181,16 +181,22 @@ class FullNodeAPI:
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         self.log.info(f"got weight proof request {request}")
         cache = await init_block_block_cache_mock(self.full_node.blockchain, uint32(0), request.total_number_of_blocks)
-        self.full_node.weight_proof_handler.set_block_cache(cache)
-        wp = self.full_node.weight_proof_handler.create_proof_of_weight(
-            self.full_node.constants.WEIGHT_PROOF_RECENT_BLOCKS, request.total_number_of_blocks, request.tip
+        wpf = WeightProofHandler(self.full_node.constants, cache)
+        wpf.set_block_cache(cache)
+        wp = wpf.create_proof_of_weight(
+            uint32(self.full_node.constants.WEIGHT_PROOF_RECENT_BLOCKS), request.total_number_of_blocks, request.tip
         )
         return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp))
 
     @api_request
     async def respond_proof_of_weight(self, response: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
         self.log.info(f"got weight proof response {response.wp}")
-        return await self.full_node.weight_proof_handler.validate_weight_proof(response)
+        cache = await init_block_block_cache_mock(
+            self.full_node.blockchain, uint32(0), self.full_node.blockchain.peak_height
+        )
+        wpf = WeightProofHandler(self.full_node.constants, cache)
+        wpf.set_block_cache(cache)
+        return await wpf.validate_weight_proof(response.wp)
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:

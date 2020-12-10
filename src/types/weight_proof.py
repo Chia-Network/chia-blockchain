@@ -43,7 +43,7 @@ class SubSlotData(Streamable):
     cc_signage_point: Optional[VDFProof]
     # VDF from signage to infusion point
     cc_infusion_point: Optional[VDFProof]
-
+    cc_sp_vdf_info: Optional[VDFInfo]
     cc_signage_point_index: Optional[uint8]
 
     # VDF from beginning to end of slot if not infused
@@ -54,20 +54,12 @@ class SubSlotData(Streamable):
     # info from finished slots
     cc_slot_end_info: Optional[VDFInfo]
     icc_slot_end_info: Optional[VDFInfo]
+    rc_slot_end_info: Optional[VDFInfo]
 
     def is_challenge(self):
-        if self.cc_slot_end is not None:
-            return False
-        if self.cc_sp_sig is None:
-            return False
-        if self.cc_signage_point is None:
-            return False
-        if self.cc_infusion_point is None:
-            return False
-        if self.icc_infusion_to_slot_end_vdf is None:
-            return False
-
-        return True
+        if self.proof_of_space is not None:
+            return True
+        return False
 
 
 @dataclass(frozen=True)
