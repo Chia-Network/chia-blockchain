@@ -213,8 +213,11 @@ class FullNodeAPI:
         """
         Receive a full block from a peer full node (or ourselves).
         """
-        async with self.full_node.timelord_lock:
+        if self.full_node.sync_store.get_sync_mode():
             return await self.full_node.respond_sub_block(respond_sub_block, peer)
+        else:
+            async with self.full_node.timelord_lock:
+                return await self.full_node.respond_sub_block(respond_sub_block, peer)
 
     @api_request
     async def new_unfinished_sub_block(
