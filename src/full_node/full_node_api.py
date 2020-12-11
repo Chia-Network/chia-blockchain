@@ -721,7 +721,7 @@ class FullNodeAPI:
         # Propagate to ourselves (which validates and does further propagations)
         request = full_node_protocol.RespondUnfinishedSubBlock(new_candidate)
 
-        await self.full_node.respond_unfinished_sub_block(request, None)
+        await self.full_node.respond_unfinished_sub_block(request, None, True)
         return None
 
     # TIMELORD PROTOCOL
