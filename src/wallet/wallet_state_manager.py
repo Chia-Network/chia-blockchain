@@ -173,9 +173,8 @@ class WalletStateManager:
         return self
 
     @property
-    def peak(self) -> SubBlockRecord:
+    def peak(self) -> Optional[SubBlockRecord]:
         peak = self.blockchain.get_peak()
-        assert peak is not None
         return peak
 
     def get_derivation_index(self, pubkey: G1Element, max_depth: int = 1000) -> int:
