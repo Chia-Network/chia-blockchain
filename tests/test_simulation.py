@@ -31,7 +31,7 @@ class TestSimulation:
         node1, node2, _, _, _, _, _, server1 = simulation
         await server1.start_client(PeerInfo("localhost", uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
-        await time_out_assert(500, node_height_at_least, True, node2, 20)
+        await time_out_assert(500, node_height_at_least, True, node2, 10)
 
         # Wait additional 2 minutes to get a compact block.
         # max_height = node1.full_node.blockchain.lca_block.height
