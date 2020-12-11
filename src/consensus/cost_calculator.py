@@ -17,7 +17,7 @@ def calculate_cost_of_program(
     This function calculates the total cost of either block or a spendbundle
     """
     total_clvm_cost = 0
-    error, npc_list, cost = get_name_puzzle_conditions(program)
+    error, npc_list, cost = get_name_puzzle_conditions(program, True)
     if error:
         raise Exception("get_name_puzzle_conditions raised error" + str(error))
     total_clvm_cost += cost

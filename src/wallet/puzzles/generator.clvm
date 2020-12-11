@@ -21,15 +21,10 @@
         )
   )
 
-  (defun len (arg count)
-    (if arg
-      (len (r arg) (+ count 1))
-      count
-    )
-  )
-
+  ; TODO: this could be a macro
   (defun npc_list_for_coinsolution (coin_solution)
-    (if (and (= (len coin_solution 0) 2) (= (len (f (r coin_solution)) 0) 2) (= (strlen (f coin_solution)) 32))
+    ; The pattern (= (r (r foo)) ()) checks that foo is a list of length 2
+    (if (and (= (r (r coin_solution)) ()) (= (r (r (f (r coin_solution)))) ()) (= (strlen (f coin_solution)) 32))
       (list (f coin_solution) (sha256tree1 (f (f (r coin_solution)))) ((c (f (f (r coin_solution))) (f (r (f (r coin_solution)))))))
       (x)
     )
