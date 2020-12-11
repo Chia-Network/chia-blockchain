@@ -85,18 +85,18 @@ class TesKeychain(unittest.TestCase):
         child_sk = AugSchemeMPL.derive_child_sk(master_sk, 0)
         assert child_sk == PrivateKey.from_bytes(tv_child_int.to_bytes(32, "big"))
 
-    # def test_bip39_test_vectors_trezor(self):
-    #     with open("tests/util/bip39_test_vectors.json") as f:
-    #         all_vectors = json.loads(f.read())
-    #
-    #     for vector_list in all_vectors["english"]:
-    #         entropy_bytes = bytes.fromhex(vector_list[0])
-    #         mnemonic = vector_list[1]
-    #         seed = bytes.fromhex(vector_list[2])
-    #
-    #         assert bytes_from_mnemonic(mnemonic) == entropy_bytes
-    #         assert bytes_to_mnemonic(entropy_bytes) == mnemonic
-    #         assert mnemonic_to_seed(mnemonic, "TREZOR") == seed
+    def test_bip39_test_vectors_trezor(self):
+        with open("tests/util/bip39_test_vectors.json") as f:
+            all_vectors = json.loads(f.read())
+
+        for vector_list in all_vectors["english"]:
+            entropy_bytes = bytes.fromhex(vector_list[0])
+            mnemonic = vector_list[1]
+            seed = bytes.fromhex(vector_list[2])
+
+            assert bytes_from_mnemonic(mnemonic) == entropy_bytes
+            assert bytes_to_mnemonic(entropy_bytes) == mnemonic
+            assert mnemonic_to_seed(mnemonic, "TREZOR") == seed
 
     def test_utf8_nfkd(self):
         # Test code from trezor:

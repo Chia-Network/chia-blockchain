@@ -6,10 +6,8 @@ from typing import AsyncGenerator, List, Optional, Tuple, Callable, Dict
 from chiabip158 import PyBIP158
 from blspy import G2Element, AugSchemeMPL
 
-from src.consensus.block_creation import unfinished_block_to_full_block, create_unfinished_block
-from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty
+from src.consensus.block_creation import create_unfinished_block
 from src.consensus.pot_iterations import (
-    is_overflow_sub_block,
     calculate_ip_iters,
     calculate_sp_iters,
     calculate_iterations_quality,
@@ -36,7 +34,6 @@ from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required
-from src.util.errors import ConsensusError
 from src.util.ints import uint64, uint128, uint8, uint32
 from src.types.peer_info import PeerInfo
 from src.util.merkle_set import MerkleSet

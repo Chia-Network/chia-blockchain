@@ -34,7 +34,8 @@
 #             assert result is True
 #             result_fee, proof_fee = merkle_set.is_included_already_hashed(block.get_fees_coin().name())
 #             assert result_fee is False
-#             validate_proof = confirm_included_already_hashed(merkle_set.get_root(), block.get_coinbase().name(), proof)
+#             validate_proof = confirm_included_already_hashed(merkle_set.get_root(), block.get_coinbase().name(),
+#             proof)
 #             validate_proof_fee = confirm_included_already_hashed(
 #                 merkle_set.get_root(), block.get_fees_coin().name(), proof_fee
 #             )
