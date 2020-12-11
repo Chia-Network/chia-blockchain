@@ -166,6 +166,8 @@ class FullNodeDiscovery:
                 connected = [c for c in connected if c is not None]
                 for conn in full_node_connected:
                     peer = conn.get_peer_info()
+                    if peer is None:
+                        continue
                     group = peer.get_group()
                     if group not in groups:
                         groups.append(group)
