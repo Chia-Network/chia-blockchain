@@ -22,7 +22,7 @@ def event_loop():
     yield loop
 
 
-constants = test_constants.replace(COINBASE_FREEZE_PERIOD=200)
+constants = test_constants
 
 
 class TestCoinStore:

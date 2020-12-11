@@ -289,10 +289,6 @@ async def validate_block_body(
                 if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
                     # Check for coins spent in an ancestor block
                     return Err.DOUBLE_SPEND
-                # If it's a coinbase, check that it's not frozen
-                if unspent.coinbase == 1:
-                    if sub_height < unspent.confirmed_block_index + constants.COINBASE_FREEZE_PERIOD:
-                        return Err.COINBASE_NOT_YET_SPENDABLE
                 removal_coin_records[unspent.name] = unspent
             else:
                 # This coin is not in the current heaviest chain, so it must be in the fork
@@ -300,10 +296,6 @@ async def validate_block_body(
                     # Check for spending a coin that does not exist in this fork
                     # TODO: fix this, there is a consensus bug here
                     return Err.UNKNOWN_UNSPENT
-                if rem in coinbases_since_fork:
-                    # This coin is a coinbase coin
-                    if sub_height < coinbases_since_fork[rem] + constants.COINBASE_FREEZE_PERIOD:
-                        return Err.COINBASE_NOT_YET_SPENDABLE
                 new_coin, confirmed_height = additions_since_fork[rem]
                 new_coin_record: CoinRecord = CoinRecord(
                     new_coin,

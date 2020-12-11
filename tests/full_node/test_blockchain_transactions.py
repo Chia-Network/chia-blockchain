@@ -23,14 +23,12 @@
 # class TestBlockchainTransactions:
 #     @pytest.fixture(scope="function")
 #     async def two_nodes(self):
-#         constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
-#         async for _ in setup_two_nodes(constants):
+#         async for _ in setup_two_nodes(test_constants):
 #             yield _
 #
 #     @pytest.fixture(scope="function")
 #     async def two_nodes_standard_freeze(self):
-#         constants = test_constants.replace(COINBASE_FREEZE_PERIOD=200)
-#         async for _ in setup_two_nodes(constants):
+#         async for _ in setup_two_nodes(test_constants):
 #             yield _
 #
 #     @pytest.mark.asyncio
