@@ -1373,8 +1373,8 @@ class TestBlockHeaderValidation:
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_REWARD_BLOCK_HASH
 
     @pytest.mark.asyncio
-    async def test_reward_block_hash(self, empty_blockchain):
-        # 31
+    async def test_reward_block_hash_2(self, empty_blockchain):
+        # 33
         blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(blocks[0], "reward_chain_sub_block.is_block", False)
         block_bad: FullBlock = recursive_replace(

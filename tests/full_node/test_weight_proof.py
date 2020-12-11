@@ -1,7 +1,7 @@
 # flake8: noqa: F811, F401
 import asyncio
 import logging
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 
 import pytest
 
@@ -48,7 +48,7 @@ def count_sub_epochs(blockchain, last_hash) -> int:
     return count
 
 
-def get_prev_ses_block(sub_blocks, last_hash) -> (SubBlockRecord, int):
+def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[SubBlockRecord, int]:
     curr = sub_blocks[last_hash]
     blocks = 1
     while True:
