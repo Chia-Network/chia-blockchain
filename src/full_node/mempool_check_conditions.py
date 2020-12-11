@@ -4,6 +4,8 @@ from src.types.condition_var_pair import ConditionVarPair
 from src.types.spend_bundle import SpendBundle
 from src.types.coin_record import CoinRecord
 from src.types.name_puzzle_condition import NPC
+from src.types.program import Program
+from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode, conditions_by_opcode
@@ -99,25 +101,34 @@ def get_name_puzzle_conditions(block_program):
     cost, result = GENERATOR_MOD.run_with_cost(block_program)
     npc_list = []
     opcodes = set(item.value for item in ConditionOpcode)
-    for res in result.as_python():
+    # TODO: as_python can cause blow up - use as_iter
+    for res in result.as_iter():
         conditions_list = []
-        name = res[0]
-        puzzle_hash = bytes32(res[1])
-        for cond in res[2]:
-            if cond[0] in opcodes:
-                opcode = ConditionOpcode(cond[0])
-            else:
+        name = res.first().as_atom()
+        puzzle_hash = bytes32(res.rest().first().as_atom())
+        for cond in res.rest().rest().first().as_iter():
+            if cond.first().as_atom() in opcodes:
+                opcode = ConditionOpcode(cond.first().as_atom())
+            elif safe_mode:
                 opcode = ConditionOpcode.UNKNOWN
-            if len(cond) == 3:
-                cvp = ConditionVarPair(opcode, cond[1], cond[2])
             else:
-                cvp = ConditionVarPair(opcode, cond[1])
+                raise Exception
+            # TODO: Rename CVP class
+            if len(list(cond.as_iter())) > 1:
+                cond_var_list = []
+                for cond in cond.rest().as_iter():
+                    cond_var_list.append(cond.as_atom())
+                cvp = ConditionVarPair(opcode, *cond_var_list)
+            else:
+                cvp = ConditionVarPair(opcode)
             conditions_list.append(cvp)
         conditions_dict = conditions_by_opcode(conditions_list)
         if conditions_dict is None:
             conditions_dict = {}
         npc_list.append(NPC(name, puzzle_hash, conditions_dict))
     return None, npc_list, uint64(cost)
+
+# TODO: write get puzzle and solution for coinname and blockprogram
 
 
 def mempool_check_conditions_dict(
