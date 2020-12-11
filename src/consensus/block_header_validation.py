@@ -776,6 +776,8 @@ async def validate_finished_header_block(
 
         # 28. Check weight
         if header_block.weight != prev_sb.weight + difficulty:
+            log.error(f"INVALID WEIGHT: {header_block} {prev_sb} {difficulty}")
+            log.error(f"EPOCY? {prev_sb.sub_epoch_summary_included}")
             return None, ValidationError(Err.INVALID_WEIGHT)
     else:
         if header_block.sub_block_height != uint32(0):
