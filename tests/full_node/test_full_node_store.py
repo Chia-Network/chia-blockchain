@@ -1,10 +1,11 @@
+# flake8: noqa: F811, F401
 import asyncio
 from secrets import token_bytes
 import pytest
 from pytest import raises
 
 from src.consensus.blockchain import ReceiveBlockResult
-from src.consensus.pot_iterations import calculate_sp_iters, is_overflow_sub_block
+from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.full_node_store import FullNodeStore
 from src.full_node.signage_point import SignagePoint
 from src.protocols.timelord_protocol import NewInfusionPointVDF

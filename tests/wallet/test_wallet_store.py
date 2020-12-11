@@ -30,9 +30,12 @@
 #             coin_2 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 #             coin_3 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 #             coin_4 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
-#             record_replaced = WalletCoinRecord(coin_1, uint32(8), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
-#             record_1 = WalletCoinRecord(coin_1, uint32(4), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
-#             record_2 = WalletCoinRecord(coin_2, uint32(5), uint32(0), False, True, WalletType.STANDARD_WALLET, 0)
+#             record_replaced = WalletCoinRecord(coin_1, uint32(8), uint32(0),
+#             False, True, WalletType.STANDARD_WALLET, 0)
+#             record_1 = WalletCoinRecord(coin_1, uint32(4), uint32(0), False,
+#             True, WalletType.STANDARD_WALLET, 0)
+#             record_2 = WalletCoinRecord(coin_2, uint32(5), uint32(0),
+#             False, True, WalletType.STANDARD_WALLET, 0)
 #             record_3 = WalletCoinRecord(
 #                 coin_3,
 #                 uint32(5),

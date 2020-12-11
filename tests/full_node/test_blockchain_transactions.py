@@ -400,14 +400,17 @@
 #             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Spends a coinbase created in reorg
-#         new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks[:6], 10, b"reorg cb coin", coinbase_puzzlehash)
+#         new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks[:6],
+#         10, b"reorg cb coin", coinbase_puzzlehash)
 #
 #         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
 #         assert new_blocks[-1].header_hash in full_node_1.blockchain.headers
 #
 #         spent_block = new_blocks[-1]
-#         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash, spent_block.get_coinbase())
-#         spend_bundle_2 = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash, spent_block.get_fees_coin())
+#         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash,
+#         spent_block.get_coinbase())
+#         spend_bundle_2 = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash,
+#         spent_block.get_fees_coin())
 #
 #         block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_2])
 #         program = best_solution_program(block_spendbundle)
@@ -451,7 +454,8 @@
 #             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Spends a coinbase created in reorg
-#         new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks[:6], 10, b"reorg cb coin", coinbase_puzzlehash)
+#         new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks[:6], 10,
+#         b"reorg cb coin", coinbase_puzzlehash)
 #         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
 #
 #         assert new_blocks[-1].header_hash in full_node_1.blockchain.headers

@@ -6,7 +6,6 @@ import pytest
 from src.protocols import full_node_protocol
 from src.server.outbound_message import Message, NodeType
 from src.types.peer_info import PeerInfo
-from src.types.unfinished_block import UnfinishedBlock
 from src.util.ints import uint16
 from tests.full_node.test_full_node import connect_and_get_peer
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
