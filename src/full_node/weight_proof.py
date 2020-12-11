@@ -32,34 +32,48 @@ from src.types.weight_proof import (
 )
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint8, uint128
+from src.wallet.wallet_blockchain import WalletBlockchain
 
-#
-# class BlockCache:
-#     def __init__(self, blockchain: Blockchain):
-#         # todo make these read only copies from here
-#         self._sub_blocks = blockchain.sub_blocks
-#         self._block_store = blockchain.block_store
-#         self._sub_height_to_hash = blockchain.sub_height_to_hash
-#
-#     def header_block(self, header_hash: bytes32) -> HeaderBlock:
-#         block = await self._block_store.get_full_block(header_hash)
-#         assert block is not None
-#         return await block.get_block_header()
-#
-#     def height_to_header_block(self, height: uint32) -> HeaderBlock:
-#         return HeaderBlock()
-#
-#     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
-#         return self._sub_blocks[header_hash]
-#
-#     def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
-#         return self._sub_blocks[self._height_to_hash(height)]
-#
-#     def max_height(self) -> uint32:
-#         return uint32(len(self._sub_blocks) - 1)
-#
-#     def _height_to_hash(self, height: uint32) -> bytes32:
-#         return self._sub_height_to_hash[height]
+
+class BlockCache:
+    def __init__(self, blockchain: Union[Blockchain, WalletBlockchain]):
+        if isinstance(blockchain, Blockchain):
+            self.type = Blockchain
+        elif isinstance(blockchain, WalletBlockchain):
+            self.type = WalletBlockchain
+        # todo make these read only copies from here
+        self._sub_blocks = blockchain.sub_blocks
+        self._block_store = blockchain.block_store
+        self._sub_height_to_hash = blockchain.sub_height_to_hash
+
+    async def header_block(self, header_hash: bytes32) -> HeaderBlock:
+        if isinstance(self.type, Blockchain):
+            block = await self._block_store.get_full_block(header_hash)
+            assert block is not None
+            return await block.get_block_header()
+        else:
+            block = await self._block_store.get_header_block(header_hash)
+            return block
+
+    async def height_to_header_block(self, height: uint32) -> HeaderBlock:
+        if isinstance(self.type, Blockchain):
+            block = await self._block_store.get_full_blocks_at([height])
+            return await block[0].get_block_header()
+        else:
+            block = await self._block_store.get_header_block_at([height])
+            return block[0]
+
+    def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
+        return self._sub_blocks[header_hash]
+
+    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
+        return self._sub_blocks[self._height_to_hash(height)]
+
+    def max_height(self) -> uint32:
+        return uint32(len(self._sub_blocks) - 1)
+
+    def _height_to_hash(self, height: uint32) -> bytes32:
+        return self._sub_height_to_hash[height]
 
 
 class BlockCacheMock:
