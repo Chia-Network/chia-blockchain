@@ -48,15 +48,10 @@ def event_loop():
 class TestMempool:
     @pytest.fixture(scope="function")
     async def two_nodes(self):
-        constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+        constants = test_constants.replace()
         async for _ in setup_two_nodes(constants):
             yield _
 
-    @pytest.fixture(scope="function")
-    async def two_nodes_small_freeze(self):
-        constants = test_constants.replace(COINBASE_FREEZE_PERIOD=30)
-        async for _ in setup_two_nodes(constants):
-            yield _
 
     @pytest.mark.asyncio
     async def test_basic_mempool(self, two_nodes):
@@ -86,47 +81,6 @@ class TestMempool:
             spend_bundle,
             spend_bundle.name(),
         )
-
-    @pytest.mark.asyncio
-    async def test_coinbase_freeze(self, two_nodes_small_freeze):
-        reward_ph = WALLET_A.get_new_puzzlehash()
-        blocks = bt.get_consecutive_blocks(
-            3,
-            guarantee_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        full_node_1, full_node_2, server_1, server_2 = two_nodes_small_freeze
-        peer = await connect_and_get_peer(server_1, server_2)
-
-        for block in blocks:
-            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-        await time_out_assert(60, node_height_at_least, True, full_node_1, 2)
-
-        spend_bundle = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0])
-        assert spend_bundle is not None
-        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-
-        await full_node_1.respond_transaction(tx, peer)
-
-        sb = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name())
-        assert sb is None
-
-        blocks = bt.get_consecutive_blocks(
-            30,
-            block_list_input=blocks,
-            guarantee_block=True,
-            farmer_reward_puzzle_hash=reward_ph,
-            pool_reward_puzzle_hash=reward_ph,
-        )
-        for block in blocks:
-            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-        await time_out_assert(60, node_height_at_least, True, full_node_1, 32)
-
-        await full_node_1.respond_transaction(tx, peer)
-
-        sb = full_node_1.full_node.mempool_manager.get_spendbundle(spend_bundle.name())
-        assert sb is spend_bundle
 
     @pytest.mark.asyncio
     async def test_double_spend(self, two_nodes):

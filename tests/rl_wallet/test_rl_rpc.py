@@ -23,7 +23,7 @@
 # class TestRLWallet:
 #     @pytest.fixture(scope="function")
 #     async def three_wallet_nodes(self):
-#         async for _ in setup_simulators_and_wallets(1, 3, {"COINBASE_FREEZE_PERIOD": 0}):
+#         async for _ in setup_simulators_and_wallets(1, 3, {}):
 #             yield _
 #
 #     @pytest.mark.asyncio
