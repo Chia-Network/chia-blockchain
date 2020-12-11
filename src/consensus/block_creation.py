@@ -6,7 +6,10 @@ import blspy
 from blspy import G2Element, G1Element
 from chiabip158 import PyBIP158
 
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from src.consensus.block_rewards import (
+    calculate_pool_reward,
+    calculate_base_farmer_reward,
+)
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
 from src.full_node.bundle_tools import best_solution_program
@@ -16,12 +19,20 @@ from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.coin import Coin, hash_coin_list
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo, FoliageSubBlockData
+from src.types.foliage import (
+    FoliageSubBlock,
+    FoliageBlock,
+    TransactionsInfo,
+    FoliageSubBlockData,
+)
 from src.types.full_block import additions_for_npc, FullBlock
 from src.types.pool_target import PoolTarget
 from src.types.program import Program
 from src.types.proof_of_space import ProofOfSpace
-from src.types.reward_chain_sub_block import RewardChainSubBlockUnfinished, RewardChainSubBlock
+from src.types.reward_chain_sub_block import (
+    RewardChainSubBlockUnfinished,
+    RewardChainSubBlock,
+)
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
@@ -114,7 +125,8 @@ def create_foliage(
     )
 
     foliage_sub_block_signature: G2Element = get_plot_signature(
-        foliage_sub_block_data.get_hash(), reward_sub_block.proof_of_space.plot_public_key
+        foliage_sub_block_data.get_hash(),
+        reward_sub_block.proof_of_space.plot_public_key,
     )
 
     prev_sub_block_hash: bytes32 = constants.GENESIS_PREV_HASH
@@ -219,7 +231,12 @@ def create_foliage(
         filter_hash: bytes32 = std_hash(encoded)
 
         transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
-            bytes([0] * 32), generator_hash, aggregate_sig, uint64(spend_bundle_fees), cost, reward_claims_incorporated
+            bytes([0] * 32),
+            generator_hash,
+            aggregate_sig,
+            uint64(spend_bundle_fees),
+            cost,
+            reward_claims_incorporated,
         )
         if prev_block is None:
             prev_block_hash: bytes32 = constants.GENESIS_PREV_HASH
@@ -362,7 +379,7 @@ def create_unfinished_block(
         rc_sp_signature,
     )
 
-    foliage_sub_block, foliage_block, transactions_info, solution_program = create_foliage(
+    (foliage_sub_block, foliage_block, transactions_info, solution_program,) = create_foliage(
         constants,
         rc_sub_block,
         spend_bundle,
@@ -482,4 +499,8 @@ def unfinished_block_to_full_block(
         new_tx_info,
         new_generator,
     )
-    return recursive_replace(ret, "foliage_sub_block.reward_block_hash", ret.reward_chain_sub_block.get_hash())
+    return recursive_replace(
+        ret,
+        "foliage_sub_block.reward_block_hash",
+        ret.reward_chain_sub_block.get_hash(),
+    )

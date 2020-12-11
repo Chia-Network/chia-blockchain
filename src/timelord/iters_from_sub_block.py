@@ -1,7 +1,14 @@
 from typing import Union, Tuple, Optional
 
-from src.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_iters, calculate_ip_iters
-from src.types.reward_chain_sub_block import RewardChainSubBlock, RewardChainSubBlockUnfinished
+from src.consensus.pot_iterations import (
+    calculate_iterations_quality,
+    calculate_sp_iters,
+    calculate_ip_iters,
+)
+from src.types.reward_chain_sub_block import (
+    RewardChainSubBlock,
+    RewardChainSubBlockUnfinished,
+)
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint64
 
@@ -33,5 +40,10 @@ def iters_from_sub_block(
     )
     return (
         calculate_sp_iters(constants, sub_slot_iters, reward_chain_sub_block.signage_point_index),
-        calculate_ip_iters(constants, sub_slot_iters, reward_chain_sub_block.signage_point_index, required_iters),
+        calculate_ip_iters(
+            constants,
+            sub_slot_iters,
+            reward_chain_sub_block.signage_point_index,
+            required_iters,
+        ),
     )

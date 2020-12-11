@@ -6,7 +6,9 @@ from src.util.ints import uint128
 
 
 def get_prev_block(
-    curr: SubBlockRecord, sub_blocks: Dict[bytes32, SubBlockRecord], total_iters_sp: uint128
+    curr: SubBlockRecord,
+    sub_blocks: Dict[bytes32, SubBlockRecord],
+    total_iters_sp: uint128,
 ) -> Tuple[bool, SubBlockRecord]:
     prev_block = curr
     while not curr.is_block:

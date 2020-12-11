@@ -13,7 +13,10 @@ import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from src.consensus.block_creation import unfinished_block_to_full_block
 from src.consensus.blockchain import Blockchain, ReceiveBlockResult
 from src.consensus.constants import ConsensusConstants
-from src.consensus.difficulty_adjustment import get_sub_slot_iters_and_difficulty, can_finish_sub_and_full_epoch
+from src.consensus.difficulty_adjustment import (
+    get_sub_slot_iters_and_difficulty,
+    can_finish_sub_and_full_epoch,
+)
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.pot_iterations import is_overflow_sub_block, calculate_sp_iters
 from src.consensus.sub_block_record import SubBlockRecord
@@ -222,7 +225,10 @@ class FullNode:
             elif connection.connection_type is NodeType.WALLET:
                 # If connected to a wallet, send the Peak
                 request_wallet = wallet_protocol.NewPeak(
-                    peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height
+                    peak.header_hash,
+                    peak.sub_block_height,
+                    peak.weight,
+                    peak.sub_block_height,
                 )
                 await connection.send_message(Message("new_peak", request_wallet))
             elif connection.connection_type is NodeType.TIMELORD:
@@ -296,12 +302,20 @@ class FullNode:
         fork_point_height = -1
 
         self.sync_peers_handler = SyncPeersHandler(
-            self.sync_store, peers, fork_point_height, self.blockchain, target_peak_sb_height, self.server
+            self.sync_store,
+            peers,
+            fork_point_height,
+            self.blockchain,
+            target_peak_sb_height,
+            self.server,
         )
 
         # Start processing blocks that we have received (no block yet)
         block_processor = SyncBlocksProcessor(
-            self.sync_store, fork_point_height, uint32(target_peak_sb_height), self.blockchain
+            self.sync_store,
+            fork_point_height,
+            uint32(target_peak_sb_height),
+            self.blockchain,
         )
         block_processor_task = asyncio.create_task(block_processor.process())
         peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
@@ -364,7 +378,9 @@ class FullNode:
     async def _fetch_and_validate_weight_proof(self, peak_hash, peers, target_peak_sb_height) -> Optional[uint32]:
         wpf = WeightProofHandler(self.constants, init_block_block_cache_mock())
         response: Optional[Tuple[Any, ws.WSChiaConnection]] = await send_all_first_reply(
-            "request_proof_of_weight", full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash), peers
+            "request_proof_of_weight",
+            full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash),
+            peers,
         )
         if response is None:
             self.log.error("response was None")
@@ -412,7 +428,10 @@ class FullNode:
         peak: SubBlockRecord = self.blockchain.get_peak()
         if peak is not None:
             request_wallet = wallet_protocol.NewPeak(
-                peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height
+                peak.header_hash,
+                peak.sub_block_height,
+                peak.weight,
+                peak.sub_block_height,
             )
             msg = Message("new_peak", request_wallet)
             await self.server.send_to_all([msg], NodeType.WALLET)
@@ -433,7 +452,9 @@ class FullNode:
         return True
 
     async def respond_sub_block(
-        self, respond_sub_block: full_node_protocol.RespondSubBlock, peer: Optional[ws.WSChiaConnection] = None
+        self,
+        respond_sub_block: full_node_protocol.RespondSubBlock,
+        peer: Optional[ws.WSChiaConnection] = None,
     ):
         """
         Receive a full block from a peer full node (or ourselves).
@@ -710,7 +731,10 @@ class FullNode:
 
         async with self.blockchain.lock:
             # TODO: pre-validate VDFs outside of lock
-            required_iters, error_code = await self.blockchain.validate_unfinished_block(block)
+            (
+                required_iters,
+                error_code,
+            ) = await self.blockchain.validate_unfinished_block(block)
             if error_code is not None:
                 raise ConsensusError(error_code)
 
@@ -726,7 +750,12 @@ class FullNode:
             sub_height = uint32(self.blockchain.sub_blocks[block.prev_header_hash].sub_block_height + 1)
 
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-            self.constants, self.blockchain.sub_blocks, self.blockchain.sub_height_to_hash, required_iters, block, True
+            self.constants,
+            self.blockchain.sub_blocks,
+            self.blockchain.sub_height_to_hash,
+            required_iters,
+            block,
+            True,
         )
 
         self.full_node_store.add_unfinished_block(sub_height, block)
@@ -815,7 +844,8 @@ class FullNode:
 
             # TODO: finished slots is not correct
             overflow = is_overflow_sub_block(
-                self.constants, unfinished_block.reward_chain_sub_block.signage_point_index
+                self.constants,
+                unfinished_block.reward_chain_sub_block.signage_point_index,
             )
             finished_sub_slots = self.full_node_store.get_finished_sub_slots(
                 prev_sb,
@@ -912,7 +942,10 @@ class FullNode:
                     uint8(0),
                     bytes([0] * 32),
                 )
-                return Message("request_signage_point_or_end_of_sub_slot", full_node_request), False
+                return (
+                    Message("request_signage_point_or_end_of_sub_slot", full_node_request),
+                    False,
+                )
 
             peak = self.blockchain.get_peak()
             if peak is not None and peak.sub_block_height > 2:
@@ -924,7 +957,9 @@ class FullNode:
 
             # Adds the sub slot and potentially get new infusions
             new_infusions = self.full_node_store.new_finished_sub_slot(
-                request.end_of_slot_bundle, self.blockchain.sub_blocks, self.blockchain.get_peak()
+                request.end_of_slot_bundle,
+                self.blockchain.sub_blocks,
+                self.blockchain.get_peak(),
             )
             # It may be an empty list, even if it's not None. Not None means added successfully
             if new_infusions is not None:

@@ -77,7 +77,14 @@ def get_signage_point_vdf_info(
             assert curr.finished_challenge_slot_hashes is not None
             assert curr.finished_reward_slot_hashes is not None
             found_sub_slots = list(
-                reversed(list(zip(curr.finished_challenge_slot_hashes, curr.finished_reward_slot_hashes)))
+                reversed(
+                    list(
+                        zip(
+                            curr.finished_challenge_slot_hashes,
+                            curr.finished_reward_slot_hashes,
+                        )
+                    )
+                )
             )
         else:
             found_sub_slots = []
@@ -90,7 +97,14 @@ def get_signage_point_vdf_info(
                 assert curr.finished_challenge_slot_hashes is not None
                 assert curr.finished_reward_slot_hashes is not None
                 found_sub_slots += list(
-                    reversed(list(zip(curr.finished_challenge_slot_hashes, curr.finished_reward_slot_hashes)))
+                    reversed(
+                        list(
+                            zip(
+                                curr.finished_challenge_slot_hashes,
+                                curr.finished_reward_slot_hashes,
+                            )
+                        )
+                    )
                 )
         if sp_pre_sb is None and curr.total_iters < sp_total_iters:
             sp_pre_sb = curr

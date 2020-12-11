@@ -107,9 +107,9 @@ class Farmer:
     def set_server(self, server):
         self.server = server
 
-    def state_changed(self, change: str):
+    def state_changed(self, change: str, sp_hash: bytes32):
         if self.state_changed_callback is not None:
-            self.state_changed_callback(change)
+            self.state_changed_callback(change, sp_hash)
 
     def get_public_keys(self):
         return [child_sk.get_g1() for child_sk in self._private_keys]
@@ -120,7 +120,7 @@ class Farmer:
     async def _periodically_clear_cache_task(self):
         time_slept: uint64 = uint64(0)
         while not self._shut_down:
-            if time_slept > self.constants.SUB_SLOT_TIME_TARGET * 3:
+            if time_slept > self.constants.SUB_SLOT_TIME_TARGET * 2:
                 removed_keys: List[bytes32] = []
                 for key, add_time in self.cache_add_time.items():
                     self.sps.pop(key, None)
@@ -131,5 +131,6 @@ class Farmer:
                 for key in removed_keys:
                     self.cache_add_time.pop(key, None)
                 time_slept = uint64(0)
-            time_slept += 0.1
-            await asyncio.sleep(0.1)
+                log.warning(f"Cleared farmer cache. Num sps: {len(self.sps)}")
+            time_slept += 1
+            await asyncio.sleep(1)

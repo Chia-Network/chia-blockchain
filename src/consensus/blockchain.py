@@ -9,7 +9,10 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.block_body_validation import validate_block_body
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
-from src.consensus.difficulty_adjustment import get_next_difficulty, get_next_sub_slot_iters
+from src.consensus.difficulty_adjustment import (
+    get_next_difficulty,
+    get_next_sub_slot_iters,
+)
 from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.full_block import FullBlock
@@ -175,7 +178,11 @@ class Blockchain:
             return ReceiveBlockResult.ALREADY_HAVE_BLOCK, None, None
 
         if block.prev_header_hash not in self.sub_blocks and not genesis:
-            return ReceiveBlockResult.DISCONNECTED_BLOCK, Err.INVALID_PREV_BLOCK_HASH, None
+            return (
+                ReceiveBlockResult.DISCONNECTED_BLOCK,
+                Err.INVALID_PREV_BLOCK_HASH,
+                None,
+            )
 
         required_iters, error = await validate_finished_header_block(
             self.constants,
@@ -198,7 +205,12 @@ class Blockchain:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
         sub_block = block_to_sub_block_record(
-            self.constants, self.sub_blocks, self.sub_height_to_hash, required_iters, block, None
+            self.constants,
+            self.sub_blocks,
+            self.sub_height_to_hash,
+            required_iters,
+            block,
+            None,
         )
 
         # Always add the block to the database
