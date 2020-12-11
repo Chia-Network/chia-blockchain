@@ -57,9 +57,18 @@ class SubSlotData(Streamable):
     rc_slot_end_info: Optional[VDFInfo]
 
     def is_challenge(self):
-        if self.proof_of_space is not None:
-            return True
-        return False
+        if self.cc_slot_end is not None:
+            return False
+        if self.cc_sp_sig is None:
+            return False
+        if self.cc_signage_point is None:
+            return False
+        if self.cc_infusion_point is None:
+            return False
+        if self.icc_slot_end_info is None:
+            return False
+
+        return True
 
 
 @dataclass(frozen=True)

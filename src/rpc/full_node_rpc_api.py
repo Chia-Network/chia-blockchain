@@ -49,12 +49,14 @@ class FullNodeRpcApi:
         #     return payloads
         return []
 
+    #
     # async def get_blockchain_state(self, request: Dict):
     #     """
     #     Returns a summary of the node's view of the blockchain.
     #     """
-    #     tips: List[Header] = self.service.blockchain.get_current_tips()
-    #     lca: Header = self.service.blockchain.lca_block
+    #     peak: Optional[SubBlockRecord] = self.service.blockchain.get_peak()
+    #     if peak is not None and peak.height > 0:
+    #         difficulty = uint64(peak.weight - self.service.blockchain.sub_blocks[peak.prev_hash].weight)
     #     sync_mode: bool = self.service.sync_store.get_sync_mode()
     #     difficulty: uint64 = self.service.blockchain.get_next_difficulty(lca)
     #     lca_block = await self.service.block_store.get_block(lca.header_hash)
@@ -105,6 +107,7 @@ class FullNodeRpcApi:
     #     }
     #     self.cached_blockchain_state = dict(response["blockchain_state"])
     #     return response
+
     #
     # async def get_block(self, request: Dict) -> Optional[Dict]:
     #     if "header_hash" not in request:

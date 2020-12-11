@@ -421,6 +421,7 @@ async def validate_unfinished_header_block(
         log.error(
             f"Data: {genesis_block} {overflow} {skip_overflow_last_ss_validation} {header_block.total_iters} "
             f"{header_block.reward_chain_sub_block.signage_point_index}"
+            f"Prev: {prev_sb}"
         )
         log.error(f"Challenge {challenge} provided {header_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}")
         return None, ValidationError(Err.INVALID_CC_CHALLENGE)
@@ -717,6 +718,9 @@ async def validate_unfinished_header_block(
             while not curr_sb.is_block:
                 curr_sb = sub_blocks[curr_sb.prev_hash]
             if not header_block.foliage_block.prev_block_hash == curr_sb.header_hash:
+                log.error(
+                    f"Prev BH: {header_block.foliage_block.prev_block_hash} {curr_sb.header_hash} curr sb: {curr_sb}"
+                )
                 return None, ValidationError(Err.INVALID_PREV_BLOCK_HASH)
 
         # 25. The filter hash in the Foliage Block must be the hash of the filter
@@ -907,11 +911,6 @@ async def validate_finished_header_block(
         if header_block.reward_chain_sub_block.infused_challenge_chain_ip_vdf is None:
             # If we don't have an ICC chain, deficit must be 4 or 5
             if deficit < constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
-                log.error(
-                    "no icc vdf and deficit is lower than %d",
-                    header_block.header_hash,
-                    constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1,
-                )
                 return None, ValidationError(Err.INVALID_ICC_VDF)
         else:
             assert header_block.infused_challenge_chain_ip_proof is not None

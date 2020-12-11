@@ -12,7 +12,7 @@ test_constants_modified = test_constants.replace(
         "DISCRIMINANT_SIZE_BITS": 1024,
         "SUB_EPOCH_SUB_BLOCKS": 140,
         "MAX_SUB_SLOT_SUB_BLOCKS": 50,
-        "NUM_SPS_SUB_SLOT": 64,  # Must be a power of 2
+        "NUM_SPS_SUB_SLOT": 32,  # Must be a power of 2
         "EPOCH_SUB_BLOCKS": 280,
         "SUB_SLOT_ITERS_STARTING": 2 ** 20,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 5,
@@ -31,7 +31,7 @@ class TestSimulation:
         node1, node2, _, _, _, _, _, server1 = simulation
         await server1.start_client(PeerInfo("localhost", uint16(21238)))
         # Use node2 to test node communication, since only node1 extends the chain.
-        await time_out_assert(500, node_height_at_least, True, node2, 10)
+        await time_out_assert(500, node_height_at_least, True, node2, 20)
 
         # Wait additional 2 minutes to get a compact block.
         # max_height = node1.full_node.blockchain.lca_block.height
