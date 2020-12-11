@@ -68,7 +68,8 @@
 #         assert next_spendbundle is not None
 #
 #         new_blocks = bt.get_consecutive_blocks(
-#             1, block_list_input=blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, transaction_data=next_spendbundle
+#             1, block_list_input=blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash,
+#             transaction_data=next_spendbundle
 #         )
 #
 #         next_block = new_blocks[11]
