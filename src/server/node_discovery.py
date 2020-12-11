@@ -249,7 +249,9 @@ class FullNodeDiscovery:
                 if addr is not None and initiate_connection:
                     asyncio.create_task(
                         self.server.start_client(
-                            addr, is_feeler=disconnect_after_handshake, on_connect=self.server.on_connect
+                            addr,
+                            is_feeler=disconnect_after_handshake,
+                            on_connect=self.server.on_connect,
                         )
                     )
                 sleep_interval = 1 + len(groups) * 0.5

@@ -49,7 +49,10 @@ from src.types.spend_bundle import SpendBundle
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.types.vdf import VDFInfo, VDFProof
-from src.consensus.block_creation import create_unfinished_block, unfinished_block_to_full_block
+from src.consensus.block_creation import (
+    create_unfinished_block,
+    unfinished_block_to_full_block,
+)
 from src.util.config import load_config
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint128, uint8
@@ -293,7 +296,10 @@ class BlockTools:
         # Get the challenge for that slot
         while True:
             slot_cc_challenge, slot_rc_challenge = get_challenges(
-                constants, sub_blocks, finished_sub_slots_at_sp, latest_sub_block.header_hash
+                constants,
+                sub_blocks,
+                finished_sub_slots_at_sp,
+                latest_sub_block.header_hash,
             )
             prev_num_of_blocks = num_blocks
             if num_empty_slots_added < skip_slots:
@@ -447,7 +453,12 @@ class BlockTools:
                 sub_epoch_summary: Optional[SubEpochSummary] = None
             else:
                 sub_epoch_summary = next_sub_epoch_summary(
-                    constants, sub_blocks, height_to_hash, latest_sub_block.required_iters, block_list[-1], False
+                    constants,
+                    sub_blocks,
+                    height_to_hash,
+                    latest_sub_block.required_iters,
+                    block_list[-1],
+                    False,
                 )
                 pending_ses = True
 
@@ -485,7 +496,11 @@ class BlockTools:
                 assert icc_sub_slot is not None
                 icc_sub_slot_hash = icc_sub_slot.get_hash() if latest_sub_block.deficit == 0 else None
                 cc_sub_slot = ChallengeChainSubSlot(
-                    cc_vdf, icc_sub_slot_hash, ses_hash, new_sub_slot_iters, new_difficulty
+                    cc_vdf,
+                    icc_sub_slot_hash,
+                    ses_hash,
+                    new_sub_slot_iters,
+                    new_difficulty,
                 )
             else:
                 # No icc
@@ -523,7 +538,8 @@ class BlockTools:
             # Handle overflows: No overflows on new epoch
             if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and new_difficulty is None:
                 for signage_point_index in range(
-                    constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA, constants.NUM_SPS_SUB_SLOT
+                    constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
+                    constants.NUM_SPS_SUB_SLOT,
                 ):
                     # note that we are passing in the finished slots which include the last slot
                     signage_point = get_signage_point(
@@ -667,10 +683,15 @@ class BlockTools:
                 # Try each of the proofs of space
                 for required_iters, proof_of_space in qualified_proofs:
                     sp_iters: uint64 = calculate_sp_iters(
-                        constants, uint64(constants.SUB_SLOT_ITERS_STARTING), uint8(signage_point_index)
+                        constants,
+                        uint64(constants.SUB_SLOT_ITERS_STARTING),
+                        uint8(signage_point_index),
                     )
                     ip_iters = calculate_ip_iters(
-                        constants, uint64(constants.SUB_SLOT_ITERS_STARTING), uint8(signage_point_index), required_iters
+                        constants,
+                        uint64(constants.SUB_SLOT_ITERS_STARTING),
+                        uint8(signage_point_index),
+                        required_iters,
                     )
                     is_overflow_block = is_overflow_sub_block(constants, uint8(signage_point_index))
                     if force_overflow and not is_overflow_block:
@@ -870,7 +891,13 @@ def get_signage_point(
         cc_vdf_iters,
         rc_vdf_iters,
     ) = get_signage_point_vdf_info(
-        constants, finished_sub_slots, overflow, latest_sub_block, sub_blocks, sp_total_iters, sp_iters
+        constants,
+        finished_sub_slots,
+        overflow,
+        latest_sub_block,
+        sub_blocks,
+        sp_total_iters,
+        sp_iters,
     )
 
     cc_sp_vdf, cc_sp_proof = get_vdf_info_and_proof(
@@ -923,7 +950,11 @@ def finish_sub_block(
     )
     cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
     deficit = calculate_deficit(
-        constants, uint32(latest_sub_block.sub_block_height + 1), latest_sub_block, is_overflow, len(finished_sub_slots)
+        constants,
+        uint32(latest_sub_block.sub_block_height + 1),
+        latest_sub_block,
+        is_overflow,
+        len(finished_sub_slots),
     )
 
     icc_ip_vdf, icc_ip_proof = get_icc(

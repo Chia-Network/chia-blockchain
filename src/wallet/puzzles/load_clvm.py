@@ -21,9 +21,7 @@ def load_clvm(clvm_filename, package_or_requirement=__name__) -> Program:
 
     try:
         if pkg_resources.resource_exists(package_or_requirement, clvm_filename):
-            full_path = pathlib.Path(
-                pkg_resources.resource_filename(package_or_requirement, clvm_filename)
-            )
+            full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
             output = full_path.parent / hex_filename
             compile_clvm(full_path, output)
     except NotImplementedError:
@@ -31,8 +29,6 @@ def load_clvm(clvm_filename, package_or_requirement=__name__) -> Program:
         # so we just fall through to loading the hex clvm
         pass
 
-    clvm_hex = pkg_resources.resource_string(
-        package_or_requirement, hex_filename
-    ).decode("utf8")
+    clvm_hex = pkg_resources.resource_string(package_or_requirement, hex_filename).decode("utf8")
     clvm_blob = bytes.fromhex(clvm_hex)
     return Program.from_bytes(clvm_blob)

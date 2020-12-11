@@ -10,6 +10,4 @@ from src.util.streamable import streamable, Streamable
 @streamable
 class CCInfo(Streamable):
     my_genesis_checker: Optional[Program]  # this is the program
-    lineage_proofs: List[
-        Tuple[bytes32, Optional[Program]]
-    ]  # {coin.name(): lineage_proof}
+    lineage_proofs: List[Tuple[bytes32, Optional[Program]]]  # {coin.name(): lineage_proof}

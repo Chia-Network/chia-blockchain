@@ -30,17 +30,11 @@ class WalletUserStore:
             )
         )
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS name on users_wallets(name)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS name on users_wallets(name)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS type on users_wallets(wallet_type)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS type on users_wallets(wallet_type)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS data on users_wallets(data)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS data on users_wallets(data)")
 
         await self.db_connection.commit()
         await self.init_wallet()
@@ -68,9 +62,7 @@ class WalletUserStore:
         return await self.get_last_wallet()
 
     async def delete_wallet(self, id: int):
-        cursor = await self.db_connection.execute(
-            f"DELETE FROM users_wallets where id={id}"
-        )
+        cursor = await self.db_connection.execute(f"DELETE FROM users_wallets where id={id}")
         await cursor.close()
         await self.db_connection.commit()
 
@@ -117,9 +109,7 @@ class WalletUserStore:
         Return a wallet by id
         """
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from users_wallets WHERE id=?", (id,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from users_wallets WHERE id=?", (id,))
         row = await cursor.fetchone()
         await cursor.close()
 

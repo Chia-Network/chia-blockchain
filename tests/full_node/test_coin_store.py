@@ -34,7 +34,10 @@ class TestCoinStore:
         # Generate some coins
         print("paying to ph", reward_ph)
         blocks = bt.get_consecutive_blocks(
-            10, [], farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            10,
+            [],
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
 
         coins_to_spend: List[Coin] = []

@@ -5,7 +5,10 @@ from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from src.consensus.block_rewards import (
+    calculate_pool_reward,
+    calculate_base_farmer_reward,
+)
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
 from src.consensus.find_fork_point import find_fork_point_in_chain
@@ -270,7 +273,12 @@ async def validate_block_body(
             # Ephemeral coin
             rem_coin: Coin = additions_dic[rem]
             new_unspent: CoinRecord = CoinRecord(
-                rem_coin, sub_height, uint32(0), False, False, block.foliage_block.timestamp
+                rem_coin,
+                sub_height,
+                uint32(0),
+                False,
+                False,
+                block.foliage_block.timestamp,
             )
             removal_coin_records[new_unspent.name] = new_unspent
         else:
@@ -356,7 +364,11 @@ async def validate_block_body(
         assert height is not None
         unspent = removal_coin_records[npc.coin_name]
         error = blockchain_check_conditions_dict(
-            unspent, removal_coin_records, npc.condition_dict, height, block.foliage_block.timestamp
+            unspent,
+            removal_coin_records,
+            npc.condition_dict,
+            height,
+            block.foliage_block.timestamp,
         )
         if error:
             return error

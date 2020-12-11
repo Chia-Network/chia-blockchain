@@ -52,7 +52,13 @@ def block_to_sub_block_record(
             prev_sb.sp_total_iters(constants),
         )
     overflow = is_overflow_sub_block(constants, block.reward_chain_sub_block.signage_point_index)
-    deficit = calculate_deficit(constants, block.sub_block_height, prev_sb, overflow, len(block.finished_sub_slots))
+    deficit = calculate_deficit(
+        constants,
+        block.sub_block_height,
+        prev_sb,
+        overflow,
+        len(block.finished_sub_slots),
+    )
     prev_block_hash = block.foliage_block.prev_block_hash if block.foliage_block is not None else None
     timestamp = block.foliage_block.timestamp if block.foliage_block is not None else None
     fees = block.transactions_info.fees if block.transactions_info is not None else None

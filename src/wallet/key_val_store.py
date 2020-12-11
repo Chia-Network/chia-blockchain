@@ -19,16 +19,10 @@ class KeyValStore:
         self.db_connection = connection
 
         await self.db_connection.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS key_val_store("
-                " key text PRIMARY KEY,"
-                " value text)"
-            )
+            ("CREATE TABLE IF NOT EXISTS key_val_store(" " key text PRIMARY KEY," " value text)")
         )
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS name on key_val_store(key)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS name on key_val_store(key)")
 
         await self.db_connection.commit()
         return self
@@ -43,9 +37,7 @@ class KeyValStore:
         Return bytes representation of stored object
         """
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from key_val_store WHERE key=?", (key,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from key_val_store WHERE key=?", (key,))
         row = await cursor.fetchone()
         await cursor.close()
 

@@ -62,7 +62,10 @@ class TestMempool:
     async def test_basic_mempool(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -78,14 +81,20 @@ class TestMempool:
         await full_node_1.respond_transaction(tx, peer)
 
         await time_out_assert(
-            10, full_node_1.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
+            10,
+            full_node_1.full_node.mempool_manager.get_spendbundle,
+            spend_bundle,
+            spend_bundle.name(),
         )
 
     @pytest.mark.asyncio
     async def test_coinbase_freeze(self, two_nodes_small_freeze):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes_small_freeze
         peer = await connect_and_get_peer(server_1, server_2)
@@ -123,7 +132,10 @@ class TestMempool:
     async def test_double_spend(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -139,7 +151,8 @@ class TestMempool:
         await full_node_1.respond_transaction(tx1, peer)
 
         spend_bundle2 = generate_test_spend_bundle(
-            list(blocks[-1].get_included_reward_coins())[0], newpuzzlehash=BURN_PUZZLE_HASH_2
+            list(blocks[-1].get_included_reward_coins())[0],
+            newpuzzlehash=BURN_PUZZLE_HASH_2,
         )
         assert spend_bundle2 is not None
         tx2: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle2)
@@ -155,7 +168,10 @@ class TestMempool:
     async def test_double_spend_with_higher_fee(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -187,7 +203,10 @@ class TestMempool:
     async def test_invalid_block_index(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -217,7 +236,10 @@ class TestMempool:
     async def test_correct_block_index(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -247,7 +269,10 @@ class TestMempool:
     async def test_invalid_block_age(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -273,7 +298,10 @@ class TestMempool:
     async def test_correct_block_age(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            4, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            4,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -300,7 +328,10 @@ class TestMempool:
     async def test_correct_my_id(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -328,7 +359,10 @@ class TestMempool:
     async def test_invalid_my_id(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -361,7 +395,10 @@ class TestMempool:
     async def test_assert_time_exceeds(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -390,7 +427,10 @@ class TestMempool:
     async def test_assert_time_exceeds_both_cases(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -430,7 +470,10 @@ class TestMempool:
     async def test_correct_coin_consumed(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            4, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            4,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -466,7 +509,10 @@ class TestMempool:
     async def test_invalid_coin_consumed(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            4, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            4,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -502,7 +548,10 @@ class TestMempool:
     async def test_assert_fee_condition(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -535,7 +584,10 @@ class TestMempool:
     async def test_assert_fee_condition_wrong_fee(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -568,7 +620,10 @@ class TestMempool:
     async def test_stealing_fee(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            5, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            5,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
 
         full_node_1, full_node_2, server_1, server_2 = two_nodes
@@ -620,7 +675,10 @@ class TestMempool:
     async def test_double_spend_same_bundle(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         peer = await connect_and_get_peer(server_1, server_2)
@@ -654,7 +712,10 @@ class TestMempool:
     async def test_agg_sig_condition(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()
         blocks = bt.get_consecutive_blocks(
-            3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            3,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 

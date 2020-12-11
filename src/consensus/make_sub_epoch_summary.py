@@ -48,7 +48,13 @@ def make_sub_epoch_summary(
     assert prev_prev_sub_block.sub_block_height == blocks_included_height - 2
     # If first sub_epoch. Adds MAX_SUB_SLOT_SUB_BLOCKS because blocks_included_height might be behind
     if (blocks_included_height + constants.MAX_SUB_SLOT_SUB_BLOCKS) // constants.SUB_EPOCH_SUB_BLOCKS == 1:
-        return SubEpochSummary(constants.GENESIS_SES_HASH, constants.FIRST_RC_CHALLENGE, uint8(0), None, None)
+        return SubEpochSummary(
+            constants.GENESIS_SES_HASH,
+            constants.FIRST_RC_CHALLENGE,
+            uint8(0),
+            None,
+            None,
+        )
     curr: SubBlockRecord = prev_prev_sub_block
     while curr.sub_epoch_summary_included is None:
         curr = sub_blocks[curr.prev_hash]
@@ -113,7 +119,11 @@ def next_sub_epoch_summary(
     )
     overflow = is_overflow_sub_block(constants, signage_point_index)
     deficit = calculate_deficit(
-        constants, uint32(prev_sb.sub_block_height + 1), prev_sb, overflow, len(block.finished_sub_slots)
+        constants,
+        uint32(prev_sb.sub_block_height + 1),
+        prev_sb,
+        overflow,
+        len(block.finished_sub_slots),
     )
     can_finish_se, can_finish_epoch = can_finish_sub_and_full_epoch(
         constants,
@@ -161,5 +171,10 @@ def next_sub_epoch_summary(
         )
 
     return make_sub_epoch_summary(
-        constants, sub_blocks, uint32(prev_sb.sub_block_height + 2), prev_sb, next_difficulty, next_sub_slot_iters
+        constants,
+        sub_blocks,
+        uint32(prev_sb.sub_block_height + 2),
+        prev_sb,
+        next_difficulty,
+        next_sub_slot_iters,
     )
