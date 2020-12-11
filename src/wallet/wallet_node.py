@@ -346,14 +346,12 @@ class WalletNode:
                 return None
             self.wallet_state_manager.sync_store.add_potential_proof(hb.header_hash, weight_proof)
             self.wallet_state_manager.sync_store.add_potential_peak(hb)
-            await asyncio.sleep(1)
             self.start_sync()
 
     def start_sync(self):
         self.sync_event.set()
 
     async def check_new_peak(self):
-        await asyncio.sleep(1)
         current_peak: Optional[SubBlockRecord] = self.wallet_state_manager.blockchain.get_peak()
         if current_peak is None:
             return
@@ -367,6 +365,7 @@ class WalletNode:
 
     async def sync_job(self):
         while True:
+            await asyncio.sleep(1)
             if self._shut_down is True:
                 break
             asyncio.create_task(self.check_new_peak())
@@ -388,7 +387,6 @@ class WalletNode:
         if self.wallet_state_manager is None or self.backup_initialized is False:
             return
 
-        await asyncio.sleep(2)
         highest_weight: uint128 = uint128(0)
         peak_height: uint32 = uint32(0)
         peak: Optional[HeaderBlock] = None
@@ -404,7 +402,7 @@ class WalletNode:
                 peak_height = potential_peak_block.height
                 peak = potential_peak_block
 
-        if self.wallet_state_manager.peak is not None and highest_weight <= self.wallet_state_manager.peak.weight or peak is None:
+        if self.wallet_state_manager.peak is not None and highest_weight <= self.wallet_state_manager.peak.weight:
             self.log.info("Not performing sync, already caught up.")
             return
 
