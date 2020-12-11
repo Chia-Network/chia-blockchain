@@ -17,9 +17,7 @@ class WalletTransactionStore:
     tx_record_cache: Dict[bytes32, TransactionRecord]
 
     @classmethod
-    async def create(
-        cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)
-    ):
+    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
         self = cls()
 
         self.cache_size = cache_size
@@ -52,29 +50,21 @@ class WalletTransactionStore:
             "CREATE INDEX IF NOT EXISTS tx_created_index on transaction_record(created_at_time)"
         )
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS tx_confirmed on transaction_record(confirmed)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS tx_confirmed on transaction_record(confirmed)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS tx_sent on transaction_record(sent)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS tx_sent on transaction_record(sent)")
 
         await self.db_connection.execute(
             "CREATE INDEX IF NOT EXISTS tx_created_time on transaction_record(created_at_time)"
         )
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS tx_type on transaction_record(type)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS tx_type on transaction_record(type)")
 
         await self.db_connection.execute(
             "CREATE INDEX IF NOT EXISTS tx_to_puzzle_hash on transaction_record(to_puzzle_hash)"
         )
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS wallet_id on transaction_record(wallet_id)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on transaction_record(wallet_id)")
 
         await self.db_connection.commit()
         self.tx_record_cache = dict()
@@ -143,9 +133,7 @@ class WalletTransactionStore:
         )
         await self.add_transaction_record(tx)
 
-    async def unconfirmed_with_removal_coin(
-        self, removal_id: bytes32
-    ) -> List[TransactionRecord]:
+    async def unconfirmed_with_removal_coin(self, removal_id: bytes32) -> List[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
         result = []
         all_unconfirmed: List[TransactionRecord] = await self.get_all_unconfirmed()
@@ -156,9 +144,7 @@ class WalletTransactionStore:
 
         return result
 
-    async def tx_with_addition_coin(
-        self, removal_id: bytes32, wallet_id: int
-    ) -> List[TransactionRecord]:
+    async def tx_with_addition_coin(self, removal_id: bytes32, wallet_id: int) -> List[TransactionRecord]:
         """ Returns a record containing removed coin with id: removal_id"""
         result = []
         all: List[TransactionRecord] = await self.get_all_transactions(wallet_id)
@@ -247,9 +233,7 @@ class WalletTransactionStore:
         """
         if id.hex() in self.tx_record_cache:
             return self.tx_record_cache[id.hex()]
-        cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE bundle_id=?", (id.hex(),)
-        )
+        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE bundle_id=?", (id.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
@@ -283,9 +267,7 @@ class WalletTransactionStore:
         Returns the list of all transaction that have not yet been confirmed.
         """
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed=?", (0,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE confirmed=?", (0,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -296,9 +278,7 @@ class WalletTransactionStore:
 
         return records
 
-    async def get_unconfirmed_for_wallet(
-        self, wallet_id: int
-    ) -> List[TransactionRecord]:
+    async def get_unconfirmed_for_wallet(self, wallet_id: int) -> List[TransactionRecord]:
         """
         Returns the list of transaction that have not yet been confirmed.
         """
@@ -325,9 +305,7 @@ class WalletTransactionStore:
         Returns all stored transactions.
         """
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record where wallet_id=?", (wallet_id,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from transaction_record where wallet_id=?", (wallet_id,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []

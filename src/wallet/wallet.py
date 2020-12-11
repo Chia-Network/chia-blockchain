@@ -63,9 +63,7 @@ class Wallet:
         return self.wallet_id
 
     async def get_confirmed_balance(self) -> uint64:
-        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(
-            self.id()
-        )
+        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id())
 
     async def get_unconfirmed_balance(self) -> uint64:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id())
@@ -74,27 +72,17 @@ class Wallet:
         return await self.wallet_state_manager.get_frozen_balance(self.id())
 
     async def get_spendable_balance(self) -> uint64:
-        spendable_am = (
-            await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
-                self.id()
-            )
-        )
+        spendable_am = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(self.id())
         return spendable_am
 
     async def get_pending_change_balance(self) -> uint64:
-        unconfirmed_tx = (
-            await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-                self.id()
-            )
-        )
+        unconfirmed_tx = await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.id())
         addition_amount = 0
 
         for record in unconfirmed_tx:
             our_spend = False
             for coin in record.removals:
-                if await self.wallet_state_manager.does_coin_belong_to_wallet(
-                    coin, self.id()
-                ):
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
                     our_spend = True
                     break
 
@@ -102,9 +90,7 @@ class Wallet:
                 continue
 
             for coin in record.additions:
-                if await self.wallet_state_manager.does_coin_belong_to_wallet(
-                    coin, self.id()
-                ):
+                if await self.wallet_state_manager.does_coin_belong_to_wallet(coin, self.id()):
                     addition_amount += coin.amount
 
         return uint64(addition_amount)
@@ -112,9 +98,7 @@ class Wallet:
     def puzzle_for_pk(self, pubkey: bytes) -> Program:
         return puzzle_for_pk(pubkey)
 
-    async def hack_populate_secret_key_for_puzzle_hash(
-        self, puzzle_hash: bytes32
-    ) -> G1Element:
+    async def hack_populate_secret_key_for_puzzle_hash(self, puzzle_hash: bytes32) -> G1Element:
         maybe = await self.wallet_state_manager.get_keys(puzzle_hash)
         if maybe is None:
             error_msg = f"Wallet couldn't find keys for puzzle_hash {puzzle_hash}"
@@ -125,24 +109,18 @@ class Wallet:
         public_key, secret_key = maybe
 
         # HACK
-        synthetic_secret_key = calculate_synthetic_secret_key(
-            secret_key, DEFAULT_HIDDEN_PUZZLE_HASH
-        )
+        synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
         self.secret_key_store.save_secret_key(synthetic_secret_key)
 
         return public_key
 
-    async def hack_populate_secret_keys_for_coin_solutions(
-        self, coin_solutions: List[CoinSolution]
-    ) -> None:
+    async def hack_populate_secret_keys_for_coin_solutions(self, coin_solutions: List[CoinSolution]) -> None:
         """
         This hack forces secret keys into the `_pk2sk` lookup. This should eventually be replaced
         by a persistent DB table that can do this look-up directly.
         """
         for coin_solution in coin_solutions:
-            await self.hack_populate_secret_key_for_puzzle_hash(
-                coin_solution.coin.puzzle_hash
-            )
+            await self.hack_populate_secret_key_for_puzzle_hash(coin_solution.coin.puzzle_hash)
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
@@ -153,18 +131,14 @@ class Wallet:
         return puzzle_for_pk(bytes(dr.pubkey))
 
     async def get_new_puzzlehash(self) -> bytes32:
-        return (
-            await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        ).puzzle_hash
+        return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
 
     def make_solution(self, primaries=None, min_time=0, me=None, consumed=None, fee=0):
         assert fee >= 0
         condition_list = []
         if primaries:
             for primary in primaries:
-                condition_list.append(
-                    make_create_coin_condition(primary["puzzlehash"], primary["amount"])
-                )
+                condition_list.append(make_create_coin_condition(primary["puzzlehash"], primary["amount"]))
         if consumed:
             for coin in consumed:
                 condition_list.append(make_assert_coin_consumed_condition(coin))
@@ -194,9 +168,7 @@ class Wallet:
 
             self.log.info(f"About to select coins for amount {amount}")
             unspent: List[WalletCoinRecord] = list(
-                await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                    self.id()
-                )
+                await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id())
             )
             sum_value = 0
             used_coins: Set = set()
@@ -206,9 +178,7 @@ class Wallet:
 
             # Try to use coins from the store, if there isn't enough of "unused"
             # coins use change coins that are not confirmed yet
-            unconfirmed_removals: Dict[
-                bytes32, Coin
-            ] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
+            unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
                 self.id()
             )
             for coinrecord in unspent:
@@ -220,9 +190,7 @@ class Wallet:
                     continue
                 sum_value += coinrecord.coin.amount
                 used_coins.add(coinrecord.coin)
-                self.log.info(
-                    f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!"
-                )
+                self.log.info(f"Selected coin: {coinrecord.coin.name()} at height {coinrecord.confirmed_block_index}!")
 
             # This happens when we couldn't use one of the coins because it's already used
             # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
@@ -292,9 +260,7 @@ class Wallet:
         return spends
 
     async def sign_transaction(self, coin_solutions: List[CoinSolution]) -> SpendBundle:
-        return await sign_coin_solutions(
-            coin_solutions, self.secret_key_store.secret_key_for_public_key
-        )
+        return await sign_coin_solutions(coin_solutions, self.secret_key_store.secret_key_for_public_key)
 
     async def generate_signed_transaction(
         self,
@@ -306,9 +272,7 @@ class Wallet:
     ) -> TransactionRecord:
         """ Use this to generate transaction. """
 
-        transaction = await self.generate_unsigned_transaction(
-            amount, puzzle_hash, fee, origin_id, coins
-        )
+        transaction = await self.generate_unsigned_transaction(amount, puzzle_hash, fee, origin_id, coins)
         assert len(transaction) > 0
 
         self.log.info("About to sign a transaction")
@@ -343,9 +307,7 @@ class Wallet:
         await self.wallet_state_manager.add_pending_transaction(tx)
 
     # This is to be aggregated together with a coloured coin offer to ensure that the trade happens
-    async def create_spend_bundle_relative_chia(
-        self, chia_amount: int, exclude: List[Coin]
-    ) -> SpendBundle:
+    async def create_spend_bundle_relative_chia(self, chia_amount: int, exclude: List[Coin]) -> SpendBundle:
         list_of_solutions = []
         utxos = None
 
@@ -376,7 +338,5 @@ class Wallet:
             list_of_solutions.append(CoinSolution(coin, Program.to([puzzle, solution])))
 
         await self.hack_populate_secret_keys_for_coin_solutions(list_of_solutions)
-        spend_bundle = await sign_coin_solutions(
-            list_of_solutions, self.secret_key_store.secret_key_for_public_key
-        )
+        spend_bundle = await sign_coin_solutions(list_of_solutions, self.secret_key_store.secret_key_for_public_key)
         return spend_bundle

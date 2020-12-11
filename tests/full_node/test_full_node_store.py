@@ -85,7 +85,10 @@ class TestFullNodeStore:
 
         assert (
             store.get_finished_sub_slots(
-                None, {}, sub_slots[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge, False
+                None,
+                {},
+                sub_slots[0].challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                False,
             )
             == []
         )
@@ -126,7 +129,12 @@ class TestFullNodeStore:
         assert store.get_sub_slot(sub_slots[4].challenge_chain.get_hash())[0] == sub_slots[4]
 
         assert (
-            store.get_finished_sub_slots(peak, blockchain.sub_blocks, sub_slots[-1].challenge_chain.get_hash(), False)
+            store.get_finished_sub_slots(
+                peak,
+                blockchain.sub_blocks,
+                sub_slots[-1].challenge_chain.get_hash(),
+                False,
+            )
             == []
         )
 
@@ -163,7 +171,13 @@ class TestFullNodeStore:
         ss_start_iters = peak.sp_sub_slot_total_iters(test_constants)
         for i in range(1, test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA):
             sp = get_signage_point(
-                test_constants, blockchain.sub_blocks, peak, ss_start_iters, uint8(i), [], peak.sub_slot_iters
+                test_constants,
+                blockchain.sub_blocks,
+                peak,
+                ss_start_iters,
+                uint8(i),
+                [],
+                peak.sub_slot_iters,
             )
             assert store.new_signage_point(i, blockchain.sub_blocks, peak, peak.sub_slot_iters, sp)
 
@@ -228,7 +242,10 @@ class TestFullNodeStore:
         # Test adding future signage point, a few slots forward (good)
         saved_sp_hash = None
         for slot_offset in range(1, len(finished_sub_slots)):
-            for i in range(1, test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA):
+            for i in range(
+                1,
+                test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA,
+            ):
                 sp = get_signage_point(
                     test_constants,
                     blockchain.sub_blocks,
@@ -272,7 +289,9 @@ class TestFullNodeStore:
         # Get signage point by index
         assert (
             store.get_signage_point_by_index(
-                finished_sub_slots[0].challenge_chain.get_hash(), 4, finished_sub_slots[0].reward_chain.get_hash()
+                finished_sub_slots[0].challenge_chain.get_hash(),
+                4,
+                finished_sub_slots[0].reward_chain.get_hash(),
             )
             is not None
         )
@@ -308,7 +327,10 @@ class TestFullNodeStore:
         finished_sub_slots = blocks_3[-1].finished_sub_slots
 
         for slot_offset in range(1, len(finished_sub_slots) + 1):
-            for i in range(1, test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA):
+            for i in range(
+                1,
+                test_constants.NUM_SPS_SUB_SLOT - test_constants.NUM_SP_INTERVALS_EXTRA,
+            ):
                 sp = get_signage_point(
                     test_constants,
                     {},

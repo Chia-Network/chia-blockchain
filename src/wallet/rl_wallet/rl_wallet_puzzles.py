@@ -87,9 +87,7 @@ def rl_puzzle_for_pk(
         fail("wrong min block time"),
     )
     TEMPLATE_MY_ID = make_list(hexstr(opcode_myid), sha256(args(0), args(1), args(2)))
-    CREATE_CHANGE = make_list(
-        hexstr(opcode_create), args(1), subtract(args(2), add(args(4), args(8)))
-    )
+    CREATE_CHANGE = make_list(hexstr(opcode_create), args(1), subtract(args(2), add(args(4), args(8))))
     CREATE_NEW_COIN = make_list(hexstr(opcode_create), args(3), args(4))
     RATE_LIMIT_PUZZLE = make_if(
         TEMPLATE_SINGLETON_RL,
@@ -118,12 +116,8 @@ def rl_puzzle_for_pk(
         sexp(),
         fail(quote("Parent doesnt satisfy RL conditions")),
     )
-    CREATE_CONSOLIDATED = make_list(
-        hexstr(opcode_create), args(1), (add(args(4), args(6)))
-    )
-    MODE_TWO_ME_STRING = make_list(
-        hexstr(opcode_myid), sha256(args(5), args(1), args(6))
-    )
+    CREATE_CONSOLIDATED = make_list(hexstr(opcode_create), args(1), (add(args(4), args(6))))
+    MODE_TWO_ME_STRING = make_list(hexstr(opcode_myid), sha256(args(5), args(1), args(6)))
     CREATE_LOCK = make_list(
         hexstr(opcode_create),
         sha256tree(
@@ -148,9 +142,7 @@ def rl_puzzle_for_pk(
         ),
         make_list(MODE_TWO_ME_STRING, CREATE_LOCK, CREATE_CONSOLIDATED),
     )
-    AGGSIG_ENTIRE_SOLUTION = make_list(
-        hexstr(opcode_aggsig), hexstr(hex_pk), sha256tree(args())
-    )
+    AGGSIG_ENTIRE_SOLUTION = make_list(hexstr(opcode_aggsig), hexstr(hex_pk), sha256tree(args()))
     WHOLE_PUZZLE = cons(
         AGGSIG_ENTIRE_SOLUTION,
         make_if(
@@ -164,9 +156,7 @@ def rl_puzzle_for_pk(
         rest(args()),
     )
 
-    WHOLE_PUZZLE_WITH_CLAWBACK = make_if(
-        equal(args(0), quote(3)), CLAWBACK, WHOLE_PUZZLE
-    )
+    WHOLE_PUZZLE_WITH_CLAWBACK = make_if(equal(args(0), quote(3)), CLAWBACK, WHOLE_PUZZLE)
 
     return Program.to(binutils.assemble(WHOLE_PUZZLE_WITH_CLAWBACK))
 
@@ -196,9 +186,7 @@ def rl_make_solution_mode_2(
 ):
     my_puzzle_hash = hexlify(my_puzzle_hash).decode("ascii")
     consolidating_primary_input = hexlify(consolidating_primary_input).decode("ascii")
-    consolidating_coin_puzzle_hash = hexlify(consolidating_coin_puzzle_hash).decode(
-        "ascii"
-    )
+    consolidating_coin_puzzle_hash = hexlify(consolidating_coin_puzzle_hash).decode("ascii")
     primary_input = hexlify(my_primary_input).decode("ascii")
     sol = sexp(
         2,
@@ -265,9 +253,7 @@ def rl_make_aggregation_puzzle(wallet_puzzle):
         )
     )
     parent_coin_id = sha256(args(1), hexstr(wallet_puzzle), args(2))
-    input_of_lock = make_list(
-        hexstr(opcode_consumed), sha256(parent_coin_id, lock_puzzle, quote(0))
-    )
+    input_of_lock = make_list(hexstr(opcode_consumed), sha256(parent_coin_id, lock_puzzle, quote(0)))
     puz = make_list(me_is_my_id, input_of_lock)
 
     return Program.to(binutils.assemble(puz))

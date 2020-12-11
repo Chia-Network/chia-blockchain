@@ -25,7 +25,11 @@ from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
 from src.util.clvm import int_to_bytes
 from tests.full_node.test_full_sync import node_height_at_least
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
+from tests.time_out_assert import (
+    time_out_assert,
+    time_out_assert_custom_interval,
+    time_out_messages,
+)
 from src.protocols.shared_protocol import protocol_version
 
 log = logging.getLogger(__name__)
@@ -49,7 +53,15 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
     url = f"wss://127.0.0.1:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
     wsc = WSChiaConnection(
-        NodeType.FULL_NODE, ws, server._port, log, True, False, "127.0.0.1", incoming_queue, lambda x: x
+        NodeType.FULL_NODE,
+        ws,
+        server._port,
+        log,
+        True,
+        False,
+        "127.0.0.1",
+        incoming_queue,
+        lambda x: x,
     )
     node_id = std_hash(b"123")
     handshake = await wsc.perform_handshake(
@@ -196,7 +208,12 @@ class TestFullNodeProtocol:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
         num_sub_slots_added = len(blocks[-1].finished_sub_slots[:-2])
         await time_out_assert(
-            10, time_out_messages(incoming_queue, "new_signage_point_or_end_of_sub_slot", num_sub_slots_added)
+            10,
+            time_out_messages(
+                incoming_queue,
+                "new_signage_point_or_end_of_sub_slot",
+                num_sub_slots_added,
+            ),
         )
 
         # Add empty slots unsuccessful
@@ -216,7 +233,12 @@ class TestFullNodeProtocol:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
         num_sub_slots_added = len(blocks[-1].finished_sub_slots)
         await time_out_assert(
-            10, time_out_messages(incoming_queue, "new_signage_point_or_end_of_sub_slot", num_sub_slots_added)
+            10,
+            time_out_messages(
+                incoming_queue,
+                "new_signage_point_or_end_of_sub_slot",
+                num_sub_slots_added,
+            ),
         )
 
     @pytest.mark.asyncio
@@ -309,7 +331,10 @@ class TestFullNodeProtocol:
         await full_node_1.respond_transaction(respond_transaction_2, peer)
 
         blocks_new = bt.get_consecutive_blocks(
-            2, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
+            2,
+            block_list_input=blocks,
+            guarantee_block=True,
+            transaction_data=spend_bundle,
         )
 
         # Already seen

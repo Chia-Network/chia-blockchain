@@ -25,7 +25,12 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint32, uint64
 from src.util.logging import initialize_logging
 from tests.setup_nodes import test_constants
-from tests.full_node.fixtures import empty_blockchain, default_1000_blocks, default_400_blocks, default_10000_blocks
+from tests.full_node.fixtures import (
+    empty_blockchain,
+    default_1000_blocks,
+    default_400_blocks,
+    default_10000_blocks,
+)
 
 
 @pytest.fixture(scope="module")

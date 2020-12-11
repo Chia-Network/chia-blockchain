@@ -17,9 +17,7 @@ class TradeStore:
     cache_size: uint32
 
     @classmethod
-    async def create(
-        cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)
-    ):
+    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
         self = cls()
 
         self.cache_size = cache_size
@@ -40,12 +38,8 @@ class TradeStore:
         await self.db_connection.execute(
             "CREATE INDEX IF NOT EXISTS trade_confirmed_index on trade_records(confirmed_at_index)"
         )
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS trade_status on trade_records(status)"
-        )
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS trade_id on trade_records(trade_id)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS trade_status on trade_records(status)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS trade_id on trade_records(trade_id)")
 
         await self.db_connection.commit()
         return self
@@ -74,9 +68,7 @@ class TradeStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def set_status(
-        self, trade_id: bytes32, status: TradeStatus, index: uint32 = uint32(0)
-    ):
+    async def set_status(self, trade_id: bytes32, status: TradeStatus, index: uint32 = uint32(0)):
         """
         Updates the status of the trade
         """
@@ -176,9 +168,7 @@ class TradeStore:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
-        cursor = await self.db_connection.execute(
-            "SELECT * from trade_records WHERE trade_id=?", (trade_id.hex(),)
-        )
+        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE trade_id=?", (trade_id.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
@@ -186,15 +176,11 @@ class TradeStore:
             return record
         return None
 
-    async def get_trade_record_with_status(
-        self, status: TradeStatus
-    ) -> List[TradeRecord]:
+    async def get_trade_record_with_status(self, status: TradeStatus) -> List[TradeRecord]:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
-        cursor = await self.db_connection.execute(
-            "SELECT * from trade_records WHERE status=?", (status.value,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE status=?", (status.value,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -230,9 +216,7 @@ class TradeStore:
         Returns the list of all trades that have not yet been confirmed.
         """
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from trade_records WHERE confirmed=?", (0,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE confirmed=?", (0,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
@@ -260,9 +244,7 @@ class TradeStore:
         return records
 
     async def get_trades_above(self, height: uint32) -> List[TradeRecord]:
-        cursor = await self.db_connection.execute(
-            "SELECT * from trade_records WHERE confirmed_at_index>?", (height,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE confirmed_at_index>?", (height,))
         rows = await cursor.fetchall()
         await cursor.close()
         records = []

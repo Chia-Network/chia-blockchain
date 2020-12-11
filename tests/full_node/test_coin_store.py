@@ -33,7 +33,10 @@ class TestCoinStore:
 
         # Generate some coins
         blocks = bt.get_consecutive_blocks(
-            10, [], farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            10,
+            [],
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
 
         coins_to_spend: List[Coin] = []

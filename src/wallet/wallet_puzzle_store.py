@@ -22,9 +22,7 @@ class WalletPuzzleStore:
     all_puzzle_hashes: Set[bytes32]
 
     @classmethod
-    async def create(
-        cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)
-    ):
+    async def create(cls, connection: aiosqlite.Connection, cache_size: uint32 = uint32(600000)):
         self = cls()
 
         self.cache_size = cache_size
@@ -46,25 +44,15 @@ class WalletPuzzleStore:
             "CREATE INDEX IF NOT EXISTS derivation_index_index on derivation_paths(derivation_index)"
         )
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS ph on derivation_paths(puzzle_hash)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS ph on derivation_paths(puzzle_hash)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS pubkey on derivation_paths(pubkey)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS pubkey on derivation_paths(pubkey)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS wallet_type on derivation_paths(wallet_type)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_type on derivation_paths(wallet_type)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS wallet_id on derivation_paths(wallet_id)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on derivation_paths(wallet_id)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS used on derivation_paths(wallet_type)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS used on derivation_paths(wallet_type)")
 
         await self.db_connection.commit()
         # Lock
@@ -109,9 +97,7 @@ class WalletPuzzleStore:
         await cursor.close()
         await self.db_connection.commit()
 
-    async def get_derivation_record(
-        self, index: uint32, wallet_id: uint32
-    ) -> Optional[DerivationRecord]:
+    async def get_derivation_record(self, index: uint32, wallet_id: uint32) -> Optional[DerivationRecord]:
         """
         Returns the derivation record by index and wallet id.
         """
@@ -136,9 +122,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_derivation_record_for_puzzle_hash(
-        self, puzzle_hash: str
-    ) -> Optional[DerivationRecord]:
+    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: str) -> Optional[DerivationRecord]:
         """
         Returns the derivation record by index and wallet id.
         """
@@ -230,9 +214,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def index_for_puzzle_hash_and_wallet(
-        self, puzzle_hash: bytes32, wallet_id: uint32
-    ) -> Optional[uint32]:
+    async def index_for_puzzle_hash_and_wallet(self, puzzle_hash: bytes32, wallet_id: uint32) -> Optional[uint32]:
         """
         Returns the derivation path for the puzzle_hash.
         Returns None if not present.
@@ -252,9 +234,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def wallet_info_for_puzzle_hash(
-        self, puzzle_hash: bytes32
-    ) -> Optional[Tuple[uint32, WalletType]]:
+    async def wallet_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[Tuple[uint32, WalletType]]:
         """
         Returns the derivation path for the puzzle_hash.
         Returns None if not present.
@@ -291,9 +271,7 @@ class WalletPuzzleStore:
         Returns the last derivation path by derivation_index.
         """
 
-        cursor = await self.db_connection.execute(
-            "SELECT MAX(derivation_index) FROM derivation_paths;"
-        )
+        cursor = await self.db_connection.execute("SELECT MAX(derivation_index) FROM derivation_paths;")
         row = await cursor.fetchone()
         await cursor.close()
 
@@ -302,9 +280,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_last_derivation_path_for_wallet(
-        self, wallet_id: int
-    ) -> Optional[uint32]:
+    async def get_last_derivation_path_for_wallet(self, wallet_id: int) -> Optional[uint32]:
         """
         Returns the last derivation path by derivation_index.
         """
@@ -324,9 +300,7 @@ class WalletPuzzleStore:
         """
         Returns the first unused derivation path by derivation_index.
         """
-        cursor = await self.db_connection.execute(
-            "SELECT MIN(derivation_index) FROM derivation_paths WHERE used=0;"
-        )
+        cursor = await self.db_connection.execute("SELECT MIN(derivation_index) FROM derivation_paths WHERE used=0;")
         row = await cursor.fetchone()
         await cursor.close()
 

@@ -7,7 +7,10 @@ from typing import Callable, List, Tuple
 from blspy import AugSchemeMPL, G2Element
 from chiapos import DiskProver
 
-from src.consensus.pot_iterations import calculate_sp_interval_iters, calculate_iterations_quality
+from src.consensus.pot_iterations import (
+    calculate_sp_interval_iters,
+    calculate_iterations_quality,
+)
 from src.harvester.harvester import Harvester
 from src.plotting.plot_tools import PlotInfo
 from src.protocols import harvester_protocol
@@ -78,7 +81,9 @@ class HarvesterAPI:
             # so it should be run in a thread pool.
             try:
                 sp_challenge_hash = ProofOfSpace.calculate_pos_challenge(
-                    plot_info.prover.get_id(), new_challenge.challenge_hash, new_challenge.sp_hash
+                    plot_info.prover.get_id(),
+                    new_challenge.challenge_hash,
+                    new_challenge.sp_hash,
                 )
                 quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
             except Exception as e:
@@ -91,7 +96,10 @@ class HarvesterAPI:
                 # Found proofs of space (on average 1 is expected per plot)
                 for index, quality_str in enumerate(quality_strings):
                     required_iters: uint64 = calculate_iterations_quality(
-                        quality_str, plot_info.prover.get_size(), new_challenge.difficulty, new_challenge.sp_hash
+                        quality_str,
+                        plot_info.prover.get_size(),
+                        new_challenge.difficulty,
+                        new_challenge.sp_hash,
                     )
                     sp_interval_iters = calculate_sp_interval_iters(
                         self.harvester.constants, new_challenge.sub_slot_iters

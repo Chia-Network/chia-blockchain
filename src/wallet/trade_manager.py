@@ -104,9 +104,7 @@ class TradeManager:
                 return trade
         return None
 
-    async def coins_of_interest_farmed(
-        self, removals: List[Coin], additions: List[Coin], index: uint32
-    ):
+    async def coins_of_interest_farmed(self, removals: List[Coin], additions: List[Coin], index: uint32):
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
         If coins from other side of trade got farmed without ours, that means that trade failed because either someone
@@ -149,32 +147,18 @@ class TradeManager:
 
             if failed is False:
                 # Mark this trade as succesfull
-                await self.trade_store.set_status(
-                    trade.trade_id, TradeStatus.CONFIRMED, index
-                )
-                self.log.info(
-                    f"Trade with id: {trade.trade_id} confirmed at height: {index}"
-                )
+                await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, index)
+                self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {index}")
             else:
                 # Either we canceled this trade or this trade failed
                 if trade.status == TradeStatus.PENDING_CANCEL.value:
-                    await self.trade_store.set_status(
-                        trade.trade_id, TradeStatus.CANCELED
-                    )
-                    self.log.info(
-                        f"Trade with id: {trade.trade_id} canceled at height: {index}"
-                    )
+                    await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELED)
+                    self.log.info(f"Trade with id: {trade.trade_id} canceled at height: {index}")
                 elif trade.status == TradeStatus.PENDING_CONFIRM.value:
-                    await self.trade_store.set_status(
-                        trade.trade_id, TradeStatus.FAILED
-                    )
-                    self.log.warning(
-                        f"Trade with id: {trade.trade_id} failed at height: {index}"
-                    )
+                    await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
+                    self.log.warning(f"Trade with id: {trade.trade_id} failed at height: {index}")
 
-    async def get_locked_coins(
-        self, wallet_id: int = None
-    ) -> Dict[bytes32, WalletCoinRecord]:
+    async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, WalletCoinRecord]:
         """ Returns a dictionary of confirmed coins that are locked by a trade. """
         all_pending = []
         pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
@@ -189,13 +173,9 @@ class TradeManager:
         result = {}
         for trade_offer in all_pending:
             if trade_offer.tx_spend_bundle is None:
-                locked = await self.get_locked_coins_in_spend_bundle(
-                    trade_offer.spend_bundle
-                )
+                locked = await self.get_locked_coins_in_spend_bundle(trade_offer.spend_bundle)
             else:
-                locked = await self.get_locked_coins_in_spend_bundle(
-                    trade_offer.tx_spend_bundle
-                )
+                locked = await self.get_locked_coins_in_spend_bundle(trade_offer.tx_spend_bundle)
             for name, record in locked.items():
                 if wallet_id is None or record.wallet_id == wallet_id:
                     result[name] = record
@@ -210,18 +190,12 @@ class TradeManager:
         record = await self.trade_store.get_trade_record(trade_id)
         return record
 
-    async def get_locked_coins_in_spend_bundle(
-        self, bundle: SpendBundle
-    ) -> Dict[bytes32, WalletCoinRecord]:
+    async def get_locked_coins_in_spend_bundle(self, bundle: SpendBundle) -> Dict[bytes32, WalletCoinRecord]:
         """ Returns a list of coin records that are used in this SpendBundle"""
         result = {}
         removals = bundle.removals()
         for coin in removals:
-            coin_record = (
-                await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(
-                    coin.name()
-                )
-            )
+            coin_record = await self.wallet_state_manager.wallet_store.get_coin_record_by_coin_id(coin.name())
             if coin_record is None:
                 continue
             result[coin_record.name()] = coin_record
@@ -246,13 +220,9 @@ class TradeManager:
                 continue
             new_ph = await wallet.get_new_puzzlehash()
             if wallet.type() == WalletType.COLOURED_COIN.value:
-                tx = await wallet.generate_signed_transaction(
-                    [coin.amount], [new_ph], 0, coins={coin}
-                )
+                tx = await wallet.generate_signed_transaction([coin.amount], [new_ph], 0, coins={coin})
             else:
-                tx = await wallet.generate_signed_transaction(
-                    coin.amount, new_ph, 0, coins={coin}
-                )
+                tx = await wallet.generate_signed_transaction(coin.amount, new_ph, 0, coins={coin})
             await self.wallet_state_manager.add_pending_transaction(tx_record=tx)
 
         await self.trade_store.set_status(trade_id, TradeStatus.PENDING_CANCEL)
@@ -272,9 +242,7 @@ class TradeManager:
 
         return success, trade_offer, error
 
-    async def _create_offer_for_ids(
-        self, offer: Dict[int, int]
-    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+    async def _create_offer_for_ids(self, offer: Dict[int, int]) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         """
         Offer is dictionary of wallet ids and amount
         """
@@ -293,16 +261,12 @@ class TradeManager:
                             to_exclude: List[Coin] = []
                         else:
                             to_exclude = spend_bundle.removals()
-                        zero_spend_bundle: SpendBundle = (
-                            await wallet.generate_zero_val_coin(False, to_exclude)
-                        )
+                        zero_spend_bundle: SpendBundle = await wallet.generate_zero_val_coin(False, to_exclude)
 
                         if spend_bundle is None:
                             spend_bundle = zero_spend_bundle
                         else:
-                            spend_bundle = SpendBundle.aggregate(
-                                [spend_bundle, zero_spend_bundle]
-                            )
+                            spend_bundle = SpendBundle.aggregate([spend_bundle, zero_spend_bundle])
 
                         additions = zero_spend_bundle.additions()
                         removals = zero_spend_bundle.removals()
@@ -310,23 +274,15 @@ class TradeManager:
                         for add in additions:
                             if add not in removals and add.amount == 0:
                                 zero_val_coin = add
-                        new_spend_bundle = (
-                            await wallet.create_spend_bundle_relative_amount(
-                                amount, zero_val_coin
-                            )
-                        )
+                        new_spend_bundle = await wallet.create_spend_bundle_relative_amount(amount, zero_val_coin)
                     else:
-                        new_spend_bundle = (
-                            await wallet.create_spend_bundle_relative_amount(amount)
-                        )
+                        new_spend_bundle = await wallet.create_spend_bundle_relative_amount(amount)
                 elif isinstance(wallet, Wallet):
                     if spend_bundle is None:
                         to_exclude = []
                     else:
                         to_exclude = spend_bundle.removals()
-                    new_spend_bundle = await wallet.create_spend_bundle_relative_chia(
-                        amount, to_exclude
-                    )
+                    new_spend_bundle = await wallet.create_spend_bundle_relative_chia(amount, to_exclude)
                 else:
                     return False, None, "unsupported wallet type"
                 if new_spend_bundle is None or new_spend_bundle.removals() == []:
@@ -334,9 +290,7 @@ class TradeManager:
                 if spend_bundle is None:
                     spend_bundle = new_spend_bundle
                 else:
-                    spend_bundle = SpendBundle.aggregate(
-                        [spend_bundle, new_spend_bundle]
-                    )
+                    spend_bundle = SpendBundle.aggregate([spend_bundle, new_spend_bundle])
 
             if spend_bundle is None:
                 return False, None, None
@@ -366,18 +320,14 @@ class TradeManager:
         if offer is not None:
             file_path.write_text(bytes(offer).hex())
 
-    async def get_discrepancies_for_offer(
-        self, file_path: Path
-    ) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
+    async def get_discrepancies_for_offer(self, file_path: Path) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
         self.log.info(f"trade offer: {file_path}")
         trade_offer_hex = file_path.read_text()
         trade_offer = TradeRecord.from_bytes(bytes.fromhex(trade_offer_hex))
         return get_discrepancies_for_spend_bundle(trade_offer.spend_bundle)
 
     async def get_inner_puzzle_for_puzzle_hash(self, puzzle_hash) -> Program:
-        info = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
-            puzzle_hash.hex()
-        )
+        info = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(puzzle_hash.hex())
         assert info is not None
         puzzle = self.wallet_state_manager.main_wallet.puzzle_for_pk(bytes(info.pubkey))
         return puzzle
@@ -401,9 +351,7 @@ class TradeManager:
 
         return True
 
-    async def respond_to_offer(
-        self, file_path: Path
-    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+    async def respond_to_offer(self, file_path: Path) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         has_wallets = await self.maybe_create_wallets_for_offer(file_path)
         if not has_wallets:
             return False, None, "Unknown Error"
@@ -434,22 +382,14 @@ class TradeManager:
                 mod_hash, genesis_checker, inner_puzzle = r
                 colour = bytes(genesis_checker).hex()
                 if colour not in wallets:
-                    wallets[
-                        colour
-                    ] = await self.wallet_state_manager.get_wallet_for_colour(colour)
-                unspent = (
-                    await self.wallet_state_manager.get_spendable_coins_for_wallet(
-                        wallets[colour].id()
-                    )
-                )
+                    wallets[colour] = await self.wallet_state_manager.get_wallet_for_colour(colour)
+                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(wallets[colour].id())
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, None, "can't respond to own offer"
 
                 innersol = solution.first()
 
-                total = get_output_amount_for_puzzle_and_solution(
-                    inner_puzzle, innersol
-                )
+                total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
                 if colour in cc_discrepancies:
                     cc_discrepancies[colour] += coinsol.coin.amount - total
                 else:
@@ -462,19 +402,13 @@ class TradeManager:
 
             else:
                 # standard chia coin
-                unspent = (
-                    await self.wallet_state_manager.get_spendable_coins_for_wallet(1)
-                )
+                unspent = await self.wallet_state_manager.get_spendable_coins_for_wallet(1)
                 if coinsol.coin in [record.coin for record in unspent]:
                     return False, None, "can't respond to own offer"
                 if chia_discrepancy is None:
-                    chia_discrepancy = get_output_discrepancy_for_puzzle_and_solution(
-                        coinsol.coin, puzzle, solution
-                    )
+                    chia_discrepancy = get_output_discrepancy_for_puzzle_and_solution(coinsol.coin, puzzle, solution)
                 else:
-                    chia_discrepancy += get_output_discrepancy_for_puzzle_and_solution(
-                        coinsol.coin, puzzle, solution
-                    )
+                    chia_discrepancy += get_output_discrepancy_for_puzzle_and_solution(coinsol.coin, puzzle, solution)
                 coinsols.append(coinsol)
 
         chia_spend_bundle: Optional[SpendBundle] = None
@@ -492,9 +426,7 @@ class TradeManager:
         self.log.info(cc_discrepancies)
         for colour in cc_discrepancies.keys():
             if cc_discrepancies[colour] < 0:
-                my_cc_spends = await wallets[colour].select_coins(
-                    abs(cc_discrepancies[colour])
-                )
+                my_cc_spends = await wallets[colour].select_coins(abs(cc_discrepancies[colour]))
             else:
                 if chia_spend_bundle is None:
                     to_exclude: List = []
@@ -502,9 +434,7 @@ class TradeManager:
                     to_exclude = chia_spend_bundle.removals()
                 my_cc_spends = await wallets[colour].select_coins(0)
                 if my_cc_spends is None or my_cc_spends == set():
-                    zero_spend_bundle: SpendBundle = await wallets[
-                        colour
-                    ].generate_zero_val_coin(False, to_exclude)
+                    zero_spend_bundle: SpendBundle = await wallets[colour].generate_zero_val_coin(False, to_exclude)
                     if zero_spend_bundle is None:
                         return (
                             False,
@@ -528,31 +458,19 @@ class TradeManager:
             my_output_coin = my_cc_spends.pop()
             spendable_cc_list = []
             innersol_list = []
-            genesis_id = genesis_coin_id_for_genesis_coin_checker(
-                Program.from_bytes(bytes.fromhex(colour))
-            )
+            genesis_id = genesis_coin_id_for_genesis_coin_checker(Program.from_bytes(bytes.fromhex(colour)))
             # Make the rest of the coins assert the output coin is consumed
             for coloured_coin in my_cc_spends:
-                inner_solution = self.wallet_state_manager.main_wallet.make_solution(
-                    consumed=[my_output_coin.name()]
-                )
-                inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
-                    coloured_coin.puzzle_hash
-                )
+                inner_solution = self.wallet_state_manager.main_wallet.make_solution(consumed=[my_output_coin.name()])
+                inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(coloured_coin.puzzle_hash)
                 assert inner_puzzle is not None
 
-                sigs = await wallets[colour].get_sigs(
-                    inner_puzzle, inner_solution, coloured_coin.name()
-                )
+                sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution, coloured_coin.name())
                 sigs.append(aggsig)
                 aggsig = AugSchemeMPL.aggregate(sigs)
 
-                lineage_proof = await wallets[colour].get_lineage_proof_for_coin(
-                    coloured_coin
-                )
-                spendable_cc_list.append(
-                    SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof)
-                )
+                lineage_proof = await wallets[colour].get_lineage_proof_for_coin(coloured_coin)
+                spendable_cc_list.append(SpendableCC(coloured_coin, genesis_id, inner_puzzle, lineage_proof))
                 innersol_list.append(inner_solution)
 
             # Create SpendableCC for each of the coloured coins received
@@ -566,39 +484,23 @@ class TradeManager:
                     mod_hash, genesis_coin_checker, inner_puzzle = r
                     inner_solution = solution.first()
                     lineage_proof = solution.rest().rest().first()
-                    spendable_cc_list.append(
-                        SpendableCC(
-                            cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof
-                        )
-                    )
+                    spendable_cc_list.append(SpendableCC(cc_coinsol.coin, genesis_id, inner_puzzle, lineage_proof))
                     innersol_list.append(inner_solution)
 
             # Finish the output coin SpendableCC with new information
             newinnerpuzhash = await wallets[colour].get_new_inner_hash()
-            outputamount = (
-                sum([c.amount for c in my_cc_spends])
-                + cc_discrepancies[colour]
-                + my_output_coin.amount
-            )
+            outputamount = sum([c.amount for c in my_cc_spends]) + cc_discrepancies[colour] + my_output_coin.amount
             inner_solution = self.wallet_state_manager.main_wallet.make_solution(
                 primaries=[{"puzzlehash": newinnerpuzhash, "amount": outputamount}]
             )
-            inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(
-                my_output_coin.puzzle_hash
-            )
+            inner_puzzle = await self.get_inner_puzzle_for_puzzle_hash(my_output_coin.puzzle_hash)
             assert inner_puzzle is not None
 
-            lineage_proof = await wallets[colour].get_lineage_proof_for_coin(
-                my_output_coin
-            )
-            spendable_cc_list.append(
-                SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof)
-            )
+            lineage_proof = await wallets[colour].get_lineage_proof_for_coin(my_output_coin)
+            spendable_cc_list.append(SpendableCC(my_output_coin, genesis_id, inner_puzzle, lineage_proof))
             innersol_list.append(inner_solution)
 
-            sigs = await wallets[colour].get_sigs(
-                inner_puzzle, inner_solution, my_output_coin.name()
-            )
+            sigs = await wallets[colour].get_sigs(inner_puzzle, inner_solution, my_output_coin.name())
             sigs.append(aggsig)
             aggsig = AugSchemeMPL.aggregate(sigs)
             if spend_bundle is None:

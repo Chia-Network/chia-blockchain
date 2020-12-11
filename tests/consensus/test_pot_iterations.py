@@ -69,7 +69,12 @@ class TestPotIterations:
 
         # Overflow
         sp_iters = sp_interval_iters * (test_constants.NUM_SPS_SUB_SLOT - 1)
-        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(test_constants.NUM_SPS_SUB_SLOT - 1), required_iters)
+        ip_iters = calculate_ip_iters(
+            test_constants,
+            ssi,
+            uint8(test_constants.NUM_SPS_SUB_SLOT - 1),
+            required_iters,
+        )
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 

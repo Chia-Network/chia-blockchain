@@ -25,7 +25,12 @@ from src.types.reward_chain_sub_block import (
     RewardChainSubBlock,
 )
 from src.types.sized_bytes import bytes32
-from src.types.slots import ChallengeChainSubSlot, InfusedChallengeChainSubSlot, RewardChainSubSlot, SubSlotProofs
+from src.types.slots import (
+    ChallengeChainSubSlot,
+    InfusedChallengeChainSubSlot,
+    RewardChainSubSlot,
+    SubSlotProofs,
+)
 from src.types.vdf import VDFInfo, VDFProof
 from src.util.ints import uint64, uint8, int512, uint32
 from src.types.sub_epoch_summary import SubEpochSummary
@@ -447,7 +452,9 @@ class Timelord:
                         ip_total_iters
                         - ip_iters
                         + calculate_sp_iters(
-                            self.constants, block.sub_slot_iters, block.reward_chain_sub_block.signage_point_index
+                            self.constants,
+                            block.sub_slot_iters,
+                            block.reward_chain_sub_block.signage_point_index,
                         )
                         - (block.sub_slot_iters if overflow else 0)
                     )
@@ -618,7 +625,10 @@ class Timelord:
                 SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
             )
             if self.server is not None:
-                msg = Message("new_end_of_sub_slot_vdf", timelord_protocol.NewEndOfSubSlotVDF(eos_bundle))
+                msg = Message(
+                    "new_end_of_sub_slot_vdf",
+                    timelord_protocol.NewEndOfSubSlotVDF(eos_bundle),
+                )
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
             log.info(
@@ -715,7 +725,11 @@ class Timelord:
             while True:
                 try:
                     data = await reader.readexactly(4)
-                except (asyncio.IncompleteReadError, ConnectionResetError, Exception) as e:
+                except (
+                    asyncio.IncompleteReadError,
+                    ConnectionResetError,
+                    Exception,
+                ) as e:
                     log.warning(f"{type(e)} {e}")
                     break
 

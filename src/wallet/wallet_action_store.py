@@ -34,17 +34,11 @@ class WalletActionStore:
             )
         )
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS name on action_queue(name)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS name on action_queue(name)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS wallet_id on action_queue(wallet_id)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on action_queue(wallet_id)")
 
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS wallet_type on action_queue(wallet_type)"
-        )
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_type on action_queue(wallet_type)")
 
         await self.db_connection.commit()
         return self
@@ -59,18 +53,14 @@ class WalletActionStore:
         Return a wallet action by id
         """
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from action_queue WHERE id=?", (id,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from action_queue WHERE id=?", (id,))
         row = await cursor.fetchone()
         await cursor.close()
 
         if row is None:
             return None
 
-        return WalletAction(
-            row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6]
-        )
+        return WalletAction(row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6])
 
     async def create_action(
         self,
@@ -119,9 +109,7 @@ class WalletActionStore:
         Returns list of all pending action
         """
         result: List[WalletAction] = []
-        cursor = await self.db_connection.execute(
-            "SELECT * from action_queue WHERE done=?", (0,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from action_queue WHERE done=?", (0,))
         rows = await cursor.fetchall()
         await cursor.close()
 
@@ -129,9 +117,7 @@ class WalletActionStore:
             return result
 
         for row in rows:
-            action = WalletAction(
-                row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6]
-            )
+            action = WalletAction(row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6])
             result.append(action)
 
         return result
@@ -141,15 +127,11 @@ class WalletActionStore:
         Return a wallet action by id
         """
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from action_queue WHERE id=?", (id,)
-        )
+        cursor = await self.db_connection.execute("SELECT * from action_queue WHERE id=?", (id,))
         row = await cursor.fetchone()
         await cursor.close()
 
         if row is None:
             return None
 
-        return WalletAction(
-            row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6]
-        )
+        return WalletAction(row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6])

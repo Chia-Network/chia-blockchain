@@ -28,12 +28,7 @@ else:
         handler = signal.getsignal(signum)
         # work around the synchronization problem when calling
         # kill from the main thread.
-        if (
-            signum in sigmap
-            and thread.name == "MainThread"
-            and callable(handler)
-            and pid == 0
-        ):
+        if signum in sigmap and thread.name == "MainThread" and callable(handler) and pid == 0:
             event = threading.Event()
 
             def handler_set_event(signum, frame):
