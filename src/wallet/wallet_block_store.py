@@ -1,8 +1,9 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 import aiosqlite
 
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.header_block import HeaderBlock
+from src.util.ints import uint32
 from src.wallet.block_record import HeaderBlockRecord
 from src.types.sized_bytes import bytes32
 
@@ -103,6 +104,17 @@ class WalletBlockStore:
             return hbr.header
         else:
             return None
+
+    async def get_header_block_at(self, sub_heights: List[uint32]) -> List[HeaderBlock]:
+        if len(sub_heights) == 0:
+            return []
+
+        heights_db = tuple(sub_heights)
+        formatted_str = f'SELECT block from header_blocks WHERE sub_height in ({"?," * (len(heights_db) - 1)}?)'
+        cursor = await self.db.execute(formatted_str, heights_db)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return [HeaderBlock.from_bytes(row[0]) for row in rows]
 
     async def get_header_block_record(self, header_hash: bytes32) -> Optional[HeaderBlockRecord]:
         """Gets a block record from the database, if present"""

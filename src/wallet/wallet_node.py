@@ -8,6 +8,7 @@ import logging
 from blspy import PrivateKey
 
 from src.consensus.sub_block_record import SubBlockRecord
+from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from src.protocols.wallet_protocol import (
     RequestSubBlockHeader,
     RespondSubBlockHeader,
@@ -17,7 +18,7 @@ from src.protocols.wallet_protocol import (
     RejectRemovalsRequest,
     RejectAdditionsRequest,
 )
-from src.server.connection_utils import send_all_first_reply
+from src.server.connection_utils import send_all_first_reply, send_to_random
 from src.server.ws_connection import WSChiaConnection
 from src.types.coin import hash_coin_list, Coin
 from src.types.peer_info import PeerInfo
@@ -319,34 +320,6 @@ class WalletNode:
                 return True
         return False
 
-    # @api_request
-    # async def respond_peers_with_peer_info(
-    #     self,
-    #     request: introducer_protocol.RespondPeers,
-    #     peer_info: PeerInfo,
-    # ) -> OutboundMessageGenerator:
-    #     if not self._has_full_node():
-    #         await self.wallet_peers.respond_peers(request, peer_info, False)
-    #     else:
-    #         await self.wallet_peers.ensure_is_closed()
-    #     yield OutboundMessage(NodeType.INTRODUCER, Message("", None), Delivery.CLOSE)
-    #
-    # @api_request
-    # async def respond_peers_full_node_with_peer_info(
-    #     self,
-    #     request: full_node_protocol.RespondPeers,
-    #     peer_info: PeerInfo,
-    # ):
-    #     if not self._has_full_node():
-    #         await self.wallet_peers.respond_peers(request, peer_info, True)
-    #     else:
-    #         await self.wallet_peers.ensure_is_closed()
-    #
-    # @api_request
-    # async def respond_peers_full_node(self, request: full_node_protocol.RespondPeers):
-    #     pass
-    #
-
     async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
         assert self.wallet_state_manager is not None
         curr_peak = self.wallet_state_manager.blockchain.get_peak()
@@ -358,7 +331,19 @@ class WalletNode:
 
         if response is not None and response.header_block is not None:
             # TODO validate weight
-            self.wallet_state_manager.sync_store.add_potential_peak(response.header_block)
+            hb = response.header_block
+            request = RequestProofOfWeight(hb.sub_block_height, hb.header_hash)
+            weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(request)
+            if weight_proof_response is None:
+                return
+            weight_proof = weight_proof_response.wp
+            if not self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof):
+                self.log.error(
+                    f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
+                    f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
+                )
+                return None
+            self.wallet_state_manager.sync_store.add_potential_peak(hb)
             await asyncio.sleep(1)
             self.start_sync()
 
@@ -404,7 +389,7 @@ class WalletNode:
         await asyncio.sleep(2)
         highest_weight: uint128 = uint128(0)
         peak_height: uint32 = uint32(0)
-
+        peak: Optional[HeaderBlock] = None
         potential_peaks: List[
             Tuple[bytes32, HeaderBlock]
         ] = self.wallet_state_manager.sync_store.get_potential_peaks_tuples()
@@ -415,8 +400,9 @@ class WalletNode:
             if potential_peak_block.weight > highest_weight:
                 highest_weight = potential_peak_block.weight
                 peak_height = potential_peak_block.height
+                peak = potential_peak_block
 
-        if self.wallet_state_manager.peak is not None and highest_weight <= self.wallet_state_manager.peak.weight:
+        if self.wallet_state_manager.peak is not None and highest_weight <= self.wallet_state_manager.peak.weight or peak is None:
             self.log.info("Not performing sync, already caught up.")
             return
 
@@ -428,10 +414,12 @@ class WalletNode:
 
         fetched_blocks: Dict[int, HeaderBlockRecord] = {}
 
-        for i in range(0, peak_height + 1):
+        fork_height = 0
+
+        for i in range(fork_height, peak_height + 1):
             self.log.info(f"Requesting block {i}")
             request = RequestSubBlockHeader(uint32(i))
-            response, peer = await send_all_first_reply("request_sub_block_header", request, peers)
+            response, peer = await send_to_random("request_sub_block_header", request, peers)
             peer: WSChiaConnection = peer
             res: RespondSubBlockHeader = response
             block_i: HeaderBlock = res.header_block
