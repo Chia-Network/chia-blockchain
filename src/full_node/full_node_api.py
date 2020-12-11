@@ -185,10 +185,8 @@ class FullNodeAPI:
         self.log.info(f"got weight proof request {request}")
         cache = await init_block_block_cache_mock(self.full_node.blockchain, uint32(0), request.total_number_of_blocks)
         self.full_node.weight_proof_handler.set_block_cache(cache)
-        wp = self.full_node.weight_proof_handler.create_proof_of_weight(
-            self.full_node.constants.WEIGHT_PROOF_RECENT_BLOCKS,
-            request.total_number_of_blocks,
-            request.tip,
+        wp = await self.full_node.weight_proof_handler.create_proof_of_weight(
+            self.full_node.constants.WEIGHT_PROOF_RECENT_BLOCKS, request.total_number_of_blocks, request.tip
         )
         return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp))
 
