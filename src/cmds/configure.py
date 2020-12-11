@@ -28,10 +28,10 @@ def make_parser(parser: ArgumentParser):
 def help_message():
     print("usage: chia configure -flag")
     print(
-        """
+        '''
         chia configure --set-node-introducer [IP:Port] (Set the introducer for node)
         chia configure --set-fullnode-port [Port] (Set the full node default port, useful for beta testing)
-        """
+        '''
     )
 
 
@@ -47,7 +47,6 @@ def configure(args, parser):
                 )
                 config["full_node"]["introducer_peer"]["host"] = host
                 config["full_node"]["introducer_peer"]["port"] = int(port)
-                config["introducer"]["port"] = int(port)
                 print("Node introducer updated.")
                 change_made = True
         except ValueError:
@@ -59,7 +58,6 @@ def configure(args, parser):
         config["timelord"]["full_node_peer"]["port"] = int(args.set_fullnode_port)
         config["wallet"]["full_node_peer"]["port"] = int(args.set_fullnode_port)
         config["wallet"]["introducer_peer"]["port"] = int(args.set_fullnode_port)
-        config["introducer"]["port"] = int(args.set_fullnode_port)
         print("Default full node port updated.")
         change_made = True
     if change_made:
