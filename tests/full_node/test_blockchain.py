@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 from dataclasses import replace
 import pytest
@@ -17,8 +18,8 @@ from src.util.hash import std_hash
 from src.util.ints import uint64, uint8, int512
 from tests.recursive_replace import recursive_replace
 from tests.setup_nodes import test_constants, bt
-from tests.full_node.fixtures import empty_blockchain
-from tests.full_node.fixtures import default_1000_blocks
+from tests.full_node.fixtures import empty_blockchain  # noqa: F401
+from tests.full_node.fixtures import default_1000_blocks  # noqa: F401
 
 
 @pytest.fixture(scope="module")

@@ -3,7 +3,7 @@ import sqlite3
 
 import pytest
 from src.full_node.sync_store import SyncStore
-from tests.setup_nodes import test_constants, bt
+from tests.setup_nodes import bt
 
 
 @pytest.fixture(scope="module")
