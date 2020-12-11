@@ -44,7 +44,7 @@ async def get_block_path(full_node: FullNodeAPI):
 async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asyncio.Queue, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
-    incoming_queue = asyncio.Queue()
+    incoming_queue: asyncio.Queue = asyncio.Queue()
     ssl_context = ssl_context_for_client(server._private_cert_path, server._private_key_path, False)
     url = f"wss://127.0.0.1:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
