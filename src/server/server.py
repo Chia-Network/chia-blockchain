@@ -110,7 +110,6 @@ class ChiaServer:
         self.connection_close_task: Optional[asyncio.Task] = None
         self.site_shutdown_task: Optional[asyncio.Task] = None
         self.app_shut_down_task: Optional[asyncio.Task] = None
-        self.api_tasks: List[asyncio.Task] = []
 
     async def start_server(self, on_connect: Callable = None):
         self.app = web.Application()
@@ -218,8 +217,8 @@ class ChiaServer:
             self.log.info(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
-            except asyncio.TimeoutError as e:
-                self.log.warning(f"Timeout error {e} connecting to {url}")
+            except asyncio.TimeoutError:
+                self.log.warning(f"Timeout error connecting to {url}")
                 await session.close()
                 return False
             if ws is not None:
@@ -248,7 +247,10 @@ class ChiaServer:
                 if connection.connection_type is not None:
                     connection_type_str = connection.connection_type.name.lower()
                 self.log.info(f"Connected with {connection_type_str} {target_node}")
-            return True
+                return True
+            else:
+                await session.close()
+                return False
         except client_exceptions.ClientConnectorError as e:
             self.log.warning(f"{e}")
         except ProtocolError as e:
@@ -322,7 +324,7 @@ class ChiaServer:
                         pass
                     await connection.close()
 
-            self.api_tasks.append(asyncio.create_task(api_call(payload_inc, connection_inc)))
+            asyncio.create_task(api_call(payload_inc, connection_inc))
 
     async def send_to_others(
         self,
@@ -402,10 +404,6 @@ class ChiaServer:
             await self.app_shut_down_task
         if self.site_shutdown_task is not None:
             await self.site_shutdown_task
-        if len(self.api_tasks) > 0:
-            _, pending = await asyncio.wait(self.api_tasks, timeout=3, return_when=asyncio.ALL_COMPLETED)
-            for task in pending:
-                task.cancel()
 
     async def get_peer_info(self) -> Optional[PeerInfo]:
         ip = None
