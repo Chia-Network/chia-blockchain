@@ -31,7 +31,5 @@ def solution_for_conditions(conditions) -> Program:
     return solution_for_delegated_puzzle(delegated_puzzle, Program.to(0))
 
 
-def solution_for_delegated_puzzle(
-    delegated_puzzle: Program, delegated_solution: Program
-) -> Program:
+def solution_for_delegated_puzzle(delegated_puzzle: Program, delegated_solution: Program) -> Program:
     return Program.to([delegated_puzzle, delegated_solution])

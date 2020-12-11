@@ -63,7 +63,14 @@ class CoinStore:
         removals, additions = await block.tx_removals_and_additions()
 
         for coin in additions:
-            record: CoinRecord = CoinRecord(coin, block.height, uint32(0), False, False, block.foliage_block.timestamp)
+            record: CoinRecord = CoinRecord(
+                coin,
+                block.height,
+                uint32(0),
+                False,
+                False,
+                block.foliage_block.timestamp,
+            )
             await self._add_coin_record(record)
 
         for coin_name in removals:
@@ -77,7 +84,12 @@ class CoinStore:
 
         for coin in included_reward_coins:
             reward_coin_r: CoinRecord = CoinRecord(
-                coin, block.height, uint32(0), False, True, block.foliage_block.timestamp
+                coin,
+                block.height,
+                uint32(0),
+                False,
+                True,
+                block.foliage_block.timestamp,
             )
             await self._add_coin_record(reward_coin_r)
 
@@ -180,6 +192,11 @@ class CoinStore:
         if current is None:
             return
         spent: CoinRecord = CoinRecord(
-            current.coin, current.confirmed_block_index, index, True, current.coinbase, current.timestamp
+            current.coin,
+            current.confirmed_block_index,
+            index,
+            True,
+            current.coinbase,
+            current.timestamp,
         )  # type: ignore # noqa
         await self._add_coin_record(spent)

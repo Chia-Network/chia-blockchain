@@ -2,7 +2,10 @@ from typing import Callable
 
 from blspy import AugSchemeMPL, G2Element
 
-from src.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
+from src.consensus.pot_iterations import (
+    calculate_iterations_quality,
+    calculate_sp_interval_iters,
+)
 from src.farmer.farmer import Farmer
 from src.protocols import harvester_protocol, farmer_protocol
 from src.server.outbound_message import Message, NodeType
@@ -47,7 +50,9 @@ class FarmerAPI:
         sps = self.farmer.sps[new_proof_of_space.sp_hash]
         for sp in sps:
             computed_quality_string = new_proof_of_space.proof.verify_and_get_quality_string(
-                self.farmer.constants, new_proof_of_space.challenge_hash, new_proof_of_space.sp_hash
+                self.farmer.constants,
+                new_proof_of_space.challenge_hash,
+                new_proof_of_space.sp_hash,
             )
             if computed_quality_string is None:
                 self.farmer.log.error(f"Invalid proof of space {new_proof_of_space.proof}")
@@ -64,7 +69,7 @@ class FarmerAPI:
             # Double check that the iters are good
             assert required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters)
 
-            self.farmer.state_changed("proof")
+            self.farmer.state_changed("proof", new_proof_of_space.sp_hash)
 
             # Proceed at getting the signatures for this PoSpace
             request = harvester_protocol.RequestSignatures(
@@ -232,7 +237,7 @@ class FarmerAPI:
         if new_signage_point.challenge_chain_sp not in self.farmer.sps:
             self.farmer.sps[new_signage_point.challenge_chain_sp] = []
         self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
-        self.farmer.state_changed("signage_point")
+        self.farmer.state_changed("signage_point", new_signage_point.challenge_chain_sp)
 
     @api_request
     async def request_signed_values(self, full_node_request: farmer_protocol.RequestSignedValues):
@@ -240,9 +245,11 @@ class FarmerAPI:
             self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
             return
 
-        plot_identifier, challenge_hash, sp_hash = self.farmer.quality_str_to_identifiers[
-            full_node_request.quality_string
-        ]
+        (
+            plot_identifier,
+            challenge_hash,
+            sp_hash,
+        ) = self.farmer.quality_str_to_identifiers[full_node_request.quality_string]
         request = harvester_protocol.RequestSignatures(
             plot_identifier,
             challenge_hash,

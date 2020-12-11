@@ -18,7 +18,13 @@ from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.weight_proof import init_block_block_cache_mock, WeightProofHandler
 
-from src.protocols import introducer_protocol, farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
+from src.protocols import (
+    introducer_protocol,
+    farmer_protocol,
+    full_node_protocol,
+    timelord_protocol,
+    wallet_protocol,
+)
 from src.protocols.wallet_protocol import RejectHeaderRequest
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.coin import Coin, hash_coin_list
@@ -178,10 +184,11 @@ class FullNodeAPI:
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         self.log.info(f"got weight proof request {request}")
         cache = await init_block_block_cache_mock(self.full_node.blockchain, uint32(0), request.total_number_of_blocks)
-        wpf = WeightProofHandler(self.full_node.constants, cache)
-        wpf.set_block_cache(cache)
-        wp = wpf.create_proof_of_weight(
-            uint32(self.full_node.constants.WEIGHT_PROOF_RECENT_BLOCKS), request.total_number_of_blocks, request.tip
+        self.full_node.weight_proof_handler.set_block_cache(cache)
+        wp = self.full_node.weight_proof_handler.create_proof_of_weight(
+            self.full_node.constants.WEIGHT_PROOF_RECENT_BLOCKS,
+            request.total_number_of_blocks,
+            request.tip,
         )
         return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp))
 
@@ -212,7 +219,9 @@ class FullNodeAPI:
     @api_request
     @peer_required
     async def respond_sub_block(
-        self, respond_sub_block: full_node_protocol.RespondSubBlock, peer: ws.WSChiaConnection
+        self,
+        respond_sub_block: full_node_protocol.RespondSubBlock,
+        peer: ws.WSChiaConnection,
     ) -> Optional[Message]:
         """
         Receive a full block from a peer full node (or ourselves).
@@ -260,7 +269,9 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def respond_unfinished_sub_block(
-        self, respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedSubBlock, peer: ws.WSChiaConnection
+        self,
+        respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedSubBlock,
+        peer: ws.WSChiaConnection,
     ) -> Optional[Message]:
         await self.full_node.respond_unfinished_sub_block(respond_unfinished_sub_block, peer)
         return None
@@ -274,7 +285,9 @@ class FullNodeAPI:
             return None
         if (
             self.full_node.full_node_store.get_signage_point_by_index(
-                new_sp.challenge_hash, new_sp.index_from_challenge, new_sp.last_rc_infusion
+                new_sp.challenge_hash,
+                new_sp.index_from_challenge,
+                new_sp.last_rc_infusion,
             )
             is not None
         ):
@@ -318,14 +331,19 @@ class FullNodeAPI:
                 request.challenge_hash
             )
             if sub_slot is not None:
-                return Message("respond_end_of_sub_slot", full_node_protocol.RespondEndOfSubSlot(sub_slot[0]))
+                return Message(
+                    "respond_end_of_sub_slot",
+                    full_node_protocol.RespondEndOfSubSlot(sub_slot[0]),
+                )
         else:
             if self.full_node.full_node_store.get_sub_slot(request.challenge_hash) is None:
                 if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
                     self.log.warning(f"Don't have challenge hash {request.challenge_hash}")
 
             sp: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index(
-                request.challenge_hash, request.index_from_challenge, request.last_rc_infusion
+                request.challenge_hash,
+                request.index_from_challenge,
+                request.last_rc_infusion,
             )
             if sp is not None:
                 assert (
@@ -438,7 +456,9 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def request_mempool_transactions(
-        self, request: full_node_protocol.RequestMempoolTransactions, peer: ws.WSChiaConnection
+        self,
+        request: full_node_protocol.RequestMempoolTransactions,
+        peer: ws.WSChiaConnection,
     ) -> Optional[Message]:
         received_filter = PyBIP158(bytearray(request.filter))
 
@@ -534,7 +554,10 @@ class FullNodeAPI:
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
             ip_iters: uint64 = calculate_ip_iters(
-                self.full_node.constants, sub_slot_iters, request.signage_point_index, required_iters
+                self.full_node.constants,
+                sub_slot_iters,
+                request.signage_point_index,
+                required_iters,
             )
 
             def get_plot_sig(to_sign, _) -> G2Element:
@@ -553,13 +576,19 @@ class FullNodeAPI:
                 while curr.total_iters > (total_iters_pos_slot + sp_iters) and curr.sub_block_height > 0:
                     curr = self.full_node.blockchain.sub_blocks[curr.prev_hash]
                 if curr.total_iters > (total_iters_pos_slot + sp_iters):
-                    pool_target = PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
+                    pool_target = PoolTarget(
+                        self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
+                        uint32(0),
+                    )
                     prev_sb = None
                 else:
                     pool_target = request.pool_target
                     prev_sb = curr
             else:
-                pool_target = PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
+                pool_target = PoolTarget(
+                    self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
+                    uint32(0),
+                )
                 prev_sb = None
             try:
                 finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node.full_node_store.get_finished_sub_slots(
@@ -728,7 +757,10 @@ class FullNodeAPI:
         )
         if block is not None:
             header_block: HeaderBlock = await block.get_block_header()
-            msg = Message("respond_sub_block_header", wallet_protocol.RespondSubBlockHeader(header_block))
+            msg = Message(
+                "respond_sub_block_header",
+                wallet_protocol.RespondSubBlockHeader(header_block),
+            )
             return msg
         return None
 

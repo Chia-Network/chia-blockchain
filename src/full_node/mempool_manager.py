@@ -180,7 +180,12 @@ class MempoolManager:
                 removal_coin = additions_dict[name]
                 # TODO(straya): what timestamp to use here?
                 removal_record = CoinRecord(
-                    removal_coin, uint32(self.peak.height + 1), uint32(0), False, False, uint64(int(time.time()))
+                    removal_coin,
+                    uint32(self.peak.height + 1),
+                    uint32(0),
+                    False,
+                    False,
+                    uint64(int(time.time())),
                 )
 
             assert removal_record is not None

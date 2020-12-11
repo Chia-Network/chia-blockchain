@@ -110,7 +110,10 @@ class FullNodeStore:
                 del self.disconnected_blocks[key]
 
     def add_unfinished_block(self, sub_height: uint32, unfinished_block: UnfinishedBlock) -> None:
-        self.unfinished_blocks[unfinished_block.partial_hash] = (sub_height, unfinished_block)
+        self.unfinished_blocks[unfinished_block.partial_hash] = (
+            sub_height,
+            unfinished_block,
+        )
 
     def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
         result = self.unfinished_blocks.get(unfinished_reward_hash, None)
@@ -123,7 +126,10 @@ class FullNodeStore:
 
     def clear_unfinished_blocks_below(self, sub_height: uint32) -> None:
         del_keys: List[bytes32] = []
-        for partial_reward_hash, (unf_height, unfinished_block) in self.unfinished_blocks.items():
+        for partial_reward_hash, (
+            unf_height,
+            unfinished_block,
+        ) in self.unfinished_blocks.items():
             if unf_height < sub_height:
                 del_keys.append(partial_reward_hash)
         for del_key in del_keys:
@@ -157,7 +163,10 @@ class FullNodeStore:
         self.finished_sub_slots = [(None, [None] * self.constants.NUM_SPS_SUB_SLOT, uint128(0))]
 
     def new_finished_sub_slot(
-        self, eos: EndOfSubSlotBundle, sub_blocks: Dict[bytes32, SubBlockRecord], peak: Optional[SubBlockRecord]
+        self,
+        eos: EndOfSubSlotBundle,
+        sub_blocks: Dict[bytes32, SubBlockRecord],
+        peak: Optional[SubBlockRecord],
     ) -> Optional[List[timelord_protocol.NewInfusionPointVDF]]:
         """
         Returns false if not added. Returns a list if added. The list contains all infusion points that depended
@@ -374,7 +383,10 @@ class FullNodeStore:
                 ):
                     return False
                 if not signage_point.rc_proof.is_valid(
-                    self.constants, ClassgroupElement.get_default_element(), signage_point.rc_vdf, rc_vdf_info_expected
+                    self.constants,
+                    ClassgroupElement.get_default_element(),
+                    signage_point.rc_vdf,
+                    rc_vdf_info_expected,
                 ):
                     return False
 
@@ -481,9 +493,19 @@ class FullNodeStore:
                 prev_sub_slot_total_iters = peak.sp_sub_slot_total_iters(self.constants)
                 assert total_iters_peak != prev_sub_slot_total_iters
                 self.finished_sub_slots = [
-                    (sp_sub_slot, [None] * self.constants.NUM_SPS_SUB_SLOT, prev_sub_slot_total_iters)
+                    (
+                        sp_sub_slot,
+                        [None] * self.constants.NUM_SPS_SUB_SLOT,
+                        prev_sub_slot_total_iters,
+                    )
                 ]
-            self.finished_sub_slots.append((ip_sub_slot, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters_peak))
+            self.finished_sub_slots.append(
+                (
+                    ip_sub_slot,
+                    [None] * self.constants.NUM_SPS_SUB_SLOT,
+                    total_iters_peak,
+                )
+            )
 
         new_eos: Optional[EndOfSubSlotBundle] = None
         new_sps: List[SignagePoint] = []
