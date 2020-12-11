@@ -40,6 +40,7 @@ from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required
+from src.util.errors import ConsensusError, Err
 from src.util.ints import uint64, uint128, uint8, uint32
 from src.types.peer_info import PeerInfo
 from src.util.merkle_set import MerkleSet
@@ -886,7 +887,7 @@ class FullNodeAPI:
             removal_merkle_set = MerkleSet()
             for coin_name in all_removals:
                 removal_merkle_set.add_already_hashed(coin_name)
-            assert removal_merkle_set.get_root() == block.foliage_block.additions_root
+            assert removal_merkle_set.get_root() == block.foliage_block.removals_root
             for coin_name in request.coin_names:
                 result, proof = removal_merkle_set.is_included_already_hashed(coin_name)
                 proofs_map.append((coin_name, proof))
@@ -901,4 +902,58 @@ class FullNodeAPI:
             response = wallet_protocol.RespondRemovals(block.height, block.header_hash, coins_map, proofs_map)
 
         msg = Message("respond_removals", response)
+        return msg
+
+    @api_request
+    async def send_transaction(self, request: wallet_protocol.SendTransaction) -> Optional[Message]:
+        # Ignore if syncing
+        if self.full_node.sync_store.get_sync_mode():
+            return None
+        # Ignore if syncing
+        if self.full_node.sync_store.get_sync_mode():
+            status = MempoolInclusionStatus.FAILED
+            error: Optional[Err] = Err.UNKNOWN
+        else:
+            async with self.full_node.blockchain.lock:
+                cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
+                    request.transaction
+                )
+                if status == MempoolInclusionStatus.SUCCESS:
+                    self.log.info(
+                        f"Added transaction to mempool: {request.transaction.name()}"
+                    )
+                    # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
+                    # vector.
+                    fees = request.transaction.fees()
+                    assert fees >= 0
+                    assert cost is not None
+                    new_tx = full_node_protocol.NewTransaction(
+                        request.transaction.name(),
+                        cost,
+                        uint64(request.transaction.fees()),
+                    )
+                    msg = Message("new_transaction", new_tx)
+                    await self.full_node.server.send_to_all([msg], NodeType.FULL_NODE)
+                else:
+                    self.log.warning(
+                        f"Wasn't able to add transaction with id {request.transaction.name()}, "
+                        f"status {status} error: {error}"
+                    )
+
+        error_name = error.name if error is not None else None
+        if status == MempoolInclusionStatus.SUCCESS:
+            response = wallet_protocol.TransactionAck(
+                request.transaction.name(), status, error_name
+            )
+        else:
+            # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
+            if self.full_node.mempool_manager.get_spendbundle(request.transaction.name()) is not None:
+                response = wallet_protocol.TransactionAck(
+                    request.transaction.name(), MempoolInclusionStatus.SUCCESS, None
+                )
+            else:
+                response = wallet_protocol.TransactionAck(
+                    request.transaction.name(), status, error_name
+                )
+        msg = Message("transaction_ack", response)
         return msg

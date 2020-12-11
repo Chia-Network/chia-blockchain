@@ -427,9 +427,7 @@ class WalletStateManager:
     async def get_frozen_balance(self, wallet_id: int) -> uint64:
         current_index = self.peak.height
 
-        coinbase_freeze_period = self.constants.COINBASE_FREEZE_PERIOD
-
-        valid_index = current_index - coinbase_freeze_period
+        valid_index = current_index
 
         not_frozen: Set[WalletCoinRecord] = await self.coin_store.get_spendable_for_index(valid_index, wallet_id)
         all_records: Set[WalletCoinRecord] = await self.coin_store.get_spendable_for_index(current_index, wallet_id)
@@ -915,12 +913,7 @@ class WalletStateManager:
 
         current_index = self.peak.height
 
-        coinbase_freeze_period = self.constants.COINBASE_FREEZE_PERIOD
-
-        if current_index <= coinbase_freeze_period:
-            return set()
-
-        valid_index = current_index - coinbase_freeze_period
+        valid_index = current_index
 
         records = await self.coin_store.get_spendable_for_index(valid_index, wallet_id)
 
