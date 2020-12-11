@@ -28,10 +28,10 @@ def make_parser(parser: ArgumentParser):
 def help_message():
     print("usage: chia configure -flag")
     print(
-        '''
+        """
         chia configure --set-node-introducer [IP:Port] (Set the introducer for node)
         chia configure --set-fullnode-port [Port] (Set the full node default port, useful for beta testing)
-        '''
+        """
     )
 
 

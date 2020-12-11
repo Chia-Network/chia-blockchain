@@ -558,7 +558,8 @@ class FullNodeStore:
             assert curr.finished_challenge_slot_hashes is not None
             final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
         else:
-            final_sub_slot_in_chain: bytes32 = self.constants.FIRST_CC_CHALLENGE
+            final_sub_slot_in_chain = self.constants.FIRST_CC_CHALLENGE
+            #  LGTM.com: The value assigned to local variable 'final_sub_slot_in_chain' is never used.
 
         pos_index: Optional[int] = None
         final_index: int = 0
