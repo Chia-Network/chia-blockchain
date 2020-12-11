@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Tuple
 from secrets import token_bytes
 
+from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols import full_node_protocol as fnp
 from src.server.outbound_message import NodeType
@@ -17,6 +18,7 @@ from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
+from src.types.unfinished_block import UnfinishedBlock
 from src.util.hash import std_hash
 from src.util.ints import uint16, uint32, uint64
 from src.types.condition_var_pair import ConditionVarPair
@@ -240,6 +242,96 @@ class TestFullNodeProtocol:
                 num_sub_slots_added,
             ),
         )
+
+    @pytest.mark.asyncio
+    async def test_respond_unfinished(self, two_empty_nodes):
+        full_node_1, full_node_2, server_1, server_2 = two_empty_nodes
+
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
+
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+
+        peer = await connect_and_get_peer(server_1, server_2)
+
+        # Create empty slots
+        blocks = bt.get_consecutive_blocks(1, skip_slots=6)
+        block = blocks[-1]
+        if is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index):
+            finished_ss = block.finished_sub_slots[:-1]
+        else:
+            finished_ss = block.finished_sub_slots
+
+        unf = UnfinishedBlock(
+            finished_ss,
+            block.reward_chain_sub_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+        # Can't add because no sub slots
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
+
+        # Add empty slots successful
+        for slot in blocks[-1].finished_sub_slots:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedSubBlock(unf), None)
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
+
+        # Do the same thing but with non-genesis
+        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=3)
+
+        block = blocks[-1]
+
+        if is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index):
+            finished_ss = block.finished_sub_slots[:-1]
+        else:
+            finished_ss = block.finished_sub_slots
+        unf = UnfinishedBlock(
+            finished_ss,
+            block.reward_chain_sub_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
+
+        for slot in blocks[-1].finished_sub_slots:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedSubBlock(unf), None)
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
+
+        # Do the same thing one more time, with overflow
+        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=3, force_overflow=True)
+
+        block = blocks[-1]
+
+        unf = UnfinishedBlock(
+            block.finished_sub_slots[:-1],
+            block.reward_chain_sub_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
+
+        for slot in blocks[-1].finished_sub_slots:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedSubBlock(unf), None)
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
     @pytest.mark.asyncio
     async def test_new_peak(self, two_empty_nodes):
