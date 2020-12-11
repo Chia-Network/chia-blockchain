@@ -1,3 +1,4 @@
+import time
 from typing import Callable
 
 from blspy import AugSchemeMPL, G2Element
@@ -32,6 +33,7 @@ class FarmerAPI:
         """
         if new_proof_of_space.sp_hash not in self.farmer.number_of_responses:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] = 0
+            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
 
         max_pos_per_sp = 5
         if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
@@ -93,11 +95,13 @@ class FarmerAPI:
                         new_proof_of_space.proof,
                     )
                 )
+            self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
             self.farmer.quality_str_to_identifiers[computed_quality_string] = (
                 new_proof_of_space.plot_identifier,
                 new_proof_of_space.challenge_hash,
                 new_proof_of_space.sp_hash,
             )
+            self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
             msg = Message("request_signatures", request)
             await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
@@ -237,6 +241,7 @@ class FarmerAPI:
         if new_signage_point.challenge_chain_sp not in self.farmer.sps:
             self.farmer.sps[new_signage_point.challenge_chain_sp] = []
         self.farmer.sps[new_signage_point.challenge_chain_sp].append(new_signage_point)
+        self.farmer.cache_add_time[new_signage_point.challenge_chain_sp] = uint64(int(time.time()))
         self.farmer.state_changed("signage_point", new_signage_point.challenge_chain_sp)
 
     @api_request
