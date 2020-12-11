@@ -2,7 +2,7 @@ import asyncio
 import logging
 import ssl
 from pathlib import Path
-from typing import Any, List, Dict, Tuple, Callable, Optional, Set
+from typing import Any, List, Dict, Callable, Optional, Set
 
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
@@ -91,7 +91,7 @@ class ChiaServer:
         self.root_path = root_path
         self.config = config
         self.on_connect: Optional[Callable] = None
-        self.incoming_messages: asyncio.Queue[Tuple[Payload, WSChiaConnection]] = asyncio.Queue()
+        self.incoming_messages: asyncio.Queue = asyncio.Queue()
         self.shut_down_event = asyncio.Event()
 
         if self._local_type is NodeType.INTRODUCER:
@@ -213,7 +213,12 @@ class ChiaServer:
 
             url = f"wss://{target_node.host}:{target_node.port}/ws"
             self.log.info(f"Connecting: {url}, Peer info: {target_node}")
-            ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
+            try:
+                ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
+            except asyncio.exceptions.TimeoutError as e:
+                self.log.warning(f"Timeout error {e} connecting to {url}")
+                await session.close()
+                return False
             if ws is not None:
                 connection = WSChiaConnection(
                     self._local_type,

@@ -176,7 +176,7 @@ class FullNodeStore:
         assert len(self.finished_sub_slots) >= 1
 
         if len(self.finished_sub_slots) == 0:
-            log.warning("no fini sub slots")
+            log.warning("no finished sub slots")
             return None
 
         last_slot, _, last_slot_iters = self.finished_sub_slots[-1]
@@ -465,7 +465,6 @@ class FullNodeStore:
         reorg: bool,
         sub_blocks: Dict[bytes32, SubBlockRecord],
     ) -> Tuple[Optional[EndOfSubSlotBundle], List[SignagePoint], List[timelord_protocol.NewInfusionPointVDF]]:
-
         """
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
         the prev sub-slot (since we still might get more sub-blocks with an sp in the previous sub-slot)
@@ -476,12 +475,18 @@ class FullNodeStore:
         if not reorg:
             # This is a new peak that adds to the last peak. We can clear data in old sub-slots. (and new ones)
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
-                if peak.overflow:
-                    if sub_slot == sp_sub_slot:
-                        # In the case of a peak overflow sub-block, the previous sub-slot is added
+                if sub_slot == sp_sub_slot:
+                    # In the case of a peak overflow sub-block (or first ss), the previous sub-slot is added
+                    if sp_sub_slot is None:
+                        if (
+                            ip_sub_slot is not None
+                            and ip_sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                        ) == self.constants.FIRST_CC_CHALLENGE:
+                            new_finished_sub_slots.append((sub_slot, sps, total_iters))
+                            continue
+                    else:
                         new_finished_sub_slots.append((sub_slot, sps, total_iters))
                         continue
-
                 if sub_slot == ip_sub_slot:
                     new_finished_sub_slots.append((sub_slot, sps, total_iters))
             self.finished_sub_slots = new_finished_sub_slots
@@ -489,7 +494,7 @@ class FullNodeStore:
             # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current
             # cache, delete the entire cache and add this sub slot.
             self.clear_slots()
-            if peak.overflow and sp_sub_slot is not None:
+            if peak.overflow:
                 prev_sub_slot_total_iters = peak.sp_sub_slot_total_iters(self.constants)
                 assert total_iters_peak != prev_sub_slot_total_iters
                 self.finished_sub_slots = [
