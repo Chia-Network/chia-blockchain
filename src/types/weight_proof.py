@@ -64,7 +64,7 @@ class SubSlotData(Streamable):
             return False
         if self.cc_infusion_point is None:
             return False
-        if self.icc_infusion_to_slot_end_vdf is None:
+        if self.icc_slot_end_info is None:
             return False
 
         return True

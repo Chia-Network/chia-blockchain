@@ -4,7 +4,7 @@ import asyncio
 import traceback
 from secrets import token_bytes
 
-from typing import Any, AsyncGenerator, Callable, Optional, List, Tuple, Dict
+from typing import Any, AsyncGenerator, Callable, Optional, List, Dict
 
 from aiohttp import WSMessage, WSMsgType
 
@@ -74,8 +74,8 @@ class WSChiaConnection:
         self.last_message_time: float = 0
 
         # Messaging
-        self.incoming_queue: asyncio.Queue[Tuple[Payload, WSChiaConnection]] = incoming_queue
-        self.outgoing_queue: asyncio.Queue[Payload] = asyncio.Queue()
+        self.incoming_queue: asyncio.Queue = incoming_queue
+        self.outgoing_queue: asyncio.Queue = asyncio.Queue()
 
         self.inbound_task = None
         self.outbound_task = None
