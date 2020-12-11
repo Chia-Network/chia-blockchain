@@ -260,11 +260,11 @@ class WSChiaConnection:
             await self.outgoing_queue.put(payload)
 
     async def _send_message(self, payload: Payload):
-        self.log.info(f"-> {payload.msg.function} to peer {self.peer_host} {self.peer_node_id}")
         encoded: bytes = cbor.dumps({"f": payload.msg.function, "d": payload.msg.data, "i": payload.id})
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         await self.ws.send_bytes(encoded)
+        self.log.info(f"-> {payload.msg.function} to peer {self.peer_host} {self.peer_node_id}")
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Payload]:
