@@ -52,7 +52,6 @@ class MempoolManager:
         self.mempool_size = int(tx_per_sec * sec_per_block * block_buffer_count)
         self.potential_cache_size = 300
         self.seen_cache_size = 10000
-        self.coinbase_freeze = self.constants.COINBASE_FREEZE_PERIOD
 
         # The mempool will correspond to a certain peak
         self.peak: Optional[SubBlockRecord] = None
@@ -314,11 +313,6 @@ class MempoolManager:
             # 2. Checks if there's a mempool conflict
             if removal.name() in self.mempool.removals:
                 conflicts.append(removal)
-
-            # 3. Check coinbase freeze period
-            if record.coinbase == 1:
-                if self.peak.height + 1 < record.confirmed_block_index + self.coinbase_freeze:
-                    return Err.COINBASE_NOT_YET_SPENDABLE, []
 
         if len(conflicts) > 0:
             return Err.MEMPOOL_CONFLICT, conflicts

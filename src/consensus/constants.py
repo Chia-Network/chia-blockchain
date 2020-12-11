@@ -36,8 +36,6 @@ class ConsensusConstants:
     TX_PER_SEC: int
     # Size of mempool = 10x the size of block
     MEMPOOL_BLOCK_BUFFER: int
-    # Coinbase rewards are not spendable for 200 blocks
-    COINBASE_FREEZE_PERIOD: int
     # Max coin amount uint(1 << 64)
     MAX_COIN_AMOUNT: int
     # Raw size per block target = 1,000,000 bytes
