@@ -1,18 +1,14 @@
 import asyncio
-from secrets import token_bytes
-from typing import List
 
 import pytest
 
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.server.server import ChiaServer
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint16, uint32
+from src.util.ints import uint16
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
 )
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 
 @pytest.fixture(scope="module")
@@ -58,12 +54,12 @@ class TestWalletSimulator:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
-        funds = sum(
-            [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(0, num_blocks - 1)
-            ]
-        )
+        # funds = sum(
+        #     [
+        #         calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+        #         for i in range(0, num_blocks - 1)
+        #     ]
+        # )
 
         # await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
@@ -105,7 +101,8 @@ class TestWalletSimulator:
     #         await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
     #
     #     new_funds = sum(
-    #         [calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i)) for i in range(1, (2 * num_blocks) - 1)]
+    #         [calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
+    #         for i in range(1, (2 * num_blocks) - 1)]
     #     )
     #     await time_out_assert(5, wallet.get_confirmed_balance, new_funds - 10)
     #     await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - 10)

@@ -12,8 +12,6 @@ from src.types.condition_opcodes import ConditionOpcode
 from src.types.spend_bundle import SpendBundle
 from src.util.condition_tools import (
     conditions_for_solution,
-    conditions_by_opcode,
-    pkm_pairs_for_conditions_dict,
 )
 from src.util.clvm import int_to_bytes
 from src.util.ints import uint64
@@ -659,7 +657,6 @@ class TestMempool:
             3, guarantee_block=True, farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
         )
         full_node_1, full_node_2, server_1, server_2 = two_nodes
-        peer = await connect_and_get_peer(server_1, server_2)
 
         for block in blocks:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
@@ -679,10 +676,10 @@ class TestMempool:
         err, con, cost = conditions_for_solution(coin_solution.solution)
         assert con is not None
 
-        puzzle, solution = list(coin_solution.solution.as_iter())
-        conditions_dict = conditions_by_opcode(con)
-
         # TODO(straya): fix this test
+        # puzzle, solution = list(coin_solution.solution.as_iter())
+        # conditions_dict = conditions_by_opcode(con)
+
         # pkm_pairs = pkm_pairs_for_conditions_dict(conditions_dict, coin_solution.coin.name())
         # assert len(pkm_pairs) == 1
         #

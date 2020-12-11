@@ -6,7 +6,7 @@ from typing import Any, List, Dict, Tuple, Callable, Optional, Set
 
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
-from aiohttp import web, ClientSession, ClientTimeout, client_exceptions, ClientSession
+from aiohttp import web, ClientTimeout, client_exceptions, ClientSession
 
 from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload

@@ -1,4 +1,4 @@
-from typing import Callable, Set, Dict, List
+from typing import Callable, Dict, List
 
 from src.farmer.farmer import Farmer
 
