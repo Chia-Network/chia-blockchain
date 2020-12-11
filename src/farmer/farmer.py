@@ -131,6 +131,9 @@ class Farmer:
                 for key in removed_keys:
                     self.cache_add_time.pop(key, None)
                 time_slept = uint64(0)
-                log.warning(f"Cleared farmer cache. Num sps: {len(self.sps)}")
+                log.info(
+                    f"Cleared farmer cache. Num sps: {len(self.sps)} {len(self.proofs_of_space)} "
+                    f"{len(self.quality_str_to_identifiers)} {len(self.number_of_responses)}"
+                )
             time_slept += 1
             await asyncio.sleep(1)
