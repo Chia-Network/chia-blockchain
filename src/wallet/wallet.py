@@ -198,19 +198,7 @@ class Wallet:
                 raise ValueError(
                     "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
                 )
-                # TODO(straya): remove this
-                # unconfirmed_additions = await self.wallet_state_manager.unconfirmed_additions_for_wallet(
-                #     self.id()
-                # )
-                # for coin in unconfirmed_additions.values():
-                #     if sum_value > amount:
-                #         break
-                #     if coin.name() in unconfirmed_removals:
-                #         continue
 
-                #     sum_value += coin.amount
-                #     used_coins.add(coin)
-                #     self.log.info(f"Selected used coin: {coin.name()}")
 
         self.log.info(f"Successfully selected coins: {used_coins}")
         return used_coins
