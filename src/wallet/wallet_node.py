@@ -22,6 +22,7 @@ from src.server.connection_utils import send_all_first_reply, send_to_random
 from src.server.ws_connection import WSChiaConnection
 from src.types.coin import hash_coin_list, Coin
 from src.types.peer_info import PeerInfo
+from src.types.weight_proof import WeightProof
 from src.util.byte_types import hexstr_to_bytes
 from src.protocols import wallet_protocol
 from src.consensus.constants import ConsensusConstants
@@ -343,6 +344,7 @@ class WalletNode:
                     f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
                 )
                 return None
+            self.wallet_state_manager.sync_store.add_potential_proof(hb.header_hash, weight_proof)
             self.wallet_state_manager.sync_store.add_potential_peak(hb)
             await asyncio.sleep(1)
             self.start_sync()
@@ -413,8 +415,18 @@ class WalletNode:
             return
 
         fetched_blocks: Dict[int, HeaderBlockRecord] = {}
-
         fork_height = 0
+        weight_proof: Optional[WeightProof] = None
+        if peak is not None:
+            weight_proof = self.wallet_state_manager.sync_store.get_potential_proof(peak.header_hash)
+
+        if weight_proof is not None:
+            # iterate through sub epoch summaries to find fork point
+            for idx, fork_point_height in enumerate(sorted(self.wallet_state_manager.blockchain.sub_epoch_summaries.keys())):
+                if self.wallet_state_manager.blockchain.sub_epoch_summaries[fork_point_height].get_hash() != weight_proof.sub_epochs[idx]:
+                    fork_height = fork_point_height
+                    self.log.info(f"Fork point is at: {fork_height}")
+                    break
 
         for i in range(fork_height, peak_height + 1):
             self.log.info(f"Requesting block {i}")
