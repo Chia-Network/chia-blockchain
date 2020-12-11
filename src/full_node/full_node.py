@@ -670,6 +670,7 @@ class FullNode:
         self,
         respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedSubBlock,
         peer: Optional[ws.WSChiaConnection],
+        farmed_block: bool = False,
     ):
         """
         We have received an unfinished sub-block, either created by us, or from another peer.
@@ -782,7 +783,10 @@ class FullNode:
         )
 
         self.full_node_store.add_unfinished_block(sub_height, block)
-        self.log.info(f"Added unfinished_block {block.partial_hash}")
+        if farmed_block is True:
+            self.log.info(f"🍀 ️Farmed unfinished_block {block.partial_hash}")
+        else:
+            self.log.info(f"Added unfinished_block {block.partial_hash}, not farmed")
 
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants,
@@ -987,7 +991,8 @@ class FullNode:
             # It may be an empty list, even if it's not None. Not None means added successfully
             if new_infusions is not None:
                 self.log.info(
-                    f"⏲️  Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}, "
+                    f"⏲️  Finished sub slot, SP 16/{self.constants.NUM_SPS_SUB_SLOT}, "
+                    f"{request.end_of_slot_bundle.challenge_chain.get_hash()}, "
                     f"number of sub-slots: {len(self.full_node_store.finished_sub_slots)}, "
                     f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
                     f"Deficit {request.end_of_slot_bundle.reward_chain.deficit}"
