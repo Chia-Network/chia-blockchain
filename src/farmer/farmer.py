@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from typing import Dict, List, Optional, Callable, Tuple, Any
 
 from blspy import G1Element
@@ -120,14 +121,16 @@ class Farmer:
     async def _periodically_clear_cache_task(self):
         time_slept: uint64 = uint64(0)
         while not self._shut_down:
-            if time_slept > self.constants.SUB_SLOT_TIME_TARGET * 2:
+            if time_slept > self.constants.SUB_SLOT_TIME_TARGET:
+                now = time.time()
                 removed_keys: List[bytes32] = []
                 for key, add_time in self.cache_add_time.items():
-                    self.sps.pop(key, None)
-                    self.proofs_of_space.pop(key, None)
-                    self.quality_str_to_identifiers.pop(key, None)
-                    self.number_of_responses.pop(key, None)
-                    removed_keys.append(key)
+                    if now - float(add_time) > self.constants.SUB_SLOT_TIME_TARGET * 2:
+                        self.sps.pop(key, None)
+                        self.proofs_of_space.pop(key, None)
+                        self.quality_str_to_identifiers.pop(key, None)
+                        self.number_of_responses.pop(key, None)
+                        removed_keys.append(key)
                 for key in removed_keys:
                     self.cache_add_time.pop(key, None)
                 time_slept = uint64(0)
