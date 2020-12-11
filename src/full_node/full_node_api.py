@@ -423,7 +423,10 @@ class FullNodeAPI:
             msg = Message("new_signage_point", broadcast_farmer)
             await self.server.send_to_all([msg], NodeType.FARMER)
         else:
-            self.log.warning(f"Signage point not added {request}")
+            self.log.warning(
+                f"Signage point {request.index_from_challenge} not added, CC challenge: "
+                f"{request.challenge_chain_vdf.challenge}, RC challenge: {request.reward_chain_vdf.challenge}"
+            )
 
         return None
 
@@ -432,71 +435,8 @@ class FullNodeAPI:
     async def respond_end_of_sub_slot(
         self, request: full_node_protocol.RespondEndOfSubSlot, peer: ws.WSChiaConnection
     ) -> Optional[Message]:
-
-        async with self.full_node.timelord_lock:
-            fetched_ss = self.full_node.full_node_store.get_sub_slot(
-                request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-            )
-            if (
-                (fetched_ss is None)
-                and request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
-                != self.full_node.constants.FIRST_CC_CHALLENGE
-            ):
-                # If we don't have the prev, request the prev instead
-                full_node_request = full_node_protocol.RequestSignagePointOrEndOfSubSlot(
-                    request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-                    uint8(0),
-                    bytes([0] * 32),
-                )
-                return Message("request_signage_point_or_end_of_sub_slot", full_node_request)
-
-            peak = self.full_node.blockchain.get_peak()
-            if peak is not None and peak.sub_block_height > 2:
-                next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
-                next_difficulty = self.full_node.blockchain.get_next_difficulty(peak.header_hash, True)
-            else:
-                next_sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
-                next_difficulty = self.full_node.constants.DIFFICULTY_STARTING
-
-            # Adds the sub slot and potentially get new infusions
-            new_infusions = self.full_node.full_node_store.new_finished_sub_slot(
-                request.end_of_slot_bundle, self.full_node.blockchain.sub_blocks, self.full_node.blockchain.get_peak()
-            )
-            # It may be an empty list, even if it's not None. Not None means added successfully
-            if new_infusions is not None:
-                self.log.info(
-                    f"⏲️  Finished sub slot {request.end_of_slot_bundle.challenge_chain.get_hash()}, "
-                    f"number of sub-slots: {len(self.full_node.full_node_store.finished_sub_slots)}, "
-                    f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
-                    f"Deficit {request.end_of_slot_bundle.reward_chain.deficit}"
-                )
-                # Notify full nodes of the new sub-slot
-                broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
-                    request.end_of_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-                    request.end_of_slot_bundle.challenge_chain.get_hash(),
-                    uint8(0),
-                    request.end_of_slot_bundle.reward_chain.end_of_slot_vdf.challenge,
-                )
-                msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
-                await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
-
-                for infusion in new_infusions:
-                    await self.new_infusion_point_vdf(infusion)
-
-                # Notify farmers of the new sub-slot
-                broadcast_farmer = farmer_protocol.NewSignagePoint(
-                    request.end_of_slot_bundle.challenge_chain.get_hash(),
-                    request.end_of_slot_bundle.challenge_chain.get_hash(),
-                    request.end_of_slot_bundle.reward_chain.get_hash(),
-                    next_difficulty,
-                    next_sub_slot_iters,
-                    uint8(0),
-                )
-                msg = Message("new_signage_point", broadcast_farmer)
-                await self.server.send_to_all([msg], NodeType.FARMER)
-            else:
-                self.log.warning(f"End of slot not added {request}")
-        return None
+        msg, _ = await self.full_node.respond_end_of_sub_slot(request, peer)
+        return msg
 
     @peer_required
     @api_request
@@ -619,10 +559,6 @@ class FullNodeAPI:
                     pool_target = PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0))
                     prev_sb = None
                 else:
-                    self.log.warning(
-                        f"Making a non-genesis block. curr total iters{curr.total_iters} "
-                        f"{total_iters_pos_slot + sp_iters}"
-                    )
                     pool_target = request.pool_target
                     prev_sb = curr
             else:
@@ -750,129 +686,7 @@ class FullNodeAPI:
     @api_request
     async def new_infusion_point_vdf(self, request: timelord_protocol.NewInfusionPointVDF) -> Optional[Message]:
         # Lookup unfinished blocks
-
-        async with self.full_node.timelord_lock:
-            unfinished_block: Optional[UnfinishedBlock] = self.full_node.full_node_store.get_unfinished_block(
-                request.unfinished_reward_hash
-            )
-
-            if unfinished_block is None:
-                self.log.warning(
-                    f"Do not have unfinished reward chain block {request.unfinished_reward_hash}, cannot finish."
-                )
-                return None
-
-            prev_sb: Optional[SubBlockRecord] = None
-
-            target_rc_hash = request.reward_chain_ip_vdf.challenge
-
-            # Backtracks through end of slot objects, should work for multiple empty sub slots
-            for eos, _, _ in reversed(self.full_node.full_node_store.finished_sub_slots):
-                if eos is not None and eos.reward_chain.get_hash() == target_rc_hash:
-                    target_rc_hash = eos.reward_chain.end_of_slot_vdf.challenge
-            if target_rc_hash == self.full_node.constants.FIRST_RC_CHALLENGE:
-                prev_sb = None
-            else:
-                # Find the prev block, starts looking backwards from the peak
-                # TODO: should we look at end of slots too?
-                curr: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
-
-                for _ in range(10):
-                    if curr is None:
-                        break
-                    if curr.reward_infusion_new_challenge == target_rc_hash:
-                        # Found our prev block
-                        prev_sb = curr
-                        break
-                    curr = self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None)
-
-                # If not found, cache keyed on prev block
-                if prev_sb is None:
-                    self.full_node.full_node_store.add_to_future_ip(request)
-                    self.log.warning(f"Previous block is None, infusion point {request.reward_chain_ip_vdf.challenge}")
-                    return None
-
-            sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-                self.full_node.constants,
-                unfinished_block,
-                self.full_node.blockchain.sub_height_to_hash,
-                prev_sb,
-                self.full_node.blockchain.sub_blocks,
-            )
-            overflow = is_overflow_sub_block(
-                self.full_node.constants, unfinished_block.reward_chain_sub_block.signage_point_index
-            )
-            finished_sub_slots = self.full_node.full_node_store.get_finished_sub_slots(
-                prev_sb,
-                self.full_node.blockchain.sub_blocks,
-                unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash,
-                overflow,
-            )
-
-            if (
-                unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
-                == self.full_node.constants.FIRST_CC_CHALLENGE
-            ):
-                sub_slot_start_iters = uint128(0)
-            else:
-                ss_res = self.full_node.full_node_store.get_sub_slot(
-                    unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash
-                )
-                if ss_res is None:
-                    self.log.warning(
-                        f"Do not have sub slot {unfinished_block.reward_chain_sub_block.pos_ss_cc_challenge_hash}"
-                    )
-                    return None
-                _, _, sub_slot_start_iters = ss_res
-            sp_total_iters = uint128(
-                sub_slot_start_iters
-                + calculate_sp_iters(
-                    self.full_node.constants,
-                    sub_slot_iters,
-                    unfinished_block.reward_chain_sub_block.signage_point_index,
-                )
-            )
-
-            block: FullBlock = unfinished_block_to_full_block(
-                unfinished_block,
-                request.challenge_chain_ip_vdf,
-                request.challenge_chain_ip_proof,
-                request.reward_chain_ip_vdf,
-                request.reward_chain_ip_proof,
-                request.infused_challenge_chain_ip_vdf,
-                request.infused_challenge_chain_ip_proof,
-                finished_sub_slots,
-                prev_sb,
-                self.full_node.blockchain.sub_blocks,
-                sp_total_iters,
-                difficulty,
-            )
-            first_ss_new_epoch = False
-            if not self.full_node.has_valid_pool_sig(block):
-                self.log.warning("Trying to make a pre-farm block but height is not 0")
-                return None
-            if len(block.finished_sub_slots) > 0:
-                if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
-                    first_ss_new_epoch = True
-            else:
-                curr = prev_sb
-                while (curr is not None) and not curr.first_in_sub_slot:
-                    curr = self.full_node.blockchain.sub_blocks.get(curr.prev_hash, None)
-                if (
-                    curr is not None
-                    and curr.first_in_sub_slot
-                    and curr.sub_epoch_summary_included is not None
-                    and curr.sub_epoch_summary_included.new_difficulty is not None
-                ):
-                    first_ss_new_epoch = True
-            if first_ss_new_epoch and overflow:
-                # No overflow sub-blocks in the first sub-slot of each epoch
-                return None
-            try:
-                await self.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-            except ConsensusError as e:
-                self.log.warning(f"Consensus error validating sub-block: {e}")
-        return None
+        return await self.full_node.new_infusion_point_vdf(request)
 
     @peer_required
     @api_request
@@ -895,8 +709,17 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         # Calls our own internal message to handle the end of sub slot, and potentially broadcasts to other peers.
         full_node_message = full_node_protocol.RespondEndOfSubSlot(request.end_of_sub_slot_bundle)
-        await self.respond_end_of_sub_slot(full_node_message, peer)
-        return None
+        msg, added = await self.full_node.respond_end_of_sub_slot(full_node_message, peer)
+        if not added:
+            self.log.error(
+                f"Was not able to add end of sub-slot: "
+                f"{request.end_of_sub_slot_bundle.challenge_chain.challenge_chain_end_of_slot_vdf.challenge}. "
+                f"Re-sending new-peak to timelord"
+            )
+            await self.full_node._send_peak_to_timelords()
+            return None
+        else:
+            return msg
 
     @api_request
     async def request_sub_block_header(self, request: wallet_protocol.RequestSubBlockHeader) -> Optional[Message]:
