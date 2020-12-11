@@ -28,8 +28,7 @@
 # class TestWalletSync:
 #     @pytest.fixture(scope="function")
 #     async def wallet_node(self):
-#         constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
-#         async for _ in setup_node_and_wallet(constants):
+#         async for _ in setup_node_and_wallet(test_constants):
 #             yield _
 #
 #     @pytest.fixture(scope="function")
