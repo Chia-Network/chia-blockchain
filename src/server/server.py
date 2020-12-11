@@ -163,14 +163,17 @@ class ChiaServer:
             await self.connection_added(connection, self.on_connect)
             if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
                 self.introducer_peers.add(connection.get_peer_info())
-        except Exception as e:
-            if isinstance(e, ProtocolError) and e.code == Err.SELF_CONNECTION:
+        except ProtocolError as e:
+            if e.code == Err.SELF_CONNECTION:
                 close_event.set()
             else:
                 error_stack = traceback.format_exc()
-                self.log.error(f"Exception: {e}")
-                self.log.error(f"Exception Stack: {error_stack}")
+                self.log.error(f"Exception {e}, exception Stack: {error_stack}")
                 close_event.set()
+        except Exception as e:
+            error_stack = traceback.format_exc()
+            self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+            close_event.set()
 
         await close_event.wait()
         return ws
@@ -215,7 +218,7 @@ class ChiaServer:
             self.log.info(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
-            except asyncio.exceptions.TimeoutError as e:
+            except asyncio.TimeoutError as e:
                 self.log.warning(f"Timeout error {e} connecting to {url}")
                 await session.close()
                 return False
@@ -248,13 +251,16 @@ class ChiaServer:
             return True
         except client_exceptions.ClientConnectorError as e:
             self.log.warning(f"{e}")
-        except Exception as e:
-            if isinstance(e, ProtocolError) and e.code == Err.SELF_CONNECTION:
+        except ProtocolError as e:
+            if e.code == Err.SELF_CONNECTION:
                 pass
             else:
                 error_stack = traceback.format_exc()
-                self.log.error(f"Exception: {e}")
-                self.log.error(f"Exception Stack: {error_stack}")
+                self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+        except Exception as e:
+            error_stack = traceback.format_exc()
+            self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+
         if session is not None:
             await session.close()
 
