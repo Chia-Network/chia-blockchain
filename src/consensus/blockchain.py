@@ -345,7 +345,7 @@ class Blockchain:
         if block is None:
             return None
         is_overflow = self.sub_blocks[block.header_hash].overflow
-        if block is None:
+        if is_overflow is None:
             return None
 
         curr: Optional[FullBlock] = block

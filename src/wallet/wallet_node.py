@@ -350,8 +350,9 @@ class WalletNode:
     async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
         assert self.wallet_state_manager is not None
         curr_peak = self.wallet_state_manager.blockchain.get_peak()
-        if curr_peak is not None and curr_peak.weight > curr_peak.weight:
-            return
+        #  if curr_peak is not None and curr_peak.weight > curr_peak.weight:
+        #    return
+        #  Did you mean -  peak.weight > curr_peak.weight:
 
         request = wallet_protocol.RequestSubBlockHeader(peak.sub_block_height)
         response: Optional[RespondSubBlockHeader] = await peer.request_sub_block_header(request)

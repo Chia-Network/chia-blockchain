@@ -321,7 +321,6 @@ class ChiaServer:
                         connection.log.error(f"Exception: {e}, closing connection {connection}. {tb}")
                     else:
                         connection.log.info(f"Exception: {e} while closing connection")
-                        pass
                     await connection.close()
 
             asyncio.create_task(api_call(payload_inc, connection_inc))
