@@ -1,19 +1,10 @@
 # import asyncio
-# import time
 # from typing import Optional
 # import pytest
 #
-# from src.consensus.blockchain import ReceiveBlockResult
-# from src.types.condition_var_pair import ConditionVarPair
-# from src.types.condition_opcodes import ConditionOpcode
-# from src.types.sized_bytes import bytes32
-# from src.full_node.bundle_tools import best_solution_program
 # from src.protocols import full_node_protocol
 # from src.types.full_block import FullBlock
-# from src.types.spend_bundle import SpendBundle
-# from src.util.clvm import int_to_bytes
-# from src.util.errors import Err
-# from src.util.ints import uint64
+# from tests.full_node.test_full_node import connect_and_get_peer
 # from tests.setup_nodes import setup_two_nodes, test_constants, bt
 # from src.util.wallet_tools import WalletTool
 #
@@ -49,20 +40,25 @@
 #         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
 #         receiver_puzzlehash = BURN_PUZZLE_HASH
 #
-#         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
+#         blocks = bt.get_consecutive_blocks(
+#             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+#         )
 #         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
+#         peer = await connect_and_get_peer(server_1, server_2)
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block), None)
 #
 #         spent_block = blocks[1]
 #
-#         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spent_block.get_coinbase())
+#         spend_bundle = wallet_a.generate_signed_transaction(
+#             1000, receiver_puzzlehash, spent_block.get_included_reward_coins()[0]
+#         )
 #
 #         assert spend_bundle is not None
 #         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-#         await full_node_api_1.respond_transaction(tx)
+#         await full_node_api_1.respond_transaction(tx, peer)
 #
 #         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
 #         assert sb is spend_bundle
@@ -71,11 +67,9 @@
 #         next_spendbundle = await full_node_1.mempool_manager.create_bundle_from_mempool(last_block.header)
 #         assert next_spendbundle is not None
 #
-#         program = best_solution_program(next_spendbundle)
-#         aggsig = next_spendbundle.aggregated_signature
-#
-#         dic_h = {11: (program, aggsig)}
-#         new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h)
+#         new_blocks = bt.get_consecutive_blocks(
+#             1, block_list_input=blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, transaction_data=next_spendbundle
+#         )
 #
 #         next_block = new_blocks[11]
 #         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(next_block))
@@ -104,6 +98,7 @@
 #         assert farmed_block is not None
 #         assert farmed_block.transactions_generator == program
 #
+
 #     @pytest.mark.asyncio
 #     async def test_validate_blockchain_with_double_spend(self, two_nodes):
 #
