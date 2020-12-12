@@ -100,14 +100,14 @@ def event_loop():
 
 @pytest.fixture(scope="function")
 async def two_nodes():
-    zero_free_constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+    zero_free_constants = test_constants.replace()
     async for _ in setup_two_nodes(zero_free_constants):
         yield _
 
 
 @pytest.fixture(scope="function")
 async def two_empty_nodes():
-    zero_free_constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+    zero_free_constants = test_constants.replace()
     async for _ in setup_two_nodes(zero_free_constants):
         yield _
 

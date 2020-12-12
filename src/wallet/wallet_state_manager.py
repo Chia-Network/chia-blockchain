@@ -15,6 +15,7 @@ from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.sub_block_record import SubBlockRecord
+from src.full_node.weight_proof import WeightProofHandler, BlockCache
 from src.types.coin import Coin
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
@@ -90,6 +91,7 @@ class WalletStateManager:
     block_store: WalletBlockStore
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
+    weight_proof_handler: WeightProofHandler
 
     @staticmethod
     async def create(
@@ -118,7 +120,6 @@ class WalletStateManager:
         self.action_store = await WalletActionStore.create(self.db_connection)
         self.basic_store = await KeyValStore.create(self.db_connection)
         self.trade_manager = await TradeManager.create(self, self.db_connection)
-
         self.user_settings = await UserSettings.create(self.basic_store)
         self.block_store = await WalletBlockStore.create(self.db_connection)
         self.blockchain = await WalletBlockchain.create(
@@ -127,6 +128,7 @@ class WalletStateManager:
             self.coins_of_interest_received,
             self.reorg_rollback,
         )
+        self.weight_proof_handler = WeightProofHandler(self.constants, BlockCache(self.blockchain))
 
         self.sync_mode = False
         self.sync_store = await WalletSyncStore.create()
@@ -171,9 +173,8 @@ class WalletStateManager:
         return self
 
     @property
-    def peak(self) -> SubBlockRecord:
+    def peak(self) -> Optional[SubBlockRecord]:
         peak = self.blockchain.get_peak()
-        assert peak is not None
         return peak
 
     def get_derivation_index(self, pubkey: G1Element, max_depth: int = 1000) -> int:
@@ -424,11 +425,12 @@ class WalletStateManager:
         return uint64(result)
 
     async def get_frozen_balance(self, wallet_id: int) -> uint64:
-        current_index = self.peak.height
+        if self.peak is not None:
+            current_index = self.peak.height
+        else:
+            current_index = uint32(0)
 
-        coinbase_freeze_period = self.constants.COINBASE_FREEZE_PERIOD
-
-        valid_index = current_index - coinbase_freeze_period
+        valid_index = current_index
 
         not_frozen: Set[WalletCoinRecord] = await self.coin_store.get_spendable_for_index(valid_index, wallet_id)
         all_records: Set[WalletCoinRecord] = await self.coin_store.get_spendable_for_index(current_index, wallet_id)
@@ -678,7 +680,7 @@ class WalletStateManager:
         tx_filter = PyBIP158([b for b in transactions_filter])
 
         # Find fork point
-        if new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH:
+        if new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH and self.peak is not None:
             self.log.info("not genesis")
             # TODO: handle returning of -1
             fork_h = find_fork_point_in_chain(
@@ -818,16 +820,14 @@ class WalletStateManager:
         self.tx_pending_changed()
 
     async def close_all_stores(self):
-        async with self.lock:
-            await self.db_connection.close()
+        await self.db_connection.close()
 
     async def clear_all_stores(self):
-        async with self.lock:
-            await self.coin_store._clear_database()
-            await self.tx_store._clear_database()
-            await self.puzzle_store._clear_database()
-            await self.user_store._clear_database()
-            await self.basic_store._clear_database()
+        await self.coin_store._clear_database()
+        await self.tx_store._clear_database()
+        await self.puzzle_store._clear_database()
+        await self.user_store._clear_database()
+        await self.basic_store._clear_database()
 
     def unlink_db(self):
         Path(self.db_path).unlink()
@@ -919,12 +919,7 @@ class WalletStateManager:
 
         current_index = self.peak.height
 
-        coinbase_freeze_period = self.constants.COINBASE_FREEZE_PERIOD
-
-        if current_index <= coinbase_freeze_period:
-            return set()
-
-        valid_index = current_index - coinbase_freeze_period
+        valid_index = current_index
 
         records = await self.coin_store.get_spendable_for_index(valid_index, wallet_id)
 
