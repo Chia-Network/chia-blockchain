@@ -52,7 +52,6 @@ class TestMempool:
         async for _ in setup_two_nodes(constants):
             yield _
 
-
     @pytest.mark.asyncio
     async def test_basic_mempool(self, two_nodes):
         reward_ph = WALLET_A.get_new_puzzlehash()

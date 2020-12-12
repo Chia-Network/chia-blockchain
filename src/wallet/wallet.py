@@ -199,7 +199,6 @@ class Wallet:
                     "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
                 )
 
-
         self.log.info(f"Successfully selected coins: {used_coins}")
         return used_coins
 

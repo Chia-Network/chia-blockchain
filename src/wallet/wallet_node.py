@@ -1,6 +1,7 @@
 import asyncio
 import json
 import traceback
+from asyncio import Task
 from typing import Dict, Optional, Tuple, List, AsyncGenerator, Callable, Union
 from pathlib import Path
 import socket
@@ -18,7 +19,7 @@ from src.protocols.wallet_protocol import (
     RejectRemovalsRequest,
     RejectAdditionsRequest,
 )
-from src.server.connection_utils import send_all_first_reply, send_to_random
+from src.server.connection_utils import send_to_random
 from src.server.ws_connection import WSChiaConnection
 from src.types.coin import hash_coin_list, Coin
 from src.types.peer_info import PeerInfo
@@ -103,7 +104,7 @@ class WalletNode:
         self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
         self.server = None
         self.wsm_close_task = None
-        self.sync_task = None
+        self.sync_task: Optional[Task] = None
 
     def get_key_for_fingerprint(self, fingerprint):
         private_keys = self.keychain.get_all_private_keys()
@@ -336,8 +337,8 @@ class WalletNode:
         if response is not None and response.header_block is not None:
             # TODO validate weight
             hb = response.header_block
-            request = RequestProofOfWeight(hb.sub_block_height, hb.header_hash)
-            weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(request)
+            weight_request = RequestProofOfWeight(hb.sub_block_height, hb.header_hash)
+            weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request)
             if weight_proof_response is None:
                 return
             weight_proof = weight_proof_response.wp
@@ -389,7 +390,7 @@ class WalletNode:
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Loop exception in sync {e}. {tb}")
-            #self.sync_event.clear()
+            # self.sync_event.clear()
             self.log.info("Loop end in sync job")
 
     async def _sync(self):
@@ -433,8 +434,13 @@ class WalletNode:
 
         if weight_proof is not None:
             # iterate through sub epoch summaries to find fork point
-            for idx, fork_point_height in enumerate(sorted(self.wallet_state_manager.blockchain.sub_epoch_summaries.keys())):
-                if self.wallet_state_manager.blockchain.sub_epoch_summaries[fork_point_height].get_hash() != weight_proof.sub_epochs[idx]:
+            for idx, fork_point_height in enumerate(
+                sorted(self.wallet_state_manager.blockchain.sub_epoch_summaries.keys())
+            ):
+                if (
+                    self.wallet_state_manager.blockchain.sub_epoch_summaries[fork_point_height].get_hash()
+                    != weight_proof.sub_epochs[idx]
+                ):
                     fork_height = fork_point_height
                     self.log.info(f"Fork point is at: {fork_height}")
                     break

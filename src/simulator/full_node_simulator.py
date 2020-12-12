@@ -1,6 +1,5 @@
-from typing import AsyncGenerator, List, Optional, Tuple
+from typing import AsyncGenerator, List, Optional
 
-from src.consensus.blockchain import ReceiveBlockResult
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols.full_node_protocol import RespondSubBlock
@@ -10,11 +9,9 @@ from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 
 from src.util.api_decorators import api_request
-from src.util.errors import Err
-from src.util.ints import uint8, uint32
+from src.util.ints import uint8
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
-
 
 
 class FullNodeSimulator(FullNodeAPI):
@@ -50,7 +47,7 @@ class FullNodeSimulator(FullNodeAPI):
         current_blocks = await self.get_all_full_blocks()
         if len(current_blocks) == 0:
             genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-            res: Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]] = await self.full_node.blockchain.receive_block(genesis)
+            await self.full_node.blockchain.receive_block(genesis)
 
         peak = self.full_node.blockchain.get_peak()
         assert peak is not None
@@ -87,7 +84,7 @@ class FullNodeSimulator(FullNodeAPI):
             block_list_input=current_blocks[:old_index],
             force_overflow=True,
             guarantee_block=True,
-            seed=32*b"1"
+            seed=32 * b"1",
         )
 
         for block in more_blocks:
