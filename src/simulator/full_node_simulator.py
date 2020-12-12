@@ -1,5 +1,6 @@
-from typing import AsyncGenerator, List, Optional
+from typing import AsyncGenerator, List, Optional, Tuple
 
+from src.consensus.blockchain import ReceiveBlockResult
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols.full_node_protocol import RespondSubBlock
@@ -9,19 +10,18 @@ from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
 
 from src.util.api_decorators import api_request
-from src.util.block_tools import BlockTools, test_constants
-from src.util.ints import uint8
+from src.util.errors import Err
+from src.util.ints import uint8, uint32
 
 OutboundMessageGenerator = AsyncGenerator[OutboundMessage, None]
 
-bt = BlockTools(constants=test_constants)
 
 
 class FullNodeSimulator(FullNodeAPI):
     def __init__(self, full_node, block_tools):
         super().__init__(full_node)
-        self.full_node = full_node
         self.bt = block_tools
+        self.full_node = full_node
 
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
@@ -49,8 +49,8 @@ class FullNodeSimulator(FullNodeAPI):
         self.log.info("Farming new block!")
         current_blocks = await self.get_all_full_blocks()
         if len(current_blocks) == 0:
-            genesis = bt.get_consecutive_blocks(uint8(1), force_overflow=True)[0]
-            await self.full_node.blockchain.receive_block(genesis)
+            genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
+            res: Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]] = await self.full_node.blockchain.receive_block(genesis)
 
         peak = self.full_node.blockchain.get_peak()
         assert peak is not None
@@ -59,7 +59,7 @@ class FullNodeSimulator(FullNodeAPI):
         )
         current_blocks = await self.get_all_full_blocks()
         target = request.puzzle_hash
-        more = bt.get_consecutive_blocks(
+        more = self.bt.get_consecutive_blocks(
             1,
             transaction_data=bundle,
             farmer_reward_puzzle_hash=target,

@@ -7,13 +7,12 @@ from src.full_node.full_node import FullNode
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
-from src.util.block_tools import BlockTools
+from src.util.block_tools import BlockTools, test_constants
 from src.util.config import load_config_cli
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.path import mkdir, path_from_root
 
 from .full_node_simulator import FullNodeSimulator
-from .simulator_constants import test_constants
 
 
 # See: https://bugs.python.org/issue29288
@@ -60,7 +59,7 @@ def main():
         DEFAULT_ROOT_PATH,
         config,
         test_constants,
-        BlockTools(),
+        BlockTools(test_constants),
     )
     return run_service(**kwargs)
 

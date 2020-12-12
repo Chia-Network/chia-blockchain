@@ -104,6 +104,7 @@ class WalletNode:
         self.server = None
         self.wsm_close_task = None
         self.sync_event = asyncio.Event()
+        self.close_event = asyncio.Event()
 
     def get_key_for_fingerprint(self, fingerprint):
         private_keys = self.keychain.get_all_private_keys()
@@ -184,13 +185,15 @@ class WalletNode:
             return
         self.wsm_close_task = asyncio.create_task(self.wallet_state_manager.close_all_stores())
         self.wallet_peers_task = asyncio.create_task(self.wallet_peers.ensure_is_closed())
+        self.close_event.set()
 
     async def _await_closed(self):
-        if self.wallet_state_manager is None or self.backup_initialized is False:
-            return
+        await self.close_event.wait()
         if self.wsm_close_task is not None:
             await self.wsm_close_task
             self.wsm_close_task = None
+        if self.wallet_peers_task is not None:
+            await self.wallet_peers_task
         self.wallet_state_manager = None
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -322,7 +325,9 @@ class WalletNode:
         return False
 
     async def new_peak(self, peak: wallet_protocol.NewPeak, peer: WSChiaConnection):
-        assert self.wallet_state_manager is not None
+        if self.wallet_state_manager is None:
+            return
+
         curr_peak = self.wallet_state_manager.blockchain.get_peak()
         if curr_peak is not None and curr_peak.weight > curr_peak.weight:
             return
