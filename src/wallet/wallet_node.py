@@ -103,8 +103,7 @@ class WalletNode:
         self.backup_initialized = False  # Delay first launch sync after user imports backup info or decides to skip
         self.server = None
         self.wsm_close_task = None
-        self.sync_event = asyncio.Event()
-        self.close_event = asyncio.Event()
+        self.sync_task = None
 
     def get_key_for_fingerprint(self, fingerprint):
         private_keys = self.keychain.get_all_private_keys()
@@ -176,25 +175,24 @@ class WalletNode:
         self._shut_down = False
 
         asyncio.create_task(self._periodically_check_full_node())
+        self.sync_event = asyncio.Event()
         self.sync_task = asyncio.create_task(self.sync_job())
+        self.log.info("self.sync_job")
         return True
 
     def _close(self):
+        self.log.info("self._close")
         self._shut_down = True
-        if self.wallet_state_manager is None:
-            return
-        self.wsm_close_task = asyncio.create_task(self.wallet_state_manager.close_all_stores())
-        self.wallet_peers_task = asyncio.create_task(self.wallet_peers.ensure_is_closed())
-        self.close_event.set()
 
     async def _await_closed(self):
-        await self.close_event.wait()
-        if self.wsm_close_task is not None:
-            await self.wsm_close_task
-            self.wsm_close_task = None
-        if self.wallet_peers_task is not None:
-            await self.wallet_peers_task
-        self.wallet_state_manager = None
+        self.log.info("self._await_closed")
+        await self.wallet_peers.ensure_is_closed()
+        if self.wallet_state_manager is not None:
+            await self.wallet_state_manager.close_all_stores()
+            self.wallet_state_manager = None
+        if self.sync_task is not None:
+            self.sync_task.cancel()
+            self.sync_task = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -349,11 +347,13 @@ class WalletNode:
                     f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
                 )
                 return None
+            self.log.info("validated")
             self.wallet_state_manager.sync_store.add_potential_proof(hb.header_hash, weight_proof)
             self.wallet_state_manager.sync_store.add_potential_peak(hb)
             self.start_sync()
 
     def start_sync(self):
+        self.log.info("self.sync_event.set()")
         self.sync_event.set()
 
     async def check_new_peak(self):
@@ -370,19 +370,27 @@ class WalletNode:
 
     async def sync_job(self):
         while True:
+            self.log.info("Loop start in sync job")
             await asyncio.sleep(1)
             if self._shut_down is True:
+                self.log.info("Loop self._shut_down is True 1")
                 break
             asyncio.create_task(self.check_new_peak())
+            self.log.info("Loop self.sync_event.wait() 1")
             await self.sync_event.wait()
+            self.log.info("Loop self.sync_event.wait() 2")
             if self._shut_down is True:
+                self.log.info("Loop self._shut_down is True 2")
                 break
             try:
+                self.log.info("Loop Before sync")
                 await self._sync()
+                self.log.info("Loop After sync")
             except Exception as e:
                 tb = traceback.format_exc()
-                self.log.error(f"exception in sync {e}. {tb}")
-            self.sync_event.clear()
+                self.log.error(f"Loop exception in sync {e}. {tb}")
+            #self.sync_event.clear()
+            self.log.info("Loop end in sync job")
 
     async def _sync(self):
         """
@@ -438,9 +446,10 @@ class WalletNode:
             peer: WSChiaConnection = peer
             res: RespondSubBlockHeader = response
             block_i: HeaderBlock = res.header_block
-            self.log.error(f"Received block {block_i.sub_block_height}, {block_i.height}, {block_i.is_block}")
             if block_i is None:
                 continue
+
+            self.log.error(f"Received block {block_i.sub_block_height}, {block_i.height}, {block_i.is_block}")
 
             if block_i.is_block:
                 # Find additions and removals
@@ -472,8 +481,13 @@ class WalletNode:
             ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record)
             if result == ReceiveBlockResult.NEW_PEAK:
                 self.wallet_state_manager.state_changed("new_block")
+                self.log.info("New Peak")
+            elif result == ReceiveBlockResult.INVALID_BLOCK:
+                self.log.info("Invalid block")
+                await peer.close()
+                break
 
-    async def validate_additions(
+    def validate_additions(
         self,
         coins: List[Tuple[bytes32, List[Coin]]],
         proofs: Optional[List[Tuple[bytes32, bytes, Optional[bytes]]]],
@@ -532,7 +546,7 @@ class WalletNode:
 
         return True
 
-    async def validate_removals(self, coins, proofs, root):
+    def validate_removals(self, coins, proofs, root):
         if proofs is None:
             # If there are no proofs, it means all removals were returned in the response.
             # we must find the ones relevant to our wallets.
@@ -587,7 +601,7 @@ class WalletNode:
                 await peer.close()
                 return None
             elif isinstance(additions_res, RespondAdditions):
-                validated = await self.validate_additions(
+                validated = self.validate_additions(
                     additions_res.coins,
                     additions_res.proofs,
                     block_i.foliage_block.additions_root,

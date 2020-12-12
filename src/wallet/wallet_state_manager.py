@@ -815,16 +815,14 @@ class WalletStateManager:
         self.tx_pending_changed()
 
     async def close_all_stores(self):
-        async with self.lock:
-            await self.db_connection.close()
+        await self.db_connection.close()
 
     async def clear_all_stores(self):
-        async with self.lock:
-            await self.coin_store._clear_database()
-            await self.tx_store._clear_database()
-            await self.puzzle_store._clear_database()
-            await self.user_store._clear_database()
-            await self.basic_store._clear_database()
+        await self.coin_store._clear_database()
+        await self.tx_store._clear_database()
+        await self.puzzle_store._clear_database()
+        await self.user_store._clear_database()
+        await self.basic_store._clear_database()
 
     def unlink_db(self):
         Path(self.db_path).unlink()
