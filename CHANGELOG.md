@@ -18,6 +18,7 @@ for setuptools_scm/PEP 440 reasons.
 
 - There are new farming and plotting pages. The plotting flow was redesigned to streamline it and add advanced options as drop downs as appropriate. Plots are now queued into your local plot list. To see the plotting log, try the three vertical dots. Remote harvester plot display will be coming to the plot page as well.
 - Harvester and farmer will start when the GUI starts instead of waiting for key selection.
+- Plotting has a new option `-e`. This allows you to choose from either the default bitfield back propagation or the classic back propagation. SSD temp space is generally faster with the classic mode with `-e` and spinning disk are generally faster with the new method. YMMV.
 - We have moved to taproot across all of our transactions and smart transactions.
 - The rate limited wallet was updated and re-factored.
 - All appropriate Chialisp smart transactions have been updated to use aggsig_me.
@@ -28,6 +29,7 @@ for setuptools_scm/PEP 440 reasons.
 - aiohttp, clvm-tools, colorlog, concurrent-log-handler, keyring, cryptography, and sortedcontainers have been upgraded to their current versions.
 
 ### Fixed
+- There was a regression in Beta 18 where the plotter took 499GiB of temp space for a k32 when it used to only use 332GiB. The plotter should now use just slightly less than it did in Beta 17. 
 
 ## [1.0beta18] aka Beta 1.18 - 2020-12-03
 
