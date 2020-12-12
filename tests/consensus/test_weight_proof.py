@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 import logging
 from typing import Dict, Optional, List, Tuple
@@ -234,7 +235,8 @@ class TestWeightProof:
     #     wpf.log.setLevel(logging.INFO)
     #     initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
     #
-    #     wp = await wpf.create_proof_of_weight(uint32(len(header_cache)), uint32(num_of_blocks), blocks[-1].header_hash)
+    #     wp = await wpf.create_proof_of_weight(uint32(len(header_cache)),
+    #               uint32(num_of_blocks), blocks[-1].header_hash)
     #
     #     assert wp is not None
     #     assert len(wp.sub_epochs) == sub_epochs
