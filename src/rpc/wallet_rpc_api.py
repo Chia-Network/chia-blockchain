@@ -258,11 +258,11 @@ class WalletRpcApi:
     async def get_height_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
 
-        # TODO(straya)
-        # ca = self.service.wallet_state_manager.lca
-        # height = self.service.wallet_state_manager.block_records[lca].height
-
-        return {}
+        peak = self.service.wallet_state_manager.peak
+        if peak is None:
+            return {"height": 0}
+        else:
+            return {"height": peak.height}
 
     async def farm_block(self, request):
         raw_puzzle_hash = decode_puzzle_hash(request["address"])

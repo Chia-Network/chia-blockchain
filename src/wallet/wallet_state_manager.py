@@ -425,7 +425,10 @@ class WalletStateManager:
         return uint64(result)
 
     async def get_frozen_balance(self, wallet_id: int) -> uint64:
-        current_index = self.peak.height
+        if self.peak is not None:
+            current_index = self.peak.height
+        else:
+            current_index = 0
 
         valid_index = current_index
 
