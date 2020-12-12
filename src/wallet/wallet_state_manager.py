@@ -428,7 +428,7 @@ class WalletStateManager:
         if self.peak is not None:
             current_index = self.peak.height
         else:
-            current_index = 0
+            current_index = uint32(0)
 
         valid_index = current_index
 
@@ -675,7 +675,7 @@ class WalletStateManager:
         tx_filter = PyBIP158([b for b in transactions_filter])
 
         # Find fork point
-        if new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH:
+        if new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH and self.peak is not None:
             self.log.info("not genesis")
             # TODO: handle returning of -1
             fork_h = find_fork_point_in_chain(

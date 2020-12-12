@@ -40,7 +40,7 @@ from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.api_decorators import api_request, peer_required
-from src.util.errors import ConsensusError, Err
+from src.util.errors import Err
 from src.util.ints import uint64, uint128, uint8, uint32
 from src.types.peer_info import PeerInfo
 from src.util.merkle_set import MerkleSet
@@ -915,13 +915,9 @@ class FullNodeAPI:
             error: Optional[Err] = Err.UNKNOWN
         else:
             async with self.full_node.blockchain.lock:
-                cost, status, error = await self.full_node.mempool_manager.add_spendbundle(
-                    request.transaction
-                )
+                cost, status, error = await self.full_node.mempool_manager.add_spendbundle(request.transaction)
                 if status == MempoolInclusionStatus.SUCCESS:
-                    self.log.info(
-                        f"Added transaction to mempool: {request.transaction.name()}"
-                    )
+                    self.log.info(f"Added transaction to mempool: {request.transaction.name()}")
                     # Only broadcast successful transactions, not pending ones. Otherwise it's a DOS
                     # vector.
                     fees = request.transaction.fees()
@@ -942,9 +938,7 @@ class FullNodeAPI:
 
         error_name = error.name if error is not None else None
         if status == MempoolInclusionStatus.SUCCESS:
-            response = wallet_protocol.TransactionAck(
-                request.transaction.name(), status, error_name
-            )
+            response = wallet_protocol.TransactionAck(request.transaction.name(), status, error_name)
         else:
             # If if failed/pending, but it previously succeeded (in mempool), this is idempotence, return SUCCESS
             if self.full_node.mempool_manager.get_spendbundle(request.transaction.name()) is not None:
@@ -952,8 +946,6 @@ class FullNodeAPI:
                     request.transaction.name(), MempoolInclusionStatus.SUCCESS, None
                 )
             else:
-                response = wallet_protocol.TransactionAck(
-                    request.transaction.name(), status, error_name
-                )
+                response = wallet_protocol.TransactionAck(request.transaction.name(), status, error_name)
         msg = Message("transaction_ack", response)
         return msg
