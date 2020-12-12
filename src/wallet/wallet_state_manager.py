@@ -15,7 +15,7 @@ from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.weight_proof import WeightProofHandler, BlockCache
+from src.full_node.weight_proof import WeightProofHandler
 from src.types.coin import Coin
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
@@ -128,7 +128,7 @@ class WalletStateManager:
             self.coins_of_interest_received,
             self.reorg_rollback,
         )
-        self.weight_proof_handler = WeightProofHandler(self.constants, BlockCache(self.blockchain))
+        self.weight_proof_handler = WeightProofHandler(self.constants)
 
         self.sync_mode = False
         self.sync_store = await WalletSyncStore.create()
