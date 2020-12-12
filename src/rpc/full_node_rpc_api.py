@@ -8,6 +8,7 @@ from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.byte_types import hexstr_to_bytes
 from src.util.ints import uint64, uint32, uint128
 from src.util.ws_message import create_payload
+from src.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 
 
 class FullNodeRpcApi:
@@ -186,9 +187,14 @@ class FullNodeRpcApi:
 
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
-        network_space_constant = 2 ** 25
+        additional_difficulty_constant = 2 ** 25
         eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
-        network_space_bytes_estimate = weight_div_iters * network_space_constant * eligible_plots_filter_multiplier
+        network_space_bytes_estimate = (
+            UI_ACTUAL_SPACE_CONSTANT_FACTOR
+            * weight_div_iters
+            * additional_difficulty_constant
+            * eligible_plots_filter_multiplier
+        )
         return {"space": uint128(int(network_space_bytes_estimate))}
 
     async def get_unspent_coins(self, request: Dict) -> Optional[Dict]:

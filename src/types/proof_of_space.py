@@ -39,6 +39,10 @@ class ProofOfSpace(Streamable):
             return None
         if (self.pool_public_key is not None) and (self.pool_contract_puzzle_hash is not None):
             return None
+        if self.size < constants.MIN_PLOT_SIZE:
+            return None
+        if self.size > constants.MAX_PLOT_SIZE:
+            return None
         plot_id: bytes32 = self.get_plot_id()
         new_challenge: bytes32 = ProofOfSpace.calculate_pos_challenge(plot_id, original_challenge_hash, signage_point)
 
