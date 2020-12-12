@@ -5,6 +5,7 @@ from typing import Dict
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.util.block_tools import test_constants
 from src.wallet.wallet_node import WalletNode
 from src.rpc.wallet_rpc_api import WalletRpcApi
 from src.server.outbound_message import NodeType
@@ -65,8 +66,6 @@ def main():
     # This is simulator
     local_test = config["testing"]
     if local_test is True:
-        from src.simulator.simulator_constants import test_constants
-
         constants = test_constants
         current = config["database_path"]
         config["database_path"] = f"{current}_simulation"

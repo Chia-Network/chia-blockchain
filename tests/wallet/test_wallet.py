@@ -8,10 +8,11 @@ from src.consensus.sub_block_record import SubBlockRecord
 from src.server.server import ChiaServer
 from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
-from src.util.ints import uint16
+from src.util.ints import uint16, uint32
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
 )
+from tests.time_out_assert import time_out_assert
 
 
 @pytest.fixture(scope="module")
@@ -49,7 +50,6 @@ class TestWalletSimulator:
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
 
-        await server_2.start_client(PeerInfo("127.0.0.1", server_1._port))
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
