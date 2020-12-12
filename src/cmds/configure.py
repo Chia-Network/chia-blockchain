@@ -36,12 +36,12 @@ def make_parser(parser: ArgumentParser):
 def help_message():
     print("usage: chia configure -flag")
     print(
-        '''
+        """
         chia configure [arguments] [inputs]
             --set-node-introducer [IP:Port] (Set the introducer for node),
             --set-fullnode-port [Port] (Set the full node default port, useful for beta testing),
             --set-log-level [LogLevel] (Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET)
-        '''
+        """
     )
 
 
@@ -73,7 +73,14 @@ def configure(args, parser):
         print("Default full node port updated.")
         change_made = True
     if args.set_log_level:
-        if (args.set_log_level == "CRITICAL") or (args.set_log_level == "ERROR") or (args.set_log_level == "WARNING") or (args.set_log_level == "INFO") or (args.set_log_level == "DEBUG") or (args.set_log_level == "NOTSET"):
+        if (
+            (args.set_log_level == "CRITICAL")
+            or (args.set_log_level == "ERROR")
+            or (args.set_log_level == "WARNING")
+            or (args.set_log_level == "INFO")
+            or (args.set_log_level == "DEBUG")
+            or (args.set_log_level == "NOTSET")
+        ):
             config["logging"]["log_level"] = args.set_log_level
             print("Logging level updated. Check CHIA_ROOT/log/debug.log")
             change_made = True
