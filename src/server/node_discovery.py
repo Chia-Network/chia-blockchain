@@ -37,7 +37,7 @@ class FullNodeDiscovery:
         root_path: Path,
         target_outbound_count: int,
         peer_db_path: str,
-        introducer_info: Optional[PeerInfo],
+        introducer_info: Optional[Dict],
         peer_connect_interval: int,
         log,
     ):
@@ -143,15 +143,6 @@ class FullNodeDiscovery:
             await peer.send_message(msg)
 
         await self.server.start_client(self.introducer_info, on_connect)
-        # If we are still connected to introducer, disconnect
-
-        async def disconnect_after_sleep():
-            await asyncio.sleep(10)
-            for id, connection in self.server.all_connections.items():
-                if connection.connection_type == NodeType.INTRODUCER:
-                    await connection.close()
-
-        asyncio.create_task(disconnect_after_sleep())
 
     async def _connect_to_peers(self, random):
         next_feeler = self._poisson_next_send(time.time() * 1000 * 1000, 240, random)
@@ -175,6 +166,8 @@ class FullNodeDiscovery:
                 connected = [c for c in connected if c is not None]
                 for conn in full_node_connected:
                     peer = conn.get_peer_info()
+                    if peer is None:
+                        continue
                     group = peer.get_group()
                     if group not in groups:
                         groups.append(group)
@@ -258,7 +251,9 @@ class FullNodeDiscovery:
                 if addr is not None and initiate_connection:
                     asyncio.create_task(
                         self.server.start_client(
-                            addr, is_feeler=disconnect_after_handshake, on_connect=self.server.on_connect
+                            addr,
+                            is_feeler=disconnect_after_handshake,
+                            on_connect=self.server.on_connect,
                         )
                     )
                 sleep_interval = 1 + len(groups) * 0.5

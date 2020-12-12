@@ -23,7 +23,10 @@ def calculate_sp_iters(constants: ConsensusConstants, sub_slot_iters: uint64, si
 
 
 def calculate_ip_iters(
-    constants: ConsensusConstants, sub_slot_iters: uint64, signage_point_index: uint8, required_iters: uint64
+    constants: ConsensusConstants,
+    sub_slot_iters: uint64,
+    signage_point_index: uint8,
+    required_iters: uint64,
 ) -> uint64:
     # Note that the SSI is for the block passed in, which might be in the previous epoch
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
@@ -37,7 +40,7 @@ def calculate_ip_iters(
             f"{sub_slot_iters} or not >0."
         )
 
-    return (sp_iters + constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % sub_slot_iters
+    return uint64((sp_iters + constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % sub_slot_iters)
 
 
 def calculate_iterations_quality(

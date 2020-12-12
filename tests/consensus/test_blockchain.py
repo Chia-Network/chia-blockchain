@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 from dataclasses import replace
 import pytest
@@ -17,8 +18,8 @@ from src.util.hash import std_hash
 from src.util.ints import uint64, uint8, int512
 from tests.recursive_replace import recursive_replace
 from tests.setup_nodes import test_constants, bt
-from tests.full_node.fixtures import empty_blockchain
-from tests.full_node.fixtures import default_1000_blocks
+from tests.full_node.fixtures import empty_blockchain  # noqa: F401
+from tests.full_node.fixtures import default_1000_blocks  # noqa: F401
 
 
 @pytest.fixture(scope="module")
@@ -1372,7 +1373,7 @@ class TestBlockHeaderValidation:
         assert (await empty_blockchain.receive_block(block_bad))[1] == Err.INVALID_REWARD_BLOCK_HASH
 
     @pytest.mark.asyncio
-    async def test_reward_block_hash(self, empty_blockchain):
+    async def test_reward_block_hash_2(self, empty_blockchain):
         # 33
         blocks = bt.get_consecutive_blocks(1)
         block_bad: FullBlock = recursive_replace(blocks[0], "reward_chain_sub_block.is_block", False)

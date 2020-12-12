@@ -110,7 +110,10 @@ class FullNodeStore:
                 del self.disconnected_blocks[key]
 
     def add_unfinished_block(self, sub_height: uint32, unfinished_block: UnfinishedBlock) -> None:
-        self.unfinished_blocks[unfinished_block.partial_hash] = (sub_height, unfinished_block)
+        self.unfinished_blocks[unfinished_block.partial_hash] = (
+            sub_height,
+            unfinished_block,
+        )
 
     def get_unfinished_block(self, unfinished_reward_hash: bytes32) -> Optional[UnfinishedBlock]:
         result = self.unfinished_blocks.get(unfinished_reward_hash, None)
@@ -123,7 +126,10 @@ class FullNodeStore:
 
     def clear_unfinished_blocks_below(self, sub_height: uint32) -> None:
         del_keys: List[bytes32] = []
-        for partial_reward_hash, (unf_height, unfinished_block) in self.unfinished_blocks.items():
+        for partial_reward_hash, (
+            unf_height,
+            unfinished_block,
+        ) in self.unfinished_blocks.items():
             if unf_height < sub_height:
                 del_keys.append(partial_reward_hash)
         for del_key in del_keys:
@@ -157,7 +163,10 @@ class FullNodeStore:
         self.finished_sub_slots = [(None, [None] * self.constants.NUM_SPS_SUB_SLOT, uint128(0))]
 
     def new_finished_sub_slot(
-        self, eos: EndOfSubSlotBundle, sub_blocks: Dict[bytes32, SubBlockRecord], peak: Optional[SubBlockRecord]
+        self,
+        eos: EndOfSubSlotBundle,
+        sub_blocks: Dict[bytes32, SubBlockRecord],
+        peak: Optional[SubBlockRecord],
     ) -> Optional[List[timelord_protocol.NewInfusionPointVDF]]:
         """
         Returns false if not added. Returns a list if added. The list contains all infusion points that depended
@@ -167,7 +176,7 @@ class FullNodeStore:
         assert len(self.finished_sub_slots) >= 1
 
         if len(self.finished_sub_slots) == 0:
-            log.warning("no fini sub slots")
+            log.warning("no finished sub slots")
             return None
 
         last_slot, _, last_slot_iters = self.finished_sub_slots[-1]
@@ -231,10 +240,10 @@ class FullNodeStore:
                 curr = peak
                 while not curr.first_in_sub_slot and not curr.is_challenge_sub_block(self.constants):
                     curr = sub_blocks[curr.prev_hash]
-                assert curr.finished_infused_challenge_slot_hashes is not None
                 if curr.is_challenge_sub_block(self.constants):
                     icc_start_challenge_hash = curr.challenge_block_info_hash
                 else:
+                    assert curr.finished_infused_challenge_slot_hashes is not None
                     icc_start_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
                 if peak.deficit < self.constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
                     assert eos.infused_challenge_chain is not None
@@ -374,7 +383,10 @@ class FullNodeStore:
                 ):
                     return False
                 if not signage_point.rc_proof.is_valid(
-                    self.constants, ClassgroupElement.get_default_element(), signage_point.rc_vdf, rc_vdf_info_expected
+                    self.constants,
+                    ClassgroupElement.get_default_element(),
+                    signage_point.rc_vdf,
+                    rc_vdf_info_expected,
                 ):
                     return False
 
@@ -453,7 +465,6 @@ class FullNodeStore:
         reorg: bool,
         sub_blocks: Dict[bytes32, SubBlockRecord],
     ) -> Tuple[Optional[EndOfSubSlotBundle], List[SignagePoint], List[timelord_protocol.NewInfusionPointVDF]]:
-
         """
         If the peak is an overflow block, must provide two sub-slots: one for the current sub-slot and one for
         the prev sub-slot (since we still might get more sub-blocks with an sp in the previous sub-slot)
@@ -464,12 +475,18 @@ class FullNodeStore:
         if not reorg:
             # This is a new peak that adds to the last peak. We can clear data in old sub-slots. (and new ones)
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
-                if peak.overflow:
-                    if sub_slot == sp_sub_slot:
-                        # In the case of a peak overflow sub-block, the previous sub-slot is added
+                if sub_slot == sp_sub_slot:
+                    # In the case of a peak overflow sub-block (or first ss), the previous sub-slot is added
+                    if sp_sub_slot is None:
+                        if (
+                            ip_sub_slot is not None
+                            and ip_sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
+                        ) == self.constants.FIRST_CC_CHALLENGE:
+                            new_finished_sub_slots.append((sub_slot, sps, total_iters))
+                            continue
+                    else:
                         new_finished_sub_slots.append((sub_slot, sps, total_iters))
                         continue
-
                 if sub_slot == ip_sub_slot:
                     new_finished_sub_slots.append((sub_slot, sps, total_iters))
             self.finished_sub_slots = new_finished_sub_slots
@@ -477,13 +494,23 @@ class FullNodeStore:
             # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current
             # cache, delete the entire cache and add this sub slot.
             self.clear_slots()
-            if peak.overflow and sp_sub_slot is not None:
+            if peak.overflow:
                 prev_sub_slot_total_iters = peak.sp_sub_slot_total_iters(self.constants)
                 assert total_iters_peak != prev_sub_slot_total_iters
                 self.finished_sub_slots = [
-                    (sp_sub_slot, [None] * self.constants.NUM_SPS_SUB_SLOT, prev_sub_slot_total_iters)
+                    (
+                        sp_sub_slot,
+                        [None] * self.constants.NUM_SPS_SUB_SLOT,
+                        prev_sub_slot_total_iters,
+                    )
                 ]
-            self.finished_sub_slots.append((ip_sub_slot, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters_peak))
+            self.finished_sub_slots.append(
+                (
+                    ip_sub_slot,
+                    [None] * self.constants.NUM_SPS_SUB_SLOT,
+                    total_iters_peak,
+                )
+            )
 
         new_eos: Optional[EndOfSubSlotBundle] = None
         new_sps: List[SignagePoint] = []

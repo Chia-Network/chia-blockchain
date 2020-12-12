@@ -70,13 +70,18 @@ class SubBlockRecord(Streamable):
             return uint128(self.total_iters - self.ip_iters(constants))
 
     def ip_sub_slot_total_iters(self, constants: ConsensusConstants) -> uint128:
-        return self.total_iters - self.ip_iters(constants)
+        return uint128(self.total_iters - self.ip_iters(constants))
 
     def sp_iters(self, constants: ConsensusConstants) -> uint64:
         return calculate_sp_iters(constants, self.sub_slot_iters, self.signage_point_index)
 
     def ip_iters(self, constants: ConsensusConstants) -> uint64:
-        return calculate_ip_iters(constants, self.sub_slot_iters, self.signage_point_index, self.required_iters)
+        return calculate_ip_iters(
+            constants,
+            self.sub_slot_iters,
+            self.signage_point_index,
+            self.required_iters,
+        )
 
     def sp_total_iters(self, constants: ConsensusConstants):
         return self.sp_sub_slot_total_iters(constants) + self.sp_iters(constants)

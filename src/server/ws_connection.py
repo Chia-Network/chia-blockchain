@@ -4,7 +4,7 @@ import asyncio
 import traceback
 from secrets import token_bytes
 
-from typing import Any, AsyncGenerator, Callable, Optional, List, Tuple, Dict
+from typing import Any, AsyncGenerator, Callable, Optional, List, Dict
 
 from aiohttp import WSMessage, WSMsgType
 
@@ -74,8 +74,8 @@ class WSChiaConnection:
         self.last_message_time: float = 0
 
         # Messaging
-        self.incoming_queue: asyncio.Queue[Tuple[Payload, WSChiaConnection]] = incoming_queue
-        self.outgoing_queue: asyncio.Queue[Payload] = asyncio.Queue()
+        self.incoming_queue: asyncio.Queue = incoming_queue
+        self.outgoing_queue: asyncio.Queue = asyncio.Queue()
 
         self.inbound_task = None
         self.outbound_task = None
@@ -260,26 +260,28 @@ class WSChiaConnection:
             await self.outgoing_queue.put(payload)
 
     async def _send_message(self, payload: Payload):
-        self.log.info(f"-> {payload.msg.function} to peer {self.peer_host} {self.peer_node_id}")
         encoded: bytes = cbor.dumps({"f": payload.msg.function, "d": payload.msg.data, "i": payload.id})
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
         await self.ws.send_bytes(encoded)
+        self.log.info(f"-> {payload.msg.function} to peer {self.peer_host} {self.peer_node_id}")
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Payload]:
-        if self.connection_type is None:
-            return None
         message: WSMessage = await self.ws.receive()
+        if self.connection_type is not None:
+            connection_type_str = NodeType(self.connection_type).name.lower()
+        else:
+            connection_type_str = ""
         if message.type == WSMsgType.CLOSING:
             self.log.info(
-                f"Closing connection to {NodeType(self.connection_type).name.lower()} {self.peer_host}:"
+                f"Closing connection to {connection_type_str} {self.peer_host}:"
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
         elif message.type == WSMsgType.CLOSE:
             self.log.info(
-                f"Peer closed connection {NodeType(self.connection_type).name.lower()} {self.peer_host}:"
+                f"Peer closed connection {connection_type_str} {self.peer_host}:"
                 f"{self.peer_server_port}/"
                 f"{self.peer_port}"
             )
@@ -305,4 +307,5 @@ class WSChiaConnection:
         if result is None:
             return None
         connection_host = result[0]
-        return PeerInfo(connection_host, self.peer_server_port)
+        port = self.peer_server_port if self.peer_server_port is not None else self.peer_port
+        return PeerInfo(connection_host, port)

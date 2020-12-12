@@ -1,7 +1,7 @@
 from typing import Callable, Optional
 import logging
 from src.protocols import timelord_protocol
-from src.timelord import Timelord, iters_from_sub_block, Chain, IterationType
+from src.timelord.timelord import Timelord, iters_from_sub_block, Chain, IterationType
 from src.util.api_decorators import api_request
 from src.util.ints import uint64
 
@@ -34,11 +34,10 @@ class TimelordAPI:
             ):
                 log.info("Skipping peak, already have.")
                 return
-            elif self.timelord.last_state.get_weight() == new_peak.reward_chain_sub_block.weight:
-                log.warning("Different sub-block at same weight, changing to it.")
-                self.timelord.new_peak = new_peak
             else:
-                log.info("Peak at smaller weight, skipping")
+                log.warning("Sub-block that we don't have, changing to it.")
+                self.timelord.new_peak = new_peak
+                self.timelord.new_subslot_end = None
 
     @api_request
     async def new_unfinished_sub_block(self, new_unfinished_subblock: timelord_protocol.NewUnfinishedSubBlock):

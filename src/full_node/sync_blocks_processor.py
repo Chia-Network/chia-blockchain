@@ -77,7 +77,6 @@ class SyncBlocksProcessor:
 
             for index, block in enumerate(blocks):
                 assert block is not None
-
                 async with self.blockchain.lock:
                     (
                         result,
@@ -88,9 +87,9 @@ class SyncBlocksProcessor:
                         if error is not None:
                             raise ConsensusError(error, block.header_hash)
                         raise RuntimeError(f"Invalid block {block.header_hash}")
-                assert self.blockchain.get_peak().weight >= block.weight
+                peak = self.blockchain.get_peak()
+                assert peak is not None and peak.weight >= block.weight
                 del self.sync_store.potential_blocks[block.sub_block_height]
-
                 self.sync_store.add_header_hashes_added(block.sub_block_height, block.header_hash)
 
             log.info(

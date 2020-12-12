@@ -4,7 +4,7 @@ from setuptools import setup
 dependencies = [
     "aiter==0.13.20191203",  # Used for async generator tools
     "blspy==0.2.9",  # Signature library
-    "chiavdf==0.13.0b1",  # timelord and vdf verification
+    "chiavdf==0.13.0b2",  # timelord and vdf verification
     "chiabip158==0.17",  # bip158-style wallet filters
     "chiapos==0.12.38",  # proof of space
     "clvm==0.6",
@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 upnp_dependencies = [
-    "miniupnpc==2.1",  # Allows users to open ports on their router
+    "miniupnpc==2.0.2",  # Allows users to open ports on their router
 ]
 dev_dependencies = [
     "pytest",
@@ -58,6 +58,10 @@ kwargs = dict(
         "src.consensus",
         "src.daemon",
         "src.full_node",
+        "src.timelord",
+        "src.farmer",
+        "src.harvester",
+        "src.introducer",
         "src.protocols",
         "src.rpc",
         "src.server",
@@ -81,7 +85,7 @@ kwargs = dict(
             "chia_farmer = src.server.start_farmer:main",
             "chia_introducer = src.server.start_introducer:main",
             "chia_timelord = src.server.start_timelord:main",
-            "chia_timelord_launcher = src.timelord_launcher:main",
+            "chia_timelord_launcher = src.timelord.timelord_launcher:main",
             "chia_full_node_simulator = src.simulator.start_simulator:main",
         ]
     },

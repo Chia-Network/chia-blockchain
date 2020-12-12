@@ -38,11 +38,7 @@ class TransactionRecord(Streamable):
     def name(self) -> bytes32:
         if self.spend_bundle:
             return self.spend_bundle.name()
-        return std_hash(
-            bytes(self.to_puzzle_hash)
-            + bytes(self.created_at_time)
-            + bytes(self.amount)
-        )
+        return std_hash(bytes(self.to_puzzle_hash) + bytes(self.created_at_time) + bytes(self.amount))
 
     def is_in_mempool(self) -> bool:
         # If one of the nodes we sent it to responded with success, we set it to success

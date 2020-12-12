@@ -5,38 +5,33 @@ import pytest
 import random
 import time
 import logging
-from typing import Dict, Tuple, Callable
+from typing import Dict, Tuple
 from secrets import token_bytes
 
+from src.consensus.pot_iterations import is_overflow_sub_block
 from src.full_node.full_node_api import FullNodeAPI
-from src.protocols import full_node_protocol as fnp, wallet_protocol
+from src.protocols import full_node_protocol as fnp
 from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_client, ChiaServer
 from src.server.ws_connection import WSChiaConnection
-from src.types.coin import hash_coin_list
-from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
-from src.types.full_block import FullBlock
-from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
-from src.full_node.bundle_tools import best_solution_program
-from src.util.errors import ConsensusError, Err
+from src.types.unfinished_block import UnfinishedBlock
 from src.util.hash import std_hash
-from src.util.ints import uint16, uint32, uint64, uint8
+from src.util.ints import uint16, uint32, uint64
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
-from src.util.merkle_set import (
-    confirm_not_included_already_hashed,
-    MerkleSet,
-    confirm_included_already_hashed,
-)
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
 from src.util.clvm import int_to_bytes
 from tests.full_node.test_full_sync import node_height_at_least
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
+from tests.time_out_assert import (
+    time_out_assert,
+    time_out_assert_custom_interval,
+    time_out_messages,
+)
 from src.protocols.shared_protocol import protocol_version
 
 log = logging.getLogger(__name__)
@@ -44,6 +39,7 @@ log = logging.getLogger(__name__)
 
 async def get_block_path(full_node: FullNodeAPI):
     blocks_list = [await full_node.full_node.blockchain.get_full_peak()]
+    assert blocks_list[0] is not None
     while blocks_list[0].sub_block_height != 0:
         b = await full_node.full_node.block_store.get_full_block(blocks_list[0].prev_header_hash)
         assert b is not None
@@ -54,12 +50,20 @@ async def get_block_path(full_node: FullNodeAPI):
 async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asyncio.Queue, bytes32]:
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
-    incoming_queue = asyncio.Queue()
+    incoming_queue: asyncio.Queue = asyncio.Queue()
     ssl_context = ssl_context_for_client(server._private_cert_path, server._private_key_path, False)
     url = f"wss://127.0.0.1:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
     wsc = WSChiaConnection(
-        NodeType.FULL_NODE, ws, server._port, log, True, False, "127.0.0.1", incoming_queue, lambda x: x
+        NodeType.FULL_NODE,
+        ws,
+        server._port,
+        log,
+        True,
+        False,
+        "127.0.0.1",
+        incoming_queue,
+        lambda x: x,
     )
     node_id = std_hash(b"123")
     handshake = await wsc.perform_handshake(
@@ -96,14 +100,14 @@ def event_loop():
 
 @pytest.fixture(scope="function")
 async def two_nodes():
-    zero_free_constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+    zero_free_constants = test_constants.replace()
     async for _ in setup_two_nodes(zero_free_constants):
         yield _
 
 
 @pytest.fixture(scope="function")
 async def two_empty_nodes():
-    zero_free_constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+    zero_free_constants = test_constants.replace()
     async for _ in setup_two_nodes(zero_free_constants):
         yield _
 
@@ -206,7 +210,12 @@ class TestFullNodeProtocol:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
         num_sub_slots_added = len(blocks[-1].finished_sub_slots[:-2])
         await time_out_assert(
-            10, time_out_messages(incoming_queue, "new_signage_point_or_end_of_sub_slot", num_sub_slots_added)
+            10,
+            time_out_messages(
+                incoming_queue,
+                "new_signage_point_or_end_of_sub_slot",
+                num_sub_slots_added,
+            ),
         )
 
         # Add empty slots unsuccessful
@@ -226,8 +235,103 @@ class TestFullNodeProtocol:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
         num_sub_slots_added = len(blocks[-1].finished_sub_slots)
         await time_out_assert(
-            10, time_out_messages(incoming_queue, "new_signage_point_or_end_of_sub_slot", num_sub_slots_added)
+            10,
+            time_out_messages(
+                incoming_queue,
+                "new_signage_point_or_end_of_sub_slot",
+                num_sub_slots_added,
+            ),
         )
+
+    @pytest.mark.asyncio
+    async def test_respond_unfinished(self, two_empty_nodes):
+        full_node_1, full_node_2, server_1, server_2 = two_empty_nodes
+
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
+
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
+
+        peer = await connect_and_get_peer(server_1, server_2)
+
+        # Create empty slots
+        blocks = bt.get_consecutive_blocks(1, skip_slots=6)
+        block = blocks[-1]
+        if is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index):
+            finished_ss = block.finished_sub_slots[:-1]
+        else:
+            finished_ss = block.finished_sub_slots
+
+        unf = UnfinishedBlock(
+            finished_ss,
+            block.reward_chain_sub_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+        # Can't add because no sub slots
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
+
+        # Add empty slots successful
+        for slot in blocks[-1].finished_sub_slots:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedSubBlock(unf), None)
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
+
+        # Do the same thing but with non-genesis
+        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=3)
+
+        block = blocks[-1]
+
+        if is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index):
+            finished_ss = block.finished_sub_slots[:-1]
+        else:
+            finished_ss = block.finished_sub_slots
+        unf = UnfinishedBlock(
+            finished_ss,
+            block.reward_chain_sub_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
+
+        for slot in blocks[-1].finished_sub_slots:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedSubBlock(unf), None)
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
+
+        # Do the same thing one more time, with overflow
+        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=3, force_overflow=True)
+
+        block = blocks[-1]
+
+        unf = UnfinishedBlock(
+            block.finished_sub_slots[:-1],
+            block.reward_chain_sub_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is None
+
+        for slot in blocks[-1].finished_sub_slots:
+            await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
+
+        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedSubBlock(unf), None)
+        assert full_node_1.full_node.full_node_store.get_unfinished_block(unf.partial_hash) is not None
 
     @pytest.mark.asyncio
     async def test_new_peak(self, two_empty_nodes):
@@ -319,7 +423,10 @@ class TestFullNodeProtocol:
         await full_node_1.respond_transaction(respond_transaction_2, peer)
 
         blocks_new = bt.get_consecutive_blocks(
-            2, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
+            2,
+            block_list_input=blocks,
+            guarantee_block=True,
+            transaction_data=spend_bundle,
         )
 
         # Already seen

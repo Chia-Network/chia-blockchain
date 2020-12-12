@@ -32,8 +32,8 @@ def quality_str_to_quality(quality_str: bytes32, k: int) -> uint64:
     # minus 1 (so that we can input it into the approximation for log(1+x)), times 2^256, since
     # we want to work with big ints and not decimals
     xt = int.from_bytes(quality_str, "big") - t
-    numerator = xt * xt + 6 * (xt) * t
-    denominator = 6 * t + 4 * (xt)
+    numerator = xt * xt + 6 * xt * t
+    denominator = 6 * t + 4 * xt
 
     # To get the output of log(x), you would do the following
     # log(1+x) = - (numerator / denominator / t)

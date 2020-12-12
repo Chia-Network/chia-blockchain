@@ -18,6 +18,13 @@ Protocol between wallet (SPV node) and full node.
 
 @dataclass(frozen=True)
 @streamable
+class RequestGenerator(Streamable):
+    height: uint32
+    header_hash: bytes32
+
+
+@dataclass(frozen=True)
+@streamable
 class GeneratorResponse(Streamable):
     height: uint32
     header_hash: bytes32

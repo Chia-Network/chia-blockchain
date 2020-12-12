@@ -10,7 +10,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "SUB_SLOT_ITERS_STARTING": 2 ** 10,
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "CLVM_COST_RATIO_CONSTANT": 108,
-        "COINBASE_FREEZE_PERIOD": 0,
     }
 )
 
@@ -20,6 +19,6 @@ if __name__ == "__main__":
 
     # TODO: mariano: fix this with new consensus
     bt = BlockTools(root_path=DEFAULT_ROOT_PATH)
-    new_genesis_block = bt.create_genesis_block(test_constants, bytes([0] * 32), b"0")
+    new_genesis_block = bt.create_genesis_block(test_constants, b"0")
 
     print(bytes(new_genesis_block))

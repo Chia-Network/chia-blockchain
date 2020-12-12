@@ -2,11 +2,11 @@ import asyncio
 import logging
 import ssl
 from pathlib import Path
-from typing import Any, List, Dict, Tuple, Callable, Optional, Set
+from typing import Any, List, Dict, Callable, Optional, Set
 
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
-from aiohttp import web, ClientSession, ClientTimeout, client_exceptions, ClientSession
+from aiohttp import web, ClientTimeout, client_exceptions, ClientSession
 
 from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload
@@ -91,7 +91,7 @@ class ChiaServer:
         self.root_path = root_path
         self.config = config
         self.on_connect: Optional[Callable] = None
-        self.incoming_messages: asyncio.Queue[Tuple[Payload, WSChiaConnection]] = asyncio.Queue()
+        self.incoming_messages: asyncio.Queue = asyncio.Queue()
         self.shut_down_event = asyncio.Event()
 
         if self._local_type is NodeType.INTRODUCER:
@@ -162,23 +162,29 @@ class ChiaServer:
             await self.connection_added(connection, self.on_connect)
             if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
                 self.introducer_peers.add(connection.get_peer_info())
-        except Exception as e:
-            if isinstance(e, ProtocolError) and e.code == Err.SELF_CONNECTION:
+        except ProtocolError as e:
+            if e.code == Err.SELF_CONNECTION:
                 close_event.set()
             else:
                 error_stack = traceback.format_exc()
-                self.log.error(f"Exception: {e}")
-                self.log.error(f"Exception Stack: {error_stack}")
+                self.log.error(f"Exception {e}, exception Stack: {error_stack}")
                 close_event.set()
+        except Exception as e:
+            error_stack = traceback.format_exc()
+            self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+            close_event.set()
 
         await close_event.wait()
         return ws
 
     async def connection_added(self, connection: WSChiaConnection, on_connect=None):
         self.all_connections[connection.peer_node_id] = connection
-        self.connection_by_type[connection.connection_type][connection.peer_node_id] = connection
-        if on_connect is not None:
-            await on_connect(connection)
+        if connection.connection_type is not None:
+            self.connection_by_type[connection.connection_type][connection.peer_node_id] = connection
+            if on_connect is not None:
+                await on_connect(connection)
+        else:
+            self.log.error(f"Invalid connection type for connection {connection}")
 
     async def start_client(
         self,
@@ -209,7 +215,12 @@ class ChiaServer:
 
             url = f"wss://{target_node.host}:{target_node.port}/ws"
             self.log.info(f"Connecting: {url}, Peer info: {target_node}")
-            ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
+            try:
+                ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
+            except asyncio.TimeoutError:
+                self.log.warning(f"Timeout error connecting to {url}")
+                await session.close()
+                return False
             if ws is not None:
                 connection = WSChiaConnection(
                     self._local_type,
@@ -232,17 +243,26 @@ class ChiaServer:
                 )
                 assert handshake is True
                 await self.connection_added(connection, on_connect)
-                self.log.info(f"Connected with {connection.connection_type.name.lower()} {target_node}")
-            return True
+                connection_type_str = ""
+                if connection.connection_type is not None:
+                    connection_type_str = connection.connection_type.name.lower()
+                self.log.info(f"Connected with {connection_type_str} {target_node}")
+                return True
+            else:
+                await session.close()
+                return False
         except client_exceptions.ClientConnectorError as e:
             self.log.warning(f"{e}")
-        except Exception as e:
-            if isinstance(e, ProtocolError) and e.code == Err.SELF_CONNECTION:
+        except ProtocolError as e:
+            if e.code == Err.SELF_CONNECTION:
                 pass
             else:
                 error_stack = traceback.format_exc()
-                self.log.error(f"Exception: {e}")
-                self.log.error(f"Exception Stack: {error_stack}")
+                self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+        except Exception as e:
+            error_stack = traceback.format_exc()
+            self.log.error(f"Exception {e}, exception Stack: {error_stack}")
+
         if session is not None:
             await session.close()
 
@@ -252,8 +272,11 @@ class ChiaServer:
         self.log.info(f"Connection closed: {connection.peer_host}")
         if connection.peer_node_id in self.all_connections:
             self.all_connections.pop(connection.peer_node_id)
-        if connection.peer_node_id in self.connection_by_type[connection.connection_type]:
-            self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
+        if connection.connection_type is not None:
+            if connection.peer_node_id in self.connection_by_type[connection.connection_type]:
+                self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
+        else:
+            self.log.error(f"Invalid connection type for connection {connection}, while closing")
 
     async def incoming_api_task(self):
         self.tasks = set()
@@ -292,10 +315,13 @@ class ChiaServer:
                         payload_id = payload.id
                         response_payload = Payload(response, payload_id)
                         await connection.reply_to_request(response_payload)
-
                 except Exception as e:
-                    tb = traceback.format_exc()
-                    connection.log.error(f"Exception: {e}, closing connection {connection}. {tb}")
+                    if self.connection_close_task is None:
+                        tb = traceback.format_exc()
+                        connection.log.error(f"Exception: {e}, closing connection {connection}. {tb}")
+                    else:
+                        connection.log.info(f"Exception: {e} while closing connection")
+                        pass
                     await connection.close()
 
             asyncio.create_task(api_call(payload_inc, connection_inc))

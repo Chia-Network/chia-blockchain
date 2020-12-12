@@ -23,8 +23,9 @@ def calculate_deficit(
         num_finished_sub_slots: the number of finished slots between infusion points of prev and current
     """
     if sub_block_height == 0:
-        return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK) - 1
+        return uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1)
     else:
+        assert prev_sb is not None
         prev_deficit: uint8 = prev_sb.deficit
         if prev_deficit == constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
             # Prev sb must be an overflow sb. However maybe it's in a different sub-slot

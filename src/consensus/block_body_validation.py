@@ -5,7 +5,10 @@ from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
 from clvm.casts import int_from_bytes
 
-from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from src.consensus.block_rewards import (
+    calculate_pool_reward,
+    calculate_base_farmer_reward,
+)
 from src.consensus.coinbase import create_pool_coin, create_farmer_coin
 from src.consensus.constants import ConsensusConstants
 from src.consensus.find_fork_point import find_fork_point_in_chain
@@ -100,22 +103,23 @@ async def validate_block_body(
         assert curr_sb.header_hash == block.foliage_block.prev_block_hash
 
         if curr_sb.sub_block_height == 0:
-            height = 0
+            curr_height = uint32(0)
         else:
             if curr_sb.is_block:
-                height = curr_sb.height + 1
+                curr_height = uint32(curr_sb.height + 1)
             else:
-                height = curr_sb.height
+                curr_height = curr_sb.height
 
+        assert curr_sb.fees is not None
         pool_coin = create_pool_coin(
             curr_sb.sub_block_height,
             curr_sb.pool_puzzle_hash,
-            calculate_pool_reward(height),
+            calculate_pool_reward(curr_height),
         )
         farmer_coin = create_farmer_coin(
             curr_sb.sub_block_height,
             curr_sb.farmer_puzzle_hash,
-            calculate_base_farmer_reward(height) + curr_sb.fees,
+            uint64(calculate_base_farmer_reward(curr_height) + curr_sb.fees),
         )
         # Adds the previous block
         expected_reward_coins.add(pool_coin)
@@ -222,7 +226,7 @@ async def validate_block_body(
     if peak is None or sub_height == 0:
         fork_h: int = -1
     else:
-        fork_h: int = find_fork_point_in_chain(sub_blocks, peak, sub_blocks[block.prev_header_hash])
+        fork_h = find_fork_point_in_chain(sub_blocks, peak, sub_blocks[block.prev_header_hash])
 
     # Get additions and removals since (after) fork_h but not including this block
     additions_since_fork: Dict[bytes32, Tuple[Coin, uint32]] = {}
@@ -253,7 +257,12 @@ async def validate_block_body(
             # Ephemeral coin
             rem_coin: Coin = additions_dic[rem]
             new_unspent: CoinRecord = CoinRecord(
-                rem_coin, sub_height, uint32(0), False, False, block.foliage_block.timestamp
+                rem_coin,
+                sub_height,
+                uint32(0),
+                False,
+                False,
+                block.foliage_block.timestamp,
             )
             removal_coin_records[new_unspent.name] = new_unspent
         else:
@@ -264,10 +273,6 @@ async def validate_block_body(
                 if unspent.spent == 1 and unspent.spent_block_index <= fork_h:
                     # Check for coins spent in an ancestor block
                     return Err.DOUBLE_SPEND
-                # If it's a coinbase, check that it's not frozen
-                if unspent.coinbase == 1:
-                    if sub_height < unspent.confirmed_block_index + constants.COINBASE_FREEZE_PERIOD:
-                        return Err.COINBASE_NOT_YET_SPENDABLE
                 removal_coin_records[unspent.name] = unspent
             else:
                 # This coin is not in the current heaviest chain, so it must be in the fork
@@ -275,10 +280,6 @@ async def validate_block_body(
                     # Check for spending a coin that does not exist in this fork
                     # TODO: fix this, there is a consensus bug here
                     return Err.UNKNOWN_UNSPENT
-                if rem in coinbases_since_fork:
-                    # This coin is a coinbase coin
-                    if sub_height < coinbases_since_fork[rem] + constants.COINBASE_FREEZE_PERIOD:
-                        return Err.COINBASE_NOT_YET_SPENDABLE
                 new_coin, confirmed_height = additions_since_fork[rem]
                 new_coin_record: CoinRecord = CoinRecord(
                     new_coin,
@@ -336,9 +337,14 @@ async def validate_block_body(
     pairs_pks = []
     pairs_msgs = []
     for npc in npc_list:
+        assert height is not None
         unspent = removal_coin_records[npc.coin_name]
         error = blockchain_check_conditions_dict(
-            unspent, removal_coin_records, npc.condition_dict, height, block.foliage_block.timestamp
+            unspent,
+            removal_coin_records,
+            npc.condition_dict,
+            height,
+            block.foliage_block.timestamp,
         )
         if error:
             return error

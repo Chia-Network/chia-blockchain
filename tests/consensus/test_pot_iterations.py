@@ -1,12 +1,9 @@
 from src.consensus.pot_iterations import (
-    calculate_iterations_quality,
     is_overflow_sub_block,
     calculate_sp_iters,
     calculate_ip_iters,
 )
-from src.consensus.pos_quality import _expected_plot_size
 from src.util.ints import uint8, uint64
-from src.util.hash import std_hash
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from pytest import raises
 
@@ -65,14 +62,19 @@ class TestPotIterations:
         ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
 
-        required_iters = ssi * 4 / 300
+        required_iters = uint64(int(ssi * 4 / 300))
         ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
         assert sp_iters < ip_iters
 
         # Overflow
         sp_iters = sp_interval_iters * (test_constants.NUM_SPS_SUB_SLOT - 1)
-        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(test_constants.NUM_SPS_SUB_SLOT - 1), required_iters)
+        ip_iters = calculate_ip_iters(
+            test_constants,
+            ssi,
+            uint8(test_constants.NUM_SPS_SUB_SLOT - 1),
+            required_iters,
+        )
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 

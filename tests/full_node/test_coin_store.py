@@ -22,7 +22,7 @@ def event_loop():
     yield loop
 
 
-constants = test_constants.replace(COINBASE_FREEZE_PERIOD=200)
+constants = test_constants
 
 
 class TestCoinStore:
@@ -33,7 +33,10 @@ class TestCoinStore:
 
         # Generate some coins
         blocks = bt.get_consecutive_blocks(
-            10, [], farmer_reward_puzzle_hash=reward_ph, pool_reward_puzzle_hash=reward_ph
+            10,
+            [],
+            farmer_reward_puzzle_hash=reward_ph,
+            pool_reward_puzzle_hash=reward_ph,
         )
 
         coins_to_spend: List[Coin] = []

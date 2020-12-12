@@ -49,9 +49,7 @@ nil = quote(sexp())
 
 
 def make_if(predicate, true_expression, false_expression):
-    return eval(
-        apply("i", [predicate, quote(true_expression), quote(false_expression)])
-    )
+    return eval(apply("i", [predicate, quote(true_expression), quote(false_expression)]))
 
 
 def make_list(*argv, terminator=nil):

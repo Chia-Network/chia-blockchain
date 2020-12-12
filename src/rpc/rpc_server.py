@@ -58,7 +58,7 @@ class RpcServer:
             try:
                 await self.websocket.send_str(dict_to_json_str(payload))
             except Exception as e:
-                self.log.warning(f"Sending data failed. Exception {type(e)}.")
+                self.log.warning(f"Sending data failed. Exception {e}.")
 
     def state_changed(self, *args):
         if self.websocket is None:

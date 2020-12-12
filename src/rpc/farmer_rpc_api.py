@@ -1,6 +1,9 @@
-from typing import Callable, Set, Dict, List
+from typing import Callable, Dict, List
 
-from src.farmer import Farmer
+from src.farmer.farmer import Farmer
+from src.types.sized_bytes import bytes32
+from src.util.byte_types import hexstr_to_bytes
+from src.util.ws_message import create_payload
 
 
 class FarmerRpcApi:
@@ -9,40 +12,60 @@ class FarmerRpcApi:
         self.service_name = "chia_farmer"
 
     def get_routes(self) -> Dict[str, Callable]:
-        # return {"/get_latest_challenges": self.get_latest_challenges}
-        return {}
+        return {
+            "/get_signage_point": self.get_signage_point,
+            "/get_signage_points": self.get_signage_points,
+        }
 
-    async def _state_changed(self, change: str) -> List[Dict]:
-        # if change == "signage_point":
-        #     data = await self.get_latest_challenges({})
-        #     return [
-        #         create_payload(
-        #             "get_latest_challenges",
-        #             data,
-        #             self.service_name,
-        #             "wallet_ui",
-        #             string=False,
-        #         )
-        #     ]
+    async def _state_changed(self, change: str, sp_hash: bytes32) -> List[Dict]:
+        if change == "signage_point":
+            data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
+            return [
+                create_payload(
+                    "get_signage_point",
+                    data,
+                    self.service_name,
+                    "wallet_ui",
+                    string=False,
+                )
+            ]
         return []
 
     async def get_signage_point(self, request: Dict) -> Dict:
-        response = []
-        seen_challenges: Set = set()
-        if self.service.current_weight == 0:
-            return {"latest_challenges": []}
-        for pospace_fin in self.service.challenges[self.service.current_weight]:
-            estimates = self.service.challenge_to_estimates.get(pospace_fin.challenge, [])
-            if pospace_fin.challenge in seen_challenges:
-                continue
-            response.append(
-                {
-                    "challenge": pospace_fin.challenge,
-                    "weight": pospace_fin.weight,
-                    "height": pospace_fin.height,
-                    "difficulty": pospace_fin.difficulty,
-                    "estimates": estimates,
-                }
-            )
-            seen_challenges.add(pospace_fin.challenge)
-        return {"latest_challenges": response}
+        sp_hash = hexstr_to_bytes(request["sp_hash"])
+        for _, sps in self.service.sps.items():
+            for sp in sps:
+                if sp.challenge_chain_sp == sp_hash:
+                    pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
+                    return {
+                        "signage_point": {
+                            "challenge_hash": sp.challenge_hash,
+                            "challenge_chain_sp": sp.challenge_chain_sp,
+                            "reward_chain_sp": sp.reward_chain_sp,
+                            "difficulty": sp.difficulty,
+                            "sub_slot_iters": sp.sub_slot_iters,
+                            "signage_point_index": sp.signage_point_index,
+                        },
+                        "proofs": pospaces,
+                    }
+        raise ValueError(f"Signage point {sp_hash.hex()} not found")
+
+    async def get_signage_points(self, _: Dict) -> Dict:
+        result: List = []
+        for _, sps in self.service.sps.items():
+            for sp in sps:
+                pospaces = self.service.proofs_of_space.get(sp.challenge_chain_sp, [])
+                result.append(
+                    {
+                        "sp": {
+                            "challenge_hash": sp.challenge_hash,
+                            "challenge_chain_sp": sp.challenge_chain_sp,
+                            "reward_chain_sp": sp.reward_chain_sp,
+                            "difficulty": sp.difficulty,
+                            "sub_slot_iters": sp.sub_slot_iters,
+                            "signage_point_index": sp.signage_point_index,
+                        },
+                        "proofs": pospaces,
+                    }
+                )
+        return {"signage_points": result}
