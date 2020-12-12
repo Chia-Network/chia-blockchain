@@ -40,7 +40,7 @@ class RewardChainSubSlot(Streamable):
     end_of_slot_vdf: VDFInfo
     challenge_chain_sub_slot_hash: bytes32
     infused_challenge_chain_sub_slot_hash: Optional[bytes32]
-    deficit: uint8  # 5 or less. usually zero
+    deficit: uint8  # 16 or less. usually zero
 
 
 @dataclass(frozen=True)

@@ -1,137 +1,140 @@
-# import asyncio
-# from typing import Optional
-# import pytest
-#
-# from src.protocols import full_node_protocol
-# from src.types.full_block import FullBlock
-# from tests.full_node.test_full_node import connect_and_get_peer
-# from tests.setup_nodes import setup_two_nodes, test_constants, bt
-# from src.util.wallet_tools import WalletTool
-#
-# BURN_PUZZLE_HASH = b"0" * 32
-#
-# WALLET_A = WalletTool()
-# WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
-#
-#
-# @pytest.fixture(scope="module")
-# def event_loop():
-#     loop = asyncio.get_event_loop()
-#     yield loop
-#
-#
-# class TestBlockchainTransactions:
-#     @pytest.fixture(scope="function")
-#     async def two_nodes(self):
-#         async for _ in setup_two_nodes(test_constants):
-#             yield _
-#
-#     @pytest.fixture(scope="function")
-#     async def two_nodes_standard_freeze(self):
-#         async for _ in setup_two_nodes(test_constants):
-#             yield _
-#
-#     @pytest.mark.asyncio
-#     async def test_basic_blockchain_tx(self, two_nodes):
-#         num_blocks = 10
-#         wallet_a = WALLET_A
-#         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
-#         receiver_puzzlehash = BURN_PUZZLE_HASH
-#
-#         blocks = bt.get_consecutive_blocks(
-#             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
-#         )
-#         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-#         peer = await connect_and_get_peer(server_1, server_2)
-#         full_node_1 = full_node_api_1.full_node
-#
-#         for block in blocks:
-#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block), None)
-#
-#         spent_block = blocks[1]
-#
-#         spend_bundle = wallet_a.generate_signed_transaction(
-#             1000, receiver_puzzlehash, spent_block.get_included_reward_coins()[0]
-#         )
-#
-#         assert spend_bundle is not None
-#         tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-#         await full_node_api_1.respond_transaction(tx, peer)
-#
-#         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
-#         assert sb is spend_bundle
-#
-#         last_block = blocks[10]
-#         next_spendbundle = await full_node_1.mempool_manager.create_bundle_from_mempool(last_block.header)
-#         assert next_spendbundle is not None
-#
-#         new_blocks = bt.get_consecutive_blocks(
-#             1, block_list_input=blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash,
-#             transaction_data=next_spendbundle
-#         )
-#
-#         next_block = new_blocks[11]
-#         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(next_block))
-#
-#         tips = full_node_1.blockchain.get_current_tips()
-#         assert next_block.header in tips
-#
-#         added_coins = next_spendbundle.additions()
-#
-#         # Two coins are added, main spend and change
-#         assert len(added_coins) == 2
-#         for coin in added_coins:
-#             unspent = await full_node_1.coin_store.get_coin_record(coin.name(), next_block.header)
-#             assert unspent is not None
-#
-#         full_tips = await full_node_1.blockchain.get_full_tips()
-#         in_full_tips = False
-#
-#         farmed_block: Optional[FullBlock] = None
-#         for tip in full_tips:
-#             if tip.header == next_block.header:
-#                 in_full_tips = True
-#                 farmed_block = tip
-#
-#         assert in_full_tips
-#         assert farmed_block is not None
-#         assert farmed_block.transactions_generator == program
-#
+import asyncio
+import pytest
 
-#     @pytest.mark.asyncio
-#     async def test_validate_blockchain_with_double_spend(self, two_nodes):
-#
-#         num_blocks = 5
-#         wallet_a = WALLET_A
-#         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
-#         receiver_puzzlehash = BURN_PUZZLE_HASH
-#
-#         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
-#         full_node_api_1, full_node_api_3, server_1, server_2 = two_nodes
-#         full_node_1 = full_node_api_1.full_node
-#
-#         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-#
-#         spent_block = blocks[1]
-#
-#         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spent_block.get_coinbase())
-#         spend_bundle_double = wallet_a.generate_signed_transaction(
-#             1001, receiver_puzzlehash, spent_block.get_coinbase()
-#         )
-#
-#         block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
-#         program = best_solution_program(block_spendbundle)
-#         aggsig = block_spendbundle.aggregated_signature
-#
-#         dic_h = {(num_blocks + 1): (program, aggsig)}
-#         new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h)
-#
-#         next_block = new_blocks[num_blocks + 1]
-#         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
-#
-#         assert error is Err.DOUBLE_SPEND
-#
+from src.consensus.blockchain import ReceiveBlockResult
+from src.protocols import full_node_protocol
+from src.types.spend_bundle import SpendBundle
+from src.util.errors import Err
+from tests.full_node.test_full_node import connect_and_get_peer
+from tests.setup_nodes import setup_two_nodes, test_constants, bt
+from src.util.wallet_tools import WalletTool
+
+BURN_PUZZLE_HASH = b"0" * 32
+
+WALLET_A = WalletTool()
+WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
+
+
+@pytest.fixture(scope="module")
+def event_loop():
+    loop = asyncio.get_event_loop()
+    yield loop
+
+
+class TestBlockchainTransactions:
+    @pytest.fixture(scope="function")
+    async def two_nodes(self):
+        constants = test_constants.replace(COINBASE_FREEZE_PERIOD=0)
+        async for _ in setup_two_nodes(constants):
+            yield _
+
+    @pytest.fixture(scope="function")
+    async def two_nodes_standard_freeze(self):
+        constants = test_constants.replace(COINBASE_FREEZE_PERIOD=200)
+        async for _ in setup_two_nodes(constants):
+            yield _
+
+    @pytest.mark.asyncio
+    async def test_basic_blockchain_tx(self, two_nodes):
+        num_blocks = 10
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_puzzlehash = BURN_PUZZLE_HASH
+
+        blocks = bt.get_consecutive_blocks(
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+        )
+        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
+        peer = await connect_and_get_peer(server_1, server_2)
+        full_node_1 = full_node_api_1.full_node
+
+        for block in blocks:
+            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block), None)
+
+        spend_block = blocks[1]
+        spend_coin = None
+        for coin in list(spend_block.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                spend_coin = coin
+
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+
+        assert spend_bundle is not None
+        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
+        await full_node_api_1.respond_transaction(tx, peer)
+
+        sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
+        assert sb is spend_bundle
+
+        last_block = blocks[-1]
+        next_spendbundle = await full_node_1.mempool_manager.create_bundle_from_mempool(last_block.header_hash)
+        assert next_spendbundle is not None
+
+        new_blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            transaction_data=next_spendbundle,
+            guarantee_block=True,
+        )
+
+        next_block = new_blocks[-1]
+        await full_node_1.respond_sub_block(full_node_protocol.RespondSubBlock(next_block))
+
+        assert next_block.header_hash == full_node_1.blockchain.get_peak().header_hash
+        print("Adde block ", next_block)
+
+        added_coins = next_spendbundle.additions()
+
+        # Two coins are added, main spend and change
+        assert len(added_coins) == 2
+        for coin in added_coins:
+            unspent = await full_node_1.coin_store.get_coin_record(coin.name())
+            assert unspent is not None
+            assert not unspent.spent
+            assert not unspent.coinbase
+
+    @pytest.mark.asyncio
+    async def test_validate_blockchain_with_double_spend(self, two_nodes):
+        num_blocks = 5
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_puzzlehash = BURN_PUZZLE_HASH
+
+        blocks = bt.get_consecutive_blocks(
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+        )
+        full_node_api_1, full_node_api_3, server_1, server_2 = two_nodes
+        full_node_1 = full_node_api_1.full_node
+
+        for block in blocks:
+            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        spend_block = blocks[1]
+        spend_coin = None
+        for coin in list(spend_block.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                spend_coin = coin
+
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+        spend_bundle_double = wallet_a.generate_signed_transaction(1001, receiver_puzzlehash, spend_coin)
+
+        block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
+
+        new_blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            transaction_data=block_spendbundle,
+            guarantee_block=True,
+        )
+
+        next_block = new_blocks[-1]
+        res, err, _ = await full_node_1.blockchain.receive_block(next_block)
+        assert res == ReceiveBlockResult.INVALID_BLOCK
+        assert err == Err.DOUBLE_SPEND
+
+
 #     @pytest.mark.asyncio
 #     async def test_validate_blockchain_duplicate_output(self, two_nodes):
 #         num_blocks = 10
@@ -144,7 +147,7 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         spent_block = blocks[1]
 #
@@ -177,7 +180,7 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         spent_block = blocks[1]
 #
@@ -190,7 +193,7 @@
 #         blocks = bt.get_consecutive_blocks(test_constants, 10, blocks, 10, b"", coinbase_puzzlehash, dic_h)
 #         # Move chain to height 20, with a spend at height 11
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Reorg at block 5, same spend at block 13 and 14 that was previously at block 11
 #         dic_h = {13: (program, aggsig), 14: (program, aggsig)}
@@ -205,12 +208,12 @@
 #         )
 #
 #         for block in new_blocks[:13]:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #         next_block = new_blocks[13]
 #         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
 #         assert error is None
 #
-#         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[13]))
+#         await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[13]))
 #
 #         next_block = new_blocks[14]
 #         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
@@ -228,7 +231,7 @@
 #             dic_h,
 #         )
 #         for block in new_blocks[:9]:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #         next_block = new_blocks[9]
 #         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
 #         assert error is None
@@ -245,7 +248,7 @@
 #             dic_h,
 #         )
 #         for block in new_blocks[:11]:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #         next_block = new_blocks[11]
 #         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
 #         assert error is None
@@ -262,7 +265,7 @@
 #             dic_h,
 #         )
 #         for block in new_blocks[:12]:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #         next_block = new_blocks[12]
 #         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
 #         assert error is Err.DOUBLE_SPEND
@@ -279,7 +282,7 @@
 #             dic_h,
 #         )
 #         for block in new_blocks[:15]:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #         next_block = new_blocks[15]
 #         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
 #         assert error is Err.DOUBLE_SPEND
@@ -298,7 +301,7 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         spent_block = blocks[1]
 #
@@ -318,7 +321,7 @@
 #             dic_h,
 #         )
 #
-#         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
+#         await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
 #         assert new_blocks[-1].header_hash in full_node_1.blockchain.headers
 #
 #         coin_2 = None
@@ -343,7 +346,7 @@
 #             coinbase_puzzlehash,
 #             dic_h,
 #         )
-#         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
+#         await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
 #         assert new_blocks[-1].header_hash in full_node_1.blockchain.headers
 #
 #         coin_3 = None
@@ -369,7 +372,7 @@
 #             dic_h,
 #         )
 #
-#         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
+#         await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
 #         assert new_blocks[-1].header_hash in full_node_1.blockchain.headers
 #
 #         coin_4 = None
@@ -391,13 +394,13 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Spends a coinbase created in reorg
 #         new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks[:6],
 #         10, b"reorg cb coin", coinbase_puzzlehash)
 #
-#         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
+#         await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
 #         assert new_blocks[-1].header_hash in full_node_1.blockchain.headers
 #
 #         spent_block = new_blocks[-1]
@@ -424,7 +427,7 @@
 #             new_blocks[-1], new_blocks[-1].get_fees_coin().amount
 #         )
 #         assert error is None
-#         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
+#         await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
 #         assert new_blocks[-1].header_hash in full_node_1.blockchain.headers
 #
 #         coins_created = []
@@ -445,12 +448,12 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Spends a coinbase created in reorg
 #         new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks[:6], 10,
 #         b"reorg cb coin", coinbase_puzzlehash)
-#         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
+#         await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
 #
 #         assert new_blocks[-1].header_hash in full_node_1.blockchain.headers
 #
@@ -487,7 +490,7 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         spent_block = blocks[1]
 #
@@ -498,7 +501,7 @@
 #
 #         dic_h = {11: (program, aggsig)}
 #         new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h)
-#         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
+#         await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[-1]))
 #
 #         # Spends a coin in a genesis reorg, that was already spent
 #         dic_h = {5: (program, aggsig)}
@@ -512,7 +515,7 @@
 #             dic_h,
 #         )
 #         for block in new_blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         assert new_blocks[-1].header_hash in full_node_1.blockchain.headers
 #
@@ -529,7 +532,7 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Coinbase that gets spent
 #         spent_block = blocks[1]
@@ -596,7 +599,7 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Coinbase that gets spent
 #         block1 = blocks[1]
@@ -668,7 +671,7 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Coinbase that gets spent
 #         block1 = blocks[1]
@@ -701,7 +704,7 @@
 #         )
 #
 #         for block in valid_new_blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Try to validate that block at index 12
 #         next_block = valid_new_blocks[12]
@@ -724,7 +727,7 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Coinbase that gets spent
 #         block1 = blocks[1]
@@ -758,7 +761,7 @@
 #         )
 #
 #         for block in valid_new_blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Try to validate that block at index 12
 #         next_block = valid_new_blocks[12]
@@ -781,7 +784,7 @@
 #         full_node_1 = full_node_api_1.full_node
 #
 #         for block in blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Coinbase that gets spent
 #         block1 = blocks[1]
@@ -818,7 +821,7 @@
 #         )
 #
 #         for block in valid_new_blocks:
-#             await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #         # Try to validate that block after 3 sec have passed
 #         next_block = valid_new_blocks[12]
@@ -839,7 +842,7 @@
 #     full_node_1 = full_node_api_1.full_node
 #
 #     for block in blocks:
-#         await full_node_api_1.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+#         await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 #
 #     spent_block = blocks[1]
 #
