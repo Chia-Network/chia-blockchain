@@ -4,7 +4,7 @@ from src.consensus.blockchain import ReceiveBlockResult
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.full_node_api import FullNodeAPI
 from src.protocols.full_node_protocol import RespondSubBlock
-from src.simulator.simulator_protocol import FarmNewBlockProtocol
+from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.server.outbound_message import OutboundMessage
 from src.types.full_block import FullBlock
 from src.types.spend_bundle import SpendBundle
@@ -70,3 +70,25 @@ class FullNodeSimulator(FullNodeAPI):
         )
         rr = RespondSubBlock(more[-1])
         await self.full_node.respond_sub_block(rr)
+
+    @api_request
+    async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
+        new_index = request.new_index
+        old_index = request.old_index
+        coinbase_ph = request.puzzle_hash
+
+        current_blocks = await self.get_all_full_blocks()
+        block_count = new_index - old_index
+
+        more_blocks = self.bt.get_consecutive_blocks(
+            block_count,
+            farmer_reward_puzzle_hash=coinbase_ph,
+            pool_reward_puzzle_hash=coinbase_ph,
+            block_list_input=current_blocks[:old_index],
+            force_overflow=True,
+            guarantee_block=True,
+            seed=32*b"1"
+        )
+
+        for block in more_blocks:
+            await self.full_node.respond_sub_block(RespondSubBlock(block))
