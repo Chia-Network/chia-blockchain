@@ -6,7 +6,7 @@ import pytest
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.consensus.sub_block_record import SubBlockRecord
 from src.server.server import ChiaServer
-from src.simulator.simulator_protocol import FarmNewBlockProtocol
+from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
 from src.util.ints import uint16, uint32
 from tests.setup_nodes import (
@@ -107,34 +107,36 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_confirmed_balance, new_funds - 10)
         await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - 10)
 
-    # @pytest.mark.asyncio
-    # async def test_wallet_coinbase_reorg(self, wallet_node):
-    #     num_blocks = 5
-    #     full_nodes, wallets = wallet_node
-    #     full_node_api = full_nodes[0]
-    #     fn_server = full_node_api.full_node.server
-    #     wallet_node, server_2 = wallets[0]
-    #     wallet = wallet_node.wallet_state_manager.main_wallet
-    #     ph = await wallet.get_new_puzzlehash()
-    #
-    #     await server_2.start_client(PeerInfo("localhost", uint16(fn_server._port)), None)
-    #     for i in range(1, num_blocks):
-    #         await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
-    #
-    #     funds = sum(
-    #         [calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i)) for i in range(1, num_blocks - 2)]
-    #     )
-    #
-    #     await time_out_assert(5, wallet.get_confirmed_balance, funds)
-    #
-    #     await full_node_api.reorg_from_index_to_new_index(
-    #         ReorgProtocol(uint32(5), uint32(num_blocks + 3), token_bytes()), None
-    #     )
-    #
-    #     funds = sum([calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i)) for i in range(1, 5)])
-    #
-    #     await time_out_assert(5, wallet.get_confirmed_balance, funds)
-    #
+    @pytest.mark.asyncio
+    async def test_wallet_coinbase_reorg(self, wallet_node):
+        num_blocks = 5
+        full_nodes, wallets = wallet_node
+        full_node_api = full_nodes[0]
+        fn_server = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo("localhost", uint16(fn_server._port)), None)
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+
+        funds = sum([
+         calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+        )
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+
+        await full_node_api.reorg_from_index_to_new_index(
+            ReorgProtocol(uint32(3), uint32(num_blocks + 6), 32*b'0')
+        )
+
+        funds = sum([
+            calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 2)]
+        )
+
+        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+
     # @pytest.mark.asyncio
     # async def test_wallet_send_to_three_peers(self, three_sim_two_wallets):
     #     num_blocks = 10
