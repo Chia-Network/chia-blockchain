@@ -416,7 +416,7 @@ class TestBlockHeaderValidation:
                             block.finished_sub_slots[
                                 -1
                             ].infused_challenge_chain.infused_challenge_chain_end_of_slot_vdf,
-                            challenge_hash=bytes([0] * 32),
+                            challenge=bytes([0] * 32),
                         )
                     ),
                 )
@@ -438,10 +438,9 @@ class TestBlockHeaderValidation:
                 result, err, _ = await empty_blockchain.receive_block(block_bad_5)
                 assert err == Err.INVALID_ICC_EOS_VDF
 
-            else:
-                result, err, _ = await empty_blockchain.receive_block(block)
-                assert err is None
-                assert result == ReceiveBlockResult.NEW_PEAK
+            result, err, _ = await empty_blockchain.receive_block(block)
+            assert err is None
+            assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_invalid_icc_into_cc(self, empty_blockchain):
@@ -607,6 +606,11 @@ class TestBlockHeaderValidation:
                         uint64(10000000),
                     ),
                 )
+                new_finished_ss = recursive_replace(
+                    new_finished_ss,
+                    "reward_chain.challenge_chain_sub_slot_hash",
+                    new_finished_ss.challenge_chain.get_hash(),
+                )
                 block_bad = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss]
                 )
@@ -622,6 +626,12 @@ class TestBlockHeaderValidation:
                         "challenge_chain_end_of_slot_vdf.output",
                         ClassgroupElement.get_default_element(),
                     ),
+                )
+
+                new_finished_ss_2 = recursive_replace(
+                    new_finished_ss_2,
+                    "reward_chain.challenge_chain_sub_slot_hash",
+                    new_finished_ss_2.challenge_chain.get_hash(),
                 )
                 block_bad_2 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_2]
@@ -639,11 +649,17 @@ class TestBlockHeaderValidation:
                         bytes([1] * 32),
                     ),
                 )
+
+                new_finished_ss_3 = recursive_replace(
+                    new_finished_ss_3,
+                    "reward_chain.challenge_chain_sub_slot_hash",
+                    new_finished_ss_3.challenge_chain.get_hash(),
+                )
                 block_bad_3 = recursive_replace(
                     block, "finished_sub_slots", block.finished_sub_slots[:-1] + [new_finished_ss_3]
                 )
                 result, err, _ = await empty_blockchain.receive_block(block_bad_3)
-                assert err == Err.INVALID_CC_EOS_VDF
+                assert err == Err.INVALID_CC_EOS_VDF or err == Err.INVALID_PREV_CHALLENGE_SLOT_HASH
 
                 # Bad proof
                 new_finished_ss_5 = recursive_replace(
@@ -657,10 +673,9 @@ class TestBlockHeaderValidation:
                 result, err, _ = await empty_blockchain.receive_block(block_bad_5)
                 assert err == Err.INVALID_CC_EOS_VDF
 
-            else:
-                result, err, _ = await empty_blockchain.receive_block(block)
-                assert err is None
-                assert result == ReceiveBlockResult.NEW_PEAK
+            result, err, _ = await empty_blockchain.receive_block(block)
+            assert err is None
+            assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_invalid_rc_sub_slot_vdf(self, empty_blockchain):
@@ -674,7 +689,7 @@ class TestBlockHeaderValidation:
                     "reward_chain",
                     recursive_replace(
                         block.finished_sub_slots[-1].reward_chain,
-                        "reward_chain_end_of_slot_vdf.number_of_iterations",
+                        "end_of_slot_vdf.number_of_iterations",
                         uint64(10000000),
                     ),
                 )
@@ -690,7 +705,7 @@ class TestBlockHeaderValidation:
                     "reward_chain",
                     recursive_replace(
                         block.finished_sub_slots[-1].reward_chain,
-                        "reward_chain_end_of_slot_vdf.output",
+                        "end_of_slot_vdf.output",
                         ClassgroupElement.get_default_element(),
                     ),
                 )
@@ -728,10 +743,9 @@ class TestBlockHeaderValidation:
                 result, err, _ = await empty_blockchain.receive_block(block_bad_5)
                 assert err == Err.INVALID_RC_EOS_VDF
 
-            else:
-                result, err, _ = await empty_blockchain.receive_block(block)
-                assert err is None
-                assert result == ReceiveBlockResult.NEW_PEAK
+            result, err, _ = await empty_blockchain.receive_block(block)
+            assert err is None
+            assert result == ReceiveBlockResult.NEW_PEAK
 
     @pytest.mark.asyncio
     async def test_genesis_bad_deficit(self, empty_blockchain):

@@ -112,6 +112,7 @@ async def validate_unfinished_header_block(
                 if genesis_block:
                     # 2a. check sub-slot challenge hash for genesis block
                     if challenge_hash != constants.FIRST_CC_CHALLENGE:
+                        print(111)
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
                 else:
                     assert prev_sb is not None
@@ -122,6 +123,7 @@ async def validate_unfinished_header_block(
 
                     # 2b. check sub-slot challenge hash for non-genesis block
                     if not curr.finished_challenge_slot_hashes[-1] == challenge_hash:
+                        print(curr.finished_challenge_slot_hashes[-1], challenge_hash)
                         return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
             else:
                 # 2c. check sub-slot challenge hash for empty slot
@@ -129,6 +131,7 @@ async def validate_unfinished_header_block(
                     not header_block.finished_sub_slots[finished_sub_slot_n - 1].challenge_chain.get_hash()
                     == challenge_hash
                 ):
+                    print(113)
                     return None, ValidationError(Err.INVALID_PREV_CHALLENGE_SLOT_HASH)
 
             if genesis_block:

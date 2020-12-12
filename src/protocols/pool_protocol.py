@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 
-from src.types.coinbase import CoinbaseInfo
 from src.types.proof_of_space import ProofOfSpace
 from src.util.cbor_message import cbor_message
 from src.util.ints import uint32, uint64
@@ -17,7 +16,7 @@ Protocol between farmer and pool.
 @dataclass(frozen=True)
 @streamable
 class SignedCoinbase:
-    coinbase: CoinbaseInfo
+    pass
     # coinbase_signature: PrependSignature
 
 
