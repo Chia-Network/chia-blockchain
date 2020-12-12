@@ -17,6 +17,7 @@ SUBCOMMANDS = [
     "netspace",
     "run_daemon",
     "wallet",
+    "configure",
 ]
 
 
