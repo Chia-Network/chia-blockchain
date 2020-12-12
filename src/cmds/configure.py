@@ -47,6 +47,7 @@ def configure(args, parser):
                 )
                 config["full_node"]["introducer_peer"]["host"] = host
                 config["full_node"]["introducer_peer"]["port"] = int(port)
+                config["introducer"]["port"] = int(port)
                 print("Node introducer updated.")
                 change_made = True
         except ValueError:
