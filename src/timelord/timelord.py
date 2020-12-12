@@ -647,7 +647,7 @@ class Timelord:
     async def _manage_chains(self):
         async with self.lock:
             # TODO: fix this race condition. Send the initial data when clients connect
-            await asyncio.sleep(10)
+            await asyncio.sleep(5)
             await self._reset_chains()
         while not self._shut_down:
             try:
