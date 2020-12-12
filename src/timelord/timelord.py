@@ -646,7 +646,7 @@ class Timelord:
 
     async def _manage_chains(self):
         async with self.lock:
-            await asyncio.sleep(5)
+            await asyncio.sleep(10)
             await self._reset_chains()
         while not self._shut_down:
             try:
