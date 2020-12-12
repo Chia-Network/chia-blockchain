@@ -627,8 +627,8 @@ class WeightProofHandler:
         if ses.new_sub_slot_iters is not None:
             curr_ssi = ses.new_sub_slot_iters
         for idx, sub_slot in enumerate(segment.sub_slots):
-            total_slot_iters += curr_ssi
-            total_slots += uint64(1)
+            total_slot_iters = total_slot_iters + curr_ssi  # type: ignore
+            total_slots = total_slots + uint64(1)  # type: ignore
 
             # todo uncomment after vdf merging is done
             # if not validate_sub_slot_vdfs(self.constants, sub_slot, vdf_info, sub_slot.is_challenge()):
@@ -652,16 +652,10 @@ class WeightProofHandler:
                     cc_sub_slot.get_hash(),
                     sub_slot.cc_signage_point.get_hash(),
                 )
-                total_ip_iters = uint128(
-                    total_ip_iters
-                    + calculate_ip_iters(
-                        self.constants,
-                        curr_ssi,
-                        sub_slot.cc_signage_point_index,
-                        required_iters,
-                    )
+                total_ip_iters = total_ip_iters + calculate_ip_iters(  # type: ignore
+                    self.constants, curr_ssi, sub_slot.cc_signage_point_index, required_iters
                 )
-                challenge_blocks += 1
+                challenge_blocks = challenge_blocks + 1
 
         return True, total_slot_iters, total_slots, challenge_blocks
 
@@ -700,8 +694,8 @@ def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: Union[BlockCache,
             return count
 
         curr = cache.sub_block_record(curr.prev_hash)
-        count += uint32(1)
-    count += uint32(1)
+        count = count + uint32(1)  # type: ignore
+    count = count + uint32(1)  # type: ignore
 
     return count
 
@@ -784,7 +778,9 @@ def map_summaries(
         if data.new_difficulty is not None:
             curr_difficulty = data.new_difficulty
 
-        sub_epoch_data_weight += uint128(curr_difficulty * (sub_blocks_for_se + data.num_sub_blocks_overflow))
+        sub_epoch_data_weight = sub_epoch_data_weight + uint128(  # type: ignore
+            curr_difficulty * (sub_blocks_for_se + data.num_sub_blocks_overflow)
+        )
 
         # add to dict
         summaries[uint32(idx)] = ses
