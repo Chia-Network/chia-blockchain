@@ -28,7 +28,7 @@ from src.full_node.signage_point import SignagePoint
 from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
-from src.full_node.weight_proof import WeightProofHandler, init_block_block_cache_mock
+from src.full_node.weight_proof import WeightProofHandler, init_block_block_cache
 from src.protocols import (
     full_node_protocol,
     timelord_protocol,
@@ -109,7 +109,7 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
-        self.weight_proof_handler = WeightProofHandler(self.constants, BlockCache(self.blockchain))
+        self.weight_proof_handler = WeightProofHandler(self.constants)
         self._sync_task = None
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
@@ -405,6 +405,8 @@ class FullNode:
             return None
 
         # if validated continue else fail
+        cache = await init_block_block_cache(self.blockchain)
+        self.weight_proof_handler.set_block_cache(cache)
         weight_proof: WeightProof = response[0].wp
         if not wpf.validate_weight_proof(weight_proof):
             self.log.error(
