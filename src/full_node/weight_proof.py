@@ -276,7 +276,7 @@ class WeightProofHandler:
         curr_ssi: uint64,
         rc_sub_slot_hash: bytes32,
     ):
-        total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
+        # total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
         total_slot_iters, total_slots = uint64(0), uint64(0)
         total_ip_iters = uint64(0)
         # validate sub epoch samples
@@ -295,7 +295,7 @@ class WeightProofHandler:
                     )
                     rc_sub_slot_hash = rc_sub_slot.get_hash()
 
-                self.log.info(f"compare segment rc_sub_slot_hash with ses reward_chain_hash")
+                self.log.info("compare segment rc_sub_slot_hash with ses reward_chain_hash")
                 if not summaries[segment.sub_epoch_n].reward_chain_hash == rc_sub_slot_hash:
                     self.log.error(f"failed reward_chain_hash validation sub_epoch {segment.sub_epoch_n}")
                     self.log.error(f"rc slot hash  {rc_sub_slot_hash}")
@@ -367,7 +367,7 @@ class WeightProofHandler:
         assert self.block_cache is not None
         last_slot_hb = await self.block_cache.header_block(block.header_hash)
         assert last_slot_hb.finished_sub_slots is not None
-        last_slot = last_slot_hb.finished_sub_slots[-1]
+        # last_slot = last_slot_hb.finished_sub_slots[-1]
 
         count: uint32 = sub_epoch_blocks_n
         while not count == 0:
@@ -568,8 +568,8 @@ class WeightProofHandler:
         if ses.new_sub_slot_iters is not None:
             curr_ssi = ses.new_sub_slot_iters
         for idx, sub_slot in enumerate(segment.sub_slots):
-            total_slot_iters += curr_ssi
-            total_slots += uint64(1)
+            total_slot_iters = total_slot_iters + curr_ssi  # type: ignore
+            total_slots = total_slots + uint64(1)  # type: ignore
 
             # todo uncomment after vdf merging is done
             # if not validate_sub_slot_vdfs(self.constants, sub_slot, vdf_info, sub_slot.is_challenge()):
@@ -580,7 +580,7 @@ class WeightProofHandler:
                 self.log.info("validate proof of space")
                 q_str = self.__get_quality_string(segment, idx, ses)
                 if q_str is None:
-                    self.log.error(f"failed to validate segment space proof")
+                    self.log.error("failed to validate segment space proof")
                     return False, uint64(0), uint64(0), 0
                 assert sub_slot is not None
                 assert cc_sub_slot is not None
@@ -593,10 +593,10 @@ class WeightProofHandler:
                     cc_sub_slot.get_hash(),
                     sub_slot.cc_signage_point.get_hash(),
                 )
-                total_ip_iters += calculate_ip_iters(
+                total_ip_iters = total_ip_iters + calculate_ip_iters(  # type: ignore
                     self.constants, curr_ssi, sub_slot.cc_signage_point_index, required_iters
                 )
-                challenge_blocks += 1
+                challenge_blocks = challenge_blocks + 1
 
         return True, total_slot_iters, total_slots, challenge_blocks
 
@@ -635,8 +635,8 @@ def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: BlockCacheMock) -
             return count
 
         curr = cache.sub_block_record(curr.prev_hash)
-        count += uint32(1)
-    count += uint32(1)
+        count = count + uint32(1)  # type: ignore
+    count = count + uint32(1)  # type: ignore
 
     return count
 
@@ -714,7 +714,9 @@ def map_summaries(
         if data.new_difficulty is not None:
             curr_difficulty = data.new_difficulty
 
-        sub_epoch_data_weight += uint128(curr_difficulty * (sub_blocks_for_se + data.num_sub_blocks_overflow))
+        sub_epoch_data_weight = sub_epoch_data_weight + uint128(  # type: ignore
+            curr_difficulty * (sub_blocks_for_se + data.num_sub_blocks_overflow)
+        )
 
         # add to dict
         summaries[uint32(idx)] = ses

@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 import logging
 from typing import Dict, Optional, List, Tuple
@@ -7,7 +8,7 @@ import pytest
 from src.consensus.full_block_to_sub_block_record import block_to_sub_block_record
 from src.consensus.pot_iterations import calculate_iterations_quality
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.weight_proof import (
+from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
     get_last_ses_block_idx,
     map_summaries,
@@ -19,7 +20,6 @@ from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.weight_proof import ProofBlockHeader
-from src.util.block_tools import get_challenges
 from src.util.default_root import DEFAULT_ROOT_PATH
 from src.util.ints import uint32, uint64
 from src.util.logging import initialize_logging
@@ -234,7 +234,8 @@ class TestWeightProof:
     #     wpf.log.setLevel(logging.INFO)
     #     initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
     #
-    #     wp = await wpf.create_proof_of_weight(uint32(len(header_cache)), uint32(num_of_blocks), blocks[-1].header_hash)
+    #     wp = await wpf.create_proof_of_weight(uint32(len(header_cache)),
+    #               uint32(num_of_blocks), blocks[-1].header_hash)
     #
     #     assert wp is not None
     #     assert len(wp.sub_epochs) == sub_epochs
