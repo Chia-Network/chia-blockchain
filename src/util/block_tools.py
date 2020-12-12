@@ -70,9 +70,10 @@ from src.consensus.default_constants import DEFAULT_CONSTANTS
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
-        "DIFFICULTY_STARTING": 2 ** 9,
+        "DIFFICULTY_STARTING": 2 ** 12,
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_SUB_BLOCKS": 140,
+        "NUM_SPS_SUB_SLOT": 16,  # Must be a power of 2
         "MAX_SUB_SLOT_SUB_BLOCKS": 50,
         "EPOCH_SUB_BLOCKS": 280,
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600

@@ -87,17 +87,17 @@ class TestPotIterations:
         with the assumption that all farmers have access to the same VDF speed.
         """
         farmer_ks = {
-            uint8(32): 2000,
-            uint8(33): 2000,
-            uint8(34): 2000,
-            uint8(35): 2000,
-            uint8(36): 2000,
+            uint8(32): 100,
+            uint8(33): 100,
+            uint8(34): 100,
+            uint8(35): 100,
+            uint8(36): 100,
         }
         farmer_space = {k: _expected_plot_size(uint8(k)) * count for k, count in farmer_ks.items()}
         total_space = sum(farmer_space.values())
         percentage_space = {k: float(sp / total_space) for k, sp in farmer_space.items()}
         wins = {k: 0 for k in farmer_ks.keys()}
-        total_slots = 100
+        total_slots = 50
         num_sps = 16
         sp_interval_iters = uint64(100000000 // 32)
         difficulty = uint64(500000000000)
