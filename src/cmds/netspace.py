@@ -2,7 +2,6 @@ import aiohttp
 import asyncio
 import time
 from time import struct_time, localtime
-import datetime
 from src.util.config import load_config
 from src.util.default_root import DEFAULT_ROOT_PATH
 
@@ -61,43 +60,37 @@ async def netstorge_async(args, parser):
             # Get lca or newer block
             if args.start == "":
                 blockchain_state = await client.get_blockchain_state()
-                newer_block_height = blockchain_state["lca"].data.sub_block_height
+                if blockchain_state["peak"] is None:
+                    print("No sub-blocks in blockchain")
+
+                newer_block_height = blockchain_state["peak"].sub_block_height
             else:
                 newer_block_height = int(args.start)  # Starting block height in args
-            newer_block_header = await client.get_header_by_height(newer_block_height)
-            older_block_height = newer_block_height - int(args.delta_block_height)
-            older_block_header = await client.get_header_by_height(older_block_height)
-            newer_block_header_hash = str(newer_block_header.get_hash())
-            older_block_header_hash = str(older_block_header.get_hash())
-            elapsed_time = newer_block_header.data.timestamp - older_block_header.data.timestamp
-            newer_block_time_string = human_local_time(newer_block_header.data.timestamp)
-            older_block_time_string = human_local_time(older_block_header.data.timestamp)
-            time_delta = datetime.timedelta(seconds=elapsed_time)
+
+            newer_block_header = await client.get_sub_block_record_by_sub_height(newer_block_height)
+            older_block_height = max(0, newer_block_height - int(args.delta_block_height))
+            older_block_header = await client.get_sub_block_record_by_sub_height(older_block_height)
             network_space_bytes_estimate = await client.get_network_space(
-                newer_block_header_hash, older_block_header_hash
+                newer_block_header.header_hash, older_block_header.header_hash
             )
             print(
-                f"Older Block: {older_block_header.data.height}\n"
-                f"Older Block: {older_block_header.data.height}\n"
-                f"Header Hash: 0x{older_block_header_hash}\n"
-                f"Timestamp:   {older_block_time_string}\n"
-                f"Weight:      {older_block_header.data.weight}\n"
+                f"Older Sub-block Height: {older_block_header.sub_block_height}\n"
+                f"Older Height: {older_block_header.height}\n"
+                f"Header Hash: 0x{older_block_header.header_hash}\n"
+                f"Weight:      {older_block_header.weight}\n"
                 f"Total VDF\n"
-                f"Iterations:  {older_block_header.data.total_iters}\n"
+                f"Iterations:  {older_block_header.total_iters}\n"
             )
             print(
-                f"Newer Block: {newer_block_header.data.height}\n"
-                f"Header Hash: 0x{newer_block_header_hash}\n"
-                f"Timestamp:   {newer_block_time_string}\n"
-                f"Weight:      {newer_block_header.data.weight}\n"
+                f"Newer Sub-block Height: {newer_block_header.sub_block_height}\n"
+                f"Newer Height: {newer_block_header.height}\n"
+                f"Header Hash: 0x{newer_block_header.header_hash}\n"
+                f"Weight:      {newer_block_header.weight}\n"
                 f"Total VDF\n"
-                f"Iterations:  {newer_block_header.data.total_iters}\n"
+                f"Iterations:  {newer_block_header.total_iters}\n"
             )
-            network_space_terrabytes_estimate = network_space_bytes_estimate / 1024 ** 4
-            print(
-                f"The elapsed time between blocks is reported as {time_delta}.\n"
-                f"The network has an estimated {network_space_terrabytes_estimate:.2f}TiB"
-            )
+            network_space_terabytes_estimate = network_space_bytes_estimate / 1024 ** 4
+            print(f"The network has an estimated {network_space_terabytes_estimate:.2f}TiB")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):

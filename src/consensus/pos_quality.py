@@ -12,8 +12,19 @@ def _expected_plot_size(k: int) -> uint64:
     # The following line is the formula for total number of bytes. Instead we can use a formula
     # for number of kilobytes, to prevent decimal usage.
     # return 0.762 * k * pow(2, k)
+    # TODO: change to:
+    # (k + 1 / 2) * 2 ** k
+    # ((2 * k) + 1) * 2 ** (k - 1)
 
     return 780 * k * pow(2, k - 10)
+
+
+#
+# def quality_str_to_quality_linear(quality_str: bytes32, k: int) -> uint64:
+#     t = pow(2, 256)
+#     # xt = int.from_bytes(quality_str, "big")
+#     xt = int.from_bytes(quality_str, "big")
+#     return xt * _expected_plot_size(k) // t
 
 
 def quality_str_to_quality(quality_str: bytes32, k: int) -> uint64:
@@ -39,4 +50,5 @@ def quality_str_to_quality(quality_str: bytes32, k: int) -> uint64:
     # log(1+x) = - (numerator / denominator / t)
 
     # Instead, here we rearrange the terms to only have one division, which we can use bigints for
+    # return -(t * _expected_plot_size(k) * denominator) // numerator
     return -(t * _expected_plot_size(k) * denominator) // numerator
