@@ -29,7 +29,8 @@ for setuptools_scm/PEP 440 reasons.
 - aiohttp, clvm-tools, colorlog, concurrent-log-handler, keyring, cryptography, and sortedcontainers have been upgraded to their current versions.
 
 ### Fixed
-- There was a regression in Beta 18 where the plotter took 499GiB of temp space for a k32 when it used to only use 332GiB. The plotter should now use just slightly less than it did in Beta 17. 
+
+- There was a regression in Beta 18 where the plotter took 499GiB of temp space for a k32 when it used to only use 332GiB. The plotter should now use just slightly less than it did in Beta 17.
 
 ## [1.0beta18] aka Beta 1.18 - 2020-12-03
 
