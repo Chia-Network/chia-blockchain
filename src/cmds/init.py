@@ -33,7 +33,7 @@ def make_parser(parser: ArgumentParser):
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
     for k, v in default.items():
         if isinstance(v, dict) and k in updated:
-            # If there is an intermediate key with empty string value, do not migrate all decendants
+            # If there is an intermediate key with empty string value, do not migrate all descendants
             if do_not_migrate_keys.get(k, None) == "":
                 do_not_migrate_keys[k] = v
             dict_add_new_default(updated[k], default[k], do_not_migrate_keys.get(k, {}))

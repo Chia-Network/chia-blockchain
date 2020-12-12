@@ -60,7 +60,6 @@ class FullNodeRpcApi:
 
         sync_mode: bool = self.service.sync_store.get_sync_mode()
 
-        peak_hash = peak.get_hash() if peak is not None else b""
         if sync_mode and self.service.sync_peers_handler is not None:
             max_pp = 0
             for _, potential_peak in self.service.sync_store.potential_peaks.items():
@@ -75,7 +74,7 @@ class FullNodeRpcApi:
         if peak is not None and peak.height > 1:
             newer_block_hex = peak.header_hash.hex()
             older_block_hex = self.service.blockchain.sub_height_to_hash[
-                uint32(max(1, peak.sub_block_height - 500))
+                uint32(max(1, peak.sub_block_height - 1000))
             ].hex()
             space = await self.get_network_space(
                 {
@@ -89,7 +88,6 @@ class FullNodeRpcApi:
         response: Dict = {
             "blockchain_state": {
                 "peak": peak,
-                "peak_hash": peak_hash,
                 "sync": {
                     "sync_mode": sync_mode,
                     "sync_tip_height": sync_tip_height,
@@ -169,35 +167,28 @@ class FullNodeRpcApi:
         """
         if "newer_block_header_hash" not in request or "older_block_header_hash" not in request:
             raise ValueError("Invalid request. newer_block_header_hash and older_block_header_hash required")
-        # newer_block_hex = request["newer_block_header_hash"]
-        # older_block_hex = request["older_block_header_hash"]
-        #
-        # if newer_block_hex == older_block_hex:
-        #     raise ValueError("New and old must not be the same")
-        #
-        # newer_block_bytes = hexstr_to_bytes(newer_block_hex)
-        # older_block_bytes = hexstr_to_bytes(older_block_hex)
-        #
-        # newer_block = await self.service.block_store.get_block(newer_block_bytes)
-        # if newer_block is None:
-        #     raise ValueError("Newer block not found")
-        # older_block = await self.service.block_store.get_block(older_block_bytes)
-        # if older_block is None:
-        #     raise ValueError("Newer block not found")
-        # delta_weight = newer_block.header.data.weight - older_block.header.data.weight
-        # delta_iters = newer_block.header.data.total_iters - older_block.header.data.total_iters
-        # total_min_inters = await self.get_total_miniters(newer_block, older_block)
-        # if total_min_inters is None:
-        #     raise ValueError("Min iters invalid")
-        # delta_iters -= total_min_inters
-        # weight_div_iters = delta_weight / delta_iters
-        # tips_adjustment_constant = 0.65
-        # network_space_constant = 2 ** 32  # 2^32
-        # eligible_plots_filter_mult = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
-        # network_space_bytes_estimate = (
-        #     weight_div_iters * network_space_constant * tips_adjustment_constant * eligible_plots_filter_mult
-        # )
-        network_space_bytes_estimate = 1024 ** 4
+        newer_block_hex = request["newer_block_header_hash"]
+        older_block_hex = request["older_block_header_hash"]
+
+        if newer_block_hex == older_block_hex:
+            raise ValueError("New and old must not be the same")
+
+        newer_block_bytes = hexstr_to_bytes(newer_block_hex)
+        older_block_bytes = hexstr_to_bytes(older_block_hex)
+
+        newer_block = await self.service.block_store.get_sub_block_record(newer_block_bytes)
+        if newer_block is None:
+            raise ValueError("Newer block not found")
+        older_block = await self.service.block_store.get_sub_block_record(older_block_bytes)
+        if older_block is None:
+            raise ValueError("Newer block not found")
+        delta_weight = newer_block.weight - older_block.weight
+
+        delta_iters = newer_block.total_iters - older_block.total_iters
+        weight_div_iters = delta_weight / delta_iters
+        network_space_constant = 2 ** 25
+        eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
+        network_space_bytes_estimate = weight_div_iters * network_space_constant * eligible_plots_filter_multiplier
         return {"space": uint128(int(network_space_bytes_estimate))}
 
     async def get_unspent_coins(self, request: Dict) -> Optional[Dict]:
