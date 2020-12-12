@@ -21,6 +21,7 @@ class Coin(Streamable):
     amount: uint64
 
     def name(self) -> bytes32:
+        # TODO(straya): use CLVM coin id calculation
         return self.get_hash()
 
     def as_list(self) -> List[Any]:

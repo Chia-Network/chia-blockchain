@@ -5,8 +5,9 @@ from time import struct_time, localtime
 
 from typing import List, Optional
 
+from src.consensus.sub_block_record import SubBlockRecord
 from src.server.outbound_message import NodeType
-from src.types.header_block import HeaderBlock
+from src.types.full_block import FullBlock
 from src.rpc.full_node_rpc_client import FullNodeRpcClient
 from src.util.byte_types import hexstr_to_bytes
 from src.util.config import str2bool
@@ -39,16 +40,16 @@ def make_parser(parser):
 
     parser.add_argument(
         "-b",
-        "--block-by-header-hash",
-        help="Look up a block by block header hash.",
+        "--sub-block-by-header-hash",
+        help="Look up a sub-block by block header hash.",
         type=str,
         default="",
     )
 
     parser.add_argument(
         "-bh",
-        "--block-header-hash-by-height",
-        help="Look up a block header hash by block height.",
+        "--sub-block-header-hash-by-sub-height",
+        help="Look up a sub-block header hash by block height.",
         type=str,
         default="",
     )
@@ -116,18 +117,16 @@ async def show_async(args, parser):
 
         if args.state:
             blockchain_state = await client.get_blockchain_state()
-            lca_block = blockchain_state["lca"]
-            tips = blockchain_state["tips"]
+            peak: Optional[SubBlockRecord] = blockchain_state["peak"]
             difficulty = blockchain_state["difficulty"]
-            ips = blockchain_state["ips"]
+            sub_slot_iters = blockchain_state["sub_slot_iters"]
             sync_mode = blockchain_state["sync"]["sync_mode"]
-            total_iters = lca_block.data.total_iters
+            total_iters = peak.total_iters if peak is not None else 0
             num_blocks: int = 10
 
             if sync_mode:
                 sync_max_block = blockchain_state["sync"]["sync_tip_height"]
                 sync_current_block = blockchain_state["sync"]["sync_progress_height"]
-                # print (max_block)
                 print(
                     "Current Blockchain Status: Full Node syncing to",
                     sync_max_block,
@@ -136,50 +135,39 @@ async def show_async(args, parser):
                 )
             else:
                 print("Current Blockchain Status: Full Node Synced")
-            print("Latest Common Ancestor:\n    ", lca_block.header_hash)
-            lca_time = struct_time(localtime(lca_block.data.timestamp))
+            print("Peak:\n    ", peak.header_hash)
+            curr = peak
+            while curr is not None and not curr.is_block:
+                curr = await client.get_sub_block_record(curr.prev_hash)
+
+            peak_time = struct_time(localtime(curr.timestamp))
+
             # Should auto format the align right of LCA height
             print(
-                "     LCA time:",
-                time.strftime("%a %b %d %Y %T %Z", lca_time),
-                "       LCA height:",
-                lca_block.height,
+                "     Peak time:",
+                time.strftime("%a %b %d %Y %T %Z", peak_time),
+                "       Peak sub-block height:",
+                peak.sub_block_height,
+                "       Peak height:",
+                peak.height,
             )
-            print("Heights of tips: " + str([h.height for h in tips]))
-            print(f"Current difficulty: {difficulty}")
-            print(f"Current VDF iterations per second: {ips:.0f}")
-            print("Total iterations since genesis:", total_iters)
-            print("")
-            heads: List[HeaderBlock] = tips
-            added_blocks: List[HeaderBlock] = []
-            while len(added_blocks) < num_blocks and len(heads) > 0:
-                heads = sorted(heads, key=lambda b: b.height, reverse=True)
-                max_block = heads[0]
-                if max_block not in added_blocks:
-                    added_blocks.append(max_block)
-                heads.remove(max_block)
-                prev: Optional[HeaderBlock] = await client.get_header(max_block.prev_header_hash)
-                if prev is not None:
-                    heads.append(prev)
 
-            latest_blocks_labels = []
-            for i, b in enumerate(added_blocks):
-                latest_blocks_labels.append(
-                    f"{b.height}:{b.header_hash}"
-                    f" {'LCA' if b.header_hash == lca_block.header_hash else ''}"
-                    f" {'TIP' if b.header_hash in [h.header_hash for h in tips] else ''}"
-                )
-            for i in range(len(latest_blocks_labels)):
-                if i < 2:
-                    print(latest_blocks_labels[i])
-                elif i == 2:
-                    print(
-                        latest_blocks_labels[i],
-                        "\n",
-                        "                                -----",
-                    )
-                else:
-                    print("", latest_blocks_labels[i])
+            network_space_terabytes_estimate = blockchain_state["space"] / 1024 ** 4
+            print(f"The network has an estimated {network_space_terabytes_estimate:.2f}TiB")
+            print(f"Current difficulty: {difficulty}")
+            print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
+            print("Total iterations since the start of the blockchain:", total_iters)
+            print("")
+
+            added_blocks: List[SubBlockRecord] = []
+            curr = peak
+            while curr is not None and len(added_blocks) < num_blocks:
+                added_blocks.append(curr)
+                curr = await client.get_sub_block_record(curr.prev_hash)
+
+            for b in added_blocks:
+                print(f"SB height: {b.sub_block_height}, height: {b.height}, {b.header_hash}")
+
             # if called together with connections, leave a blank line
             if args.connections:
                 print("")
@@ -244,50 +232,64 @@ async def show_async(args, parser):
                     elif result_txt == "":
                         result_txt = f"NodeID {args.remove_connection}... not found."
             print(result_txt)
-        if args.block_header_hash_by_height != "":
-            block_header = await client.get_header_by_height(args.block_header_hash_by_height)
+        if args.sub_block_header_hash_by_sub_height != "":
+            block_header = await client.get_sub_block_record_by_sub_height(args.sub_block_header_hash_by_sub_height)
             if block_header is not None:
-                block_header_string = str(block_header.get_hash())
-                print(f"Header hash of block {args.block_header_hash_by_height}: {block_header_string}")
-            else:
-                print("Block height", args.block_header_hash_by_height, "not found.")
-        if args.block_by_header_hash != "":
-            block = await client.get_full_block(hexstr_to_bytes(args.block_by_header_hash))
-            # Would like to have a verbose flag for this
-            if block is not None:
-                prev_block_header_hash = block.header.data.prev_header_hash
-                prev_block_header = await client.get_full_block(prev_block_header_hash)
-                block_time = struct_time(localtime(block.header.data.timestamp))
-                block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
-                if block.header.data.aggregated_signature is None:
-                    aggregated_signature = block.header.data.aggregated_signature
-                else:
-                    aggregated_signature = block.header.data.aggregated_signature
-                print("Block", block.header.data.height, ":")
                 print(
-                    f"Header Hash            0x{args.block_by_header_hash}\n"
-                    f"Timestamp              {block_time_string}\n"
-                    f"Height                 {block.header.data.height}\n"
-                    f"Weight                 {block.header.data.weight}\n"
-                    f"Previous Block         0x{block.header.data.prev_header_hash}\n"
-                    f"Cost                   {block.header.data.cost}\n"
-                    f"Difficulty             {block.header.data.weight-prev_block_header.header.data.weight}\n"
-                    f"Total VDF Iterations   {block.header.data.total_iters}\n"
-                    f"Block VDF Iterations   {block.proof_of_time.number_of_iterations}\n"
-                    f"PoTime Witness Type    {block.proof_of_time.witness_type}\n"
-                    f"PoSpace 'k' Size       {block.proof_of_space.size}\n"
-                    f"Plot Public Key        0x{block.proof_of_space.plot_public_key}\n"
-                    f"Pool Public Key        0x{block.proof_of_space.pool_public_key}\n"
-                    f"Tx Filter Hash         {b'block.transactions_filter'.hex()}\n"
-                    f"Tx Generator Hash      {block.transactions_generator}\n"
-                    f"Coinbase Amount        {block.get_coinbase().amount/1000000000000}\n"
-                    f"Coinbase Address       {encode_puzzle_hash(block.get_coinbase().puzzle_hash)}\n"
-                    f"Fees Amount            {block.get_fees_coin().amount/1000000000000}\n"
-                    f"Fees Address           {encode_puzzle_hash(block.get_fees_coin().puzzle_hash)}\n"
-                    f"Aggregated Signature   {aggregated_signature}"
+                    f"Header hash of sub-block {args.sub_block_header_hash_by_sub_height}: "
+                    f"{block_header.header_hash.hex()}"
                 )
             else:
-                print("Block with header hash", args.block_by_header_hash, "not found.")
+                print("Sub block height", args.sub_block_header_hash_by_sub_height, "not found.")
+        if args.sub_block_by_header_hash != "":
+            sub_block: Optional[SubBlockRecord] = await client.get_sub_block_record(
+                hexstr_to_bytes(args.sub_block_by_header_hash)
+            )
+            full_block: Optional[FullBlock] = await client.get_sub_block(hexstr_to_bytes(args.sub_block_by_header_hash))
+            # Would like to have a verbose flag for this
+            if sub_block is not None:
+                assert full_block is not None
+                prev_sb = await client.get_sub_block_record(sub_block.prev_hash)
+                if prev_sb is not None:
+                    difficulty = sub_block.weight - prev_sb.weight
+                else:
+                    difficulty = sub_block.weight
+                if sub_block.is_block:
+                    assert full_block.transactions_info is not None
+                    block_time = struct_time(localtime(full_block.foliage_block.timestamp))
+                    block_time_string = time.strftime("%a %b %d %Y %T %Z", block_time)
+                    cost = full_block.transactions_info.cost
+                    tx_filter_hash = full_block.foliage_block.filter_hash
+                else:
+                    block_time_string = "Not a block"
+                    cost = "Not a block"
+                    tx_filter_hash = "Not a block"
+                print("Sub block at sub-height", sub_block.sub_block_height, ":")
+                print(
+                    f"Header Hash            0x{sub_block.header_hash.hex()}\n"
+                    f"Timestamp              {block_time_string}\n"
+                    f"Sub-block Height       {sub_block.sub_block_height}\n"
+                    f"Height                 {sub_block.height}\n"
+                    f"Weight                 {sub_block.weight}\n"
+                    f"Previous Block         0x{sub_block.prev_hash.hex()}\n"
+                    f"Difficulty             {difficulty}\n"
+                    f"Sub-slot iters         {sub_block.sub_slot_iters}\n"
+                    f"Cost                   {cost}\n"
+                    f"Total VDF Iterations   {sub_block.total_iters}\n"
+                    f"Is a Block?            {sub_block.is_block}\n"
+                    f"Deficit                {sub_block.deficit}\n"
+                    f"PoSpace 'k' Size       {full_block.reward_chain_sub_block.proof_of_space.size}\n"
+                    f"Plot Public Key        0x{full_block.reward_chain_sub_block.proof_of_space.plot_public_key}\n"
+                    f"Pool Public Key        0x{full_block.reward_chain_sub_block.proof_of_space.pool_public_key}\n"
+                    f"Pool Contract PH       0x"
+                    f"{full_block.reward_chain_sub_block.proof_of_space.pool_contract_puzzle_hash}\n"
+                    f"Tx Filter Hash         {tx_filter_hash}\n"
+                    f"Farmer Address         {encode_puzzle_hash(sub_block.farmer_puzzle_hash)}\n"
+                    f"Pool Address           {encode_puzzle_hash(sub_block.pool_puzzle_hash)}\n"
+                    f"Fees Amount            {sub_block.fees}\n"
+                )
+            else:
+                print("Sub-block with header hash", args.sub_block_header_hash_by_sub_height, "not found.")
 
     except Exception as e:
         if isinstance(e, aiohttp.client_exceptions.ClientConnectorError):

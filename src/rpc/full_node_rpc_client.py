@@ -50,13 +50,15 @@ class FullNodeRpcClient(RpcClient):
         response = await self.fetch("get_unfinished_sub_block_headers", {"sub_height": sub_height})
         return [UnfinishedHeaderBlock.from_json_dict(r) for r in response["headers"]]
 
-    async def get_network_space(self, newer_block_header_hash: str, older_block_header_hash: str) -> Optional[uint64]:
+    async def get_network_space(
+        self, newer_block_header_hash: bytes32, older_block_header_hash: bytes32
+    ) -> Optional[uint64]:
         try:
             network_space_bytes_estimate = await self.fetch(
                 "get_network_space",
                 {
-                    "newer_block_header_hash": newer_block_header_hash,
-                    "older_block_header_hash": older_block_header_hash,
+                    "newer_block_header_hash": newer_block_header_hash.hex(),
+                    "older_block_header_hash": older_block_header_hash.hex(),
                 },
             )
         except Exception:
