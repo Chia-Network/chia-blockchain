@@ -83,13 +83,9 @@ class WalletNodeAPI:
 
     @peer_required
     @api_request
-    async def respond_peers(
-        self, request: introducer_protocol.RespondPeers, peer: WSChiaConnection
-    ):
+    async def respond_peers(self, request: introducer_protocol.RespondPeers, peer: WSChiaConnection):
         if not self.wallet_node.has_full_node():
-            await self.wallet_node.wallet_peers.respond_peers(
-                request, peer.get_peer_info(), False
-            )
+            await self.wallet_node.wallet_peers.respond_peers(request, peer.get_peer_info(), False)
         else:
             await self.wallet_node.wallet_peers.ensure_is_closed()
 
