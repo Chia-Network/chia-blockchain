@@ -322,8 +322,8 @@ class WeightProofHandler:
         rc_sub_slot_hash: bytes32,
     ):
         # total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
-        total_slot_iters, total_slots = uint128(0), 0
-        total_ip_iters = uint128(0)
+        total_slot_iters, total_slots = uint64(0), uint64(0)
+        total_ip_iters = uint64(0)
         # validate sub epoch samples
         cc_sub_slot: Optional[ChallengeChainSubSlot] = None
         curr_sub_epoch_n = -1
@@ -340,7 +340,7 @@ class WeightProofHandler:
                     )
                     rc_sub_slot_hash = rc_sub_slot.get_hash()
 
-                self.log.info(f"compare segment rc_sub_slot_hash with ses reward_chain_hash")
+                self.log.info("compare segment rc_sub_slot_hash with ses reward_chain_hash")
                 if not summaries[segment.sub_epoch_n].reward_chain_hash == rc_sub_slot_hash:
                     self.log.error(f"failed reward_chain_hash validation sub_epoch {segment.sub_epoch_n}")
                     self.log.error(f"rc slot hash  {rc_sub_slot_hash}")
@@ -412,7 +412,7 @@ class WeightProofHandler:
         assert self.block_cache is not None
         last_slot_hb = await self.block_cache.header_block(block.header_hash)
         assert last_slot_hb.finished_sub_slots is not None
-        last_slot = last_slot_hb.finished_sub_slots[-1]
+        # last_slot = last_slot_hb.finished_sub_slots[-1]
 
         count: uint32 = sub_epoch_blocks_n
         while not count == 0:
@@ -639,7 +639,7 @@ class WeightProofHandler:
                 self.log.info("validate proof of space")
                 q_str = self.__get_quality_string(segment, idx, ses)
                 if q_str is None:
-                    self.log.error(f"failed to validate segment space proof")
+                    self.log.error("failed to validate segment space proof")
                     return False, uint64(0), uint64(0), 0
                 assert sub_slot is not None
                 assert cc_sub_slot is not None
