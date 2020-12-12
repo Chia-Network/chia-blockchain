@@ -26,7 +26,7 @@ testnet_kwargs = {
     "FIRST_CC_CHALLENGE": bytes([0x00] * 32),
     "FIRST_RC_CHALLENGE": bytes([0x00] * 32),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "7a916bdc50d3d0337b0998668a4f439670339467d7e9039b8650ba7b1d4fc1a0"
+        "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
     ),
     "GENESIS_PREV_HASH": bytes([0x00] * 32),
     "GENESIS_SES_HASH": bytes([0x00] * 32),
