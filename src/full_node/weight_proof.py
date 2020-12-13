@@ -2,7 +2,6 @@ import logging
 import random
 from typing import Dict, Optional, List, Tuple
 
-from src.consensus.blockchain import Blockchain
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
     is_overflow_sub_block,
@@ -10,10 +9,9 @@ from src.consensus.pot_iterations import (
     calculate_ip_iters,
 )
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.block_store import BlockStore
+from src.full_node.block_cache import BlockCache
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.slots import (
@@ -62,101 +60,11 @@ class BlockCache:
             return h_block[0]
 
 
-#
-# class BlockCache:
-#     def __init__(self, blockchain: Blockchain):
-#         # todo make these read only copies from here
-#         self._sub_blocks = blockchain.sub_blocks
-#         self._block_store = blockchain.block_store
-#         self._sub_height_to_hash = blockchain.sub_height_to_hash
-#
-#     def header_block(self, header_hash: bytes32) -> HeaderBlock:
-#         block = await self._block_store.get_full_block(header_hash)
-#         assert block is not None
-#         return await block.get_block_header()
-#
-#     def height_to_header_block(self, height: uint32) -> HeaderBlock:
-#         return HeaderBlock()
-#
-#     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
-#         return self._sub_blocks[header_hash]
-#
-#     def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
-#         return self._sub_blocks[self._height_to_hash(height)]
-#
-#     def max_height(self) -> uint32:
-#         return uint32(len(self._sub_blocks) - 1)
-#
-#     def _height_to_hash(self, height: uint32) -> bytes32:
-#         return self._sub_height_to_hash[height]
-
-
-class BlockCacheMock:
-    def __init__(
-        self,
-        sub_blocks: Dict[bytes32, SubBlockRecord],
-        sub_height_to_hash: Dict[uint32, bytes32],
-        header_blocks: Dict[uint32, HeaderBlock],
-    ):
-        self._sub_blocks = sub_blocks
-        self._header_cache = header_blocks
-        self._sub_height_to_hash = sub_height_to_hash
-
-    async def header_block(self, header_hash: bytes32) -> HeaderBlock:
-        return self._header_cache[header_hash]
-
-    async def height_to_header_block(self, height: uint32) -> HeaderBlock:
-        return self._header_cache[self._height_to_hash(height)]
-
-    def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
-        return self._sub_blocks[header_hash]
-
-    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
-        return self._sub_blocks[self._height_to_hash(height)]
-
-    def max_height(self) -> uint32:
-        return uint32(len(self._sub_blocks) - 1)
-
-    def _height_to_hash(self, height: uint32) -> bytes32:
-        return self._sub_height_to_hash[height]
-
-
-async def init_block_block_cache(blockchain: Blockchain, start: int = None, stop: int = None) -> BlockCacheMock:
-    batch_size = 200
-    full_blocks: List[FullBlock] = []
-    batch_blocks: List[uint32] = []
-    if start is None:
-        start = 0
-
-    if stop is None:
-        assert blockchain.peak_height is not None
-        stop = blockchain.peak_height
-
-    for x in range(start, stop):
-        batch_blocks.append(uint32(x))
-
-        if len(batch_blocks) == batch_size:
-            blocks = await blockchain.block_store.get_full_blocks_at(batch_blocks)
-            full_blocks.extend(blocks)
-            batch_blocks = []
-
-    # fetch remaining blocks
-    blocks = await blockchain.block_store.get_full_blocks_at(batch_blocks)
-    full_blocks.extend(blocks)
-
-    # convert to FullBlocks HeaderBlocks
-    header_blocks: Dict[bytes32, HeaderBlock] = {}
-    for block in full_blocks:
-        header_blocks[block.header_hash] = await block.get_block_header()
-
-    return BlockCacheMock(blockchain.sub_blocks, blockchain.sub_height_to_hash, header_blocks)
-
-
 class WeightProofHandler:
     def __init__(
         self,
         constants: ConsensusConstants,
-        block_cache: BlockCacheMock = None,
+        block_cache: BlockCache,
         name: str = None,
     ):
         self.constants = constants
@@ -201,7 +109,7 @@ class WeightProofHandler:
         while curr_height < sub_block_height:
             # next sub block
             sub_block = self.block_cache.height_to_sub_block_record(curr_height)
-            header_block = await self.block_cache.height_to_header_block(curr_height)
+            header_block = self.block_cache.height_to_header_block(curr_height)
             if is_overflow_sub_block(self.constants, header_block.reward_chain_sub_block.signage_point_index):
                 total_overflow_blocks += 1
                 self.log.debug(f"overflow block at height {curr_height}  ")
@@ -282,7 +190,7 @@ class WeightProofHandler:
         prev_ses_hash: bytes32,
     ):
         assert self.block_cache is not None
-        if prev_ses_hash is None or fork_point is None:
+        if prev_ses_hash is None or fork_point is None or fork_point.sub_block_height == 0:
             prev_ses_hash = self.constants.GENESIS_SES_HASH
             fork_point_difficulty = self.constants.DIFFICULTY_STARTING
         else:
@@ -410,7 +318,7 @@ class WeightProofHandler:
         segments: List[SubEpochChallengeSegment] = []
         curr = block
         assert self.block_cache is not None
-        last_slot_hb = await self.block_cache.header_block(block.header_hash)
+        last_slot_hb = self.block_cache.header_block(block.header_hash)
         assert last_slot_hb.finished_sub_slots is not None
         # last_slot = last_slot_hb.finished_sub_slots[-1]
 
@@ -419,7 +327,7 @@ class WeightProofHandler:
             # not challenge block skip
             if curr.is_challenge_sub_block(self.constants):
                 self.log.debug(f"sub epoch {sub_epoch_n} challenge segment, starts at {curr.sub_block_height} ")
-                challenge_sub_block = await self.block_cache.header_block(curr.header_hash)
+                challenge_sub_block = self.block_cache.header_block(curr.header_hash)
                 # prepend as we are stepping backwards in the chain
                 seg = await self._handle_challenge_segment(challenge_sub_block, sub_epoch_n)
                 segments.insert(0, seg)
@@ -444,7 +352,7 @@ class WeightProofHandler:
         # # VDFs from slot after challenge block to end of slot
         self.log.debug(f"create slot end vdf for block {block.header_hash} height {block.sub_block_height} ")
 
-        end_height_hb = await self.block_cache.height_to_header_block(uint32(160))
+        end_height_hb = self.block_cache.height_to_header_block(uint32(160))
         challenge_slot_end_sub_slots = await self.__get_slot_end_vdf(end_height_hb)
 
         sub_slots.extend(challenge_slot_end_sub_slots)
@@ -460,7 +368,7 @@ class WeightProofHandler:
         sub_slots_data: List[SubSlotData] = []
         max_height = self.block_cache.max_height()
         while curr.sub_block_height + 1 < max_height:
-            curr = await self.block_cache.height_to_header_block(curr.sub_block_height + 1)
+            curr = self.block_cache.height_to_header_block(curr.sub_block_height + 1)
             if len(curr.finished_sub_slots) > 0:
                 # slot finished combine proofs and add slot data to list
                 sub_slots_data.append(
@@ -515,7 +423,7 @@ class WeightProofHandler:
         icc_slot_end_vdf: List[VDFProof] = []
         while True:
             curr = self.block_cache.height_to_sub_block_record(uint32(curr.sub_block_height + 1))
-            curr_header = await self.block_cache.header_block(curr.header_hash)
+            curr_header = self.block_cache.header_block(curr.header_hash)
             assert curr_header.finished_sub_slots is not None
             if len(curr_header.finished_sub_slots) > 0:
                 icc_vdf: Optional[VDFInfo] = None
@@ -678,7 +586,7 @@ def make_sub_epoch_data(
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
 
 
-def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: Union[BlockCache, BlockCacheMock]) -> int:
+def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: BlockCache) -> uint32:
     """
     returns the number of blocks in a sub epoch ending with
     """
