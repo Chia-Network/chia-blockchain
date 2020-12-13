@@ -55,14 +55,14 @@ def count_sub_epochs(blockchain, last_hash) -> int:
 def get_prev_ses_block(sub_blocks, last_hash) -> Tuple[SubBlockRecord, int]:
     curr = sub_blocks[last_hash]
     blocks = 1
-    while True:
-        assert curr.sub_block_height != 0
+    while curr.sub_block_height != 0:
         # next sub block
         curr = sub_blocks[curr.prev_hash]
         # if end of sub-epoch
         if curr.sub_epoch_summary_included is not None:
             return curr, blocks
         blocks += 1
+    assert False
 
 
 async def load_blocks_dont_validate(blocks):
@@ -160,9 +160,9 @@ class TestWeightProof:
         assert sub_epoch_blocks_n == sub_epoch_end.sub_block_height - prev_sub_epoch_end.sub_block_height
 
     @pytest.mark.asyncio
-    async def test_get_last_ses_block_idx(self, default_400_blocks):
-        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_400_blocks)
-        sub_epoch_end, _ = get_prev_ses_block(sub_blocks, default_400_blocks[-1].prev_header_hash)
+    async def test_get_last_ses_block_idx(self, default_1000_blocks):
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_1000_blocks)
+        sub_epoch_end, _ = get_prev_ses_block(sub_blocks, default_1000_blocks[-1].prev_header_hash)
         recent_blocks: List[ProofBlockHeader] = []
         for block in header_cache.values():
             recent_blocks.append(ProofBlockHeader(block.finished_sub_slots, block.reward_chain_sub_block))

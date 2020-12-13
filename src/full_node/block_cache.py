@@ -10,6 +10,8 @@ from src.wallet.wallet_blockchain import WalletBlockchain
 
 
 class BlockCache:
+    BATCH_SIZE = 300
+
     def __init__(
         self,
         sub_blocks: Dict[bytes32, SubBlockRecord],
@@ -40,7 +42,6 @@ class BlockCache:
 
 
 async def init_block_cache(blockchain: Blockchain, start: int = 0, stop: int = 0) -> BlockCache:
-    batch_size = 200
     full_blocks: List[FullBlock] = []
     batch_blocks: List[uint32] = []
 
@@ -50,7 +51,7 @@ async def init_block_cache(blockchain: Blockchain, start: int = 0, stop: int = 0
     for x in range(start, stop):
         batch_blocks.append(uint32(x))
 
-        if len(batch_blocks) == batch_size:
+        if len(batch_blocks) == BlockCache.BATCH_SIZE:
             blocks = await blockchain.block_store.get_full_blocks_at(batch_blocks)
             full_blocks.extend(blocks)
             batch_blocks = []
@@ -68,7 +69,6 @@ async def init_block_cache(blockchain: Blockchain, start: int = 0, stop: int = 0
 
 
 async def init_wallet_block_cache(blockchain: WalletBlockchain, start: int = 0, stop: int = 0) -> BlockCache:
-    batch_size = 200
     header_blocks: List[HeaderBlock] = []
     batch_blocks: List[uint32] = []
 
@@ -78,7 +78,7 @@ async def init_wallet_block_cache(blockchain: WalletBlockchain, start: int = 0, 
     for x in range(start, stop):
         batch_blocks.append(uint32(x))
 
-        if len(batch_blocks) == batch_size:
+        if len(batch_blocks) == BlockCache.BATCH_SIZE:
             blocks = await blockchain.block_store.get_header_block_at(batch_blocks)
             header_blocks.extend(blocks)
             batch_blocks = []

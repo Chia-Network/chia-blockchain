@@ -97,10 +97,10 @@ class WeightProofHandler:
         assert sub_block_height >= total_number_of_blocks - 1
 
         blocks_left = total_number_of_blocks
-        curr_height = uint32(sub_block_height - (total_number_of_blocks - 1))
+        curr_height = uint32(sub_block_height - total_number_of_blocks)
 
         self.log.info(
-            f"build weight proofs, peak : {sub_block_height} num of blocks: {total_number_of_blocks}, "
+            f"build weight proof, peak : {sub_block_height} num of blocks: {total_number_of_blocks}, "
             f"start from {curr_height}"
         )
 
@@ -147,12 +147,15 @@ class WeightProofHandler:
         self.log.debug(f"total overflow blocks in proof {total_overflow_blocks}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, proof_blocks)
 
-    def validate_weight_proof(self, weight_proof: WeightProof, fork_point: Optional[SubBlockRecord] = None) -> bool:
+    def validate_weight_proof(
+        self, weight_proof: WeightProof, fork_point: Optional[SubBlockRecord] = None
+    ) -> (Optional[List[SubEpochSummary]]):
         # sub epoch summaries validate hashes
-        return True
         self.log.info("validate summaries")
         assert self.block_cache is not None
         prev_ses_hash = self.constants.GENESIS_SES_HASH
+
+        assert len(weight_proof.sub_epochs) > 0
 
         # last find latest ses
         if fork_point is not None:
@@ -166,10 +169,9 @@ class WeightProofHandler:
                 assert curr.sub_epoch_summary_included is not None
                 prev_ses_hash = curr.sub_epoch_summary_included.get_hash()
 
-        if len(weight_proof.sub_epochs) > 0:
-            summaries = self.validate_sub_epoch_summaries(weight_proof, fork_point, prev_ses_hash)
-            if summaries is None:
-                return False
+        summaries = self.validate_sub_epoch_summaries(weight_proof, fork_point, prev_ses_hash)
+        if summaries is None:
+            return summaries
 
             # self.log.info(f"validate sub epoch challenge segments")
             # if not self._validate_segments(weight_proof, summaries, curr):
@@ -177,9 +179,9 @@ class WeightProofHandler:
 
         self.log.info("validate weight proof recent blocks")
         if not self._validate_recent_blocks(weight_proof):
-            return False
+            return None
 
-        return True
+        return summaries
 
     def _validate_recent_blocks(self, weight_proof: WeightProof):
         return True
@@ -187,9 +189,9 @@ class WeightProofHandler:
     def validate_sub_epoch_summaries(
         self,
         weight_proof: WeightProof,
-        fork_point: Optional[SubBlockRecord],
-        prev_ses_hash: bytes32,
-    ):
+        fork_point: Optional[SubBlockRecord] = None,
+        prev_ses_hash: Optional[bytes32] = None,
+    ) -> Optional[List[SubEpochSummary]]:
         assert self.block_cache is not None
         if prev_ses_hash is None or fork_point is None or fork_point.sub_block_height == 0:
             prev_ses_hash = self.constants.GENESIS_SES_HASH
@@ -208,7 +210,7 @@ class WeightProofHandler:
 
         self.log.debug(f"validating {len(summaries)} summaries")
 
-        last_ses = summaries[uint32(len(summaries) - 1)]
+        last_ses = summaries[-1]
         last_ses_block = get_last_ses_block_idx(self.constants, weight_proof.recent_chain_data)
         if last_ses_block is None:
             self.log.error("could not find first block after last sub epoch end")
@@ -568,6 +570,18 @@ class WeightProofHandler:
 
         return True, total_slot_iters, total_slots, challenge_blocks
 
+    def get_fork_point(self, local_summaries: Dict[uint32, SubEpochSummary], recived_summaries: List[SubEpochSummary]):
+        # iterate through sub epoch summaries to find fork point
+        self.log.info("find fork point from weight proof")
+        fork_point_height = -1
+        for idx, summary_height in enumerate(sorted(local_summaries.keys())):
+            self.log.debug(f"check summary {idx}")
+            local_ses = local_summaries[summary_height]
+            if local_ses is None or local_ses.get_hash() != recived_summaries[idx].get_hash():
+                break
+            fork_point_height = summary_height
+        return fork_point_height
+
 
 def combine_proofs(proofs: List[VDFProof]) -> VDFProof:
     # todo
@@ -670,9 +684,9 @@ def map_summaries(
     ses_hash: bytes32,
     sub_epoch_data: List[SubEpochData],
     curr_difficulty: uint64,
-) -> Tuple[Dict[uint32, SubEpochSummary], uint128]:
+) -> Tuple[List[SubEpochSummary], uint128]:
     sub_epoch_data_weight: uint128 = uint128(0)
-    summaries: Dict[uint32, SubEpochSummary] = {}
+    summaries: List[SubEpochSummary] = []
 
     for idx, data in enumerate(sub_epoch_data):
         ses = SubEpochSummary(
@@ -692,7 +706,7 @@ def map_summaries(
         )
 
         # add to dict
-        summaries[uint32(idx)] = ses
+        summaries.append(ses)
         ses_hash = std_hash(ses)
     return summaries, sub_epoch_data_weight
 
@@ -704,15 +718,15 @@ def get_last_ses_block_idx(
         if uint8(block.reward_chain_sub_block.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS) == 0:
             idx = len(recent_reward_chain) - 1 - idx  # reverse
             # find first block after sub slot end
-            curr = recent_reward_chain[idx]
-            while True:
+            while idx < len(recent_reward_chain):
+                curr = recent_reward_chain[idx]
+                print(f"checking ses {curr.reward_chain_sub_block.sub_block_height}")
                 if len(curr.finished_sub_slots) > 0:
                     for slot in curr.finished_sub_slots:
                         if slot.challenge_chain.subepoch_summary_hash is not None:
+                            print(f"found ses at {curr.reward_chain_sub_block.sub_block_height}")
                             return curr
                 idx += 1
-                curr = recent_reward_chain[idx]
-
     return None
 
 
