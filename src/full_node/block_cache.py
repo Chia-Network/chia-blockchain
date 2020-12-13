@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List
 
 from src.consensus.blockchain import Blockchain
 from src.consensus.sub_block_record import SubBlockRecord

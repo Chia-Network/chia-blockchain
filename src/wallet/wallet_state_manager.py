@@ -15,7 +15,7 @@ from cryptography.fernet import Fernet
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.block_cache import init_block_cache, init_wallet_block_cache
+from src.full_node.block_cache import init_wallet_block_cache
 from src.full_node.weight_proof import WeightProofHandler
 from src.types.coin import Coin
 from src.types.header_block import HeaderBlock
