@@ -11,6 +11,7 @@ from tests.time_out_assert import time_out_assert
 from tests.full_node.fixtures import (
     empty_blockchain,
     default_400_blocks,
+    default_1000_blocks,
     default_10000_blocks,
 )
 
@@ -58,6 +59,25 @@ class TestFullSync:
 
         for block in blocks:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+
+        # The second node should eventually catch up to the first one, and have the
+        # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
+        await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
+
+    @pytest.mark.asyncio
+    async def test_sync_from_forkpoint(self, two_nodes, default_1000_blocks):
+        # Must be larger than "sync_block_behind_threshold" in the config
+        num_blocks = len(default_1000_blocks)
+        blocks = default_1000_blocks
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        for block in blocks:
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        for i in range(int(len(default_1000_blocks) / 2)):
+            await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(default_1000_blocks[i]))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
