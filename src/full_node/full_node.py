@@ -994,7 +994,7 @@ class FullNode:
             # It may be an empty list, even if it's not None. Not None means added successfully
             if new_infusions is not None:
                 self.log.info(
-                    f"⏲️  Finished sub slot, SP 16/{self.constants.NUM_SPS_SUB_SLOT}, "
+                    f"⏲️  Finished sub slot, SP {self.constants.NUM_SPS_SUB_SLOT}/{self.constants.NUM_SPS_SUB_SLOT}, "
                     f"{request.end_of_slot_bundle.challenge_chain.get_hash()}, "
                     f"number of sub-slots: {len(self.full_node_store.finished_sub_slots)}, "
                     f"RC hash: {request.end_of_slot_bundle.reward_chain.get_hash()}, "
