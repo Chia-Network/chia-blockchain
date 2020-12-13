@@ -20,6 +20,7 @@ from src.consensus.difficulty_adjustment import (
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.pot_iterations import is_overflow_sub_block, calculate_sp_iters
 from src.consensus.sub_block_record import SubBlockRecord
+from src.full_node.block_cache import init_block_cache
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.full_node_store import FullNodeStore
@@ -28,7 +29,7 @@ from src.full_node.signage_point import SignagePoint
 from src.full_node.sync_blocks_processor import SyncBlocksProcessor
 from src.full_node.sync_peers_handler import SyncPeersHandler
 from src.full_node.sync_store import SyncStore
-from src.full_node.weight_proof import WeightProofHandler, init_block_block_cache
+from src.full_node.weight_proof import WeightProofHandler
 from src.protocols import (
     full_node_protocol,
     timelord_protocol,
@@ -109,7 +110,7 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
-        self.weight_proof_handler = WeightProofHandler(self.constants)
+        self.weight_proof_handler = WeightProofHandler(self.constants, await init_block_cache(self.blockchain))
         self._sync_task = None
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
@@ -405,7 +406,7 @@ class FullNode:
             return None
 
         # if validated continue else fail
-        cache = await init_block_block_cache(self.blockchain)
+        cache = await init_block_cache(self.blockchain)
         self.weight_proof_handler.set_block_cache(cache)
         weight_proof: WeightProof = response[0].wp
         if not wpf.validate_weight_proof(weight_proof):
