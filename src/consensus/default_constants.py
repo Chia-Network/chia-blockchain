@@ -4,16 +4,16 @@ from .constants import ConsensusConstants
 testnet_kwargs = {
     "SLOT_SUB_BLOCKS_TARGET": 32,
     "MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK": 12,  # Must be less than half of SLOT_SUB_BLOCKS_TARGET
-    "MAX_SUB_SLOT_SUB_BLOCKS": 20,  # Must be less than half of SUB_EPOCH_SUB_BLOCKS
+    "MAX_SUB_SLOT_SUB_BLOCKS": 128,  # Must be less than half of SUB_EPOCH_SUB_BLOCKS
     "NUM_SPS_SUB_SLOT": 64,  # Must be a power of 2
     "SUB_SLOT_ITERS_STARTING": 2 ** 25,
     # DIFFICULTY_STARTING is the starting difficulty for the first epoch, which is then further
     # multiplied by another factor of 2^25, to be used in the VDF iter calculation formula.
-    "DIFFICULTY_STARTING": 2 ** 18,
+    "DIFFICULTY_STARTING": 2 ** 24,
     "DIFFICULTY_FACTOR": 3,  # The next difficulty is truncated to range [prev / FACTOR, prev * FACTOR]
     # These 3 constants must be changed at the same time
-    "SUB_EPOCH_SUB_BLOCKS": 128,  # The number of sub-blocks per sub-epoch, mainnet 284
-    "EPOCH_SUB_BLOCKS": 256,  # The number of sub-blocks per epoch, mainnet 32256. Must be multiple of SUB_EPOCH_SB
+    "SUB_EPOCH_SUB_BLOCKS": 384,  # The number of sub-blocks per sub-epoch, mainnet 284
+    "EPOCH_SUB_BLOCKS": 384 * 2,  # The number of sub-blocks per epoch, mainnet 32256. Must be multiple of SUB_EPOCH_SB
     "SIGNIFICANT_BITS": 12,  # The number of bits to look at in difficulty and min iters. The rest are zeroed
     "DISCRIMINANT_SIZE_BITS": 1024,  # Max is 1024 (based on ClassGroupElement int size)
     "NUMBER_ZERO_BITS_PLOT_FILTER": 9,  # H(plot signature of the challenge) must start with these many zeroes
@@ -26,7 +26,7 @@ testnet_kwargs = {
     "FIRST_CC_CHALLENGE": bytes([0x00] * 32),
     "FIRST_RC_CHALLENGE": bytes([0x00] * 32),
     "GENESIS_PRE_FARM_POOL_PUZZLE_HASH": bytes.fromhex(
-        "7a916bdc50d3d0337b0998668a4f439670339467d7e9039b8650ba7b1d4fc1a0"
+        "23b039a829f3ed14a260355b9fc55d9ccc4539f05bd4bf529fd2630de1751d52"
     ),
     "GENESIS_PREV_HASH": bytes([0x00] * 32),
     "GENESIS_SES_HASH": bytes([0x00] * 32),

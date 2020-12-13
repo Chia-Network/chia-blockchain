@@ -348,8 +348,6 @@ class WalletBlockchain:
         if block is None:
             return None
         is_overflow = self.sub_blocks[block.header_hash].overflow
-        if block is None:
-            return None
 
         curr: Optional[HeaderBlock] = block
         assert curr is not None
