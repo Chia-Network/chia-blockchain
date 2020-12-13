@@ -9,7 +9,7 @@ import logging
 from blspy import PrivateKey
 
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.block_cache import init_block_cache, init_wallet_block_cache
+from src.full_node.block_cache import init_wallet_block_cache
 from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from src.protocols.wallet_protocol import (
     RequestSubBlockHeader,
