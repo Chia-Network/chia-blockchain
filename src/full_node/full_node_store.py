@@ -549,8 +549,12 @@ class FullNodeStore:
         which is denoted from the pos_challenge hash, and extra_sub_slot.
         NOTE: In the case of the overflow, passing in extra_sub_slot=True will add the necessary sub-slot. This might
         not be available until later though.
+        # TODO: review this code
         """
         assert len(self.finished_sub_slots) >= 1
+        pos_index: Optional[int] = None
+        final_index: int = -1
+
         if prev_sb is not None:
             curr: SubBlockRecord = prev_sb
             while not curr.first_in_sub_slot:
@@ -559,9 +563,8 @@ class FullNodeStore:
             final_sub_slot_in_chain: bytes32 = curr.finished_challenge_slot_hashes[-1]
         else:
             final_sub_slot_in_chain = self.constants.FIRST_CC_CHALLENGE
+            final_index = 0
 
-        pos_index: Optional[int] = None
-        final_index: int = 0
         if pos_ss_challenge_hash == self.constants.FIRST_CC_CHALLENGE:
             pos_index = 0
         if prev_sb is None:
@@ -577,8 +580,10 @@ class FullNodeStore:
                     pos_index = index
                 if sub_slot.challenge_chain.get_hash() == final_sub_slot_in_chain:
                     final_index = index
+                if sub_slot is None and final_sub_slot_in_chain == self.constants.FIRST_CC_CHALLENGE:
+                    final_index = index
 
-        if pos_index is None:
+        if pos_index is None or final_index is None:
             raise ValueError(
                 f"Did not find challenge hash or peak pi: {pos_index} fi: {final_index} {len(sub_block_records)}"
             )
