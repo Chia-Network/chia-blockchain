@@ -12,7 +12,7 @@ from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
     get_last_ses_block_idx,
     map_summaries,
-    BlockCacheMock,
+    BlockCache,
     get_sub_epoch_block_num,
 )
 from src.types.full_block import FullBlock
@@ -119,7 +119,7 @@ async def _test_map_summaries(blocks, header_cache, height_to_hash, sub_blocks, 
     print(f"fork point is {curr.sub_block_height} (not included)")
     print(f"num of blocks in proof: {num_of_blocks}")
     print(f"num of full sub epochs in proof: {sub_epochs}")
-    wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
+    wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, height_to_hash, header_cache))
     wpf.log.setLevel(logging.INFO)
     initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
     wp = await wpf.create_proof_of_weight(uint32(len(header_cache)), uint32(num_of_blocks), blocks[-1].header_hash)
@@ -148,7 +148,7 @@ class TestWeightProof:
         sub_epoch_end, _ = get_prev_ses_block(sub_blocks, default_400_blocks[-1].header_hash)
         print("first block of last sub epoch ", sub_epoch_end.sub_block_height)
         sub_epoch_blocks_n: uint32 = get_sub_epoch_block_num(
-            sub_epoch_end, BlockCacheMock(sub_blocks, height_to_hash, header_cache)
+            sub_epoch_end, BlockCache(sub_blocks, height_to_hash, header_cache)
         )
         print("sub epoch before last has ", sub_epoch_blocks_n, "blocks")
         prev_sub_epoch_end, _ = get_prev_ses_block(sub_blocks, sub_epoch_end.header_hash)
@@ -187,7 +187,7 @@ class TestWeightProof:
     @pytest.mark.asyncio
     async def test_weight_proof_summaries_10000_blocks(self, default_10000_blocks):
         header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_10000_blocks)
-        wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, height_to_hash, header_cache))
         wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
         wp = await wpf.create_proof_of_weight(
@@ -195,16 +195,16 @@ class TestWeightProof:
         )
         wpf.validate_sub_epoch_summaries(wp)
 
-    # @pytest.mark.asyncio
-    # async def test_weight_proof_from_genesis(self, default_400_blocks):
-    #     blocks = default_400_blocks
-    #     header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
-    #     wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
-    #     wpf.log.setLevel(logging.INFO)
-    #     initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
-    #     wp = await wpf.create_proof_of_weight(uint32(len(header_cache)), uint32(len(blocks)), blocks[-1].header_hash)
-    #     assert wp is not None
-    #     assert wpf.validate_weight_proof(wp, sub_blocks[height_to_hash[0]])
+    @pytest.mark.asyncio
+    async def test_weight_proof_from_genesis(self, default_400_blocks):
+        blocks = default_400_blocks
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, height_to_hash, header_cache))
+        wpf.log.setLevel(logging.INFO)
+        initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
+        wp = await wpf.create_proof_of_weight(uint32(len(header_cache)), uint32(len(blocks)), blocks[-1].header_hash)
+        assert wp is not None
+        assert wpf.validate_weight_proof(wp, sub_blocks[height_to_hash[0]])
 
     # @pytest.mark.asyncio
     # async def test_weight_proof_validate_segment_0(self, default_400_blocks):
@@ -277,7 +277,7 @@ class TestWeightProof:
         print(f"fork point is {curr.sub_block_height} (not included)")
         print(f"num of blocks in proof: {num_of_blocks}")
         print(f"num of full sub epochs in proof: {sub_epochs}")
-        wpf = WeightProofHandler(test_constants, BlockCacheMock(sub_blocks, height_to_hash, header_cache))
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, height_to_hash, header_cache))
         wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
         wp = await wpf.create_proof_of_weight(uint32(300), uint32(num_of_blocks), blocks[-1].header_hash)

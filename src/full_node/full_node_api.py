@@ -12,11 +12,11 @@ from src.consensus.pot_iterations import (
     calculate_sp_iters,
     calculate_iterations_quality,
 )
-
+from src.full_node.block_cache import init_block_cache
 from src.full_node.full_node import FullNode
 from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.weight_proof import init_block_block_cache
+
 
 from src.protocols import (
     introducer_protocol,
@@ -184,7 +184,7 @@ class FullNodeAPI:
     @api_request
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         self.log.info(f"got weight proof request {request}")
-        cache = await init_block_block_cache(self.full_node.blockchain)
+        cache = await init_block_cache(self.full_node.blockchain)
         self.full_node.weight_proof_handler.set_block_cache(cache)
         wp = await self.full_node.weight_proof_handler.create_proof_of_weight(
             self.full_node.constants.WEIGHT_PROOF_RECENT_BLOCKS, request.total_number_of_blocks, request.tip
