@@ -9,6 +9,7 @@ import logging
 from blspy import PrivateKey
 
 from src.consensus.sub_block_record import SubBlockRecord
+from src.full_node.block_cache import init_block_cache, init_wallet_block_cache
 from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from src.protocols.wallet_protocol import (
     RequestSubBlockHeader,
@@ -435,16 +436,13 @@ class WalletNode:
 
         if weight_proof is not None:
             # iterate through sub epoch summaries to find fork point
-            for idx, fork_point_height in enumerate(
-                sorted(self.wallet_state_manager.blockchain.sub_epoch_summaries.keys())
-            ):
-                if (
-                    self.wallet_state_manager.blockchain.sub_epoch_summaries[fork_point_height].get_hash()
-                    != weight_proof.sub_epochs[idx]
-                ):
-                    fork_height = fork_point_height
-                    self.log.info(f"Fork point is at: {fork_height}")
-                    break
+            cache = await init_wallet_block_cache(self.wallet_state_manager.blockchain)
+            self.wallet_state_manager.weight_proof_handler.set_block_cache(cache)
+            summaries = self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
+            if summaries is not None:
+                fork_height = self.wallet_state_manager.weight_proof_handler.get_fork_point(
+                    self.wallet_state_manager.blockchain.sub_epoch_summaries, summaries
+                )
 
         for i in range(fork_height, peak_height + 1):
             self.log.info(f"Requesting block {i}")
