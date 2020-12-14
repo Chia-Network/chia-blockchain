@@ -302,16 +302,22 @@ class FullNode:
                 return
 
             self.log.info(f"Peak height {target_peak_sb_height}")
-            # send weight proof message, continue on first response
-            fork_point_height = await self._fetch_and_validate_weight_proof(
+            # send weight proof message, continue on first respons
+
+            if target_peak_sb_height < self.constants.SUB_EPOCH_SUB_BLOCKS:
+                self.log.info("first sub epoch, dont use weight proofs")
+                # todo work on this flow so we dont fetch redundant blocks
+                return await self.sync_from_fork_point(-1, sync_start_time, target_peak_sb_height)
+
+            valid, fork_point_height = await self._fetch_and_validate_weight_proof(
                 peak_hash, self.server.get_full_node_connections(), target_peak_sb_height
             )
 
-            if fork_point_height is None:
+            if not valid:
                 self.log.error("failed to validate weight proof")
                 return
 
-            await self.sync_from_fork_point(fork_point_height, sync_start_time, target_peak_sb_height)
+            await self.sync_from_fork_point(fork_point_height - 1, sync_start_time, target_peak_sb_height)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
@@ -322,9 +328,7 @@ class FullNode:
                 return
             await self._finish_sync()
 
-    async def sync_from_fork_point(
-        self, fork_point_height: uint32, sync_start_time: float, target_peak_sb_height: uint32
-    ):
+    async def sync_from_fork_point(self, fork_point_height: int, sync_start_time: float, target_peak_sb_height: uint32):
         self.log.info(f"start syncing from fork point at {fork_point_height}")
         peers = self.server.get_full_node_connections()
         self.sync_peers_handler = SyncPeersHandler(
@@ -399,8 +403,7 @@ class FullNode:
             f"{round((time.time() - sync_start_time) / 60, 2)} minutes."
         )
 
-    async def _fetch_and_validate_weight_proof(self, peak_hash, peers, target_peak_sb_height) -> Optional[uint32]:
-        wpf = WeightProofHandler(self.constants, init_block_block_cache_mock())
+    async def _fetch_and_validate_weight_proof(self, peak_hash, peers, target_peak_sb_height) -> Tuple[bool, int]:
         response: Optional[Tuple[Any, ws.WSChiaConnection]] = await send_all_first_reply(
             "request_proof_of_weight",
             full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash),
@@ -408,19 +411,12 @@ class FullNode:
         )
         if response is None:
             self.log.error("response was None")
-            return None
+            return False, uint32(0)
 
         cache = await init_block_cache(self.blockchain)
         self.weight_proof_handler.set_block_cache(cache)
         weight_proof: WeightProof = response[0].wp
-        summaries = self.weight_proof_handler.validate_weight_proof(weight_proof)
-        if summaries is None:
-            self.log.error(
-                f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
-                f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
-            )
-            return None
-        return self.weight_proof_handler.get_fork_point(self.blockchain.sub_epoch_summaries, summaries)
+        return self.weight_proof_handler.validate_weight_proof(weight_proof)
 
     async def _finish_sync(self):
         """
