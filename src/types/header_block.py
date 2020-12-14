@@ -1,48 +1,63 @@
+from typing import Optional, List
 from dataclasses import dataclass
 
-from src.types.challenge import Challenge
-from src.types.header import Header
-from src.types.proof_of_space import ProofOfSpace
-from src.types.proof_of_time import ProofOfTime
+from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.util.streamable import Streamable, streamable
-from src.consensus.coinbase import create_coinbase_coin, create_fees_coin
-from src.consensus.block_rewards import calculate_block_reward
-from src.types.coin import Coin
+from src.types.vdf import VDFProof
+from src.types.reward_chain_sub_block import RewardChainSubBlock
+from src.types.foliage import FoliageSubBlock, FoliageBlock, TransactionsInfo
 
 
 @dataclass(frozen=True)
 @streamable
 class HeaderBlock(Streamable):
-    proof_of_space: ProofOfSpace
-    proof_of_time: ProofOfTime
-    challenge: Challenge
-    header: Header
+    # Same as a FullBlock but without TransactionInfo and Generator (but with filter), used by light clients
+    finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
+    reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
+    challenge_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
+    challenge_chain_ip_proof: VDFProof
+    reward_chain_sp_proof: Optional[VDFProof]  # If not first sp in sub-slot
+    reward_chain_ip_proof: VDFProof
+    infused_challenge_chain_ip_proof: Optional[VDFProof]  # Iff deficit < 4
+    foliage_sub_block: FoliageSubBlock  # Reward chain foliage data
+    foliage_block: Optional[FoliageBlock]  # Reward chain foliage data (tx block)
+    transactions_filter: bytes  # Filter for block transactions
+    transactions_info: Optional[TransactionsInfo]  # Reward chain foliage data (tx block additional)
 
     @property
     def prev_header_hash(self):
-        return self.header.data.prev_header_hash
+        return self.foliage_sub_block.prev_sub_block_hash
+
+    @property
+    def prev_hash(self):
+        return self.foliage_sub_block.prev_sub_block_hash
 
     @property
     def height(self):
-        return self.header.height
+        if self.foliage_block is None:
+            return None
+        return self.foliage_block.height
+
+    @property
+    def sub_block_height(self):
+        return self.reward_chain_sub_block.sub_block_height
 
     @property
     def weight(self):
-        return self.header.weight
+        return self.reward_chain_sub_block.weight
 
     @property
     def header_hash(self):
-        return self.header.header_hash
+        return self.foliage_sub_block.get_hash()
 
-    def get_coinbase(self) -> Coin:
-        br = calculate_block_reward(self.height)
-        return create_coinbase_coin(
-            self.height, self.header.data.pool_target.puzzle_hash, br
-        )
+    @property
+    def total_iters(self):
+        return self.reward_chain_sub_block.total_iters
 
-    def get_fees_coin(self) -> Coin:
-        return create_fees_coin(
-            self.height,
-            self.header.data.farmer_rewards_puzzle_hash,
-            self.header.data.total_transaction_fees,
-        )
+    @property
+    def log_string(self):
+        return "block " + str(self.header_hash) + " sb_height " + str(self.sub_block_height) + " "
+
+    @property
+    def is_block(self):
+        return self.reward_chain_sub_block.is_block

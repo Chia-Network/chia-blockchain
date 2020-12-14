@@ -1,11 +1,12 @@
 from dataclasses import dataclass
+from typing import Optional
+
 from blspy import G2Element
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.types.pool_target import PoolTarget
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint32, uint64, uint128
-
+from src.util.ints import uint64, uint8
 
 """
 Protocol between farmer and full node.
@@ -14,47 +15,41 @@ Protocol between farmer and full node.
 
 @dataclass(frozen=True)
 @cbor_message
-class ProofOfSpaceFinalized:
+class NewSignagePoint:
     challenge_hash: bytes32
-    height: uint32
-    weight: uint128
+    challenge_chain_sp: bytes32
+    reward_chain_sp: bytes32
     difficulty: uint64
+    sub_slot_iters: uint64
+    signage_point_index: uint8
 
 
 @dataclass(frozen=True)
 @cbor_message
-class ProofOfSpaceArrived:
-    previous_challenge_hash: bytes32
-    weight: uint128
-    quality_string: bytes32
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RequestHeaderHash:
+class DeclareProofOfSpace:
     challenge_hash: bytes32
+    challenge_chain_sp: bytes32
+    signage_point_index: uint8
+    reward_chain_sp: bytes32
     proof_of_space: ProofOfSpace
-    pool_target: PoolTarget
-    pool_target_signature: G2Element
-    farmer_rewards_puzzle_hash: bytes32
+    challenge_chain_sp_signature: G2Element
+    reward_chain_sp_signature: G2Element
+    farmer_puzzle_hash: bytes32
+    pool_target: Optional[PoolTarget]
+    pool_signature: Optional[G2Element]
 
 
 @dataclass(frozen=True)
 @cbor_message
-class HeaderHash:
-    pos_hash: bytes32
-    header_hash: bytes32
+class RequestSignedValues:
+    quality_string: bytes32
+    foliage_sub_block_hash: bytes32
+    foliage_block_hash: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
-class HeaderSignature:
-    pos_hash: bytes32
-    header_hash: bytes32
-    header_signature: G2Element
-
-
-@dataclass(frozen=True)
-@cbor_message
-class ProofOfTimeRate:
-    pot_estimate_ips: uint64
+class SignedValues:
+    quality_string: bytes32
+    foliage_sub_block_signature: G2Element
+    foliage_block_signature: G2Element

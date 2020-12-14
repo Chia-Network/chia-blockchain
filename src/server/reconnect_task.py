@@ -1,13 +1,11 @@
 import asyncio
 import socket
-import logging
+
+from src.server.server import ChiaServer
 from src.types.peer_info import PeerInfo
 
 
-log = logging.getLogger(__name__)
-
-
-def start_reconnect_task(server, peer_info_arg, log, auth):
+def start_reconnect_task(server: ChiaServer, peer_info_arg: PeerInfo, log, auth: bool):
     """
     Start a background task that checks connection and reconnects periodically to a peer.
     """
@@ -16,14 +14,9 @@ def start_reconnect_task(server, peer_info_arg, log, auth):
     async def connection_check():
         while True:
             peer_retry = True
-
-            for connection in server.global_connections.get_connections():
-                if (
-                    connection.get_peer_info() == peer_info
-                    or connection.get_peer_info() == peer_info_arg
-                ):
+            for _, connection in server.all_connections.items():
+                if connection.get_peer_info() == peer_info or connection.get_peer_info() == peer_info_arg:
                     peer_retry = False
-
             if peer_retry:
                 log.info(f"Reconnecting to peer {peer_info}")
                 try:

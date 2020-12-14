@@ -62,12 +62,8 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
         print(f"consuming coin {dump_coin(coin)}")
         print(f"  with id {coin.name()}")
         print()
-        print(
-            f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'"
-        )
-        error, conditions, cost = conditions_dict_for_solution(
-            Program.to([puzzle_reveal, solution])
-        )
+        print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
+        error, conditions, cost = conditions_dict_for_solution(Program.to([puzzle_reveal, solution]))
         if error:
             print(f"*** error {error}")
         elif conditions is not None:
@@ -133,15 +129,12 @@ def debug_spend_bundle(spend_bundle: SpendBundle) -> None:
     print("=" * 80)
     print()
     if len(msgs) > 0:
-        validates = AugSchemeMPL.aggregate_verify(
-            pks, msgs, spend_bundle.aggregated_signature
-        )
+        validates = AugSchemeMPL.aggregate_verify(pks, msgs, spend_bundle.aggregated_signature)
     print(f"aggregated signature check pass: {validates}")
 
 
 def solution_for_pay_to_any(puzzle_hash_amount_pairs: Tuple[bytes32, int]) -> Program:
     output_conditions = [
-        [ConditionOpcode.CREATE_COIN, puzzle_hash, amount]
-        for puzzle_hash, amount in puzzle_hash_amount_pairs
+        [ConditionOpcode.CREATE_COIN, puzzle_hash, amount] for puzzle_hash, amount in puzzle_hash_amount_pairs
     ]
     return Program.to(output_conditions)

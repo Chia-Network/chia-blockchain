@@ -3,179 +3,132 @@ import aiosqlite
 from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
-from src.types.header import Header
 from src.types.sized_bytes import bytes32
-from src.util.hash import std_hash
-from src.util.ints import uint32, uint64
+from src.util.ints import uint32
+from src.consensus.sub_block_record import SubBlockRecord
 
 log = logging.getLogger(__name__)
 
 
 class BlockStore:
     db: aiosqlite.Connection
-    proof_of_time_heights: Dict[Tuple[bytes32, uint64], uint32]
-    challenge_hash_dict: Dict[bytes32, bytes32]
-    seen_compact_proofs: set
 
     @classmethod
-    async def create(cls, connection):
+    async def create(cls, connection: aiosqlite.Connection):
         self = cls()
 
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db = connection
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS blocks(height bigint, header_hash text PRIMARY KEY, block blob)"
+            "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, sub_height bigint, is_block"
+            " tinyint, block blob)"
         )
 
-        # Headers
+        # Sub block records
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS headers(height bigint, header_hash "
-            "text PRIMARY KEY, proof_hash text, challenge_hash text, header "
-            "blob, is_lca tinyint, is_tip tinyint)"
+            "CREATE TABLE IF NOT EXISTS sub_block_records(header_hash "
+            "text PRIMARY KEY, prev_hash text, sub_height bigint,"
+            "sub_block blob, is_peak tinyint, is_block tinyint)"
         )
 
         # Height index so we can look up in order of height for sync purposes
-        await self.db.execute(
-            "CREATE INDEX IF NOT EXISTS block_height on blocks(height)"
-        )
-        await self.db.execute(
-            "CREATE INDEX IF NOT EXISTS header_height on headers(height)"
-        )
+        await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_sub_height on full_blocks(sub_height)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS is_block on full_blocks(is_block)")
 
-        # is_lca and is_tip index to quickly find tips and lca
-        await self.db.execute("CREATE INDEX IF NOT EXISTS hh on headers(header_hash)")
-        await self.db.execute("CREATE INDEX IF NOT EXISTS lca on headers(is_lca)")
-        await self.db.execute("CREATE INDEX IF NOT EXISTS tip on headers(is_tip)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS sub_block_sub_height on sub_block_records(sub_height)")
+
+        await self.db.execute("CREATE INDEX IF NOT EXISTS hh on sub_block_records(header_hash)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS peak on sub_block_records(is_peak)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS is_block on sub_block_records(is_block)")
+
         await self.db.commit()
-        self.proof_of_time_heights = {}
-        self.challenge_hash_dict = {}
-        self.seen_compact_proofs = set()
 
         return self
 
-    async def get_lca(self) -> Optional[Header]:
-        cursor = await self.db.execute("SELECT header from headers WHERE is_lca=1")
-        row = await cursor.fetchone()
-        await cursor.close()
-        if row is not None:
-            return Header.from_bytes(row[0])
-        return None
+    async def add_full_block(self, block: FullBlock, sub_block: SubBlockRecord) -> None:
 
-    async def set_lca(self, header_hash: bytes32) -> None:
-        cursor_1 = await self.db.execute("UPDATE headers SET is_lca=0 WHERE is_lca=1")
-        await cursor_1.close()
-        cursor_2 = await self.db.execute(
-            "UPDATE headers SET is_lca=1 WHERE header_hash=?", (header_hash.hex(),)
-        )
-        await cursor_2.close()
-        await self.db.commit()
-
-    async def get_tips(self) -> List[bytes32]:
-        cursor = await self.db.execute("SELECT header from headers WHERE is_tip=1")
-        rows = await cursor.fetchall()
-        await cursor.close()
-        return [Header.from_bytes(row[0]) for row in rows]
-
-    async def set_tips(self, header_hashes: List[bytes32]) -> None:
-        cursor_1 = await self.db.execute("UPDATE headers SET is_tip=0 WHERE is_tip=1")
-        await cursor_1.close()
-        tips_db = tuple([h.hex() for h in header_hashes])
-
-        formatted_str = f'UPDATE headers SET is_tip=1 WHERE header_hash in ({"?," * (len(tips_db) - 1)}?)'
-        cursor_2 = await self.db.execute(formatted_str, tips_db)
-        await cursor_2.close()
-        await self.db.commit()
-
-    async def add_block(self, block: FullBlock) -> None:
-        assert block.proof_of_time is not None
         cursor_1 = await self.db.execute(
-            "INSERT OR REPLACE INTO blocks VALUES(?, ?, ?)",
-            (block.height, block.header_hash.hex(), bytes(block)),
-        )
-        await cursor_1.close()
-        proof_hash = std_hash(
-            block.proof_of_space.get_hash() + block.proof_of_time.output.get_hash()
-        )
-        cursor_2 = await self.db.execute(
-            ("INSERT OR REPLACE INTO headers VALUES(?, ?, ?, ?, ?, 0, 0)"),
+            "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?)",
             (
-                block.height,
                 block.header_hash.hex(),
-                proof_hash.hex(),
-                block.proof_of_space.challenge_hash.hex(),
-                bytes(block.header),
+                block.sub_block_height,
+                int(block.is_block()),
+                bytes(block),
+            ),
+        )
+
+        await cursor_1.close()
+
+        cursor_2 = await self.db.execute(
+            "INSERT OR REPLACE INTO sub_block_records VALUES(?, ?, ?, ?, ?, ?)",
+            (
+                block.header_hash.hex(),
+                block.prev_header_hash.hex(),
+                block.sub_block_height,
+                bytes(sub_block),
+                False,
+                block.is_block(),
             ),
         )
         await cursor_2.close()
         await self.db.commit()
 
-    async def get_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        cursor = await self.db.execute(
-            "SELECT block from blocks WHERE header_hash=?", (header_hash.hex(),)
-        )
+    async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
+        cursor = await self.db.execute("SELECT block from full_blocks WHERE header_hash=?", (header_hash.hex(),))
         row = await cursor.fetchone()
         await cursor.close()
         if row is not None:
             return FullBlock.from_bytes(row[0])
         return None
 
-    async def get_blocks_at(self, heights: List[uint32]) -> List[FullBlock]:
-        if len(heights) == 0:
+    async def get_full_blocks_at(self, sub_heights: List[uint32]) -> List[FullBlock]:
+        if len(sub_heights) == 0:
             return []
 
-        heights_db = tuple(heights)
-        formatted_str = f'SELECT block from blocks WHERE height in ({"?," * (len(heights_db) - 1)}?)'
+        heights_db = tuple(sub_heights)
+        formatted_str = f'SELECT block from full_blocks WHERE sub_height in ({"?," * (len(heights_db) - 1)}?)'
         cursor = await self.db.execute(formatted_str, heights_db)
         rows = await cursor.fetchall()
         await cursor.close()
         return [FullBlock.from_bytes(row[0]) for row in rows]
 
-    async def get_headers(self) -> Dict[bytes32, Header]:
-        cursor = await self.db.execute("SELECT header_hash, header from headers")
-        rows = await cursor.fetchall()
-        await cursor.close()
-        return {bytes.fromhex(row[0]): Header.from_bytes(row[1]) for row in rows}
-
-    async def get_proof_hashes(self) -> Dict[bytes32, bytes32]:
-        cursor = await self.db.execute("SELECT header_hash, proof_hash from headers")
-        rows = await cursor.fetchall()
-        await cursor.close()
-        return {bytes.fromhex(row[0]): bytes.fromhex(row[1]) for row in rows}
-
-    async def init_challenge_hashes(self) -> None:
+    async def get_sub_block_record(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         cursor = await self.db.execute(
-            "SELECT header_hash, challenge_hash from headers"
+            "SELECT sub_block from sub_block_records WHERE header_hash=?",
+            (header_hash.hex(),),
         )
-        rows = await cursor.fetchall()
+        row = await cursor.fetchone()
         await cursor.close()
-        self.challenge_hash_dict = {
-            bytes.fromhex(row[0]): bytes.fromhex(row[1]) for row in rows
-        }
-
-    def get_challenge_hash(self, header_hash: bytes32) -> bytes32:
-        return self.challenge_hash_dict[header_hash]
-
-    def add_proof_of_time(
-        self, challenge: bytes32, iter: uint64, height: uint32
-    ) -> None:
-        self.proof_of_time_heights[
-            (
-                challenge,
-                iter,
-            )
-        ] = height
-
-    def get_height_proof_of_time(
-        self, challenge: bytes32, iter: uint64
-    ) -> Optional[uint32]:
-        pot_tuple = (challenge, iter)
-        if pot_tuple in self.proof_of_time_heights:
-            return self.proof_of_time_heights[pot_tuple]
+        if row is not None:
+            return SubBlockRecord.from_bytes(row[0])
         return None
 
-    def seen_compact_proof(self, challenge: bytes32, iter: uint64) -> bool:
-        pot_tuple = (challenge, iter)
-        if pot_tuple in self.seen_compact_proofs:
-            return True
-        self.seen_compact_proofs.add(pot_tuple)
-        return False
+    async def get_sub_block_records(
+        self,
+    ) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
+        """
+        Returns a dictionary with all sub blocks, as well as the header hash of the peak,
+        if present.
+        """
+        cursor = await self.db.execute("SELECT * from sub_block_records")
+        rows = await cursor.fetchall()
+        await cursor.close()
+        ret: Dict[bytes32, SubBlockRecord] = {}
+        peak: Optional[bytes32] = None
+        for row in rows:
+            header_hash = bytes.fromhex(row[0])
+            ret[header_hash] = SubBlockRecord.from_bytes(row[3])
+            if row[4]:
+                assert peak is None  # Sanity check, only one peak
+                peak = header_hash
+        return ret, peak
+
+    async def set_peak(self, header_hash: bytes32) -> None:
+        cursor_1 = await self.db.execute("UPDATE sub_block_records SET is_peak=0 WHERE is_peak=1")
+        await cursor_1.close()
+        cursor_2 = await self.db.execute(
+            "UPDATE sub_block_records SET is_peak=1 WHERE header_hash=?",
+            (header_hash.hex(),),
+        )
+        await cursor_2.close()
+        await self.db.commit()

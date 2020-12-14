@@ -84,10 +84,7 @@ def add_plot_directory(str_path: str, root_path: Path) -> Dict:
 
 def get_plot_directories(root_path: Path) -> List[str]:
     config = load_config(root_path, "config.yaml")
-    return [
-        str(Path(str_path).resolve())
-        for str_path in config["harvester"]["plot_directories"]
-    ]
+    return [str(Path(str_path).resolve()) for str_path in config["harvester"]["plot_directories"]]
 
 
 def remove_plot_directory(str_path: str, root_path: Path) -> None:
@@ -128,19 +125,14 @@ def load_plots(
     new_provers: Dict[Path, PlotInfo] = {}
 
     if match_str is not None:
-        log.info(
-            f'Only loading plots that contain "{match_str}" in the file or directory name'
-        )
+        log.info(f'Only loading plots that contain "{match_str}" in the file or directory name')
 
     for filename in all_filenames:
         filename_str = str(filename)
         if match_str is not None and match_str not in filename_str:
             continue
         if filename.exists():
-            if (
-                filename in failed_to_open_filenames
-                and (time.time() - failed_to_open_filenames[filename]) < 1200
-            ):
+            if filename in failed_to_open_filenames and (time.time() - failed_to_open_filenames[filename]) < 1200:
                 # Try once every 20 minutes to open the file
                 continue
             if filename in provers:
@@ -157,33 +149,21 @@ def load_plots(
                     local_master_sk,
                 ) = parse_plot_info(prover.get_memo())
                 # Only use plots that correct keys associated with them
-                if (
-                    farmer_public_keys is not None
-                    and farmer_public_key not in farmer_public_keys
-                ):
-                    log.warning(
-                        f"Plot {filename} has a farmer public key that is not in the farmer's pk list."
-                    )
+                if farmer_public_keys is not None and farmer_public_key not in farmer_public_keys:
+                    log.warning(f"Plot {filename} has a farmer public key that is not in the farmer's pk list.")
                     no_key_filenames.add(filename)
                     if not open_no_key_filenames:
                         continue
 
-                if (
-                    pool_public_keys is not None
-                    and pool_public_key not in pool_public_keys
-                ):
-                    log.warning(
-                        f"Plot {filename} has a pool public key that is not in the farmer's pool pk list."
-                    )
+                if pool_public_keys is not None and pool_public_key not in pool_public_keys:
+                    log.warning(f"Plot {filename} has a pool public key that is not in the farmer's pool pk list.")
                     no_key_filenames.add(filename)
                     if not open_no_key_filenames:
                         continue
 
                 stat_info = filename.stat()
                 local_sk = master_sk_to_local_sk(local_master_sk)
-                plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(
-                    local_sk.get_g1(), farmer_public_key
-                )
+                plot_public_key: G1Element = ProofOfSpace.generate_plot_public_key(local_sk.get_g1(), farmer_public_key)
                 new_provers[filename] = PlotInfo(
                     prover,
                     pool_public_key,
@@ -200,11 +180,7 @@ def load_plots(
                 log.error(f"Failed to open file {filename}. {e} {tb}")
                 failed_to_open_filenames[filename] = int(time.time())
                 continue
-            log.info(
-                f"Found plot {filename} of size {new_provers[filename].prover.get_size()}"
-            )
+            log.info(f"Found plot {filename} of size {new_provers[filename].prover.get_size()}")
 
-    log.info(
-        f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB"
-    )
-    return (changed, new_provers, failed_to_open_filenames, no_key_filenames)
+    log.info(f"Loaded a total of {len(new_provers)} plots of size {total_size / (1024 ** 4)} TiB")
+    return changed, new_provers, failed_to_open_filenames, no_key_filenames

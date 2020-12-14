@@ -33,9 +33,7 @@ def get_farmer_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
     else:
         sk_ent = keychain.get_first_private_key()
     if sk_ent is None:
-        raise RuntimeError(
-            "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -f"
-        )
+        raise RuntimeError("No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -f")
     return master_sk_to_farmer_sk(sk_ent[0]).get_g1()
 
 
@@ -47,15 +45,11 @@ def get_pool_public_key(alt_fingerprint: Optional[int] = None) -> G1Element:
     else:
         sk_ent = keychain.get_first_private_key()
     if sk_ent is None:
-        raise RuntimeError(
-            "No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -p"
-        )
+        raise RuntimeError("No keys, please run 'chia keys add', 'chia keys generate' or provide a public key with -p")
     return master_sk_to_pool_sk(sk_ent[0]).get_g1()
 
 
-def create_plots(
-    args, root_path, use_datetime=True, test_private_keys: Optional[List] = None
-):
+def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional[List] = None):
     config_filename = config_path_for_filename(root_path, "config.yaml")
 
     if args.tmp2_dir is None:
@@ -105,14 +99,10 @@ def create_plots(
             sk = AugSchemeMPL.key_gen(token_bytes(32))
 
         # The plot public key is the combination of the harvester and farmer keys
-        plot_public_key = ProofOfSpace.generate_plot_public_key(
-            master_sk_to_local_sk(sk).get_g1(), farmer_public_key
-        )
+        plot_public_key = ProofOfSpace.generate_plot_public_key(master_sk_to_local_sk(sk).get_g1(), farmer_public_key)
 
         # The plot id is based on the harvester, farmer, and pool keys
-        plot_id: bytes32 = ProofOfSpace.calculate_plot_id(
-            pool_public_key, plot_public_key
-        )
+        plot_id: bytes32 = ProofOfSpace.calculate_plot_id_pk(pool_public_key, plot_public_key)
         if args.plotid is not None:
             log.info(f"Debug plot ID: {args.plotid}")
             plot_id: bytes32 = bytes32(bytes.fromhex(args.plotid))
@@ -131,10 +121,7 @@ def create_plots(
         full_path: Path = args.final_dir / filename
 
         if args.final_dir.resolve() not in plot_filenames:
-            if (
-                str(args.final_dir.resolve())
-                not in config["harvester"]["plot_directories"]
-            ):
+            if str(args.final_dir.resolve()) not in config["harvester"]["plot_directories"]:
                 # Adds the directory to the plot directories if it is not present
                 config = add_plot_directory(str(args.final_dir.resolve()), root_path)
 
@@ -166,17 +153,13 @@ def create_plots(
         try:
             args.tmp_dir.rmdir()
         except Exception:
-            log.info(
-                f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty."
-            )
+            log.info(f"warning: did not remove primary temporary folder {args.tmp_dir}, it may not be empty.")
 
     if tmp2_dir_created:
         try:
             args.tmp2_dir.rmdir()
         except Exception:
-            log.info(
-                f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty."
-            )
+            log.info(f"warning: did not remove secondary temporary folder {args.tmp2_dir}, it may not be empty.")
 
     log.info(f"Created a total of {len(finished_filenames)} new plots")
     for filename in finished_filenames:

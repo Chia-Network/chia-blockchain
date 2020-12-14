@@ -30,9 +30,7 @@ def format_response(incoming_msg: Dict[str, Any], response_data: Dict[str, Any])
     return json_str
 
 
-def create_payload(
-    command: str, data: Dict[str, Any], origin: str, destination: str, string=True
-):
+def create_payload(command: str, data: Dict[str, Any], origin: str, destination: str, string=True):
     response = {
         "command": command,
         "ack": False,

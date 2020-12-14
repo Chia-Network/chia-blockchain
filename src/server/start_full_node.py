@@ -6,6 +6,7 @@ from typing import Dict
 from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from src.full_node.full_node import FullNode
+from src.full_node.full_node_api import FullNodeAPI
 from src.rpc.full_node_rpc_api import FullNodeRpcApi
 from src.server.outbound_message import NodeType
 from src.server.start_service import run_service
@@ -14,7 +15,7 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 
 
 # See: https://bugs.python.org/issue29288
-u"".encode("idna")
+"".encode("idna")
 
 SERVICE_NAME = "full_node"
 
@@ -22,8 +23,8 @@ SERVICE_NAME = "full_node"
 def service_kwargs_for_full_node(
     root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
-
-    api = FullNode(config, root_path=root_path, consensus_constants=consensus_constants)
+    full_node = FullNode(config, root_path=root_path, consensus_constants=consensus_constants)
+    api = FullNodeAPI(full_node)
 
     upnp_list = []
     if config["enable_upnp"]:
@@ -31,13 +32,14 @@ def service_kwargs_for_full_node(
 
     kwargs = dict(
         root_path=root_path,
-        api=api,
+        node=api.full_node,
+        peer_api=api,
         node_type=NodeType.FULL_NODE,
         advertised_port=config["port"],
         service_name=SERVICE_NAME,
         upnp_ports=upnp_list,
         server_listen_ports=[config["port"]],
-        on_connect_callback=api._on_connect,
+        on_connect_callback=full_node.on_connect,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])

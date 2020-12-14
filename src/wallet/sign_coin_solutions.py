@@ -17,17 +17,13 @@ async def sign_coin_solutions(
     msg_list = []
     for coin_solution in coin_solutions:
         # Get AGGSIG conditions
-        err, conditions_dict, cost = conditions_dict_for_solution(
-            coin_solution.solution
-        )
+        err, conditions_dict, cost = conditions_dict_for_solution(coin_solution.solution)
         if err or conditions_dict is None:
             error_msg = f"Sign transaction failed, con:{conditions_dict}, error: {err}"
             raise ValueError(error_msg)
 
         # Create signature
-        for _, msg in pkm_pairs_for_conditions_dict(
-            conditions_dict, bytes(coin_solution.coin.name())
-        ):
+        for _, msg in pkm_pairs_for_conditions_dict(conditions_dict, bytes(coin_solution.coin.name())):
             pk_list.append(_)
             msg_list.append(msg)
             secret_key = secret_key_for_public_key_f(_)

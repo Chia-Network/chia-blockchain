@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any, Optional
-from src.types.sized_bytes import bytes32
+from src.types.sized_bytes import bytes32, bytes8
 
 
 class NodeType(IntEnum):
@@ -34,6 +34,14 @@ class Message:
     function: str
     # Message data for that function call
     data: Any
+
+
+@dataclass
+class Payload:
+    # Message payload
+    msg: Message
+    # payload id
+    id: Optional[bytes8]
 
 
 @dataclass

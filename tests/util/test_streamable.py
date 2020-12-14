@@ -75,9 +75,7 @@ class TestStreamable(unittest.TestCase):
         tc1_b = TestClass1([uint32(4), uint32(5)])
         tc1_c = TestClass1([uint32(7), uint32(8)])
 
-        tc2 = TestClass2(
-            uint32(5), [[tc1_a], [tc1_b, tc1_c], None], bytes32(bytes([1] * 32))
-        )
+        tc2 = TestClass2(uint32(5), [[tc1_a], [tc1_b, tc1_c], None], bytes32(bytes([1] * 32)))
         assert TestClass2.from_json_dict(tc2.to_json_dict()) == tc2
 
     def test_recursive_types(self):
@@ -85,7 +83,7 @@ class TestStreamable(unittest.TestCase):
         l1 = [(bytes32([2] * 32), coin)]
         rr = RespondRemovals(uint32(1), bytes32([1] * 32), l1, None)
         c = cbor.loads(cbor.dumps(rr))
-        RespondRemovals(c["height"], c["header_hash"], c["coins"], c["proofs"])
+        RespondRemovals(c["sub_height"], c["header_hash"], c["coins"], c["proofs"])
 
 
 if __name__ == "__main__":

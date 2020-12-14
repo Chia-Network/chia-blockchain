@@ -1,6 +1,6 @@
 from typing import Callable, Dict, List
 
-from src.harvester import Harvester
+from src.harvester.harvester import Harvester
 from src.util.ws_message import create_payload
 
 
@@ -22,14 +22,12 @@ class HarvesterRpcApi:
     async def _state_changed(self, change: str) -> List[Dict]:
         if change == "plots":
             data = await self.get_plots({})
-            payload = create_payload(
-                "get_plots", data, self.service_name, "wallet_ui", string=False
-            )
+            payload = create_payload("get_plots", data, self.service_name, "wallet_ui", string=False)
             return [payload]
         return []
 
     async def get_plots(self, request: Dict) -> Dict:
-        plots, failed_to_open, not_found = self.service._get_plots()
+        plots, failed_to_open, not_found = self.service.get_plots()
         return {
             "plots": plots,
             "failed_to_open_filenames": failed_to_open,
@@ -37,27 +35,27 @@ class HarvesterRpcApi:
         }
 
     async def refresh_plots(self, request: Dict) -> Dict:
-        await self.service._refresh_plots()
+        await self.service.refresh_plots()
         return {}
 
     async def delete_plot(self, request: Dict) -> Dict:
         filename = request["filename"]
-        if self.service._delete_plot(filename):
+        if self.service.delete_plot(filename):
             return {}
         raise ValueError(f"Not able to delete file {filename}")
 
     async def add_plot_directory(self, request: Dict) -> Dict:
-        dirname = request["dirname"]
-        if await self.service._add_plot_directory(dirname):
+        directory_name = request["dirname"]
+        if await self.service.add_plot_directory(directory_name):
             return {}
-        raise ValueError(f"Did not add plot directory {dirname}")
+        raise ValueError(f"Did not add plot directory {directory_name}")
 
     async def get_plot_directories(self, request: Dict) -> Dict:
-        plot_dirs = await self.service._get_plot_directories()
+        plot_dirs = await self.service.get_plot_directories()
         return {"directories": plot_dirs}
 
     async def remove_plot_directory(self, request: Dict) -> Dict:
-        dirname = request["dirname"]
-        if await self.service._remove_plot_directory(dirname):
+        directory_name = request["dirname"]
+        if await self.service.remove_plot_directory(directory_name):
             return {}
-        raise ValueError(f"Did not remove plot directory {dirname}")
+        raise ValueError(f"Did not remove plot directory {directory_name}")

@@ -1,7 +1,8 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 from src.types.full_block import FullBlock
-from src.types.header import Header
+from src.consensus.sub_block_record import SubBlockRecord
 from src.types.sized_bytes import bytes32
+from src.types.unfinished_header_block import UnfinishedHeaderBlock
 from src.util.ints import uint32, uint64
 from src.types.coin_record import CoinRecord
 from src.rpc.rpc_client import RpcClient
@@ -18,72 +19,67 @@ class FullNodeRpcClient(RpcClient):
 
     async def get_blockchain_state(self) -> Dict:
         response = await self.fetch("get_blockchain_state", {})
-        response["blockchain_state"]["tips"] = [
-            Header.from_json_dict(tip) for tip in response["blockchain_state"]["tips"]
-        ]
-        response["blockchain_state"]["lca"] = Header.from_json_dict(
-            response["blockchain_state"]["lca"]
-        )
+        if response["blockchain_state"]["peak"] is not None:
+            response["blockchain_state"]["peak"] = SubBlockRecord.from_json_dict(response["blockchain_state"]["peak"])
         return response["blockchain_state"]
 
-    async def get_block(self, header_hash) -> Optional[FullBlock]:
+    async def get_sub_block(self, header_hash) -> Optional[FullBlock]:
         try:
-            response = await self.fetch("get_block", {"header_hash": header_hash.hex()})
+            response = await self.fetch("get_sub_block", {"header_hash": header_hash.hex()})
         except Exception:
             return None
-        return FullBlock.from_json_dict(response["block"])
+        return FullBlock.from_json_dict(response["sub_block"])
 
-    async def get_header_by_height(self, header_height) -> Optional[Header]:
+    async def get_sub_block_record_by_sub_height(self, sub_height) -> Optional[SubBlockRecord]:
         try:
-            response = await self.fetch(
-                "get_header_by_height", {"height": header_height}
-            )
+            response = await self.fetch("get_sub_block_record_by_sub_height", {"sub_height": sub_height})
         except Exception:
             return None
-        return Header.from_json_dict(response["header"])
+        return SubBlockRecord.from_json_dict(response["sub_block_record"])
 
-    async def get_header(self, header_hash) -> Optional[Header]:
+    async def get_sub_block_record(self, header_hash) -> Optional[SubBlockRecord]:
         try:
-            response = await self.fetch(
-                "get_header", {"header_hash": header_hash.hex()}
-            )
-            if response["header"] is None:
+            response = await self.fetch("get_sub_block_record", {"header_hash": header_hash.hex()})
+            if response["sub_block_record"] is None:
                 return None
         except Exception:
             return None
-        return Header.from_json_dict(response["header"])
+        return SubBlockRecord.from_json_dict(response["sub_block_record"])
 
-    async def get_unfinished_block_headers(self, height: uint32) -> List[Header]:
-        response = await self.fetch("get_unfinished_block_headers", {"height": height})
-        return [Header.from_json_dict(r) for r in response["headers"]]
+    async def get_unfinished_sub_block_headers(self, sub_height: uint32) -> List[UnfinishedHeaderBlock]:
+        response = await self.fetch("get_unfinished_sub_block_headers", {"sub_height": sub_height})
+        return [UnfinishedHeaderBlock.from_json_dict(r) for r in response["headers"]]
 
     async def get_network_space(
-        self, newer_block_header_hash: str, older_block_header_hash: str
+        self, newer_block_header_hash: bytes32, older_block_header_hash: bytes32
     ) -> Optional[uint64]:
         try:
             network_space_bytes_estimate = await self.fetch(
                 "get_network_space",
                 {
-                    "newer_block_header_hash": newer_block_header_hash,
-                    "older_block_header_hash": older_block_header_hash,
+                    "newer_block_header_hash": newer_block_header_hash.hex(),
+                    "older_block_header_hash": older_block_header_hash.hex(),
                 },
             )
         except Exception:
             return None
         return network_space_bytes_estimate["space"]
 
-    async def get_unspent_coins(
-        self, puzzle_hash: bytes32, header_hash: Optional[bytes32] = None
-    ) -> List:
-        if header_hash is not None:
-            d = {"puzzle_hash": puzzle_hash.hex(), "header_hash": header_hash.hex()}
-        else:
-            d = {"puzzle_hash": puzzle_hash.hex()}
+    async def get_unspent_coins(self, puzzle_hash: bytes32) -> List:
+        d = {"puzzle_hash": puzzle_hash.hex()}
         return [
-            CoinRecord.from_json_dict(coin)
-            for coin in ((await self.fetch("get_unspent_coins", d))["coin_records"])
+            CoinRecord.from_json_dict(coin) for coin in ((await self.fetch("get_unspent_coins", d))["coin_records"])
         ]
 
-    async def get_heaviest_block_seen(self) -> Header:
-        response = await self.fetch("get_heaviest_block_seen", {})
-        return Header.from_json_dict(response["tip"])
+    async def get_additions_and_removals(self, header_hash: bytes32) -> Tuple[List[CoinRecord], List[CoinRecord]]:
+        try:
+            response = await self.fetch("get_additions_and_removals", {"header_hash": header_hash.hex()})
+        except Exception:
+            return [], []
+        removals = []
+        additions = []
+        for coin_record in response["removals"]:
+            removals.append(CoinRecord.from_json_dict(coin_record))
+        for coin_record in response["additions"]:
+            additions.append(CoinRecord.from_json_dict(coin_record))
+        return additions, removals

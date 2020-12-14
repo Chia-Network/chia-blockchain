@@ -4,7 +4,8 @@ from typing import Dict
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.default_constants import DEFAULT_CONSTANTS
-from src.farmer import Farmer
+from src.farmer.farmer import Farmer
+from src.farmer.farmer_api import FarmerAPI
 from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.util.keychain import Keychain
@@ -15,7 +16,7 @@ from src.rpc.farmer_rpc_api import FarmerRpcApi
 from src.server.start_service import run_service
 
 # See: https://bugs.python.org/issue29288
-u"".encode("idna")
+"".encode("idna")
 
 SERVICE_NAME = "farmer"
 
@@ -33,19 +34,20 @@ def service_kwargs_for_farmer(
     if fnp is not None:
         connect_peers.append(PeerInfo(fnp["host"], fnp["port"]))
 
-    # TOD: Remove once we have pool server
-    api = Farmer(config, config_pool, keychain, consensus_constants)
+    farmer = Farmer(config, config_pool, keychain, consensus_constants)
+    peer_api = FarmerAPI(farmer)
 
     kwargs = dict(
         root_path=root_path,
-        api=api,
+        node=farmer,
+        peer_api=peer_api,
         node_type=NodeType.FARMER,
         advertised_port=config["port"],
         service_name=SERVICE_NAME,
         server_listen_ports=[config["port"]],
         connect_peers=connect_peers,
         auth_connect_peers=False,
-        on_connect_callback=api._on_connect,
+        on_connect_callback=farmer.on_connect,
     )
     if config["start_rpc_server"]:
         kwargs["rpc_info"] = (FarmerRpcApi, config["rpc_port"])
@@ -56,9 +58,7 @@ def main():
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
     keychain = Keychain()
-    kwargs = service_kwargs_for_farmer(
-        DEFAULT_ROOT_PATH, config, config_pool, keychain, DEFAULT_CONSTANTS
-    )
+    kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH, config, config_pool, keychain, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 

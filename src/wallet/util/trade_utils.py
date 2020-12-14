@@ -43,18 +43,14 @@ def trade_record_to_dict(record: TradeRecord) -> Dict:
 
 # Returns the relative difference in value between the amount outputted by a puzzle and solution and a coin's amount
 def get_output_discrepancy_for_puzzle_and_solution(coin, puzzle, solution):
-    discrepancy = coin.amount - get_output_amount_for_puzzle_and_solution(
-        puzzle, solution
-    )
+    discrepancy = coin.amount - get_output_amount_for_puzzle_and_solution(puzzle, solution)
     return discrepancy
 
     # Returns the amount of value outputted by a puzzle and solution
 
 
 def get_output_amount_for_puzzle_and_solution(puzzle, solution):
-    error, conditions, cost = conditions_dict_for_solution(
-        Program.to([puzzle, solution])
-    )
+    error, conditions, cost = conditions_dict_for_solution(Program.to([puzzle, solution]))
     total = 0
     if conditions:
         for _ in conditions.get(ConditionOpcode.CREATE_COIN, []):
@@ -77,9 +73,7 @@ def get_discrepancies_for_spend_bundle(
                 mod_hash, genesis_checker, inner_puzzle = r
                 innersol = solution.first()
 
-                total = get_output_amount_for_puzzle_and_solution(
-                    inner_puzzle, innersol
-                )
+                total = get_output_amount_for_puzzle_and_solution(inner_puzzle, innersol)
                 colour = bytes(genesis_checker).hex()
                 if colour in cc_discrepancies:
                     cc_discrepancies[colour] += coinsol.coin.amount - total

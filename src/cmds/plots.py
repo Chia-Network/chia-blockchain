@@ -38,18 +38,10 @@ def help_message():
 
 def make_parser(parser):
     parser.add_argument("-k", "--size", help="Plot size", type=int, default=26)
-    parser.add_argument(
-        "-n", "--num", help="Number of plots or challenges", type=int, default=None
-    )
-    parser.add_argument(
-        "-b", "--buffer", help="Mebibytes for sort/plot buffer", type=int, default=0
-    )
-    parser.add_argument(
-        "-r", "--num_threads", help="Number of threads to use", type=int, default=0
-    )
-    parser.add_argument(
-        "-u", "--buckets", help="Number of buckets", type=int, default=0
-    )
+    parser.add_argument("-n", "--num", help="Number of plots or challenges", type=int, default=None)
+    parser.add_argument("-b", "--buffer", help="Mebibytes for sort/plot buffer", type=int, default=0)
+    parser.add_argument("-r", "--num_threads", help="Number of threads to use", type=int, default=0)
+    parser.add_argument("-u", "--buckets", help="Number of buckets", type=int, default=0)
     parser.add_argument("-s", "--stripe_size", help="Stripe size", type=int, default=0)
     parser.add_argument(
         "-a",
@@ -65,9 +57,7 @@ def make_parser(parser):
         type=str,
         default=None,
     )
-    parser.add_argument(
-        "-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None
-    )
+    parser.add_argument("-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None)
     parser.add_argument(
         "-g",
         "--grep_string",
@@ -148,9 +138,7 @@ def handler(args, parser):
 
     root_path: Path = args.root_path
     if not root_path.is_dir():
-        raise RuntimeError(
-            "Please initialize (or migrate) your config directory with chia init."
-        )
+        raise RuntimeError("Please initialize (or migrate) your config directory with chia init.")
 
     initialize_logging("", {"log_stdout": True}, root_path)
     command = args.command

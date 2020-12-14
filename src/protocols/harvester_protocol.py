@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 from blspy import G1Element, G2Element
 
 from src.types.proof_of_space import ProofOfSpace
 from src.types.sized_bytes import bytes32
 from src.util.cbor_message import cbor_message
-from src.util.ints import uint8
-
+from src.util.ints import uint64, uint8
 
 """
 Protocol between harvester and farmer.
@@ -23,48 +22,39 @@ class HarvesterHandshake:
 
 @dataclass(frozen=True)
 @cbor_message
-class NewChallenge:
+class NewSignagePoint:
     challenge_hash: bytes32
+    difficulty: uint64
+    sub_slot_iters: uint64
+    signage_point_index: uint8
+    sp_hash: bytes32
 
 
 @dataclass(frozen=True)
 @cbor_message
-class ChallengeResponse:
+class NewProofOfSpace:
     challenge_hash: bytes32
-    plot_id: str
-    response_number: uint8
-    quality_string: bytes32
-    plot_size: uint8
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RequestProofOfSpace:
-    challenge_hash: bytes32
-    plot_id: str
-    response_number: uint8
-
-
-@dataclass(frozen=True)
-@cbor_message
-class RespondProofOfSpace:
-    plot_id: str
-    response_number: uint8
+    sp_hash: bytes32
+    plot_identifier: str
     proof: ProofOfSpace
+    signage_point_index: uint8
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RequestSignature:
-    plot_id: str
-    message: bytes32
+class RequestSignatures:
+    plot_identifier: str
+    challenge_hash: bytes32
+    sp_hash: bytes32
+    messages: List[bytes32]
 
 
 @dataclass(frozen=True)
 @cbor_message
-class RespondSignature:
-    plot_id: str
-    message: bytes32
+class RespondSignatures:
+    plot_identifier: str
+    challenge_hash: bytes32
+    sp_hash: bytes32
     local_pk: G1Element
     farmer_pk: G1Element
-    message_signature: G2Element
+    message_signatures: List[Tuple[bytes32, G2Element]]

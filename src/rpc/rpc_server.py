@@ -58,7 +58,7 @@ class RpcServer:
             try:
                 await self.websocket.send_str(dict_to_json_str(payload))
             except Exception as e:
-                self.log.warning(f"Sending data failed. Exception {type(e)}.")
+                self.log.warning(f"Sending data failed. Exception {e}.")
 
     def state_changed(self, *args):
         if self.websocket is None:
@@ -87,18 +87,17 @@ class RpcServer:
         return inner
 
     async def get_connections(self, request: Dict) -> Dict:
-        if self.rpc_api.service.global_connections is None:
+        if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
-        connections = self.rpc_api.service.global_connections.get_connections()
+        connections = self.rpc_api.service.server.get_connections()
         con_info = [
             {
                 "type": con.connection_type,
-                "local_host": con.local_host,
                 "local_port": con.local_port,
                 "peer_host": con.peer_host,
                 "peer_port": con.peer_port,
                 "peer_server_port": con.peer_server_port,
-                "node_id": con.node_id,
+                "node_id": con.peer_node_id,
                 "creation_time": con.creation_time,
                 "bytes_read": con.bytes_read,
                 "bytes_written": con.bytes_written,
@@ -113,8 +112,8 @@ class RpcServer:
         port = request["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
         on_connect = None
-        if hasattr(self.rpc_api.service, "_on_connect"):
-            on_connect = self.rpc_api.service._on_connect
+        if hasattr(self.rpc_api.service, "on_connect"):
+            on_connect = self.rpc_api.service.on_connect
         if getattr(self.rpc_api.service, "server", None) is None or not (
             await self.rpc_api.service.server.start_client(target_node, on_connect)
         ):
@@ -123,17 +122,13 @@ class RpcServer:
 
     async def close_connection(self, request: Dict):
         node_id = hexstr_to_bytes(request["node_id"])
-        if self.rpc_api.service.global_connections is None:
+        if self.rpc_api.service.server is None:
             raise aiohttp.web.HTTPInternalServerError()
-        connections_to_close = [
-            c
-            for c in self.rpc_api.service.global_connections.get_connections()
-            if c.node_id == node_id
-        ]
+        connections_to_close = [c for c in self.rpc_api.service.server.get_connections() if c.peer_node_id == node_id]
         if len(connections_to_close) == 0:
             raise ValueError(f"Connection with node_id {node_id.hex()} does not exist")
         for connection in connections_to_close:
-            self.rpc_api.service.global_connections.close(connection)
+            await connection.close()
         return {}
 
     async def stop_node(self, request):
@@ -242,9 +237,7 @@ class RpcServer:
                 self.websocket = None
                 await session.close()
             except aiohttp.client_exceptions.ClientConnectorError:
-                self.log.warning(
-                    f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}"
-                )
+                self.log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
@@ -271,10 +264,7 @@ async def start_rpc_server(
     rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
     http_routes: Dict[str, Callable] = rpc_api.get_routes()
 
-    routes = [
-        aiohttp.web.post(route, rpc_server._wrap_http_handler(func))
-        for (route, func) in http_routes.items()
-    ]
+    routes = [aiohttp.web.post(route, rpc_server._wrap_http_handler(func)) for (route, func) in http_routes.items()]
     routes += [
         aiohttp.web.post(
             "/get_connections",
@@ -288,16 +278,12 @@ async def start_rpc_server(
             "/close_connection",
             rpc_server._wrap_http_handler(rpc_server.close_connection),
         ),
-        aiohttp.web.post(
-            "/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)
-        ),
+        aiohttp.web.post("/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)),
     ]
 
     app.add_routes(routes)
     if connect_to_daemon:
-        daemon_connection = asyncio.create_task(
-            rpc_server.connect_to_daemon(self_hostname, daemon_port)
-        )
+        daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
     site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port))
