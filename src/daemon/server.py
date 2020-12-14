@@ -45,10 +45,10 @@ service_plotter = "chia plots create"
 
 
 class PlotState(str, Enum):
-    SUBMITTED = 'SUBMITTED'
-    RUNNING = 'RUNNING'
-    ERROR = 'ERROR'
-    FINISHED = 'FINISHED'
+    SUBMITTED = "SUBMITTED"
+    RUNNING = "RUNNING"
+    ERROR = "ERROR"
+    FINISHED = "FINISHED"
 
 
 # determine if application is a script file or frozen exe
@@ -268,7 +268,7 @@ class WebSocketServer:
         response = {"success": True, "value": "pong"}
         return response
 
-    def plot_queue_to_payload(plot_queue_item):
+    def plot_queue_to_payload(self, plot_queue_item):
         error = plot_queue_item.get("error")
         has_error = error is not None
 
@@ -285,7 +285,7 @@ class WebSocketServer:
     def extract_plot_queue(self):
         data = []
         for item in self.plots_queue:
-            data.append(WebSocketServer.plot_queue_to_payload(item))
+            data.append(WebSocketServer.plot_queue_to_payload(self, item))
         return data
 
     async def _state_changed(self, service: str, state: str):
@@ -304,9 +304,7 @@ class WebSocketServer:
         if message is None:
             return
 
-        response = create_payload(
-            "state_changed", message, service, "wallet_ui"
-        )
+        response = create_payload("state_changed", message, service, "wallet_ui")
 
         for websocket in websockets:
             try:
@@ -328,9 +326,9 @@ class WebSocketServer:
         if config is None:
             raise Exception(f"Plot queue config with ID {id} is not defined")
 
-        words = ['Renamed final file']
+        words = ["Renamed final file"]
         file_path = config["out_file"]
-        fp = open(file_path, 'r')
+        fp = open(file_path, "r")
         while True:
             new = await loop.run_in_executor(io_pool_exc, fp.readline)
 
@@ -503,9 +501,7 @@ class WebSocketServer:
         id = request["id"]
         config = self._get_plots_queue_item(id)
         if config is None:
-            return {
-                "success": False
-            }
+            return {"success": False}
 
         id = config["id"]
         state = config["state"]
@@ -516,18 +512,14 @@ class WebSocketServer:
                 await kill_process(process, self.root_path, service_plotter, id)
             self.plots_queue.remove(config)
             self.state_changed(service_plotter, "removed")
-            return {
-                "success": True
-            }
+            return {"success": True}
         except Exception as e:
             log.error(f"Error during killing the plot process: {e}")
             config["state"] = PlotState.ERROR
             config["error"] = str(e)
             self.state_changed(service_plotter, "state")
             pass
-            return {
-                "success": False
-            }
+            return {"success": False}
 
     async def start_service(self, request):
         service_command = request["service"]
@@ -726,7 +718,9 @@ def launch_service(root_path, service_command):
     return process, pid_path
 
 
-async def kill_process(process, root_path, service_name, id, delay_before_kill=15) -> bool:
+async def kill_process(
+    process, root_path, service_name, id, delay_before_kill=15
+) -> bool:
     pid_path = pid_path_for_service(root_path, service_name, id)
 
     if platform == "win32" or platform == "cygwin":
