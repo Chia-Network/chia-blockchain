@@ -142,8 +142,7 @@ class FullNode:
             self.full_node_peers = FullNodePeers(
                 self.server,
                 self.root_path,
-                self.config["target_peer_count"]
-                - self.config["target_outbound_peer_count"],
+                self.config["target_peer_count"] - self.config["target_outbound_peer_count"],
                 self.config["target_outbound_peer_count"],
                 self.config["peer_db_path"],
                 self.config["introducer_peer"],

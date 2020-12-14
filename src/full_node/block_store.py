@@ -104,7 +104,7 @@ class BlockStore:
         return None
 
     async def get_sub_block_records(
-            self,
+        self,
     ) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all sub blocks, as well as the header hash of the peak,
