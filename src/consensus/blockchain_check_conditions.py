@@ -73,12 +73,13 @@ def blockchain_assert_time_exceeds(condition: ConditionVarPair, timestamp):
         return Err.ASSERT_TIME_EXCEEDS_FAILED
     return None
 
+
 def blockchain_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: CoinRecord, timestamp):
     """
     Checks if time since unspent creation in millis exceeds the time specified in condition
     """
     try:
-        expected_mili_time = int_from_bytes(condition.var1)
+        expected_mili_time = int_from_bytes(condition.vars[0])
     except ValueError:
         return Err.INVALID_CONDITION
 
@@ -87,12 +88,13 @@ def blockchain_assert_relative_time_exceeds(condition: ConditionVarPair, unspent
         return Err.ASSERT_RELATIVE_TIME_EXCEEDS_FAILED
     return None
 
+
 def blockchain_check_conditions_dict(
     unspent: CoinRecord,
     removed: Dict[bytes32, CoinRecord],
     conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
     height: uint32,
-    timestamp: uint64
+    timestamp: uint64,
 ) -> Optional[Err]:
     """
     Check all conditions against current state.

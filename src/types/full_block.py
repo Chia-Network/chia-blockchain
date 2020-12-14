@@ -46,7 +46,7 @@ class FullBlock(Streamable):
     @property
     def height(self):
         if self.foliage_block is None:
-            return None
+            raise ValueError("Not a block")
         return self.foliage_block.height
 
     @property
@@ -72,16 +72,15 @@ class FullBlock(Streamable):
         pool_amount = calculate_pool_reward(height)
         farmer_amount = calculate_base_farmer_reward(height)
         if self.is_block():
-            farmer_amount = calculate_base_farmer_reward(height)
             assert self.transactions_info is not None
             farmer_amount = uint64(farmer_amount + self.transactions_info.fees)
         pool_coin: Coin = create_pool_coin(
-            self.height,
+            self.sub_block_height,
             self.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
             pool_amount,
         )
         farmer_coin: Coin = create_farmer_coin(
-            self.height,
+            self.sub_block_height,
             self.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
             farmer_amount,
         )
@@ -117,7 +116,7 @@ class FullBlock(Streamable):
             self.foliage_sub_block,
             self.foliage_block,
             encoded_filter,
-            self.transactions_info
+            self.transactions_info,
         )
 
     def get_included_reward_coins(self) -> Set[Coin]:
