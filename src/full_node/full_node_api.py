@@ -192,12 +192,7 @@ class FullNodeAPI:
     @api_request
     async def respond_proof_of_weight(self, response: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
         self.log.info(f"got weight proof response {response.wp}")
-        cache = await init_block_block_cache_mock(
-            self.full_node.blockchain, uint32(0), self.full_node.blockchain.peak_height
-        )
-        wpf = WeightProofHandler(self.full_node.constants, cache)
-        wpf.set_block_cache(cache)
-        return await wpf.validate_weight_proof(response.wp)
+        return await self.full_node.weight_proof_handler.validate_weight_proof(response)
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:

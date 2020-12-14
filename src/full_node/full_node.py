@@ -509,7 +509,6 @@ class FullNode:
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return
         elif added == ReceiveBlockResult.INVALID_BLOCK:
-            self.log.error(f"Block {header_hash} at height {sub_block.sub_block_height} is invalid with code {error_code}.")
             assert error_code is not None
             self.log.error(
                 f"Block {header_hash} at height {sub_block.sub_block_height} is invalid with code {error_code}."
@@ -642,7 +641,10 @@ class FullNode:
             await self.server.send_to_all([msg], NodeType.WALLET)
 
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
-            self.log.info(f"Received orphan block of height {sub_block.sub_block_height}")
+            self.log.warning(
+                f"Received orphan block of height {sub_block.sub_block_height} rh "
+                f"{sub_block.reward_chain_sub_block.get_hash()}"
+            )
         else:
             # Should never reach here, all the cases are covered
             raise RuntimeError(f"Invalid result from receive_block {added}")
@@ -788,7 +790,7 @@ class FullNode:
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants,
             block,
-            self.blockchain.height_to_hash,
+            self.blockchain.sub_height_to_hash,
             prev_sb,
             self.blockchain.sub_blocks,
         )

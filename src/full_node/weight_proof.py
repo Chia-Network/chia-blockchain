@@ -3,22 +3,14 @@ import random
 from typing import Dict, Optional, List, Tuple
 
 from src.consensus.constants import ConsensusConstants
-from src.consensus.pot_iterations import (
-    is_overflow_sub_block,
-    calculate_iterations_quality,
-    calculate_ip_iters,
-)
+from src.consensus.pot_iterations import is_overflow_sub_block, calculate_iterations_quality, calculate_ip_iters
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.block_cache import BlockCache
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.types.slots import (
-    ChallengeChainSubSlot,
-    RewardChainSubSlot,
-    InfusedChallengeChainSubSlot,
-)
+from src.types.slots import ChallengeChainSubSlot, RewardChainSubSlot, InfusedChallengeChainSubSlot
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.vdf import VDFProof, VDFInfo
 from src.types.weight_proof import (
@@ -30,34 +22,6 @@ from src.types.weight_proof import (
 )
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint64, uint8, uint128
-from src.wallet.wallet_block_store import WalletBlockStore
-from src.wallet.wallet_blockchain import WalletBlockchain
-
-
-class BlockCache:
-    def __init__(self, blockchain: Union[Blockchain, WalletBlockchain]):
-        # todo make these read only copies from here
-        self._sub_blocks = blockchain.sub_blocks
-        self._block_store = blockchain.block_store
-        self._sub_height_to_hash = blockchain.sub_height_to_hash
-
-    async def header_block(self, header_hash: bytes32) -> HeaderBlock:
-        if isinstance(self._block_store, BlockStore):
-            block = await self._block_store.get_full_block(header_hash)
-            assert block is not None
-            return await block.get_block_header()
-        elif isinstance(self._block_store, WalletBlockStore):
-            h_block = await self._block_store.get_header_block(header_hash)
-            assert h_block is not None
-            return h_block
-
-    async def height_to_header_block(self, height: uint32) -> HeaderBlock:
-        if isinstance(self._block_store, BlockStore):
-            block = await self._block_store.get_full_blocks_at([height])
-            return await block[0].get_block_header()
-        elif isinstance(self._block_store, WalletBlockStore):
-            h_block = await self._block_store.get_header_block_at([height])
-            return h_block[0]
 
 
 class WeightProofHandler:
@@ -127,10 +91,7 @@ class WeightProofHandler:
                 # add to needed reward chain recent blocks
                 header_block = self.block_cache.height_to_header_block(curr_height)
                 proof_blocks.append(
-                    ProofBlockHeader(
-                        header_block.finished_sub_slots,
-                        header_block.reward_chain_sub_block,
-                    )
+                    ProofBlockHeader(header_block.finished_sub_slots, header_block.reward_chain_sub_block)
                 )
 
             blocks_left = uint32(blocks_left - 1)
@@ -346,8 +307,10 @@ class WeightProofHandler:
                         None,
                         None,
                         None,
+                        None,
                         combine_proofs(cc_proofs),
                         combine_proofs(icc_proofs),
+                        None,
                         None,
                         None,
                     )
@@ -446,10 +409,7 @@ class WeightProofHandler:
         return sub_slots, next_slot_height
 
     def __get_quality_string(
-        self,
-        segment: SubEpochChallengeSegment,
-        ses: SubEpochSummary,
-        slot_iters: uint64,
+        self, segment: SubEpochChallengeSegment, idx: int, ses: SubEpochSummary
     ) -> Optional[bytes32]:
 
         # find challenge block sub slot
@@ -461,25 +421,12 @@ class WeightProofHandler:
         cc_sub_slot = ChallengeChainSubSlot(cc_vdf, icc_vdf.get_hash(), None, None, None)
         challenge = cc_sub_slot.get_hash()
 
-        # check filter
-        assert challenge_sub_slot is not None
-        assert challenge_sub_slot.proof_of_space is not None
-        if challenge_sub_slot.cc_signage_point is None:
+        if challenge_sub_slot.cc_sp_vdf_info is None:
+            self.log.info(f"challenge from prev slot {challenge_sub_slot.cc_sp_vdf_info}")
             cc_sp_hash: bytes32 = cc_sub_slot.get_hash()
         else:
-            assert challenge_sub_slot.cc_signage_point is not None
-            # cc_sp_hash = challenge_sub_slot.cc_signage_point.output.get_hash()
-            # TODO(almog): fix
-            cc_sp_hash = b""
-
-        if not AugSchemeMPL.verify(
-            challenge_sub_slot.proof_of_space.plot_public_key,
-            cc_sp_hash,
-            challenge_sub_slot.cc_sp_sig,
-        ):
-            self.log.error("did not pass filter")
-            return None
-
+            self.log.info(f"challenge from sp vdf {challenge_sub_slot.cc_sp_vdf_info}")
+            cc_sp_hash = challenge_sub_slot.cc_sp_vdf_info.output.get_hash()
         # validate proof of space
         assert challenge_sub_slot.proof_of_space is not None
         return challenge_sub_slot.proof_of_space.verify_and_get_quality_string(
@@ -577,7 +524,7 @@ def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: BlockCache) -> ui
         raise Exception("block does not finish a sub_epoch")
 
     curr = cache.sub_block_record(last_block.prev_hash)
-    count = 0
+    count: uint32 = uint32(0)
     while not curr.sub_epoch_summary_included:
         # todo skip overflows from last sub epoch
         if curr.sub_block_height == uint32(0):
@@ -602,9 +549,7 @@ def choose_sub_epoch(sub_epoch_blocks_n: uint32, rng: random.Random, total_numbe
 
 # returns a challenge chain vdf from infusion point to end of slot
 def count_sub_epochs_in_range(
-    curr: SubBlockRecord,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
-    total_number_of_blocks: int,
+    curr: SubBlockRecord, sub_blocks: Dict[bytes32, SubBlockRecord], total_number_of_blocks: int
 ):
     sub_epochs_n = 0
     while not total_number_of_blocks == 0:
@@ -617,10 +562,7 @@ def count_sub_epochs_in_range(
 
 
 def validate_sub_slot_vdfs(
-    constants: ConsensusConstants,
-    sub_slot: SubSlotData,
-    vdf_info: VDFInfo,
-    infused: bool,
+    constants: ConsensusConstants, sub_slot: SubSlotData, vdf_info: VDFInfo, infused: bool
 ) -> bool:
     default = ClassgroupElement.get_default_element()
     if infused:

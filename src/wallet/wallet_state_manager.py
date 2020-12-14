@@ -492,7 +492,12 @@ class WalletStateManager:
             if info is not None:
                 wallet_id, wallet_type = info
                 await self.coin_added(
-                    coin, height, is_coinbase, uint32(wallet_id), wallet_type
+                    coin,
+                    height,
+                    is_coinbase,
+                    is_fee_reward,
+                    uint32(wallet_id),
+                    wallet_type,
                 )
 
         return trade_adds

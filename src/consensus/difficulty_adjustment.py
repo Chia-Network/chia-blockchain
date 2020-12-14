@@ -87,7 +87,6 @@ def _get_last_block_in_previous_epoch(
             f"Height at {prev_sb.sub_block_height + 1} should not create a new epoch, it is far past the epoch barrier"
         )
 
-    height_prev_epoch_surpass: uint32 = height_epoch_surpass - constants.EPOCH_SUB_BLOCKS
     if height_prev_epoch_surpass == 0:
         # The genesis block is an edge case, where we measure from the first block in epoch (height 0), as opposed to
         # the last sub-block in the previous epoch, which would be height -1
@@ -103,11 +102,12 @@ def _get_last_block_in_previous_epoch(
         sub_height_to_hash,
         sub_blocks,
         prev_sb,
-        uint32(height_prev_epoch_surpass - constants.MAX_SLOT_SUB_BLOCKS - 1),
-        uint32(2 * constants.MAX_SLOT_SUB_BLOCKS + 1),
+        uint32(height_prev_epoch_surpass - constants.MAX_SUB_SLOT_SUB_BLOCKS - 1),
+        uint32(2 * constants.MAX_SUB_SLOT_SUB_BLOCKS + 1),
     )
+
     # This is the last sb in the slot at which we surpass the height. The last block in epoch will be before this.
-    fetched_index: int = constants.MAX_SLOT_SUB_BLOCKS
+    fetched_index: int = constants.MAX_SUB_SLOT_SUB_BLOCKS
     last_sb_in_slot: SubBlockRecord = fetched_blocks[fetched_index]
     fetched_index += 1
     assert last_sb_in_slot.sub_block_height == height_prev_epoch_surpass - 1
@@ -116,17 +116,17 @@ def _get_last_block_in_previous_epoch(
 
     # Wait until the slot finishes with a challenge chain infusion at start of slot
     # Note that there are no overflow blocks at the start of new epochs
-    while not curr.is_challenge_sub_block(constants):
-        last_sb_in_slot = curr
-        curr = fetched_blocks[fetched_index]
+    while curr_b.sub_epoch_summary_included is None:
+        last_sb_in_slot = curr_b
+        curr_b = fetched_blocks[fetched_index]
         fetched_index += 1
 
     # Backtrack to find the last block before the signage point
-    curr = sub_blocks[last_sb_in_slot.prev_hash]
-    while curr.total_iters > last_sb_in_slot.sp_total_iters(constants) or not curr.is_block:
-        curr = sub_blocks[curr.prev_hash]
+    curr_b = sub_blocks[last_sb_in_slot.prev_hash]
+    while curr_b.total_iters > last_sb_in_slot.sp_total_iters(constants) or not curr_b.is_block:
+        curr_b = sub_blocks[curr_b.prev_hash]
 
-    return curr
+    return curr_b
 
 
 def can_finish_sub_and_full_epoch(

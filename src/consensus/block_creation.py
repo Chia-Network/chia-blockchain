@@ -97,6 +97,7 @@ def create_foliage(
         sub_block_height = uint32(prev_sub_block.sub_block_height + 1)
 
     if prev_block is None:
+        sub_height: uint32 = uint32(0)
         height: uint32 = uint32(0)
     else:
         sub_height = uint32(prev_block.sub_block_height + 1)
@@ -172,7 +173,7 @@ def create_foliage(
             assert curr.header_hash == prev_block.header_hash
             reward_claims_incorporated += [pool_coin, farmer_coin]
 
-            if curr.height > 0:
+            if curr.sub_block_height > 0:
                 curr = sub_blocks[curr.prev_hash]
                 # Prev block is not genesis
                 while not curr.is_block:
@@ -251,7 +252,7 @@ def create_foliage(
             additions_root,
             removals_root,
             transactions_info.get_hash(),
-            height
+            height,
         )
         assert foliage_block is not None
         foliage_block_hash: Optional[bytes32] = foliage_block.get_hash()

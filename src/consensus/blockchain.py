@@ -197,8 +197,14 @@ class Blockchain:
         assert required_iters is not None
 
         error_code = await validate_block_body(
-            self.constants, self.sub_blocks, self.block_store, self.coin_store, self.get_peak(),
-            block, block.sub_block_height, block.height
+            self.constants,
+            self.sub_blocks,
+            self.block_store,
+            self.coin_store,
+            self.get_peak(),
+            block,
+            block.sub_block_height,
+            block.height if block.is_block() else None,
         )
 
         if error_code is not None:
@@ -276,7 +282,7 @@ class Blockchain:
                 assert fetched_block is not None
                 assert fetched_sub_block is not None
                 blocks_to_add.append((fetched_block, fetched_sub_block))
-                if fetched_block.height == 0:
+                if fetched_block.sub_block_height == 0:
                     # Doing a full reorg, starting at height 0
                     break
                 curr = fetched_sub_block.prev_hash
@@ -286,7 +292,9 @@ class Blockchain:
                 if fetched_sub_block.is_block:
                     await self.coin_store.new_block(fetched_block)
                 if fetched_sub_block.sub_epoch_summary_included is not None:
-                    self.sub_epoch_summaries[fetched_sub_block.sub_block_height] = fetched_sub_block.sub_epoch_summary_included
+                    self.sub_epoch_summaries[
+                        fetched_sub_block.sub_block_height
+                    ] = fetched_sub_block.sub_epoch_summary_included
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(sub_block.header_hash)
@@ -412,7 +420,9 @@ class Blockchain:
         # return results
         return []
 
-    async def validate_unfinished_block(self, block: UnfinishedBlock) -> Tuple[Optional[uint64], Optional[Err]]:
+    async def validate_unfinished_block(
+        self, block: UnfinishedBlock, skip_overflow_ss_validation=True
+    ) -> Tuple[Optional[uint64], Optional[Err]]:
         if (
             block.prev_header_hash not in self.sub_blocks
             and not block.prev_header_hash == self.constants.GENESIS_PREV_HASH
@@ -435,7 +445,7 @@ class Blockchain:
             self.sub_height_to_hash,
             unfinished_header_block,
             False,
-            True,
+            skip_overflow_ss_validation,
         )
 
         if error is not None:

@@ -40,7 +40,7 @@ async def validate_block_body(
     peak: Optional[SubBlockRecord],
     block: Union[FullBlock, UnfinishedBlock],
     sub_height: uint32,
-    height: uint32,
+    height: Optional[uint32],
 ) -> Optional[Err]:
     """
     This assumes the header block has been completely validated.
@@ -49,7 +49,11 @@ async def validate_block_body(
     """
     if isinstance(block, FullBlock):
         assert sub_height == block.sub_block_height
-        assert height == block.height
+        if height is not None:
+            assert height == block.height
+            assert block.is_block()
+        else:
+            assert not block.is_block()
 
     # 1. For non block sub-blocks, foliage block, transaction filter, transactions info, and generator must be empty
     # If it is a sub block but not a block, there is no body to validate. Check that all fields are None
@@ -89,32 +93,12 @@ async def validate_block_body(
             return Err.INVALID_TRANSACTIONS_GENERATOR_ROOT
 
     # 7. The reward claims must be valid for the previous sub-blocks, and current block fees
-    pool_coin = create_pool_coin(
-        sub_height,
-        block.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
-        calculate_pool_reward(height),
-    )
-    farmer_coin = create_farmer_coin(
-        sub_height,
-        block.foliage_sub_block.foliage_sub_block_data.farmer_reward_puzzle_hash,
-        calculate_base_farmer_reward(height) + block.transactions_info.fees,
-    )
-    expected_reward_coins.add(pool_coin)
-    expected_reward_coins.add(farmer_coin)
-
     if sub_height > 0:
-        # Add reward claims for all sub-blocks since the last block
+        # Add reward claims for all sub-blocks from the prev prev block, until the prev block (including the latter)
         curr_sb = sub_blocks[block.prev_header_hash]
 
         while not curr_sb.is_block:
-            expected_reward_coins.add(
-                create_pool_coin(curr_sb.sub_block_height, curr_sb.pool_puzzle_hash, calculate_pool_reward(curr_sb.sub_block_height))
-            )
-            expected_reward_coins.add(
-                create_farmer_coin(
-                    curr_sb.sub_block_height, curr_sb.farmer_puzzle_hash, calculate_base_farmer_reward(curr_sb.sub_block_height)
-                )
-            )
+            # Finds the prev block
             curr_sb = sub_blocks[curr_sb.prev_hash]
         assert curr_sb.header_hash == block.foliage_block.prev_block_hash
 
@@ -128,7 +112,7 @@ async def validate_block_body(
 
         assert curr_sb.fees is not None
         pool_coin = create_pool_coin(
-            curr_sb.height,
+            curr_sb.sub_block_height,
             curr_sb.pool_puzzle_hash,
             calculate_pool_reward(curr_height),
         )
@@ -142,7 +126,7 @@ async def validate_block_body(
         expected_reward_coins.add(farmer_coin)
 
         # For the second block in the chain, don't go back further
-        if curr_sb.height > 0:
+        if curr_sb.sub_block_height > 0:
             curr_sb = sub_blocks[curr_sb.prev_hash]
             curr_height = curr_sb.height
             while not curr_sb.is_block:
@@ -258,11 +242,11 @@ async def validate_block_body(
             for c_name in removals_in_curr:
                 removals_since_fork.add(c_name)
             for c in additions_in_curr:
-                additions_since_fork[c.name()] = (c, curr.height)
+                additions_since_fork[c.name()] = (c, curr.sub_block_height)
 
             for coinbase_coin in curr.get_included_reward_coins():
-                coinbases_since_fork[coinbase_coin.name()] = curr.height
-            if curr.height == 0:
+                coinbases_since_fork[coinbase_coin.name()] = curr.sub_block_height
+            if curr.sub_block_height == 0:
                 break
             curr = await block_store.get_full_block(curr.prev_header_hash)
             assert curr is not None
@@ -332,7 +316,7 @@ async def validate_block_body(
         if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
             fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
             for cvp in fee_list:
-                fee = int_from_bytes(cvp.var1)
+                fee = int_from_bytes(cvp.vars[0])
                 assert_fee_sum = assert_fee_sum + fee
 
     # 17. Check that the assert fee sum <= fees
