@@ -113,6 +113,7 @@ class BlockTools:
             args.buckets = 0
             args.stripe_size = 2000
             args.num_threads = 0
+            args.nobitfield = False
             test_private_keys = [
                 AugSchemeMPL.key_gen(std_hash(bytes([i]))) for i in range(args.num)
             ]
