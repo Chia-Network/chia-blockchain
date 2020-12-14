@@ -154,6 +154,7 @@ def create_plots(
                 args.buckets,
                 args.stripe_size,
                 args.num_threads,
+                args.nobitfield,
             )
             finished_filenames.append(filename)
         else:
