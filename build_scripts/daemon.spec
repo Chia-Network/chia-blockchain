@@ -35,7 +35,6 @@ SUBCOMMANDS = [
     "netspace",
     "run_daemon",
     "wallet",
-    "configure",
 ]
 block_cipher = None
 subcommand_modules = [f"{root}/src.cmds.%s" % _ for _ in SUBCOMMANDS]
