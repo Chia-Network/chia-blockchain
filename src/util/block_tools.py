@@ -108,6 +108,7 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
+
         self.constants = constants
         create_default_chia_config(root_path)
         self.keychain = Keychain("testing-1.8.0", True)

@@ -51,10 +51,16 @@ export default function PlotAdd() {
   }, [plotSize, setValue]);
 
   const handleSubmit: SubmitHandler<FormData> = (data) => {
+    const { delay } = data;
+
     dispatch(plotQueueAdd(fingerprint ? {
       ...data,
       fingerprint,
-    } : data));
+      delay: delay * 60,
+    } : {
+      ...data,
+      delay: delay * 60,
+    }));
 
     history.push('/dashboard/plot');
   }

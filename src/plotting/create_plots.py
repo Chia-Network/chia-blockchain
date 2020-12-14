@@ -141,6 +141,7 @@ def create_plots(args, root_path, use_datetime=True, test_private_keys: Optional
                 args.buckets,
                 args.stripe_size,
                 args.num_threads,
+                args.nobitfield,
             )
             finished_filenames.append(filename)
         else:

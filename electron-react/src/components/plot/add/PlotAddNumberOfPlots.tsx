@@ -62,7 +62,6 @@ export default function PlotAddNumberOfPlots() {
                   control={<Radio />}
                   label="Plot in Parallel"
                   value
-                  disabled
                 />
                 <FormControlLabel
                   value={false}
