@@ -67,7 +67,7 @@ class TestMempool:
         for block in blocks:
             await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        await time_out_assert(60, node_height_at_least, True, full_node_1, 2)
+        await time_out_assert(60, node_height_at_least, True, full_node_2, 2)
 
         spend_bundle = generate_test_spend_bundle(list(blocks[-1].get_included_reward_coins())[0])
         assert spend_bundle is not None

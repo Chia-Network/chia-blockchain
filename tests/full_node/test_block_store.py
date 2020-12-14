@@ -21,7 +21,7 @@ class TestBlockStore:
     @pytest.mark.asyncio
     async def test_block_store(self):
         assert sqlite3.threadsafety == 1
-        blocks = bt.get_consecutive_blocks(test_constants, 10)
+        blocks = bt.get_consecutive_blocks(10)
 
         db_filename = Path("blockchain_test.db")
         db_filename_2 = Path("blockchain_test2.db")
@@ -84,7 +84,7 @@ class TestBlockStore:
         This test was added because the store was deadlocking in certain situations, when fetching and
         adding blocks repeatedly. The issue was patched.
         """
-        blocks = bt.get_consecutive_blocks(test_constants, 10)
+        blocks = bt.get_consecutive_blocks(10)
         db_filename = Path("blockchain_test.db")
         db_filename_2 = Path("blockchain_test2.db")
 

@@ -4,7 +4,7 @@ from typing import Dict, Optional, Tuple, List, Set
 import logging
 
 from chiabip158 import PyBIP158
-from blspy import G1Element, AugSchemeMPL
+from blspy import G1Element, AugSchemeMPL, G2Element
 
 from src.consensus.constants import ConsensusConstants
 from src.consensus.sub_block_record import SubBlockRecord
@@ -196,7 +196,6 @@ class MempoolManager:
             return None, MempoolInclusionStatus.FAILED, Err.UNKNOWN_UNSPENT
 
         if addition_amount > removal_amount:
-            print("Removal: ", removal_record)
             print(addition_amount, removal_amount)
             return None, MempoolInclusionStatus.FAILED, Err.MINTING_COIN
 
@@ -207,7 +206,7 @@ class MempoolManager:
             if ConditionOpcode.ASSERT_FEE in npc.condition_dict:
                 fee_list: List[ConditionVarPair] = npc.condition_dict[ConditionOpcode.ASSERT_FEE]
                 for cvp in fee_list:
-                    fee = int_from_bytes(cvp.var1)
+                    fee = int_from_bytes(cvp.vars[0])
                     assert_fee_sum = assert_fee_sum + fee
 
         if fees < assert_fee_sum:
@@ -283,8 +282,12 @@ class MempoolManager:
             return None, MempoolInclusionStatus.FAILED, error
 
         # Verify aggregated signature
-        validates = AugSchemeMPL.aggregate_verify(pks, msgs, new_spend.aggregated_signature)
+        if len(pks) == 0 and len(msgs) == 0:
+            validates = new_spend.aggregated_signature == G2Element.infinity()
+        else:
+            validates = AugSchemeMPL.aggregate_verify(pks, msgs, new_spend.aggregated_signature)
         if not validates:
+            log.warning(f"{pks} {msgs} {new_spend}")
             return None, MempoolInclusionStatus.FAILED, Err.BAD_AGGREGATE_SIGNATURE
 
         # Remove all conflicting Coins and SpendBundles
