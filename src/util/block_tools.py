@@ -160,6 +160,7 @@ class BlockTools:
         args.buckets = 0
         args.stripe_size = 2000
         args.num_threads = 0
+        args.nobitfield = False
         test_private_keys = [AugSchemeMPL.key_gen(std_hash(i.to_bytes(2, "big"))) for i in range(args.num)]
         try:
             # No datetime in the filename, to get deterministic filenames and not re-plot
