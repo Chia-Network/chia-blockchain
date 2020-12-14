@@ -27,9 +27,7 @@ io_pool_exc = ThreadPoolExecutor()
 try:
     from aiohttp import web
 except ModuleNotFoundError:
-    print(
-        "Error: Make sure to run . ./activate from the project folder before starting Chia."
-    )
+    print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     quit()
 
 try:
@@ -83,6 +81,11 @@ else:
         return service_name
 
 
+async def ping():
+    response = {"success": True, "value": "pong"}
+    return response
+
+
 class WebSocketServer:
     def __init__(self, root_path):
         self.root_path = root_path
@@ -95,20 +98,17 @@ class WebSocketServer:
         net_config = load_config(root_path, "config.yaml")
         self.self_hostname = net_config["self_hostname"]
         self.daemon_port = net_config["daemon_port"]
+        self.websocket_server = None
 
     async def start(self):
         self.log.info("Starting Daemon Server")
 
         def master_close_cb():
-            asyncio.ensure_future(self.stop())
+            asyncio.create_task(self.stop())
 
         try:
-            asyncio.get_running_loop().add_signal_handler(
-                signal.SIGINT, master_close_cb
-            )
-            asyncio.get_running_loop().add_signal_handler(
-                signal.SIGTERM, master_close_cb
-            )
+            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
+            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
         except NotImplementedError:
             self.log.info("Not implemented")
 
@@ -145,23 +145,20 @@ class WebSocketServer:
             async for message in websocket:
                 try:
                     decoded = json.loads(message)
-                    response, sockets_to_use = await self.handle_message(
-                        websocket, decoded
-                    )
+                    response, sockets_to_use = await self.handle_message(websocket, decoded)
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error while handling message: {tb}")
                     error = {"success": False, "error": f"{e}"}
                     response = format_response(message, error)
+                    sockets_to_use = 0
                 if len(sockets_to_use) > 0:
                     for socket in sockets_to_use:
                         try:
                             await socket.send(response)
                         except Exception as e:
                             tb = traceback.format_exc()
-                            self.log.error(
-                                f"Unexpected exception trying to send to websocket: {e} {tb}"
-                            )
+                            self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
                             self.remove_connection(socket)
                             await socket.close()
         except Exception as e:
@@ -171,13 +168,9 @@ class WebSocketServer:
             if remote_address in self.remote_address_map:
                 service_name = self.remote_address_map[remote_address]
             if isinstance(e, ConnectionClosedOK):
-                self.log.info(
-                    f"ConnectionClosedOk. Closing websocket with {service_name} {e}"
-                )
+                self.log.info(f"ConnectionClosedOk. Closing websocket with {service_name} {e}")
             elif isinstance(e, WebSocketException):
-                self.log.info(
-                    f"Websocket exception. Closing websocket with {service_name} {e} {tb}"
-                )
+                self.log.info(f"Websocket exception. Closing websocket with {service_name} {e} {tb}")
             else:
                 self.log.error(f"Unexpected exception in websocket: {e} {tb}")
         finally:
@@ -206,24 +199,23 @@ class WebSocketServer:
             if service_name in self.connections:
                 sockets = self.connections[service_name]
                 for socket in sockets:
-                    try:
-                        self.log.info(f"About to ping: {service_name}")
-                        await socket.ping()
-                    except asyncio.CancelledError:
-                        self.log.info("Ping task received Cancel")
-                        restart = False
-                        break
-                    except Exception as e:
-                        self.log.info(f"Ping error: {e}")
-                        self.log.warning("Ping failed, connection closed.")
-                        self.remove_connection(socket)
-                        await socket.close()
+                    if socket.remote_address[1] == remote_address:
+                        try:
+                            self.log.info(f"About to ping: {service_name}")
+                            await socket.ping()
+                        except asyncio.CancelledError:
+                            self.log.info("Ping task received Cancel")
+                            restart = False
+                            break
+                        except Exception as e:
+                            self.log.info(f"Ping error: {e}")
+                            self.log.warning("Ping failed, connection closed.")
+                            self.remove_connection(socket)
+                            await socket.close()
         if restart is True:
             self.ping_job = asyncio.create_task(self.ping_task())
 
-    async def handle_message(
-        self, websocket, message
-    ) -> Tuple[Optional[str], List[Any]]:
+    async def handle_message(self, websocket, message) -> Tuple[Optional[str], List[Any]]:
         """
         This function gets called when new message is received via websocket.
         """
@@ -242,7 +234,7 @@ class WebSocketServer:
         if "data" in message:
             data = message["data"]
         if command == "ping":
-            response = await self.ping()
+            response = await ping()
         elif command == "start_service":
             response = await self.start_service(data)
         elif command == "start_plotting":
@@ -262,11 +254,7 @@ class WebSocketServer:
             response = {"success": False, "error": f"unknown_command {command}"}
 
         full_response = format_response(message, response)
-        return (full_response, [websocket])
-
-    async def ping(self):
-        response = {"success": True, "value": "pong"}
-        return response
+        return full_response, [websocket]
 
     def plot_queue_to_payload(self, plot_queue_item):
         error = plot_queue_item.get("error")
@@ -663,9 +651,7 @@ def launch_plotter(root_path, service_name, service_array, id):
         mkdir(plotter_path.parent)
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")
-    process = subprocess.Popen(
-        service_array, shell=False, stdout=outfile, startupinfo=startupinfo
-    )
+    process = subprocess.Popen(service_array, shell=False, stdout=outfile, startupinfo=startupinfo)
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
@@ -732,12 +718,12 @@ async def kill_process(
         log.info("sending term signal to %s", service_name)
         process.terminate()
 
-    count = 0
+    count: float = 0
     while count < delay_before_kill:
         if process.poll() is not None:
             break
-        await asyncio.sleep(1)
-        count += 1
+        await asyncio.sleep(0.5)
+        count += 0.5
     else:
         process.kill()
         log.info("sending kill signal to %s", service_name)
@@ -801,7 +787,7 @@ def create_server_for_daemon(root_path):
 
     @routes.get("/daemon/service/stop/")
     async def stop_service(request):
-        service_name = request.query.get("service")
+        service_name = request.qu5ry.get("service")
         r = await kill_service(root_path, services, service_name)
         return web.Response(text=str(r))
 
@@ -858,7 +844,6 @@ async def async_run_daemon(root_path):
 
     # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
     create_server_for_daemon(root_path)
-    log.info("before start")
     ws_server = WebSocketServer(root_path)
     await ws_server.start()
 
