@@ -42,7 +42,7 @@ farmer:
   # The farmer will attempt to connect to this full node and harvester
   full_node_peer:
     host: *self_hostname
-    port: 8444
+    port: 58444
   harvester_peer:
     host: *self_hostname
     port: 8448
@@ -88,7 +88,7 @@ timelord:
       - 150000
   full_node_peer:
       host: *self_hostname
-      port: 8444
+      port: 58444
   # Maximum number of seconds allowed for a client to reconnect to the server.
   max_connection_time: 60
   # The ip and port where the TCP clients will connect.
@@ -119,12 +119,12 @@ timelord:
 
 full_node:
   # The full node server (if run) will run on this port
-  port: 8444
+  port: 58444
 
   # Run multiple nodes with different databases by changing the database_path
-  database_path: db/blockchain_v20.db
+  database_path: db/blockchain_v22.db
   peer_db_path: db/peer_table_node.db
-  simulator_database_path: sim_db/simulator_blockchain_v20.db
+  simulator_database_path: sim_db/simulator_blockchain_v22.db
 
   # If True, starts an RPC server at the following port
   start_rpc_server: True
@@ -162,8 +162,8 @@ full_node:
       host: *self_hostname
       port: 8446
   introducer_peer:
-      host: introducer-ms.new_consensus_rebased.chiatechlab.com  # Chia AWS introducer IPv4/IPv6
-      port: 8444
+      host: introducer1.beta.chia.net  # Chia AWS introducer IPv4/IPv6
+      port: 58444
   wallet_peer:
     host: *self_hostname
     port: 8449
@@ -211,10 +211,10 @@ wallet:
 
   full_node_peer:
     host: *self_hostname
-    port: 8444
+    port: 58444
 
   testing: False
-  database_path: wallet/db/blockchain_wallet_v21.db
+  database_path: wallet/db/blockchain_wallet_v22.db
   wallet_peers_path: wallet/db/wallet_peers.db
 
   logging: *logging
@@ -226,8 +226,8 @@ wallet:
   recent_peer_threshold: 6000
 
   introducer_peer:
-    host: introducer-ms.new_consensus_rebased.chiatechlab.com # Chia AWS introducer IPv4/IPv6
-    port: 8444
+    host: introducer1.beta.chia.net # Chia AWS introducer IPv4/IPv6
+    port: 58444
 
   ssl:
     crt: "trusted.crt"
