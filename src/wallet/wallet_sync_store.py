@@ -4,7 +4,6 @@ from typing import Dict, List, Optional, Tuple
 
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
-from src.types.weight_proof import WeightProof
 from src.util.ints import uint32
 
 log = logging.getLogger(__name__)
@@ -61,10 +60,10 @@ class WalletSyncStore:
     def add_potential_peak(self, block: HeaderBlock) -> None:
         self.potential_peaks[block.header_hash] = block
 
-    def add_potential_proof(self, peak_hash: bytes32, proof: WeightProof):
-        self.potential_proofs[peak_hash] = proof
+    def add_potential_proof(self, peak_hash: bytes32, fork_point: uint32):
+        self.potential_proofs[peak_hash] = fork_point
 
-    def get_potential_proof(self, peak_hash) -> Optional[WeightProof]:
+    def get_potential_proof(self, peak_hash) -> Optional[uint32]:
         if peak_hash in self.potential_proofs:
             return self.potential_proofs[peak_hash]
         else:
