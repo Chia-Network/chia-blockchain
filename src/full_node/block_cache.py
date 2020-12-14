@@ -5,6 +5,7 @@ from src.consensus.sub_block_record import SubBlockRecord
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
+from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint32
 from src.wallet.wallet_blockchain import WalletBlockchain
 
@@ -17,10 +18,12 @@ class BlockCache:
         sub_blocks: Dict[bytes32, SubBlockRecord],
         sub_height_to_hash: Dict[uint32, bytes32],
         header_blocks: Dict[uint32, HeaderBlock],
+        sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {},
     ):
         self._sub_blocks = sub_blocks
         self._header_cache = header_blocks
         self._sub_height_to_hash = sub_height_to_hash
+        self._sub_epoch_summaries = sub_epoch_summaries
 
     def header_block(self, header_hash: bytes32) -> HeaderBlock:
         return self._header_cache[header_hash]
@@ -36,6 +39,12 @@ class BlockCache:
 
     def max_height(self) -> uint32:
         return uint32(len(self._sub_blocks) - 1)
+
+    def get_ses_heights(self) -> List[bytes32]:
+        return sorted(self._sub_epoch_summaries.keys())
+
+    def get_ses(self, height: uint32) -> SubEpochSummary:
+        return self._sub_epoch_summaries[height]
 
     def _height_to_hash(self, height: uint32) -> bytes32:
         return self._sub_height_to_hash[height]
@@ -65,7 +74,9 @@ async def init_block_cache(blockchain: Blockchain, start: int = 0, stop: int = 0
     for block in full_blocks:
         header_blocks[block.header_hash] = await block.get_block_header()
 
-    return BlockCache(blockchain.sub_blocks, blockchain.sub_height_to_hash, header_blocks)
+    return BlockCache(
+        blockchain.sub_blocks, blockchain.sub_height_to_hash, header_blocks, blockchain.sub_epoch_summaries
+    )
 
 
 async def init_wallet_block_cache(blockchain: WalletBlockchain, start: int = 0, stop: int = 0) -> BlockCache:
@@ -92,4 +103,6 @@ async def init_wallet_block_cache(blockchain: WalletBlockchain, start: int = 0, 
     for block in header_blocks:
         header_block_map[block.header_hash] = block
 
-    return BlockCache(blockchain.sub_blocks, blockchain.sub_height_to_hash, header_block_map)
+    return BlockCache(
+        blockchain.sub_blocks, blockchain.sub_height_to_hash, header_block_map, blockchain.sub_epoch_summaries
+    )

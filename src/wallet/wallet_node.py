@@ -9,7 +9,6 @@ import logging
 from blspy import PrivateKey
 
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.block_cache import init_wallet_block_cache
 from src.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
 from src.protocols.wallet_protocol import (
     RequestSubBlockHeader,
@@ -24,7 +23,6 @@ from src.server.connection_utils import send_to_random
 from src.server.ws_connection import WSChiaConnection
 from src.types.coin import hash_coin_list, Coin
 from src.types.peer_info import PeerInfo
-from src.types.weight_proof import WeightProof
 from src.util.byte_types import hexstr_to_bytes
 from src.protocols import wallet_protocol
 from src.consensus.constants import ConsensusConstants
@@ -343,15 +341,15 @@ class WalletNode:
             if weight_proof_response is None:
                 return
             weight_proof = weight_proof_response.wp
-
-            if not self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof):
+            valid, fork_point = self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
+            if not valid:
                 self.log.error(
                     f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
                     f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
                 )
                 return None
             self.log.info("validated")
-            self.wallet_state_manager.sync_store.add_potential_proof(hb.header_hash, weight_proof)
+            self.wallet_state_manager.sync_store.add_potential_proof(hb.header_hash, uint32(fork_point))
             self.wallet_state_manager.sync_store.add_potential_peak(hb)
             self.start_sync()
 
@@ -423,28 +421,15 @@ class WalletNode:
             return
 
         peers: List[WSChiaConnection] = self.server.get_full_node_connections()
-
         if len(peers) == 0:
             self.log.info("No peers to sync to")
             return
 
         fetched_blocks: Dict[int, HeaderBlockRecord] = {}
-        fork_height = 0
-        weight_proof: Optional[WeightProof] = None
-        if peak is not None:
-            weight_proof = self.wallet_state_manager.sync_store.get_potential_proof(peak.header_hash)
 
-        if weight_proof is not None:
-            # iterate through sub epoch summaries to find fork point
-            cache = await init_wallet_block_cache(self.wallet_state_manager.blockchain)
-            self.wallet_state_manager.weight_proof_handler.set_block_cache(cache)
-            summaries = self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
-            if summaries is not None:
-                fork_height = self.wallet_state_manager.weight_proof_handler.get_fork_point(
-                    self.wallet_state_manager.blockchain.sub_epoch_summaries, summaries
-                )
+        fork_height = self.wallet_state_manager.sync_store.get_potential_proof(peak.header_hash)
 
-        for i in range(fork_height, peak_height + 1):
+        for i in range(fork_height - 1, peak_height + 1):
             self.log.info(f"Requesting block {i}")
             request = RequestSubBlockHeader(uint32(i))
             response, peer = await send_to_random("request_sub_block_header", request, peers)
