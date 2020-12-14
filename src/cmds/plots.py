@@ -115,7 +115,7 @@ def make_parser(parser):
         "--nobitfield",
         help="Disable bitfield",
         default=False,
-        action='store_true',
+        action="store_true",
     )
     parser.add_argument(
         "command",
