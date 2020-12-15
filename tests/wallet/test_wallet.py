@@ -1,21 +1,15 @@
 import asyncio
-from typing import List
 
 import pytest
 
 
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.protocols.full_node_protocol import RespondSubBlock
-from src.server.outbound_message import NodeType
 from src.server.server import ChiaServer
-from src.server.ws_connection import WSChiaConnection
 from src.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from src.types.peer_info import PeerInfo
-from src.util.block_tools import test_constants
 from src.util.ints import uint16, uint32
-from tests.setup_nodes import (
-    setup_simulators_and_wallets,
-    setup_wallet_node, setup_introducer, setup_full_node, _teardown_nodes)
+from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
@@ -181,14 +175,14 @@ class TestWalletSimulator:
 
         funds = sum(
             [
-                calculate_pool_reward(uint32(i+1)) + calculate_base_farmer_reward(uint32(i+1))
-                for i in range(0, num_blocks-1)
+                calculate_pool_reward(uint32(i + 1)) + calculate_base_farmer_reward(uint32(i + 1))
+                for i in range(0, num_blocks - 1)
             ]
         )
 
         await time_out_assert(5, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, 32*b'0', 0)
+        tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(10, 32 * b"0", 0)
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
         await time_out_assert_not_none(5, full_node_0.mempool_manager.get_spendbundle, tx.name())
@@ -225,11 +219,11 @@ class TestWalletSimulator:
             await full_node_api_0.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-                    [
-                        calculate_pool_reward(uint32(i+1)) + calculate_base_farmer_reward(uint32(i+1))
-                        for i in range(0, num_blocks-1)
-                    ]
-                )
+            [
+                calculate_pool_reward(uint32(i + 1)) + calculate_base_farmer_reward(uint32(i + 1))
+                for i in range(0, num_blocks - 1)
+            ]
+        )
 
         await time_out_assert(5, wallet_0.get_confirmed_balance, funds)
         await time_out_assert(5, wallet_0.get_unconfirmed_balance, funds)
@@ -250,14 +244,14 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet_0.get_unconfirmed_balance, funds - 10)
 
         for i in range(0, 4):
-            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(32 * b'0'))
+            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(32 * b"0"))
 
         new_funds = sum(
-                    [
-                        calculate_pool_reward(uint32(i+1)) + calculate_base_farmer_reward(uint32(i+1))
-                        for i in range(0, num_blocks)
-                    ]
-                )
+            [
+                calculate_pool_reward(uint32(i + 1)) + calculate_base_farmer_reward(uint32(i + 1))
+                for i in range(0, num_blocks)
+            ]
+        )
 
         # Full node height 17, wallet height 15
         await time_out_assert(5, wallet_0.get_confirmed_balance, new_funds - 10)
@@ -268,7 +262,7 @@ class TestWalletSimulator:
         await wallet_1.push_transaction(tx)
 
         for i in range(0, 4):
-            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(32 * b'0'))
+            await full_node_api_0.farm_new_block(FarmNewBlockProtocol(32 * b"0"))
 
         await wallet_0.get_confirmed_balance()
         await wallet_0.get_unconfirmed_balance()
@@ -331,11 +325,11 @@ class TestWalletSimulator:
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-                            [
-                                calculate_pool_reward(uint32(i+1)) + calculate_base_farmer_reward(uint32(i+1))
-                                for i in range(0, num_blocks-1)
-                            ]
-                        )
+            [
+                calculate_pool_reward(uint32(i + 1)) + calculate_base_farmer_reward(uint32(i + 1))
+                for i in range(0, num_blocks - 1)
+            ]
+        )
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
@@ -356,23 +350,17 @@ class TestWalletSimulator:
         await wallet.push_transaction(tx)
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
-        await time_out_assert(
-            5, wallet.get_unconfirmed_balance, funds - tx_amount - tx_fee
-        )
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - tx_amount - tx_fee)
 
         for i in range(0, num_blocks):
-            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b'0'))
+            await full_node_1.farm_new_block(FarmNewBlockProtocol(32 * b"0"))
 
         new_funds = sum(
-                            [
-                                calculate_pool_reward(uint32(i+1)) + calculate_base_farmer_reward(uint32(i+1))
-                                for i in range(0, num_blocks)
-                            ]
-                        )
+            [
+                calculate_pool_reward(uint32(i + 1)) + calculate_base_farmer_reward(uint32(i + 1))
+                for i in range(0, num_blocks)
+            ]
+        )
 
-        await time_out_assert(
-            5, wallet.get_confirmed_balance, new_funds - tx_amount - tx_fee
-        )
-        await time_out_assert(
-            5, wallet.get_unconfirmed_balance, new_funds - tx_amount - tx_fee
-        )
+        await time_out_assert(5, wallet.get_confirmed_balance, new_funds - tx_amount - tx_fee)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, new_funds - tx_amount - tx_fee)
