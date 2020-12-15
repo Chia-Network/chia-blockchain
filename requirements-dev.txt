@@ -34,7 +34,7 @@ setuptools_scm>=4.1.2
 
 aiohttp~=3.7.1
 blspy~=0.2.4
-cryptography~=3.2
+cryptography~=3.3
 PyYAML~=5.3.1
 cbor2~=5.2.0
 clvm~=0.6
