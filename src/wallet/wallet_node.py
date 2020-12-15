@@ -174,7 +174,7 @@ class WalletNode:
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
 
-        asyncio.create_task(self._periodically_check_full_node())
+        self.peer_task = asyncio.create_task(self._periodically_check_full_node())
         self.sync_event = asyncio.Event()
         self.sync_task = asyncio.create_task(self.sync_job())
         self.log.info("self.sync_job")
@@ -299,10 +299,11 @@ class WalletNode:
                 await self.wallet_peers.ensure_is_closed()
                 break
             tries += 1
-            await asyncio.sleep(180)
+            await asyncio.sleep(self.config["peer_connect_interval"])
 
     def has_full_node(self) -> bool:
-        assert self.server is not None
+        if self.server is None:
+            return False
         if "full_node_peer" in self.config:
             full_node_peer = PeerInfo(
                 self.config["full_node_peer"]["host"],
