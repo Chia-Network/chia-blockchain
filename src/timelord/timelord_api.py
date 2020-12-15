@@ -63,3 +63,4 @@ class TimelordAPI:
                     ):
                         self.timelord.iters_to_submit[Chain.INFUSED_CHALLENGE_CHAIN].append(new_block_iters)
                     self.timelord.iteration_to_proof_type[new_block_iters] = IterationType.INFUSION_POINT
+                    self.timelord.total_unfinished += 1
