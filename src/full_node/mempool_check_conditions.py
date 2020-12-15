@@ -147,9 +147,9 @@ def get_name_puzzle_conditions(block_program: Program, safe_mode: bool):
                     cond_var_list = []
                     for cond in cond.rest().as_iter():
                         cond_var_list.append(cond.as_atom())
-                    cvl = ConditionVarList(opcode, *cond_var_list)
+                    cvl = ConditionVarPair(opcode, *cond_var_list)
                 else:
-                    cvl = ConditionVarList(opcode)
+                    cvl = ConditionVarPair(opcode)
                 conditions_list.append(cvl)
             conditions_dict = conditions_by_opcode(conditions_list)
             if conditions_dict is None:
