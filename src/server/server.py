@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import ssl
+from ipaddress import ip_address, IPv6Address
 from pathlib import Path
 from typing import Any, List, Dict, Callable, Optional, Set
 
@@ -208,10 +209,11 @@ class ChiaServer:
             timeout = ClientTimeout(total=10)
             session = ClientSession(timeout=timeout)
 
-            # ipv6 localhost format
-            # todo fix ipv6 in a less patchy way
-            if target_node.host == "::1":
-                target_node = PeerInfo("[::1]", target_node.port)
+            try:
+                if type(ip_address(target_node.host)) is IPv6Address:
+                    target_node = PeerInfo(f"[{target_node.host}]", target_node.port)
+            except ValueError:
+                pass
 
             url = f"wss://{target_node.host}:{target_node.port}/ws"
             self.log.info(f"Connecting: {url}, Peer info: {target_node}")
