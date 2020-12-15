@@ -148,12 +148,16 @@ class Timelord:
         difficulty = self.last_state.get_difficulty()
         ip_iters = self.last_state.get_last_ip()
         rc_block = block.reward_chain_sub_block
-        block_sp_iters, block_ip_iters = iters_from_sub_block(
-            self.constants,
-            rc_block,
-            sub_slot_iters,
-            difficulty,
-        )
+        try:
+            block_sp_iters, block_ip_iters = iters_from_sub_block(
+                self.constants,
+                rc_block,
+                sub_slot_iters,
+                difficulty,
+            )
+        except Exception as e:
+            log.warning(f"Received invalid unfinished block: {e}.")
+            return None
         block_sp_total_iters = self.last_state.total_iters - ip_iters + block_sp_iters
         if is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index):
             block_sp_total_iters -= self.last_state.get_sub_slot_iters()
@@ -394,12 +398,15 @@ class Timelord:
                 block = None
                 ip_iters = None
                 for unfinished_block in self.unfinished_blocks:
-                    _, ip_iters = iters_from_sub_block(
-                        self.constants,
-                        unfinished_block.reward_chain_sub_block,
-                        self.last_state.get_sub_slot_iters(),
-                        self.last_state.get_difficulty(),
-                    )
+                    try:
+                        _, ip_iters = iters_from_sub_block(
+                            self.constants,
+                            unfinished_block.reward_chain_sub_block,
+                            self.last_state.get_sub_slot_iters(),
+                            self.last_state.get_difficulty(),
+                        )
+                    except Exception:
+                        continue
                     if ip_iters - self.last_state.get_last_ip() == iteration:
                         block = unfinished_block
                         break
