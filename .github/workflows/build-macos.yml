@@ -114,7 +114,7 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        ./venv/bin/py.test tests/test_simulation.py -s -v --durations 0
+        ./venv/bin/py.test tests -s -v --durations 0
 
     - name: Upload MacOS artifacts
       uses: actions/upload-artifact@v2.2.1
