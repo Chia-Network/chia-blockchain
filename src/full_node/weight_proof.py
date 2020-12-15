@@ -297,7 +297,7 @@ class WeightProofHandler:
         icc_proofs: List[VDFProof] = []
         sub_slots_data: List[SubSlotData] = []
         max_height = self.block_cache.max_height()
-        while curr.sub_block_height + 1 < max_height:
+        while curr.sub_block_height < max_height - 2:
             curr = self.block_cache.height_to_header_block(curr.sub_block_height + 1)
             if len(curr.finished_sub_slots) > 0:
                 # slot finished combine proofs and add slot data to list

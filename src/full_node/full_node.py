@@ -306,11 +306,13 @@ class FullNode:
             if target_peak_sb_height < self.constants.SUB_EPOCH_SUB_BLOCKS:
                 self.log.info("first sub epoch, dont use weight proofs")
                 # todo work on this flow so we dont fetch redundant blocks
-                return await self.sync_from_fork_point(-1, sync_start_time, target_peak_sb_height)
-
-            await self.sync_from_fork_point(
-                self.sync_store.get_potential_fork_point(peak_hash) - 1, sync_start_time, target_peak_sb_height
-            )
+                return await self.sync_from_fork_point(0, sync_start_time, target_peak_sb_height)
+            self.log.info(f"get peak {peak_hash}")
+            fork_point = self.sync_store.get_potential_fork_point(peak_hash)
+            if fork_point is None:
+                self.log.error("Non fork point for peak")
+                return
+            await self.sync_from_fork_point(fork_point, sync_start_time, target_peak_sb_height)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
