@@ -24,6 +24,8 @@ class SyncStore:
     potential_future_blocks: List[FullBlock]
     # A map from sub height to header hash of sub-blocks added to the chain
     header_hashes_added: Dict[uint32, bytes32]
+    # map from potential peak to fork point
+    peak_fork_point: Dict[bytes32, uint32]
 
     @classmethod
     async def create(cls):
@@ -36,6 +38,7 @@ class SyncStore:
         self.potential_blocks_received = {}
         self.potential_future_blocks = []
         self.header_hashes_added = {}
+        self.peak_fork_point = {}
         return self
 
     def set_sync_mode(self, sync_mode: bool) -> None:
@@ -51,6 +54,7 @@ class SyncStore:
         self.potential_future_blocks.clear()
         self.header_hashes_added.clear()
         self.waiting_for_peaks = True
+        self.peak_fork_point = {}
 
     def get_potential_peaks_tuples(self) -> List[Tuple[bytes32, FullBlock]]:
         return list(self.potential_peaks.items())
@@ -72,3 +76,12 @@ class SyncStore:
 
     def get_header_hashes_added(self, height: uint32) -> Optional[bytes32]:
         return self.header_hashes_added.get(height, None)
+
+    def add_potential_fork_point(self, peak_hash: bytes32, fork_point: uint32):
+        self.peak_fork_point[peak_hash] = fork_point
+
+    def get_potential_fork_point(self, peak_hash) -> Optional[uint32]:
+        if peak_hash in self.peak_fork_point:
+            return self.peak_fork_point[peak_hash]
+        else:
+            return None

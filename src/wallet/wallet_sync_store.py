@@ -24,6 +24,8 @@ class WalletSyncStore:
     potential_future_blocks: List[HeaderBlock]
     # A map from height to header hash of sub-blocks added to the chain
     header_hashes_added: Dict[uint32, bytes32]
+    # map from potential peak to fork point
+    peak_fork_point: Dict[bytes32, uint32]
 
     @classmethod
     async def create(cls):
@@ -36,7 +38,7 @@ class WalletSyncStore:
         self.potential_blocks_received = {}
         self.potential_future_blocks = []
         self.header_hashes_added = {}
-        self.potential_proofs = {}
+        self.peak_fork_point = {}
         return self
 
     def set_sync_mode(self, sync_mode: bool) -> None:
@@ -52,7 +54,7 @@ class WalletSyncStore:
         self.potential_future_blocks.clear()
         self.header_hashes_added.clear()
         self.waiting_for_peaks = True
-        self.potential_proofs = {}
+        self.peak_fork_point = {}
 
     def get_potential_peaks_tuples(self) -> List[Tuple[bytes32, HeaderBlock]]:
         return list(self.potential_peaks.items())
@@ -60,12 +62,12 @@ class WalletSyncStore:
     def add_potential_peak(self, block: HeaderBlock) -> None:
         self.potential_peaks[block.header_hash] = block
 
-    def add_potential_proof(self, peak_hash: bytes32, fork_point: uint32):
-        self.potential_proofs[peak_hash] = fork_point
+    def add_potential_fork_point(self, peak_hash: bytes32, fork_point: uint32):
+        self.peak_fork_point[peak_hash] = fork_point
 
-    def get_potential_proof(self, peak_hash) -> Optional[uint32]:
-        if peak_hash in self.potential_proofs:
-            return self.potential_proofs[peak_hash]
+    def get_potential_fork_point(self, peak_hash) -> Optional[uint32]:
+        if peak_hash in self.peak_fork_point:
+            return self.peak_fork_point[peak_hash]
         else:
             return None
 
