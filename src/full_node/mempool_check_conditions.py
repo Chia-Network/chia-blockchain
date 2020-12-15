@@ -165,7 +165,6 @@ def get_puzzle_and_solution_for_coin(block_program: Program, coin_name: bytes):
         cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(
             [block_program, coin_name]
         )
-        breakpoint()
         puzzle = result.first()
         solution = result.rest().first()
         return None, puzzle, solution
