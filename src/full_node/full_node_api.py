@@ -184,9 +184,14 @@ class FullNodeAPI:
     @api_request
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
         self.log.info(f"got weight proof request {request}")
+        if request.tip not in self.full_node.blockchain.sub_blocks:
+            self.log.error(f"got weight proof request for unknown peak {request.tip}")
+            return None
         cache = await init_block_cache(self.full_node.blockchain)
         self.full_node.weight_proof_handler.set_block_cache(cache)
         wp = await self.full_node.weight_proof_handler.create_proof_of_weight(request.tip)
+        if wp is None:
+            return None
         return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp))
 
     @api_request

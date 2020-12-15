@@ -42,7 +42,7 @@ class WeightProofHandler:
     def set_block_cache(self, block_cache):
         self.block_cache = block_cache
 
-    async def create_proof_of_weight(self, tip: bytes32) -> WeightProof:
+    async def create_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
         """
         Creates a weight proof object
         """
@@ -55,9 +55,10 @@ class WeightProofHandler:
         rng: random.Random = random.Random(tip)
         # ses_hash from the latest sub epoch summary before this part of the chain
         tip_height = self.block_cache.sub_block_record(tip).sub_block_height
-
+        if tip_height is None:
+            self.log.error(f"build weight proof, for unknown peak  {tip_height}")
+            return None
         blocks_left = tip_height
-        self.log.info(f"build weight proof, peak : {tip_height} ")
 
         curr_height = uint32(0)
         total_overflow_blocks = 0
@@ -100,13 +101,13 @@ class WeightProofHandler:
         self.log.info(f"sub_spochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, proof_blocks)
 
-    def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, int]:
+    def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
         # sub epoch summaries validate hashes
         assert self.block_cache is not None
         assert len(weight_proof.sub_epochs) > 0
         summaries = self.validate_sub_epoch_summaries(weight_proof)
         if summaries is None:
-            return False, 0
+            return False, uint32(0)
 
             # self.log.info(f"validate sub epoch challenge segments")
             # if not self._validate_segments(weight_proof, summaries, curr):
@@ -114,7 +115,7 @@ class WeightProofHandler:
 
         self.log.info("validate weight proof recent blocks")
         if not self._validate_recent_blocks(weight_proof):
-            return False, 0
+            return False, uint32(0)
 
         return True, self.get_fork_point(summaries)
 
