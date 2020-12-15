@@ -125,6 +125,7 @@ class MempoolManager:
         fail_reason, npc_list, cost = calculate_cost_of_program(
             program,
             self.constants.CLVM_COST_RATIO_CONSTANT,
+            True
         )
         if fail_reason:
             return None, MempoolInclusionStatus.FAILED, fail_reason
