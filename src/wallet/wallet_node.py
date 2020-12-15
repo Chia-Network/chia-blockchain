@@ -334,22 +334,25 @@ class WalletNode:
         response: Optional[RespondSubBlockHeader] = await peer.request_sub_block_header(request)
 
         if response is not None and response.header_block is not None:
-            # TODO validate weight
             hb = response.header_block
-            weight_request = RequestProofOfWeight(hb.sub_block_height, hb.header_hash)
-            weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request)
-            if weight_proof_response is None:
-                return
-            weight_proof = weight_proof_response.wp
-            valid, fork_point = self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
-            if not valid:
-                self.log.error(
-                    f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
-                    f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
-                )
-                return None
-            self.log.info("validated")
-            self.wallet_state_manager.sync_store.add_potential_proof(hb.header_hash, uint32(fork_point))
+            if curr_peak is not None and hb.prev_header_hash != peak.header_hash:
+                weight_request = RequestProofOfWeight(hb.sub_block_height, hb.header_hash)
+                weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(weight_request)
+                if weight_proof_response is None:
+                    return
+                weight_proof = weight_proof_response.wp
+                if len(weight_proof.sub_epochs) > 0:
+                    valid, fork_point = self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
+                        weight_proof
+                    )
+                    if not valid:
+                        self.log.error(
+                            f"invalid weight proof, num of epochs {len(weight_proof.sub_epochs)}"
+                            f" recent blocks num ,{len(weight_proof.recent_chain_data)}"
+                        )
+                        return None
+                    self.log.info(f"Validated, fork point is {fork_point}")
+                    self.wallet_state_manager.sync_store.add_potential_proof(hb.header_hash, uint32(fork_point))
             self.wallet_state_manager.sync_store.add_potential_peak(hb)
             self.start_sync()
 
@@ -428,8 +431,10 @@ class WalletNode:
         fetched_blocks: Dict[int, HeaderBlockRecord] = {}
 
         fork_height = self.wallet_state_manager.sync_store.get_potential_proof(peak.header_hash)
+        if fork_height is None:
+            fork_height = 0
 
-        for i in range(fork_height - 1, peak_height + 1):
+        for i in range(max(fork_height - 1, 0), peak_height + 1):
             self.log.info(f"Requesting block {i}")
             request = RequestSubBlockHeader(uint32(i))
             response, peer = await send_to_random("request_sub_block_header", request, peers)
