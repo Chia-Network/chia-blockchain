@@ -115,12 +115,13 @@ async def setup_wallet_node(
     config["database_path"] = str(db_name)
     config["testing"] = True
 
-    config["introducer_peer"]["host"] = "localhost"
+    config["introducer_peer"]["host"] = "127.0.0.1"
     if introducer_port is not None:
         config["introducer_peer"]["port"] = introducer_port
         config["peer_connect_interval"] = 10
 
     if full_node_port is not None:
+        config["full_node_peer"] = {}
         config["full_node_peer"]["host"] = self_hostname
         config["full_node_peer"]["port"] = full_node_port
     else:
