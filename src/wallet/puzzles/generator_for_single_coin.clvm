@@ -1,0 +1,15 @@
+(mod (block_program coinname)
+
+  (defun check_for_coinname (coin_solutions coinname)
+    (if coin_solutions
+      (if (= (f (f coin_solutions)) coinname)
+        (list (f (f (r (f coin_solutions)))) (f (r (f (r (f coin_solutions))))))
+        (check_for_coinname (r coin_solutions) coinname)
+      )
+      (x)
+    )
+  )
+
+  ; main
+  (check_for_coinname ((c block_program (q ()))) coinname)
+)
