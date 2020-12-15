@@ -103,6 +103,7 @@ class WeightProofHandler:
     def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, int]:
         # sub epoch summaries validate hashes
         assert self.block_cache is not None
+        breakpoint()
         assert len(weight_proof.sub_epochs) > 0
         summaries = self.validate_sub_epoch_summaries(weight_proof)
         if summaries is None:
