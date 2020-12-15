@@ -5,7 +5,6 @@ from src.types.spend_bundle import SpendBundle
 from src.types.coin_record import CoinRecord
 from src.types.name_puzzle_condition import NPC
 from src.types.program import Program
-from src.full_node.mempool import Mempool
 from src.types.sized_bytes import bytes32
 from src.util.clvm import int_from_bytes
 from src.util.condition_tools import ConditionOpcode, conditions_by_opcode
@@ -145,8 +144,8 @@ def get_name_puzzle_conditions(block_program: Program, safe_mode: bool):
                     return "Unknown operator in safe mode.", None, None
                 if len(list(cond.as_iter())) > 1:
                     cond_var_list = []
-                    for cond in cond.rest().as_iter():
-                        cond_var_list.append(cond.as_atom())
+                    for cond_1 in cond.rest().as_iter():
+                        cond_var_list.append(cond_1.as_atom())
                     cvl = ConditionVarPair(opcode, *cond_var_list)
                 else:
                     cvl = ConditionVarPair(opcode)
