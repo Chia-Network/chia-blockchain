@@ -308,15 +308,9 @@ class FullNode:
                 # todo work on this flow so we dont fetch redundant blocks
                 return await self.sync_from_fork_point(-1, sync_start_time, target_peak_sb_height)
 
-            valid, fork_point_height = await self._fetch_and_validate_weight_proof(
-                peak_hash, self.server.get_full_node_connections(), target_peak_sb_height
+            await self.sync_from_fork_point(
+                self.sync_store.get_potential_fork_point(peak_hash) - 1, sync_start_time, target_peak_sb_height
             )
-
-            if not valid:
-                self.log.error("failed to validate weight proof")
-                return
-
-            await self.sync_from_fork_point(fork_point_height - 1, sync_start_time, target_peak_sb_height)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
@@ -402,7 +396,12 @@ class FullNode:
             f"{round((time.time() - sync_start_time) / 60, 2)} minutes."
         )
 
-    async def _fetch_and_validate_weight_proof(self, peak_hash, peers, target_peak_sb_height) -> Tuple[bool, int]:
+    async def _fetch_and_validate_weight_proof(self, peak_hash, peers, target_peak_sb_height) -> Tuple[bool, uint32]:
+
+        if target_peak_sb_height < self.constants.SUB_EPOCH_SUB_BLOCKS:
+            self.log.info(f"height of peak {target_peak_sb_height}, no ses yet, dont use weight proof")
+            return True, uint32(0)
+
         response: Optional[Tuple[Any, ws.WSChiaConnection]] = await send_all_first_reply(
             "request_proof_of_weight",
             full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash),
@@ -527,8 +526,13 @@ class FullNode:
                     if self.sync_store.get_sync_mode():
                         return
                     await self.sync_store.clear_sync_info()
-                    self.sync_store.add_potential_peak(sub_block)
-                    # TODO: only set sync mode after verifying weight proof, to prevent dos attack
+                    valid, fork_point_height = await self._fetch_and_validate_weight_proof(
+                        sub_block.header_hash, self.server.get_full_node_connections(), sub_block.sub_block_height
+                    )
+
+                    if valid:
+                        self.sync_store.add_potential_peak(sub_block)
+                        self.sync_store.add_potential_fork_point(sub_block.header_hash, fork_point_height)
                     self.sync_store.set_sync_mode(True)
                 self.log.info(
                     f"We are too far behind this block. Our height is {peak_height} and block is at "
