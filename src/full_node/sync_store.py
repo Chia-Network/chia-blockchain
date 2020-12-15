@@ -54,7 +54,7 @@ class SyncStore:
         self.potential_future_blocks.clear()
         self.header_hashes_added.clear()
         self.waiting_for_peaks = True
-        self.peak_fork_point = {}
+        self.peak_fork_point.clear()
 
     def get_potential_peaks_tuples(self) -> List[Tuple[bytes32, FullBlock]]:
         return list(self.potential_peaks.items())
