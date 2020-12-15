@@ -4,7 +4,10 @@ import pytest
 
 from src.full_node.bundle_tools import best_solution_program
 from src.full_node.cost_calculator import calculate_cost_of_program
-from src.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from src.full_node.mempool_check_conditions import (
+    get_name_puzzle_conditions,
+    get_puzzle_and_solution_for_coin,
+)
 from tests.setup_nodes import test_constants, bt
 from clvm_tools import binutils
 
