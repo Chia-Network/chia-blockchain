@@ -33,8 +33,12 @@ class TestCostCalculation:
             pool_reward_puzzle_hash=ph,
             farmer_reward_puzzle_hash=ph
         )
-        coinbase = blocks[1].get_included_reward_coins().pop()
-
+        coinbase = None
+        for coin in blocks[1].get_included_reward_coins():
+            if coin.puzzle_hash == ph:
+                coinbase = coin
+                break
+        assert coinbase is not None
         spend_bundle = wallet_tool.generate_signed_transaction(
             coinbase.amount,
             BURN_PUZZLE_HASH,
@@ -70,7 +74,12 @@ class TestCostCalculation:
             farmer_reward_puzzle_hash=ph
         )
 
-        coinbase = blocks[1].get_included_reward_coins().pop()
+        coinbase = None
+        for coin in blocks[1].get_included_reward_coins():
+            if coin.puzzle_hash == ph:
+                coinbase = coin
+                break
+        assert coinbase is not None
         spend_bundle = wallet_tool.generate_signed_transaction(
             coinbase.amount,
             BURN_PUZZLE_HASH,
@@ -88,7 +97,7 @@ class TestCostCalculation:
             " (q 0x88bc9360319e7c54ab42e19e974288a2d7a817976f7633f4b43f36ce72074e59c4ab8ddac362202f3e366f0aebbb6280)"
             ' 1))) (() (q ((65 "00000000000000000000000000000000" 0x0cbba106e000))) ())))))'
         )
-
+        breakpoint()
         error, npc_list, cost = get_name_puzzle_conditions(program, True)
         assert error is not None
         error, npc_list, cost = get_name_puzzle_conditions(program, False)
