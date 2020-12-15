@@ -192,7 +192,7 @@ def create_foliage(
         additions: List[Coin] = reward_claims_incorporated.copy()
         npc_list = []
         if solution_program is not None:
-            error, npc_list, _ = get_name_puzzle_conditions(solution_program)
+            error, npc_list, _ = get_name_puzzle_conditions(solution_program, False)
             additions += additions_for_npc(npc_list)
         for coin in additions:
             tx_additions.append(coin)
