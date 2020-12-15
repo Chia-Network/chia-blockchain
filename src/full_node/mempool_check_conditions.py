@@ -32,6 +32,16 @@ GENERATOR_MOD = Program.from_bytes(
     )
 )
 
+GENERATOR_FOR_SINGLE_COIN_MOD = Program.from_bytes(
+    bytes.fromhex(
+        "ffff05ffff01ffffff05ff02ffff05ff02ffff05ffffff05ff05ffff01ff80808080f"
+        "fff05ff0bffff01ff8080808080808080ffff05ffff01ffffff05ffff04ff05ffff01"
+        "ffffff05ffff04ffff0aff11ff0b80ffff01ffff05ff49ffff05ff8200a9ffff01ff8"
+        "080808080ffff01ffffff05ff02ffff05ff02ffff05ff0dffff05ff0bffff01ff8080"
+        "80808080808080ff01808080ffff01ffff09808080ff01808080ff01808080"
+    )
+)
+
 
 def mempool_assert_coin_consumed(condition: ConditionVarPair, spend_bundle: SpendBundle) -> Optional[Err]:
     """
@@ -116,6 +126,8 @@ def mempool_assert_relative_time_exceeds(condition: ConditionVarPair, unspent: C
 
 def get_name_puzzle_conditions(block_program: Program, safe_mode: bool):
     # TODO: allow generator mod to take something (future)
+    # TODO: check strict mode locations are set correctly
+    # TODO: write various tests
     try:
         cost, result = GENERATOR_MOD.run_with_cost(block_program)
         npc_list = []
@@ -144,6 +156,19 @@ def get_name_puzzle_conditions(block_program: Program, safe_mode: bool):
                 conditions_dict = {}
             npc_list.append(NPC(name, puzzle_hash, conditions_dict))
         return None, npc_list, uint64(cost)
+    except Exception as e:
+        return e, None, None
+
+
+def get_puzzle_and_solution_for_coin(block_program: Program, coin_name: bytes):
+    try:
+        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(
+            [block_program, coin_name]
+        )
+        breakpoint()
+        puzzle = result.first()
+        solution = result.rest().first()
+        return None, puzzle, solution
     except Exception as e:
         return e, None, None
 
