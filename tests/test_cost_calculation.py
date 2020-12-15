@@ -2,8 +2,8 @@ import asyncio
 
 import pytest
 
+from src.consensus.cost_calculator import calculate_cost_of_program
 from src.full_node.bundle_tools import best_solution_program
-from src.full_node.cost_calculator import calculate_cost_of_program
 from src.full_node.mempool_check_conditions import (
     get_name_puzzle_conditions,
     get_puzzle_and_solution_for_coin,
@@ -24,19 +24,21 @@ class TestCostCalculation:
     @pytest.mark.asyncio
     async def test_basics(self):
         wallet_tool = bt.get_pool_wallet_tool()
-
+        ph = wallet_tool.get_new_puzzlehash()
         num_blocks = 2
         blocks = bt.get_consecutive_blocks(
-            test_constants,
             num_blocks,
             [],
-            10,
+            guarantee_block=True,
+            pool_reward_puzzle_hash=ph,
+            farmer_reward_puzzle_hash=ph
         )
+        coinbase = blocks[1].get_included_reward_coins().pop()
 
         spend_bundle = wallet_tool.generate_signed_transaction(
-            blocks[1].get_coinbase().amount,
+            coinbase.amount,
             BURN_PUZZLE_HASH,
-            blocks[1].get_coinbase(),
+            coinbase,
         )
         assert spend_bundle is not None
         program = best_solution_program(spend_bundle)
@@ -57,19 +59,22 @@ class TestCostCalculation:
     @pytest.mark.asyncio
     async def test_strict_mode(self):
         wallet_tool = bt.get_pool_wallet_tool()
+        ph = wallet_tool.get_new_puzzlehash()
 
-        num_blocks = 2
+        num_blocks = 3
         blocks = bt.get_consecutive_blocks(
-            test_constants,
             num_blocks,
             [],
-            10,
+            guarantee_block=True,
+            pool_reward_puzzle_hash=ph,
+            farmer_reward_puzzle_hash=ph
         )
 
+        coinbase = blocks[1].get_included_reward_coins().pop()
         spend_bundle = wallet_tool.generate_signed_transaction(
-            blocks[1].get_coinbase().amount,
+            coinbase.amount,
             BURN_PUZZLE_HASH,
-            blocks[1].get_coinbase(),
+            coinbase,
         )
         assert spend_bundle is not None
         program = binutils.assemble(
