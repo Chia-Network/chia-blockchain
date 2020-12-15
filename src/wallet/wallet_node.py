@@ -434,7 +434,7 @@ class WalletNode:
 
         fetched_blocks: Dict[int, HeaderBlockRecord] = {}
 
-        fork_height = self.wallet_state_manager.sync_store.get_potential_proof(peak.header_hash)
+        fork_height = self.wallet_state_manager.sync_store.get_potential_fork_point(peak.header_hash)
         if fork_height is None:
             fork_height = 0
 
