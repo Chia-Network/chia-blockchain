@@ -182,18 +182,6 @@ class TestWeightProof:
         wpf.validate_sub_epoch_summaries(wp)
 
     @pytest.mark.asyncio
-    async def test_weight_proof_summaries_10000_blocks(self, default_10000_blocks):
-        blocks = default_10000_blocks
-        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(
-            test_constants, BlockCache(sub_blocks, height_to_hash, header_cache, blocks[-1].sub_block_height)
-        )
-        wpf.log.setLevel(logging.INFO)
-        initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
-        wp = await wpf.create_proof_of_weight(blocks[-1].header_hash)
-        wpf.validate_sub_epoch_summaries(wp)
-
-    @pytest.mark.asyncio
     async def test_weight_proof_bad_cache_height(self, default_1000_blocks):
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
