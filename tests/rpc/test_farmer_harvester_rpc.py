@@ -109,6 +109,7 @@ class TestRpc:
                 0,
                 2000,
                 0,
+                False,
             )
 
             res_2 = await client_2.get_plots()
