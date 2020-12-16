@@ -139,7 +139,7 @@ export const add_new_key_action = (mnemonic) => {
         // Go to wallet
         dispatch(resetMnemonic());
         dispatch(format_message('get_public_keys', {}));
-        refreshAllState(dispatch);
+        dispatch(refreshAllState());
         dispatch(push('/dashboard'));
       } else {
         if (response.data.word) {
@@ -164,7 +164,7 @@ export const add_and_skip_backup = (mnemonic) => {
           // Go to wallet
           dispatch(resetMnemonic());
           dispatch(format_message('get_public_keys', {}));
-          refreshAllState(dispatch);
+          dispatch(refreshAllState());
           dispatch(push('/dashboard'));
         } else {
           if (response.data.word) {
@@ -194,7 +194,7 @@ export const add_and_restore_from_backup = (mnemonic, file_path) => {
       if (response.data.success) {
         // Go to wallet
         dispatch(resetMnemonic());
-        refreshAllState(dispatch);
+        dispatch(refreshAllState());
       } else {
         if (response.data.word) {
           dispatch(setIncorrectWord(response.data.word));
@@ -268,7 +268,7 @@ export const log_in_and_import_backup_action = (fingerprint, file_path) => {
       dispatch(closeProgress());
       if (response.data.success) {
         // Go to wallet
-        refreshAllState(dispatch);
+        dispatch(refreshAllState());
         dispatch(push('/dashboard'));
       } else {
         const { error } = response.data;
@@ -291,7 +291,7 @@ export const login_and_skip_action = (fingerprint) => {
         dispatch(closeProgress());
         if (response.data.success) {
           // Go to wallet
-          refreshAllState(dispatch);
+          dispatch(refreshAllState());
           dispatch(push('/dashboard'));
         } else {
           const { error } = response.data;
@@ -314,7 +314,7 @@ export const login_action = (fingerprint) => {
       dispatch(closeProgress());
       if (response.data.success) {
         // Go to wallet
-        refreshAllState(dispatch);
+        dispatch(refreshAllState());
         dispatch(push('/dashboard'));
       } else {
         const { error } = response.data;

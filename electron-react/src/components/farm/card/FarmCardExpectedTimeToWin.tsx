@@ -11,7 +11,7 @@ export default function FarmCardExpectedTimeToWin() {
     (state: RootState) => state.farming_state.harvester.plots,
   );
   const totalNetworkSpace = useSelector(
-    (state: RootState) => state.full_node_state.blockchain_state.space,
+    (state: RootState) => state.full_node_state.blockchain_state?.space ?? 0,
   );
 
   const farmerSpace = useMemo(() => {
