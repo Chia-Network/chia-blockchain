@@ -278,7 +278,6 @@ class FullNode:
         # TODO: better way to tell that we have finished receiving peaks
         # TODO: fix DOS issue. Attacker can request syncing to an invalid blockchain
         await asyncio.sleep(2)
-        highest_weight: uint128 = uint128(0)
         target_peak_sb_height: uint32 = uint32(0)
         sync_start_time = time.time()
         try:

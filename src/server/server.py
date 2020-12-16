@@ -218,7 +218,9 @@ class ChiaServer:
             url = f"wss://{target_node.host}:{target_node.port}/ws"
             self.log.info(f"Connecting: {url}, Peer info: {target_node}")
             try:
-                ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context, max_msg_size=5 * 4 * 1024 * 1024)
+                ws = await session.ws_connect(
+                    url, autoclose=False, autoping=True, ssl=ssl_context, max_msg_size=5 * 4 * 1024 * 1024
+                )
             except asyncio.TimeoutError:
                 self.log.warning(f"Timeout error connecting to {url}")
                 await session.close()
