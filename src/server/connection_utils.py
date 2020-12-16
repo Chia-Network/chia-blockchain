@@ -6,7 +6,7 @@ from src.server.ws_connection import WSChiaConnection
 
 
 async def send_all_first_reply(
-    func: str, arg: Any, peers: List[WSChiaConnection]
+    func: str, arg: Any, peers: List[WSChiaConnection], timeout=15
 ) -> Optional[Tuple[Any, WSChiaConnection]]:
     """performs an API request to peers and returns the result of the first response and the peer that sent it."""
 
@@ -16,7 +16,7 @@ async def send_all_first_reply(
         if result_x is not None:
             return result_x, peer_x
         else:
-            await asyncio.sleep(15)
+            await asyncio.sleep(timeout)
             return None
 
     tasks = []
