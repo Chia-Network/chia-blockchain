@@ -130,9 +130,7 @@ class FullBlock(Streamable):
 
         if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(
-                self.transactions_generator, False
-            )
+            err, npc_list, cost = get_name_puzzle_conditions(self.transactions_generator, False)
             # created coins
             if npc_list is not None:
                 additions.extend(additions_for_npc(npc_list))
@@ -152,9 +150,7 @@ class FullBlock(Streamable):
 
         if self.transactions_generator is not None:
             # This should never throw here, block must be valid if it comes to here
-            err, npc_list, cost = get_name_puzzle_conditions(
-                self.transactions_generator, False
-            )
+            err, npc_list, cost = get_name_puzzle_conditions(self.transactions_generator, False)
             # build removals list
             if npc_list is None:
                 return [], []

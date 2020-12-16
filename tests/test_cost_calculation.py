@@ -27,11 +27,7 @@ class TestCostCalculation:
         ph = wallet_tool.get_new_puzzlehash()
         num_blocks = 2
         blocks = bt.get_consecutive_blocks(
-            num_blocks,
-            [],
-            guarantee_block=True,
-            pool_reward_puzzle_hash=ph,
-            farmer_reward_puzzle_hash=ph
+            num_blocks, [], guarantee_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
         )
         coinbase = None
         for coin in blocks[1].get_included_reward_coins():
@@ -56,9 +52,7 @@ class TestCostCalculation:
         error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_name)
 
         # Create condition + agg_sig_condition + length + cpu_cost
-        assert (
-            clvm_cost == 200 * ratio + 20 * ratio + len(bytes(program)) * ratio + cost
-        )
+        assert clvm_cost == 200 * ratio + 20 * ratio + len(bytes(program)) * ratio + cost
 
     @pytest.mark.asyncio
     async def test_strict_mode(self):
@@ -67,11 +61,7 @@ class TestCostCalculation:
 
         num_blocks = 3
         blocks = bt.get_consecutive_blocks(
-            num_blocks,
-            [],
-            guarantee_block=True,
-            pool_reward_puzzle_hash=ph,
-            farmer_reward_puzzle_hash=ph
+            num_blocks, [], guarantee_block=True, pool_reward_puzzle_hash=ph, farmer_reward_puzzle_hash=ph
         )
 
         coinbase = None

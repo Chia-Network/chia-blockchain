@@ -122,11 +122,7 @@ class MempoolManager:
         # Calculate the cost and fees
         program = best_solution_program(new_spend)
         # npc contains names of the coins removed, puzzle_hashes and their spend conditions
-        fail_reason, npc_list, cost = calculate_cost_of_program(
-            program,
-            self.constants.CLVM_COST_RATIO_CONSTANT,
-            True
-        )
+        fail_reason, npc_list, cost = calculate_cost_of_program(program, self.constants.CLVM_COST_RATIO_CONSTANT, True)
         if fail_reason:
             return None, MempoolInclusionStatus.FAILED, fail_reason
 
