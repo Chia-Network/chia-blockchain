@@ -52,7 +52,7 @@ class BlockCache:
         return self._sub_height_to_hash[height]
 
 
-async def init_block_cache(blockchain: Blockchain, start: int = 0, stop: int = 0) -> BlockCache:
+async def init_block_cache(blockchain: Blockchain, start: uint32 = uint32(0), stop: uint32 = uint32(0)) -> BlockCache:
     full_blocks: List[FullBlock] = []
     batch_blocks: List[uint32] = []
 
@@ -86,7 +86,9 @@ async def init_block_cache(blockchain: Blockchain, start: int = 0, stop: int = 0
     )
 
 
-async def init_wallet_block_cache(blockchain: WalletBlockchain, start: int = 0, stop: int = 0) -> BlockCache:
+async def init_wallet_block_cache(
+    blockchain: WalletBlockchain, start: uint32 = uint32(0), stop: uint32 = uint32(0)
+) -> BlockCache:
     header_blocks: List[HeaderBlock] = []
     batch_blocks: List[uint32] = []
 
