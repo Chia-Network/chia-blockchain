@@ -59,6 +59,7 @@ class RequestProofOfWeight:
 @cbor_message
 class RespondProofOfWeight:
     wp: WeightProof
+    tip: bytes32
 
 
 @dataclass(frozen=True)

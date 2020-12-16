@@ -192,12 +192,14 @@ class FullNodeAPI:
         wp = await self.full_node.weight_proof_handler.create_proof_of_weight(request.tip)
         if wp is None:
             return None
-        return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp))
+        return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp, request.tip))
 
     @api_request
     async def respond_proof_of_weight(self, response: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
         self.log.info(f"got weight proof response")
-        self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
+        validated, fork_point = self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
+        if validated is True:
+            self.full_node.sync_store.add_potential_fork_point(response.tip, fork_point)
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
