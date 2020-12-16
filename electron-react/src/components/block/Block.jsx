@@ -19,8 +19,8 @@ import {
 } from '../../util/utils';
 import {
   clearBlock,
-  getHeader,
-  getBlock,
+  getSubBlockRecord,
+  getSubBlock,
 } from '../../modules/fullnodeMessages';
 import { chia_formatter } from '../../util/chia';
 
@@ -75,12 +75,12 @@ const Block = (props) => {
   ]);
 
   const handleGetHeader = useCallback(
-    (headerHash) => dispatch(getHeader(headerHash)),
+    (headerHash) => dispatch(getSubBlockRecord(headerHash)),
     [dispatch],
   );
 
   const handleGetBlock = useCallback(
-    (headerHash) => dispatch(getBlock(headerHash)),
+    (headerHash) => dispatch(getSubBlock(headerHash)),
     [dispatch],
   );
 

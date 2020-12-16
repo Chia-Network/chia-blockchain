@@ -17,7 +17,7 @@ const cols = [
     field(row: Row) {
       return (
         <Tooltip title={row.challenge}>
-          <span>{row.challenge}</span>
+          <span>{row.sp.challenge_hash}</span>
         </Tooltip>
       );
     },
@@ -27,22 +27,13 @@ const cols = [
   },
   {
     width: '150px',
-    field: 'height',
+    field: (row: Row) => row.sp.signage_point_index,
     title: <Trans id="FarmLatestBlockChallenges.height">Height</Trans>,
   },
   {
     width: '200px',
     field(row: Row) {
-      return row.estimates.length;
-    },
-    title: (
-      <Trans id="FarmLatestBlockChallenges.challengeHash">Challenge Hash</Trans>
-    ),
-  },
-  {
-    width: '200px',
-    field(row: Row) {
-      if (row.estimates.length > 0) {
+      if (row?.estimates?.length > 0) {
         const seconds = Math.min(...row.estimates);
         return moment.duration({ seconds }).humanize();
       }
@@ -68,8 +59,8 @@ const cols = [
 ];
 
 export default function FarmLatestBlockChallenges() {
-  const latestChallenges = useSelector(
-    (state: RootState) => state.farming_state.farmer.latest_challenges ?? [],
+  const signagePoints = useSelector(
+    (state: RootState) => state.farming_state.farmer.signage_points ?? [],
   );
 
   const plots = useSelector(
@@ -77,7 +68,7 @@ export default function FarmLatestBlockChallenges() {
   );
 
   const hasPlots = !!plots && plots.length > 0;
-  const reducedLatestChallenges = latestChallenges.slice(0, 5);
+  const reducedSignagePoints = signagePoints.slice(0, 5);
 
   return (
     <Card
@@ -103,7 +94,10 @@ export default function FarmLatestBlockChallenges() {
           </Trans>
         </Typography>
       )}
-      <Table cols={cols} rows={reducedLatestChallenges} />
+      <Table 
+        cols={cols} 
+        rows={reducedSignagePoints} 
+      />
       <Typography variant="caption">
         <Trans id="FarmLatestBlockChallenges.subDescription">
           *Want to explore Chia’s blocks further? Check out{' '}

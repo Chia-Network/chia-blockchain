@@ -16,7 +16,7 @@ export const pingFarmer = () => {
 
 export const getLatestChallenges = () => {
   const action = farmerMessage();
-  action.message.command = 'get_latest_challenges';
+  action.message.command = 'get_signage_points';
   action.message.data = {};
   return action;
 };
