@@ -282,7 +282,7 @@ class WeightProofHandler:
         # # VDFs from slot after challenge block to end of slot
         self.log.debug(f"create slot end vdf for block {block.header_hash} height {block.sub_block_height} ")
 
-        end_height_hb = self.block_cache.height_to_header_block(uint32(160))
+        end_height_hb = self.block_cache.height_to_header_block(uint32(end_height))
         challenge_slot_end_sub_slots = await self.__get_slot_end_vdf(end_height_hb)
 
         sub_slots.extend(challenge_slot_end_sub_slots)
