@@ -278,7 +278,6 @@ class FullNode:
         # TODO: better way to tell that we have finished receiving peaks
         # TODO: fix DOS issue. Attacker can request syncing to an invalid blockchain
         await asyncio.sleep(2)
-        target_peak_sb_height: uint32 = uint32(0)
         sync_start_time = time.time()
         try:
             # Based on responses from peers about the current heads, see which head is the heaviest
@@ -291,7 +290,7 @@ class FullNode:
 
             heaviest_peak: Optional[FullBlock] = None
             for header_hash, potential_peak_block in potential_peaks:
-                if potential_peak_block.weight > heaviest_peak.weight:
+                if heaviest_peak is None or potential_peak_block.weight > heaviest_peak.weight:
                     heaviest_peak = potential_peak_block
 
             if self.blockchain.get_peak() is not None and heaviest_peak.weight <= self.blockchain.get_peak().weight:
@@ -299,23 +298,24 @@ class FullNode:
                 return
 
             # chain shorter then a sub-epoch
-            self.log.info(f"Peak height {target_peak_sb_height}")
-            if target_peak_sb_height < self.constants.SUB_EPOCH_SUB_BLOCKS:
+            if heaviest_peak.sub_block_height < self.constants.SUB_EPOCH_SUB_BLOCKS:
                 self.log.info("first sub epoch, dont use weight proofs")
-                return await self.sync_from_fork_point(-1, sync_start_time, target_peak_sb_height)
+                return await self.sync_from_fork_point(-1, sync_start_time, heaviest_peak.sub_block_height)
 
             # todo move this to when peaks are received
             valid, fork_point_height = await self._fetch_and_validate_weight_proof(
-                heaviest_peak.header_hash, self.server.get_full_node_connections(), target_peak_sb_height
+                heaviest_peak.header_hash, self.server.get_full_node_connections(), heaviest_peak.sub_block_height
             )
 
             # todo should not happen
             self.log.info(f"get peak {heaviest_peak.header_hash}")
             if fork_point_height is None or not valid:
                 self.log.error("No fork point for peak")
-                return await self.sync_from_fork_point(-1, sync_start_time, target_peak_sb_height)
+                return await self.sync_from_fork_point(-1, sync_start_time, heaviest_peak.sub_block_height)
 
-            return await self.sync_from_fork_point(fork_point_height - 1, sync_start_time, target_peak_sb_height)
+            return await self.sync_from_fork_point(
+                fork_point_height - 1, sync_start_time, heaviest_peak.sub_block_height
+            )
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
