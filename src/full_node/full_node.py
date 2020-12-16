@@ -417,6 +417,7 @@ class FullNode:
             "request_proof_of_weight",
             full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash),
             peers,
+            60
         )
 
         if response is None:
