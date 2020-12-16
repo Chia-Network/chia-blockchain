@@ -134,7 +134,7 @@ class ChiaServer:
             self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
-        ws = web.WebSocketResponse(max_msg_size=5 * 4 * 1024 * 1024)
+        ws = web.WebSocketResponse(max_msg_size=100 * 1024 * 1024)
         await ws.prepare(request)
         close_event = asyncio.Event()
 
@@ -219,7 +219,7 @@ class ChiaServer:
             self.log.info(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
-                    url, autoclose=False, autoping=True, ssl=ssl_context, max_msg_size=5 * 4 * 1024 * 1024
+                    url, autoclose=False, autoping=True, ssl=ssl_context, max_msg_size=100 * 1024 * 1024
                 )
             except asyncio.TimeoutError:
                 self.log.warning(f"Timeout error connecting to {url}")
