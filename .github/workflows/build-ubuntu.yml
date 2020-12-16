@@ -53,6 +53,14 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
+    - name: Cache Chia Test Plots
+      uses: actions/cache@v2
+      with:
+        path: .chia/test-plots
+        key: chia_plots-${{ hashFiles('tests/full_node/fixtures.py', 'src/utils/block_tools.py') }}
+        restore-keys: |
+          chia_plots-
+
     - name: Install ubuntu dependencies
       run: |
         sudo apt-get update

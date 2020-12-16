@@ -27,6 +27,14 @@ jobs:
         fetch-depth: 0
         # we need fetch-depth 0 so setuptools_scm can resolve tags
 
+    - name: Cache Chia Test Plots
+      uses: actions/cache@v2
+      with:
+        path: .chia/test-plots
+        key: chia_plots-${{ hashFiles('tests/full_node/fixtures.py', 'src/utils/block_tools.py') }}
+        restore-keys: |
+          chia_plots-
+
     - name: Setup Python environment
       uses: actions/setup-python@v2
       with:
