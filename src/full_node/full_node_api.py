@@ -191,6 +191,7 @@ class FullNodeAPI:
         self.full_node.weight_proof_handler.set_block_cache(cache)
         wp = await self.full_node.weight_proof_handler.create_proof_of_weight(request.tip)
         if wp is None:
+            self.log.error(f"failed creating weight proof for peak {request.tip}")
             return None
         return Message("respond_proof_of_weight", full_node_protocol.RespondProofOfWeight(wp, request.tip))
 
