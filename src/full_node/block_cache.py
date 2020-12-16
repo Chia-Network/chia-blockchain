@@ -18,12 +18,14 @@ class BlockCache:
         sub_blocks: Dict[bytes32, SubBlockRecord],
         sub_height_to_hash: Dict[uint32, bytes32],
         header_blocks: Dict[uint32, HeaderBlock],
+        maxheight: uint32,
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {},
     ):
         self._sub_blocks = sub_blocks
         self._header_cache = header_blocks
         self._sub_height_to_hash = sub_height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
+        self._maxheight = maxheight
 
     def header_block(self, header_hash: bytes32) -> HeaderBlock:
         return self._header_cache[header_hash]
@@ -38,7 +40,7 @@ class BlockCache:
         return self._sub_blocks[self._height_to_hash(height)]
 
     def max_height(self) -> uint32:
-        return uint32(len(self._sub_blocks) - 1)
+        return self._maxheight
 
     def get_ses_heights(self) -> List[bytes32]:
         return sorted(self._sub_epoch_summaries.keys())
@@ -57,13 +59,18 @@ async def init_block_cache(blockchain: Blockchain, start: int = 0, stop: int = 0
     if stop == 0 and blockchain.peak_height is not None:
         stop = blockchain.peak_height
 
-    for x in range(start, stop):
+    for x in range(start, stop + 1):
         batch_blocks.append(uint32(x))
 
         if len(batch_blocks) == BlockCache.BATCH_SIZE:
             blocks = await blockchain.block_store.get_full_blocks_at(batch_blocks)
             full_blocks.extend(blocks)
             batch_blocks = []
+
+    if len(batch_blocks) != 0:
+        blocks = await blockchain.block_store.get_full_blocks_at(batch_blocks)
+        full_blocks.extend(blocks)
+        batch_blocks = []
 
     # fetch remaining blocks
     blocks = await blockchain.block_store.get_full_blocks_at(batch_blocks)
@@ -75,7 +82,7 @@ async def init_block_cache(blockchain: Blockchain, start: int = 0, stop: int = 0
         header_blocks[block.header_hash] = await block.get_block_header()
 
     return BlockCache(
-        blockchain.sub_blocks, blockchain.sub_height_to_hash, header_blocks, blockchain.sub_epoch_summaries
+        blockchain.sub_blocks, blockchain.sub_height_to_hash, header_blocks, stop, blockchain.sub_epoch_summaries
     )
 
 
@@ -104,5 +111,5 @@ async def init_wallet_block_cache(blockchain: WalletBlockchain, start: int = 0, 
         header_block_map[block.header_hash] = block
 
     return BlockCache(
-        blockchain.sub_blocks, blockchain.sub_height_to_hash, header_block_map, blockchain.sub_epoch_summaries
+        blockchain.sub_blocks, blockchain.sub_height_to_hash, header_block_map, stop, blockchain.sub_epoch_summaries
     )
