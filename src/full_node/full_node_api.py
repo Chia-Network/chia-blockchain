@@ -197,7 +197,7 @@ class FullNodeAPI:
     @api_request
     async def respond_proof_of_weight(self, response: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
         self.log.info(f"got weight proof response")
-        await self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
+        self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
