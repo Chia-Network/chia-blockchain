@@ -261,8 +261,9 @@ class WeightProofHandler:
         """
 
         segments: List[SubEpochChallengeSegment] = []
-        curr = block
+        curr: Optional[SubBlockRecord] = block
         assert self.block_cache is not None
+        assert curr is not None
         last_slot_hb = self.block_cache.header_block(block.header_hash)
         if last_slot_hb is None:
             self.log.error("could not find block in cache")
@@ -272,6 +273,7 @@ class WeightProofHandler:
         count: uint32 = sub_epoch_blocks_n
         while not count == 0:
             # not challenge block skip
+            assert curr is not None
             if curr.is_challenge_sub_block(self.constants):
                 self.log.debug(f"sub epoch {sub_epoch_n} challenge segment, starts at {curr.sub_block_height} ")
                 challenge_sub_block = self.block_cache.header_block(curr.header_hash)
@@ -285,6 +287,7 @@ class WeightProofHandler:
                     return None
                 segments.insert(0, seg)
 
+            assert curr is not None
             curr = self.block_cache.sub_block_record(curr.prev_hash)
             if curr is None:
                 self.log.error("could not find block record in cache")
@@ -303,11 +306,13 @@ class WeightProofHandler:
 
         # VDFs from sub slots before challenge block
         self.log.debug(f"create ip vdf for block {block.header_hash} height {block.sub_block_height} ")
-        first_sub_slots, end_height = await self.__first_sub_slots_data(block)
-        if first_sub_slots is None:
+        first_sub_slots_data = await self.__first_sub_slots_data(block)
+        if first_sub_slots_data is None:
             self.log.error("failed building first sub slots")
             return None
 
+        first_sub_slots = first_sub_slots_data[0]
+        end_height = first_sub_slots_data[1]
         sub_slots.extend(first_sub_slots)
 
         # # VDFs from slot after challenge block to end of slot
@@ -328,7 +333,8 @@ class WeightProofHandler:
     async def __get_slot_end_vdf(self, block: HeaderBlock) -> Optional[List[SubSlotData]]:
         # gets all vdfs first sub slot after challenge block to last sub slot
         assert self.block_cache is not None
-        curr = block
+        curr: Optional[HeaderBlock] = block
+        assert curr is not None
         cc_proofs: List[VDFProof] = []
         icc_proofs: List[VDFProof] = []
         sub_slots_data: List[SubSlotData] = []
@@ -403,7 +409,7 @@ class WeightProofHandler:
                 self.log.error("sub block rec is not in cache")
                 return None
             curr_header = self.block_cache.header_block(curr.header_hash)
-            if curr is None:
+            if curr_header is None:
                 self.log.error("header block rec is not in cache")
                 return None
             assert curr_header.finished_sub_slots is not None
@@ -584,6 +590,8 @@ def get_sub_epoch_block_num(last_block: SubBlockRecord, cache: BlockCache) -> Op
             return count
 
         curr = cache.sub_block_record(curr.prev_hash)
+        if curr is None:
+            return None
         count = count + uint32(1)  # type: ignore
     count = count + uint32(1)  # type: ignore
 
