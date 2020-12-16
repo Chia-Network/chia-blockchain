@@ -625,7 +625,7 @@ def get_last_ses_block_idx(
     constants: ConsensusConstants, recent_reward_chain: List[ProofBlockHeader]
 ) -> Optional[ProofBlockHeader]:
     for idx, block in enumerate(reversed(recent_reward_chain)):
-        if uint8(block.reward_chain_sub_block.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS) == 0:
+        if (block.reward_chain_sub_block.sub_block_height % constants.SUB_EPOCH_SUB_BLOCKS) == 0:
             idx = len(recent_reward_chain) - 1 - idx  # reverse
             # find first block after sub slot end
             while idx < len(recent_reward_chain):
