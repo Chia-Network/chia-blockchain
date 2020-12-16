@@ -40,7 +40,7 @@ class WalletNodeAPI:
         await self.wallet_node.new_peak(peak, peer)
 
     @api_request
-    async def reject_header_request(self, response: wallet_protocol.RejectHeaderRequest):
+    async def reject_sub_block_header(self, response: wallet_protocol.RejectHeaderRequest):
         """
         The full node has rejected our request for a header.
         """
