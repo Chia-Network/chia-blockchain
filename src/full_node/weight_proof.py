@@ -105,6 +105,7 @@ class WeightProofHandler:
         # sub epoch summaries validate hashes
         assert self.block_cache is not None
         assert len(weight_proof.sub_epochs) > 0
+        self.log.info(f"validate weight proof")
         summaries = self.validate_sub_epoch_summaries(weight_proof)
         if summaries is None:
             return False, uint32(0)

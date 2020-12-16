@@ -290,38 +290,33 @@ class FullNode:
             if self._shut_down:
                 return
 
+            heaviest_peak: Optional[FullBlock] = None
             for header_hash, potential_peak_block in potential_peaks:
-                if potential_peak_block.weight > highest_weight:
-                    highest_weight = potential_peak_block.weight
-                    target_peak_sb_height = potential_peak_block.sub_block_height
-                    peak_hash = potential_peak_block.header_hash
+                if potential_peak_block.weight > heaviest_peak.weight:
+                    heaviest_peak = potential_peak_block
 
-            if self.blockchain.get_peak() is not None and highest_weight <= self.blockchain.get_peak().weight:
+            if self.blockchain.get_peak() is not None and heaviest_peak.weight <= self.blockchain.get_peak().weight:
                 self.log.info("Not performing sync, already caught up.")
                 return
 
+            # chain shorter then a sub-epoch
             self.log.info(f"Peak height {target_peak_sb_height}")
-            # send weight proof message, continue on first response
-
-            # begin wjb make double sure we have fork_point
-            valid, fork_point_height = await self._fetch_and_validate_weight_proof(
-                peak_hash, self.server.get_full_node_connections(), target_peak_sb_height
-            )
-
-            if valid:
-                self.sync_store.add_potential_fork_point(peak_hash, fork_point_height)
-            # end wjb
-
             if target_peak_sb_height < self.constants.SUB_EPOCH_SUB_BLOCKS:
                 self.log.info("first sub epoch, dont use weight proofs")
-                # todo work on this flow so we dont fetch redundant blocks
                 return await self.sync_from_fork_point(-1, sync_start_time, target_peak_sb_height)
-            self.log.info(f"get peak {peak_hash}")
-            fork_point = self.sync_store.get_potential_fork_point(peak_hash)
-            if fork_point is None:
+
+            # todo move this to when peaks are received
+            valid, fork_point_height = await self._fetch_and_validate_weight_proof(
+                heaviest_peak.header_hash, self.server.get_full_node_connections(), target_peak_sb_height
+            )
+
+            # todo should not happen
+            self.log.info(f"get peak {heaviest_peak.header_hash}")
+            if fork_point_height is None or not valid:
                 self.log.error("No fork point for peak")
-                return
-            await self.sync_from_fork_point(max(0, fork_point - 1), sync_start_time, target_peak_sb_height)
+                return await self.sync_from_fork_point(-1, sync_start_time, target_peak_sb_height)
+
+            return await self.sync_from_fork_point(fork_point_height - 1, sync_start_time, target_peak_sb_height)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
@@ -417,11 +412,11 @@ class FullNode:
             "request_proof_of_weight",
             full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash),
             peers,
-            60
+            60,
         )
 
         if response is None:
-            self.log.error("response was None")
+            self.log.error(f"weight proof response for peak {peak_hash} was None")
             return False, uint32(0)
 
         cache = await init_block_cache(self.blockchain)
