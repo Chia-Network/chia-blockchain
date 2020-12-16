@@ -438,7 +438,7 @@ class WalletNode:
         if fork_height is None:
             fork_height = 0
 
-        for i in range(fork_height - 1, peak_height + 1):
+        for i in range(max(0, fork_height - 1), peak_height + 1):
             self.log.info(f"Requesting block {i}")
             request = RequestSubBlockHeader(uint32(i))
             response, peer = await send_to_random("request_sub_block_header", request, peers)
