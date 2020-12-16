@@ -27,8 +27,9 @@ import {
 import {
   pingFullNode,
   getBlockChainState,
-  getLatestBlocks,
+  getUnfinishedSubBlockHeaders,
   getFullNodeConnections,
+  getSubBlockRecords,
 } from '../modules/fullnodeMessages';
 import {
   getLatestChallenges,
@@ -96,25 +97,44 @@ async function ping_harvester(store) {
   }
 }
 
-export const refreshAllState = (dispatch) => {
-  dispatch(format_message('get_wallets', {}));
-  const start_farmer = startService(service_farmer);
-  const start_harvester = startService(service_harvester);
-  dispatch(start_farmer);
-  dispatch(start_harvester);
-  // TODO add await here
-  dispatch(get_height_info());
-  dispatch(get_sync_status());
-  dispatch(get_connection_info());
-  dispatch(getBlockChainState());
-  dispatch(getLatestBlocks());
-  dispatch(getFullNodeConnections());
-  dispatch(getLatestChallenges());
-  dispatch(getFarmerConnections());
-  dispatch(getPlots());
-  dispatch(getPlotDirectories());
-  dispatch(get_all_trades());
-};
+export function refreshAllState() {
+  return async (dispatch, getState) => {
+    dispatch(format_message('get_wallets', {}));
+    const start_farmer = startService(service_farmer);
+    const start_harvester = startService(service_harvester);
+    dispatch(start_farmer);
+    dispatch(start_harvester);
+    // TODO add await here
+    console.log('REFRESHING');
+
+    dispatch(get_height_info());
+    dispatch(get_sync_status());
+    dispatch(get_connection_info());
+    console.log('ask for block chain state');
+    await dispatch(getBlockChainState());
+    console.log('response for block chain state');
+
+    const state = getState();
+    const height = state.full_node_state.blockchain_state?.peak?.sub_block_height;
+    if (height) {
+      console.log('height is defined asking for unfinished sub blocks', height);
+      dispatch(getUnfinishedSubBlockHeaders(height));
+    }
+
+    const headerHash = state.full_node_state.blockchain_state?.peak?.header_hash;
+    if (headerHash) {
+      console.log('headerHash is defined asking for unfinished sub blocks', headerHash);
+      dispatch(getSubBlockRecords(headerHash, 10));
+    }
+    
+    dispatch(getFullNodeConnections());
+    dispatch(getLatestChallenges());
+    dispatch(getFarmerConnections());
+    dispatch(getPlots());
+    dispatch(getPlotDirectories());
+    dispatch(get_all_trades());
+  };
+}
 
 export const handle_message = async (store, payload) => {
   await store.dispatch(incomingMessage(payload));
@@ -123,8 +143,13 @@ export const handle_message = async (store, payload) => {
       store.dispatch(get_connection_info());
       store.dispatch(format_message('get_public_keys', {}));
     } else if (payload.origin === service_full_node) {
-      store.dispatch(getBlockChainState());
-      store.dispatch(getLatestBlocks());
+      await store.dispatch(getBlockChainState());
+      const state = store.getState();
+      const height = state.full_node_state.blockchain_state?.peak?.sub_block_height;
+      if (height) {
+        console.log('height is defined asking for unfinished sub blocks', height);
+        store.dispatch(getUnfinishedSubBlockHeaders(height));
+      }
       store.dispatch(getFullNodeConnections());
     } else if (payload.origin === service_farmer) {
       store.dispatch(getLatestChallenges());

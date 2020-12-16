@@ -7,7 +7,7 @@ import FarmCard from './FarmCard';
 
 export default function FarmCardTotalNetworkSpace() {
   const totalNetworkSpace = useSelector(
-    (state: RootState) => state.full_node_state.blockchain_state.space,
+    (state: RootState) => state.full_node_state.blockchain_state?.space ?? 0,
   );
 
   return (

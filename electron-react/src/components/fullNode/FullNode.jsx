@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trans } from '@lingui/macro';
-import { FormatBytes, Flex, Card } from '@chia/core';
+import { FormatBytes, Flex, Card, Loading } from '@chia/core';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
 import { useSelector, useDispatch } from 'react-redux';
@@ -16,8 +16,9 @@ import Block from '../block/Block';
 import {
   closeConnection,
   openConnection,
-  getBlock,
-  getHeader,
+  getSubBlock,
+  getSubBlockRecord,
+  getSubBlockRecords,
 } from '../../modules/fullnodeMessages';
 import LayoutMain from '../layout/LayoutMain';
 
@@ -192,87 +193,45 @@ const getStatusItems = (state, connected) => {
     status_items.push(item);
   }
 
-  if (state.lca) {
-    const lca_height = state.lca.data.height;
-    const item = {
-      label: <Trans id="StatusItem.lcaBlockHeight">LCA Block Height</Trans>,
-      value: `${lca_height}`,
-    };
-    status_items.push(item);
-  } else {
-    const item = {
-      label: <Trans id="StatusItem.lcaBlockHeight">LCA Block Height</Trans>,
-      value: '0',
-    };
-    status_items.push(item);
-  }
+  status_items.push({
+    label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
+    value: connected ? (
+      <Trans id="StatusItem.connectionStatusConnected">Connected</Trans>
+    ) : (
+      <Trans id="StatusItem.connectionStatusNotConnected">
+        Not connected
+      </Trans>
+    ),
+    colour: connected ? '#3AAC59' : 'red',
+  });
 
-  if (state.tips) {
-    let max_height = 0;
-    for (const tip of state.tips) {
-      if (Number.parseInt(tip.data.height) > max_height) {
-        max_height = Number.parseInt(tip.data.height);
-      }
-    }
-    const item = {
-      label: (
-        <Trans id="StatusItem.maxTipBlockHeight">Max Tip Block Height</Trans>
-      ),
-      value: `${max_height}`,
-    };
-    status_items.push(item);
-  } else {
-    const item = {
-      label: (
-        <Trans id="StatusItem.maxTipBlockHeight">Max Tip Block Height</Trans>
-      ),
-      value: '0',
-    };
-    status_items.push(item);
-  }
+  const peakHeight = state.peak?.height ?? 0;
+  status_items.push({
+    label: <Trans id="StatusItem.peakHeight">Peak Height</Trans>,
+    value: peakHeight,
+  });
 
-  if (state.lca) {
-    const lca_time = state.lca.data.timestamp;
-    const date_string = unix_to_short_date(Number.parseInt(lca_time));
-    const item = {
-      label: <Trans id="StatusItem.lcaTime">LCA Time</Trans>,
-      value: date_string,
-      tooltip: (
-        <Trans id="StatusItem.lcaTimeTooltip">
-          This is the time of the latest common ancestor, which is a block
-          ancestor of all tip blocks. Note that the full node keeps track of up
-          to three tips at each height.
-        </Trans>
-      ),
-    };
-    status_items.push(item);
-  } else {
-    const item = {
-      label: <Trans id="StatusItem.lcaTime">LCA Time</Trans>,
-      value: '',
-    };
-    status_items.push(item);
-  }
+  const peakSubBlockHeight = state.peak?.sub_block_height ?? 0;
+  status_items.push({
+    label: <Trans id="StatusItem.peakSubBlockHeight">Peak Sub-block Height</Trans>,
+    value: peakSubBlockHeight,
+  });
 
-  if (connected) {
-    const item = {
-      label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
-      value: <Trans id="StatusItem.connectionStatusConnected">Connected</Trans>,
-      colour: '#3AAC59',
-    };
-    status_items.push(item);
-  } else {
-    const item = {
-      label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
-      value: (
-        <Trans id="StatusItem.connectionStatusNotConnected">
-          Not connected
-        </Trans>
-      ),
-      colour: 'red',
-    };
-    status_items.push(item);
-  }
+  const peakTimestamp = state.peak?.timestamp;
+  status_items.push({
+    label: <Trans id="StatusItem.peakTime">Peak Time</Trans>,
+    value: peakTimestamp 
+      ? unix_to_short_date(Number.parseInt(peakTimestamp))
+      : '',
+    tooltip: (
+      <Trans id="StatusItem.peakTimeTooltip">
+        This is the time of the latest common ancestor, which is a block
+        ancestor of all tip blocks. Note that the full node keeps track of up
+        to three tips at each height.
+      </Trans>
+    ),
+  });
+
   const { difficulty } = state;
   const diff_item = {
     label: <Trans id="StatusItem.difficulty">Difficulty</Trans>,
@@ -280,27 +239,26 @@ const getStatusItems = (state, connected) => {
   };
   status_items.push(diff_item);
 
-  const { ips } = state;
-  const ips_item = {
+  const { sub_slot_iters } = state;
+  status_items.push({
     label: (
-      <Trans id="StatusItem.iterationsPerSecond">Iterations per Second</Trans>
+      <Trans id="StatusItem.subSlotIters">VDF Sub Slot Iterations</Trans>
     ),
-    value: ips,
+    value: sub_slot_iters,
+  });
+
+  const totalIters = state.peak?.total_iters ?? 0;
+  status_items.push({
+    label: (
+      <Trans id="StatusItem.totalIterations">Total Iterations</Trans>
+    ),
+    value: totalIters,
     tooltip: (
-      <Trans id="StatusItem.iterationsPerSecondTooltip">
-        The estimated proof of time speed of the fastest timelord in the
-        network.
+      <Trans id="StatusItem.totalIterationsTooltip">
+        Total iterations since the start of the blockchain
       </Trans>
     ),
-  };
-  status_items.push(ips_item);
-
-  const iters = state.min_iters;
-  const min_item = {
-    label: <Trans id="StatusItem.minIterations">Min Iterations</Trans>,
-    value: iters,
-  };
-  status_items.push(min_item);
+  });
 
   const space_item = {
     label: (
@@ -353,30 +311,46 @@ const FullNodeStatus = (props) => {
   const connected = useSelector(
     (state) => state.daemon_state.full_node_connected,
   );
-  const statusItems = getStatusItems(blockchain_state, connected);
+  const statusItems = blockchain_state && getStatusItems(blockchain_state, connected);
 
   return (
     <Card
       title={<Trans id="FullNodeStatus.title">Full Node Status</Trans>}
     >
-      <Grid spacing={4} container>
-        {statusItems.map((item) => (
-          <StatusCell item={item} key={item.label.props.id} />
-        ))}
-      </Grid>
+      {statusItems ? (
+        <Grid spacing={4} container>
+          {statusItems.map((item) => (
+            <StatusCell item={item} key={item.label.props.id} />
+          ))}
+        </Grid>
+      ) : (
+        <Loading />
+      )}
     </Card>
   );
 };
 
 const BlocksCard = () => {
-  const headers = useSelector((state) => state.full_node_state.headers);
+  const latestHeaderHash = useSelector((state) => state.full_node_state.blockchain_state?.peak?.header_hash);
   const dispatch = useDispatch();
+  const [latestRecords, setLatestRecords] = useState();
+
+  async function getLatestRecords() {
+    if (latestHeaderHash) {
+      const records = await dispatch(getSubBlockRecords(latestHeaderHash, 10));
+      setLatestRecords(records);
+    }
+  }
+
+  useEffect(() => {
+    getLatestRecords();
+  }, [latestHeaderHash]);
 
   function clickedBlock(height, header_hash, prev_header_hash) {
     return () => {
-      dispatch(getBlock(header_hash));
+      dispatch(getSubBlock(header_hash));
       if (height > 0) {
-        dispatch(getHeader(prev_header_hash));
+        dispatch(getSubBlockRecord(prev_header_hash));
       }
     };
   }
@@ -385,64 +359,73 @@ const BlocksCard = () => {
     <Card
       title={<Trans id="BlocksCard.title">Blocks</Trans>}
     >
-        <Box
-          className={classes.block_header}
-          display="flex"
-          key="header"
-          style={{ minWidth: '100%' }}
-        >
-          <Box className={classes.left_block_cell}>
-            <Trans id="BlocksCard.headerHash">Header Hash</Trans>
-          </Box>
-          <Box className={classes.center_block_cell_small}>
-            <Trans id="BlocksCard.height">Height</Trans>
-          </Box>
-          <Box flexGrow={1} className={classes.center_block_cell}>
-            <Trans id="BlocksCard.timeCreated">Time Created</Trans>
-          </Box>
-          <Box className={classes.right_block_cell}>
-            <Trans id="BlocksCard.expectedFinishTime">
-              Expected finish time
-            </Trans>
-          </Box>
-        </Box>
-        {headers.map((header) => (
+      {latestRecords ? (
+        <>
           <Box
-            className={
-              header.data.finished
-                ? classes.block_row
-                : classes.block_row_unfinished
-            }
-            onClick={
-              header.data.finished
-                ? clickedBlock(
-                    header.data.height,
-                    header.data.header_hash,
-                    header.data.prev_header_hash,
-                  )
-                : () => {}
-            }
+            className={classes.block_header}
             display="flex"
-            key={header.data.header_hash}
+            key="header"
             style={{ minWidth: '100%' }}
           >
             <Box className={classes.left_block_cell}>
-              {`${header.data.header_hash.slice(0, 12)}...`}
-              {header.data.finished ? '' : ' (unfinished)'}
+              <Trans id="BlocksCard.headerHash">Header Hash</Trans>
             </Box>
             <Box className={classes.center_block_cell_small}>
-              {header.data.height}
+              <Trans id="BlocksCard.height">Height</Trans>
             </Box>
             <Box flexGrow={1} className={classes.center_block_cell}>
-              {unix_to_short_date(Number.parseInt(header.data.timestamp))}
+              <Trans id="BlocksCard.timeCreated">Time Created</Trans>
             </Box>
             <Box className={classes.right_block_cell}>
-              {header.data.finished
-                ? 'finished'
-                : unix_to_short_date(Number.parseInt(header.data.finish_time))}
+              <Trans id="BlocksCard.expectedFinishTime">
+                Expected finish time
+              </Trans>
             </Box>
           </Box>
-        ))}
+          {latestRecords.map((record) => {
+            const isFinished = record.finished_reward_slot_hashes && !!record.finished_reward_slot_hashes.length;
+            
+            return (
+              <Box
+                className={
+                  isFinished
+                    ? classes.block_row
+                    : classes.block_row_unfinished
+                }
+                onClick={
+                  isFinished
+                    ? clickedBlock(
+                        record.height,
+                        record.header_hash,
+                        record.prev_header_hash,
+                      )
+                    : () => {}
+                }
+                display="flex"
+                key={record.header_hash}
+                style={{ minWidth: '100%' }}
+              >
+                <Box className={classes.left_block_cell}>
+                  {`${record.header_hash.slice(0, 12)}...`}
+                  {isFinished ? '' : ' (unfinished)'}
+                </Box>
+                <Box className={classes.center_block_cell_small}>
+                  {record.height}
+                </Box>
+                <Box flexGrow={1} className={classes.center_block_cell}>
+                  {unix_to_short_date(Number.parseInt(record.timestamp))}
+                </Box>
+                <Box className={classes.right_block_cell}>
+                  {isFinished
+                    ? 'finished'
+                    : unix_to_short_date(Number.parseInt(record.timestamp))}
+                </Box>
+              </Box>
+            );
+          })}
+        </>
+      ) : <Loading />}
+        
     </Card>
   );
 };
