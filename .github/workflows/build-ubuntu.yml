@@ -53,13 +53,13 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Cache Chia Test Plots
+    - name: Cache Chia blocks
       uses: actions/cache@v2
       with:
-        path: .chia/test-plots
-        key: chia_plots-${{ hashFiles('tests/full_node/fixtures.py', 'src/utils/block_tools.py') }}
+        path: .chia/blocks
+        key: chia_blocks-${{ hashFiles('tests/full_node/fixtures.py', 'src/utils/block_tools.py') }}
         restore-keys: |
-          chia_plots-
+          chia_blocks-
 
     - name: Install ubuntu dependencies
       run: |
