@@ -7,6 +7,7 @@ from src.full_node.block_store import BlockStore
 from src.consensus.blockchain import Blockchain
 from src.full_node.coin_store import CoinStore
 from src.types.full_block import FullBlock
+from src.util.path import mkdir
 from tests.setup_nodes import test_constants, bt
 from os import path
 
@@ -53,21 +54,28 @@ async def default_20000_blocks():
 
 def persistent_blocks(num_of_blocks, db_name):
     # try loading from disc, if not create new blocks.db file
-    if path.exists(db_name):
+    # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
+    block_path_dir = Path("~/.chia/blocks")
+    file_path = f"~/.chia/blocks/{db_name}"
+    if not path.exists(block_path_dir):
+        mkdir(block_path_dir.parent)
+        mkdir(block_path_dir)
+
+    if path.exists(file_path):
         try:
-            file = open(db_name, "rb")
+            file = open(file_path, "rb")
             block_bytes_list: List[bytes] = pickle.load(file)
             blocks: List[FullBlock] = []
             for block_bytes in block_bytes_list:
                 blocks.append(FullBlock.from_bytes(block_bytes))
             file.close()
             if len(blocks) == num_of_blocks:
-                print(f"\n loaded {db_name} with {len(blocks)} blocks")
+                print(f"\n loaded {file_path} with {len(blocks)} blocks")
                 return blocks
         except EOFError:
             print("\n error reading db file")
 
-    return new_test_db(db_name, num_of_blocks)
+    return new_test_db(file_path, num_of_blocks)
 
 
 def new_test_db(db_name, num_of_blocks):
