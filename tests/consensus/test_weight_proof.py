@@ -157,19 +157,16 @@ class TestWeightProof:
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_1(self, default_400_blocks):
         header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_400_blocks)
-        sub_epochs = 1
         await _test_map_summaries(default_400_blocks, header_cache, height_to_hash, sub_blocks)
 
     @pytest.mark.asyncio
-    async def test_weight_proof_map_summaries_2(self, default_400_blocks):
-        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_400_blocks)
-        sub_epochs = 2
-        await _test_map_summaries(default_400_blocks, header_cache, height_to_hash, sub_blocks)
+    async def test_weight_proof_map_summaries_2(self, default_1000_blocks):
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_1000_blocks)
+        await _test_map_summaries(default_1000_blocks, header_cache, height_to_hash, sub_blocks)
 
     @pytest.mark.asyncio
     async def test_weight_proof_map_summaries_3(self, default_10000_blocks):
         header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(default_10000_blocks)
-        sub_epochs = 10
         await _test_map_summaries(default_10000_blocks, header_cache, height_to_hash, sub_blocks)
 
     @pytest.mark.asyncio
@@ -183,6 +180,42 @@ class TestWeightProof:
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
         wp = await wpf.create_proof_of_weight(blocks[-1].header_hash)
         wpf.validate_sub_epoch_summaries(wp)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_summaries_10000_blocks(self, default_10000_blocks):
+        blocks = default_10000_blocks
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(
+            test_constants, BlockCache(sub_blocks, height_to_hash, header_cache, blocks[-1].sub_block_height)
+        )
+        wpf.log.setLevel(logging.INFO)
+        initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
+        wp = await wpf.create_proof_of_weight(blocks[-1].header_hash)
+        wpf.validate_sub_epoch_summaries(wp)
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_bad_cache_height(self, default_1000_blocks):
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(
+            test_constants, BlockCache(sub_blocks, height_to_hash, header_cache, blocks[-1].sub_block_height + 1)
+        )
+        wpf.log.setLevel(logging.INFO)
+        initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
+        wp = await wpf.create_proof_of_weight(blocks[-1].header_hash)
+        assert wp is None
+
+    @pytest.mark.asyncio
+    async def test_weight_proof_bad_peak_hash(self, default_1000_blocks, default_400_blocks):
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(
+            test_constants, BlockCache(sub_blocks, height_to_hash, header_cache, blocks[-1].sub_block_height + 1)
+        )
+        wpf.log.setLevel(logging.INFO)
+        initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
+        wp = await wpf.create_proof_of_weight(default_400_blocks[-1].header_hash)
+        assert wp is None
 
     @pytest.mark.asyncio
     async def test_weight_proof_from_genesis(self, default_400_blocks):

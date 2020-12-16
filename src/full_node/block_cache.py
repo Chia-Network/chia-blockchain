@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from src.consensus.blockchain import Blockchain
 from src.consensus.sub_block_record import SubBlockRecord
@@ -27,17 +27,29 @@ class BlockCache:
         self._sub_epoch_summaries = sub_epoch_summaries
         self._maxheight = maxheight
 
-    def header_block(self, header_hash: bytes32) -> HeaderBlock:
+    def header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
+        if header_hash not in self._header_cache:
+            return None
+
         return self._header_cache[header_hash]
 
-    def height_to_header_block(self, height: uint32) -> HeaderBlock:
-        return self._header_cache[self._height_to_hash(height)]
+    def height_to_header_block(self, height: uint32) -> Optional[HeaderBlock]:
+        header_hash = self._height_to_hash(height)
+        if header_hash is None:
+            return None
+        return self._header_cache[header_hash]
 
-    def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
+    def sub_block_record(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
+        if header_hash not in self._sub_blocks:
+            return None
+
         return self._sub_blocks[header_hash]
 
-    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
-        return self._sub_blocks[self._height_to_hash(height)]
+    def height_to_sub_block_record(self, height: uint32) -> Optional[SubBlockRecord]:
+        header_hash = self._height_to_hash(height)
+        if header_hash is None:
+            return None
+        return self.sub_block_record(header_hash)
 
     def max_height(self) -> uint32:
         return self._maxheight
@@ -48,7 +60,9 @@ class BlockCache:
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return self._sub_epoch_summaries[height]
 
-    def _height_to_hash(self, height: uint32) -> bytes32:
+    def _height_to_hash(self, height: uint32) -> Optional[bytes32]:
+        if height not in self._sub_height_to_hash:
+            return None
         return self._sub_height_to_hash[height]
 
 
