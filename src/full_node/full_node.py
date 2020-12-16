@@ -302,16 +302,15 @@ class FullNode:
                 self.log.info("first sub epoch, dont use weight proofs")
                 return await self.sync_from_fork_point(-1, sync_start_time, heaviest_peak.sub_block_height)
 
-            # todo move this to when peaks are received
-            valid, fork_point_height = await self._fetch_and_validate_weight_proof(
-                heaviest_peak.header_hash, self.server.get_full_node_connections(), heaviest_peak.sub_block_height
-            )
-
-            # todo should not happen
-            self.log.info(f"get peak {heaviest_peak.header_hash}")
-            if fork_point_height is None or not valid:
-                self.log.error("No fork point for peak")
-                return await self.sync_from_fork_point(-1, sync_start_time, heaviest_peak.sub_block_height)
+            fork_point_height = self.sync_store.get_potential_fork_point(heaviest_peak.header_hash)
+            if fork_point_height is None:
+                self.log.info("No fork point for peak, fetch weight proof")
+                valid, fork_point_height = await self._fetch_and_validate_weight_proof(
+                    heaviest_peak.header_hash, self.server.get_full_node_connections(), heaviest_peak.sub_block_height
+                )
+                if not valid:
+                    self.log.error("invalid weight proof")
+                    return await self.sync_from_fork_point(-1, sync_start_time, heaviest_peak.sub_block_height)
 
             return await self.sync_from_fork_point(
                 fork_point_height - 1, sync_start_time, heaviest_peak.sub_block_height
@@ -485,6 +484,11 @@ class FullNode:
             if self.sync_store.waiting_for_peaks:
                 # Add the block to our potential peaks list
                 self.sync_store.add_potential_peak(sub_block)
+                valid, fork_point_height = await self._fetch_and_validate_weight_proof(
+                    sub_block.header_hash, self.server.get_full_node_connections(), sub_block.sub_block_height
+                )
+                if valid:
+                    self.sync_store.add_potential_fork_point(sub_block.header_hash, fork_point_height)
                 return
 
             # This is a block we asked for during sync
@@ -534,6 +538,11 @@ class FullNode:
                         return
                     await self.sync_store.clear_sync_info()
                     self.sync_store.add_potential_peak(sub_block)
+                    valid, fork_point_height = await self._fetch_and_validate_weight_proof(
+                        sub_block.header_hash, self.server.get_full_node_connections(), sub_block.sub_block_height
+                    )
+                    if valid:
+                        self.sync_store.add_potential_fork_point(sub_block.header_hash, fork_point_height)
                     self.sync_store.set_sync_mode(True)
                 self.log.info(
                     f"We are too far behind this block. Our height is {peak_height} and block is at "
