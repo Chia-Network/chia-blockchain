@@ -202,7 +202,7 @@ class WSChiaConnection:
                 raise AttributeError(f"bad attribute {attr_name}")
 
             msg = Message(attr_name, args[0])
-            result = await self.create_request(msg)
+            result = await self.create_request(msg, 60)
             if result is not None:
                 ret_attr = getattr(class_for_type(self.local_type), result.function, None)
 
