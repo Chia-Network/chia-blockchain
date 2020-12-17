@@ -1,18 +1,18 @@
-name: Build and test Ubuntu on Python 3.7, 3.8, 3.9
+name: Build and test Ubuntu on Python 3.7, 3.8
 
 
 on: [push, pull_request]
 
 jobs:
   build:
-    name: Ubuntu-latest on Python 3.7, 3.8, 3.9
+    name: Ubuntu-latest on Python 3.7, 3.8
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8]
         os: [ubuntu-latest]
 
     steps:
@@ -65,8 +65,8 @@ jobs:
         sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
 
     - name: Run install script
-#      env:
-#        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
         sh install.sh
 
