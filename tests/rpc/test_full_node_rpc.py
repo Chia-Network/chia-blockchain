@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from src.consensus.pot_iterations import is_overflow_sub_block
@@ -77,7 +79,7 @@ class TestRpc:
 
             assert len(await client.get_unfinished_sub_block_headers(0)) > 0
             assert len(await client.get_unfinished_sub_block_headers(1)) > 0
-
+            assert len(await client.get_all_block(0, 2)) == 2
             state = await client.get_blockchain_state()
 
             block = await client.get_sub_block(state["peak"].header_hash)
