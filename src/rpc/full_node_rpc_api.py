@@ -52,7 +52,7 @@ class FullNodeRpcApi:
         """
         Returns a summary of the node's view of the blockchain.
         """
-        full_peak: Optional[FullBlock] = await self.service.blockchain.get_full_peak()
+        full_peak: Optional[FullBlock] = await self.service.blockchain.get_block_peak()
 
         if full_peak is not None and full_peak.height > 0:
             if full_peak.header_hash in self.service.blockchain.sub_blocks:
