@@ -57,7 +57,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: $HOME/.chia/blocks
-        key: chia_blocks-${{ hashFiles('tests/full_node/fixtures.py', 'src/utils/block_tools.py') }}
+        key: chia_blocks-${{ hashFiles('tests/full_node/fixtures.py') }}
         restore-keys: |
           chia_blocks-
 
