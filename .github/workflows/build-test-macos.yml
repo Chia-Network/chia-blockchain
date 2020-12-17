@@ -1,19 +1,19 @@
-name: Build Ubuntu on Python 3.7, 3.8
+name: Build MacOS
 
 
 on: [push, pull_request]
 
 jobs:
   build:
-    name: Ubuntu-latest on Python 3.7, 3.8
+    name: Build and test MacOS-latest on Python 3.8, 3.9
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8]
-        os: [ubuntu-latest]
+        python-version: [3.8, 3.9]
+        os: [macOS-latest]
 
     steps:
     - name: Cancel previous runs on the same branch
@@ -32,14 +32,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache npm
-      uses: actions/cache@v2
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
-
     - name: Get pip cache dir
       id: pip-cache
       run: |
@@ -48,6 +40,7 @@ jobs:
     - name: Cache pip
       uses: actions/cache@v2
       with:
+        # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
         restore-keys: |
@@ -56,21 +49,19 @@ jobs:
     - name: Cache Chia blocks
       uses: actions/cache@v2
       with:
-        path: $HOME/.chia/blocks
+        path: $HOME/.chia/blocks.chia/blocks
         key: chia_blocks-${{ hashFiles('tests/full_node/fixtures.py', 'src/utils/block_tools.py') }}
         restore-keys: |
           chia_blocks-
 
-    - name: Install ubuntu dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
-
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+        BUILD_VDF_CLIENT: "N"
       run: |
+        brew install boost
         sh install.sh
+        rm -f venv/lib/python${{ matrix.python-version }}/site-packages/vdf_client
 
     - name: Install timelord
       run: |
@@ -86,5 +77,5 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         . ./activate
+        echo $HOME
         ./venv/bin/py.test tests -s -v --durations 0
-        
