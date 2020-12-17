@@ -64,7 +64,6 @@ export default function farmingReducer(
 
       // Farmer API
       if (command === 'get_signage_points') {
-        console.log('get_signage_points', data);
         if (data.success === false) {
           return state;
         }
