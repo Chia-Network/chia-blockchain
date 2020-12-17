@@ -51,10 +51,17 @@ class FullNodeRpcApi:
         """
         Returns a summary of the node's view of the blockchain.
         """
-        peak: Optional[SubBlockRecord] = self.service.blockchain.get_peak()
-        if peak is not None and peak.height > 0:
-            difficulty = uint64(peak.weight - self.service.blockchain.sub_blocks[peak.prev_hash].weight)
-            sub_slot_iters = peak.sub_slot_iters
+        full_peak: Optional[FullBlock] = await self.service.blockchain.get_full_peak()
+
+        if full_peak is not None and full_peak.height > 0:
+            if full_peak.header_hash in self.service.blockchain.sub_blocks:
+                sub_block: SubBlockRecord = self.service.blockchain.sub_blocks[full_peak.header_hash]
+                sub_slot_iters = sub_block.sub_slot_iters
+            else:
+                sub_slot_iters = self.service.constants.SUB_SLOT_ITERS_STARTING
+            difficulty = uint64(
+                full_peak.weight - self.service.blockchain.sub_blocks[full_peak.prev_header_hash].weight
+            )
         else:
             difficulty = self.service.constants.DIFFICULTY_STARTING
             sub_slot_iters = self.service.constants.SUB_SLOT_ITERS_STARTING
@@ -73,10 +80,10 @@ class FullNodeRpcApi:
             sync_tip_height = 0
             sync_progress_height = uint32(0)
 
-        if peak is not None and peak.height > 1:
-            newer_block_hex = peak.header_hash.hex()
+        if full_peak is not None and full_peak.height > 1:
+            newer_block_hex = full_peak.header_hash.hex()
             older_block_hex = self.service.blockchain.sub_height_to_hash[
-                uint32(max(1, peak.sub_block_height - 1000))
+                uint32(max(1, full_peak.sub_block_height - 1000))
             ].hex()
             space = await self.get_network_space(
                 {
@@ -89,7 +96,7 @@ class FullNodeRpcApi:
         assert space is not None
         response: Dict = {
             "blockchain_state": {
-                "peak": peak,
+                "peak": full_peak,
                 "sync": {
                     "sync_mode": sync_mode,
                     "sync_tip_height": sync_tip_height,
