@@ -103,7 +103,7 @@ class WeightProofHandler:
         self.log.info(f"sub_epochs: {len(sub_epoch_data)}")
         recent_chain = await self.get_recent_chain(tip_height)
         if recent_chain is None:
-            self.log.info(f"failed adding recent chain")
+            self.log.info("failed adding recent chain")
             return None
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
 
