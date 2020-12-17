@@ -65,8 +65,8 @@ jobs:
         sudo apt-get install python${{ matrix.python-version }}-venv python${{ matrix.python-version }}-distutils git -y
 
     - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+#      env:
+#        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
         sh install.sh
 
