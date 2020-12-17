@@ -53,13 +53,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Cache Chia blocks
-      uses: actions/cache@v2
-      with:
-        path: $HOME/.chia/blocks
-        key: chia_blocks-${{ hashFiles('tests/full_node/fixtures.py') }}
-        restore-keys: |
-          chia_blocks-
+    - name: Download Chia test blocks
+      run: |
+        cd $HOME/.chia
+        curl -L https://download.chia.net/tests/blocks-2020-12-17.tgz | tar -zx
+        ls -l $HOME/.chia/blocks
+
 
     - name: Install ubuntu dependencies
       run: |
