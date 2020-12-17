@@ -1,4 +1,4 @@
-name: Build Ubuntu on Python 3.7, 3.8
+name: Build and test Ubuntu on Python 3.7, 3.8
 
 
 on: [push, pull_request]
@@ -87,4 +87,4 @@ jobs:
       run: |
         . ./activate
         ./venv/bin/py.test tests -s -v --durations 0
-        
+        ls -l $HOME/.chia/blocks

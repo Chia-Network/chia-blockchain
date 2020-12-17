@@ -1,4 +1,4 @@
-name: Build MacOS
+name: Build MacOS installer
 
 
 on: [push, pull_request]
@@ -93,6 +93,7 @@ jobs:
         . ./activate
         clang --version
         cd ./electron-react
+        npm install -g electron-osx-sign
         npm install
         npm audit fix
         cd ../build_scripts
