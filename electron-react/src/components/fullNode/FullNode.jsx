@@ -205,19 +205,19 @@ const getStatusItems = (state, connected) => {
     colour: connected ? '#3AAC59' : 'red',
   });
 
-  const peakHeight = state.peak?.height ?? 0;
+  const peakHeight = state.peak?.foliage_block?.height ?? 0;
   status_items.push({
     label: <Trans id="StatusItem.peakHeight">Peak Height</Trans>,
     value: peakHeight,
   });
 
-  const peakSubBlockHeight = state.peak?.sub_block_height ?? 0;
+  const peakSubBlockHeight = state.peak?.foliage_sub_block?.height ?? 0;
   status_items.push({
     label: <Trans id="StatusItem.peakSubBlockHeight">Peak Sub-block Height</Trans>,
     value: peakSubBlockHeight,
   });
 
-  const peakTimestamp = state.peak?.timestamp;
+  const peakTimestamp = state.peak?.foliage_block?.timestamp;
   status_items.push({
     label: <Trans id="StatusItem.peakTime">Peak Time</Trans>,
     value: peakTimestamp 

@@ -30,6 +30,8 @@ import {
   getUnfinishedSubBlockHeaders,
   getFullNodeConnections,
   getSubBlockRecords,
+  getBlocksRecords,
+  updateLatestBlocks,
 } from '../modules/fullnodeMessages';
 import {
   getLatestChallenges,
@@ -121,10 +123,10 @@ export function refreshAllState() {
       dispatch(getUnfinishedSubBlockHeaders(height));
     }
 
-    const headerHash = state.full_node_state.blockchain_state?.peak?.header_hash;
-    if (headerHash) {
-      console.log('headerHash is defined asking for unfinished sub blocks', headerHash);
-      dispatch(getSubBlockRecords(headerHash, 10));
+    const foliageBlockHeight = state.full_node_state.blockchain_state?.peak?.foliage_block.height;
+    if (foliageBlockHeight) {
+      console.log('foliageBlockHeight is defined asking for blocks', headerHash);
+      dispatch(getBlocksRecords(foliageBlockHeight, 10));
     }
     
     dispatch(getFullNodeConnections());
@@ -137,8 +139,12 @@ export function refreshAllState() {
 }
 
 export const handle_message = async (store, payload) => {
+  const { dispatch } = store;
+  const { command } = payload;
   await store.dispatch(incomingMessage(payload));
-  if (payload.command === 'ping') {
+  if (command === 'get_blockchain_state') {
+    await dispatch(updateLatestBlocks());
+  } else if (payload.command === 'ping') {
     if (payload.origin === service_wallet) {
       store.dispatch(get_connection_info());
       store.dispatch(format_message('get_public_keys', {}));
