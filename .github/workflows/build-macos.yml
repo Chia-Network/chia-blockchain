@@ -103,6 +103,7 @@ jobs:
       run: |
         . ./activate
         venv/bin/python -m pip install -r requirements-dev.txt
+        ls -l $HOME/.chia/blocks
 
     - name: Setup Node 12.x
       uses: actions/setup-node@v2.1.3
