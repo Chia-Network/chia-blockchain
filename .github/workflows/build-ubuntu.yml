@@ -87,4 +87,4 @@ jobs:
       run: |
         . ./activate
         ./venv/bin/py.test tests -s -v --durations 0
-        ls -l .chia/blocks
+        ls -l .chia/
