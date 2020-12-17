@@ -16,6 +16,7 @@ from os import path
 async def empty_blockchain():
     """
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
+    Break cache
     """
     db_path = Path("blockchain_test.db")
     if db_path.exists():
