@@ -1,42 +1,13 @@
 import { service_full_node } from '../util/service_names';
 import type Connection from '../types/Connection';
 import type Header from '../types/Header';
+import type Block from '../types/Block';
+import type FoliageBlock from '../types/FoliageBlock';
+import type FoliageSubBlock from '../types/FoliageSubBlock';
 
 type FullNodeState = {
   blockchain_state?: {
     difficulty: number;
-    peak?: {
-      challenge_block_info_hash: string;
-      challenge_vdf_output: {
-        a: string;
-        b: string;
-      },
-      deficit: number;
-      farmer_puzzle_hash: string;
-      fees: string;
-      finished_challenge_slot_hashes: string[];
-      finished_infused_challenge_slot_hashes: string[];
-      finished_reward_slot_hashes: string[];
-      header_hash: string;
-      height: number;
-      infused_challenge_vdf_output: {
-        a: string;
-        b: string;
-      },
-      overflow: boolean;
-      pool_puzzle_hash: string;
-      prev_block_hash: string;
-      prev_hash: string;
-      required_iters: string;
-      reward_infusion_new_challenge: string;
-      signage_point_index: number;
-      sub_block_height: number;
-      sub_epoch_summary_included: null
-      sub_slot_iters: string;
-      timestamp: string;
-      total_iters: string;
-      weight: string;
-    };
     space: number;
     sub_slot_iters: number;
     sync: {
@@ -44,13 +15,18 @@ type FullNodeState = {
       sync_progress_height: number;
       sync_tip_height: number;
     };
+    peak?: {
+      foliage_block: FoliageBlock;
+      foliage_sub_block: FoliageSubBlock;
+    };
   };
   connections: Connection[];
   open_connection_error?: string;
   headers: Header[];
   block?: string | null; // If not null, page is changed to block page
   header?: string | null;
-  unfinished_sub_block_headers?: any[],
+  unfinished_sub_block_headers?: any[];
+  latest_blocks?: Block[];
 };
 
 const initialState: FullNodeState = {
@@ -66,6 +42,11 @@ export default function fullnodeReducer(
   action: any,
 ): FullNodeState {
   switch (action.type) {
+    case 'FULL_NODE_SET_LATEST_BLOCKS':
+      return {
+        ...state, 
+        latest_blocks: action.blocks,
+      };
     case 'LOG_OUT':
       return { ...initialState };
     case 'CLEAR_BLOCK':
@@ -91,14 +72,7 @@ export default function fullnodeReducer(
             unfinished_sub_block_headers: data.latest_blocks,
           };
         }
-      } /* else if (command === 'get_latest_block_headers') {
-        if (data.success) {
-          return { 
-            ...state, 
-            headers: data.latest_blocks 
-          };
-        }
-      } */ else if (command === 'get_block') {
+      } else if (command === 'get_block') {
         if (data.success) {
           return { ...state, block: data.block };
         }

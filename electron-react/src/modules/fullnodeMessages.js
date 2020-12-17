@@ -1,12 +1,49 @@
 import { service_full_node } from '../util/service_names';
 import { async_api } from './message';
 
-export const fullNodeMessage = () => ({
+export const fullNodeMessage = (message) => ({
   type: 'OUTGOING_MESSAGE',
   message: {
     destination: service_full_node,
+    ...message,
   },
 });
+
+export function updateLatestBlocks() {
+  return async (dispatch, getState) => {
+    const state = getState();
+    const height = state.full_node_state.blockchain_state?.peak?.foliage_block?.height; 
+    if (height) {
+      const blocks = await dispatch(getBlocksRecords(height));
+      console.log('blocks', blocks);
+
+      dispatch({
+        type: 'FULL_NODE_SET_LATEST_BLOCKS',
+        blocks,
+      });
+    }
+  }
+}
+
+export function getBlocksRecords(end, count = 10) {
+  return async (dispatch) => {
+    const start = end - count;
+
+    const { data: { blocks } } = await async_api(
+      dispatch,
+      fullNodeMessage({
+        command: 'get_blocks',
+        data: {
+          start,
+          end,
+        },
+      }),
+      false,
+    );
+
+    return blocks.reverse();
+  }
+}
 
 export function getSubBlockRecords(headerHash, count = 1) {
   return async (dispatch) => {
