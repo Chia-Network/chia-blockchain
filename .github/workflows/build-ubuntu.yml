@@ -1,4 +1,4 @@
-name: Build Ubuntu on Python 3.7, 3.8
+name: Build and test Ubuntu on Python 3.7, 3.8
 
 
 on: [push, pull_request]
@@ -52,6 +52,12 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
         restore-keys: |
           ${{ runner.os }}-pip-
+
+    - name: Download Chia test blocks
+      run: |
+        mkdir $HOME/.chia
+        cd $HOME/.chia
+        curl -L https://download.chia.net/tests/blocks-2020-12-17.tgz | tar -zx
 
     - name: Install ubuntu dependencies
       run: |
