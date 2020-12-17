@@ -12,7 +12,6 @@ from src.consensus.pot_iterations import (
     calculate_sp_iters,
     calculate_iterations_quality,
 )
-from src.full_node.block_cache import init_block_cache
 from src.full_node.full_node import FullNode
 from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
@@ -186,8 +185,6 @@ class FullNodeAPI:
         if request.tip not in self.full_node.blockchain.sub_blocks:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
-        cache = await init_block_cache(self.full_node.blockchain)
-        self.full_node.weight_proof_handler.set_block_cache(cache)
         wp = await self.full_node.weight_proof_handler.create_proof_of_weight(request.tip)
         if wp is None:
             self.log.error(f"failed creating weight proof for peak {request.tip}")

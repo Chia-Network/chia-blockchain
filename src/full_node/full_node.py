@@ -20,7 +20,7 @@ from src.consensus.difficulty_adjustment import (
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.pot_iterations import is_overflow_sub_block, calculate_sp_iters
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.block_cache import init_block_cache
+from src.full_node.block_cache import BlockCache
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.full_node_store import FullNodeStore
@@ -110,7 +110,20 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
-        self.weight_proof_handler = WeightProofHandler(self.constants, await init_block_cache(self.blockchain))
+        maxheight = -1
+        if self.blockchain.sub_height_to_hash is not None and len(self.blockchain.sub_height_to_hash) > 0:
+            maxheight = uint32(len(sorted(self.blockchain.sub_blocks.keys())[-1]))
+        self.weight_proof_handler = WeightProofHandler(
+            self.constants,
+            BlockCache(
+                self.blockchain.sub_blocks,
+                self.blockchain.sub_height_to_hash,
+                maxheight,
+                {},
+                self.blockchain.sub_epoch_summaries,
+                self.block_store,
+            ),
+        )
         self._sync_task = None
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
@@ -303,15 +316,6 @@ class FullNode:
                 return await self.sync_from_fork_point(-1, sync_start_time, heaviest_peak.sub_block_height)
 
             fork_point_height = self.sync_store.get_potential_fork_point(heaviest_peak.header_hash)
-            if fork_point_height is None:
-                self.log.info("No fork point for peak, fetch weight proof")
-                valid, fork_point_height = await self._fetch_and_validate_weight_proof(
-                    heaviest_peak.header_hash, heaviest_peak.sub_block_height
-                )
-                if not valid:
-                    self.log.error("invalid weight proof")
-                    return await self.sync_from_fork_point(-1, sync_start_time, heaviest_peak.sub_block_height)
-
             return await self.sync_from_fork_point(
                 fork_point_height - 1, sync_start_time, heaviest_peak.sub_block_height
             )
@@ -400,29 +404,38 @@ class FullNode:
             f"{round((time.time() - sync_start_time) / 60, 2)} minutes."
         )
 
-    async def _fetch_and_validate_weight_proof(self, peak_hash, target_peak_sb_height) -> Tuple[bool, uint32]:
+    async def _fetch_and_validate_weight_proof(
+        self,
+        peak_hash,
+        target_peak_sb_height,
+        peer: Optional[ws.WSChiaConnection] = None,
+    ) -> Tuple[bool, uint32]:
 
         if target_peak_sb_height < self.constants.SUB_EPOCH_SUB_BLOCKS:
             self.log.info(f"height of peak {target_peak_sb_height}, no ses yet, dont use weight proof")
             return True, uint32(0)
+        if peer is not None:
+            msg = Message(
+                "request_proof_of_weight", full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash)
+            )
+            response: Optional[Tuple[Any, ws.WSChiaConnection]] = await peer.send_message(msg)
+        else:
+            peers = self.server.get_full_node_connections()
+            if not len(peers) > 0:
+                self.log.error(f"request weight proof for peak {peak_hash}, no peers")
+                return False, uint32(0)
 
-        peers = self.server.get_full_node_connections()
-        if not len(peers) > 0:
-            self.log.error(f"request weight proof for peak {peak_hash}, no peers")
-            return False, uint32(0)
-        response: Optional[Tuple[Any, ws.WSChiaConnection]] = await send_all_first_reply(
-            "request_proof_of_weight",
-            full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash),
-            peers,
-            60,
-        )
+            response = await send_all_first_reply(
+                "request_proof_of_weight",
+                full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash),
+                peers,
+                60,
+            )
 
         if response is None:
             self.log.error(f"weight proof response for peak {peak_hash} was None")
             return False, uint32(0)
 
-        cache = await init_block_cache(self.blockchain)
-        self.weight_proof_handler.set_block_cache(cache)
         weight_proof: WeightProof = response[0].wp
         return self.weight_proof_handler.validate_weight_proof(weight_proof)
 
@@ -489,7 +502,7 @@ class FullNode:
                 # Add the block to our potential peaks list
                 self.sync_store.add_potential_peak(sub_block)
                 valid, fork_point_height = await self._fetch_and_validate_weight_proof(
-                    sub_block.header_hash, sub_block.sub_block_height
+                    sub_block.header_hash, sub_block.sub_block_height, peer
                 )
                 if valid:
                     self.sync_store.add_potential_fork_point(sub_block.header_hash, fork_point_height)
@@ -543,7 +556,7 @@ class FullNode:
                     await self.sync_store.clear_sync_info()
                     self.sync_store.add_potential_peak(sub_block)
                     valid, fork_point_height = await self._fetch_and_validate_weight_proof(
-                        sub_block.header_hash, sub_block.sub_block_height
+                        sub_block.header_hash, sub_block.sub_block_height, peer
                     )
                     if valid:
                         self.sync_store.add_potential_fork_point(sub_block.header_hash, fork_point_height)
