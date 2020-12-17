@@ -95,39 +95,26 @@ async def validate_block_body(
     # 7. The reward claims must be valid for the previous sub-blocks, and current block fees
     if sub_height > 0:
         # Add reward claims for all sub-blocks from the prev prev block, until the prev block (including the latter)
-        curr_sb = sub_blocks[block.prev_header_hash]
+        prev_block = sub_blocks[block.foliage_block.prev_block_hash]
 
-        while not curr_sb.is_block:
-            # Finds the prev block
-            curr_sb = sub_blocks[curr_sb.prev_hash]
-        assert curr_sb.header_hash == block.foliage_block.prev_block_hash
-
-        if curr_sb.sub_block_height == 0:
-            curr_height = uint32(0)
-        else:
-            if curr_sb.is_block:
-                curr_height = uint32(curr_sb.height + 1)
-            else:
-                curr_height = curr_sb.height
-
-        assert curr_sb.fees is not None
+        assert prev_block.fees is not None
         pool_coin = create_pool_coin(
-            curr_sb.sub_block_height,
-            curr_sb.pool_puzzle_hash,
-            calculate_pool_reward(curr_height),
+            prev_block.sub_block_height,
+            prev_block.pool_puzzle_hash,
+            calculate_pool_reward(prev_block.height),
         )
         farmer_coin = create_farmer_coin(
-            curr_sb.sub_block_height,
-            curr_sb.farmer_puzzle_hash,
-            uint64(calculate_base_farmer_reward(curr_height) + curr_sb.fees),
+            prev_block.sub_block_height,
+            prev_block.farmer_puzzle_hash,
+            uint64(calculate_base_farmer_reward(prev_block.height) + prev_block.fees),
         )
         # Adds the previous block
         expected_reward_coins.add(pool_coin)
         expected_reward_coins.add(farmer_coin)
 
         # For the second block in the chain, don't go back further
-        if curr_sb.sub_block_height > 0:
-            curr_sb = sub_blocks[curr_sb.prev_hash]
+        if prev_block.sub_block_height > 0:
+            curr_sb = sub_blocks[prev_block.prev_hash]
             curr_height = curr_sb.height
             while not curr_sb.is_block:
                 expected_reward_coins.add(
