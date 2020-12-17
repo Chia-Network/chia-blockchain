@@ -55,6 +55,7 @@ class TestGenesisBlock:
         if proof.is_valid(test_constants, ClassgroupElement.get_default_element(), vdf) is False:
             raise Exception("invalid proof")
 
+
 #
 #
 #
