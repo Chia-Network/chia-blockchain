@@ -1,18 +1,18 @@
-name: Build and test Ubuntu on Python 3.7, 3.8
+name: Build and test Ubuntu on Python 3.7, 3.8, 3.9
 
 
 on: [push, pull_request]
 
 jobs:
   build:
-    name: Ubuntu-latest on Python 3.7, 3.8
+    name: Ubuntu-latest on Python 3.7, 3.8, 3.9
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: [3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest]
 
     steps:
