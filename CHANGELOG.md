@@ -27,6 +27,7 @@ for setuptools_scm/PEP 440 reasons.
 - chiavdf now allows passing in input to a VDF for new consensus.
 - sha256tree has been removed from Chialisp.
 - aiohttp, clvm-tools, colorlog, concurrent-log-handler, keyring, cryptography, and sortedcontainers have been upgraded to their current versions.
+- Tests now place a cache of blocks in the ~/.chia/ directory to speed up total testing time.
 
 ### Fixed
 

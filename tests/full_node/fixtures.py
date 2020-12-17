@@ -55,20 +55,19 @@ async def default_20000_blocks():
 def persistent_blocks(num_of_blocks, db_name):
     # try loading from disc, if not create new blocks.db file
     # TODO hash fixtures.py and blocktool.py, add to path, delete if the files changed
-    block_path_dir = Path("~/.chia/blocks")
-    file_path = f"~/.chia/blocks/{db_name}"
+    block_path_dir = Path("~/.chia/blocks").expanduser()
+    file_path = Path(f"~/.chia/blocks/{db_name}").expanduser()
     if not path.exists(block_path_dir):
         mkdir(block_path_dir.parent)
         mkdir(block_path_dir)
 
-    if path.exists(file_path):
+    if file_path.exists():
         try:
-            file = open(file_path, "rb")
-            block_bytes_list: List[bytes] = pickle.load(file)
+            bytes_list = file_path.read_bytes()
+            block_bytes_list: List[bytes] = pickle.loads(bytes_list)
             blocks: List[FullBlock] = []
             for block_bytes in block_bytes_list:
                 blocks.append(FullBlock.from_bytes(block_bytes))
-            file.close()
             if len(blocks) == num_of_blocks:
                 print(f"\n loaded {file_path} with {len(blocks)} blocks")
                 return blocks
@@ -78,13 +77,12 @@ def persistent_blocks(num_of_blocks, db_name):
     return new_test_db(file_path, num_of_blocks)
 
 
-def new_test_db(db_name, num_of_blocks):
-    print(f"create {db_name} with {num_of_blocks} blocks")
-    file = open(db_name, "wb+")
+def new_test_db(path: Path, num_of_blocks):
+    print(f"create {path} with {num_of_blocks} blocks")
     blocks: List[FullBlock] = bt.get_consecutive_blocks(num_of_blocks)
     block_bytes_list: List[bytes] = []
     for block in blocks:
         block_bytes_list.append(bytes(block))
-    pickle.dump(block_bytes_list, file)
-    file.close()
+    bytes_fn = pickle.dumps(block_bytes_list)
+    path.write_bytes(bytes_fn)
     return blocks
