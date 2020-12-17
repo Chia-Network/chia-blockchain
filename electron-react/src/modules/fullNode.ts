@@ -60,12 +60,10 @@ export default function fullnodeReducer(
       const { command } = message;
 
       if (command === 'get_blockchain_state') {
-        console.log('get_blockchain_state', data);
         if (data.success) {
           return { ...state, blockchain_state: data.blockchain_state };
         }
       } else if (command === 'get_unfinished_sub_block_headers') {
-        console.log('get_unfinished_sub_block_headers', data);
         if (data.success) {
           return { 
             ...state, 

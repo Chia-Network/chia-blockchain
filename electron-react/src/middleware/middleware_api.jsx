@@ -29,7 +29,6 @@ import {
   getBlockChainState,
   getUnfinishedSubBlockHeaders,
   getFullNodeConnections,
-  getSubBlockRecords,
   getBlocksRecords,
   updateLatestBlocks,
 } from '../modules/fullnodeMessages';
@@ -106,27 +105,22 @@ export function refreshAllState() {
     const start_harvester = startService(service_harvester);
     dispatch(start_farmer);
     dispatch(start_harvester);
-    // TODO add await here
-    console.log('REFRESHING');
 
     dispatch(get_height_info());
     dispatch(get_sync_status());
     dispatch(get_connection_info());
-    console.log('ask for block chain state');
     await dispatch(getBlockChainState());
-    console.log('response for block chain state');
 
     const state = getState();
-    const height = state.full_node_state.blockchain_state?.peak?.sub_block_height;
-    if (height) {
-      console.log('height is defined asking for unfinished sub blocks', height);
-      dispatch(getUnfinishedSubBlockHeaders(height));
-    }
 
     const foliageBlockHeight = state.full_node_state.blockchain_state?.peak?.foliage_block.height;
     if (foliageBlockHeight) {
-      console.log('foliageBlockHeight is defined asking for blocks', headerHash);
       dispatch(getBlocksRecords(foliageBlockHeight, 10));
+    }
+
+    const foliageSubBlockHeight = state.full_node_state.blockchain_state?.peak?.foliage_sub_block?.height;
+    if (foliageSubBlockHeight) {
+      dispatch(getUnfinishedSubBlockHeaders(foliageSubBlockHeight));
     }
     
     dispatch(getFullNodeConnections());
@@ -151,10 +145,9 @@ export const handle_message = async (store, payload) => {
     } else if (payload.origin === service_full_node) {
       await store.dispatch(getBlockChainState());
       const state = store.getState();
-      const height = state.full_node_state.blockchain_state?.peak?.sub_block_height;
-      if (height) {
-        console.log('height is defined asking for unfinished sub blocks', height);
-        store.dispatch(getUnfinishedSubBlockHeaders(height));
+      const foliageSubBlockHeight = state.full_node_state.blockchain_state?.peak?.foliage_sub_block?.height;
+      if (foliageSubBlockHeight) {
+        dispatch(getUnfinishedSubBlockHeaders(foliageSubBlockHeight));
       }
       store.dispatch(getFullNodeConnections());
     } else if (payload.origin === service_farmer) {

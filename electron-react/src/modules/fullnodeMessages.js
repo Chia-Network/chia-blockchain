@@ -15,7 +15,6 @@ export function updateLatestBlocks() {
     const height = state.full_node_state.blockchain_state?.peak?.foliage_block?.height; 
     if (height) {
       const blocks = await dispatch(getBlocksRecords(height));
-      console.log('blocks', blocks);
 
       dispatch({
         type: 'FULL_NODE_SET_LATEST_BLOCKS',
@@ -42,6 +41,23 @@ export function getBlocksRecords(end, count = 10) {
     );
 
     return blocks.reverse();
+  }
+}
+
+export function getUnfinishedSubBlockHeaders(subHeight) {
+  return async (dispatch) => {
+    const { data: { headers } } = await async_api(
+      dispatch,
+      fullNodeMessage({
+        command: 'get_unfinished_sub_block_headers',
+        data: {
+          sub_height: subHeight,
+        },
+      }),
+      false,
+    );
+      
+    return headers.reverse();
   }
 }
 
@@ -85,12 +101,14 @@ export const getBlockChainState = () => {
   return action;
 };
 
+/*
 export const getUnfinishedSubBlockHeaders = (subHeight) => {
   const action = fullNodeMessage();
   action.message.command = 'get_unfinished_sub_block_headers';
   action.message.data = { sub_height: subHeight};
   return action;
 };
+*/
 
 // @deprecated
 export const getLatestBlocks = () => {
