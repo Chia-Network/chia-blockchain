@@ -86,5 +86,5 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        ls -l .chia/blocks
         ./venv/bin/py.test tests -s -v --durations 0
+        ls -l .chia/blocks
