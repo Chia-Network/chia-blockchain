@@ -1,4 +1,4 @@
-name: Build MacOS and test
+name: Build MacOS and test on 3.8 and 3.9
 
 
 on: [push, pull_request]
@@ -51,7 +51,6 @@ jobs:
         mkdir $HOME/.chia
         cd $HOME/.chia
         curl -L https://download.chia.net/tests/blocks-2020-12-17.tgz | tar -zx
-        ls -l $HOME/.chia/blocks
 
     - name: Run install script
       env:
@@ -76,5 +75,4 @@ jobs:
     - name: Test blockchain code with pytest
       run: |
         . ./activate
-        echo $HOME
         ./venv/bin/py.test tests -s -v --durations 0

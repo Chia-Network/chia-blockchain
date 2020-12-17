@@ -58,8 +58,6 @@ jobs:
         mkdir $HOME/.chia
         cd $HOME/.chia
         curl -L https://download.chia.net/tests/blocks-2020-12-17.tgz | tar -zx
-        ls -l $HOME/.chia/blocks
-
 
     - name: Install ubuntu dependencies
       run: |
@@ -87,4 +85,3 @@ jobs:
       run: |
         . ./activate
         ./venv/bin/py.test tests -s -v --durations 0
-        ls -l $HOME/.chia/blocks
