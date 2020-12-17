@@ -324,16 +324,16 @@ const FullNodeStatus = (props) => {
           ))}
         </Grid>
       ) : (
-        <Loading />
+        <Flex justifyContent="center">
+          <Loading />
+        </Flex>
       )}
     </Card>
   );
 };
 
 const BlocksCard = () => {
-  const latestHeaderHash = useSelector((state) => state.full_node_state.blockchain_state?.peak?.header_hash);
-  const dispatch = useDispatch();
-  const [latestRecords, setLatestRecords] = useState();
+  const latestBlocks = useSelector((state) => state.full_node_state.latest_blocks);
 
   async function getLatestRecords() {
     if (latestHeaderHash) {
@@ -341,10 +341,6 @@ const BlocksCard = () => {
       setLatestRecords(records);
     }
   }
-
-  useEffect(() => {
-    getLatestRecords();
-  }, [latestHeaderHash]);
 
   function clickedBlock(height, header_hash, prev_header_hash) {
     return () => {
@@ -359,7 +355,7 @@ const BlocksCard = () => {
     <Card
       title={<Trans id="BlocksCard.title">Blocks</Trans>}
     >
-      {latestRecords ? (
+      {latestBlocks ? (
         <>
           <Box
             className={classes.block_header}
@@ -382,9 +378,17 @@ const BlocksCard = () => {
               </Trans>
             </Box>
           </Box>
-          {latestRecords.map((record) => {
-            const isFinished = record.finished_reward_slot_hashes && !!record.finished_reward_slot_hashes.length;
-            
+          {latestBlocks.map((record) => {
+            const isFinished = true; //record.finished_reward_slot_hashes && !!record.finished_reward_slot_hashes.length;
+            const { 
+              foliage_block: {
+                height,
+                timestamp,
+                header_hash = 'mocked-hash',
+                prev_block_hash,
+              } 
+            } = record;
+
             return (
               <Box
                 className={
@@ -395,36 +399,40 @@ const BlocksCard = () => {
                 onClick={
                   isFinished
                     ? clickedBlock(
-                        record.height,
-                        record.header_hash,
-                        record.prev_header_hash,
+                        height,
+                        header_hash,
+                        prev_block_hash,
                       )
                     : () => {}
                 }
                 display="flex"
-                key={record.header_hash}
+                key={header_hash}
                 style={{ minWidth: '100%' }}
               >
                 <Box className={classes.left_block_cell}>
-                  {`${record.header_hash.slice(0, 12)}...`}
+                  {`${header_hash.slice(0, 12)}...`}
                   {isFinished ? '' : ' (unfinished)'}
                 </Box>
                 <Box className={classes.center_block_cell_small}>
-                  {record.height}
+                  {height}
                 </Box>
                 <Box flexGrow={1} className={classes.center_block_cell}>
-                  {unix_to_short_date(Number.parseInt(record.timestamp))}
+                  {unix_to_short_date(Number.parseInt(timestamp))}
                 </Box>
                 <Box className={classes.right_block_cell}>
                   {isFinished
                     ? 'finished'
-                    : unix_to_short_date(Number.parseInt(record.timestamp))}
+                    : unix_to_short_date(Number.parseInt(timestamp))}
                 </Box>
               </Box>
             );
           })}
         </>
-      ) : <Loading />}
+      ) : (
+        <Flex justifyContent="center">
+          <Loading />
+        </Flex>
+      )}
         
     </Card>
   );
