@@ -55,6 +55,7 @@ jobs:
 
     - name: Download Chia test blocks
       run: |
+        mkdir $HOME/.chia
         cd $HOME/.chia
         curl -L https://download.chia.net/tests/blocks-2020-12-17.tgz | tar -zx
         ls -l $HOME/.chia/blocks
