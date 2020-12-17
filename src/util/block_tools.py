@@ -73,6 +73,8 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "DIFFICULTY_STARTING": 2 ** 12,
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_SUB_BLOCKS": 140,
+        "WEIGHT_PROOF_THRESHOLD": 2,
+        "WEIGHT_PROOF_RECENT_BLOCKS": 200,
         "NUM_SPS_SUB_SLOT": 16,  # Must be a power of 2
         "MAX_SUB_SLOT_SUB_BLOCKS": 50,
         "EPOCH_SUB_BLOCKS": 280,

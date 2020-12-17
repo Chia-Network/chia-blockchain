@@ -2,6 +2,7 @@ from typing import Dict, List, Optional
 
 from src.consensus.blockchain import Blockchain
 from src.consensus.sub_block_record import SubBlockRecord
+from src.full_node.block_store import BlockStore
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
@@ -17,27 +18,33 @@ class BlockCache:
         self,
         sub_blocks: Dict[bytes32, SubBlockRecord],
         sub_height_to_hash: Dict[uint32, bytes32],
-        header_blocks: Dict[uint32, HeaderBlock],
         maxheight: uint32,
+        header_blocks: Dict[uint32, HeaderBlock] = {},
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {},
+        block_store: Optional[BlockStore] = None,
     ):
         self._sub_blocks = sub_blocks
         self._header_cache = header_blocks
         self._sub_height_to_hash = sub_height_to_hash
         self._sub_epoch_summaries = sub_epoch_summaries
         self._maxheight = maxheight
+        self.block_store = block_store
 
-    def header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
+    async def header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
         if header_hash not in self._header_cache:
+            if self.block_store is not None:
+                block = await self.block_store.get_full_block(header_hash)
+                if block is not None:
+                    return await block.get_block_header()
             return None
 
         return self._header_cache[header_hash]
 
-    def height_to_header_block(self, height: uint32) -> Optional[HeaderBlock]:
+    async def height_to_header_block(self, height: uint32) -> Optional[HeaderBlock]:
         header_hash = self._height_to_hash(height)
         if header_hash is None:
             return None
-        return self._header_cache[header_hash]
+        return await self.header_block(header_hash)
 
     def sub_block_record(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         if header_hash not in self._sub_blocks:
@@ -65,39 +72,55 @@ class BlockCache:
             return None
         return self._sub_height_to_hash[height]
 
+    def clean(self):
+        self._header_cache = {}
+
+    async def init_headers(self, start: uint32, stop: uint32):
+        if self.block_store is None:
+            return
+        self._header_cache = {}
+        self._header_cache = await init_header_cache(self.block_store, start, stop)
+
 
 async def init_block_cache(blockchain: Blockchain, start: uint32 = uint32(0), stop: uint32 = uint32(0)) -> BlockCache:
-    full_blocks: List[FullBlock] = []
-    batch_blocks: List[uint32] = []
-
+    header_blocks = await init_header_cache(blockchain.block_store, start, stop)
     if stop == 0 and blockchain.peak_height is not None:
         stop = blockchain.peak_height
+    return BlockCache(
+        blockchain.sub_blocks,
+        blockchain.sub_height_to_hash,
+        stop,
+        header_blocks,
+        blockchain.sub_epoch_summaries,
+        blockchain.block_store,
+    )
 
+
+async def init_header_cache(block_store: BlockStore, start: uint32, stop: uint32) -> Dict[bytes32, HeaderBlock]:
+    full_blocks: List[FullBlock] = []
+    batch_blocks: List[uint32] = []
     for x in range(start, stop + 1):
         batch_blocks.append(uint32(x))
 
         if len(batch_blocks) == BlockCache.BATCH_SIZE:
-            blocks = await blockchain.block_store.get_full_blocks_at(batch_blocks)
+            blocks = await block_store.get_full_blocks_at(batch_blocks)
             full_blocks.extend(blocks)
             batch_blocks = []
 
     if len(batch_blocks) != 0:
-        blocks = await blockchain.block_store.get_full_blocks_at(batch_blocks)
+        blocks = await block_store.get_full_blocks_at(batch_blocks)
         full_blocks.extend(blocks)
         batch_blocks = []
 
     # fetch remaining blocks
-    blocks = await blockchain.block_store.get_full_blocks_at(batch_blocks)
+    blocks = await block_store.get_full_blocks_at(batch_blocks)
     full_blocks.extend(blocks)
 
     # convert to FullBlocks HeaderBlocks
     header_blocks: Dict[bytes32, HeaderBlock] = {}
     for block in full_blocks:
         header_blocks[block.header_hash] = await block.get_block_header()
-
-    return BlockCache(
-        blockchain.sub_blocks, blockchain.sub_height_to_hash, header_blocks, stop, blockchain.sub_epoch_summaries
-    )
+    return header_blocks
 
 
 async def init_wallet_block_cache(
@@ -127,5 +150,5 @@ async def init_wallet_block_cache(
         header_block_map[block.header_hash] = block
 
     return BlockCache(
-        blockchain.sub_blocks, blockchain.sub_height_to_hash, header_block_map, stop, blockchain.sub_epoch_summaries
+        blockchain.sub_blocks, blockchain.sub_height_to_hash, stop, header_block_map, blockchain.sub_epoch_summaries
     )

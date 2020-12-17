@@ -80,8 +80,8 @@ class SyncStore:
     def add_potential_fork_point(self, peak_hash: bytes32, fork_point: uint32):
         self.peak_fork_point[peak_hash] = fork_point
 
-    def get_potential_fork_point(self, peak_hash) -> Optional[uint32]:
+    def get_potential_fork_point(self, peak_hash) -> uint32:
         if peak_hash in self.peak_fork_point:
             return self.peak_fork_point[peak_hash]
         else:
-            return None
+            return uint32(0)
