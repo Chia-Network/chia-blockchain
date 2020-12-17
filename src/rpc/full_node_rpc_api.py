@@ -28,6 +28,7 @@ class FullNodeRpcApi:
             "/get_network_space": self.get_network_space,
             "/get_unspent_coins": self.get_unspent_coins,
             "/get_additions_and_removals": self.get_additions_and_removals,
+            "/get_blocks": self.get_blocks,
         }
 
     async def _state_changed(self, change: str) -> List[Dict]:
@@ -120,6 +121,19 @@ class FullNodeRpcApi:
             raise ValueError(f"Block {header_hash.hex()} not found")
 
         return {"sub_block": block}
+
+    async def get_blocks(self, request: Dict) -> Optional[Dict]:
+        if "start" not in request:
+            raise ValueError("No start in request")
+        if "end" not in request:
+            raise ValueError("No end in request")
+        start = int(request["start"])
+        end = int(request["end"])
+        block_range = []
+        for a in range(start, end):
+            block_range.append(uint32(a))
+        blocks: List[FullBlock] = await self.service.block_store.get_full_blocks_at_height(block_range)
+        return {"blocks": blocks}
 
     async def get_sub_block_record_by_sub_height(self, request: Dict) -> Optional[Dict]:
         if "sub_height" not in request:

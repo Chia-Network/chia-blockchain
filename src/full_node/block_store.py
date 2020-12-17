@@ -20,8 +20,8 @@ class BlockStore:
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db = connection
         await self.db.execute(
-            "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, sub_height bigint, is_block"
-            " tinyint, block blob)"
+            "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint, sub_height bigint,"
+            "  is_block tinyint, block blob)"
         )
 
         # Sub block records
@@ -33,6 +33,7 @@ class BlockStore:
 
         # Height index so we can look up in order of height for sync purposes
         await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_sub_height on full_blocks(sub_height)")
+        await self.db.execute("CREATE INDEX IF NOT EXISTS full_block_height on full_blocks(height)")
         await self.db.execute("CREATE INDEX IF NOT EXISTS is_block on full_blocks(is_block)")
 
         await self.db.execute("CREATE INDEX IF NOT EXISTS sub_block_sub_height on sub_block_records(sub_height)")
@@ -48,9 +49,10 @@ class BlockStore:
     async def add_full_block(self, block: FullBlock, sub_block: SubBlockRecord) -> None:
 
         cursor_1 = await self.db.execute(
-            "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
             (
                 block.header_hash.hex(),
+                sub_block.height,
                 block.sub_block_height,
                 int(block.is_block()),
                 bytes(block),
@@ -87,6 +89,19 @@ class BlockStore:
 
         heights_db = tuple(sub_heights)
         formatted_str = f'SELECT block from full_blocks WHERE sub_height in ({"?," * (len(heights_db) - 1)}?)'
+        cursor = await self.db.execute(formatted_str, heights_db)
+        rows = await cursor.fetchall()
+        await cursor.close()
+        return [FullBlock.from_bytes(row[0]) for row in rows]
+
+    async def get_full_blocks_at_height(self, heights: List[uint32]) -> List[FullBlock]:
+        if len(heights) == 0:
+            return []
+
+        heights_db = tuple(heights)
+        formatted_str = (
+            f'SELECT block from full_blocks WHERE height in ({"?," * (len(heights_db) - 1)}?) and is_block = 1'
+        )
         cursor = await self.db.execute(formatted_str, heights_db)
         rows = await cursor.fetchall()
         await cursor.close()
