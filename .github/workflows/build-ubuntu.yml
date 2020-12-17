@@ -56,7 +56,7 @@ jobs:
     - name: Cache Chia blocks
       uses: actions/cache@v2
       with:
-        path: ${{ HOME }}/.chia/blocks
+        path: $HOME/.chia/blocks
         key: chia_blocks-${{ hashFiles('tests/full_node/fixtures.py', 'src/utils/block_tools.py') }}
         restore-keys: |
           chia_blocks-
@@ -87,5 +87,5 @@ jobs:
       run: |
         . ./activate
         ./venv/bin/py.test tests -s -v --durations 0
-        echo ${{ HOME }}
-        ls -l ${{ HOME }}/.chia/blocks
+        echo $HOME
+        ls -l $HOME/.chia/blocks
