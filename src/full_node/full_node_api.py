@@ -90,26 +90,7 @@ class FullNodeAPI:
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
         we can ask for it.
         """
-        # Check if we have this block in the blockchain
-        if self.full_node.blockchain.contains_sub_block(request.header_hash):
-            return None
-
-        # Not interested in less heavy peaks
-        peak: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
-        if peak is not None and peak.weight > request.weight:
-            return None
-
-        if request.sub_block_height < self.full_node.constants.WEIGHT_PROOF_RECENT_BLOCKS:
-            self.log.info("not enough blocks for weight proof,request peak sub block")
-            return Message(
-                "request_sub_block",
-                full_node_protocol.RequestSubBlock(uint32(request.sub_block_height), True),
-            )
-
-        return Message(
-            "request_proof_of_weight",
-            full_node_protocol.RequestProofOfWeight(request.sub_block_height, request.header_hash),
-        )
+        return self.full_node.new_peak(request)
 
     @api_request
     async def new_transaction(self, transaction: full_node_protocol.NewTransaction) -> Optional[Message]:
