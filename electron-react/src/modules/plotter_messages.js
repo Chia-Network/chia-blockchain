@@ -29,6 +29,7 @@ export const startPlotting = (
   a,
   parallel,
   delay,
+  e,
 ) => {
   const action = daemonMessage();
   action.message.command = 'start_plotting';
@@ -46,6 +47,7 @@ export const startPlotting = (
     s,
     parallel,
     delay,
+    e,
   };
 
   if (a) {

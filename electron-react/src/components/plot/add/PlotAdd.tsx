@@ -37,6 +37,7 @@ export default function PlotAdd() {
       workspaceLocation2: '',
       delay: 0,
       parallel: false,
+      disableBitfieldPlotting: false,
     },
   });
 

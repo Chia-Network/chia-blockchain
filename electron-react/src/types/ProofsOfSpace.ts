@@ -1,5 +1,5 @@
 type ProofsOfSpace = {
-  [key:string]: [string, ProofsOfSpace][];
-}
+  [key: string]: [string, ProofsOfSpace][];
+};
 
 export default ProofsOfSpace;

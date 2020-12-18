@@ -25,6 +25,7 @@ export function plotQueueAdd(
       fingerprint,
       parallel,
       delay,
+      disableBitfieldPlotting,
     } = config;
 
     return dispatch(
@@ -41,6 +42,7 @@ export function plotQueueAdd(
         fingerprint,
         parallel,
         delay,
+        disableBitfieldPlotting,
       ),
     );
   };

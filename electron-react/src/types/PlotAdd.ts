@@ -13,6 +13,7 @@ type PlotAdd = {
   parallel: boolean;
   delay: number;
   fingerprint?: Fingerprint;
+  disableBitfieldPlotting?: boolean;
 };
 
 export default PlotAdd;

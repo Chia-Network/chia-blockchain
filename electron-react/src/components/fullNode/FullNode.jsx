@@ -211,7 +211,7 @@ const getStatusItems = (state, connected) => {
     value: peakHeight,
   });
 
-  const peakSubBlockHeight = state.peak?.foliage_sub_block?.height ?? 0;
+  const peakSubBlockHeight = state.peak?.reward_chain_sub_block?.sub_block_height ?? 0;
   status_items.push({
     label: <Trans id="StatusItem.peakSubBlockHeight">Peak Sub-block Height</Trans>,
     value: peakSubBlockHeight,
@@ -334,6 +334,7 @@ const FullNodeStatus = (props) => {
 
 const BlocksCard = () => {
   const latestBlocks = useSelector((state) => state.full_node_state.latest_blocks);
+  const unfinishedSubBlockHeaders = useSelector((state) => state.full_node_state.unfinished_sub_block_headers);
 
   async function getLatestRecords() {
     if (latestHeaderHash) {
@@ -351,6 +352,9 @@ const BlocksCard = () => {
     };
   }
   const classes = useStyles();
+
+  console.log('unfinishedSubBlockHeaders', unfinishedSubBlockHeaders);
+
   return (
     <Card
       title={<Trans id="BlocksCard.title">Blocks</Trans>}
