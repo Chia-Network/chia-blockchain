@@ -36,7 +36,7 @@ from src.protocols import (
     wallet_protocol,
     farmer_protocol,
 )
-from src.server.connection_utils import send_all_first_reply
+
 from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -45,7 +45,7 @@ from src.types.pool_target import PoolTarget
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
-from src.types.weight_proof import WeightProof
+
 from src.util.errors import ConsensusError
 from src.util.ints import uint32, uint128, uint8
 from src.util.path import mkdir, path_from_root
