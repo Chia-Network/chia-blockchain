@@ -14,15 +14,15 @@ def make_parser(parser):
         "-d",
         "--delta-block-height",
         help="Compare a block X blocks older."
-        + "Defaults to 24 blocks and LCA as the starting block."
+        + "Defaults to 192 sub-blocks (~1 hour) and Peak sub-block as the starting block."
         + "Use --start BLOCK_HEIGHT to specify starting block",
         type=str,
-        default="24",
+        default="192",
     )
     parser.add_argument(
         "-s",
         "--start",
-        help="Newest block used to calculate estimated total network space. Defaults to LCA.",
+        help="Newest block used to calculate estimated total network space. Defaults to Peak sub-block.",
         type=str,
         default="",
     )
