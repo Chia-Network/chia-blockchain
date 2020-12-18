@@ -296,29 +296,32 @@ class FullNode:
             # Based on responses from peers about the current heads, see which head is the heaviest
             # (similar to longest chain rule).
             self.sync_store.waiting_for_peaks = False
-            potential_peaks: List[Tuple[bytes32, FullBlock]] = self.sync_store.get_potential_peaks_tuples()
+            potential_peaks: List[Tuple[bytes32, Tuple[uint32, uint128]]] = self.sync_store.get_potential_peaks_tuples()
             self.log.info(f"Have collected {len(potential_peaks)} potential peaks")
             if self._shut_down:
                 return
 
-            heaviest_peak: Optional[FullBlock] = None
-            for header_hash, potential_peak_block in potential_peaks:
-                if heaviest_peak is None or potential_peak_block.weight > heaviest_peak.weight:
-                    heaviest_peak = potential_peak_block
+            heaviest_peak: Optional[bytes32] = None
+            heaviest_peak_weight: Optional[uint128] = None
+            heaviest_peak_height: Optional[uint32] = None
+            for header_hash, height_weight_tuple in potential_peaks:
+                height = height_weight_tuple[0]
+                weight = height_weight_tuple[1]
+                if heaviest_peak is None or weight > heaviest_peak_height:
+                    heaviest_peak = header_hash
+                    heaviest_peak_weight = weight
+                    heaviest_peak_height = height
 
-            if self.blockchain.get_peak() is not None and heaviest_peak.weight <= self.blockchain.get_peak().weight:
+            if heaviest_peak is None:
+                self.log.info("Not performing sync, no peaks collected")
+                return
+
+            if self.blockchain.get_peak() is not None and heaviest_peak_weight <= self.blockchain.get_peak().weight:
                 self.log.info("Not performing sync, already caught up.")
                 return
 
-            # chain shorter then a sub-epoch
-            if heaviest_peak.sub_block_height < self.constants.SUB_EPOCH_SUB_BLOCKS:
-                self.log.info("first sub epoch, dont use weight proofs")
-                return await self.sync_from_fork_point(-1, sync_start_time, heaviest_peak.sub_block_height)
-
-            fork_point_height = self.sync_store.get_potential_fork_point(heaviest_peak.header_hash)
-            return await self.sync_from_fork_point(
-                fork_point_height - 1, sync_start_time, heaviest_peak.sub_block_height
-            )
+            fork_point_height = self.sync_store.get_potential_fork_point(heaviest_peak)
+            return await self.sync_from_fork_point(fork_point_height - 1, sync_start_time, heaviest_peak_height)
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
@@ -404,41 +407,6 @@ class FullNode:
             f"{round((time.time() - sync_start_time) / 60, 2)} minutes."
         )
 
-    async def _fetch_and_validate_weight_proof(
-        self,
-        peak_hash,
-        target_peak_sb_height,
-        peer: Optional[ws.WSChiaConnection] = None,
-    ) -> Tuple[bool, uint32]:
-
-        if target_peak_sb_height < self.constants.SUB_EPOCH_SUB_BLOCKS:
-            self.log.info(f"height of peak {target_peak_sb_height}, no ses yet, dont use weight proof")
-            return True, uint32(0)
-        if peer is not None:
-            msg = Message(
-                "request_proof_of_weight", full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash)
-            )
-            response: Optional[Tuple[Any, ws.WSChiaConnection]] = await peer.send_message(msg)
-        else:
-            peers = self.server.get_full_node_connections()
-            if not len(peers) > 0:
-                self.log.error(f"request weight proof for peak {peak_hash}, no peers")
-                return False, uint32(0)
-
-            response = await send_all_first_reply(
-                "request_proof_of_weight",
-                full_node_protocol.RequestProofOfWeight(target_peak_sb_height, peak_hash),
-                peers,
-                60,
-            )
-
-        if response is None:
-            self.log.error(f"weight proof response for peak {peak_hash} was None")
-            return False, uint32(0)
-
-        weight_proof: WeightProof = response[0].wp
-        return self.weight_proof_handler.validate_weight_proof(weight_proof)
-
     async def _finish_sync(self):
         """
         Finalize sync by setting sync mode to False, clearing all sync information, and adding any final
@@ -500,14 +468,7 @@ class FullNode:
             # This is a peak sent to us by another peer
             if self.sync_store.waiting_for_peaks:
                 # Add the block to our potential peaks list
-                self.sync_store.add_potential_peak(sub_block)
-                valid, fork_point_height = await self._fetch_and_validate_weight_proof(
-                    sub_block.header_hash, sub_block.sub_block_height, peer
-                )
-                if valid:
-                    self.sync_store.add_potential_fork_point(sub_block.header_hash, fork_point_height)
-                return
-
+                self.sync_store.add_potential_peak(sub_block.header_hash, sub_block.height, sub_block.weight)
             # This is a block we asked for during sync
             if self.sync_peers_handler is not None:
                 await self.sync_peers_handler.new_block(sub_block)
@@ -553,13 +514,6 @@ class FullNode:
                 async with self.blockchain.lock:
                     if self.sync_store.get_sync_mode():
                         return
-                    await self.sync_store.clear_sync_info()
-                    self.sync_store.add_potential_peak(sub_block)
-                    valid, fork_point_height = await self._fetch_and_validate_weight_proof(
-                        sub_block.header_hash, sub_block.sub_block_height, peer
-                    )
-                    if valid:
-                        self.sync_store.add_potential_fork_point(sub_block.header_hash, fork_point_height)
                     self.sync_store.set_sync_mode(True)
                 self.log.info(
                     f"We are too far behind this block. Our height is {peak_height} and block is at "
