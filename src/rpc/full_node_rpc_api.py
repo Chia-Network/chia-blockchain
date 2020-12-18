@@ -71,12 +71,14 @@ class FullNodeRpcApi:
 
         if sync_mode and self.service.sync_peers_handler is not None:
             max_pp = 0
-
-            for _, weight_height in self.service.sync_store.get_potential_peaks_tuples():
-                if weight_height[0] > max_pp:
-                    max_pp = weight_height[0]
+            for _, potential_peak in self.service.sync_store.potential_peaks.items():
+                if potential_peak.sub_block_height > max_pp:
+                    max_pp = potential_peak.height
             sync_tip_height = max_pp
-            sync_progress_height = self.service.sync_peers_handler.fully_validated_up_to
+            sync_progress_sub_height = uint32(self.service.sync_peers_handler.fully_validated_up_to)
+            hash = self.service.blockchain.sub_height_to_hash[sync_progress_sub_height]
+            sync_block = self.service.blockchain.sub_blocks[hash]
+            sync_progress_height = sync_block.height
         else:
             sync_tip_height = 0
             sync_progress_height = uint32(0)
