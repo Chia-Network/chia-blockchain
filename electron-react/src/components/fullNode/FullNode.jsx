@@ -353,8 +353,6 @@ const BlocksCard = () => {
   }
   const classes = useStyles();
 
-  console.log('unfinishedSubBlockHeaders', unfinishedSubBlockHeaders);
-
   return (
     <Card
       title={<Trans id="BlocksCard.title">Blocks</Trans>}

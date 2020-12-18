@@ -54,7 +54,6 @@ export function updateUnfinishedSubBlockHeaders() {
       state.full_node_state.blockchain_state?.peak?.reward_chain_sub_block
         ?.sub_block_height;
     if (height) {
-      console.log('sub block height', height);
       const headers = await dispatch(getUnfinishedSubBlockHeaders(height));
 
       dispatch({
