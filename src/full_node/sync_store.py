@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Tuple
 
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
-from src.util.ints import uint32
+from src.util.ints import uint32, uint128
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class SyncStore:
     # Whether we are waiting for peaks (at the start of sync) or already syncing
     waiting_for_peaks: bool
     # Potential new peaks that we have received from others.
-    potential_peaks: Dict[bytes32, FullBlock]
+    potential_peaks: Dict[bytes32, Tuple[uint32, uint128]]
     # Blocks received from other peers during sync
     potential_blocks: Dict[uint32, FullBlock]
     # Event to signal when blocks are received at each height
@@ -56,13 +56,14 @@ class SyncStore:
         self.waiting_for_peaks = True
         self.peak_fork_point.clear()
 
-    def get_potential_peaks_tuples(self) -> List[Tuple[bytes32, FullBlock]]:
+    # todo dont use tuple
+    def get_potential_peaks_tuples(self) -> List[Tuple[bytes32, Tuple[uint32, uint128]]]:
         return list(self.potential_peaks.items())
 
-    def add_potential_peak(self, block: FullBlock) -> None:
-        self.potential_peaks[block.header_hash] = block
+    def add_potential_peak(self, header_hash: bytes32, height: uint32, weight: uint128) -> None:
+        self.potential_peaks[header_hash] = (height, weight)
 
-    def get_potential_peak(self, header_hash: bytes32) -> Optional[FullBlock]:
+    def get_potential_peak(self, header_hash: bytes32) -> Optional[Tuple[uint32, uint128]]:
         return self.potential_peaks.get(header_hash, None)
 
     def add_potential_future_block(self, block: FullBlock):

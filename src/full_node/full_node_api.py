@@ -99,15 +99,17 @@ class FullNodeAPI:
         if peak is not None and peak.weight > request.weight:
             return None
 
-        # TODO: potential optimization, don't request blocks that we have already sent out
-        request_transactions: bool = (
-            self.full_node.full_node_store.get_unfinished_block(request.unfinished_reward_block_hash) is None
+        if request.sub_block_height < self.full_node.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+            self.log.info("not enough blocks for weight proof,request peak sub block")
+            return Message(
+                "request_sub_block",
+                full_node_protocol.RequestSubBlock(uint32(request.sub_block_height), True),
+            )
+
+        return Message(
+            "request_proof_of_weight",
+            full_node_protocol.RequestProofOfWeight(request.sub_block_height, request.header_hash),
         )
-        message = Message(
-            "request_sub_block",
-            full_node_protocol.RequestSubBlock(request.sub_block_height, request_transactions),
-        )
-        return message
 
     @api_request
     async def new_transaction(self, transaction: full_node_protocol.NewTransaction) -> Optional[Message]:
@@ -182,6 +184,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
+        self.log.info(f"got weight proof request {request.total_number_of_blocks}")
         if request.tip not in self.full_node.blockchain.sub_blocks:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
@@ -196,7 +199,15 @@ class FullNodeAPI:
         self.log.info(f"got weight proof response length {len(bytes(response.wp))}")
         validated, fork_point = self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
         if validated is True:
+            # get tip params
+            tip_weight = response.wp.recent_chain_data[-1].reward_chain_sub_block.weight
+            tip_height = response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
+            self.full_node.sync_store.add_potential_peak(response.tip, tip_height, tip_weight)
             self.full_node.sync_store.add_potential_fork_point(response.tip, fork_point)
+            return Message(
+                "request_sub_block",
+                full_node_protocol.RequestSubBlock(uint32(tip_height), True),
+            )
         return None
 
     @api_request
