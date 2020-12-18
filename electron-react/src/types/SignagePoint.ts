@@ -8,4 +8,3 @@ type SignagePoint = {
 };
 
 export default SignagePoint;
- 

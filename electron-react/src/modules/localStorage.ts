@@ -65,7 +65,7 @@ export default function localStorageReducer(
           .filter((item: Challenge) => item.estimates && item.estimates.length)
           .map((challenge: Challenge) => ({
             ...challenge,
-            timestamp: new Date().getTime(),
+            timestamp: Date.now(),
           }));
 
         const newLastAttepmtedProof = state.lastAttepmtedProof

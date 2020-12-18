@@ -337,11 +337,11 @@ class WebSocketServer:
         async for hit_word, hit_sentence in self._watch_file_changes(id, loop):
             break
 
-    def _build_plotting_command_args(self, request):
+    def _build_plotting_command_args(self, request, ignoreCount):
         service_name = request["service"]
 
         k = request["k"]
-        n = request["n"]
+        n = 1 if ignoreCount else request["n"]
         t = request["t"]
         t2 = request["t2"]
         d = request["d"]
@@ -350,6 +350,7 @@ class WebSocketServer:
         r = request["r"]
         s = request["s"]
         a = request["a"]
+        e = request["e"]
 
         command_args: List[str] = []
         command_args += service_name.split(" ")
@@ -365,6 +366,9 @@ class WebSocketServer:
 
         if a is not None:
             command_args.append(f"-a={a}")
+
+        if e is True:
+            command_args.append(f"-e")
 
         return command_args
 
@@ -449,34 +453,38 @@ class WebSocketServer:
         delay = request.get("delay", 0)
         parallel = request.get("parallel", False)
         size = request.get("k")
+        count = request.get("n", 1)
 
-        id = str(uuid.uuid1())
-        config = {
-            "id": id,
-            "size": size,
-            "service_name": service_name,
-            "command_args": self._build_plotting_command_args(request),
-            "parallel": parallel,
-            "delay": delay,
-            "state": PlotState.SUBMITTED,
-            "error": None,
-            "log": None,
-            "process": None,
-        }
+        for k in range(count):
+            id = str(uuid.uuid1())
+            config = {
+                "id": id,
+                "size": size,
+                "service_name": service_name,
+                "command_args": self._build_plotting_command_args(request, True),
+                "parallel": parallel,
+                "delay": delay,
+                "state": PlotState.SUBMITTED,
+                "error": None,
+                "log": None,
+                "process": None,
+            }
 
-        self.plots_queue.append(config)
+            self.plots_queue.append(config)
 
-        if parallel is True or self._is_serial_plotting_running() is False:
-            log.info(f"Plotting will start in {delay} seconds")
-            loop = asyncio.get_event_loop()
-            loop.create_task(self._start_plotting(id, loop))
-        else:
-            log.info("Plotting will start automatically when previous plotting finish")
+            # only first item can start when user selected serial plotting
+            can_start_serial_plotting = k == 0 and self._is_serial_plotting_running() is False
+
+            if parallel is True or can_start_serial_plotting:
+                log.info(f"Plotting will start in {delay} seconds")
+                loop = asyncio.get_event_loop()
+                loop.create_task(self._start_plotting(id, loop))
+            else:
+                log.info("Plotting will start automatically when previous plotting finish")
 
         response = {
             "success": True,
             "service_name": service_name,
-            "plot_id": str(id),
         }
 
         return response
@@ -495,6 +503,10 @@ class WebSocketServer:
             if process is not None and state == PlotState.RUNNING:
                 await kill_process(process, self.root_path, service_plotter, id)
             self.plots_queue.remove(config)
+
+            loop = asyncio.get_event_loop()
+            self._run_next_serial_plotting(loop)
+
             self.state_changed(service_plotter, "removed")
             return {"success": True}
         except Exception as e:
