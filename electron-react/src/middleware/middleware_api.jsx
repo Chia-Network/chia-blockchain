@@ -27,10 +27,9 @@ import {
 import {
   pingFullNode,
   getBlockChainState,
-  getUnfinishedSubBlockHeaders,
   getFullNodeConnections,
-  getBlocksRecords,
   updateLatestBlocks,
+  updateUnfinishedSubBlockHeaders,
 } from '../modules/fullnodeMessages';
 import {
   getLatestChallenges,
@@ -109,20 +108,7 @@ export function refreshAllState() {
     dispatch(get_height_info());
     dispatch(get_sync_status());
     dispatch(get_connection_info());
-    await dispatch(getBlockChainState());
 
-    const state = getState();
-
-    const foliageBlockHeight = state.full_node_state.blockchain_state?.peak?.foliage_block.height;
-    if (foliageBlockHeight) {
-      dispatch(getBlocksRecords(foliageBlockHeight, 10));
-    }
-
-    const foliageSubBlockHeight = state.full_node_state.blockchain_state?.peak?.foliage_sub_block?.height;
-    if (foliageSubBlockHeight) {
-      dispatch(getUnfinishedSubBlockHeaders(foliageSubBlockHeight));
-    }
-    
     dispatch(getFullNodeConnections());
     dispatch(getLatestChallenges());
     dispatch(getFarmerConnections());
@@ -135,20 +121,27 @@ export function refreshAllState() {
 export const handle_message = async (store, payload) => {
   const { dispatch } = store;
   const { command } = payload;
+  const stateBefore = store.getState();
+
   await store.dispatch(incomingMessage(payload));
   if (command === 'get_blockchain_state') {
-    await dispatch(updateLatestBlocks());
+    const state = store.getState();
+
+    if (
+      stateBefore.full_node_state?.blockchain_state?.peak
+        ?.reward_chain_sub_block?.sub_block_height !==
+      state.full_node_state?.blockchain_state?.peak?.reward_chain_sub_block
+        ?.sub_block_height
+    ) {
+      dispatch(updateLatestBlocks());
+      dispatch(updateUnfinishedSubBlockHeaders());
+    }
   } else if (payload.command === 'ping') {
     if (payload.origin === service_wallet) {
       store.dispatch(get_connection_info());
       store.dispatch(format_message('get_public_keys', {}));
     } else if (payload.origin === service_full_node) {
       await store.dispatch(getBlockChainState());
-      const state = store.getState();
-      const foliageSubBlockHeight = state.full_node_state.blockchain_state?.peak?.foliage_sub_block?.height;
-      if (foliageSubBlockHeight) {
-        dispatch(getUnfinishedSubBlockHeaders(foliageSubBlockHeight));
-      }
       store.dispatch(getFullNodeConnections());
     } else if (payload.origin === service_farmer) {
       store.dispatch(getLatestChallenges());
@@ -232,6 +225,7 @@ export const handle_message = async (store, payload) => {
   } else if (payload.command === 'state_changed') {
     const { origin } = payload;
     const { state } = payload.data;
+
     if (origin === service_plotter) {
       const { queue } = payload.data;
       await store.dispatch(plotQueueUpdate(queue));

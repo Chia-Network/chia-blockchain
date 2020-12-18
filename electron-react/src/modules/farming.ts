@@ -6,7 +6,7 @@ import type ProofsOfSpace from '../types/ProofsOfSpace';
 
 type SignagePointAndProofsOfSpace = {
   sp: SignagePoint[];
-  proofs: ProofsOfSpace,
+  proofs: ProofsOfSpace;
 };
 
 type FarmingState = {

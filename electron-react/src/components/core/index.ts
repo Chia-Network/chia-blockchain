@@ -6,6 +6,7 @@ export { default as ButtonSelected } from './ButtonSelected';
 export { default as Card } from './Card';
 export { default as CardHero } from './CardHero';
 export { default as CardStep } from './CardStep';
+export { default as Checkbox } from './Checkbox';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as DarkModeToggle } from './DarkModeToggle';
 export { default as Flex } from './Flex';

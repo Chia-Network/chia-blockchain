@@ -44,8 +44,13 @@ export default function fullnodeReducer(
   switch (action.type) {
     case 'FULL_NODE_SET_LATEST_BLOCKS':
       return {
-        ...state, 
+        ...state,
         latest_blocks: action.blocks,
+      };
+    case 'FULL_NODE_SET_UNFINISHED_SUB_BLOCK_HEADERS':
+      return {
+        ...state,
+        unfinished_sub_block_headers: action.headers,
       };
     case 'LOG_OUT':
       return { ...initialState };
@@ -62,13 +67,6 @@ export default function fullnodeReducer(
       if (command === 'get_blockchain_state') {
         if (data.success) {
           return { ...state, blockchain_state: data.blockchain_state };
-        }
-      } else if (command === 'get_unfinished_sub_block_headers') {
-        if (data.success) {
-          return { 
-            ...state, 
-            unfinished_sub_block_headers: data.latest_blocks,
-          };
         }
       } else if (command === 'get_block') {
         if (data.success) {

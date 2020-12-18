@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { AdvancedOptions, CardStep, Select, TextField, RadioGroup, Flex } from '@chia/core';
+import { AdvancedOptions, CardStep, Select, TextField, RadioGroup, Flex, Checkbox } from '@chia/core';
 import { Grid, FormControl, InputLabel, MenuItem, InputAdornment, Typography, FormControlLabel, Radio } from '@material-ui/core';
 import { useFormContext } from 'react-hook-form';
 
@@ -187,6 +187,21 @@ export default function PlotAddNumberOfPlots() {
                 InputProps={{
                   inputProps: { min: 0 },
                 }}
+              />
+            </FormControl>
+          </Grid>
+          <Grid xs={12} sm={6} item>
+            <FormControl
+              variant="filled"
+              fullWidth
+            >
+              <FormControlLabel
+                control={(
+                  <Checkbox
+                    name="disableBitfieldPlotting"
+                  />
+                )}
+                label="Disable bitfield plotting"
               />
             </FormControl>
           </Grid>

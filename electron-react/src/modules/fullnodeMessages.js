@@ -12,7 +12,8 @@ export const fullNodeMessage = (message) => ({
 export function updateLatestBlocks() {
   return async (dispatch, getState) => {
     const state = getState();
-    const height = state.full_node_state.blockchain_state?.peak?.foliage_block?.height; 
+    const height =
+      state.full_node_state.blockchain_state?.peak?.foliage_block?.height;
     if (height) {
       const blocks = await dispatch(getBlocksRecords(height));
 
@@ -21,14 +22,16 @@ export function updateLatestBlocks() {
         blocks,
       });
     }
-  }
+  };
 }
 
 export function getBlocksRecords(end, count = 10) {
   return async (dispatch) => {
     const start = end - count;
 
-    const { data: { blocks } } = await async_api(
+    const {
+      data: { blocks },
+    } = await async_api(
       dispatch,
       fullNodeMessage({
         command: 'get_blocks',
@@ -41,12 +44,32 @@ export function getBlocksRecords(end, count = 10) {
     );
 
     return blocks.reverse();
-  }
+  };
+}
+
+export function updateUnfinishedSubBlockHeaders() {
+  return async (dispatch, getState) => {
+    const state = getState();
+    const height =
+      state.full_node_state.blockchain_state?.peak?.reward_chain_sub_block
+        ?.sub_block_height;
+    if (height) {
+      console.log('sub block height', height);
+      const headers = await dispatch(getUnfinishedSubBlockHeaders(height));
+
+      dispatch({
+        type: 'FULL_NODE_SET_UNFINISHED_SUB_BLOCK_HEADERS',
+        headers,
+      });
+    }
+  };
 }
 
 export function getUnfinishedSubBlockHeaders(subHeight) {
   return async (dispatch) => {
-    const { data: { headers } } = await async_api(
+    const {
+      data: { headers },
+    } = await async_api(
       dispatch,
       fullNodeMessage({
         command: 'get_unfinished_sub_block_headers',
@@ -56,9 +79,9 @@ export function getUnfinishedSubBlockHeaders(subHeight) {
       }),
       false,
     );
-      
+
     return headers.reverse();
-  }
+  };
 }
 
 export function getSubBlockRecords(headerHash, count = 1) {
@@ -76,7 +99,7 @@ export function getSubBlockRecords(headerHash, count = 1) {
       if (subBlockRecord) {
         records.push(subBlockRecord);
       }
-      
+
       currentHash = subBlockRecord?.prev_hash;
       if (!currentHash) {
         break;
@@ -100,15 +123,6 @@ export const getBlockChainState = () => {
   action.message.data = {};
   return action;
 };
-
-/*
-export const getUnfinishedSubBlockHeaders = (subHeight) => {
-  const action = fullNodeMessage();
-  action.message.command = 'get_unfinished_sub_block_headers';
-  action.message.data = { sub_height: subHeight};
-  return action;
-};
-*/
 
 // @deprecated
 export const getLatestBlocks = () => {
