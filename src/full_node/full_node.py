@@ -173,6 +173,25 @@ class FullNode:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
+    def new_peak(self, request):
+        # Check if we have this block in the blockchain
+        if self.blockchain.contains_sub_block(request.header_hash):
+            return None
+        # Not interested in less heavy peaks
+        peak: Optional[SubBlockRecord] = self.blockchain.get_peak()
+        if peak is not None and peak.weight > request.weight:
+            return None
+        if request.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+            self.log.info("not enough blocks for weight proof,request peak sub block")
+            return Message(
+                "request_sub_block",
+                full_node_protocol.RequestSubBlock(uint32(request.sub_block_height), True),
+            )
+        return Message(
+            "request_proof_of_weight",
+            full_node_protocol.RequestProofOfWeight(request.sub_block_height, request.header_hash),
+        )
+
     async def send_peak_to_timelords(self):
         """
         Sends current peak to timelords

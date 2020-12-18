@@ -30,6 +30,7 @@ class WeightProofHandler:
     LAMBDA_L = 100
     C = 0.5
     MAX_SAMPLES = 10  # todo switch to 256 after testing / segment size resolved
+    WeightProofHandler = "weight_proof_handler"
 
     def __init__(
         self,
@@ -43,7 +44,7 @@ class WeightProofHandler:
         if name:
             self.log = logging.getLogger(name)
         else:
-            self.log = logging.getLogger(__name__)
+            self.log = logging.getLogger(self.WeightProofHandler)
 
     def set_block_cache(self, block_cache):
         self.block_cache = block_cache
@@ -574,7 +575,6 @@ class WeightProofHandler:
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
-        self.log.info("find fork point from weight proof")
         fork_point_height = uint32(0)
         for idx, summary_height in enumerate(self.block_cache.get_ses_heights()):
             self.log.debug(f"check summary {idx} height {summary_height}")
@@ -583,7 +583,7 @@ class WeightProofHandler:
                 break
             fork_point_height = summary_height
 
-        self.log.info(f"update fork_point to {fork_point_height}")
+        self.log.info(f"fork_point: {fork_point_height}")
         return fork_point_height
 
     def get_weights_for_sampling(
