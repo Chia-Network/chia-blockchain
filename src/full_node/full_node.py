@@ -292,7 +292,7 @@ class FullNode:
         try:
             if self._sync_task is not None:
                 await asyncio.wait_for(self._sync_task, timeout=2)
-        except asyncio.exceptions.TimeoutError:
+        except asyncio.TimeoutError:
             pass
 
     async def _sync(self):
