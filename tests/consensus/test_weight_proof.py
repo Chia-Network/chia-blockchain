@@ -280,7 +280,7 @@ class TestWeightProof:
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks = await load_blocks_dont_validate(blocks)
         sub_epoch_end, num_of_blocks = get_prev_ses_block(sub_blocks, blocks[-1].header_hash)
-        print("num of blocks to first ses: ", num_of_blocks)
+        # print("num of blocks to first ses: ", num_of_blocks)
 
         curr = sub_epoch_end
         summaries: Dict[uint32, SubEpochSummary] = {}
@@ -303,10 +303,10 @@ class TestWeightProof:
         assert wp is not None
         # todo for each sampled sub epoch, validate number of segments
         valid, fork_point = wpf.validate_weight_proof(wp)
-        print("weight proof size: ", get_size(wp))
-        print("recent size: ", get_size(wp.recent_chain_data))
-        print("sub epochs size: ", get_size(wp.sub_epochs))
-        print("segments size: ", get_size(wp.sub_epoch_segments))
+        # print("weight proof size: ", get_size(wp))
+        # print("recent size: ", get_size(wp.recent_chain_data))
+        # print("sub epochs size: ", get_size(wp.sub_epochs))
+        # print("segments size: ", get_size(wp.sub_epoch_segments))
         assert valid
         assert fork_point == 0
 
