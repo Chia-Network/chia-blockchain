@@ -578,16 +578,23 @@ class WeightProofHandler:
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
-        fork_point_height = uint32(0)
-        for idx, summary_height in enumerate(self.block_cache.get_ses_heights()):
-            self.log.debug(f"check summary {idx} height {summary_height}")
+        fork_point_index = 0
+        ses_heights = self.block_cache.get_ses_heights()
+        for idx, summary_height in enumerate(ses_heights):
+            self.log.info(f"check summary {idx} height {summary_height}")
             local_ses = self.block_cache.get_ses(summary_height)
             if local_ses is None or local_ses.get_hash() != received_summaries[idx].get_hash():
                 break
-            fork_point_height = summary_height
+            fork_point_index = idx
 
-        self.log.info(f"fork_point: {fork_point_height}")
-        return fork_point_height
+        if fork_point_index > 2:
+            # Two summeries can have different blocks and still be identical
+            # This gets resolved after one full sub epoch
+            height = ses_heights[fork_point_index - 2]
+        else:
+            height = 0
+
+        return height
 
     def get_weights_for_sampling(
         self, rng: random.Random, total_weight: uint128, recent_chain: List[ProofBlockHeader]
