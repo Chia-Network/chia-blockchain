@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Tuple
 
+from src.server.ws_connection import WSChiaConnection
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint128
@@ -26,6 +27,7 @@ class SyncStore:
     header_hashes_added: Dict[uint32, bytes32]
     # map from potential peak to fork point
     peak_fork_point: Dict[bytes32, uint32]
+    peak_to_peer: Dict[bytes32, List[bytes32]]  # Header hash : peer node id
 
     @classmethod
     async def create(cls):
@@ -39,6 +41,7 @@ class SyncStore:
         self.potential_future_blocks = []
         self.header_hashes_added = {}
         self.peak_fork_point = {}
+        self.peak_to_peer = {}
         return self
 
     def set_sync_mode(self, sync_mode: bool) -> None:
@@ -46,6 +49,18 @@ class SyncStore:
 
     def get_sync_mode(self) -> bool:
         return self.sync_mode
+
+    def add_peak_peer(self, peak_hash: bytes32, peer: WSChiaConnection):
+        if peak_hash in self.peak_to_peer:
+            self.peak_to_peer[peak_hash].append(peer.peer_node_id)
+        else:
+            self.peak_to_peer[peak_hash] = [peer.peer_node_id]
+
+    def get_peak_peers(self, header_hash) -> List[bytes32]:
+        if header_hash in self.peak_to_peer:
+            return self.peak_to_peer[header_hash]
+        else:
+            return []
 
     async def clear_sync_info(self):
         self.potential_peaks.clear()
