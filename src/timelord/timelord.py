@@ -839,8 +839,8 @@ class Timelord:
                     ips = int(iterations_needed / time_taken * 10) / 10
                     log.info(
                         f"Finished PoT chall:{challenge[:10].hex()}.. {iterations_needed}"
-                        f" iters."
-                        f"Estimated IPS: {ips}. Chain: {chain}"
+                        f" iters, "
+                        f"Estimated IPS: {ips}, Chain: {chain}"
                     )
 
                     vdf_info: VDFInfo = VDFInfo(
