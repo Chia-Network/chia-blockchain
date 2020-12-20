@@ -65,7 +65,6 @@ class WeightProofHandler:
         Creates a weight proof object
         """
         assert self.block_cache is not None
-        # todo assert recent blocks number
         # todo clean some of the logs after tests pass
         sub_epoch_data: List[SubEpochData] = []
         sub_epoch_segments: List[SubEpochChallengeSegment] = []
@@ -87,38 +86,36 @@ class WeightProofHandler:
         if weight_to_check is None:
             self.log.error("math error while sampling sub epochs")
 
-        # todo iterate subepoch summaries instead of blocks
         for ses_height in self.block_cache.get_ses_heights():
             # next sub block
             sub_block = self.block_cache.height_to_sub_block_record(ses_height)
-            if sub_block is None:
-                self.log.error("sub block not in cache")
+            if sub_block is None or sub_block.sub_epoch_summary_included is None:
+                self.log.error("error while building proof")
                 return None
-            # for each sub-epoch
-            if sub_block.sub_epoch_summary_included is not None:
-                self.log.debug(f"sub epoch end, block height {ses_height} {sub_block.sub_epoch_summary_included}")
-                sub_epoch_data.append(make_sub_epoch_data(sub_block.sub_epoch_summary_included))
-                # get sub_epoch_blocks_n in sub_epoch
-                sub_epoch_blocks_n = get_sub_epoch_block_num(sub_block, self.block_cache)
-                if sub_epoch_blocks_n is None:
-                    self.log.error("could not get sub epoch block number")
+
+            self.log.debug(f"sub epoch end, block height {ses_height} {sub_block.sub_epoch_summary_included}")
+            sub_epoch_data.append(make_sub_epoch_data(sub_block.sub_epoch_summary_included))
+            # get sub_epoch_blocks_n in sub_epoch
+            sub_epoch_blocks_n = get_sub_epoch_block_num(sub_block, self.block_cache)
+            if sub_epoch_blocks_n is None:
+                self.log.error("could not get sub epoch block number")
+                return None
+
+            start_of_epoch = self.block_cache.height_to_sub_block_record(uint32(ses_height - sub_epoch_blocks_n))
+
+            # if we have enough sub_epoch samples, dont sample
+            if sub_epoch_n >= self.MAX_SAMPLES:
+                continue
+
+            # sample sub epoch
+            if self.sample_sub_epoch(start_of_epoch, sub_block, weight_to_check):
+                self.log.debug(f"sample: {sub_epoch_n}")
+                segments = await self.__create_sub_epoch_segments(sub_block, sub_epoch_blocks_n, sub_epoch_n)
+                if segments is None:
+                    self.log.error(f"failed while building segments for sub epoch {sub_epoch_n} ")
                     return None
-
-                start_of_epoch = self.block_cache.height_to_sub_block_record(uint32(ses_height - sub_epoch_blocks_n))
-
-                # if we have enough dont sample
-                if sub_epoch_n >= self.MAX_SAMPLES:
-                    continue
-
-                # sample sub epoch
-                if self.sample_sub_epoch(start_of_epoch, sub_block, weight_to_check):
-                    self.log.debug(f"sample: {sub_epoch_n}")
-                    segments = await self.__create_sub_epoch_segments(sub_block, sub_epoch_blocks_n, sub_epoch_n)
-                    if segments is None:
-                        self.log.error(f"failed while building segments for sub epoch {sub_epoch_n} ")
-                        return None
-                    sub_epoch_segments.extend(segments)
-                    sub_epoch_n = uint32(sub_epoch_n + 1)
+                sub_epoch_segments.extend(segments)
+                sub_epoch_n = uint32(sub_epoch_n + 1)
 
         self.log.info(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_reward_chain)
@@ -301,7 +298,7 @@ class WeightProofHandler:
         """
         # get headers in cache
         await self.block_cache.init_headers(
-            uint32(block.sub_block_height - sub_epoch_blocks_n), block.sub_block_height + 30
+            uint32(block.sub_block_height - sub_epoch_blocks_n), uint32(block.sub_block_height + 30)
         )
         segments: List[SubEpochChallengeSegment] = []
         curr: Optional[SubBlockRecord] = block
