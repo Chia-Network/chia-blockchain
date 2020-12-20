@@ -315,14 +315,9 @@ class WeightProofHandler:
             assert curr is not None
             if curr.is_challenge_sub_block(self.constants):
                 self.log.debug(f"sub epoch {sub_epoch_n} challenge segment, starts at {curr.sub_block_height} ")
-                challenge_sub_block = await self.block_cache.header_block(curr.header_hash)
-                if challenge_sub_block is None:
-                    self.log.error("could not find challenge_sub_block in cache")
-                    return None
-                # prepend as we are stepping backwards in the chain
-                seg = await self._handle_challenge_segment(challenge_sub_block, sub_epoch_n)
+                seg = await self._handle_challenge_segment(curr, sub_epoch_n)
                 if seg is None:
-                    self.log.error(f"failed creating segment {challenge_sub_block.header_hash} ")
+                    self.log.error(f"failed creating segment {curr.header_hash} ")
                     return None
                 segments.insert(0, seg)
 
@@ -334,17 +329,21 @@ class WeightProofHandler:
         return segments
 
     async def _handle_challenge_segment(
-        self, block: HeaderBlock, sub_epoch_n: uint32
+        self, block_rec: SubBlockRecord, sub_epoch_n: uint32
     ) -> Optional[SubEpochChallengeSegment]:
         assert self.block_cache is not None
         sub_slots: List[SubSlotData] = []
         self.log.debug(
-            f"create challenge segment for block {block.header_hash} sub_block_height {block.sub_block_height} "
+            f"create challenge segment for block {block_rec.header_hash} sub_block_height {block_rec.sub_block_height} "
         )
+        block_header = await self.block_cache.header_block(block_rec.header_hash)
+        if block_header is None:
+            self.log.error("could not find challenge_sub_block in cache")
+            return None
 
         # VDFs from sub slots before challenge block
-        self.log.debug(f"create ip vdf for block {block.header_hash} height {block.sub_block_height} ")
-        first_sub_slots, end_height = await self.__first_sub_slots_data(block)
+        self.log.debug(f"create ip vdf for block {block_header.header_hash} height {block_header.sub_block_height} ")
+        first_sub_slots, end_height = await self.__first_sub_slots_data(block_header)
         if first_sub_slots is None or end_height is None:
             self.log.error("failed building first sub slots")
             return None
@@ -352,7 +351,9 @@ class WeightProofHandler:
         sub_slots.extend(first_sub_slots)
 
         # # VDFs from slot after challenge block to end of slot
-        self.log.debug(f"create slot end vdf for block {block.header_hash} height {block.sub_block_height} ")
+        self.log.debug(
+            f"create slot end vdf for block {block_header.header_hash} height {block_header.sub_block_height} "
+        )
 
         end_height_hb = await self.block_cache.height_to_header_block(end_height)
         if end_height_hb is None:
@@ -364,7 +365,7 @@ class WeightProofHandler:
             return None
         sub_slots.extend(challenge_slot_end_sub_slots)
         self.log.debug(f"segment number of sub slots {len(sub_slots)}")
-        return SubEpochChallengeSegment(sub_epoch_n, block.reward_chain_sub_block.reward_chain_ip_vdf, sub_slots)
+        return SubEpochChallengeSegment(sub_epoch_n, block_header.reward_chain_sub_block.reward_chain_ip_vdf, sub_slots)
 
     async def __get_slot_end_vdf(self, block: HeaderBlock) -> Optional[List[SubSlotData]]:
         # gets all vdfs first sub slot after challenge block to last sub slot
