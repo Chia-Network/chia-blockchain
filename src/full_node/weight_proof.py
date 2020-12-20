@@ -76,8 +76,6 @@ class WeightProofHandler:
             self.log.error(f"build weight proof, for unknown peak  {tip}")
             return None
         tip_height = tip.sub_block_height
-        blocks_left = tip_height
-        curr_height = uint32(0)
         sub_epoch_n = uint32(0)
 
         recent_reward_chain = await self.get_recent_chain(tip_height)
@@ -90,15 +88,15 @@ class WeightProofHandler:
             self.log.error("math error while sampling sub epochs")
 
         # todo iterate subepoch summaries instead of blocks
-        while curr_height < tip.sub_block_height:
+        for ses_height in self.block_cache.get_ses_heights():
             # next sub block
-            sub_block = self.block_cache.height_to_sub_block_record(curr_height)
+            sub_block = self.block_cache.height_to_sub_block_record(ses_height)
             if sub_block is None:
                 self.log.error("sub block not in cache")
                 return None
             # for each sub-epoch
             if sub_block.sub_epoch_summary_included is not None:
-                self.log.debug(f"sub epoch end, block height {curr_height} {sub_block.sub_epoch_summary_included}")
+                self.log.debug(f"sub epoch end, block height {ses_height} {sub_block.sub_epoch_summary_included}")
                 sub_epoch_data.append(make_sub_epoch_data(sub_block.sub_epoch_summary_included))
                 # get sub_epoch_blocks_n in sub_epoch
                 sub_epoch_blocks_n = get_sub_epoch_block_num(sub_block, self.block_cache)
@@ -106,7 +104,7 @@ class WeightProofHandler:
                     self.log.error("could not get sub epoch block number")
                     return None
 
-                start_of_epoch = self.block_cache.height_to_sub_block_record(uint32(curr_height - sub_epoch_blocks_n))
+                start_of_epoch = self.block_cache.height_to_sub_block_record(uint32(ses_height - sub_epoch_blocks_n))
 
                 # if we have enough dont sample
                 if sub_epoch_n >= self.MAX_SAMPLES:
@@ -121,9 +119,6 @@ class WeightProofHandler:
                         return None
                     sub_epoch_segments.extend(segments)
                     sub_epoch_n = uint32(sub_epoch_n + 1)
-
-            blocks_left = uint32(blocks_left - 1)
-            curr_height = uint32(curr_height + 1)
 
         self.log.info(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_reward_chain)
@@ -485,9 +480,7 @@ class WeightProofHandler:
         return sub_slots, next_slot_height
 
     def _handle_finished_slots(self, cc_slot_end_vdf, curr, curr_header, icc_slot_end_vdf, sub_slots):
-
         if curr_header.finished_sub_slots is None or not len(curr_header.finished_sub_slots) > 0:
-            self.log.info("no finished slots")
             return
 
         icc_vdf: Optional[VDFInfo] = None
