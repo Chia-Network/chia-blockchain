@@ -82,7 +82,7 @@ class BlockCache:
         if self.block_store is None:
             return
         self._header_cache = {}
-        self.log.info(f"init headers {start} {stop}")
+        self.log.debug(f"init headers {start} {stop}")
         self._header_cache = await init_header_cache(self.block_store, start, stop)
         self._maxheight = stop
 
