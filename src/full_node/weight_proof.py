@@ -84,7 +84,7 @@ class WeightProofHandler:
 
         weight_to_check = self.get_weights_for_sampling(rng, tip.weight, recent_reward_chain)
         if weight_to_check is None:
-            self.log.error("math error while sampling sub epochs")
+            self.log.warning("math error while sampling sub epochs")
 
         for ses_height in self.block_cache.get_ses_heights():
             # next sub block
