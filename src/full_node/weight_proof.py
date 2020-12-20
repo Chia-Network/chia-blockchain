@@ -126,9 +126,9 @@ class WeightProofHandler:
         choose = False
         for weight in weight_to_check:
             if start_of_epoch.weight < weight < end_of_epoch.weight:
-                self.log.info(f"start weight: {start_of_epoch.weight}")
-                self.log.info(f"weight to check {weight}")
-                self.log.info(f"end weight: {end_of_epoch.weight}")
+                self.log.debug(f"start weight: {start_of_epoch.weight}")
+                self.log.debug(f"weight to check {weight}")
+                self.log.debug(f"end weight: {end_of_epoch.weight}")
                 choose = True
                 break
 
