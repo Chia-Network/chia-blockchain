@@ -173,8 +173,9 @@ class FullNode:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
-    def new_peak(self, request):
+    def new_peak(self, request, peer: ws.WSChiaConnection):
         # Check if we have this block in the blockchain
+        self.sync_store.add_peak_peer(request.header_hash, peer.peer_node_id)
         if self.blockchain.contains_sub_block(request.header_hash):
             return None
         # Not interested in less heavy peaks
