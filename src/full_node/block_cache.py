@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, List, Optional
 
 from src.consensus.blockchain import Blockchain
@@ -29,12 +30,14 @@ class BlockCache:
         self._sub_epoch_summaries = sub_epoch_summaries
         self._maxheight = maxheight
         self.block_store = block_store
+        self.log = logging.getLogger(__name__)
 
     async def header_block(self, header_hash: bytes32) -> Optional[HeaderBlock]:
         if header_hash not in self._header_cache:
             if self.block_store is not None:
                 block = await self.block_store.get_full_block(header_hash)
                 if block is not None:
+                    self.log.debug(f"cache miss {block.sub_block_height} {block.header_hash}")
                     return await block.get_block_header()
             return None
 
@@ -79,7 +82,9 @@ class BlockCache:
         if self.block_store is None:
             return
         self._header_cache = {}
+        self.log.debug(f"init headers {start} {stop}")
         self._header_cache = await init_header_cache(self.block_store, start, stop)
+        self._maxheight = stop
 
 
 async def init_block_cache(blockchain: Blockchain, start: uint32 = uint32(0), stop: uint32 = uint32(0)) -> BlockCache:
