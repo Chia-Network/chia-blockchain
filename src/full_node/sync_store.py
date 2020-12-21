@@ -27,7 +27,9 @@ class SyncStore:
     # map from potential peak to fork point
     peak_fork_point: Dict[bytes32, uint32]
     peak_to_peer: Dict[bytes32, List[bytes32]]  # Header hash : peer node id
-    peak_hash_target = None  # Peak hash we are syncing towards
+    sync_hash_target: Optional[bytes32]  # Peak hash we are syncing towards
+    sync_height_target: Optional[uint32]  # Peak height we are syncing towards
+    peers_changed: asyncio.Event
 
     @classmethod
     async def create(cls):
@@ -35,7 +37,8 @@ class SyncStore:
 
         self.sync_mode = False
         self.waiting_for_peaks = True
-        self.peak_hash_target = None
+        self.sync_hash_target = None
+        self.sync_height_target = None
         self.potential_peaks = {}
         self.potential_blocks = {}
         self.potential_blocks_received = {}
@@ -43,13 +46,18 @@ class SyncStore:
         self.header_hashes_added = {}
         self.peak_fork_point = {}
         self.peak_to_peer = {}
+        self.peers_changed = asyncio.Event()
         return self
 
-    def set_peak_target(self, peak_hash: bytes32):
-        self.peak_hash_target = peak_hash
+    def set_peak_target(self, peak_hash: bytes32, target_sub_height: uint32):
+        self.sync_hash_target = peak_hash
+        self.sync_height_target = target_sub_height
 
-    def get_peak_target(self) -> Optional[bytes32]:
-        return self.peak_hash_target
+    def get_sync_target_hash(self) -> Optional[bytes32]:
+        return self.sync_hash_target
+
+    def get_sync_target_height(self) -> Optional[bytes32]:
+        return self.sync_height_target
 
     def set_sync_mode(self, sync_mode: bool) -> None:
         self.sync_mode = sync_mode
@@ -58,6 +66,8 @@ class SyncStore:
         return self.sync_mode
 
     def add_peak_peer(self, peak_hash: bytes32, peer_id: bytes32):
+        if peak_hash == self.sync_hash_target:
+            self.peers_changed.set()
         if peak_hash in self.peak_to_peer:
             self.peak_to_peer[peak_hash].append(peer_id)
         else:
