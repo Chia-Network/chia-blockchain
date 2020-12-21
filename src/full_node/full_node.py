@@ -364,7 +364,8 @@ class FullNode:
 
             fork_point_height = self.sync_store.get_potential_fork_point(heaviest_peak_hash)
 
-            return await self.sync_from_fork_point(fork_point_height, heaviest_peak_height, heaviest_peak_hash)
+            await self.sync_from_fork_point(fork_point_height, heaviest_peak_height, heaviest_peak_hash)
+            await self._finish_sync()
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:
@@ -431,8 +432,6 @@ class FullNode:
             if batch_added is False:
                 self.log.info(f"Failed to fetch blocks {start_height} to {end_height} from peers: {peers_with_peak}")
                 break
-
-        await self._finish_sync()
 
     async def receive_sub_block_batch(self, blocks: List[FullBlock], peer: ws.WSChiaConnection) -> bool:
         async with self.blockchain.lock:
@@ -507,7 +506,7 @@ class FullNode:
         sub_block: FullBlock = respond_sub_block.sub_block
         if self.sync_store.get_sync_mode():
             # This is a peak sent to us by another peer
-            self.sync_store.add_potential_peak(sub_block.header_hash, sub_block.height, sub_block.weight)
+            self.sync_store.add_potential_peak(sub_block.header_hash, sub_block.sub_block_height, sub_block.weight)
             return None
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
@@ -632,7 +631,7 @@ class FullNode:
                 # Occasionally clear the seen list to keep it small
                 self.full_node_store.clear_seen_unfinished_blocks()
 
-            if not self.sync_store.sync_mode:
+            if self.sync_store.get_sync_mode() is False:
                 await self.send_peak_to_timelords()
 
                 # Tell full nodes about the new peak
