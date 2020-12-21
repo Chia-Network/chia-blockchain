@@ -27,6 +27,7 @@ class SyncStore:
     # map from potential peak to fork point
     peak_fork_point: Dict[bytes32, uint32]
     peak_to_peer: Dict[bytes32, List[bytes32]]  # Header hash : peer node id
+    peak_hash_target = None  # Peak hash we are syncing towards
 
     @classmethod
     async def create(cls):
@@ -34,6 +35,7 @@ class SyncStore:
 
         self.sync_mode = False
         self.waiting_for_peaks = True
+        self.peak_hash_target = None
         self.potential_peaks = {}
         self.potential_blocks = {}
         self.potential_blocks_received = {}
@@ -42,6 +44,12 @@ class SyncStore:
         self.peak_fork_point = {}
         self.peak_to_peer = {}
         return self
+
+    def set_peak_target(self, peak_hash: bytes32):
+        self.peak_hash_target = peak_hash
+
+    def get_peak_target(self) -> Optional[bytes32]:
+        return self.peak_hash_target
 
     def set_sync_mode(self, sync_mode: bool) -> None:
         self.sync_mode = sync_mode
@@ -85,12 +93,6 @@ class SyncStore:
 
     def get_potential_future_blocks(self):
         return self.potential_future_blocks
-
-    def add_header_hashes_added(self, height: uint32, header_hash: bytes32):
-        self.header_hashes_added[height] = header_hash
-
-    def get_header_hashes_added(self, height: uint32) -> Optional[bytes32]:
-        return self.header_hashes_added.get(height, None)
 
     def add_potential_fork_point(self, peak_hash: bytes32, fork_point: uint32):
         self.peak_fork_point[peak_hash] = fork_point
