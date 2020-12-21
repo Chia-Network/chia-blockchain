@@ -183,6 +183,8 @@ class FullNode:
             return None
         if request.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
             self.log.info("not enough blocks for weight proof,request peak sub block")
+            self.sync_store.add_potential_peak(request.header_hash, request.sub_block_height, request.weight)
+            self.sync_store.add_potential_fork_point(request.header_hash, uint32(0))
             return Message(
                 "request_sub_block",
                 full_node_protocol.RequestSubBlock(uint32(request.sub_block_height), True),
