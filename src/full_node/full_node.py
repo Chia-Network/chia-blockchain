@@ -430,6 +430,7 @@ class FullNode:
 
             if batch_added is False:
                 self.log.info(f"Failed to fetch blocks {start_height} to {end_height} from peers: {peers_with_peak}")
+                break
 
         await self._finish_sync()
 
