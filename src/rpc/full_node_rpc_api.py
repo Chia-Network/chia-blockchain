@@ -135,7 +135,12 @@ class FullNodeRpcApi:
         for a in range(start, end):
             block_range.append(uint32(a))
         blocks: List[FullBlock] = await self.service.block_store.get_full_blocks_at_height(block_range)
-        return {"blocks": blocks}
+        json_blocks = []
+        for block in blocks:
+            json = block.to_json_dict()
+            json["header_hash"] = block.header_hash.hex()
+            json_blocks.append(json)
+        return {"blocks": json_blocks}
 
     async def get_sub_block_record_by_sub_height(self, request: Dict) -> Optional[Dict]:
         if "sub_height" not in request:
