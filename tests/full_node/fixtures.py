@@ -79,7 +79,7 @@ def persistent_blocks(num_of_blocks, db_name):
 
 def new_test_db(path: Path, num_of_blocks):
     print(f"create {path} with {num_of_blocks} blocks")
-    blocks: List[FullBlock] = bt.get_consecutive_blocks(num_of_blocks)
+    blocks: List[FullBlock] = bt.get_consecutive_blocks(num_of_blocks, seed=num_of_blocks.to_bytes(2, "little"))
     block_bytes_list: List[bytes] = []
     for block in blocks:
         block_bytes_list.append(bytes(block))

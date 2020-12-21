@@ -579,7 +579,8 @@ class WeightProofHandler:
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
         fork_point_height = uint32(0)
-        for idx, summary_height in enumerate(self.block_cache.get_ses_heights()):
+        # skip first ses as it is the same in all chains
+        for idx, summary_height in enumerate(self.block_cache.get_ses_heights(), 1):
             self.log.debug(f"check summary {idx} height {summary_height}")
             local_ses = self.block_cache.get_ses(summary_height)
             if local_ses is None or local_ses.get_hash() != received_summaries[idx].get_hash():
