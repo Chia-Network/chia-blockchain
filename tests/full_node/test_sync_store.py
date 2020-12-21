@@ -29,5 +29,7 @@ class TestStore:
         await db.clear_sync_info()
 
         # add/get potential tip, get potential tips num
-        db.add_potential_peak(blocks[1], blocks[1].sub_block_height, blocks[1].weight)
-        assert blocks[1] == db.get_potential_peak(blocks[1].header_hash)
+        db.add_potential_peak(blocks[1].header_hash, blocks[1].sub_block_height, blocks[1].weight)
+        potential_peak = db.get_potential_peak(blocks[1].header_hash)
+        assert blocks[1].sub_block_height == potential_peak[0]
+        assert blocks[1].weight == potential_peak[1]
