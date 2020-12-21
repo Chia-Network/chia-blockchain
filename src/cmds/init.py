@@ -240,6 +240,9 @@ def chia_init(root_path: Path):
         "full_node.database_path",
         "wallet.database_path",
         "full_node.simulator_database_path",
+        "farmer.full_node_peer.port",
+        "timelord.full_node_peer.port",
+        "full_node.port",
     ]
 
     # These are the files that will be migrated
