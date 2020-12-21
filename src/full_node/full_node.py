@@ -632,35 +632,36 @@ class FullNode:
                 # Occasionally clear the seen list to keep it small
                 self.full_node_store.clear_seen_unfinished_blocks()
 
-            await self.send_peak_to_timelords()
+            if not self.sync_store.sync_mode:
+                await self.send_peak_to_timelords()
 
-            # Tell full nodes about the new peak
-            msg = Message(
-                "new_peak",
-                full_node_protocol.NewPeak(
-                    sub_block.header_hash,
-                    sub_block.sub_block_height,
-                    sub_block.weight,
-                    fork_height,
-                    sub_block.reward_chain_sub_block.get_unfinished().get_hash(),
-                ),
-            )
-            if peer is not None:
-                await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
-            else:
-                await self.server.send_to_all([msg], NodeType.FULL_NODE)
+                # Tell full nodes about the new peak
+                msg = Message(
+                    "new_peak",
+                    full_node_protocol.NewPeak(
+                        sub_block.header_hash,
+                        sub_block.sub_block_height,
+                        sub_block.weight,
+                        fork_height,
+                        sub_block.reward_chain_sub_block.get_unfinished().get_hash(),
+                    ),
+                )
+                if peer is not None:
+                    await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
+                else:
+                    await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-            # Tell wallets about the new peak
-            msg = Message(
-                "new_peak",
-                wallet_protocol.NewPeak(
-                    sub_block.header_hash,
-                    sub_block.sub_block_height,
-                    sub_block.weight,
-                    fork_height,
-                ),
-            )
-            await self.server.send_to_all([msg], NodeType.WALLET)
+                # Tell wallets about the new peak
+                msg = Message(
+                    "new_peak",
+                    wallet_protocol.NewPeak(
+                        sub_block.header_hash,
+                        sub_block.sub_block_height,
+                        sub_block.weight,
+                        fork_height,
+                    ),
+                )
+                await self.server.send_to_all([msg], NodeType.WALLET)
 
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
             self.log.warning(
