@@ -71,6 +71,29 @@ class RequestSubBlock:
 
 @dataclass(frozen=True)
 @cbor_message
+class RequestSubBlocks:
+    start_sub_height: uint32
+    end_sub_height: uint32
+    include_transaction_block: bool
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondSubBlocks:
+    start_sub_height: uint32
+    end_sub_height: uint32
+    sub_blocks: List[FullBlock]
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RejectSubBlocks:
+    start_sub_height: uint32
+    end_sub_height: uint32
+
+
+@dataclass(frozen=True)
+@cbor_message
 class RespondSubBlock:
     sub_block: FullBlock
 

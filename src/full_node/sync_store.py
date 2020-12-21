@@ -2,7 +2,6 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from src.server.ws_connection import WSChiaConnection
 from src.types.full_block import FullBlock
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint32, uint128
@@ -50,11 +49,11 @@ class SyncStore:
     def get_sync_mode(self) -> bool:
         return self.sync_mode
 
-    def add_peak_peer(self, peak_hash: bytes32, peer: WSChiaConnection):
+    def add_peak_peer(self, peak_hash: bytes32, peer_id: bytes32):
         if peak_hash in self.peak_to_peer:
-            self.peak_to_peer[peak_hash].append(peer.peer_node_id)
+            self.peak_to_peer[peak_hash].append(peer_id)
         else:
-            self.peak_to_peer[peak_hash] = [peer.peer_node_id]
+            self.peak_to_peer[peak_hash] = [peer_id]
 
     def get_peak_peers(self, header_hash) -> List[bytes32]:
         if header_hash in self.peak_to_peer:
