@@ -24,6 +24,7 @@ from src.protocols import (
     timelord_protocol,
     wallet_protocol,
 )
+from src.protocols.full_node_protocol import RejectSubBlocks
 from src.protocols.wallet_protocol import RejectHeaderRequest
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.coin import Coin, hash_coin_list
@@ -91,7 +92,7 @@ class FullNodeAPI:
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
         we can ask for it.
         """
-        return self.full_node.new_peak(request, peer)
+        return await self.full_node.new_peak(request, peer)
 
     @api_request
     async def new_transaction(self, transaction: full_node_protocol.NewTransaction) -> Optional[Message]:
@@ -205,6 +206,45 @@ class FullNodeAPI:
             msg = Message("respond_sub_block", full_node_protocol.RespondSubBlock(block))
             return msg
         return None
+
+    @api_request
+    async def request_sub_blocks(self, request: full_node_protocol.RequestSubBlocks) -> Optional[Message]:
+        if request.end_sub_height < request.start_sub_height or request.end_sub_height - request.start_sub_height > 32:
+            return None
+        for i in range(request.start_sub_height, request.end_sub_height + 1):
+            if i not in self.full_node.blockchain.sub_height_to_hash:
+                reject = RejectSubBlocks(request.start_sub_height, request.end_sub_height)
+                msg = Message("reject_sub_blocks", reject)
+                return msg
+
+        blocks = []
+
+        for i in range(request.start_sub_height, request.end_sub_height + 1):
+            block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
+                self.full_node.blockchain.sub_height_to_hash[uint32(i)]
+            )
+            if block is None:
+                reject = RejectSubBlocks(request.start_sub_height, request.end_sub_height)
+                msg = Message("reject_sub_blocks", reject)
+                return msg
+            if not request.include_transaction_block:
+                block = dataclasses.replace(block, transactions_generator=None)
+            blocks.append(block)
+
+        msg = Message(
+            "respond_sub_blocks",
+            full_node_protocol.RespondSubBlocks(request.start_sub_height, request.end_sub_height, blocks),
+        )
+        return msg
+
+    @api_request
+    async def reject_sub_blocks(self, request: full_node_protocol.RequestSubBlocks):
+        self.log.info(f"reject_sub_blocks {request.start_sub_height} {request.end_sub_height}")
+        pass
+
+    @api_request
+    async def respond_sub_blocks(self, request: full_node_protocol.RespondSubBlocks):
+        pass
 
     @api_request
     @peer_required

@@ -338,13 +338,12 @@ class TestFullNodeProtocol:
         full_node_1, full_node_2, server_1, server_2 = two_empty_nodes
 
         incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
-
+        dummy_peer = server_1.all_connections[dummy_node_id]
         await time_out_assert(10, time_out_messages(incoming_queue, "request_mempool_transactions", 1))
         peer = await connect_and_get_peer(server_1, server_2)
 
         blocks = bt.get_consecutive_blocks(10)
         blocks_reorg = bt.get_consecutive_blocks(10, seed=b"214")  # Alternate chain
-
         for block in blocks:
             new_peak = fnp.NewPeak(
                 block.header_hash,
@@ -353,13 +352,13 @@ class TestFullNodeProtocol:
                 uint32(0),
                 block.reward_chain_sub_block.get_unfinished().get_hash(),
             )
-            message = await full_node_1.new_peak(new_peak)
-            assert message is not None
+            asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+            await time_out_assert(10, time_out_messages(incoming_queue, "request_sub_block", 1))
 
             await full_node_1.respond_sub_block(fnp.RespondSubBlock(block), peer)
             # Ignores, already have
-            message = await full_node_1.new_peak(new_peak)
-            assert message is None
+            asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+            await time_out_assert(10, time_out_messages(incoming_queue, "request_sub_block", 0))
 
         # Ignores low weight
         new_peak = fnp.NewPeak(
@@ -369,8 +368,8 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-2].reward_chain_sub_block.get_unfinished().get_hash(),
         )
-        message = await full_node_1.new_peak(new_peak)
-        assert message is None
+        asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_sub_block", 0))
 
         # Does not ignore equal weight
         new_peak = fnp.NewPeak(
@@ -380,8 +379,8 @@ class TestFullNodeProtocol:
             uint32(0),
             blocks_reorg[-1].reward_chain_sub_block.get_unfinished().get_hash(),
         )
-        message = await full_node_1.new_peak(new_peak)
-        assert message is not None
+        asyncio.create_task(full_node_1.new_peak(new_peak, dummy_peer))
+        await time_out_assert(10, time_out_messages(incoming_queue, "request_sub_block", 1))
 
     @pytest.mark.asyncio
     async def test_new_transaction(self, two_nodes, wallet_blocks_five_blocks):
