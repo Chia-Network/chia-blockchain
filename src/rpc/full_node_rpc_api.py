@@ -167,12 +167,14 @@ class FullNodeRpcApi:
         return {"sub_block_record": record}
 
     async def get_unfinished_sub_block_headers(self, request: Dict) -> Optional[Dict]:
-        if "sub_height" not in request:
-            raise ValueError("sub_height not in request")
-        sub_height = request["sub_height"]
+
+        peak: Optional[SubBlockRecord] = await self.service.blockchain.get_peak()
+        if peak is None:
+            return {"headers": []}
+
         response_headers: List[UnfinishedHeaderBlock] = []
         for ub_sub_height, block in (self.service.full_node_store.get_unfinished_blocks()).values():
-            if ub_sub_height == sub_height:
+            if ub_sub_height == peak:
                 unfinished_header_block = UnfinishedHeaderBlock(
                     block.finished_sub_slots,
                     block.reward_chain_sub_block,
