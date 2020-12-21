@@ -395,7 +395,7 @@ class FullNode:
 
         batch_size = self.constants.MAX_BLOCK_COUNT_PER_REQUESTS
         for i in range(fork_point_height, target_peak_sb_height, batch_size):
-            start_height = fork_point_height + (i * batch_size)
+            start_height = fork_point_height
             end_height = min(target_peak_sb_height, start_height + batch_size)
             request = RequestSubBlocks(uint32(start_height), uint32(end_height), True)
             peers_to_remove = []
