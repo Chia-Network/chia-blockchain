@@ -507,9 +507,7 @@ class FullNode:
         sub_block: FullBlock = respond_sub_block.sub_block
         if self.sync_store.get_sync_mode():
             # This is a peak sent to us by another peer
-            if self.sync_store.waiting_for_peaks:
-                # Add the block to our potential peaks list
-                self.sync_store.add_potential_peak(sub_block.header_hash, sub_block.height, sub_block.weight)
+            self.sync_store.add_potential_peak(sub_block.header_hash, sub_block.height, sub_block.weight)
             return None
 
         # Adds the block to seen, and check if it's seen before (which means header is in memory)
