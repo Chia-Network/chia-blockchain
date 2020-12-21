@@ -50,6 +50,7 @@ testnet_kwargs = {
     "MAX_BLOCK_COST_CLVM": 225359496,
     "WEIGHT_PROOF_THRESHOLD": 2,
     "WEIGHT_PROOF_RECENT_BLOCKS": 450,
+    "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
 }
 
 
