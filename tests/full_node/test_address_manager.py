@@ -550,7 +550,7 @@ class TestPeerManager:
         addrman2 = await address_manager_store.deserialize()
 
         retrieved_peers = []
-        for _ in range(20):
+        for _ in range(50):
             peer = await addrman2.select_peer()
             if peer not in retrieved_peers:
                 retrieved_peers.append(peer)
@@ -565,7 +565,11 @@ class TestPeerManager:
         recovered = 0
         for target_peer in wanted_peers:
             for current_peer in retrieved_peers:
-                if current_peer.peer_info == target_peer.peer_info and current_peer.src == target_peer.src:
+                if (
+                    current_peer.peer_info == target_peer.peer_info 
+                    and current_peer.src == target_peer.src
+                    and current_peer.timestamp == target_peer.timestamp
+                ):
                     recovered += 1
         assert recovered == 3
         await connection.close()
