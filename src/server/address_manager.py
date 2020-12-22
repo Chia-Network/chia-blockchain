@@ -56,6 +56,8 @@ class ExtendedPeerInfo:
             + " "
             + str(int(self.peer_info.port))
             + " "
+            + str(int(self.timestamp))
+            + " "
             + self.src.host
             + " "
             + str(int(self.src.port))
@@ -65,9 +67,9 @@ class ExtendedPeerInfo:
     @classmethod
     def from_string(cls, peer_str: str):
         blobs = peer_str.split(" ")
-        assert len(blobs) == 4
-        peer_info = TimestampedPeerInfo(blobs[0], uint16(int(blobs[1])), uint64(0))
-        src_peer = PeerInfo(blobs[2], uint16(int(blobs[3])))
+        assert len(blobs) == 5
+        peer_info = TimestampedPeerInfo(blobs[0], uint16(int(blobs[1])), uint64(int(blobs[2])))
+        src_peer = PeerInfo(blobs[3], uint16(int(blobs[4])))
         return cls(peer_info, src_peer)
 
     def get_tried_bucket(self, key: int) -> int:
@@ -487,6 +489,19 @@ class AddressManager:
                 addr.append(cur_peer_info)
 
         return addr
+
+    def cleanup(self, max_timestamp_difference: int, max_consecutive_failures: int):
+        now = int(math.floor(time.time()))
+        for bucket in range(NEW_BUCKET_COUNT):
+            for pos in range(BUCKET_SIZE):
+                if self.new_matrix[bucket][pos] != -1:
+                    node_id = self.new_matrix[bucket][pos]
+                    cur_info = self.map_info[node_id]
+                    if (
+                        cur_info.timestamp < now - max_timestamp_difference
+                        and cur_info.num_attempts >= max_consecutive_failures
+                    ):
+                        self.clear_new_(bucket, pos)
 
     def connect_(self, addr: PeerInfo, timestamp: int):
         info, _ = self.find_(addr)

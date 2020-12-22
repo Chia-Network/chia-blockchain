@@ -72,12 +72,14 @@ class FullNodeDiscovery:
         random = Random()
         self.connect_peers_task = asyncio.create_task(self._connect_to_peers(random))
         self.serialize_task = asyncio.create_task(self._periodically_serialize(random))
+        self.cleanup_task = asyncio.create_task(self._periodically_cleanup())
 
     async def _close_common(self):
         self.is_closed = True
         self.connect_peers_task.cancel()
         self.process_messages_task.cancel()
         self.serialize_task.cancel()
+        self.cleanup_task.cancel()
         await self.connection.close()
 
     def add_message(self, message, data):
@@ -269,6 +271,26 @@ class FullNodeDiscovery:
             await asyncio.sleep(serialize_interval)
             async with self.address_manager.lock:
                 await self.address_manager_store.serialize(self.address_manager)
+
+    async def _periodically_cleanup(self):
+        while not self.is_closed:
+            # Removes entries with timestamp worse than 14 days ago
+            # and with a high number of failed attempts.
+            # Most likely, the peer left the network,
+            # so we can save space in the peer tables.
+            cleanup_interval = 1800
+            max_timestamp_difference = 14 * 3600 * 24
+            max_consecutive_failures = 10
+            await asyncio.sleep(cleanup_interval)
+            # Perform the cleanup only if we have at least 3 connections.
+            full_node_connected = self.server.get_full_node_connections()
+            connected = [c.get_peer_info() for c in full_node_connected]
+            connected = [c for c in connected if c is not None]
+            if len(connected) >= 3:
+                async with self.address_manager.lock:
+                    self.address_manager.cleanup(
+                        max_timestamp_difference, max_consecutive_failures
+                    )
 
     async def _respond_peers_common(self, request, peer_src, is_full_node):
         # Check if we got the peers from a full node or from the introducer.
