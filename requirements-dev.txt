@@ -63,6 +63,6 @@ yarl~=1.6.2
 chardet~=3.0.4
 pyparsing~=2.4.7
 pycparser~=2.20
-packaging~=20.4
+packaging~=20.8
 zipp~=3.4.0
 portalocker~=2.0.0
