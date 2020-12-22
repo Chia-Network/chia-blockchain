@@ -566,7 +566,7 @@ class TestPeerManager:
         for target_peer in wanted_peers:
             for current_peer in retrieved_peers:
                 if (
-                    current_peer.peer_info == target_peer.peer_info 
+                    current_peer.peer_info == target_peer.peer_info
                     and current_peer.src == target_peer.src
                     and current_peer.timestamp == target_peer.timestamp
                 ):
