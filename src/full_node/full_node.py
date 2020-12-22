@@ -213,7 +213,7 @@ class FullNode:
         elif request.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
             self.log.info("not enough blocks for weight proof,request peak sub block")
             await self.request_and_add_sub_block(peer, request.sub_block_height)
-        elif peak.sub_block_height > request.sub_block_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+        elif peak is not None and peak.sub_block_height > request.sub_block_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
             await self.request_and_add_sub_block(peer, request.sub_block_height)
         else:
             return Message(
