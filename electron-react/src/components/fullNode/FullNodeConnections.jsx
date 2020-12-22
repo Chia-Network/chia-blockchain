@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { Card } from '@chia/core';
+import { Card, Flex, Loading } from '@chia/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { Paper, TableRow } from '@material-ui/core';
 import Button from '@material-ui/core/Button';
@@ -79,91 +79,98 @@ export default function Connections(props) {
     <Card
       title={<Trans id="Connections.title">Connections</Trans>}
     >
-      <TableContainer component={Paper}>
-        <Table
-          className={classes.table}
-          size="small"
-          aria-label="a dense table"
-        >
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <Trans id="Connections.nodeId">Node Id</Trans>
-              </TableCell>
-              <TableCell align="right">
-                <Trans id="Connections.ipAddress">Ip address</Trans>
-              </TableCell>
-              <TableCell align="right">
-                <Trans id="Connections.port">Port</Trans>
-              </TableCell>
-              <TableCell align="right">
-                <Trans id="Connections.upDown">Up/Down</Trans>
-              </TableCell>
-              <TableCell align="right">
-                <Trans id="Connections.connectionType">
-                  Connection type
-                </Trans>
-              </TableCell>
-              {connectionTime ? (
-                <TableCell align="right">
-                  <Trans id="Connections.connected">Connected</Trans>
-                </TableCell>
-              ) : null}
-              {connectionTime ? (
-                <TableCell align="right">
-                  <Trans id="Connections.lastMessage">Last message</Trans>
-                </TableCell>
-              ) : null}
-              <TableCell align="right">
-                <Trans id="Connections.delete">Delete</Trans>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {connections.map((item) => (
-              <TableRow key={item.node_id}>
-                <TableCell component="th" scope="row">
-                  {item.node_id.slice(0, 10)}...
-                </TableCell>
-                <TableCell align="right">{item.peer_host}</TableCell>
-                <TableCell align="right">
-                  {item.peer_port}/{item.peer_server_port}
-                </TableCell>
-
-                <TableCell align="right">
-                  {Math.floor(item.bytes_written / 1024)}/
-                  {Math.floor(item.bytes_read / 1024)} KiB
+      {connections ? (
+        <TableContainer component={Paper}>
+          <Table
+            className={classes.table}
+            size="small"
+            aria-label="a dense table"
+          >
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  <Trans id="Connections.nodeId">Node Id</Trans>
                 </TableCell>
                 <TableCell align="right">
-                  {service_connection_types[item.type]}
+                  <Trans id="Connections.ipAddress">Ip address</Trans>
                 </TableCell>
-
+                <TableCell align="right">
+                  <Trans id="Connections.port">Port</Trans>
+                </TableCell>
+                <TableCell align="right">
+                  <Trans id="Connections.upDown">Up/Down</Trans>
+                </TableCell>
+                <TableCell align="right">
+                  <Trans id="Connections.connectionType">
+                    Connection type
+                  </Trans>
+                </TableCell>
                 {connectionTime ? (
                   <TableCell align="right">
-                    {unix_to_short_date(
-                      Number.parseInt(item.creation_time),
-                    )}
+                    <Trans id="Connections.connected">Connected</Trans>
                   </TableCell>
                 ) : null}
                 {connectionTime ? (
                   <TableCell align="right">
-                    {unix_to_short_date(
-                      Number.parseInt(item.last_message_time),
-                    )}
+                    <Trans id="Connections.lastMessage">Last message</Trans>
                   </TableCell>
                 ) : null}
-                <TableCell
-                  className={classes.clickable}
-                  onClick={deleteConnection(item.node_id)}
-                  align="right"
-                >
-                  <DeleteForeverIcon />
+                <TableCell align="right">
+                  <Trans id="Connections.delete">Delete</Trans>
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {connections.map((item) => (
+                <TableRow key={item.node_id}>
+                  <TableCell component="th" scope="row">
+                    {item.node_id.slice(0, 10)}...
+                  </TableCell>
+                  <TableCell align="right">{item.peer_host}</TableCell>
+                  <TableCell align="right">
+                    {item.peer_port}/{item.peer_server_port}
+                  </TableCell>
+
+                  <TableCell align="right">
+                    {Math.floor(item.bytes_written / 1024)}/
+                    {Math.floor(item.bytes_read / 1024)} KiB
+                  </TableCell>
+                  <TableCell align="right">
+                    {service_connection_types[item.type]}
+                  </TableCell>
+
+                  {connectionTime ? (
+                    <TableCell align="right">
+                      {unix_to_short_date(
+                        Number.parseInt(item.creation_time),
+                      )}
+                    </TableCell>
+                  ) : null}
+                  {connectionTime ? (
+                    <TableCell align="right">
+                      {unix_to_short_date(
+                        Number.parseInt(item.last_message_time),
+                      )}
+                    </TableCell>
+                  ) : null}
+                  <TableCell
+                    className={classes.clickable}
+                    onClick={deleteConnection(item.node_id)}
+                    align="right"
+                  >
+                    <DeleteForeverIcon />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : (
+        <Flex justifyContent="center">
+          <Loading />
+        </Flex>
+      )}
+      
       <h4 className={classes.connect}>
         <Trans id="Connections.connectToOtherPeersTitle">
           Connect to other peers
