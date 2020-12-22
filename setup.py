@@ -18,7 +18,7 @@ dependencies = [
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     "cryptography==3.3.1",  # Python cryptography library for TLS
     "keyring==21.5.0",  # Store keys in MacOS Keychain, Windows Credential Locker
-    "keyrings.cryptfile==1.3.6",  # Secure storage for keys on Linux (Will be replaced)
+    "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
     "PyYAML==5.3.1",  # Used for config file format
     "sortedcontainers==2.3.0",  # For maintaining sorted mempools
     "websockets==8.1.0",  # For use in wallet RPC and electron UI
