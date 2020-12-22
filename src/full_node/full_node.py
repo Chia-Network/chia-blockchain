@@ -34,7 +34,8 @@ from src.protocols import (
     wallet_protocol,
     farmer_protocol,
 )
-from src.protocols.full_node_protocol import RequestSubBlocks, RejectSubBlocks, RespondSubBlocks, RespondSubBlock
+from src.protocols.full_node_protocol import RequestSubBlocks, RejectSubBlocks, RespondSubBlocks, RespondSubBlock, \
+    RespondProofOfWeight
 
 from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, OutboundMessage
@@ -403,6 +404,7 @@ class FullNode:
             start_height = i
             end_height = min(target_peak_sb_height, start_height + batch_size)
             request = RequestSubBlocks(uint32(start_height), uint32(end_height), True)
+            self.log.info(f"Requesting sub blocks:  {start_height} to {end_height}")
             peers_to_remove = []
             batch_added = False
             to_remove = []
@@ -549,16 +551,27 @@ class FullNode:
             else:
                 peak_height = peak.sub_block_height
             if sub_block.sub_block_height > peak_height + self.config["sync_blocks_behind_threshold"]:
-                async with self.blockchain.lock:
-                    if self.sync_store.get_sync_mode():
-                        return None
-                    self.sync_store.set_sync_mode(True)
-                self.log.info(
-                    f"We are too far behind this block. Our height is {peak_height} and block is at "
-                    f"{sub_block.sub_block_height}"
-                )
-                # Performs sync, and catch exceptions so we don't close the connection
-                self._sync_task = asyncio.create_task(self._sync())
+                if peak_height > sub_block.sub_block_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+                    msg = Message(
+                        "request_sub_block",
+                        full_node_protocol.RequestSubBlock(uint32(sub_block.sub_block_height - 1), True),
+                    )
+                    self.full_node_store.add_disconnected_block(sub_block)
+                    if peer is not None:
+                        await peer.send_message(msg)
+                    else:
+                        return msg
+                else:
+                    async with self.blockchain.lock:
+                        if self.sync_store.get_sync_mode():
+                            return None
+                        self.sync_store.set_sync_mode(True)
+                    self.log.info(
+                        f"We are too far behind this block. Our height is {peak_height} and block is at "
+                        f"{sub_block.sub_block_height}"
+                    )
+                    # Performs sync, and catch exceptions so we don't close the connection
+                    self._sync_task = asyncio.create_task(self._sync())
 
             elif sub_block.sub_block_height >= peak_height - 5:
                 # Allows shallow reorgs by simply requesting the previous height repeatedly
