@@ -169,6 +169,22 @@ class FullNode:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
 
+    async def request_and_add_sub_block(self, peer: ws.WSChiaConnection, sub_height):
+        peer_peak = await peer.request_sub_block(
+            full_node_protocol.RequestSubBlock(uint32(sub_height), True)
+        )
+        if peer_peak is None:
+            self.log.warning(f"Failed to fetch sub block {sub_height} from {peer.get_peer_info()}")
+            return
+        if isinstance(peer_peak, full_node_protocol.RespondSubBlock):
+            sub_block = peer_peak.sub_block
+            self.sync_store.add_potential_peak(
+                sub_block.header_hash, sub_block.sub_block_height, sub_block.weight
+            )
+            await self.respond_sub_block(peer_peak, peer)
+        else:
+            self.log.warning(f"Failed to fetch sub block {sub_height} from {peer.get_peer_info()}")
+
     async def new_peak(self, request, peer: ws.WSChiaConnection):
         # Check if we have this block in the blockchain
         if peer is not None and peer.peer_node_id is not None:
@@ -194,23 +210,11 @@ class FullNode:
                     )
                     if target_peak_response is not None and isinstance(target_peak_response, RespondSubBlock):
                         self.sync_store.add_peak_peer(peak_sync_hash, peer.peer_node_id)
-
-        if request.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+        elif request.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
             self.log.info("not enough blocks for weight proof,request peak sub block")
-            peer_peak = await peer.request_sub_block(
-                full_node_protocol.RequestSubBlock(uint32(request.sub_block_height), True)
-            )
-            if peer_peak is None:
-                return
-            if isinstance(peer_peak, full_node_protocol.RespondSubBlock):
-                sub_block = peer_peak.sub_block
-                if peak is not None and peak.header_hash == sub_block.prev_header_hash:
-                    await self.respond_sub_block(peer_peak, peer)
-                else:
-                    self.sync_store.add_potential_peak(
-                        sub_block.header_hash, sub_block.sub_block_height, sub_block.weight
-                    )
-                    await self.respond_sub_block(peer_peak, peer)
+            await self.request_and_add_sub_block(peer, request.sub_block_height)
+        elif peak.sub_block_height > request.sub_block_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+            await self.request_and_add_sub_block(peer, request.sub_block_height)
         else:
             return Message(
                 "request_proof_of_weight",
