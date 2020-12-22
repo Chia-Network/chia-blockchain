@@ -533,12 +533,13 @@ class TestPeerManager:
     @pytest.mark.asyncio
     async def test_serialization(self):
         addrman = AddressManagerTest()
-        peer1 = PeerInfo("250.7.1.1", 8333)
-        peer2 = PeerInfo("250.7.2.2", 9999)
-        peer3 = PeerInfo("250.7.3.3", 9999)
+        now = int(math.floor(time.time()))
+        t_peer1 = TimestampedPeerInfo("250.7.1.1", 8333, now - 10000)
+        t_peer2 = TimestampedPeerInfo("250.7.2.2", 9999, now - 20000)
+        t_peer3 = TimestampedPeerInfo("250.7.3.3", 9999, now - 30000)
         source = PeerInfo("252.5.1.1", 8333)
-        await addrman.add_peer_info([peer1, peer2, peer3], source)
-        await addrman.mark_good(peer1)
+        await addrman.add_to_new_table([t_peer1, t_peer2, t_peer3], source)
+        await addrman.mark_good(PeerInfo("250.7.1.1", 8333))
 
         db_filename = Path("peer_table.db")
         if db_filename.exists():
@@ -556,9 +557,6 @@ class TestPeerManager:
             if len(retrieved_peers) == 3:
                 break
         assert len(retrieved_peers) == 3
-        t_peer1 = TimestampedPeerInfo("250.7.1.1", 8333, 0)
-        t_peer2 = TimestampedPeerInfo("250.7.2.2", 9999, 0)
-        t_peer3 = TimestampedPeerInfo("250.7.3.3", 9999, 0)
         wanted_peers = [
             ExtendedPeerInfo(t_peer1, source),
             ExtendedPeerInfo(t_peer2, source),
@@ -572,3 +570,18 @@ class TestPeerManager:
         assert recovered == 3
         await connection.close()
         db_filename.unlink()
+
+    @pytest.mark.asyncio
+    async def test_cleanup(self):
+        addrman = AddressManagerTest()
+        peer1 = TimestampedPeerInfo("250.250.2.1", 8444, 100000)
+        peer2 = TimestampedPeerInfo("250.250.2.2", 9999, time.time())
+        source = PeerInfo("252.5.1.1", 8333)
+        assert await addrman.add_to_new_table([peer1], source)
+        assert await addrman.add_to_new_table([peer2], source)
+        await addrman.mark_good(PeerInfo("250.250.2.2", 9999))
+        assert await addrman.size() == 2
+        for _ in range(5):
+            await addrman.attempt(peer1, True, time.time() - 61)
+        addrman.cleanup(7 * 3600 * 24, 5)
+        assert await addrman.size() == 1
