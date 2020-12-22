@@ -288,9 +288,7 @@ class FullNodeDiscovery:
             connected = [c for c in connected if c is not None]
             if len(connected) >= 3:
                 async with self.address_manager.lock:
-                    self.address_manager.cleanup(
-                        max_timestamp_difference, max_consecutive_failures
-                    )
+                    self.address_manager.cleanup(max_timestamp_difference, max_consecutive_failures)
 
     async def _respond_peers_common(self, request, peer_src, is_full_node):
         # Check if we got the peers from a full node or from the introducer.
