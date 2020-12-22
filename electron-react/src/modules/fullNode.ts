@@ -20,7 +20,7 @@ type FullNodeState = {
       foliage_sub_block: FoliageSubBlock;
     };
   };
-  connections: Connection[];
+  connections?: Connection[];
   open_connection_error?: string;
   headers: Header[];
   block?: string | null; // If not null, page is changed to block page
@@ -30,7 +30,6 @@ type FullNodeState = {
 };
 
 const initialState: FullNodeState = {
-  connections: [],
   open_connection_error: '',
   headers: [],
   block: null, // If not null, page is changed to block page
