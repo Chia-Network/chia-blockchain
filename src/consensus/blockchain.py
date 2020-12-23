@@ -145,10 +145,10 @@ class Blockchain:
         """ Return peak block"""
         if self.peak_height is None or self.peak_height == 0:
             return None
-        start = self.peak_height
+        start = int(self.peak_height)
         peak = None
         while start > 0:
-            block = await self.block_store.get_full_block(self.sub_height_to_hash[start])
+            block = await self.block_store.get_full_block(self.sub_height_to_hash[uint32(start)])
             if block is not None and block.is_block():
                 peak = block
                 break
