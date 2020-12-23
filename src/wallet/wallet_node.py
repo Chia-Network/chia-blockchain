@@ -422,6 +422,9 @@ class WalletNode:
                 peak_height = potential_peak_block.height
                 peak = potential_peak_block
 
+        if peak_height is None or peak_height == 0:
+            return
+
         if self.wallet_state_manager.peak is not None and highest_weight <= self.wallet_state_manager.peak.weight:
             self.log.info("Not performing sync, already caught up.")
             return
