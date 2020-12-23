@@ -649,38 +649,44 @@ class WalletRpcApi:
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         spend_bundle_list = []
-        for i in request["spend_bundles"]:
-            spend_bundle_list.append(SpendBundle.from_bytes(bytes.fromhex(i)))
-        # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
-        info_dict = request["info_dict"]
-        my_recovery_list: List[bytes] = wallet.did_info.backup_ids
-        if len(info_dict) < wallet.did_info.num_of_backup_ids_needed:
-            return {"success": False, "reason": "insufficient messages"}
-        # convert info dict into recovery list - same order as wallet
-        info_list = []
-        for entry in my_recovery_list:
-            if entry.hex() in info_dict:
-                info_list.append(
-                    [
-                        bytes.fromhex(info_dict[entry.hex()][0]),
-                        bytes.fromhex(info_dict[entry.hex()][1]),
-                        info_dict[entry.hex()][2],
-                    ]
-                )
-            else:
-                info_list.append([])
-        message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
+        try:
+            for i in request["attest_spendbundle_filenames"]:
+                f = open(i)
+                new_sb = SpendBundle.from_bytes(bytes.fromhex(f.read()))
+                spend_bundle_list.append(new_sb)
+                f.close()
+            # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
+            info_dict = request["info_dict"]
+            my_recovery_list: List[bytes] = wallet.did_info.backup_ids
+            if len(info_dict) < wallet.did_info.num_of_backup_ids_needed:
+                return {"success": False, "reason": "insufficient messages"}
+            # convert info dict into recovery list - same order as wallet
+            info_list = []
+            for entry in my_recovery_list:
+                if entry.hex() in info_dict:
+                    info_list.append(
+                        [
+                            bytes.fromhex(info_dict[entry.hex()][0]),
+                            bytes.fromhex(info_dict[entry.hex()][1]),
+                            info_dict[entry.hex()][2],
+                        ]
+                    )
+                else:
+                    info_list.append([])
+            message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
 
-        pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
+            pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
 
-        success = await wallet.recovery_spend(
-            wallet.did_info.temp_coin,
-            bytes.fromhex(request["puzhash"]),
-            info_list,
-            pubkey,
-            message_spend_bundle,
-        )
-        return {"success": success}
+            success = await wallet.recovery_spend(
+                wallet.did_info.temp_coin,
+                bytes.fromhex(request["puzhash"]),
+                info_list,
+                pubkey,
+                message_spend_bundle,
+            )
+            return {"success": success}
+        except Exception:
+            return {"success": False}
 
     async def did_get_pubkey(self, request):
         wallet_id = int(request["wallet_id"])
