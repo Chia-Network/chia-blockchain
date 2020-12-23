@@ -378,21 +378,15 @@ class WalletNode:
     async def sync_job(self):
         while True:
             self.log.info("Loop start in sync job")
-            await asyncio.sleep(1)
+            await asyncio.sleep(10)
             if self._shut_down is True:
-                self.log.info("Loop self._shut_down is True 1")
                 break
             asyncio.create_task(self.check_new_peak())
-            self.log.info("Loop self.sync_event.wait() 1")
             await self.sync_event.wait()
-            self.log.info("Loop self.sync_event.wait() 2")
             if self._shut_down is True:
-                self.log.info("Loop self._shut_down is True 2")
                 break
             try:
-                self.log.info("Loop Before sync")
                 await self._sync()
-                self.log.info("Loop After sync")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Loop exception in sync {e}. {tb}")
