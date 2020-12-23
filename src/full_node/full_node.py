@@ -34,8 +34,7 @@ from src.protocols import (
     wallet_protocol,
     farmer_protocol,
 )
-from src.protocols.full_node_protocol import RequestSubBlocks, RejectSubBlocks, RespondSubBlocks, RespondSubBlock, \
-    RespondProofOfWeight
+from src.protocols.full_node_protocol import RequestSubBlocks, RejectSubBlocks, RespondSubBlocks, RespondSubBlock
 
 from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, OutboundMessage
@@ -171,17 +170,13 @@ class FullNode:
             self.state_changed_callback(change)
 
     async def request_and_add_sub_block(self, peer: ws.WSChiaConnection, sub_height):
-        peer_peak = await peer.request_sub_block(
-            full_node_protocol.RequestSubBlock(uint32(sub_height), True)
-        )
+        peer_peak = await peer.request_sub_block(full_node_protocol.RequestSubBlock(uint32(sub_height), True))
         if peer_peak is None:
             self.log.warning(f"Failed to fetch sub block {sub_height} from {peer.get_peer_info()}")
             return
         if isinstance(peer_peak, full_node_protocol.RespondSubBlock):
             sub_block = peer_peak.sub_block
-            self.sync_store.add_potential_peak(
-                sub_block.header_hash, sub_block.sub_block_height, sub_block.weight
-            )
+            self.sync_store.add_potential_peak(sub_block.header_hash, sub_block.sub_block_height, sub_block.weight)
             await self.respond_sub_block(peer_peak, peer)
         else:
             self.log.warning(f"Failed to fetch sub block {sub_height} from {peer.get_peer_info()}")
@@ -214,7 +209,10 @@ class FullNode:
         elif request.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
             self.log.info("not enough blocks for weight proof,request peak sub block")
             await self.request_and_add_sub_block(peer, request.sub_block_height)
-        elif peak is not None and peak.sub_block_height > request.sub_block_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+        elif (
+            peak is not None
+            and peak.sub_block_height > request.sub_block_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS
+        ):
             await self.request_and_add_sub_block(peer, request.sub_block_height)
         else:
             return Message(
