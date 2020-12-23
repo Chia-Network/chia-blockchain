@@ -12,6 +12,7 @@ from src.consensus.constants import ConsensusConstants
 
 log = logging.getLogger(__name__)
 
+
 @dataclass(frozen=True)
 @streamable
 class VDFInfo(Streamable):
