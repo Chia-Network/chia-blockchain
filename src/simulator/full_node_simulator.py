@@ -1,3 +1,4 @@
+import asyncio
 from typing import AsyncGenerator, List, Optional
 
 from src.consensus.sub_block_record import SubBlockRecord
@@ -19,6 +20,7 @@ class FullNodeSimulator(FullNodeAPI):
         super().__init__(full_node)
         self.bt = block_tools
         self.full_node = full_node
+        self.lock = asyncio.Lock()
 
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[SubBlockRecord] = self.full_node.blockchain.get_peak()
@@ -43,30 +45,31 @@ class FullNodeSimulator(FullNodeAPI):
 
     @api_request
     async def farm_new_block(self, request: FarmNewBlockProtocol):
-        self.log.info("Farming new block!")
-        current_blocks = await self.get_all_full_blocks()
-        if len(current_blocks) == 0:
-            genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
-            await self.full_node.blockchain.receive_block(genesis)
+        async with self.lock:
+            self.log.info("Farming new block!")
+            current_blocks = await self.get_all_full_blocks()
+            if len(current_blocks) == 0:
+                genesis = self.bt.get_consecutive_blocks(uint8(1))[0]
+                await self.full_node.blockchain.receive_block(genesis)
 
-        peak = self.full_node.blockchain.get_peak()
-        assert peak is not None
-        bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(
-            peak.header_hash
-        )
-        current_blocks = await self.get_all_full_blocks()
-        target = request.puzzle_hash
-        more = self.bt.get_consecutive_blocks(
-            1,
-            transaction_data=bundle,
-            farmer_reward_puzzle_hash=target,
-            pool_reward_puzzle_hash=target,
-            block_list_input=current_blocks,
-            force_overflow=True,
-            guarantee_block=True,
-        )
-        rr = RespondSubBlock(more[-1])
-        await self.full_node.respond_sub_block(rr)
+            peak = self.full_node.blockchain.get_peak()
+            assert peak is not None
+            bundle: Optional[SpendBundle] = await self.full_node.mempool_manager.create_bundle_from_mempool(
+                peak.header_hash
+            )
+            current_blocks = await self.get_all_full_blocks()
+            target = request.puzzle_hash
+            more = self.bt.get_consecutive_blocks(
+                1,
+                transaction_data=bundle,
+                farmer_reward_puzzle_hash=target,
+                pool_reward_puzzle_hash=target,
+                block_list_input=current_blocks,
+                force_overflow=True,
+                guarantee_block=True,
+            )
+            rr = RespondSubBlock(more[-1])
+            await self.full_node.respond_sub_block(rr)
 
     @api_request
     async def reorg_from_index_to_new_index(self, request: ReorgProtocol):

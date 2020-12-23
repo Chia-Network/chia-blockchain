@@ -550,7 +550,9 @@ class WalletNode:
 
             # Verify removals root
             removals_merkle_set = MerkleSet()
-            for coin in coins:
+            for name_coin in coins:
+                # TODO review all verification
+                name, coin = name_coin
                 if coin is not None:
                     removals_merkle_set.add_already_hashed(coin.name())
             removals_root = removals_merkle_set.get_root()
@@ -629,6 +631,10 @@ class WalletNode:
                 coin.puzzle_hash.hex()
             )
             if record_info is not None and record_info.wallet_type == WalletType.COLOURED_COIN:
+                # TODO why ?
+                request_all_removals = True
+                break
+            if record_info is not None and record_info.wallet_type == WalletType.DISTRIBUTED_ID:
                 request_all_removals = True
                 break
 
