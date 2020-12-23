@@ -18,8 +18,6 @@ class SyncStore:
     potential_peaks: Dict[bytes32, Tuple[uint32, uint128]]
     # Blocks received from other peers during sync
     potential_blocks: Dict[uint32, FullBlock]
-    # Event to signal when blocks are received at each height
-    potential_blocks_received: Dict[uint32, asyncio.Event]
     # Blocks that we have finalized during sync, queue them up for adding after sync is done
     potential_future_blocks: List[FullBlock]
     # A map from sub height to header hash of sub-blocks added to the chain
@@ -41,7 +39,6 @@ class SyncStore:
         self.sync_height_target = None
         self.potential_peaks = {}
         self.potential_blocks = {}
-        self.potential_blocks_received = {}
         self.potential_future_blocks = []
         self.header_hashes_added = {}
         self.peak_fork_point = {}
@@ -82,7 +79,6 @@ class SyncStore:
     async def clear_sync_info(self):
         self.potential_peaks.clear()
         self.potential_blocks.clear()
-        self.potential_blocks_received.clear()
         self.potential_future_blocks.clear()
         self.header_hashes_added.clear()
         self.waiting_for_peaks = True
@@ -92,8 +88,8 @@ class SyncStore:
     def get_potential_peaks_tuples(self) -> List[Tuple[bytes32, Tuple[uint32, uint128]]]:
         return list(self.potential_peaks.items())
 
-    def add_potential_peak(self, header_hash: bytes32, height: uint32, weight: uint128) -> None:
-        self.potential_peaks[header_hash] = (height, weight)
+    def add_potential_peak(self, header_hash: bytes32, sub_height: uint32, weight: uint128) -> None:
+        self.potential_peaks[header_hash] = (sub_height, weight)
 
     def get_potential_peak(self, header_hash: bytes32) -> Optional[Tuple[uint32, uint128]]:
         return self.potential_peaks.get(header_hash, None)
