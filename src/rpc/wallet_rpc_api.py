@@ -80,6 +80,7 @@ class WalletRpcApi:
             "/did_recovery_spend": self.did_recovery_spend,
             "/did_get_recovery_list": self.did_get_recovery_list,
             "/did_create_attest": self.did_create_attest,
+            "/did_get_information_needed_for_recovery": self.did_get_information_needed_for_recovery,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
             "/respond_to_offer": self.respond_to_offer,
@@ -718,7 +719,28 @@ class WalletRpcApi:
         else:
             return {"success": False}
 
-    ##########################################################################################
+    async def did_get_information_needed_for_recovery(self, request):
+        wallet_id = int(request["wallet_id"])
+        did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        my_did = did_wallet.get_my_DID()
+        coin_name = did_wallet.did_info.temp_coin.name().hex()
+        newpuzhash = (await did_wallet.get_new_puzzle()).get_tree_hash().hex()
+        pubkey = bytes(
+            (
+                await self.service.wallet_state_manager.get_unused_derivation_record(
+                    did_wallet.wallet_info.id
+                )
+            ).pubkey
+        ).hex()
+        return{
+            "success": True,
+            "my_did": my_did,
+            "coin_name": coin_name,
+            "newpuzhash": newpuzhash,
+            "pubkey": pubkey,
+            "backup_dids": did_wallet.did_info.backup_ids,
+        }
+##########################################################################################
     # Coloured Coins and Trading
     ##########################################################################################
 
