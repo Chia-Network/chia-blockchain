@@ -143,7 +143,7 @@ class Blockchain:
 
     async def get_block_peak(self) -> Optional[FullBlock]:
         """ Return peak block"""
-        if self.peak_height is None:
+        if self.peak_height is None or self.peak_height == 0:
             return None
         start = self.peak_height
         peak = None
@@ -152,6 +152,7 @@ class Blockchain:
             if block is not None and block.is_block():
                 peak = block
                 break
+            start -= 1
 
         return peak
 
