@@ -117,7 +117,7 @@ async def show_async(args, parser):
 
         if args.state:
             blockchain_state = await client.get_blockchain_state()
-            peak: Optional[SubBlockRecord] = blockchain_state["peak"]
+            peak: Optional[FullBlock] = blockchain_state["peak"]
             difficulty = blockchain_state["difficulty"]
             sub_slot_iters = blockchain_state["sub_slot_iters"]
             sync_mode = blockchain_state["sync"]["sync_mode"]
@@ -136,11 +136,16 @@ async def show_async(args, parser):
             else:
                 print("Current Blockchain Status: Full Node Synced")
             print("Peak:\n    ", peak.header_hash)
-            curr = peak
-            while curr is not None and not curr.is_block:
-                curr = await client.get_sub_block_record(curr.prev_hash)
+            if peak.is_block():
+                peak_time = peak.foliage_block.timestamp
+            else:
+                peak_hash = peak.header_hash
+                curr = await client.get_sub_block_record(peak_hash)
+                while curr is not None and not curr.is_block:
+                    curr = await client.get_sub_block_record(curr.prev_hash)
+                peak_time = curr.timestamp
 
-            peak_time = struct_time(localtime(curr.timestamp))
+            peak_time = struct_time(localtime(peak_time))
 
             # Should auto format the align right of LCA height
             print(
@@ -160,7 +165,7 @@ async def show_async(args, parser):
             print("")
 
             added_blocks: List[SubBlockRecord] = []
-            curr = peak
+            curr = await client.get_sub_block_record(peak.header_hash)
             while curr is not None and len(added_blocks) < num_blocks:
                 added_blocks.append(curr)
                 curr = await client.get_sub_block_record(curr.prev_hash)
