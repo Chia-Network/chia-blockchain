@@ -378,7 +378,6 @@ class WalletNode:
     async def sync_job(self):
         while True:
             self.log.info("Loop start in sync job")
-            await asyncio.sleep(10)
             if self._shut_down is True:
                 break
             asyncio.create_task(self.check_new_peak())
