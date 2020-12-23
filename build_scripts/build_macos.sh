@@ -34,7 +34,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain --appVersion=$CHIA_INSTALLER_VERSION
-electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist
+electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist --no-gatekeeper-assess
 mv Chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts || exit
 
