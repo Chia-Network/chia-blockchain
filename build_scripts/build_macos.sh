@@ -12,7 +12,7 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
 npm install electron-packager -g
-npm install electron/electron-osx-sign #master --save-dev -g
+npm install electron/electron-osx-sign -g
 
 echo "Create dist/"
 sudo rm -rf dist
