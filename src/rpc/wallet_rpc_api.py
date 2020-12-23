@@ -648,19 +648,22 @@ class WalletRpcApi:
     async def did_recovery_spend(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-
+        if len(request["attest_filenames"]) < wallet.did_info.num_of_backup_ids_needed:
+            return {"success": False, "reason": "insufficient messages"}
         spend_bundle_list = []
+        info_dict = {}
         try:
-            for i in request["attest_spendbundle_filenames"]:
+            for i in request["attest_filenames"]:
                 f = open(i)
-                new_sb = SpendBundle.from_bytes(bytes.fromhex(f.read()))
+                info = f.read().split(":")
+                info_dict[info[0]] = [info[2], info[3], info[4]]
+
+                new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
                 spend_bundle_list.append(new_sb)
                 f.close()
             # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
-            info_dict = request["info_dict"]
             my_recovery_list: List[bytes] = wallet.did_info.backup_ids
-            if len(info_dict) < wallet.did_info.num_of_backup_ids_needed:
-                return {"success": False, "reason": "insufficient messages"}
+
             # convert info dict into recovery list - same order as wallet
             info_list = []
             for entry in my_recovery_list:
@@ -708,7 +711,7 @@ class WalletRpcApi:
         coin = bytes.fromhex(request["coin_name"])
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
         spend_bundle = await wallet.create_attestment(
-            coin, bytes.fromhex(request["puzhash"]), pubkey
+            coin, bytes.fromhex(request["puzhash"]), pubkey, request["filename"]
         )
         if spend_bundle is not None:
             return {

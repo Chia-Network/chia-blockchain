@@ -552,7 +552,7 @@ class DIDWallet:
     # Pushes the a SpendBundle to create a message coin on the blockchain
     # Returns a SpendBundle for the recoverer to spend the message coin
     async def create_attestment(
-        self, recovering_coin_name, newpuz, pubkey
+        self, recovering_coin_name, newpuz, pubkey, filename=""
     ) -> SpendBundle:
         coins = await self.select_coins(1)
         assert coins is not None and coins != set()
@@ -621,6 +621,19 @@ class DIDWallet:
             trade_id=None,
         )
         await self.standard_wallet.push_transaction(did_record)
+        if filename != "":
+            f = open(filename, "w")
+            f.write(self.get_my_DID())
+            f.write(":")
+            f.write(bytes(message_spend_bundle).hex())
+            f.write(":")
+            rec_info = await self.get_info_for_recovery()
+            f.write(rec_info[0])
+            f.write(":")
+            f.write(rec_info[1])
+            f.write(":")
+            f.write(rec_info[2])
+            f.close()
         return message_spend_bundle
 
     async def get_info_for_recovery(self):
