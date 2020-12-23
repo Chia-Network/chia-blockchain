@@ -368,7 +368,7 @@ class WebSocketServer:
             command_args.append(f"-a={a}")
 
         if e is True:
-            command_args.append(f"-e")
+            command_args.append("-e")
 
         return command_args
 

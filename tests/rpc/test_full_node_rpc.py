@@ -1,5 +1,3 @@
-import asyncio
-
 import pytest
 
 from src.consensus.pot_iterations import is_overflow_sub_block
