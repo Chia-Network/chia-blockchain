@@ -84,7 +84,7 @@ jobs:
         sh install.sh
 
     - name: Setup Node 12.x
-      uses: actions/setup-node@v2.1.4
+      uses: actions/setup-node@v2.1.3
       with:
         node-version: '12.x'
 
@@ -93,7 +93,6 @@ jobs:
         . ./activate
         clang --version
         cd ./electron-react
-        npm install -g electron-osx-sign
         npm install
         npm audit fix
         cd ../build_scripts
