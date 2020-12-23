@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import Optional
 
@@ -9,6 +10,7 @@ from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
 from src.consensus.constants import ConsensusConstants
 
+log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 @streamable
@@ -35,10 +37,10 @@ class VDFProof(Streamable):
         If target_vdf_info is passed in, it is compared with info.
         """
         if target_vdf_info is not None and info != target_vdf_info:
-            print(f"INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
+            log.error(f"INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
             return False
         if self.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
-            print(f"WITNESS SIZE TO BIG {constants.MAX_VDF_WITNESS_SIZE}")
+            log.error(f"WITNESS SIZE TO BIG {constants.MAX_VDF_WITNESS_SIZE}")
             return False
         try:
             disc: int = int(
