@@ -71,9 +71,10 @@ class FullNodeRpcApi:
 
         if sync_mode and self.service.sync_peers_handler is not None:
             max_pp = 0
-            for _, potential_peak in self.service.sync_store.potential_peaks.items():
-                if potential_peak.sub_block_height > max_pp:
-                    max_pp = potential_peak.height
+            for _, potential_peak_tuple in self.service.sync_store.potential_peaks.items():
+                peak_h, peak_w = potential_peak_tuple
+                if peak_h > max_pp:
+                    max_pp = peak_h
             sync_tip_height = max_pp
             sync_progress_sub_height = uint32(self.service.sync_peers_handler.fully_validated_up_to)
             hash = self.service.blockchain.sub_height_to_hash[sync_progress_sub_height]
@@ -173,7 +174,7 @@ class FullNodeRpcApi:
 
     async def get_unfinished_sub_block_headers(self, request: Dict) -> Optional[Dict]:
 
-        peak: Optional[SubBlockRecord] = await self.service.blockchain.get_peak()
+        peak: Optional[SubBlockRecord] = self.service.blockchain.get_peak()
         if peak is None:
             return {"headers": []}
 
