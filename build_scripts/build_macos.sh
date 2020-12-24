@@ -52,8 +52,10 @@ if [ "$NOTARIZE" ]; then
 	cd final_installer
 	ls -l
 	length=${#APPLE_NOTARIZE_PASSWORD}
-	echo "Password length is $length"
+	echo "Password length is $length - xcrun version is:"
+	xcrun --version
   notarize-cli --file=Chia-$CHIA_INSTALLER_VERSION.dmg --bundle-id net.chia.blockchain --username $APPLE_NOTARIZE_USERNAME --password $APPLE_NOTARIZE_PASSWORD
+	xcrun altool --verbose --notarize-app -f Chia-$CHIA_INSTALLER_VERSION.dmg --primary-bundle-id net.chia.blockchain -u $APPLE_NOTARIZE_USERNAME -p $APPLE_NOTARIZE_PASSWORD
   echo "Notarization step complete"
 else
 	echo "Not on ci so skipping Notarize"

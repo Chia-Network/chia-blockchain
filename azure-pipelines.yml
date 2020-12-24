@@ -95,7 +95,6 @@ steps:
       export APPLE_NOTARIZE_PASSWORD="$(APPLE_NOTARIZE_PASSWORD)"
       cd build_scripts
       sh build_macos.sh
-      ls -l final_installer
     displayName: "Build DMG with build_scripts/build_macos.sh"
 
   - task: PublishPipelineArtifact@1
