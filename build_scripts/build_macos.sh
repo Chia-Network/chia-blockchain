@@ -48,7 +48,7 @@ electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
 mv Chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts || exit
 
-$DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
+DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
 echo "Create $DMG_NAME"
 mkdir final_installer
 electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION \
