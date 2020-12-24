@@ -52,9 +52,25 @@ if [ "$NOTARIZE" ]; then
 	cd final_installer
 	ls -l
 	length=${#APPLE_NOTARIZE_PASSWORD}
-	echo "Filename is Chia-$CHIA_INSTALLER_VERSION.dmg - length of password is $length"
-  npx notarize-cli --file=Chia-$CHIA_INSTALLER_VERSION.dmg --bundle-id net.chia.blockchain --username $APPLE_NOTARIZE_USERNAME --password $APPLE_NOTARIZE_PASSWORD
+  notarize-cli --file=Chia-$CHIA_INSTALLER_VERSION.dmg --bundle-id net.chia.blockchain --username $APPLE_NOTARIZE_USERNAME --password $APPLE_NOTARIZE_PASSWORD
   echo "Notarization step complete"
 else
 	echo "Not on ci so skipping Notarize"
 fi
+
+# Notes on how to manually notarize
+#
+# Ask for username and password - password should be an app specific password
+# Generate app specific password https://support.apple.com/en-us/HT204397
+# xcrun altool --notarize-app -f Chia-0.1.X.dmg --primary-bundle-id net.chia.blockchain -u username -p password
+# xcrun altool --notarize-app; -should return REQUEST-ID, use it in next command
+#
+# Wait until following command return a success message"
+# watch -n 20 'xcrun altool --notarization-info  {REQUEST-ID} -u username -p password'
+# It can take a while, run it every few minutes
+#
+# Once that is successful, execute the following command"
+# xcrun stapler staple Chia-0.1.X.dmg
+#
+# Validate DMG
+# xcrun stapler validate Chia-0.1.X.dmg
