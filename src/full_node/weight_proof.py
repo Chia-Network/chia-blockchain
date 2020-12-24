@@ -249,10 +249,6 @@ class WeightProofHandler:
                     self.log.error(f"failed reward_chain_hash validation sub_epoch {segment.sub_epoch_n}")
                     return False
 
-            self.log.debug(
-                f"validate segment {idx} out of {len(weight_proof.sub_epoch_segments)} sub_epoch : {segment.sub_epoch_n}"
-            )
-
             valid_segment, ip_iters, slot_iters, slots, blocks = self._validate_segment_slots(
                 segment, curr_ssi, curr_difficulty, prev_ses
             )
