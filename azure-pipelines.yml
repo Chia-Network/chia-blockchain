@@ -21,6 +21,9 @@ strategy:
 #      python.version: '3.8'  # Disabled 3.8 because artifact names conflict
 #                               Also, installer can target one verison
 
+variables:
+  - group: Apple-Notarize-Variables
+
 steps:
   - task: UsePythonVersion@0
     inputs:
@@ -87,6 +90,8 @@ steps:
 
   - script: |
       . ./activate
+      export APPLE_NOTARIZE_USERNAME=$(APPLE_NOTARIZE_USERNAME)
+      export APPLE_NOTARIZE_PASSWORD=$(APPLE_NOTARIZE_PASSWORD)
       cd build_scripts
       sh build_macos.sh
       ls -l final_installer

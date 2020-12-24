@@ -13,6 +13,7 @@ echo "Installing npm and electron packagers"
 npm install electron-installer-dmg -g
 npm install electron-packager -g
 npm install electron/electron-osx-sign -g
+npm install notarize-cli -g
 
 echo "Create dist/"
 sudo rm -rf dist
@@ -43,3 +44,10 @@ mkdir final_installer
 electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION --overwrite --out final_installer
 echo "ls -l"
 ls -l
+
+echo "Notarize DMG on ci"
+if [ "$CI" ]; then
+  notarize-cli --file=final_installer/Chia-$CHIA_INSTALLER_VERSION.dmg --bundle-id net.chia.blockchain --username $APPLE_NOTARIZE_USERNAME --password $APPLE_NOTARIZE_PASSWORD
+else
+	echo "Not on ci so skipping Notarize"
+fi
