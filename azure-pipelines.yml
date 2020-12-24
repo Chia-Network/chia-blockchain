@@ -93,8 +93,6 @@ steps:
       export NOTARIZE=true
       export APPLE_NOTARIZE_USERNAME=$(APPLE_NOTARIZE_USERNAME)
       export APPLE_NOTARIZE_PASSWORD=$(APPLE_NOTARIZE_PASSWORD)
-      echo "xcrun path is:"
-      type xcrun
       cd build_scripts
       sh build_macos.sh
       ls -l final_installer
