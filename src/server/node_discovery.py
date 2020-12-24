@@ -282,6 +282,10 @@ class FullNodeDiscovery:
             max_timestamp_difference = 14 * 3600 * 24
             max_consecutive_failures = 10
             await asyncio.sleep(cleanup_interval)
+
+            # HACK: skip this code for now. Later, remove this "continue"
+            continue
+
             # Perform the cleanup only if we have at least 3 connections.
             full_node_connected = self.server.get_full_node_connections()
             connected = [c.get_peer_info() for c in full_node_connected]
