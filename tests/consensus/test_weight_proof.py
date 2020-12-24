@@ -6,8 +6,6 @@ from typing import Dict, Optional, List, Tuple, Mapping, Container
 
 import pytest
 
-from src.consensus.constants import ConsensusConstants
-
 try:
     from reprlib import repr
 except ImportError:

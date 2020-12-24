@@ -211,9 +211,9 @@ class WeightProofHandler:
         rc_sub_slot_hash = self.constants.FIRST_CC_CHALLENGE
         curr_difficulty = self.constants.DIFFICULTY_STARTING
         curr_ssi = self.constants.SUB_SLOT_ITERS_STARTING
-        total_blocks, total_ip_iters = uint64(0), uint64(0)
-        total_slot_iters, total_slots = uint64(0), uint64(0)
-        total_ip_iters = uint64(0)
+        total_blocks, total_ip_iters = 0, 0
+        total_slot_iters, total_slots = 0, 0
+        total_ip_iters = 0
         # validate sub epoch samples
         curr_sub_epoch_n = -1
         prev_ses: Optional[SubEpochSummary] = None
@@ -519,7 +519,7 @@ class WeightProofHandler:
         curr_ssi: uint64,
         curr_difficulty: uint64,
         ses: Optional[SubEpochSummary],
-    ) -> Tuple[bool, uint64, uint64, uint64, int]:
+    ) -> Tuple[bool, int, int, int, int]:
         ip_iters, slot_iters, slots, challenge_blocks = 0, 0, 0, 0
         for idx, sub_slot in enumerate(segment.sub_slots):
             slot_iters = slot_iters + curr_ssi  # type: ignore
