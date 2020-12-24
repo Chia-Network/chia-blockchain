@@ -85,8 +85,11 @@ class WeightProofHandler:
         weight_to_check = self._get_weights_for_sampling(rng, tip.weight, recent_reward_chain)
         if weight_to_check is None:
             self.log.warning("math error while sampling sub epochs")
-
-        for ses_height in self.block_cache.get_ses_heights():
+        prev_ses_block = self.block_cache.height_to_sub_block_record(uint32(0))
+        if prev_ses_block is None:
+            return None
+        summary_heights = self.block_cache.get_ses_heights()
+        for idx, ses_height in enumerate(summary_heights):
             # next sub block
             ses_block = self.block_cache.height_to_sub_block_record(ses_height)
             if ses_block is None or ses_block.sub_epoch_summary_included is None:
@@ -95,28 +98,22 @@ class WeightProofHandler:
 
             self.log.debug(f"sub epoch end, block height {ses_height} {ses_block.sub_epoch_summary_included}")
             sub_epoch_data.append(_make_sub_epoch_data(ses_block.sub_epoch_summary_included))
-            sub_epoch_blocks_n = _get_sub_epoch_block_num(ses_block, self.block_cache)
-            if sub_epoch_blocks_n is None:
-                self.log.error("could not get sub epoch block number")
-                return None
 
             # if we have enough sub_epoch samples, dont sample
             if sub_epoch_n >= self.MAX_SAMPLES:
                 self.log.debug("reached sampled sub epoch cap")
                 continue
 
-            se_start = self.block_cache.height_to_sub_block_record(uint32(ses_height - sub_epoch_blocks_n))
             # sample sub epoch
-            if self.sample_sub_epoch(se_start, ses_block, weight_to_check):  # type: ignore
-                self.log.debug(f"add sub_epoch at height {ses_height} to sub epoch samples")
-                segments = await self.__create_sub_epoch_segments(ses_block, se_start, sub_epoch_n)  # type: ignore
+            if self.sample_sub_epoch(prev_ses_block, ses_block, weight_to_check):  # type: ignore
+                segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, sub_epoch_n)
                 if segments is None:
                     self.log.error(f"failed while building segments for sub epoch {sub_epoch_n} ")
                     return None
                 self.log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
                 sub_epoch_segments.extend(segments)
                 sub_epoch_n = uint32(sub_epoch_n + 1)
-
+            prev_ses_block = ses_block
         self.log.info(f"sub_epochs: {len(sub_epoch_data)}")
         return WeightProof(sub_epoch_data, sub_epoch_segments, recent_reward_chain)
 
@@ -297,13 +294,9 @@ class WeightProofHandler:
     async def __create_sub_epoch_segments(
         self, ses_block: SubBlockRecord, se_start: SubBlockRecord, sub_epoch_n: uint32
     ) -> Optional[List[SubEpochChallengeSegment]]:
-        """
-        receives the last block in sub epoch and creates List[SubEpochChallengeSegment] for that sub_epoch
-        """
+
         # get headers in cache
-        await self.block_cache.init_headers(
-            uint32(ses_block.sub_block_height - se_start.sub_block_height), uint32(ses_block.sub_block_height + 30)
-        )
+        await self.block_cache.init_headers(uint32(se_start.sub_block_height), uint32(ses_block.sub_block_height + 30))
         segments: List[SubEpochChallengeSegment] = []
 
         curr: Optional[SubBlockRecord] = se_start
@@ -311,8 +304,7 @@ class WeightProofHandler:
         assert curr is not None
         while curr.sub_block_height < ses_block.sub_block_height:
             if curr.is_challenge_sub_block(self.constants):
-                self.log.debug(f"challenge sub block at {curr.sub_block_height}")
-                self.log.debug(f"sub epoch {sub_epoch_n} challenge segment, starts at {curr.sub_block_height} ")
+                self.log.debug(f"challenge segment, starts at {curr.sub_block_height} ")
                 seg, height = await self._handle_challenge_segment(curr, sub_epoch_n)
                 if seg is None:
                     self.log.error(f"failed creating segment {curr.header_hash} ")
@@ -608,41 +600,6 @@ def _make_sub_epoch_data(
     sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
     new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
     return SubEpochData(reward_chain_hash, previous_sub_epoch_overflows, sub_slot_iters, new_difficulty)
-
-
-def _get_sub_epoch_block_num(ses_block: SubBlockRecord, cache: BlockCache) -> Optional[uint32]:
-    """
-    returns the number of blocks in a sub epoch ending with
-    """
-
-    count: uint32 = uint32(0)
-    # count from end of sub_epoch
-    if ses_block.sub_epoch_summary_included is None:
-        return None
-
-    # if ses_block is overflow, count it
-    if ses_block.overflow:
-        count = uint32(1)  # type: ignore
-
-    curr = cache.sub_block_record(ses_block.prev_hash)
-    if curr is None:
-        return None
-
-    while not curr.sub_epoch_summary_included:
-        # genesis
-        if curr.sub_block_height == uint32(0):
-            return count
-
-        curr = cache.sub_block_record(curr.prev_hash)
-        if curr is None:
-            return None
-        count = count + uint32(1)  # type: ignore
-
-    # if prev ses block is overflow, dont count it
-    if curr.overflow:
-        count = count - uint32(1)  # type: ignore
-
-    return count
 
 
 def _validate_sub_slot_vdfs(
