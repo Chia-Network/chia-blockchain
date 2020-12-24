@@ -52,6 +52,7 @@ if [ "$NOTARIZE" ]; then
 	cd final_installer
 	ls -l
 	length=${#APPLE_NOTARIZE_PASSWORD}
+	echo "Password length is $length"
   notarize-cli --file=Chia-$CHIA_INSTALLER_VERSION.dmg --bundle-id net.chia.blockchain --username $APPLE_NOTARIZE_USERNAME --password $APPLE_NOTARIZE_PASSWORD
   echo "Notarization step complete"
 else
