@@ -1,6 +1,8 @@
 #!/bin/bash
 pip install setuptools_scm
 # The environment variable CHIA_INSTALLER_VERSION needs to be defined
+# If the env variable NOTARIZE and the username and password variables are
+# set, this will attempt to Notarize the signed DMG
 CHIA_INSTALLER_VERSION=$(python installer-version.py)
 
 if [ ! "$CHIA_INSTALLER_VERSION" ]; then
@@ -46,8 +48,11 @@ echo "ls -l"
 ls -l
 
 echo "Notarize DMG on ci"
-if [ "$CI" ]; then
-  notarize-cli --file=final_installer/Chia-$CHIA_INSTALLER_VERSION.dmg --bundle-id net.chia.blockchain --username $APPLE_NOTARIZE_USERNAME --password $APPLE_NOTARIZE_PASSWORD
+if [ "$NOTARIZE" ]; then
+	cd final_installer
+	ls -l
+  notarize-cli --file=Chia-$CHIA_INSTALLER_VERSION.dmg --bundle-id net.chia.blockchain --username $APPLE_NOTARIZE_USERNAME --password $APPLE_NOTARIZE_PASSWORD
+  echo "Notarization step complete"
 else
 	echo "Not on ci so skipping Notarize"
 fi
