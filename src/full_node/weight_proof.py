@@ -211,7 +211,7 @@ class WeightProofHandler:
         rc_sub_slot_hash = self.constants.FIRST_CC_CHALLENGE
         curr_difficulty = self.constants.DIFFICULTY_STARTING
         curr_ssi = self.constants.SUB_SLOT_ITERS_STARTING
-        # total_challenge_blocks, total_ip_iters = uint64(0), uint64(0)
+        total_blocks, total_ip_iters = uint64(0), uint64(0)
         total_slot_iters, total_slots = uint64(0), uint64(0)
         total_ip_iters = uint64(0)
         # validate sub epoch samples
@@ -239,22 +239,25 @@ class WeightProofHandler:
 
             self.log.debug(f"validate segment {idx} out of {len(weight_proof.sub_epoch_segments)}")
 
-            valid_segment, total_slot_iters, total_slots, challenge_blocks = self._validate_segment_slots(
-                segment, curr_ssi, curr_difficulty, total_slot_iters, total_slots, total_ip_iters, prev_ses
+            valid_segment, ip_iters, slot_iters, slots, blocks = self._validate_segment_slots(
+                segment, curr_ssi, curr_difficulty, prev_ses
             )
             prev_ses = None
             if not valid_segment:
                 self.log.error(f"failed to validate segment {idx} of sub_epoch {segment.sub_epoch_n} slots")
                 return False
 
-            # total_challenge_blocks += challenge_blocks
+            total_blocks += blocks
+            total_slot_iters += slot_iters
+            total_slots += slots
+            total_ip_iters += ip_iters
 
             curr_sub_epoch_n = segment.sub_epoch_n
-        # avg_ip_iters = total_ip_iters / total_challenge_blocks
-        # avg_slot_iters = total_slot_iters / total_slots
-        # if avg_slot_iters / avg_ip_iters < float(self.constants.WEIGHT_PROOF_THRESHOLD):
-        #     self.log.error(f"bad avg challenge block positioning ration: {avg_slot_iters / avg_ip_iters}")
-        #     return False
+        avg_ip_iters = total_ip_iters / total_blocks
+        avg_slot_iters = total_slot_iters / total_slots
+        if avg_slot_iters / avg_ip_iters < float(self.constants.WEIGHT_PROOF_THRESHOLD):
+            self.log.error(f"bad avg challenge block positioning ration: {avg_slot_iters / avg_ip_iters}")
+            return False
 
         return True
 
@@ -515,17 +518,12 @@ class WeightProofHandler:
         segment: SubEpochChallengeSegment,
         curr_ssi: uint64,
         curr_difficulty: uint64,
-        total_slot_iters: uint64,
-        total_slots: uint64,
-        total_ip_iters: uint64,
         ses: Optional[SubEpochSummary],
-    ) -> Tuple[bool, uint64, uint64, int]:
-
-        challenge_blocks = 0
-
+    ) -> Tuple[bool, uint64, uint64, uint64, int]:
+        ip_iters, slot_iters, slots, challenge_blocks = 0, 0, 0, 0
         for idx, sub_slot in enumerate(segment.sub_slots):
-            total_slot_iters = total_slot_iters + curr_ssi  # type: ignore
-            total_slots = total_slots + uint64(1)  # type: ignore
+            slot_iters = slot_iters + curr_ssi  # type: ignore
+            slots = slots + uint64(1)  # type: ignore
 
             # todo uncomment after vdf merging is done
             # if not validate_sub_slot_vdfs(self.constants, sub_slot, vdf_info, sub_slot.is_challenge()):
@@ -536,14 +534,14 @@ class WeightProofHandler:
                 self.log.debug(f"validate proof of space segment, slot {idx}")
                 required_iters = self.__validate_pospace(segment, idx, curr_difficulty, ses)
                 if required_iters is None:
-                    return False, uint64(0), uint64(0), 0
+                    return False, uint64(0), uint64(0), uint64(0), 0
                 assert sub_slot.cc_signage_point_index is not None
-                total_ip_iters = total_ip_iters + calculate_ip_iters(  # type: ignore
+                ip_iters = ip_iters + calculate_ip_iters(  # type: ignore
                     self.constants, curr_ssi, sub_slot.cc_signage_point_index, required_iters
                 )
                 challenge_blocks = challenge_blocks + 1
 
-        return True, total_slot_iters, total_slots, challenge_blocks
+        return True, ip_iters, slot_iters, slots, challenge_blocks
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> uint32:
         # iterate through sub epoch summaries to find fork point
