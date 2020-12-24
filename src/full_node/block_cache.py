@@ -68,8 +68,17 @@ class BlockCache:
     def get_ses(self, height: uint32) -> SubEpochSummary:
         return self._sub_epoch_summaries[height]
 
+    def get_ses_from_height(self, height: uint32) -> List[SubEpochSummary]:
+        ses_l = []
+        for ses_height in reversed(self.get_ses_heights()):
+            if ses_height < height:
+                break
+            ses_l.append(self.get_ses(height))
+        return ses_l
+
     def _height_to_hash(self, height: uint32) -> Optional[bytes32]:
         if height not in self._sub_height_to_hash:
+            self.log.error("could not find header hash in cache")
             return None
         return self._sub_height_to_hash[height]
 

@@ -47,9 +47,6 @@ class WeightProofHandler:
         else:
             self.log = logging.getLogger(self.WeightProofHandler)
 
-    def set_block_cache(self, block_cache):
-        self.block_cache = block_cache
-
     async def get_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
         if self.proof is not None and tip == self.proof[0]:
             wp: Optional[WeightProof] = self.proof[1]
@@ -60,36 +57,48 @@ class WeightProofHandler:
         self.proof = (tip, wp)
         return wp
 
+    async def extend_proof_of_weight(self, weight_proof: WeightProof, new_tip: SubBlockRecord) -> Optional[WeightProof]:
+        # replace recent chain
+        recent_chain = await self.get_recent_chain(new_tip.sub_block_height)
+        if recent_chain is None:
+            return None
+
+        end_height = weight_proof.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
+        sub_epoch_data = weight_proof.sub_epochs
+        for summary in self.block_cache.get_ses_from_height(end_height):
+            sub_epoch_data.append(_make_sub_epoch_data(summary))
+
+        # todo handle new sampling
+        return WeightProof(sub_epoch_data, weight_proof.sub_epoch_segments, recent_chain)
+
     async def create_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
         """
         Creates a weight proof object
         """
         assert self.block_cache is not None
-        # todo clean some of the logs after tests pass
         sub_epoch_data: List[SubEpochData] = []
         sub_epoch_segments: List[SubEpochChallengeSegment] = []
-        rng: random.Random = random.Random(tip)
-        # ses_hash from the latest sub epoch summary before this part of the chain
-        tip = self.block_cache.sub_block_record(tip)
-        if tip is None:
-            self.log.error(f"build weight proof, for unknown peak  {tip}")
-            return None
-        tip_height = tip.sub_block_height
-        sub_epoch_n = uint32(0)
-
-        recent_reward_chain = await self.get_recent_chain(tip_height)
-        if recent_reward_chain is None:
-            self.log.info("failed adding recent chain")
+        tip_rec = self.block_cache.sub_block_record(tip)
+        if tip_rec is None:
+            self.log.error("failed tip in cache")
             return None
 
-        weight_to_check = self._get_weights_for_sampling(rng, tip.weight, recent_reward_chain)
+        recent_chain = await self.get_recent_chain(tip_rec.sub_block_height)
+        if recent_chain is None:
+            return None
+
+        weight_to_check = self._get_weights_for_sampling(random.Random(tip), tip_rec.weight, recent_chain)
         if weight_to_check is None:
             self.log.warning("math error while sampling sub epochs")
+
         prev_ses_block = self.block_cache.height_to_sub_block_record(uint32(0))
         if prev_ses_block is None:
             return None
+
+        sub_epoch_n = uint32(0)
         summary_heights = self.block_cache.get_ses_heights()
         for idx, ses_height in enumerate(summary_heights):
+            self.log.info(f"handle sub epoch summary at height {ses_height}")
             # next sub block
             ses_block = self.block_cache.height_to_sub_block_record(ses_height)
             if ses_block is None or ses_block.sub_epoch_summary_included is None:
@@ -106,16 +115,16 @@ class WeightProofHandler:
 
             # sample sub epoch
             if self.sample_sub_epoch(prev_ses_block, ses_block, weight_to_check):  # type: ignore
-                segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, sub_epoch_n)
+                segments = await self.__create_sub_epoch_segments(ses_block, prev_ses_block, uint32(idx))
                 if segments is None:
-                    self.log.error(f"failed while building segments for sub epoch {sub_epoch_n} ")
+                    self.log.error(f"failed while building segments for sub epoch {idx}, ses height {ses_height} ")
                     return None
                 self.log.debug(f"sub epoch {sub_epoch_n} has {len(segments)} segments")
                 sub_epoch_segments.extend(segments)
                 sub_epoch_n = uint32(sub_epoch_n + 1)
             prev_ses_block = ses_block
         self.log.info(f"sub_epochs: {len(sub_epoch_data)}")
-        return WeightProof(sub_epoch_data, sub_epoch_segments, recent_reward_chain)
+        return WeightProof(sub_epoch_data, sub_epoch_segments, recent_chain)
 
     def sample_sub_epoch(
         self, start_of_epoch: SubBlockRecord, end_of_epoch: SubBlockRecord, weight_to_check: List[uint128]
@@ -135,17 +144,22 @@ class WeightProofHandler:
 
     async def get_recent_chain(self, tip_height: uint32) -> Optional[List[ProofBlockHeader]]:
         recent_chain: List[ProofBlockHeader] = []
-        start_height = uint32(tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS)
-
+        curr_height = uint32(tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS)
         await self.block_cache.init_headers(uint32(tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS), tip_height)
-        while start_height <= tip_height:
+        while curr_height <= tip_height:
             # add to needed reward chain recent blocks
-            header_block = await self.block_cache.height_to_header_block(start_height)
+            header_block = await self.block_cache.height_to_header_block(curr_height)
             if header_block is None:
+                self.log.error("creating recent chain failed")
                 return None
             recent_chain.append(ProofBlockHeader(header_block.finished_sub_slots, header_block.reward_chain_sub_block))
-            start_height = start_height + uint32(1)  # type: ignore
+            curr_height = curr_height + uint32(1)  # type: ignore
 
+        self.log.info(
+            f"recent chain, "
+            f"start: {recent_chain[0].reward_chain_sub_block.sub_block_height} "
+            f"end:  {recent_chain[-1].reward_chain_sub_block.sub_block_height} "
+        )
         return recent_chain
 
     def validate_weight_proof(self, weight_proof: WeightProof) -> Tuple[bool, uint32]:
@@ -193,6 +207,8 @@ class WeightProofHandler:
         last_ses_block = _get_last_ses_block_idx(self.constants, weight_proof.recent_chain_data)
         if last_ses_block is None:
             return None
+        self.log.info(f"last ses height {last_ses_block.reward_chain_sub_block.sub_block_height}")
+
         # validate weight
 
         # validate last ses_hash
@@ -214,30 +230,28 @@ class WeightProofHandler:
         total_blocks, total_ip_iters = 0, 0
         total_slot_iters, total_slots = 0, 0
         total_ip_iters = 0
-        # validate sub epoch samples
         curr_sub_epoch_n = -1
         prev_ses: Optional[SubEpochSummary] = None
         for idx, segment in enumerate(weight_proof.sub_epoch_segments):
             if curr_sub_epoch_n < segment.sub_epoch_n:
-                self.log.info(f"handle new sub epoch {segment.sub_epoch_n}")
-
+                self.log.info(f"handle sub epoch {segment.sub_epoch_n}")
                 # recreate RewardChainSubSlot for next ses rc_hash
                 if segment.sub_epoch_n > 0:
                     rc_sub_slot = self.__get_rc_sub_slot_hash(weight_proof.sub_epoch_segments[idx], summaries)
                     self.log.debug(f"rc sub slot segment {idx} {rc_sub_slot}")
                     rc_sub_slot_hash = rc_sub_slot.get_hash()
-                    ses = summaries[segment.sub_epoch_n]
+
                     prev_ses = summaries[segment.sub_epoch_n - 1]
-                    if ses.new_sub_slot_iters is not None:
-                        curr_ssi = ses.new_sub_slot_iters
-                    if ses.new_difficulty is not None:
-                        curr_difficulty = ses.new_difficulty
+                    curr_difficulty, curr_ssi = self.get_current_vars(segment.sub_epoch_n, summaries)
+
                 self.log.debug("compare segment rc_sub_slot_hash with ses reward_chain_hash")
                 if not summaries[segment.sub_epoch_n].reward_chain_hash == rc_sub_slot_hash:
                     self.log.error(f"failed reward_chain_hash validation sub_epoch {segment.sub_epoch_n}")
                     return False
 
-            self.log.debug(f"validate segment {idx} out of {len(weight_proof.sub_epoch_segments)}")
+            self.log.debug(
+                f"validate segment {idx} out of {len(weight_proof.sub_epoch_segments)} sub_epoch : {segment.sub_epoch_n}"
+            )
 
             valid_segment, ip_iters, slot_iters, slots, blocks = self._validate_segment_slots(
                 segment, curr_ssi, curr_difficulty, prev_ses
@@ -260,6 +274,19 @@ class WeightProofHandler:
             return False
 
         return True
+
+    def get_current_vars(self, idx, summaries):
+
+        curr_difficulty = self.constants.DIFFICULTY_STARTING
+        curr_ssi = self.constants.SUB_SLOT_ITERS_STARTING
+
+        for ses in reversed(summaries[0:idx]):
+            if ses.new_sub_slot_iters is not None:
+                curr_ssi = ses.new_sub_slot_iters
+                curr_difficulty = ses.new_difficulty
+                break
+
+        return curr_difficulty, curr_ssi
 
     def __get_rc_sub_slot_hash(
         self,
@@ -505,7 +532,7 @@ class WeightProofHandler:
         if q_str is None:
             self.log.error("could not verify proof of space")
             return None
-        self.log.debug(f"verify proof of space challenge {challenge} sp_hash {cc_sp_hash}")
+        self.log.info(f"verify proof of space challenge {challenge} sp_hash {cc_sp_hash}")
         return calculate_iterations_quality(
             q_str,
             challenge_sub_slot.proof_of_space.size,
@@ -531,7 +558,6 @@ class WeightProofHandler:
             #     return False
 
             if sub_slot.is_challenge():
-                self.log.debug(f"validate proof of space segment, slot {idx}")
                 required_iters = self.__validate_pospace(segment, idx, curr_difficulty, ses)
                 if required_iters is None:
                     return False, uint64(0), uint64(0), uint64(0), 0
