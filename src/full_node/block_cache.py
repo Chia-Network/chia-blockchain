@@ -73,7 +73,7 @@ class BlockCache:
         for ses_height in reversed(self.get_ses_heights()):
             if ses_height < height:
                 break
-            ses_l.append(self.get_ses(height))
+            ses_l.append(self.get_ses(ses_height))
         return ses_l
 
     def _height_to_hash(self, height: uint32) -> Optional[bytes32]:
