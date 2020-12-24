@@ -36,26 +36,29 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "npm run build failed!"
 	exit $LAST_EXIT_CODE
 fi
-electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain --appVersion=$CHIA_INSTALLER_VERSION
-electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist --no-gatekeeper-assess
+electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
+--icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
+--appVersion=$CHIA_INSTALLER_VERSION
+
+electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
+--hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
+--entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
+--no-gatekeeper-assess
+
 mv Chia-darwin-x64 ../build_scripts/dist/
 cd ../build_scripts || exit
 
-echo "Create .dmg"
+$DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
+echo "Create $DMG_NAME"
 mkdir final_installer
-electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION --overwrite --out final_installer
-echo "ls -l"
-ls -l
+electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSION \
+--overwrite --out final_installer
 
-echo "Notarize DMG on ci"
 if [ "$NOTARIZE" ]; then
+	echo "Notarize $DMG_NAME on ci"
 	cd final_installer
-	ls -l
-	length=${#APPLE_NOTARIZE_PASSWORD}
-	echo "Password length is $length - xcrun version is:"
-	xcrun --version
-  notarize-cli --file=Chia-$CHIA_INSTALLER_VERSION.dmg --bundle-id net.chia.blockchain --username $APPLE_NOTARIZE_USERNAME --password $APPLE_NOTARIZE_PASSWORD
-	xcrun altool --verbose --notarize-app -f Chia-$CHIA_INSTALLER_VERSION.dmg --primary-bundle-id net.chia.blockchain -u $APPLE_NOTARIZE_USERNAME -p $APPLE_NOTARIZE_PASSWORD
+  notarize-cli --file=$DMG_NAME --bundle-id net.chia.blockchain \
+	--username $APPLE_NOTARIZE_USERNAME --password $APPLE_NOTARIZE_PASSWORD
   echo "Notarization step complete"
 else
 	echo "Not on ci so skipping Notarize"
