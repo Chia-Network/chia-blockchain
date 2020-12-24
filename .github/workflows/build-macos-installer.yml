@@ -89,6 +89,9 @@ jobs:
         node-version: '12.x'
 
     - name: Build MacOS DMG in Catalina
+      env:
+        APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
+        APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
       run: |
         . ./activate
         clang --version

@@ -92,6 +92,7 @@ steps:
       . ./activate
       export APPLE_NOTARIZE_USERNAME=$(APPLE_NOTARIZE_USERNAME)
       export APPLE_NOTARIZE_PASSWORD=$(APPLE_NOTARIZE_PASSWORD)
+      export CI=True
       cd build_scripts
       sh build_macos.sh
       ls -l final_installer
