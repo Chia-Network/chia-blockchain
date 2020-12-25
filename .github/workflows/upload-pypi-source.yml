@@ -1,4 +1,4 @@
-name: Lint and upload source distribution to PyPI
+name: Lint and upload source distribution
 
 on: [push, pull_request]
 
