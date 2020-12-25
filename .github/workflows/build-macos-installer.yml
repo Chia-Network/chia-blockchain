@@ -1,11 +1,11 @@
-name: Build MacOS installer on Catalina and Python 3.8
+name: MacOS installer on Catalina and Python 3.8
 
 
 on: [push, pull_request]
 
 jobs:
   build:
-    name: Build MacOS installer on Python 3.8
+    name: MacOS installer on Catalina and Python 3.8
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:
