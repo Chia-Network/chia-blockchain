@@ -46,12 +46,12 @@ class FullNodeRpcClient(RpcClient):
             return None
         return SubBlockRecord.from_json_dict(response["sub_block_record"])
 
-    async def get_unfinished_sub_block_headers(self, sub_height: uint32) -> List[UnfinishedHeaderBlock]:
-        response = await self.fetch("get_unfinished_sub_block_headers", {"sub_height": sub_height})
+    async def get_unfinished_sub_block_headers(self) -> List[UnfinishedHeaderBlock]:
+        response = await self.fetch("get_unfinished_sub_block_headers", {})
         return [UnfinishedHeaderBlock.from_json_dict(r) for r in response["headers"]]
 
     async def get_all_block(self, start: uint32, end: uint32) -> List[FullBlock]:
-        response = await self.fetch("get_blocks", {"start": start, "end": end})
+        response = await self.fetch("get_blocks", {"start": start, "end": end, "exclude_header_hash": True})
         return [FullBlock.from_json_dict(r) for r in response["blocks"]]
 
     async def get_network_space(
