@@ -33,7 +33,6 @@ setuptools_scm>=4.1.2
 # No Dependencies
 
 aiohttp~=3.7.1
-blspy~=0.2.4
 cryptography~=3.3
 PyYAML~=5.3.1
 cbor2~=5.2.0
@@ -42,7 +41,6 @@ colorlog~=4.6.2
 keyring~=21.5.0
 bitstring~=3.1.7
 chiabip158~=0.16
-chiavdf~=0.13.0b2
 setproctitle~=1.1.10
 chiapos~=0.12.33
 websockets~=8.1
