@@ -164,6 +164,7 @@ class ChiaServer:
             if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
                 self.introducer_peers.add(connection.get_peer_info())
         except ProtocolError as e:
+            await connection.close()
             if e.code == Err.SELF_CONNECTION:
                 close_event.set()
             else:
@@ -179,6 +180,9 @@ class ChiaServer:
         return ws
 
     async def connection_added(self, connection: WSChiaConnection, on_connect=None):
+        if connection.peer_node_id in self.all_connections:
+            con = self.all_connections[connection.peer_node_id]
+            await con.close()
         self.all_connections[connection.peer_node_id] = connection
         if connection.connection_type is not None:
             self.connection_by_type[connection.connection_type][connection.peer_node_id] = connection
@@ -203,6 +207,11 @@ class ChiaServer:
             self.log.debug(f"Not connecting to {target_node}")
             return False
 
+        for connection in self.all_connections.values():
+            if connection.host == target_node.host and connection.peer_server_port == target_node.port:
+                self.log.debug(f"Not connecting to {target_node}, duplicate connection")
+                return False
+
         ssl_context = ssl_context_for_client(self._private_cert_path, self._private_key_path, auth)
         session = None
         try:
@@ -219,7 +228,7 @@ class ChiaServer:
             self.log.info(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
-                    url, autoclose=False, autoping=True, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
+                    url, autoclose=False, autoping=True, heartbeat=30, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
                 )
             except asyncio.TimeoutError:
                 self.log.warning(f"Timeout error connecting to {url}")
@@ -258,6 +267,7 @@ class ChiaServer:
         except client_exceptions.ClientConnectorError as e:
             self.log.warning(f"{e}")
         except ProtocolError as e:
+            await connection.close()
             if e.code == Err.SELF_CONNECTION:
                 pass
             else:

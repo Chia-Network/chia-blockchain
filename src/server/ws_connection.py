@@ -141,8 +141,10 @@ class WSChiaConnection:
 
     async def close(self):
         # Closes the connection
+        if self.closed:
+            return
         self.closed = True
-        if self.ws is not None:
+        if self.ws is not None and self.ws._closed is False:
             await self.ws.close()
         if self.inbound_task is not None:
             self.inbound_task.cancel()
@@ -179,7 +181,7 @@ class WSChiaConnection:
                     else:
                         await self.incoming_queue.put((payload, self))
                 else:
-                    break
+                    continue
         except asyncio.CancelledError:
             self.log.info("task canceled")
         except Exception as e:
@@ -268,7 +270,16 @@ class WSChiaConnection:
         self.bytes_written += size
 
     async def _read_one_message(self) -> Optional[Payload]:
-        message: WSMessage = await self.ws.receive()
+        try:
+            message: WSMessage = await self.ws.receive(30)
+        except asyncio.TimeoutError:
+            # self.ws._closed if we didn't receive a ping / pong
+            if self.ws._closed:
+                asyncio.create_task(self.close())
+                await asyncio.sleep(3)
+                return None
+            return None
+
         if self.connection_type is not None:
             connection_type_str = NodeType(self.connection_type).name.lower()
         else:
@@ -286,6 +297,7 @@ class WSChiaConnection:
                 f"{self.peer_port}"
             )
             asyncio.create_task(self.close())
+            await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
             pass
         elif message.type == WSMsgType.BINARY:
@@ -299,7 +311,8 @@ class WSChiaConnection:
             return payload
         else:
             self.log.error(f"Unexpected WebSocket message type: {message}")
-            await self.close()
+            asyncio.create_task(self.close())
+            await asyncio.sleep(3)
         return None
 
     def get_peer_info(self) -> Optional[PeerInfo]:
