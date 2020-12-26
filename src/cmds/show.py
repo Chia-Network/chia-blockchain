@@ -135,7 +135,7 @@ async def show_async(args, parser):
                 )
             else:
                 print("Current Blockchain Status: Full Node Synced")
-            print("Peak:\n    ", peak.header_hash)
+            print("\nPeak: Hash:", peak.header_hash)
             if peak.is_block():
                 peak_time = peak.foliage_block.timestamp
             else:
@@ -149,20 +149,24 @@ async def show_async(args, parser):
 
             # Should auto format the align right of LCA height
             print(
-                "     Peak time:",
-                time.strftime("%a %b %d %Y %T %Z", peak_time),
-                "       Peak sub-block height:",
-                peak.sub_block_height,
-                "       Peak height:",
-                peak.height,
+                "      Time:",
+                f"{time.strftime('%a %b %d %Y %T %Z', peak_time)}",
+                f"Height: {peak.height:>7}",
+                f"SB height: {peak.sub_block_height:>8}\n",
             )
 
-            network_space_terabytes_estimate = blockchain_state["space"] / 1024 ** 4
-            print(f"The network has an estimated {network_space_terabytes_estimate:.2f}TiB")
+            print("Estimated network space: ", end="")
+            network_space_human_readable = blockchain_state["space"] / 1024 ** 4
+            if network_space_human_readable >= 1024:
+                network_space_human_readable = network_space_human_readable / 1024
+                print(f"{network_space_human_readable:.3f}PiB")
+            else:
+                print(f"{network_space_human_readable:.3f}TiB")
             print(f"Current difficulty: {difficulty}")
             print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
             print("Total iterations since the start of the blockchain:", total_iters)
             print("")
+            print("SB Height |   Height  | Hash:")
 
             added_blocks: List[SubBlockRecord] = []
             curr = await client.get_sub_block_record(peak.header_hash)
@@ -171,29 +175,28 @@ async def show_async(args, parser):
                 curr = await client.get_sub_block_record(curr.prev_hash)
 
             for b in added_blocks:
-                print(f"SB height: {b.sub_block_height}, height: {b.height}, {b.header_hash}")
+                print(f"{b.sub_block_height:>8}  | {b.height:>7}   | {b.header_hash}")
 
             # if called together with connections, leave a blank line
             if args.connections:
                 print("")
         if args.connections:
             connections = await client.get_connections()
-            print("Connections")
+            print("Connections:")
             print(
-                "Type      IP                                      Ports      NodeID        Last Connect"
+                "Type      IP                                        Ports       NodeID      Last Connect"
                 + "       MB Up|Dwn"
             )
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
-                # last_connect = time.ctime(con['last_message_time'])
                 last_connect = time.strftime("%b %d %T", last_connect_tuple)
                 mb_down = con["bytes_read"] / 1000000
                 mb_up = con["bytes_written"] / 1000000
-                # print (last_connect)
+                # Nodetype length is 9 because INTRODUCER will be deprecated
                 con_str = (
-                    f"{NodeType(con['type']).name:9} {con['peer_host']:39} "
+                    f"{NodeType(con['type']).name:9} {con['peer_host']:41} "
                     f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
-                    f"{con['node_id'].hex()[:10]}... "
+                    f" {con['node_id'].hex()[:8]}... "
                     f"{last_connect}  "
                     f"{mb_down:7.1f}|{mb_up:<7.1f}"
                 )
@@ -220,8 +223,8 @@ async def show_async(args, parser):
                 print(f"Failed to connect to {ip}:{port}")
         if args.remove_connection:
             result_txt = ""
-            if len(args.remove_connection) != 10:
-                result_txt = "Invalid NodeID"
+            if len(args.remove_connection) != 8:
+                result_txt = "Invalid NodeID. Do not include '.'."
             else:
                 connections = await client.get_connections()
                 for con in connections:
