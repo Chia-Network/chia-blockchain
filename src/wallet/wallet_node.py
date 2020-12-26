@@ -325,6 +325,8 @@ class WalletNode:
         return False
 
     async def complete_blocks(self, header_blocks: List[HeaderBlock], peer: WSChiaConnection):
+        if self.wallet_state_manager is None:
+            return
         header_block_records: List[HeaderBlockRecord] = []
         for block in header_blocks:
             if block.is_block:
