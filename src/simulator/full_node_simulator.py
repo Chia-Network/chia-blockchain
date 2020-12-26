@@ -65,7 +65,6 @@ class FullNodeSimulator(FullNodeAPI):
                 farmer_reward_puzzle_hash=target,
                 pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
-                force_overflow=True,
                 guarantee_block=True,
             )
             rr = RespondSubBlock(more[-1])
