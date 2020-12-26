@@ -460,7 +460,6 @@ class WalletNode:
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Loop exception in sync {e}. {tb}")
-            # self.sync_event.clear()
             self.log.info("Loop end in sync job")
 
     async def _sync(self):
@@ -512,8 +511,6 @@ class WalletNode:
             block_i: HeaderBlock = res.header_block
             if block_i is None:
                 continue
-
-            self.log.error(f"Received block {block_i.sub_block_height}, {block_i.height}, {block_i.is_block}")
 
             if block_i.is_block:
                 # Find additions and removals
