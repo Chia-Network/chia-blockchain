@@ -32,18 +32,12 @@ pytest-asyncio>=0.14.0
 setuptools_scm>=4.1.2
 # No Dependencies
 
-aiohttp~=3.7.1
-cryptography~=3.3
 PyYAML~=5.3.1
 cbor2~=5.2.0
-clvm~=0.6
 colorlog~=4.6.2
 keyring~=21.5.0
 bitstring~=3.1.7
-chiabip158~=0.16
 setproctitle~=1.1.10
-chiapos~=0.12.33
-websockets~=8.1
 aiter~=0.13.20191203
 aiosqlite~=0.15.0
 sortedcontainers~=2.3.0
