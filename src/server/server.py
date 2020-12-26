@@ -164,7 +164,7 @@ class ChiaServer:
             if self._local_type is NodeType.INTRODUCER and connection.connection_type is NodeType.FULL_NODE:
                 self.introducer_peers.add(connection.get_peer_info())
         except ProtocolError as e:
-            if e.code == Err.SELF_CONNECTION:
+            if e.code == Err.SELF_CONNECTION or e.code == Err.DUPLICATE_CONNECTION:
                 close_event.set()
             else:
                 error_stack = traceback.format_exc()
@@ -179,6 +179,12 @@ class ChiaServer:
         return ws
 
     async def connection_added(self, connection: WSChiaConnection, on_connect=None):
+        for _, c in self.all_connections.items():
+            if c.peer_node_id == connection.peer_node_id:
+                connection.peer_node_id = None
+                self.log.error(f"Duplicate connection for {connection.peer_host}")
+                raise ProtocolError(Err.DUPLICATE_CONNECTION)
+
         self.all_connections[connection.peer_node_id] = connection
         if connection.connection_type is not None:
             self.connection_by_type[connection.connection_type][connection.peer_node_id] = connection
@@ -258,7 +264,7 @@ class ChiaServer:
         except client_exceptions.ClientConnectorError as e:
             self.log.warning(f"{e}")
         except ProtocolError as e:
-            if e.code == Err.SELF_CONNECTION:
+            if e.code == Err.SELF_CONNECTION or e.code == Err.DUPLICATE_CONNECTION:
                 pass
             else:
                 error_stack = traceback.format_exc()
