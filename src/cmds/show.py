@@ -186,7 +186,7 @@ async def show_async(args, parser):
             connections = await client.get_connections()
             print("Connections:")
             print(
-                "Type      IP                                        Ports       NodeID      Last Connect"
+                "Type      IP                                     Ports       NodeID      Last Connect"
                 + "       MB Up|Dwn"
             )
             for con in connections:
@@ -194,9 +194,13 @@ async def show_async(args, parser):
                 last_connect = time.strftime("%b %d %T", last_connect_tuple)
                 mb_down = con["bytes_read"] / 1000000
                 mb_up = con["bytes_written"] / 1000000
+                host = con["peer_host"]
+                # Strip IPv6 brackets
+                if host[0] == "[":
+                    host = host[1:39]
                 # Nodetype length is 9 because INTRODUCER will be deprecated
                 con_str = (
-                    f"{NodeType(con['type']).name:9} {con['peer_host']:41} "
+                    f"{NodeType(con['type']).name:9} {host:38} "
                     f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                     f" {con['node_id'].hex()[:8]}... "
                     f"{last_connect}  "
