@@ -53,7 +53,7 @@ class TestRpc:
             blocks = bt.get_consecutive_blocks(num_blocks)
             blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, guarantee_block=True)
 
-            assert len(await client.get_unfinished_sub_block_headers(0)) == 0
+            assert len(await client.get_unfinished_sub_block_headers()) == 0
             for block in blocks:
                 if is_overflow_sub_block(test_constants, block.reward_chain_sub_block.signage_point_index):
                     finished_ss = block.finished_sub_slots[:-1]
@@ -75,17 +75,13 @@ class TestRpc:
                 )
                 await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block), None)
 
-            assert len(await client.get_unfinished_sub_block_headers(0)) > 0
-            assert len(await client.get_unfinished_sub_block_headers(1)) > 0
+            assert len(await client.get_unfinished_sub_block_headers()) > 0
             assert len(await client.get_all_block(0, 2)) == 2
             state = await client.get_blockchain_state()
 
             block = await client.get_sub_block(state["peak"].header_hash)
             assert block == blocks[-1]
             assert (await client.get_sub_block(bytes([1] * 32))) is None
-
-            unf_block_headers = await client.get_unfinished_sub_block_headers(10)
-            assert len(unf_block_headers) == 0
 
             assert (await client.get_sub_block_record_by_sub_height(2)).header_hash == blocks[2].header_hash
 
