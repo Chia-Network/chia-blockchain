@@ -68,7 +68,6 @@ class FullNodeDiscovery:
             self.address_manager = AddressManager()
 
     async def start_tasks(self):
-        self.process_messages_task = asyncio.create_task(self._process_messages())
         random = Random()
         self.connect_peers_task = asyncio.create_task(self._connect_to_peers(random))
         self.serialize_task = asyncio.create_task(self._periodically_serialize(random))
@@ -77,7 +76,6 @@ class FullNodeDiscovery:
     async def _close_common(self):
         self.is_closed = True
         self.connect_peers_task.cancel()
-        self.process_messages_task.cancel()
         self.serialize_task.cancel()
         self.cleanup_task.cancel()
         await self.connection.close()
@@ -85,38 +83,16 @@ class FullNodeDiscovery:
     def add_message(self, message, data):
         self.message_queue.put_nowait((message, data))
 
-    async def _process_messages(self):
-        connection_time_pretest: Dict = {}
-        while not self.is_closed:
-            try:
-                message, peer_info = await self.message_queue.get()
-                if peer_info is None or not peer_info.port:
-                    continue
-                if message == "make_tried":
-                    await self.address_manager.mark_good(peer_info, True)
-                    await self.address_manager.connect(peer_info)
-                elif message == "mark_attempted":
-                    await self.address_manager.attempt(peer_info, True)
-                elif message == "mark_attempted_soft":
-                    await self.address_manager.attempt(peer_info, False)
-                elif message == "update_connection_time":
-                    if peer_info.host not in connection_time_pretest:
-                        connection_time_pretest[peer_info.host] = time.time()
-                    if time.time() - connection_time_pretest[peer_info.host] > 60:
-                        await self.address_manager.connect(peer_info)
-                        connection_time_pretest[peer_info.host] = time.time()
-                elif message == "new_inbound_connection":
-                    timestamped_peer_info = TimestampedPeerInfo(
-                        peer_info.host,
-                        peer_info.port,
-                        uint64(int(time.time())),
-                    )
-                    await self.address_manager.add_to_new_table([timestamped_peer_info], peer_info, 0)
-                    # await self.address_manager.mark_good(peer_info, True)
-                    if self.relay_queue is not None:
-                        self.relay_queue.put_nowait((timestamped_peer_info, 1))
-            except Exception as e:
-                self.log.error(f"Exception in process message: {e}")
+    async def on_connect(self, peer: ws.WSChiaConnection):
+        if peer.is_outbound is False and peer.peer_server_port is not None:
+            timestamped_peer_info = TimestampedPeerInfo(
+                peer.peer_host,
+                peer.peer_server_port,
+                uint64(int(time.time())),
+            )
+            await self.address_manager.add_to_new_table([timestamped_peer_info], peer.get_peer_info(), 0)
+            if self.relay_queue is not None:
+                self.relay_queue.put_nowait((timestamped_peer_info, 1))
 
     def _num_needed_peers(self) -> int:
         diff = self.target_outbound_count
@@ -250,14 +226,24 @@ class FullNodeDiscovery:
                     disconnect_after_handshake = True
                     empty_tables = False
                 initiate_connection = self._num_needed_peers() > 0 or has_collision or is_feeler
+                connected = False
                 if addr is not None and initiate_connection:
-                    asyncio.create_task(
-                        self.server.start_client(
+                    try:
+                        connected = await self.server.start_client(
                             addr,
                             is_feeler=disconnect_after_handshake,
                             on_connect=self.server.on_connect,
                         )
-                    )
+                    except Exception as e:
+                        self.log.error(f"Exception in create outbound connections: {e}")
+                        self.log.error(f"Traceback: {traceback.format_exc()}")
+
+                if connected is True:
+                    await self.address_manager.mark_good(addr)
+                    await self.address_manager.connect(addr)
+                else:
+                    await self.address_manager.attempt(addr, True)
+
                 sleep_interval = 1 + len(groups) * 0.5
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
                 await asyncio.sleep(sleep_interval)
