@@ -238,11 +238,11 @@ class FullNodeDiscovery:
                         self.log.error(f"Exception in create outbound connections: {e}")
                         self.log.error(f"Traceback: {traceback.format_exc()}")
 
-                if connected is True:
-                    await self.address_manager.mark_good(addr)
-                    await self.address_manager.connect(addr)
-                else:
-                    await self.address_manager.attempt(addr, True)
+                    if connected is True:
+                        await self.address_manager.mark_good(addr)
+                        await self.address_manager.connect(addr)
+                    else:
+                        await self.address_manager.attempt(addr, True)
 
                 sleep_interval = 1 + len(groups) * 0.5
                 sleep_interval = min(sleep_interval, self.peer_connect_interval)
