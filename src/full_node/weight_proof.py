@@ -217,7 +217,7 @@ class WeightProofHandler:
 
         last_ses_block = _get_last_ses_block_idx(self.constants, weight_proof.recent_chain_data)
         if last_ses_block is None:
-            self.log.warning(f"could not find last ses block")
+            self.log.warning("could not find last ses block")
             return None
 
         summaries, sub_epoch_data_weight = _map_summaries(
