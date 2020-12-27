@@ -187,25 +187,42 @@ async def show_async(args, parser):
             print("Connections:")
             print(
                 "Type      IP                                     Ports       NodeID      Last Connect"
-                + "       MB Up|Dwn"
+                + "       MB Up|Dwn     peak height|peak hash"
             )
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
                 last_connect = time.strftime("%b %d %T", last_connect_tuple)
                 mb_down = con["bytes_read"] / 1000000
                 mb_up = con["bytes_written"] / 1000000
+
                 host = con["peer_host"]
                 # Strip IPv6 brackets
                 if host[0] == "[":
                     host = host[1:39]
                 # Nodetype length is 9 because INTRODUCER will be deprecated
-                con_str = (
-                    f"{NodeType(con['type']).name:9} {host:38} "
-                    f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
-                    f" {con['node_id'].hex()[:8]}... "
-                    f"{last_connect}  "
-                    f"{mb_down:7.1f}|{mb_up:<7.1f}"
-                )
+                if NodeType(con["type"]) is NodeType.FULL_NODE:
+                    peak_sub_height = con["peak_sub_height"]
+                    peak_hash = con["peak_hash"]
+                    if peak_hash is None:
+                        peak_hash = "No Info"
+                    if peak_sub_height is None:
+                        peak_sub_height = 0
+                    con_str = (
+                        f"{NodeType(con['type']).name:9} {host:38} "
+                        f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
+                        f" {con['node_id'].hex()[:8]}... "
+                        f"{last_connect}  "
+                        f"{mb_down:7.1f}|{mb_up:<7.1f}    "
+                        f"{peak_sub_height:8.0f}|{peak_hash[:8]}"
+                    )
+                else:
+                    con_str = (
+                        f"{NodeType(con['type']).name:9} {host:38} "
+                        f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
+                        f" {con['node_id'].hex()[:8]}... "
+                        f"{last_connect}  "
+                        f"{mb_down:7.1f}|{mb_up:<7.1f}    "
+                    )
                 print(con_str)
             # if called together with state, leave a blank line
             if args.state:
