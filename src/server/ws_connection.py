@@ -245,6 +245,7 @@ class WSChiaConnection:
         if payload.id in self.request_results:
             result_payload: Payload = self.request_results[payload.id]
             result = result_payload.msg
+            self.log.info(f"<- {result_payload.msg.function} from: {self.peer_host}:{self.peer_port}")
             self.request_results.pop(payload.id)
 
         return result
