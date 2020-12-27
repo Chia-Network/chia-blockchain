@@ -163,7 +163,14 @@ class TestWeightProof:
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, height_to_hash, header_cache, summaries))
         wp = await wpf.get_proof_of_weight(blocks[-1].header_hash)
-        wpf._validate_sub_epoch_summaries(wp)
+        summaries, sub_epoch_data_weight = _map_summaries(
+            wpf.constants.SUB_EPOCH_SUB_BLOCKS,
+            wpf.constants.GENESIS_SES_HASH,
+            wp.sub_epochs,
+            wpf.constants.DIFFICULTY_STARTING,
+        )
+        assert wpf._validate_summaries_weight(sub_epoch_data_weight, summaries, wp)
+        # assert res is not None
 
     @pytest.mark.asyncio
     async def test_weight_proof_bad_peak_hash(self, default_1000_blocks):

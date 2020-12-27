@@ -120,14 +120,13 @@ class WeightProofHandler:
         sub_epoch_n = uint32(0)
         summary_heights = self.block_cache.get_ses_heights()
         for idx, ses_height in enumerate(summary_heights):
-            self.log.info(f"handle sub epoch summary at height {ses_height}")
             # next sub block
             ses_block = self.block_cache.height_to_sub_block_record(ses_height)
             if ses_block is None or ses_block.sub_epoch_summary_included is None:
                 self.log.error("error while building proof")
                 return None
 
-            self.log.debug(f"sub epoch end, block height {ses_height} {ses_block.sub_epoch_summary_included}")
+            self.log.info(f"handle sub epoch summary at height: {ses_height} weight: {ses_block.weight}")
             sub_epoch_data.append(_make_sub_epoch_data(ses_block.sub_epoch_summary_included))
 
             # if we have enough sub_epoch samples, dont sample
@@ -216,6 +215,11 @@ class WeightProofHandler:
     ) -> Optional[List[SubEpochSummary]]:
         assert self.block_cache is not None
 
+        last_ses_block = _get_last_ses_block_idx(self.constants, weight_proof.recent_chain_data)
+        if last_ses_block is None:
+            self.log.warning(f"could not find last ses block")
+            return None
+
         summaries, sub_epoch_data_weight = _map_summaries(
             self.constants.SUB_EPOCH_SUB_BLOCKS,
             self.constants.GENESIS_SES_HASH,
@@ -225,14 +229,13 @@ class WeightProofHandler:
 
         self.log.info(f"validating {len(summaries)} summaries")
 
-        last_ses = summaries[-1]
-        last_ses_block = _get_last_ses_block_idx(self.constants, weight_proof.recent_chain_data)
-        if last_ses_block is None:
-            return None
-        self.log.info(f"last ses height {last_ses_block.reward_chain_sub_block.sub_block_height}")
-
         # validate weight
+        if not self._validate_summaries_weight(sub_epoch_data_weight, summaries, weight_proof):
+            self.log.warning("failed validating weight")
+            return None
 
+        last_ses = summaries[-1]
+        self.log.info(f"last ses height {last_ses_block.reward_chain_sub_block.sub_block_height}")
         # validate last ses_hash
         if last_ses.get_hash() != last_ses_block.finished_sub_slots[-1].challenge_chain.subepoch_summary_hash:
             self.log.error(
@@ -240,6 +243,19 @@ class WeightProofHandler:
             )
             return None
         return summaries
+
+    def _validate_summaries_weight(self, sub_epoch_data_weight, summaries, weight_proof) -> bool:
+        num_over = summaries[-1].num_sub_blocks_overflow
+        ses_end_height = (len(summaries) - 1) * self.constants.SUB_EPOCH_SUB_BLOCKS + num_over - 1
+        self.log.info(f"weight height {ses_end_height}")
+        curr = None
+        for block in weight_proof.recent_chain_data:
+            if block.reward_chain_sub_block.sub_block_height == ses_end_height:
+                curr = block
+        if curr is None:
+            return False
+
+        return curr.reward_chain_sub_block.weight == sub_epoch_data_weight
 
     def _validate_segments(
         self,
@@ -550,7 +566,7 @@ class WeightProofHandler:
         if q_str is None:
             self.log.error("could not verify proof of space")
             return None
-        self.log.info(f"verify proof of space challenge {challenge} sp_hash {cc_sp_hash}")
+        self.log.debug(f"verify proof of space challenge {challenge} sp_hash {cc_sp_hash}")
         return calculate_iterations_quality(
             q_str,
             challenge_sub_slot.proof_of_space.size,
@@ -614,7 +630,8 @@ class WeightProofHandler:
         last_l_weight = recent_chain[-1].reward_chain_sub_block.weight - recent_chain[0].reward_chain_sub_block.weight
         delta = last_l_weight / total_weight
         prob_of_adv_succeeding = 1 - math.log(self.C, delta)
-        if prob_of_adv_succeeding == 0:
+        if prob_of_adv_succeeding <= 0:
+            self.log.warning(f"sample prob: {prob_of_adv_succeeding}")
             return None
         queries = -self.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
         for i in range(int(queries) + 1):
@@ -689,13 +706,17 @@ def _map_summaries(
             data.new_sub_slot_iters,
         )
 
+        if idx < len(sub_epoch_data) - 1:
+            delta = 0
+            if idx > 0:
+                delta = sub_epoch_data[idx].num_sub_blocks_overflow
+            sub_epoch_data_weight = sub_epoch_data_weight + uint128(  # type: ignore
+                curr_difficulty * (sub_blocks_for_se + sub_epoch_data[idx + 1].num_sub_blocks_overflow - delta)
+            )
+            print(f"sub epoch: {idx} weight: {sub_epoch_data_weight}")
         # if new epoch update diff and iters
         if data.new_difficulty is not None:
             curr_difficulty = data.new_difficulty
-
-        sub_epoch_data_weight = sub_epoch_data_weight + uint128(  # type: ignore
-            curr_difficulty * (sub_blocks_for_se + data.num_sub_blocks_overflow)
-        )
 
         # add to dict
         summaries.append(ses)
