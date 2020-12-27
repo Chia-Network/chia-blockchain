@@ -264,6 +264,8 @@ class FullNode:
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
         """
+        if self.full_node_peers is not None:
+            asyncio.create_task(self.full_node_peers.on_connect(connection))
         if connection.connection_type is NodeType.FULL_NODE:
             # Send filter to node and request mempool items that are not in it
             my_filter = self.mempool_manager.get_filter()

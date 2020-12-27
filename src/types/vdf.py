@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple, Dict
 
 from chiavdf import create_discriminant
 from src.types.classgroup import ClassgroupElement
@@ -12,7 +12,7 @@ from src.consensus.constants import ConsensusConstants
 
 log = logging.getLogger(__name__)
 
-discriminant_cache = {}
+discriminant_cache: Dict[Tuple[bytes32, int], int] = {}
 
 
 def add_to_cache(challenge_size, dsc):
@@ -50,11 +50,11 @@ class VDFProof(Streamable):
     witness: bytes
 
     def is_valid(
-            self,
-            constants: ConsensusConstants,
-            input_el: ClassgroupElement,
-            info: VDFInfo,
-            target_vdf_info: Optional[VDFInfo] = None,
+        self,
+        constants: ConsensusConstants,
+        input_el: ClassgroupElement,
+        info: VDFInfo,
+        target_vdf_info: Optional[VDFInfo] = None,
     ):
         """
         If target_vdf_info is passed in, it is compared with info.
@@ -69,7 +69,7 @@ class VDFProof(Streamable):
             disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
             x = ClassGroup.from_ab_discriminant(input_el.a, input_el.b, disc)
             y = ClassGroup.from_ab_discriminant(info.output.a, info.output.b, disc)
-        except Exception as e:
+        except Exception:
             return False
         # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
         # TODO: check for maximum witness type
