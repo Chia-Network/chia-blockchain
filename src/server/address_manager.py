@@ -27,6 +27,7 @@ MAX_FAILURES = 10
 
 log = logging.getLogger(__name__)
 
+
 # This is a Python port from 'CAddrInfo' class from Bitcoin core code.
 class ExtendedPeerInfo:
     def __init__(
@@ -426,7 +427,7 @@ class AddressManager:
                     end = time.time()
                     log.info(f"!!!! SELECT PEER took {end - start}")
                     return info
-                chance *= 1.2
+                chance *= 1.4
 
     def resolve_tried_collisions_(self):
         for node_id in self.tried_collisions[:]:
