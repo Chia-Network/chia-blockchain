@@ -181,7 +181,6 @@ class FullNodeDiscovery:
                     max_tries = 25
                 while not got_peer and not self.is_closed:
                     sleep_interval = min(15, self.peer_connect_interval)
-                    sleep_interval = min(sleep_interval, 0.5 + len(groups) * 0.5)
                     await asyncio.sleep(sleep_interval)
                     tries += 1
                     if tries > max_tries:

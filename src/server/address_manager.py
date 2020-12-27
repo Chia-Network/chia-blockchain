@@ -6,7 +6,7 @@ from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.util.ints import uint16, uint64
 from typing import Dict, List, Optional, Tuple
 from asyncio import Lock
-
+import logging
 import time
 import math
 
@@ -25,6 +25,7 @@ MAX_RETRIES = 3
 MIN_FAIL_DAYS = 7
 MAX_FAILURES = 10
 
+log = logging.getLogger(__name__)
 
 # This is a Python port from 'CAddrInfo' class from Bitcoin core code.
 class ExtendedPeerInfo:
@@ -412,6 +413,7 @@ class AddressManager:
                 chance *= 1.2
         else:
             chance = 1.0
+            start = time.time()
             while True:
                 new_bucket = randrange(NEW_BUCKET_COUNT)
                 new_bucket_pos = randrange(BUCKET_SIZE)
@@ -421,6 +423,8 @@ class AddressManager:
                 node_id = self.new_matrix[new_bucket][new_bucket_pos]
                 info = self.map_info[node_id]
                 if randbits(30) < chance * info.get_selection_chance() * (1 << 30):
+                    end = time.time()
+                    log.info(f"!!!! SELECT PEER took {end - start}")
                     return info
                 chance *= 1.2
 
