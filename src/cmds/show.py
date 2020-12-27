@@ -187,7 +187,7 @@ async def show_async(args, parser):
             print("Connections:")
             print(
                 "Type      IP                                     Ports       NodeID      Last Connect"
-                + "       MB Up|Dwn     peak height|peak hash"
+                + "       MB Up|Dwn"
             )
             for con in connections:
                 last_connect_tuple = struct_time(localtime(con["last_message_time"]))
@@ -212,8 +212,9 @@ async def show_async(args, parser):
                         f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                         f" {con['node_id'].hex()[:8]}... "
                         f"{last_connect}  "
-                        f"{mb_down:7.1f}|{mb_up:<7.1f}    "
-                        f"{peak_sub_height:8.0f}|{peak_hash[:8]}"
+                        f"{mb_down:7.1f}|{mb_up:<7.1f}"
+                        f"\n                                                 ----------- "
+                        f"SB Height - Hash: {peak_sub_height:8.0f} - {peak_hash[2:10]}..."
                     )
                 else:
                     con_str = (
