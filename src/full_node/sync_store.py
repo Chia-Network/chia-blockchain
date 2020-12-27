@@ -25,6 +25,7 @@ class SyncStore:
     # map from potential peak to fork point
     peak_fork_point: Dict[bytes32, uint32]
     peak_to_peer: Dict[bytes32, List[bytes32]]  # Header hash : peer node id
+    peer_to_peak: Dict[bytes32, Tuple[uint32, bytes32]]  # peer node id : [height, header_hash]
     sync_hash_target: Optional[bytes32]  # Peak hash we are syncing towards
     sync_height_target: Optional[uint32]  # Peak height we are syncing towards
     peers_changed: asyncio.Event
@@ -43,6 +44,7 @@ class SyncStore:
         self.header_hashes_added = {}
         self.peak_fork_point = {}
         self.peak_to_peer = {}
+        self.peer_to_peak = {}
         self.peers_changed = asyncio.Event()
         return self
 
@@ -62,13 +64,14 @@ class SyncStore:
     def get_sync_mode(self) -> bool:
         return self.sync_mode
 
-    def add_peak_peer(self, peak_hash: bytes32, peer_id: bytes32):
+    def add_peak_peer(self, peak_hash: bytes32, peer_id: bytes32, height: uint32):
         if peak_hash == self.sync_hash_target:
             self.peers_changed.set()
         if peak_hash in self.peak_to_peer:
             self.peak_to_peer[peak_hash].append(peer_id)
         else:
             self.peak_to_peer[peak_hash] = [peer_id]
+        self.peer_to_peak[peer_id] = (height, peak_hash)
 
     def get_peak_peers(self, header_hash) -> List[bytes32]:
         if header_hash in self.peak_to_peer:

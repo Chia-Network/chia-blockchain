@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple, Dict
 
 from chiavdf import create_discriminant
 from src.types.classgroup import ClassgroupElement
@@ -11,6 +11,28 @@ from src.util.streamable import Streamable, streamable
 from src.consensus.constants import ConsensusConstants
 
 log = logging.getLogger(__name__)
+
+discriminant_cache: Dict[Tuple[bytes32, int], int] = {}
+
+
+def add_to_cache(challenge_size, dsc):
+    if len(discriminant_cache.keys()) > 10:
+        keys = list(discriminant_cache.keys())
+        for i in range(0, 5):
+            discriminant_cache.pop(keys[i])
+    discriminant_cache[challenge_size] = dsc
+
+
+def get_discriminant(challenge, size_bites):
+    if (challenge, size_bites) in discriminant_cache:
+        return discriminant_cache[(challenge, size_bites)]
+    else:
+        dsc = int(
+            create_discriminant(challenge, size_bites),
+            16,
+        )
+        add_to_cache((challenge, size_bites), dsc)
+        return dsc
 
 
 @dataclass(frozen=True)
@@ -44,10 +66,7 @@ class VDFProof(Streamable):
             log.error(f"WITNESS SIZE TO BIG {constants.MAX_VDF_WITNESS_SIZE}")
             return False
         try:
-            disc: int = int(
-                create_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS),
-                16,
-            )
+            disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
             x = ClassGroup.from_ab_discriminant(input_el.a, input_el.b, disc)
             y = ClassGroup.from_ab_discriminant(info.output.a, info.output.b, disc)
         except Exception:

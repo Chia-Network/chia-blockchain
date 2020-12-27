@@ -1,11 +1,10 @@
-name: Build MacOS and test on 3.8 and 3.9
-
+name: Build and test MacOS
 
 on: [push, pull_request]
 
 jobs:
   build:
-    name: Build and test MacOS-latest on Python 3.8, 3.9
+    name: Build and test MacOS
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
     strategy:

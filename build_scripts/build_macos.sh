@@ -56,9 +56,9 @@ electron-installer-dmg dist/Chia-darwin-x64/Chia.app Chia-$CHIA_INSTALLER_VERSIO
 
 if [ "$NOTARIZE" ]; then
 	echo "Notarize $DMG_NAME on ci"
-	cd final_installer
+	cd final_installer || exit
   notarize-cli --file=$DMG_NAME --bundle-id net.chia.blockchain \
-	--username $APPLE_NOTARIZE_USERNAME --password $APPLE_NOTARIZE_PASSWORD
+	--username "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD"
   echo "Notarization step complete"
 else
 	echo "Not on ci so skipping Notarize"

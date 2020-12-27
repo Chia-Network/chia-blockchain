@@ -130,6 +130,10 @@ class FullNodeRpcApi:
             raise ValueError("No start in request")
         if "end" not in request:
             raise ValueError("No end in request")
+        exclude_hh = False
+        if "exclude_header_hash" in request:
+            exclude_hh = request["exclude_header_hash"]
+
         start = int(request["start"])
         end = int(request["end"])
         block_range = []
@@ -139,7 +143,8 @@ class FullNodeRpcApi:
         json_blocks = []
         for block in blocks:
             json = block.to_json_dict()
-            json["header_hash"] = block.header_hash.hex()
+            if not exclude_hh:
+                json["header_hash"] = block.header_hash.hex()
             json_blocks.append(json)
         return {"blocks": json_blocks}
 
@@ -180,7 +185,7 @@ class FullNodeRpcApi:
 
         response_headers: List[UnfinishedHeaderBlock] = []
         for ub_sub_height, block in (self.service.full_node_store.get_unfinished_blocks()).values():
-            if ub_sub_height == peak:
+            if ub_sub_height == peak.sub_block_height:
                 unfinished_header_block = UnfinishedHeaderBlock(
                     block.finished_sub_slots,
                     block.reward_chain_sub_block,
