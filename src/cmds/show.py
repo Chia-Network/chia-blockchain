@@ -213,8 +213,8 @@ async def show_async(args, parser):
                         f" {con['node_id'].hex()[:8]}... "
                         f"{last_connect}  "
                         f"{mb_down:7.1f}|{mb_up:<7.1f}"
-                        f"\n                                                 ----------- "
-                        f"SB Height - Hash: {peak_sub_height:8.0f} - {peak_hash[2:10]}..."
+                        f"\n                                                 "
+                        f"-SB Height: {peak_sub_height:8.0f}    -Hash: {peak_hash[2:10]}..."
                     )
                 else:
                     con_str = (
