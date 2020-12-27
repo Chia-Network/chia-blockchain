@@ -184,7 +184,7 @@ class FullNode:
     async def new_peak(self, request, peer: ws.WSChiaConnection):
         # Check if we have this block in the blockchain
         if peer is not None and peer.peer_node_id is not None:
-            self.sync_store.add_peak_peer(request.header_hash, peer.peer_node_id)
+            self.sync_store.add_peak_peer(request.header_hash, peer.peer_node_id, request.sub_block_height)
 
         if self.blockchain.contains_sub_block(request.header_hash):
             return None
@@ -205,7 +205,7 @@ class FullNode:
                         full_node_protocol.RequestSubBlock(uint32(peak_sync_height), True)
                     )
                     if target_peak_response is not None and isinstance(target_peak_response, RespondSubBlock):
-                        self.sync_store.add_peak_peer(peak_sync_hash, peer.peer_node_id)
+                        self.sync_store.add_peak_peer(peak_sync_hash, peer.peer_node_id, peak_sync_height)
         elif request.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
             self.log.info("not enough blocks for weight proof,request peak sub block")
             await self.request_and_add_sub_block(peer, request.sub_block_height)

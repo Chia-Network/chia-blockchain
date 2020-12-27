@@ -6,6 +6,7 @@ import asyncio
 import json
 import traceback
 
+from src.server.outbound_message import NodeType
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
@@ -89,22 +90,50 @@ class RpcServer:
     async def get_connections(self, request: Dict) -> Dict:
         if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
-        connections = self.rpc_api.service.server.get_connections()
-        con_info = [
-            {
-                "type": con.connection_type,
-                "local_port": con.local_port,
-                "peer_host": con.peer_host,
-                "peer_port": con.peer_port,
-                "peer_server_port": con.peer_server_port,
-                "node_id": con.peer_node_id,
-                "creation_time": con.creation_time,
-                "bytes_read": con.bytes_read,
-                "bytes_written": con.bytes_written,
-                "last_message_time": con.last_message_time,
-            }
-            for con in connections
-        ]
+        if self.rpc_api.service.server._local_type is NodeType.FULL_NODE:
+            # TODO add peaks for peers
+            connections = self.rpc_api.service.server.get_connections()
+            con_info = []
+            peak_store = self.rpc_api.service.sync_store.peer_to_peak
+            for con in connections:
+
+                if con.peer_node_id in peak_store:
+                    peak_sub_height, peak_hash = peak_store[con.peer_node_id]
+                else:
+                    peak_sub_height = None
+                    peak_hash = None
+                con_dict = {
+                    "type": con.connection_type,
+                    "local_port": con.local_port,
+                    "peer_host": con.peer_host,
+                    "peer_port": con.peer_port,
+                    "peer_server_port": con.peer_server_port,
+                    "node_id": con.peer_node_id,
+                    "creation_time": con.creation_time,
+                    "bytes_read": con.bytes_read,
+                    "bytes_written": con.bytes_written,
+                    "last_message_time": con.last_message_time,
+                    "peak_sub_height": peak_sub_height,
+                    "peak_hash": peak_hash,
+                }
+                con_info.append(con_dict)
+        else:
+            connections = self.rpc_api.service.server.get_connections()
+            con_info = [
+                {
+                    "type": con.connection_type,
+                    "local_port": con.local_port,
+                    "peer_host": con.peer_host,
+                    "peer_port": con.peer_port,
+                    "peer_server_port": con.peer_server_port,
+                    "node_id": con.peer_node_id,
+                    "creation_time": con.creation_time,
+                    "bytes_read": con.bytes_read,
+                    "bytes_written": con.bytes_written,
+                    "last_message_time": con.last_message_time,
+                }
+                for con in connections
+            ]
         return {"connections": con_info}
 
     async def open_connection(self, request: Dict):
