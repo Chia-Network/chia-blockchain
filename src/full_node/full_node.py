@@ -224,7 +224,7 @@ class FullNode:
         request = full_node_protocol.RequestProofOfWeight(height, header_hash)
         response = await peer.request_proof_of_weight(request)
         self.pow_pending.remove(peer.peer_node_id)
-        if response is not None and isinstance(response, full_node_protocol.RequestProofOfWeight):
+        if response is not None and isinstance(response, full_node_protocol.RespondProofOfWeight):
             validated, fork_point = self.weight_proof_handler.validate_weight_proof(response.wp)
             if validated is True:
                 # get tip params
