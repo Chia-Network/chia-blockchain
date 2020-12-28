@@ -164,7 +164,7 @@ class TestFullNodeProtocol:
             )
             msg = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("[::1]", server_2._port))
 
-            if not (len(msg.data.peer_list) == 1):
+            if msg is not None and not (len(msg.data.peer_list) == 1):
                 return False
             peer = msg.data.peer_list[0]
             return peer.host == "127.0.0.1" and peer.port == 1000
