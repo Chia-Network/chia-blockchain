@@ -436,6 +436,8 @@ class FullNodePeers(FullNodeDiscovery):
                 cur_day = int(time.time()) // (24 * 60 * 60)
                 for id, connection in connections:
                     peer_info = connection.get_peer_info()
+                    if peer_info is None:
+                        continue
                     cur_hash = int.from_bytes(
                         bytes(
                             std_hash(
