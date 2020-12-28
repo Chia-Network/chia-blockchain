@@ -106,15 +106,11 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
-        maxheight = -1
-        if self.blockchain.sub_height_to_hash is not None and len(self.blockchain.sub_height_to_hash) > 0:
-            maxheight = uint32(len(sorted(self.blockchain.sub_blocks.keys())[-1]))
         self.weight_proof_handler = WeightProofHandler(
             self.constants,
             BlockCache(
                 self.blockchain.sub_blocks,
                 self.blockchain.sub_height_to_hash,
-                maxheight,
                 {},
                 self.blockchain.sub_epoch_summaries,
                 self.block_store,
@@ -264,8 +260,10 @@ class FullNode:
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
         """
+
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.on_connect(connection))
+
         if connection.connection_type is NodeType.FULL_NODE:
             # Send filter to node and request mempool items that are not in it
             my_filter = self.mempool_manager.get_filter()
@@ -477,6 +475,7 @@ class FullNode:
 
         peak: SubBlockRecord = self.blockchain.get_peak()
         if peak is not None:
+            await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
             request_wallet = wallet_protocol.NewPeak(
                 peak.header_hash,
                 peak.sub_block_height,
@@ -649,6 +648,8 @@ class FullNode:
                 self.full_node_store.clear_seen_unfinished_blocks()
 
             if self.sync_store.get_sync_mode() is False:
+
+                await self.weight_proof_handler.get_proof_of_weight(sub_block.header_hash)
                 await self.send_peak_to_timelords()
 
                 # Tell full nodes about the new peak
