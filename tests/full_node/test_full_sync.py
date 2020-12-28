@@ -128,7 +128,7 @@ class TestFullSync:
 
     @pytest.mark.skip("broken, peer 1 closes before the last 50 blocks are synced")
     @pytest.mark.asyncio
-    async def test_sync_extend_weight_proof(self, two_nodes, default_1000_blocks, default_400_blocks):
+    async def test_sync_keep_in_sync(self, two_nodes, default_1000_blocks, default_400_blocks):
         # Must be larger than "sync_block_behind_threshold" in the config
         full_node_1, full_node_2, server_1, server_2 = two_nodes
 
