@@ -214,6 +214,7 @@ class TestWeightProof:
             test_constants.SUB_SLOT_ITERS_STARTING,
             test_constants.DIFFICULTY_STARTING,
             None,
+            None,
         )
 
         assert res

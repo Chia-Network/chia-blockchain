@@ -66,15 +66,14 @@ class SubSlotData(Streamable):
 @streamable
 class SubEpochChallengeSegment(Streamable):
     sub_epoch_n: uint32
-    last_reward_chain_vdf_info: VDFInfo
     sub_slots: List[SubSlotData]
 
 
 @dataclass(frozen=True)
 @streamable
 class ProofBlockHeader(Streamable):
-    finished_sub_slots: List[EndOfSubSlotBundle]  # If first sb
-    reward_chain_sub_block: RewardChainSubBlock  # Reward chain trunk data
+    finished_sub_slots: List[EndOfSubSlotBundle]
+    reward_chain_sub_block: RewardChainSubBlock
 
 
 @dataclass(frozen=True)
