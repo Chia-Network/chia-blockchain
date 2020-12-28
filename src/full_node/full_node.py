@@ -475,6 +475,7 @@ class FullNode:
 
         peak: SubBlockRecord = self.blockchain.get_peak()
         if peak is not None:
+            await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
             request_wallet = wallet_protocol.NewPeak(
                 peak.header_hash,
                 peak.sub_block_height,
@@ -647,6 +648,8 @@ class FullNode:
                 self.full_node_store.clear_seen_unfinished_blocks()
 
             if self.sync_store.get_sync_mode() is False:
+
+                await self.weight_proof_handler.get_proof_of_weight(sub_block.header_hash)
                 await self.send_peak_to_timelords()
 
                 # Tell full nodes about the new peak

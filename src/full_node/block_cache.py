@@ -71,7 +71,7 @@ class BlockCache:
     def get_ses_from_height(self, height: uint32) -> List[SubEpochSummary]:
         ses_l = []
         for ses_height in reversed(self.get_ses_heights()):
-            if ses_height < height:
+            if ses_height <= height:
                 break
             ses_l.append(self.get_ses(ses_height))
         return ses_l

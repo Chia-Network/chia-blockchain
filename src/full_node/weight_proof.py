@@ -51,26 +51,40 @@ class WeightProofHandler:
             self.log = logging.getLogger(self.WeightProofHandler)
 
     async def get_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
+
+        tip_rec = self.block_cache.sub_block_record(tip)
+        if tip_rec is None:
+            self.log.error("unknown tip")
+            return None
+
+        if tip_rec.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+            self.log.info("chain to short for weight proof")
+            return None
+        curr: Optional[SubBlockRecord] = tip_rec
         await self.lock.acquire()
         if self.proof is not None:
             if tip == self.tip:
+                self.lock.release()
                 return self.proof
-
-            curr = self.block_cache.sub_block_record(tip)
-            if curr is None:
-                self.log.error("unknown block")
-                return None
-
-            while curr.sub_block_height >= 0:
+            recent_chain_start = self.proof.recent_chain_data[0].reward_chain_sub_block.sub_block_height
+            while curr is not None:
+                if curr.sub_block_height < recent_chain_start:
+                    self.log.info("this peak is on a fork longer then recent proof chain")
+                    break
                 if curr.header_hash == self.tip:
-                    return await self._extend_proof_of_weight(self.proof, tip)
+                    new_wp = await self._extend_proof_of_weight(self.proof, tip_rec)
+                    self.proof = new_wp
+                    self.tip = tip
+                    self.lock.release()
+                    return new_wp
                 curr = self.block_cache.sub_block_record(curr.prev_hash)
                 if curr is None:
-                    self.log.error("unknown block")
-                return None
+                    self.lock.release()
+                    return None
 
         wp = await self._create_proof_of_weight(tip)
         if wp is None:
+            self.lock.release()
             return None
         self.proof = wp
         self.tip = tip
@@ -81,10 +95,12 @@ class WeightProofHandler:
         self, weight_proof: WeightProof, new_tip: SubBlockRecord
     ) -> Optional[WeightProof]:
         # replace recent chain
-        recent_chain = await self._get_recent_chain(new_tip.sub_block_height)
+
+        self.log.info(f"extend weight proof peak {new_tip.header_hash} {new_tip.sub_block_height}")
+
+        recent_chain = await self._get_recent_chain(new_tip.sub_block_height, weight_proof)
         if recent_chain is None:
             return None
-
         end_height = weight_proof.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
         sub_epoch_data = weight_proof.sub_epochs
         for summary in self.block_cache.get_ses_from_height(end_height):
@@ -104,7 +120,7 @@ class WeightProofHandler:
         if tip_rec is None:
             self.log.error("failed not tip in cache")
             return None
-
+        self.log.info(f"create weight proof peak {tip} {tip_rec.sub_block_height}")
         recent_chain = await self._get_recent_chain(tip_rec.sub_block_height)
         if recent_chain is None:
             return None
@@ -163,10 +179,27 @@ class WeightProofHandler:
 
         return choose
 
-    async def _get_recent_chain(self, tip_height: uint32) -> Optional[List[ProofBlockHeader]]:
+    async def _get_recent_chain(
+        self, tip_height: uint32, wp: Optional[WeightProof] = None
+    ) -> Optional[List[ProofBlockHeader]]:
         recent_chain: List[ProofBlockHeader] = []
+
         curr_height = uint32(tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS)
-        await self.block_cache.init_headers(uint32(tip_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS), tip_height)
+
+        if wp is not None:
+            idx = 0
+            for block in wp.recent_chain_data:
+                if block.reward_chain_sub_block.sub_block_height == curr_height:
+                    break
+                idx += 1
+
+            while curr_height <= wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height:
+                recent_chain.append(wp.recent_chain_data[idx])
+                curr_height = curr_height + uint32(1)  # type: ignore
+                idx += 1
+
+        await self.block_cache.init_headers(curr_height, tip_height)
+
         while curr_height <= tip_height:
             # add to needed reward chain recent blocks
             header_block = await self.block_cache.height_to_header_block(curr_height)
@@ -231,7 +264,7 @@ class WeightProofHandler:
 
         # validate weight
         if not self._validate_summaries_weight(sub_epoch_data_weight, summaries, weight_proof):
-            self.log.warning("failed validating weight")
+            self.log.error("failed validating weight")
             return None
 
         last_ses = summaries[-1]
@@ -388,7 +421,7 @@ class WeightProofHandler:
     ) -> Tuple[Optional[SubEpochChallengeSegment], uint32]:
         assert self.block_cache is not None
         sub_slots: List[SubSlotData] = []
-        self.log.info(
+        self.log.debug(
             f"create challenge segment for block {block_rec.header_hash} sub_block_height {block_rec.sub_block_height} "
         )
         block_header = await self.block_cache.header_block(block_rec.header_hash)
@@ -691,7 +724,6 @@ def _map_summaries(
             sub_epoch_data_weight = sub_epoch_data_weight + uint128(  # type: ignore
                 curr_difficulty * (sub_blocks_for_se + sub_epoch_data[idx + 1].num_sub_blocks_overflow - delta)
             )
-            print(f"sub epoch: {idx} weight: {sub_epoch_data_weight}")
         # if new epoch update diff and iters
         if data.new_difficulty is not None:
             curr_difficulty = data.new_difficulty
