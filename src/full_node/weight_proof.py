@@ -58,7 +58,7 @@ class WeightProofHandler:
             return None
 
         if tip_rec.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
-            self.log.info("chain to short for weight proof")
+            self.log.debug("chain to short for weight proof")
             return None
         curr: Optional[SubBlockRecord] = tip_rec
         await self.lock.acquire()
