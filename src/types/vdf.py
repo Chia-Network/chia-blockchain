@@ -1,4 +1,5 @@
 import logging
+import traceback
 from dataclasses import dataclass
 from typing import Optional, Tuple, Dict
 
@@ -60,7 +61,8 @@ class VDFProof(Streamable):
         If target_vdf_info is passed in, it is compared with info.
         """
         if target_vdf_info is not None and info != target_vdf_info:
-            log.error(f"INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
+            tb = traceback.format_stack()
+            log.error(f"{tb} INVALID VDF INFO. Have: {info} Expected: {target_vdf_info}")
             return False
         if self.witness_type + 1 > constants.MAX_VDF_WITNESS_SIZE:
             log.error(f"WITNESS SIZE TO BIG {constants.MAX_VDF_WITNESS_SIZE}")
