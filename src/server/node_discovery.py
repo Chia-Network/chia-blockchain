@@ -56,6 +56,7 @@ class FullNodeDiscovery:
         self.peer_connect_interval = peer_connect_interval
         self.log = log
         self.relay_queue = None
+        self.address_manager = None
 
     async def initialize_address_manager(self):
         mkdir(self.peer_db_path.parent)
@@ -88,6 +89,8 @@ class FullNodeDiscovery:
             peer.is_outbound is False
             and peer.peer_server_port is not None
             and peer.connection_type is NodeType.FULL_NODE
+            and self.server._local_type is NodeType.FULL_NODE
+            and self.address_manager is not None
         ):
             timestamped_peer_info = TimestampedPeerInfo(
                 peer.peer_host,
@@ -256,6 +259,9 @@ class FullNodeDiscovery:
 
     async def _periodically_serialize(self, random: Random):
         while not self.is_closed:
+            if self.address_manager is None:
+                await asyncio.sleep(10)
+                continue
             serialize_interval = random.randint(15 * 60, 30 * 60)
             await asyncio.sleep(serialize_interval)
             async with self.address_manager.lock:
@@ -394,7 +400,8 @@ class FullNodePeers(FullNodeDiscovery):
             # to users' AddrMan and later request them by sending getaddr messages.
             # Making nodes which are behind NAT and can only make outgoing connections ignore
             # the request_peers message mitigates the attack.
-
+            if self.address_manager is None:
+                return None
             peers = await self.address_manager.get_peers()
             await self.add_peers_neighbour(peers, peer_info)
 
