@@ -254,7 +254,6 @@ class FullNodeAPI:
         """
         Receive a full block from a peer full node (or ourselves).
         """
-        self.log.info("respond sub block 2")
 
         if self.full_node.sync_store.get_sync_mode():
             return await self.full_node.respond_sub_block(respond_sub_block, peer)
