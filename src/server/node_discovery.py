@@ -431,10 +431,10 @@ class FullNodePeers(FullNodeDiscovery):
                 if not relay_peer_info.is_valid():
                     continue
                 # https://en.bitcoin.it/wiki/Satoshi_Client_Node_Discovery#Address_Relay
-                connections = self.server.all_connections.items()
+                connections = self.server.get_full_node_connections()
                 hashes = []
                 cur_day = int(time.time()) // (24 * 60 * 60)
-                for id, connection in connections:
+                for connection in connections:
                     peer_info = connection.get_peer_info()
                     if peer_info is None:
                         continue
