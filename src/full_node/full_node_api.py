@@ -186,7 +186,7 @@ class FullNodeAPI:
         if len(tips) > 4:
             # Remove old from cache
             for i in range(0, 4):
-                self.full_node.pow_creation.pop(tips[0])
+                self.full_node.pow_creation.pop(tips[i])
 
         if wp is None:
             self.log.error(f"failed creating weight proof for peak {request.tip}")
