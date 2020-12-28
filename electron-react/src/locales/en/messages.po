@@ -83,7 +83,7 @@ msgstr "Pending Total Balance"
 
 #: src/components/wallet/standard/WalletStandard.tsx:234
 msgid "BalanceCard.pendingTotalBalanceTooltip"
-msgstr "This is the total balance + pending balance: it it what your balance will be after all pending transactions are confirmed."
+msgstr "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 
 #: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "BalanceCard.spendableBalance"
