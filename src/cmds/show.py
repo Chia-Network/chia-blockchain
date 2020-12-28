@@ -252,7 +252,7 @@ async def show_async(args, parser):
             else:
                 connections = await client.get_connections()
                 for con in connections:
-                    if args.remove_connection == con["node_id"].hex()[:10]:
+                    if args.remove_connection == con["node_id"].hex()[:8]:
                         print("Attempting to disconnect", "NodeID", args.remove_connection)
                         try:
                             await client.close_connection(con["node_id"])
