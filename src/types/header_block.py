@@ -61,3 +61,7 @@ class HeaderBlock(Streamable):
     @property
     def is_block(self):
         return self.reward_chain_sub_block.is_block
+
+    @property
+    def first_in_sub_slot(self) -> bool:
+        return self.finished_sub_slots is not None and len(self.finished_sub_slots) > 0

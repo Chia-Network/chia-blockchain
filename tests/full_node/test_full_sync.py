@@ -3,6 +3,7 @@ import asyncio
 
 import pytest
 
+from src.types.header_block import HeaderBlock
 from src.types.peer_info import PeerInfo
 from src.protocols import full_node_protocol
 from src.util.ints import uint16
@@ -119,14 +120,29 @@ class TestFullSync:
         for block in default_400_blocks:
             await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
-        # for h in sorted(full_node_1.full_node.blockchain.sub_epoch_summaries.keys()):
-        #     print(f"\n ses 1  {h} {full_node_1.full_node.blockchain.sub_epoch_summaries[h]}")
-        #
-        # for h in full_node_2.full_node.blockchain.sub_epoch_summaries:
-        #     print(f"\n ses 2  {h} {full_node_2.full_node.blockchain.sub_epoch_summaries[h]}")
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+
+        # The second node should eventually catch up to the first one, and have the
+        # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
+        await time_out_assert(180, node_height_at_least, True, full_node_2, len(default_1000_blocks) - 1)
+
+    @pytest.mark.skip("broken, peer 1 closes before the last 50 blocks are synced")
+    @pytest.mark.asyncio
+    async def test_sync_keep_in_sync(self, two_nodes, default_1000_blocks, default_400_blocks):
+        # Must be larger than "sync_block_behind_threshold" in the config
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        for block in default_400_blocks[:-50]:
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
+        full_node_1.full_node.log.info("start extending")
+        for block in default_400_blocks[-50:]:
+            full_node_1.full_node.log.info(f"block {block.reward_chain_sub_block.sub_block_height}")
+            await full_node_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
         await time_out_assert(180, node_height_at_least, True, full_node_2, len(default_1000_blocks) - 1)

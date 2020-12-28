@@ -12,7 +12,7 @@ test_constants_modified = test_constants.replace(
         "DISCRIMINANT_SIZE_BITS": 1024,
         "SUB_EPOCH_SUB_BLOCKS": 140,
         "WEIGHT_PROOF_THRESHOLD": 2,
-        "WEIGHT_PROOF_RECENT_BLOCKS": 200,
+        "WEIGHT_PROOF_RECENT_BLOCKS": 300,
         "MAX_SUB_SLOT_SUB_BLOCKS": 50,
         "NUM_SPS_SUB_SLOT": 32,  # Must be a power of 2
         "EPOCH_SUB_BLOCKS": 280,

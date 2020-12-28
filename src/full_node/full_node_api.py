@@ -168,7 +168,6 @@ class FullNodeAPI:
 
     @api_request
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
-        self.log.info(f"got weight proof request {request.total_number_of_blocks}")
         if request.tip not in self.full_node.blockchain.sub_blocks:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
@@ -180,7 +179,6 @@ class FullNodeAPI:
 
     @api_request
     async def respond_proof_of_weight(self, response: full_node_protocol.RespondProofOfWeight) -> Optional[Message]:
-        self.log.info(f"got weight proof response length {len(bytes(response.wp))}")
         validated, fork_point = self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
         if validated is True:
             # get tip params
@@ -257,6 +255,7 @@ class FullNodeAPI:
         """
         Receive a full block from a peer full node (or ourselves).
         """
+
         if self.full_node.sync_store.get_sync_mode():
             return await self.full_node.respond_sub_block(respond_sub_block, peer)
         else:
