@@ -82,7 +82,8 @@ class FullNodeAPI:
     ) -> Optional[Message]:
         if self.full_node.full_node_peers is not None:
             await self.full_node.full_node_peers.respond_peers(request, peer.get_peer_info(), False)
-        await peer.close()
+        if peer.connection_type is NodeType.INTRODUCER:
+            await peer.close()
         return None
 
     @peer_required

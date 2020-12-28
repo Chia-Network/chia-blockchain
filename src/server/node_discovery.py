@@ -84,7 +84,11 @@ class FullNodeDiscovery:
         self.message_queue.put_nowait((message, data))
 
     async def on_connect(self, peer: ws.WSChiaConnection):
-        if peer.is_outbound is False and peer.peer_server_port is not None:
+        if (
+            peer.is_outbound is False
+            and peer.peer_server_port is not None
+            and peer.connection_type is NodeType.FULL_NODE
+        ):
             timestamped_peer_info = TimestampedPeerInfo(
                 peer.peer_host,
                 peer.peer_server_port,
