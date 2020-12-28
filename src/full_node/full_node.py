@@ -84,6 +84,8 @@ class FullNode:
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
         self.pow_pending: Set[bytes32] = set()
+        self.pow_creation: Dict[uint32, asyncio.Event] = {}
+
         if name:
             self.log = logging.getLogger(name)
         else:
