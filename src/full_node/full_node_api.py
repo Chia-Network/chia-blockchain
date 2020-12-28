@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import time
 
@@ -171,7 +172,22 @@ class FullNodeAPI:
         if request.tip not in self.full_node.blockchain.sub_blocks:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
-        wp = await self.full_node.weight_proof_handler.get_proof_of_weight(request.tip)
+        if request.tip in self.full_node.pow_creation:
+            event = self.full_node.pow_creation[request.tip]
+            await event.wait()
+            wp = await self.full_node.weight_proof_handler.get_proof_of_weight(request.tip)
+        else:
+            event = asyncio.Event()
+            self.full_node.pow_creation[request.tip] = event
+            wp = await self.full_node.weight_proof_handler.get_proof_of_weight(request.tip)
+            event.set()
+        tips = list(self.full_node.pow_creation.keys())
+
+        if len(tips) > 4:
+            # Remove old from cache
+            for i in range(0, 4):
+                self.full_node.pow_creation.pop(tips[0])
+
         if wp is None:
             self.log.error(f"failed creating weight proof for peak {request.tip}")
             return None
