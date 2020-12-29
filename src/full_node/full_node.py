@@ -111,9 +111,7 @@ class FullNode:
             BlockCache(
                 self.blockchain.sub_blocks,
                 self.blockchain.sub_height_to_hash,
-                {},
                 self.blockchain.sub_epoch_summaries,
-                self.block_store,
             ),
         )
         self._sync_task = None

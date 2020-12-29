@@ -11,7 +11,6 @@ from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.block_cache import BlockCache
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
 from src.types.slots import ChallengeChainSubSlot, RewardChainSubSlot, InfusedChallengeChainSubSlot
 from src.types.sub_epoch_summary import SubEpochSummary
@@ -198,11 +197,11 @@ class WeightProofHandler:
                 curr_height = curr_height + uint32(1)  # type: ignore
                 idx += 1
 
-        await self.block_cache.init_headers(curr_height, tip_height)
+        # await self.block_cache.init_headers(curr_height, tip_height)
 
         while curr_height <= tip_height:
             # add to needed reward chain recent blocks
-            header_block = await self.block_cache.height_to_header_block(curr_height)
+            header_block = self.block_cache.height_to_sub_block_record(curr_height)
             if header_block is None:
                 self.log.error("creating recent chain failed")
                 return None
@@ -394,7 +393,7 @@ class WeightProofHandler:
     ) -> Optional[List[SubEpochChallengeSegment]]:
 
         # get headers in cache
-        await self.block_cache.init_headers(uint32(se_start.sub_block_height), uint32(ses_block.sub_block_height + 30))
+        # await self.block_cache.init_headers(uint32(se_start.sub_block_height), uint32(ses_block.sub_block_height + 30))
         segments: List[SubEpochChallengeSegment] = []
 
         curr: Optional[SubBlockRecord] = se_start
@@ -424,7 +423,7 @@ class WeightProofHandler:
         self.log.debug(
             f"create challenge segment for block {block_rec.header_hash} sub_block_height {block_rec.sub_block_height} "
         )
-        block_header = await self.block_cache.header_block(block_rec.header_hash)
+        block_header = self.block_cache.sub_block_record(block_rec.header_hash)
         if block_header is None:
             return None, uint32(0)
 
@@ -441,7 +440,9 @@ class WeightProofHandler:
             f"create slot end vdf for block {block_header.header_hash} height {block_header.sub_block_height} "
         )
 
-        challenge_slot_end_sub_slots, end_height = await self.__get_slot_end_vdf(block_header.sub_block_height + 1)
+        challenge_slot_end_sub_slots, end_height = await self.__get_slot_end_vdf(
+            uint32(block_header.sub_block_height + 1)
+        )
         if challenge_slot_end_sub_slots is None:
             self.log.error("failed building slot end ")
             return None, uint32(0)
@@ -457,7 +458,7 @@ class WeightProofHandler:
         curr = self.block_cache.height_to_sub_block_record(start_height)
         if curr is None:
             return None, uint32(0)
-        curr_header = await self.block_cache.header_block(curr.header_hash)
+        curr_header = self.block_cache.sub_block_record(curr.header_hash)
         if curr_header is None:
             return None, uint32(0)
         cc_proofs: List[VDFProof] = []
@@ -476,21 +477,21 @@ class WeightProofHandler:
             curr = self.block_cache.height_to_sub_block_record(uint32(curr.sub_block_height + 1))
             if curr is None:
                 return None, uint32(0)
-            curr_header = await self.block_cache.header_block(curr.header_hash)
+            curr_header = self.block_cache.sub_block_record(curr.header_hash)
             if curr_header is None:
                 return None, uint32(0)
         self.log.debug(f"slot end vdf end height {curr.sub_block_height}")
         return sub_slots_data, curr.sub_block_height
 
     # returns a challenge chain vdf from slot start to signage point
-    async def __first_sub_slots_data(self, block: HeaderBlock) -> Optional[List[SubSlotData]]:
+    async def __first_sub_slots_data(self, block: SubBlockRecord) -> Optional[List[SubSlotData]]:
         # combine cc vdfs of all reward blocks from the start of the sub slot to end
 
-        curr: Optional[HeaderBlock] = block
+        curr: Optional[SubBlockRecord] = block
         # find slot start
         assert curr is not None
         while not curr.first_in_sub_slot and curr.sub_block_height > 0:
-            curr = await self.block_cache.header_block(curr.prev_header_hash)
+            curr = self.block_cache.sub_block_record(curr.prev_hash)
             if curr is None:
                 return None
 
@@ -502,7 +503,7 @@ class WeightProofHandler:
         cc_slot_end_vdf: List[VDFProof] = []
         icc_slot_end_vdf: List[VDFProof] = []
         while curr.sub_block_height < block.sub_block_height:
-            curr = await self.block_cache.height_to_header_block(curr.sub_block_height + 1)
+            curr = self.block_cache.height_to_sub_block_record(uint32(curr.sub_block_height + 1))
             if curr is None:
                 return None
 
