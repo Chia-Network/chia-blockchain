@@ -425,7 +425,7 @@ class AddressManager:
                 info = self.map_info[node_id]
                 if randbits(30) < chance * info.get_selection_chance() * (1 << 30):
                     end = time.time()
-                    log.info(f"!!!! SELECT PEER took {end - start}")
+                    log.info(f"address_manager.select_peer took {end - start} seconds.")
                     return info
                 chance *= 1.4
 
