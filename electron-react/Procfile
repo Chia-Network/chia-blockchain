@@ -1,2 +1,2 @@
-react: npm start
+react: npm startss
 electron: node src/electron-wait-react
