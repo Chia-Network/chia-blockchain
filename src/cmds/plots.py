@@ -37,7 +37,7 @@ def help_message():
 
 
 def make_parser(parser):
-    parser.add_argument("-k", "--size", help="Plot size", type=int, default=26)
+    parser.add_argument("-k", "--size", help="Plot size", type=int, default=32)
     parser.add_argument("-n", "--num", help="Number of plots or challenges", type=int, default=None)
     parser.add_argument("-b", "--buffer", help="Mebibytes for sort/plot buffer", type=int, default=0)
     parser.add_argument("-r", "--num_threads", help="Number of threads to use", type=int, default=0)
