@@ -337,12 +337,12 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.close())
 
     async def _await_closed(self):
-        await self.connection.close()
         try:
             if self._sync_task is not None:
-                await asyncio.wait_for(self._sync_task, timeout=2)
+                self._sync_task.cancel()
         except asyncio.TimeoutError:
             pass
+        await self.connection.close()
 
     async def _sync(self):
         """
