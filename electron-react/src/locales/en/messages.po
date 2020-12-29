@@ -91,7 +91,7 @@ msgstr "Spendable Balance"
 
 #: src/components/wallet/standard/WalletStandard.tsx:212
 msgid "BalanceCard.spendableBalanceTooltip"
-msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transctions, and Chia that you have just spent but is not yet in the blockchain."
+msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 
 #: src/components/wallet/standard/WalletStandard.tsx:206
 msgid "BalanceCard.totalBalance"
@@ -287,7 +287,7 @@ msgstr "New Address"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:589
 msgid "ColouredAddressCard.title"
-msgstr "Receive Addresss"
+msgstr "Receive Address"
 
 #: src/components/wallet/coloured/WalletColoured.tsx:313
 msgid "ColouredBalanceCard.spendableBalance"
@@ -690,7 +690,7 @@ msgstr "Delete"
 
 #: src/components/selectKey/SelectKey.tsx:54
 msgid "DeleteAllKeys.description"
-msgstr "Deleting all keys will permanatly remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
+msgstr "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 
 #: src/components/selectKey/SelectKey.tsx:53
 msgid "DeleteAllKeys.title"
@@ -1084,7 +1084,7 @@ msgstr "Plotting in parallel can save time. Otherwise, add plot(s) to the queue.
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:30
 msgid "PlotAddNumberOfPlots.parallelTitle"
-msgstr "Does your machine support parellel plotting?"
+msgstr "Does your machine support parallel plotting?"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:18
 msgid "PlotAddNumberOfPlots.plotCount"
@@ -1100,7 +1100,7 @@ msgstr "Choose Number of Plots"
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:31
 msgid "PlotAddSelectFinalDirectory.description"
-msgstr "Select the final destination for the folder where you would like the plot to be stored. We rcommend you use a large slow hard drive (like external HDD)."
+msgstr "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:37
 msgid "PlotAddSelectFinalDirectory.finalFolderLocation"
@@ -1595,7 +1595,7 @@ msgstr "Can be backed up to mnemonic seed"
 
 #: src/components/selectKey/SelectKey.tsx:77
 msgid "SelectKey.signInDescription"
-msgstr "Welcome to Chia. Please log in with an existing key, or create a a new key."
+msgstr "Welcome to Chia. Please log in with an existing key, or create a new key."
 
 #: src/components/selectKey/SelectKey.tsx:74
 msgid "SelectKey.signInTitle"
@@ -1953,7 +1953,7 @@ msgstr "New Wallet"
 
 #: src/components/wallet/WalletImport.tsx:66
 msgid "WalletImport.description"
-msgstr "Enter the 24 word mmemonic that you have saved in order to restore your Chia wallet."
+msgstr "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 
 #: src/components/wallet/WalletImport.tsx:76
 msgid "WalletImport.next"
