@@ -20,7 +20,6 @@ from src.consensus.difficulty_adjustment import (
 from src.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from src.consensus.pot_iterations import is_overflow_sub_block, calculate_sp_iters
 from src.consensus.sub_block_record import SubBlockRecord
-from src.full_node.block_cache import BlockCache
 from src.full_node.block_store import BlockStore
 from src.full_node.coin_store import CoinStore
 from src.full_node.full_node_store import FullNodeStore
@@ -106,14 +105,7 @@ class FullNode:
         start_time = time.time()
         self.blockchain = await Blockchain.create(self.coin_store, self.block_store, self.constants)
         self.mempool_manager = MempoolManager(self.coin_store, self.constants)
-        self.weight_proof_handler = WeightProofHandler(
-            self.constants,
-            BlockCache(
-                self.blockchain.sub_blocks,
-                self.blockchain.sub_height_to_hash,
-                self.blockchain.sub_epoch_summaries,
-            ),
-        )
+        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
         self._sync_task = None
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:

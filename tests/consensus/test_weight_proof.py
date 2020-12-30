@@ -6,6 +6,8 @@ from typing import Dict, Optional, List, Tuple, Mapping, Container
 
 import pytest
 
+from tests.consensus.block_cache import BlockCache
+
 try:
     from reprlib import repr
 except ImportError:
@@ -18,7 +20,6 @@ from src.full_node.weight_proof import (  # type: ignore
     WeightProofHandler,
     _get_last_ses_block_idx,
     _map_summaries,
-    BlockCache,
 )
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock

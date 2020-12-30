@@ -46,7 +46,27 @@ class ReceiveBlockResult(Enum):
     DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
 
 
-class Blockchain:
+class BlockchainInterface:
+    def sub_block_record(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
+        pass
+
+    def height_to_sub_block_record(self, height: uint32) -> Optional[SubBlockRecord]:
+        pass
+
+    def get_ses_heights(self) -> List[bytes32]:
+        pass
+
+    def get_ses(self, height: uint32) -> SubEpochSummary:
+        pass
+
+    def get_ses_from_height(self, height: uint32) -> List[SubEpochSummary]:
+        pass
+
+    def _height_to_hash(self, height: uint32) -> Optional[bytes32]:
+        pass
+
+
+class Blockchain(BlockchainInterface):
     constants: ConsensusConstants
     # peak of the blockchain
     peak_height: Optional[uint32]
@@ -492,3 +512,36 @@ class Blockchain:
             return None, error_code
 
         return required_iters, None
+
+    def sub_block_record(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
+        if header_hash not in self.sub_blocks:
+            log.error("could not find header hash in cache")
+            return None
+
+        return self.sub_blocks[header_hash]
+
+    def height_to_sub_block_record(self, height: uint32) -> Optional[SubBlockRecord]:
+        header_hash = self._height_to_hash(height)
+        if header_hash is None:
+            return None
+        return self.sub_block_record(header_hash)
+
+    def get_ses_heights(self) -> List[bytes32]:
+        return sorted(self.sub_epoch_summaries.keys())
+
+    def get_ses(self, height: uint32) -> SubEpochSummary:
+        return self.sub_epoch_summaries[height]
+
+    def get_ses_from_height(self, height: uint32) -> List[SubEpochSummary]:
+        ses_l = []
+        for ses_height in reversed(self.get_ses_heights()):
+            if ses_height <= height:
+                break
+            ses_l.append(self.get_ses(ses_height))
+        return ses_l
+
+    def _height_to_hash(self, height: uint32) -> Optional[bytes32]:
+        if height not in self.sub_height_to_hash:
+            log.error("could not find header hash in cache")
+            return None
+        return self.sub_height_to_hash[height]

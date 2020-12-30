@@ -3,12 +3,13 @@ from typing import Dict, List, Optional
 
 
 from src.consensus.sub_block_record import SubBlockRecord
+from src.full_node.weight_proof import BlockchainInterface
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.util.ints import uint32
 
 
-class BlockCache:
+class BlockCache(BlockchainInterface):
     BATCH_SIZE = 300
 
     def __init__(
