@@ -128,7 +128,7 @@ class WalletStateManager:
             self.coins_of_interest_received,
             self.reorg_rollback,
         )
-        # self.weight_proof_handler = WeightProofHandler(self.constants,self.blockchain)
+        self.weight_proof_handler = WeightProofHandler(self.constants, self.blockchain)
 
         self.sync_mode = False
         self.sync_store = await WalletSyncStore.create()
