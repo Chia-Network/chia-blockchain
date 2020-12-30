@@ -66,7 +66,7 @@ from src.wallet.derive_keys import (
     master_sk_to_wallet_sk,
 )
 from src.consensus.default_constants import DEFAULT_CONSTANTS
-
+from tests.consensus.block_cache import BlockCache
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -443,7 +443,7 @@ class BlockTools:
             else:
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
-                    sub_blocks,
+                    BlockCache(sub_blocks, height_to_hash),
                     height_to_hash,
                     latest_sub_block.required_iters,
                     block_list[-1],
@@ -884,7 +884,7 @@ def get_signage_point(
         finished_sub_slots,
         overflow,
         latest_sub_block,
-        sub_blocks,
+        BlockCache(sub_blocks),
         sp_total_iters,
         sp_iters,
     )
@@ -982,7 +982,7 @@ def finish_sub_block(
     )
 
     sub_block_record = block_to_sub_block_record(
-        constants, sub_blocks, height_to_hash, required_iters, full_block, None
+        constants, BlockCache(sub_blocks), height_to_hash, required_iters, full_block, None
     )
     return full_block, sub_block_record
 
@@ -1045,7 +1045,7 @@ def load_block_list(
 
         sub_blocks[full_block.header_hash] = block_to_sub_block_record(
             constants,
-            sub_blocks,
+            BlockCache(sub_blocks),
             height_to_hash,
             required_iters,
             full_block,

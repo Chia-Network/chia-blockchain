@@ -15,8 +15,7 @@ class BlockCache(BlockchainInterface):
     def __init__(
         self,
         sub_blocks: Dict[bytes32, SubBlockRecord],
-        sub_height_to_hash: Dict[uint32, bytes32],
-        # header_blocks: Dict[uint32, HeaderBlock] = {},
+        sub_height_to_hash: Dict[uint32, bytes32] = {},
         sub_epoch_summaries: Dict[uint32, SubEpochSummary] = {},
     ):
         self._sub_blocks = sub_blocks

@@ -194,7 +194,7 @@ class WalletBlockchain(BlockchainInterface):
 
         required_iters, error = await validate_finished_header_block(
             self.constants,
-            self.sub_blocks,
+            self,
             self.sub_height_to_hash,
             block,
             False,
@@ -206,7 +206,7 @@ class WalletBlockchain(BlockchainInterface):
 
         sub_block = block_to_sub_block_record(
             self.constants,
-            self.sub_blocks,
+            self,
             self.sub_height_to_hash,
             required_iters,
             None,
@@ -316,7 +316,7 @@ class WalletBlockchain(BlockchainInterface):
             return self.constants.DIFFICULTY_STARTING
         return get_next_difficulty(
             self.constants,
-            self.sub_blocks,
+            self,
             self.sub_height_to_hash,
             header_hash,
             curr.height,
@@ -333,7 +333,7 @@ class WalletBlockchain(BlockchainInterface):
             return self.constants.SUB_SLOT_ITERS_STARTING
         return get_next_sub_slot_iters(
             self.constants,
-            self.sub_blocks,
+            self,
             self.sub_height_to_hash,
             header_hash,
             curr.height,
@@ -381,17 +381,14 @@ class WalletBlockchain(BlockchainInterface):
             return None, ip_sub_slot
         return curr.finished_sub_slots[-1], ip_sub_slot
 
-    def sub_block_record(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
-        if header_hash not in self.sub_blocks:
-            log.error("could not find header hash in cache")
-            return None
+    def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
+        sub_block = self.sub_blocks[header_hash]
+        assert sub_block is not None
+        return sub_block
 
-        return self.sub_blocks[header_hash]
-
-    def height_to_sub_block_record(self, height: uint32) -> Optional[SubBlockRecord]:
+    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
         header_hash = self._height_to_hash(height)
-        if header_hash is None:
-            return None
+        assert header_hash is not None
         return self.sub_block_record(header_hash)
 
     def get_ses_heights(self) -> List[bytes32]:

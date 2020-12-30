@@ -1,5 +1,6 @@
 from typing import Dict, Optional, Union
 
+from src.consensus.blockchain import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -26,7 +27,7 @@ log = logging.getLogger(__name__)
 
 def make_sub_epoch_summary(
     constants: ConsensusConstants,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
+    sub_blocks: BlockchainInterface,
     blocks_included_height: uint32,
     prev_prev_sub_block: SubBlockRecord,
     new_difficulty: Optional[uint64],
@@ -57,7 +58,7 @@ def make_sub_epoch_summary(
         )
     curr: SubBlockRecord = prev_prev_sub_block
     while curr.sub_epoch_summary_included is None:
-        curr = sub_blocks[curr.prev_hash]
+        curr = sub_blocks.sub_block_record(curr.prev_hash)
     assert curr is not None
     assert curr.finished_reward_slot_hashes is not None
     prev_ses = curr.sub_epoch_summary_included.get_hash()
@@ -72,7 +73,7 @@ def make_sub_epoch_summary(
 
 def next_sub_epoch_summary(
     constants: ConsensusConstants,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
+    sub_blocks: BlockchainInterface,
     height_to_hash: Dict[uint32, bytes32],
     required_iters: uint64,
     block: Union[UnfinishedBlock, FullBlock],
@@ -96,7 +97,7 @@ def next_sub_epoch_summary(
         object: the new sub-epoch summary
     """
     signage_point_index = block.reward_chain_sub_block.signage_point_index
-    prev_sb: Optional[SubBlockRecord] = sub_blocks.get(block.prev_header_hash, None)
+    prev_sb: Optional[SubBlockRecord] = sub_blocks.sub_block_record(block.prev_header_hash)
     if prev_sb is None or prev_sb.sub_block_height == 0:
         return None
 
@@ -151,7 +152,7 @@ def next_sub_epoch_summary(
             height_to_hash,
             block.prev_header_hash,
             uint32(prev_sb.sub_block_height + 1),
-            uint64(prev_sb.weight - sub_blocks[prev_sb.prev_hash].weight),
+            uint64(prev_sb.weight - sub_blocks.sub_block_record(prev_sb.prev_hash).weight),
             deficit,
             True,
             uint128(block.total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0)),
