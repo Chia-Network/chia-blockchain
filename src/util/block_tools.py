@@ -733,7 +733,7 @@ class BlockTools:
                             None,
                             finished_sub_slots,
                             None,
-                            {},
+                            BlockCache({}),
                             total_iters_sp,
                             constants.DIFFICULTY_STARTING,
                         )
@@ -798,7 +798,7 @@ class BlockTools:
                         None,
                         finished_sub_slots,
                         None,
-                        {},
+                        BlockCache({}),
                         total_iters_sp,
                         constants.DIFFICULTY_STARTING,
                     )
@@ -976,7 +976,7 @@ def finish_sub_block(
         icc_ip_proof,
         finished_sub_slots,
         latest_sub_block,
-        sub_blocks,
+        BlockCache(sub_blocks),
         sp_total_iters,
         difficulty,
     )
@@ -1154,10 +1154,10 @@ def get_full_block_and_sub_record(
         get_pool_signature,
         signage_point,
         uint64(start_timestamp + int((prev_sub_block.sub_block_height + 1 - start_height) * time_per_sub_block)),
+        BlockCache(sub_blocks),
         seed,
         transaction_data,
         prev_sub_block,
-        sub_blocks,
         finished_sub_slots,
     )
 

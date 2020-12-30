@@ -168,7 +168,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
-        if request.tip not in self.full_node.blockchain.__sub_blocks:
+        if not self.full_node.blockchain.contains_sub_block(request.tip):
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
         wp = await self.full_node.weight_proof_handler.get_proof_of_weight(request.tip)
@@ -414,7 +414,7 @@ class FullNodeAPI:
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.sub_block_height > self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
                 sub_slot_iters = peak.sub_slot_iters
-                difficulty = uint64(peak.weight - self.full_node.blockchain.__sub_blocks[peak.prev_hash].weight)
+                difficulty = uint64(peak.weight - self.full_node.blockchain.sub_block_record(peak.prev_hash).weight)
                 next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
                 next_difficulty = self.full_node.blockchain.get_next_difficulty(peak.header_hash, True)
                 sub_slots_for_peak = await self.full_node.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
@@ -587,7 +587,7 @@ class FullNodeAPI:
                     difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
                     sub_slot_iters = pos_sub_slot[0].challenge_chain.new_sub_slot_iters
                 else:
-                    difficulty = uint64(peak.weight - self.full_node.blockchain.__sub_blocks[peak.prev_hash].weight)
+                    difficulty = uint64(peak.weight - self.full_node.blockchain.sub_block_record(peak.prev_hash).weight)
                     sub_slot_iters = peak.sub_slot_iters
 
             required_iters: uint64 = calculate_iterations_quality(
@@ -642,10 +642,10 @@ class FullNodeAPI:
                         if prev_sb.finished_reward_slot_hashes[-1] == rc_challenge:
                             # This sub-block includes a sub-slot which is where our SP vdf starts. Go back one more
                             # to find the prev sub block
-                            prev_sb = self.full_node.blockchain.__sub_blocks.get(prev_sb.prev_hash, None)
+                            prev_sb = self.full_node.blockchain.try_sub_block(prev_sb.prev_hash)
                             found = True
                             break
-                    prev_sb = self.full_node.blockchain.__sub_blocks.get(prev_sb.prev_hash, None)
+                    prev_sb = self.full_node.blockchain.try_sub_block(prev_sb.prev_hash)
                     attempts += 1
                 if not found:
                     self.log.warning("Did not find a previous block with the correct reward chain hash")
@@ -688,10 +688,10 @@ class FullNodeAPI:
                 get_pool_sig,
                 sp_vdfs,
                 uint64(int(time.time())),
+                self.full_node.blockchain,
                 b"",
                 spend_bundle,
                 prev_sb,
-                self.full_node.blockchain.__sub_blocks,
                 finished_sub_slots,
             )
             if prev_sb is not None:
