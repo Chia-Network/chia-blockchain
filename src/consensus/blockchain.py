@@ -326,6 +326,10 @@ class Blockchain(BlockchainInterface):
                 curr = fetched_sub_block.prev_hash
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
+
+                # remove from sub_block_records
+                del self.__sub_blocks[self.sub_height_to_hash[fetched_sub_block.sub_block_height]]
+
                 self.sub_height_to_hash[fetched_sub_block.sub_block_height] = fetched_sub_block.header_hash
                 if fetched_sub_block.is_block:
                     await self.coin_store.new_block(fetched_block)

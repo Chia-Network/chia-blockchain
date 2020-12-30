@@ -393,7 +393,8 @@ class WeightProofHandler:
     ) -> Optional[List[SubEpochChallengeSegment]]:
 
         # get headers in cache
-        # await self.block_cache.init_headers(uint32(se_start.sub_block_height), uint32(ses_block.sub_block_height + 30))
+        # await self.block_cache.init_headers(uint32(se_start.sub_block_height),
+        # uint32(ses_block.sub_block_height + 30))
         segments: List[SubEpochChallengeSegment] = []
 
         curr: Optional[SubBlockRecord] = se_start
