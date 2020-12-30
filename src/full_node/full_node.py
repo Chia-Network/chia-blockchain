@@ -128,7 +128,7 @@ class FullNode:
                 sp_sub_slot,
                 ip_sub_slot,
                 False,
-                self.blockchain.__sub_blocks,
+                self.blockchain,
             )
 
     def set_server(self, server: ChiaServer):
@@ -212,11 +212,11 @@ class FullNode:
         """
         peak_block = await self.blockchain.get_full_peak()
         if peak_block is not None:
-            peak = self.blockchain.__sub_blocks[peak_block.header_hash]
+            peak = self.blockchain.sub_block_record(peak_block.header_hash)
             difficulty = self.blockchain.get_next_difficulty(peak.header_hash, False)
             ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
                 self.constants,
-                self.blockchain.__sub_blocks,
+                self.blockchain,
                 self.blockchain.sub_height_to_hash,
                 peak.required_iters,
                 peak_block,
@@ -226,7 +226,7 @@ class FullNode:
 
             curr = peak
             while not curr.is_challenge_sub_block(self.constants) and not curr.first_in_sub_slot:
-                curr = self.blockchain.__sub_blocks[curr.prev_hash]
+                curr = self.blockchain.sub_block_record(curr.prev_hash)
 
             if curr.is_challenge_sub_block(self.constants):
                 last_csb_or_eos = curr.total_iters
@@ -265,7 +265,7 @@ class FullNode:
         peak_full: Optional[FullBlock] = await self.blockchain.get_full_peak()
 
         if peak_full is not None:
-            peak: SubBlockRecord = self.blockchain.__sub_blocks[peak_full.header_hash]
+            peak: SubBlockRecord = self.blockchain.sub_block_record(peak_full.header_hash)
             if connection.connection_type is NodeType.FULL_NODE:
                 request_node = full_node_protocol.NewPeak(
                     peak.header_hash,
@@ -737,7 +737,7 @@ class FullNode:
         prev_sb = (
             None
             if block.prev_header_hash == self.constants.GENESIS_PREV_HASH
-            else self.blockchain.__sub_blocks[block.prev_header_hash]
+            else self.blockchain.sub_block_record(block.prev_header_hash)
         )
 
         is_overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
@@ -749,10 +749,10 @@ class FullNode:
             if block.finished_sub_slots[0].challenge_chain.new_difficulty is not None:
                 first_ss_new_epoch = True
         else:
-            curr = self.blockchain.__sub_blocks.get(block.prev_header_hash, None)
+            curr = self.blockchain.try_sub_block(block.prev_header_hash)
             num_sub_blocks_in_ss = 2  # Curr and prev
             while (curr is not None) and not curr.first_in_sub_slot:
-                curr = self.blockchain.__sub_blocks.get(curr.prev_hash, None)
+                curr = self.blockchain.try_sub_block(curr.prev_hash)
                 num_sub_blocks_in_ss += 1
             if (
                 curr is not None
@@ -801,7 +801,7 @@ class FullNode:
         if block.prev_header_hash == self.constants.GENESIS_PREV_HASH:
             sub_height = uint32(0)
         else:
-            sub_height = uint32(self.blockchain.__sub_blocks[block.prev_header_hash].sub_block_height + 1)
+            sub_height = uint32(self.blockchain.sub_block_record(block.prev_header_hash).sub_block_height + 1)
 
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
             self.constants,
@@ -891,7 +891,7 @@ class FullNode:
                         # Found our prev block
                         prev_sb = curr
                         break
-                    curr = self.blockchain.__sub_blocks.get(curr.prev_hash, None)
+                    curr = self.blockchain.try_sub_block(curr.prev_hash)
 
                 # If not found, cache keyed on prev block
                 if prev_sb is None:
@@ -949,7 +949,7 @@ class FullNode:
                 request.infused_challenge_chain_ip_proof,
                 finished_sub_slots,
                 prev_sb,
-                self.blockchain.__sub_blocks,
+                self.blockchain,
                 sp_total_iters,
                 difficulty,
             )

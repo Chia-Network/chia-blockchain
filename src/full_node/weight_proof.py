@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple
 
 import math
 
-from src.consensus.blockchain import BlockchainInterface
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import calculate_iterations_quality, calculate_ip_iters
 from src.consensus.sub_block_record import SubBlockRecord

@@ -5,6 +5,7 @@ from enum import Enum
 import multiprocessing
 from typing import Dict, List, Optional, Tuple
 
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.block_body_validation import validate_block_body
 from src.full_node.block_store import BlockStore
@@ -46,30 +47,9 @@ class ReceiveBlockResult(Enum):
     DISCONNECTED_BLOCK = 5  # Block's parent (previous pointer) is not in this blockchain
 
 
-class BlockchainInterface:
-    def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
-        pass
-
-    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
-        pass
-
-    def get_ses_heights(self) -> List[bytes32]:
-        pass
-
-    def get_ses(self, height: uint32) -> SubEpochSummary:
-        pass
-
-    def get_ses_from_height(self, height: uint32) -> List[SubEpochSummary]:
-        pass
-
-    def _height_to_hash(self, height: uint32) -> Optional[bytes32]:
-        pass
-
-    def contains_sub_block(self, header_hash: bytes32) -> bool:
-        pass
-
-
 class Blockchain(BlockchainInterface):
+    SUB_BLOCKS_SIZE = 2000
+
     constants: ConsensusConstants
     # peak of the blockchain
     peak_height: Optional[uint32]
@@ -302,7 +282,7 @@ class Blockchain(BlockchainInterface):
 
             # Rollback to fork
             await self.coin_store.rollback_to_block(coin_store_reorg_height)
-
+            self.clean_sub_block_records()
             # Rollback sub_epoch_summaries
             heights_to_delete = []
             for ses_included_height in self.sub_epoch_summaries.keys():
@@ -326,9 +306,6 @@ class Blockchain(BlockchainInterface):
                 curr = fetched_sub_block.prev_hash
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
-
-                # remove from sub_block_records
-                del self.__sub_blocks[self.sub_height_to_hash[fetched_sub_block.sub_block_height]]
 
                 self.sub_height_to_hash[fetched_sub_block.sub_block_height] = fetched_sub_block.header_hash
                 if fetched_sub_block.is_block:
@@ -549,3 +526,13 @@ class Blockchain(BlockchainInterface):
             log.error("could not find header hash in cache")
             return None
         return self.sub_height_to_hash[height]
+
+    def clean_sub_block_records(self):
+        if len(self.__sub_blocks) % self.SUB_BLOCKS_SIZE == 0:
+            peak = self.get_peak()
+            assert peak is not None
+            curr = self.sub_height_to_hash[peak.sub_block_height - self.SUB_BLOCKS_SIZE]
+            while curr is not None:
+                log.info(f"delete {curr.header_hash} height {curr.sub_block_height} from sub blocks")
+                del self.__sub_blocks[curr.header_hash]
+                curr = self.__sub_blocks[curr.prev_hash]

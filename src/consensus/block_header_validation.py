@@ -5,7 +5,7 @@ from typing import Dict, Optional, List, Tuple
 
 from blspy import AugSchemeMPL
 
-from src.consensus.blockchain import BlockchainInterface
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.deficit import calculate_deficit
 from src.consensus.difficulty_adjustment import (
@@ -57,8 +57,9 @@ async def validate_unfinished_header_block(
     and lead to other small tweaks in validation.
     """
     # 1. Check that the previous block exists in the blockchain, or that it is correct
-
-    prev_sb = sub_blocks.sub_block_record(header_block.prev_header_hash)
+    prev_sb = None
+    if sub_blocks.contains_sub_block(header_block.prev_header_hash):
+        prev_sb = sub_blocks.sub_block_record(header_block.prev_header_hash)
     genesis_block = prev_sb is None
 
     if genesis_block and header_block.prev_header_hash != constants.GENESIS_PREV_HASH:
@@ -739,7 +740,7 @@ async def validate_unfinished_header_block(
             assert curr_sb.timestamp is not None
             while len(last_timestamps) < constants.NUMBER_OF_TIMESTAMPS:
                 last_timestamps.append(curr_sb.timestamp)
-                fetched: Optional[SubBlockRecord] = sub_blocks.sub_block_record(curr_sb.prev_block_hash)
+                fetched: Optional[SubBlockRecord] = sub_blocks.try_sub_block(curr_sb.prev_block_hash)
                 if not fetched:
                     break
                 curr_sb = fetched

@@ -5,7 +5,7 @@ from enum import Enum
 import multiprocessing
 from typing import Dict, List, Optional, Tuple, Callable, Any
 
-from src.consensus.blockchain import BlockchainInterface
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.difficulty_adjustment import (
     get_next_difficulty,

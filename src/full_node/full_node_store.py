@@ -2,7 +2,7 @@ import logging
 from dataclasses import replace
 from typing import Dict, List, Optional, Tuple
 
-from src.consensus.blockchain import BlockchainInterface
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord

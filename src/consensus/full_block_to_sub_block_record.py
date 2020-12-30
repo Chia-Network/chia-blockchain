@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Union, List
 
-from src.consensus.blockchain import BlockchainInterface
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import is_overflow_sub_block
 from src.consensus.deficit import calculate_deficit

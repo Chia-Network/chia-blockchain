@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Union
 
-from src.consensus.blockchain import BlockchainInterface
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -97,7 +97,7 @@ def next_sub_epoch_summary(
         object: the new sub-epoch summary
     """
     signage_point_index = block.reward_chain_sub_block.signage_point_index
-    prev_sb: Optional[SubBlockRecord] = sub_blocks.sub_block_record(block.prev_header_hash)
+    prev_sb: Optional[SubBlockRecord] = sub_blocks.try_sub_block(block.prev_header_hash)
     if prev_sb is None or prev_sb.sub_block_height == 0:
         return None
 

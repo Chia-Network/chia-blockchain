@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from src.consensus.blockchain import BlockchainInterface
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.full_block import FullBlock

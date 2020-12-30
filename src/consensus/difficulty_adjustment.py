@@ -1,6 +1,6 @@
 from typing import Dict, List, Union, Optional, Tuple
 
-from src.consensus.blockchain import BlockchainInterface
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.types.full_block import FullBlock
 from src.types.header_block import HeaderBlock
 from src.types.unfinished_block import UnfinishedBlock
