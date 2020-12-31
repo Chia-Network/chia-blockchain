@@ -57,8 +57,8 @@ class BlockCache(BlockchainInterface):
             return None
         return self._sub_height_to_hash[height]
 
-    def clean(self):
-        self._header_cache = {}
+    def contains_sub_block(self, header_hash: bytes32) -> bool:
+        return header_hash in self._sub_blocks
 
     # async def init_headers(self, start: uint32, stop: uint32):
     #     if self.block_store is None:
