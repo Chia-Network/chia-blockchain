@@ -307,7 +307,7 @@ class Blockchain(BlockchainInterface):
 
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
                 # remove other chain sub_block from sub_blocks
-                if fetched_sub_block.sub_block_height < self.peak_height:
+                if self.peak_height is not None and (fetched_sub_block.sub_block_height < self.peak_height):
                     old_chain_block = self.sub_height_to_hash[fetched_sub_block.sub_block_height]
                     log.info(f"removing {old_chain_block} from sub_blocks")
                     del self.__sub_blocks[old_chain_block]
