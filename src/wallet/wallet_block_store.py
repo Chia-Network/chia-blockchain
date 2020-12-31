@@ -65,14 +65,17 @@ class WalletBlockStore:
         Adds a block record to the database. This block record is assumed to be connected
         to the chain, but it may or may not be in the LCA path.
         """
-        assert block_record.header.foliage_block is not None
+        if block_record.header.foliage_block is not None:
+            timestamp = block_record.header.foliage_block.timestamp
+        else:
+            timestamp = 0
         cursor = await self.db.execute(
             "INSERT OR REPLACE INTO header_blocks VALUES(?, ?, ?, ?, ?)",
             (
                 block_record.header_hash.hex(),
                 block_record.sub_block_height,
-                block_record.height,
-                block_record.header.foliage_block.timestamp,
+                sub_block.height,
+                timestamp,
                 bytes(block_record),
             ),
         )
