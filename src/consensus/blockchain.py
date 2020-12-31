@@ -308,8 +308,9 @@ class Blockchain(BlockchainInterface):
             for fetched_block, fetched_sub_block in reversed(blocks_to_add):
                 # remove other chain sub_block from sub_blocks
                 if fetched_sub_block.sub_block_height < self.peak_height:
-                    log.info(f"removing {fetched_sub_block.sub_block_height}")
-                    del self.__sub_blocks[self.sub_height_to_hash[fetched_sub_block.sub_block_height]]
+                    old_chain_block = self.sub_height_to_hash[fetched_sub_block.sub_block_height]
+                    log.info(f"removing {old_chain_block} from sub_blocks")
+                    del self.__sub_blocks[old_chain_block]
                 self.sub_height_to_hash[fetched_sub_block.sub_block_height] = fetched_sub_block.header_hash
                 if fetched_sub_block.is_block:
                     await self.coin_store.new_block(fetched_block)
