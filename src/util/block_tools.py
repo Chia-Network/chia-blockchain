@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Callable
 
 from blspy import G1Element, G2Element, AugSchemeMPL, PrivateKey
+
+from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.deficit import calculate_deficit
 
 from src.cmds.init import create_default_chia_config, initialize_ssl
@@ -314,7 +316,7 @@ class BlockTools:
 
                     signage_point: SignagePoint = get_signage_point(
                         constants,
-                        sub_blocks,
+                        BlockCache(sub_blocks),
                         latest_sub_block,
                         sub_slot_start_total_iters,
                         uint8(signage_point_index),
@@ -533,7 +535,7 @@ class BlockTools:
                     # note that we are passing in the finished slots which include the last slot
                     signage_point = get_signage_point(
                         constants,
-                        sub_blocks,
+                        BlockCache(sub_blocks),
                         latest_sub_block_eos,
                         sub_slot_start_total_iters,
                         uint8(signage_point_index),
@@ -646,7 +648,7 @@ class BlockTools:
             for signage_point_index in range(0, constants.NUM_SPS_SUB_SLOT):
                 signage_point: SignagePoint = get_signage_point(
                     constants,
-                    {},
+                    BlockCache({}),
                     None,
                     sub_slot_total_iters,
                     uint8(signage_point_index),
@@ -857,7 +859,7 @@ class BlockTools:
 
 def get_signage_point(
     constants: ConsensusConstants,
-    sub_blocks: Dict[bytes32, SubBlockRecord],
+    sub_blocks: BlockchainInterface,
     latest_sub_block: Optional[SubBlockRecord],
     sub_slot_start_total_iters: uint128,
     signage_point_index: uint8,
@@ -884,7 +886,7 @@ def get_signage_point(
         finished_sub_slots,
         overflow,
         latest_sub_block,
-        BlockCache(sub_blocks),
+        sub_blocks,
         sp_total_iters,
         sp_iters,
     )
