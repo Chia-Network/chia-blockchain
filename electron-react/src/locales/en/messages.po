@@ -1739,6 +1739,10 @@ msgstr "Not connected"
 msgid "StatusItem.statusSynced"
 msgstr "Synced"
 
+#: src/components/fullNode/FullNode.jsx:177
+msgid "StatusItem.statusNotSynced"
+msgstr "Not Synced"
+
 #: src/components/fullNode/FullNode.jsx:180
 msgid "StatusItem.statusSyncedTooltip"
 msgstr "This node is fully caught up and validating the network"

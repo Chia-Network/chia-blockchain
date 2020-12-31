@@ -154,7 +154,7 @@ const useStyles = makeStyles((theme) => ({
 const getStatusItems = (state, connected) => {
   const status_items = [];
   if (state.sync && state.sync.sync_mode) {
-    const progress = state.sync.sync_progress_height;
+    const progress = state.sync.sync_progress_sub_height;
     const tip = state.sync.sync_tip_height;
     const item = {
       label: <Trans id="StatusItem.status">Status</Trans>,
@@ -172,7 +172,24 @@ const getStatusItems = (state, connected) => {
       ),
     };
     status_items.push(item);
-  } else if (connected) {
+  } else if (!state.sync.synced){
+    debugger
+    const item = {
+      label: <Trans id="StatusItem.status">Status</Trans>,
+      value: (
+        <Trans id="StatusItem.statusNotSynced">
+          Not Synced
+        </Trans>
+      ),
+      colour: 'red',
+      tooltip: (
+        <Trans id="StatusItem.statusTooltip">
+          The node is not synced and currently not syncing
+        </Trans>
+      ),
+    };
+    status_items.push(item);
+  } else {
     const item = {
       label: <Trans id="StatusItem.status">Status</Trans>,
       value: <Trans id="StatusItem.statusSynced">Synced</Trans>,
@@ -184,6 +201,20 @@ const getStatusItems = (state, connected) => {
       ),
     };
     status_items.push(item);
+  }
+  
+  if (connected) {
+    status_items.push({
+      label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
+      value: connected ? (
+        <Trans id="StatusItem.connectionStatusConnected">Connected</Trans>
+      ) : (
+        <Trans id="StatusItem.connectionStatusNotConnected">
+          Not connected
+        </Trans>
+      ),
+      colour: connected ? '#3AAC59' : 'red',
+    });
   } else {
     const item = {
       label: <Trans id="StatusItem.status">Status</Trans>,
@@ -193,17 +224,7 @@ const getStatusItems = (state, connected) => {
     status_items.push(item);
   }
 
-  status_items.push({
-    label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
-    value: connected ? (
-      <Trans id="StatusItem.connectionStatusConnected">Connected</Trans>
-    ) : (
-      <Trans id="StatusItem.connectionStatusNotConnected">
-        Not connected
-      </Trans>
-    ),
-    colour: connected ? '#3AAC59' : 'red',
-  });
+
 
   const peakHeight = state.peak?.foliage_block?.height ?? 0;
   status_items.push({
@@ -352,7 +373,6 @@ const BlocksCard = () => {
     };
   }
   const classes = useStyles();
-
   return (
     <Card
       title={<Trans id="BlocksCard.title">Blocks</Trans>}
@@ -380,6 +400,7 @@ const BlocksCard = () => {
               </Trans>
             </Box>
           </Box>
+        
           {latestBlocks.map((record) => {
             const isFinished = true; //record.finished_reward_slot_hashes && !!record.finished_reward_slot_hashes.length;
             const { 

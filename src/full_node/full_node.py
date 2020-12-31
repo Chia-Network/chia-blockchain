@@ -471,6 +471,7 @@ class FullNode:
                     if error is not None:
                         self.log.info(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
                     return False
+        self._state_changed("new_peak")
         return True
 
     async def _finish_sync(self):
@@ -554,6 +555,7 @@ class FullNode:
             added, error_code, fork_height = await self.blockchain.receive_block(sub_block, False)
             if added == ReceiveBlockResult.NEW_PEAK:
                 await self.mempool_manager.new_peak(self.blockchain.get_peak())
+                self._state_changed("new_peak")
 
         if added == ReceiveBlockResult.ALREADY_HAVE_BLOCK:
             return None

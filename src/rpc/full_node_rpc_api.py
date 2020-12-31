@@ -1,3 +1,5 @@
+import time
+
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.full_node import FullNode
 from typing import Callable, List, Optional, Dict
@@ -33,7 +35,7 @@ class FullNodeRpcApi:
 
     async def _state_changed(self, change: str) -> List[Dict]:
         payloads = []
-        if change == "sub_block":
+        if change == "new_peak":
             data = await self.get_blockchain_state({})
             assert data is not None
             payloads.append(
@@ -69,19 +71,24 @@ class FullNodeRpcApi:
 
         sync_mode: bool = self.service.sync_store.get_sync_mode()
 
-        if sync_mode and self.service.sync_peers_handler is not None:
+        if sync_mode:
             max_pp = 0
             for _, potential_peak_tuple in self.service.sync_store.potential_peaks.items():
                 peak_h, peak_w = potential_peak_tuple
                 if peak_h > max_pp:
                     max_pp = peak_h
             sync_tip_height = max_pp
-            sync_progress_sub_height = uint32(self.service.sync_peers_handler.fully_validated_up_to)
-            hash = self.service.blockchain.sub_height_to_hash[sync_progress_sub_height]
-            sync_block = self.service.blockchain.sub_blocks[hash]
-            sync_progress_height = sync_block.height
+            sync_tip_sub_height = max_pp
+            if full_peak is not None:
+                sync_progress_sub_height = full_peak.sub_block_height
+                sync_progress_height = full_peak.height
+            else:
+                sync_progress_sub_height = 0
+                sync_progress_height = 0
         else:
             sync_tip_height = 0
+            sync_tip_sub_height = 0
+            sync_progress_sub_height = 0
             sync_progress_height = uint32(0)
 
         if full_peak is not None and full_peak.height > 1:
@@ -97,14 +104,24 @@ class FullNodeRpcApi:
             )
         else:
             space = {"space": uint128(0)}
+
+        now = time.time()
+        if full_peak is None or full_peak.foliage_block.timestamp < now - 60 * 10 or sync_mode:
+            synced = False
+        else:
+            synced = True
+
         assert space is not None
         response: Dict = {
             "blockchain_state": {
                 "peak": full_peak,
                 "sync": {
                     "sync_mode": sync_mode,
+                    "synced": synced,
                     "sync_tip_height": sync_tip_height,
+                    "sync_tip_sub_height": sync_tip_sub_height,
                     "sync_progress_height": sync_progress_height,
+                    "sync_progress_sub_height": sync_progress_sub_height,
                 },
                 "difficulty": difficulty,
                 "sub_slot_iters": sub_slot_iters,
