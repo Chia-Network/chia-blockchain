@@ -191,7 +191,7 @@ class CCWallet:
         return self.wallet_info.id
 
     async def get_confirmed_balance(self) -> uint64:
-        record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.wallet_store.get_unspent_coins_for_wallet(
+        record_list: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
             self.id()
         )
 
@@ -254,7 +254,7 @@ class CCWallet:
             data: Dict[str, Any] = {
                 "data": {
                     "action_data": {
-                        "api_name": "request_generator",
+                        "api_name": "request_puzzle_solution",
                         "height": height,
                         "header_hash": header_hash,
                     }
