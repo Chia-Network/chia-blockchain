@@ -381,7 +381,8 @@ class WalletNode:
 
             if (curr_peak is None and header_block.sub_block_height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS) or (
                 curr_peak is not None
-                and curr_peak.height > header_block.sub_block_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS
+                and curr_peak.sub_block_height
+                > header_block.sub_block_height - self.constants.WEIGHT_PROOF_RECENT_BLOCKS
             ):
                 top = header_block
                 blocks = [top]
