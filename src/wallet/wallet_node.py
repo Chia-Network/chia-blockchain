@@ -189,7 +189,7 @@ class WalletNode:
 
     async def _await_closed(self):
         self.log.info("self._await_closed")
-        await self.wallet_peers.ensure_is_closed()
+        asyncio.create_task(self.wallet_peers.ensure_is_closed())
         if self.wallet_state_manager is not None:
             await self.wallet_state_manager.close_all_stores()
             self.wallet_state_manager = None
