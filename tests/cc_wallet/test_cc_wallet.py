@@ -1,5 +1,4 @@
 import asyncio
-from secrets import token_bytes
 
 import pytest
 
@@ -9,9 +8,7 @@ from src.util.ints import uint16, uint32, uint64
 from tests.setup_nodes import setup_simulators_and_wallets
 from src.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from src.wallet.cc_wallet.cc_wallet import CCWallet
-from src.wallet.wallet_coin_record import WalletCoinRecord
 from tests.time_out_assert import time_out_assert
-from typing import List
 
 
 @pytest.fixture(scope="module")
