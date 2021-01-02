@@ -692,17 +692,17 @@ class FullNode:
                 else:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
-                # Tell wallets about the new peak
-                msg = Message(
-                    "new_peak",
-                    wallet_protocol.NewPeak(
-                        sub_block.header_hash,
-                        sub_block.sub_block_height,
-                        sub_block.weight,
-                        fork_height,
-                    ),
-                )
-                await self.server.send_to_all([msg], NodeType.WALLET)
+            # Tell wallets about the new peak
+            msg = Message(
+                "new_peak",
+                wallet_protocol.NewPeak(
+                    sub_block.header_hash,
+                    sub_block.sub_block_height,
+                    sub_block.weight,
+                    fork_height,
+                ),
+            )
+            await self.server.send_to_all([msg], NodeType.WALLET)
 
         elif added == ReceiveBlockResult.ADDED_AS_ORPHAN:
             self.log.warning(
