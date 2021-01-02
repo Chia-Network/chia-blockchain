@@ -106,7 +106,12 @@ class FullNodeRpcApi:
             space = {"space": uint128(0)}
 
         now = time.time()
-        if full_peak is None or full_peak.foliage_block.timestamp < now - 60 * 10 or sync_mode:
+        if (
+            full_peak is None
+            or full_peak.foliage_block is None
+            or full_peak.foliage_block.timestamp < now - 60 * 10
+            or sync_mode
+        ):
             synced = False
         else:
             synced = True

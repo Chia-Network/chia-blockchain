@@ -217,13 +217,10 @@ class WalletNode:
         for action in actions:
             data = json.loads(action.data)
             action_data = data["data"]["action_data"]
-            if action.name == "request_generator":
-                header_hash = bytes32(hexstr_to_bytes(action_data["header_hash"]))
-                height = uint32(action_data["height"])
-                msg = Message(
-                    "request_generator",
-                    wallet_protocol.RequestGenerator(height, header_hash),
-                )
+            if action.name == "request_puzzle_solution":
+                coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
+                sub_height = uint32(action_data["sub_height"])
+                msg = Message("request_puzzle_solution", wallet_protocol.RequestPuzzleSolution(coin_name, sub_height))
                 result.append(msg)
 
         return result

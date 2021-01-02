@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 import logging
 import time
 
 from typing import Dict, Optional, List, Any, Set
 from blspy import G2Element, AugSchemeMPL
+
+from src.protocols.wallet_protocol import PuzzleSolutionResponse
 from src.types.coin import Coin
 from src.types.coin_solution import CoinSolution
-from src.types.condition_opcodes import ConditionOpcode
 from src.types.program import Program
 from src.types.spend_bundle import SpendBundle
 from src.types.sized_bytes import bytes32
@@ -235,7 +237,7 @@ class CCWallet:
         assert self.cc_info.my_genesis_checker is not None
         return bytes(self.cc_info.my_genesis_checker).hex()
 
-    async def coin_added(self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin]):
+    async def coin_added(self, coin: Coin, height: int, header_hash: bytes32, removals: List[Coin], sub_height: uint32):
         """ Notification from wallet state manager that wallet has been received. """
         self.log.info(f"CC wallet has been notified that {coin} was added")
 
@@ -255,98 +257,49 @@ class CCWallet:
                 "data": {
                     "action_data": {
                         "api_name": "request_puzzle_solution",
-                        "height": height,
-                        "header_hash": header_hash,
+                        "sub_height": sub_height,
+                        "coin_name": coin.parent_coin_info,
+                        "received_coin": coin.name(),
                     }
                 }
             }
 
             data_str = dict_to_json_str(data)
             await self.wallet_state_manager.create_action(
-                name="request_generator",
+                name="request_puzzle_solution",
                 wallet_id=self.id(),
                 type=self.type(),
-                callback="generator_received",
+                callback="puzzle_solution_received",
                 done=False,
                 data=data_str,
             )
 
-    async def search_for_parent_info(self, block_program: Program, removals: List[Coin]) -> bool:
+    async def puzzle_solution_received(self, response: PuzzleSolutionResponse, action_id: int):
+        coin_name = response.coin_name
+        sub_height = response.sub_height
+        puzzle: Program = response.puzzle
+        r = uncurry_cc(puzzle)
+        header_hash = self.wallet_state_manager.blockchain.sub_height_to_hash[sub_height]
+        block: Optional[
+            HeaderBlockRecord
+        ] = await self.wallet_state_manager.blockchain.block_store.get_header_block_record(header_hash)
+        if block is None:
+            return None
 
-        """
-        Returns an error if it's unable to evaluate, otherwise
-        returns a list of NPC (coin_name, solved_puzzle_hash, conditions_dict)
-        """
-        cost_sum = 0
-        try:
-            cost_run, sexp = block_program.run_with_cost([])
-            cost_sum += cost_run
-        except Program.EvalError:
-            return False
+        removals = block.removals
 
-        parents = []
-
-        for name_solution in sexp.as_iter():
-            _ = name_solution.as_python()
-            if len(_) != 2:
-                return False
-            if not isinstance(_[0], bytes) or len(_[0]) != 32:
-                return False
-            coin_name = bytes32(_[0])
-            if not isinstance(_[1], list) or len(_[1]) != 2:
-                return False
-            puzzle_solution_program = name_solution.rest().first()
-            puzzle_program = puzzle_solution_program.first()
-            try:
-                error, conditions_dict, cost_run = conditions_dict_for_solution(puzzle_solution_program)
-                cost_sum += cost_run
-                if error:
-                    return False
-            except Program.EvalError:
-
-                return False
-            if conditions_dict is None:
-                conditions_dict = {}
-
-            if ConditionOpcode.CREATE_COIN in conditions_dict:
-                created_output_conditions = conditions_dict[ConditionOpcode.CREATE_COIN]
-            else:
-                continue
-            for cvp in created_output_conditions:
-                result = await self.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash(cvp.vars[0])
-                if result is None:
-                    continue
-
-                wallet_id, wallet_type = result
-                if wallet_id != self.id():
-                    continue
-
-                coin = None
-                for removed in removals:
-                    if removed.name() == coin_name:
-                        coin = removed
-                        break
-
-                if coin is not None:
-                    r = uncurry_cc(puzzle_program)
-                    if r is not None:
-                        mod_hash, genesis_coin_checker, inner_puzzle = r
-                        self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
-                        lineage_proof = get_lineage_proof_from_coin_and_puz(coin, puzzle_program)
-                        parents.append(lineage_proof)
-                        await self.add_lineage(coin_name, lineage_proof)
-
-        return len(parents) > 0
-
-    async def generator_received(self, height: uint32, header_hash: bytes32, generator: Program, action_id: int):
-        """ Notification that wallet has received a generator it asked for. """
-        block: Optional[HeaderBlockRecord] = await self.wallet_state_manager.wallet_store.get_block_record(header_hash)
-        assert block is not None
-        if block.removals is not None:
-            parent_found = await self.search_for_parent_info(generator, block.removals)
-            self.log.info(f"search_for_parent_info returned {parent_found}")
-            if parent_found:
-                await self.wallet_state_manager.set_action_done(action_id)
+        if r is not None:
+            mod_hash, genesis_coin_checker, inner_puzzle = r
+            self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
+            parent_coin = None
+            for coin in removals:
+                if coin.name() == coin_name:
+                    parent_coin = coin
+            if parent_coin is None:
+                raise ValueError("Error in finding parent")
+            lineage_proof = get_lineage_proof_from_coin_and_puz(parent_coin, puzzle)
+            await self.add_lineage(coin_name, lineage_proof)
+            await self.wallet_state_manager.action_store.action_done(action_id)
 
     async def get_new_inner_hash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()

@@ -14,6 +14,7 @@ from src.consensus.pot_iterations import (
     calculate_iterations_quality,
 )
 from src.full_node.full_node import FullNode
+from src.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from src.full_node.signage_point import SignagePoint
 from src.consensus.sub_block_record import SubBlockRecord
 
@@ -26,7 +27,7 @@ from src.protocols import (
     wallet_protocol,
 )
 from src.protocols.full_node_protocol import RejectSubBlocks
-from src.protocols.wallet_protocol import RejectHeaderRequest
+from src.protocols.wallet_protocol import RejectHeaderRequest, PuzzleSolutionResponse
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.types.coin import Coin, hash_coin_list
 
@@ -37,6 +38,7 @@ from src.types.header_block import HeaderBlock
 from src.types.mempool_inclusion_status import MempoolInclusionStatus
 from src.types.mempool_item import MempoolItem
 from src.types.pool_target import PoolTarget
+from src.types.program import Program
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
@@ -996,3 +998,32 @@ class FullNodeAPI:
                 response = wallet_protocol.TransactionAck(request.transaction.name(), status, error_name)
         msg = Message("transaction_ack", response)
         return msg
+
+    @api_request
+    async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
+        coin_name = request.coin_name
+        sub_height = request.sub_height
+        coin_record = await self.full_node.coin_store.get_coin_record(coin_name)
+        reject = wallet_protocol.RejectPuzzleSolution(coin_name, sub_height)
+        reject_msg = Message("reject_puzzle_solution", reject)
+        if coin_record is None or coin_record.spent_block_index != sub_height:
+            return reject_msg
+
+        header_hash = self.full_node.blockchain.sub_height_to_hash[sub_height]
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
+
+        if block is None or block.transactions_generator is None:
+            return reject_msg
+
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(block.transactions_generator, coin_name)
+
+        if error is not None:
+            return reject_msg
+
+        pz = Program.to(puzzle)
+        sol = Program.to(solution)
+
+        wrapper = PuzzleSolutionResponse(coin_name, sub_height, pz, sol)
+        response = wallet_protocol.RespondPuzzleSolution(wrapper)
+        response_msg = Message("respond_puzzle_solution", response)
+        return response_msg
