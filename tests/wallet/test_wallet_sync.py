@@ -7,7 +7,6 @@ from src.protocols import full_node_protocol
 from src.util.ints import uint16
 from tests.setup_nodes import setup_node_and_wallet, test_constants, bt
 from tests.time_out_assert import time_out_assert
-from tests.full_node.fixtures import empty_blockchain, default_400_blocks, default_10000_blocks
 
 
 def wallet_height_at_least(wallet_node, h):
@@ -81,7 +80,7 @@ class TestWalletSync:
 #     for i in range(1, len(blocks_reorg)):
 #         await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks_reorg[i]))
 #
-#     await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_10000_blocks) + num_blocks - 5 - 1)
+#  await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_10000_blocks) + num_blocks - 5 - 1)
 #
 #     @pytest.mark.asyncio
 #     async def test_fast_sync_wallet(self, wallet_node_starting_height):
