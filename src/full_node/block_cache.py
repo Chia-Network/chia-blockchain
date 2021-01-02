@@ -138,8 +138,8 @@ async def init_wallet_block_cache(
     header_blocks: List[HeaderBlock] = []
     batch_blocks: List[uint32] = []
 
-    if stop == 0 and blockchain.peak_height is not None:
-        stop = blockchain.peak_height
+    if stop == 0 and blockchain.peak_sub_height is not None:
+        stop = blockchain.peak_sub_height
 
     for x in range(start, stop):
         batch_blocks.append(uint32(x))

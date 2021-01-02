@@ -47,7 +47,7 @@ class ReceiveBlockResult(Enum):
 class WalletBlockchain:
     constants: ConsensusConstants
     # peak of the blockchain
-    peak_height: Optional[uint32]
+    peak_sub_height: Optional[uint32]
     # All sub blocks in peak path are guaranteed to be included, can include orphan sub-blocks
     sub_blocks: Dict[bytes32, SubBlockRecord]
     # Defines the path from genesis to the peak, no orphan sub-blocks
@@ -114,11 +114,11 @@ class WalletBlockchain:
         if len(self.sub_blocks) == 0:
             assert peak is None
             log.info("Initializing empty blockchain")
-            self.peak_height = None
+            self.peak_sub_height = None
             return
 
         assert peak is not None
-        self.peak_height = self.sub_blocks[peak].height
+        self.peak_sub_height = self.sub_blocks[peak].sub_block_height
 
         # Sets the other state variables (peak_height and height_to_hash)
         curr: SubBlockRecord = self.sub_blocks[peak]
@@ -129,21 +129,22 @@ class WalletBlockchain:
             if curr.height == 0:
                 break
             curr = self.sub_blocks[curr.prev_hash]
-        assert len(self.sub_blocks) == len(self.sub_height_to_hash) == self.peak_height + 1
+
+        assert len(self.sub_blocks) == len(self.sub_height_to_hash) == self.peak_sub_height + 1
 
     def get_peak(self) -> Optional[SubBlockRecord]:
         """
         Return the peak of the blockchain
         """
-        if self.peak_height is None:
+        if self.peak_sub_height is None:
             return None
-        return self.sub_blocks[self.sub_height_to_hash[self.peak_height]]
+        return self.sub_blocks[self.sub_height_to_hash[self.peak_sub_height]]
 
     async def get_full_peak(self) -> Optional[HeaderBlock]:
-        if self.peak_height is None:
+        if self.peak_sub_height is None:
             return None
         """ Return list of FullBlocks that are peaks"""
-        block = await self.block_store.get_header_block(self.sub_height_to_hash[self.peak_height])
+        block = await self.block_store.get_header_block(self.sub_height_to_hash[self.peak_sub_height])
         assert block is not None
         return block
 
@@ -244,7 +245,7 @@ class WalletBlockchain:
                     block.removals, block.additions, block.height, block.sub_block_height
                 )
                 self.sub_height_to_hash[uint32(0)] = block.header_hash
-                self.peak_height = uint32(0)
+                self.peak_sub_height = uint32(0)
                 return uint32(0)
             return None
 
@@ -305,7 +306,7 @@ class WalletBlockchain:
 
             # Changes the peak to be the new peak
             await self.block_store.set_peak(sub_block.header_hash)
-            self.peak_height = sub_block.sub_block_height
+            self.peak_sub_height = sub_block.sub_block_height
             return uint32(min(fork_h, 0))
 
         # This is not a heavier block than the heaviest we have seen, so we don't change the coin set
