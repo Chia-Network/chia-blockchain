@@ -5,6 +5,7 @@ import pytest
 from src.types.peer_info import PeerInfo
 from src.protocols import full_node_protocol
 from src.util.ints import uint16
+from tests.full_node.fixtures import default_400_blocks
 from tests.setup_nodes import setup_node_and_wallet, test_constants, bt
 from tests.time_out_assert import time_out_assert
 
