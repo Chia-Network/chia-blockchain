@@ -3,7 +3,7 @@ import aiosqlite
 
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.header_block import HeaderBlock
-from src.util.ints import uint32
+from src.util.ints import uint32, uint64
 from src.wallet.block_record import HeaderBlockRecord
 from src.types.sized_bytes import bytes32
 
@@ -68,7 +68,7 @@ class WalletBlockStore:
         if block_record.header.foliage_block is not None:
             timestamp = block_record.header.foliage_block.timestamp
         else:
-            timestamp = 0
+            timestamp = uint64(0)
         cursor = await self.db.execute(
             "INSERT OR REPLACE INTO header_blocks VALUES(?, ?, ?, ?, ?)",
             (

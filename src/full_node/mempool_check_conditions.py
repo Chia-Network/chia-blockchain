@@ -1,3 +1,4 @@
+import traceback
 from typing import Optional, List, Dict
 
 from src.types.condition_var_pair import ConditionVarPair
@@ -155,8 +156,9 @@ def get_name_puzzle_conditions(block_program: Program, safe_mode: bool):
                 conditions_dict = {}
             npc_list.append(NPC(name, puzzle_hash, conditions_dict))
         return None, npc_list, uint64(cost)
-    except Exception as e:
-        return e, None, None
+    except Exception:
+        tb = traceback.format_exc()
+        return tb, None, None
 
 
 def get_puzzle_and_solution_for_coin(block_program: Program, coin_name: bytes):

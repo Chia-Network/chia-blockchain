@@ -17,6 +17,7 @@ from src.consensus.constants import ConsensusConstants
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.block_cache import init_wallet_block_cache
 from src.full_node.weight_proof import WeightProofHandler
+from src.protocols.wallet_protocol import RespondPuzzleSolution, PuzzleSolutionResponse
 from src.types.coin import Coin
 from src.types.header_block import HeaderBlock
 from src.types.sized_bytes import bytes32
@@ -463,15 +464,17 @@ class WalletStateManager:
                 removals[coin.name()] = coin
         return removals
 
-    async def coins_of_interest_received(self, removals: List[Coin], additions: List[Coin], height: uint32):
+    async def coins_of_interest_received(
+        self, removals: List[Coin], additions: List[Coin], height: uint32, sub_height: uint32
+    ):
         for coin in additions:
             await self.puzzle_hash_created(coin)
-        trade_additions = await self.coins_of_interest_added(additions, height)
-        trade_removals = await self.coins_of_interest_removed(removals, height)
+        trade_additions = await self.coins_of_interest_added(additions, height, sub_height)
+        trade_removals = await self.coins_of_interest_removed(removals, height, sub_height)
         if len(trade_additions) > 0 or len(trade_removals) > 0:
-            await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height)
+            await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height, sub_height)
 
-    async def coins_of_interest_added(self, coins: List[Coin], height: uint32) -> List[Coin]:
+    async def coins_of_interest_added(self, coins: List[Coin], height: uint32, sub_height: uint32) -> List[Coin]:
         (
             trade_removals,
             trade_additions,
@@ -492,17 +495,12 @@ class WalletStateManager:
             if info is not None:
                 wallet_id, wallet_type = info
                 await self.coin_added(
-                    coin,
-                    height,
-                    is_coinbase,
-                    is_fee_reward,
-                    uint32(wallet_id),
-                    wallet_type,
+                    coin, height, is_coinbase, is_fee_reward, uint32(wallet_id), wallet_type, sub_height
                 )
 
         return trade_adds
 
-    async def coins_of_interest_removed(self, coins: List[Coin], height: uint32) -> List[Coin]:
+    async def coins_of_interest_removed(self, coins: List[Coin], height: uint32, sub_height: uint32) -> List[Coin]:
         "This get's called when coins of our interest are spent on chain"
         (
             trade_removals,
@@ -547,6 +545,7 @@ class WalletStateManager:
         fee_reward: bool,
         wallet_id: uint32,
         wallet_type: WalletType,
+        sub_height: uint32,
     ):
         """
         Adding coin to DB
@@ -618,7 +617,7 @@ class WalletStateManager:
             block: Optional[HeaderBlockRecord] = await self.block_store.get_header_block_record(header_hash)
             assert block is not None
             assert block.removals is not None
-            await wallet.coin_added(coin, index, header_hash, block.removals)
+            await wallet.coin_added(coin, index, header_hash, block.removals, sub_height)
 
         self.state_changed("coin_added", wallet_id)
 
@@ -978,3 +977,21 @@ class WalletStateManager:
                     if callback_str is not None:
                         callback = getattr(wallet, callback_str)
                         await callback(height, header_hash, program, action.id)
+
+    async def puzzle_solution_received(self, response: RespondPuzzleSolution):
+        unwrapped: PuzzleSolutionResponse = response.response
+        actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
+        for action in actions:
+            data = json.loads(action.data)
+            action_data = data["data"]["action_data"]
+            if action.name == "request_puzzle_solution":
+                stored_coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
+                sub_height = uint32(action_data["sub_height"])
+                if stored_coin_name == unwrapped.coin_name and sub_height == unwrapped.sub_height:
+                    if action.done:
+                        return
+                    wallet = self.wallets[uint32(action.wallet_id)]
+                    callback_str = action.wallet_callback
+                    if callback_str is not None:
+                        callback = getattr(wallet, callback_str)
+                        await callback(unwrapped, action.id)

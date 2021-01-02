@@ -91,3 +91,13 @@ class WalletNodeAPI:
 
         if peer is not None and peer.connection_type is NodeType.INTRODUCER:
             await peer.close()
+
+    @api_request
+    async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
+        if self.wallet_node.wallet_state_manager is None or self.wallet_node.backup_initialized is False:
+            return
+        await self.wallet_node.wallet_state_manager.puzzle_solution_received(request)
+
+    @api_request
+    async def reject_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
+        pass

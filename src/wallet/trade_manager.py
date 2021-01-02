@@ -104,7 +104,9 @@ class TradeManager:
                 return trade
         return None
 
-    async def coins_of_interest_farmed(self, removals: List[Coin], additions: List[Coin], index: uint32):
+    async def coins_of_interest_farmed(
+        self, removals: List[Coin], additions: List[Coin], index: uint32, sub_height: uint32
+    ):
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
         If coins from other side of trade got farmed without ours, that means that trade failed because either someone

@@ -240,7 +240,9 @@ class WalletBlockchain:
                 assert block is not None
                 for removed in block.removals:
                     self.log.info(f"Removed: {removed.name()}")
-                await self.coins_of_interest_received(block.removals, block.additions, block.height)
+                await self.coins_of_interest_received(
+                    block.removals, block.additions, block.height, block.sub_block_height
+                )
                 self.sub_height_to_hash[uint32(0)] = block.header_hash
                 self.peak_height = uint32(0)
                 return uint32(0)
@@ -294,6 +296,7 @@ class WalletBlockchain:
                         fetched_block.removals,
                         fetched_block.additions,
                         fetched_block.height,
+                        fetched_block.sub_block_height,
                     )
                 if fetched_sub_block.sub_epoch_summary_included is not None:
                     self.sub_epoch_summaries[
