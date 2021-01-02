@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 
 import pytest
