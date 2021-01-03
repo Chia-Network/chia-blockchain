@@ -34,7 +34,6 @@ from src.protocols import (
     farmer_protocol,
 )
 from src.protocols.full_node_protocol import RequestSubBlocks, RejectSubBlocks, RespondSubBlocks, RespondSubBlock
-
 from src.server.node_discovery import FullNodePeers
 from src.server.outbound_message import Message, NodeType, OutboundMessage
 from src.server.server import ChiaServer
@@ -43,7 +42,6 @@ from src.types.pool_target import PoolTarget
 from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
-
 from src.util.errors import ConsensusError
 from src.util.ints import uint32, uint128, uint8
 from src.util.path import mkdir, path_from_root
@@ -734,11 +732,10 @@ class FullNode:
                 # This means this unfinished block is pretty far behind, it will not add weight to our chain
                 return
 
-        prev_sb = (
-            None
-            if block.prev_header_hash == self.constants.GENESIS_PREV_HASH
-            else self.blockchain.sub_block_record(block.prev_header_hash)
-        )
+        if block.prev_header_hash == self.constants.GENESIS_PREV_HASH:
+            prev_sb = None
+        else:
+            prev_sb = self.blockchain.sub_block_record(block.prev_header_hash)
 
         is_overflow = is_overflow_sub_block(self.constants, block.reward_chain_sub_block.signage_point_index)
 
@@ -763,7 +760,7 @@ class FullNode:
                 first_ss_new_epoch = True
             elif prev_sb is not None:
                 # If the prev can finish an epoch, then we are in a new epoch
-                prev_prev = self.blockchain.sub_block_record(prev_sb.prev_hash)
+                prev_prev = self.blockchain.try_sub_block(prev_sb.prev_hash)
                 _, can_finish_epoch = can_finish_sub_and_full_epoch(
                     self.constants,
                     prev_sb.sub_block_height,
@@ -940,6 +937,7 @@ class FullNode:
             )
 
             block: FullBlock = unfinished_block_to_full_block(
+                self.constants,
                 unfinished_block,
                 request.challenge_chain_ip_vdf,
                 request.challenge_chain_ip_proof,
