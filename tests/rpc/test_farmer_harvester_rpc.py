@@ -50,6 +50,8 @@ class TestRpc:
             daemon_port,
             test_rpc_port,
             stop_node_cb,
+            None,
+            None,
             connect_to_daemon=False,
         )
         rpc_cleanup_2 = await start_rpc_server(
@@ -58,6 +60,8 @@ class TestRpc:
             daemon_port,
             test_rpc_port_2,
             stop_node_cb_2,
+            None,
+            None,
             connect_to_daemon=False,
         )
 

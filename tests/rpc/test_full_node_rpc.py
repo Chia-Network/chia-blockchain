@@ -39,6 +39,8 @@ class TestRpc:
             daemon_port,
             test_rpc_port,
             stop_node_cb,
+            None,
+            None,
             connect_to_daemon=False,
         )
 
