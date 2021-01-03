@@ -3,6 +3,9 @@ network_id: testnet  # testnet/mainnet
 ping_interval: 120
 self_hostname: &self_hostname "localhost"
 daemon_port: 55400
+ssl:
+  crt: "trusted.crt"
+  key: "trusted.key"
 
 # Controls logging of all servers (harvester, farmer, etc..). Each one can be overriden.
 logging: &logging

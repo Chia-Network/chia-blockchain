@@ -36,6 +36,10 @@ if (!setupEvents.handleSquirrelEvent()) {
 
   let pyProc = null;
   let ws = null;
+  let have_cert = null
+
+  global.key_path = null
+  global.cert_path = null
 
   const guessPackaged = () => {
     let packed;
@@ -89,6 +93,29 @@ if (!setupEvents.handleSquirrelEvent()) {
       pyProc.stdout.setEncoding("utf8");
 
       pyProc.stdout.on("data", function(data) {
+        if (!have_cert) {
+          process.stdout.write("No cert\n");
+          // listen for ssl path message
+          try {
+            let str_arr = data.toString().split("\n")
+            for (var i = 0; i < str_arr.length; i++) {
+              let str = str_arr[i]
+              try {
+                let json = JSON.parse(str);
+                global.cert_path = json["cert"]
+                global.key_path = json["key"]
+                if (cert_path && key_path) {
+                  have_cert = true
+                  process.stdout.write("Have cert\n");
+                  return
+                }
+              } catch (e) {
+              }
+            }
+          } catch (e) {
+          }
+        }
+
         process.stdout.write(data.toString());
       });
 
@@ -117,8 +144,15 @@ if (!setupEvents.handleSquirrelEvent()) {
 
     try {
       const request_id = crypto.randomBytes(32).toString("hex");
+      const key_path = key_path;
+      const cert_path = cert_path;
+      var options = {
+        cert: fs.readFileSync(cert_path),
+        key: fs.readFileSync(key_path),
+        rejectUnauthorized: false
+      };
       ws = new WebSocket(daemon_rpc_ws, {
-        perMessageDeflate: false
+        perMessageDeflate: false, options
       });
       ws.on("open", function open() {
         console.log("Opened websocket with", daemon_rpc_ws);
@@ -236,14 +270,7 @@ if (!setupEvents.handleSquirrelEvent()) {
 
   const appReady = async () => {
     app.applicationMenu = createMenu();
-    try {
-      await promisify(closeDaemon)();
-    } catch (e) {
-      console.error("Error in websocket", e);
-    }
-
     createPyProc();
-    ws.terminate();
     createWindow();
   };
 

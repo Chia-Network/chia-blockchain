@@ -15,6 +15,8 @@ from concurrent.futures import ThreadPoolExecutor
 from websockets import serve, ConnectionClosedOK, WebSocketException
 from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
+from src.server.server import ssl_context_for_server
+from src.server.ssl_context import load_ssl_paths
 from src.util.ws_message import format_response, create_payload
 from src.util.json_util import dict_to_json_str
 from src.util.config import load_config
@@ -95,10 +97,18 @@ class WebSocketServer:
         self.connections: Dict[str, List[Any]] = dict()  # service_name : [WebSocket]
         self.remote_address_map: Dict[str, str] = dict()  # remote_address: service_name
         self.ping_job = None
-        net_config = load_config(root_path, "config.yaml")
-        self.self_hostname = net_config["self_hostname"]
-        self.daemon_port = net_config["daemon_port"]
+        self.net_config = load_config(root_path, "config.yaml")
+        self.self_hostname = self.net_config["self_hostname"]
+        self.daemon_port = self.net_config["daemon_port"]
         self.websocket_server = None
+        cert_path, key_path = load_ssl_paths(root_path, self.net_config)
+        self.ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
+        sys.stdout.flush()
+        json_msg = dict_to_json_str(
+            {"message": "cert_path", "success": True, "cert": f"{cert_path}", "key": f"{key_path}"}
+        )
+        sys.stdout.write("\n" + json_msg + "\n")
+        sys.stdout.flush()
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -119,6 +129,7 @@ class WebSocketServer:
             max_size=None,
             ping_interval=500,
             ping_timeout=300,
+            ssl=self.ssl_context,
         )
 
         self.log.info("Waiting Daemon WebSocketServer closure")
