@@ -595,32 +595,6 @@ class FullNodeAPI:
                     spend_bundle: Optional[SpendBundle] = None
                 else:
                     spend_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
-            if peak is None or peak.sub_block_height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
-                difficulty = self.full_node.constants.DIFFICULTY_STARTING
-                sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
-            else:
-                assert pos_sub_slot is not None
-                if pos_sub_slot[0].challenge_chain.new_difficulty is not None:
-                    assert pos_sub_slot[0].challenge_chain.new_sub_slot_iters is not None
-                    difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
-                    sub_slot_iters = pos_sub_slot[0].challenge_chain.new_sub_slot_iters
-                else:
-                    difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
-                    sub_slot_iters = peak.sub_slot_iters
-
-            required_iters: uint64 = calculate_iterations_quality(
-                quality_string,
-                request.proof_of_space.size,
-                difficulty,
-                request.challenge_chain_sp,
-            )
-            sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
-            ip_iters: uint64 = calculate_ip_iters(
-                self.full_node.constants,
-                sub_slot_iters,
-                request.signage_point_index,
-                required_iters,
-            )
 
             def get_plot_sig(to_sign, _) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -690,6 +664,32 @@ class FullNodeAPI:
                 )
             else:
                 pool_target = request.pool_target
+
+            if peak is None or peak.sub_block_height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+                difficulty = self.full_node.constants.DIFFICULTY_STARTING
+                sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+            else:
+                difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
+                sub_slot_iters = peak.sub_slot_iters
+                for sub_slot in finished_sub_slots:
+                    if sub_slot.challenge_chain.new_difficulty is not None:
+                        difficulty = sub_slot.challenge_chain.new_difficulty
+                    if sub_slot.challenge_chain.new_sub_slot_iters is not None:
+                        sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
+
+            required_iters: uint64 = calculate_iterations_quality(
+                quality_string,
+                request.proof_of_space.size,
+                difficulty,
+                request.challenge_chain_sp,
+            )
+            sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
+            ip_iters: uint64 = calculate_ip_iters(
+                self.full_node.constants,
+                sub_slot_iters,
+                request.signage_point_index,
+                required_iters,
+            )
 
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
