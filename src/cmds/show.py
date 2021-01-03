@@ -137,8 +137,13 @@ async def show_async(args, parser):
                 )
             else:
                 print("Current Blockchain Status: Full Node Synced")
-            print("\nPeak: Hash:", peak.header_hash)
-            if peak.is_block():
+            if peak is not None:
+                print("\nPeak: Hash:", peak.header_hash)
+            else:
+                print("\nSearching for an initial chain.")
+                print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
+                print("Errors that follow can be safely ignored:\n")
+            if peak is not None and peak.is_block():
                 peak_time = peak.foliage_block.timestamp
             else:
                 peak_hash = peak.header_hash
