@@ -41,11 +41,12 @@ class Service:
         parse_cli_args=True,
         connect_to_daemon=True,
     ):
-        config = load_config(root_path, "config.yaml")
-        ping_interval = config.get("ping_interval")
-        network_id = config.get("network_id")
-        self.self_hostname = config.get("self_hostname")
-        self.daemon_port = config.get("daemon_port")
+        self.root_path = root_path
+        self.config = load_config(root_path, "config.yaml")
+        ping_interval = self.config.get("ping_interval")
+        network_id = self.config.get("network_id")
+        self.self_hostname = self.config.get("self_hostname")
+        self.daemon_port = self.config.get("daemon_port")
         assert ping_interval is not None
         assert network_id is not None
         self._connect_to_daemon = connect_to_daemon
@@ -127,6 +128,8 @@ class Service:
                     self.daemon_port,
                     rpc_port,
                     self.stop,
+                    self.root_path,
+                    self.config,
                     self._connect_to_daemon,
                 )
             )

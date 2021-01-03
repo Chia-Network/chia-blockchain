@@ -13,11 +13,17 @@ import {
   service_farmer,
   service_harvester,
 } from '../util/service_names';
+import isElectron from 'is-electron';
 
 const crypto = require('crypto');
 const config = require('../config/config');
 
 const callback_map = {};
+if (isElectron()) {
+  var remote = window.require('electron').remote;
+  var fs = remote.require('fs');
+  var WS = window.require('ws');
+}
 
 const outgoing_message = (command, data, destination) => ({
   command,
@@ -37,7 +43,6 @@ const socketMiddleware = () => {
     store.dispatch(actions.wsConnected(event.target.url));
     store.dispatch(registerService('wallet_ui'));
     store.dispatch(registerService(service_plotter));
-
 
     if (config.local_test) {
       store.dispatch(startServiceTest(service_wallet));
@@ -73,11 +78,21 @@ const socketMiddleware = () => {
         if (socket !== null) {
           socket.close();
         }
-
         // connect to the remote host
         try {
-          socket = new WebSocket(action.host);
+          const key_path = remote.getGlobal('key_path');
+          const cert_path = remote.getGlobal('cert_path');
+          debugger;
+
+          var options = {
+            cert: fs.readFileSync(cert_path),
+            key: fs.readFileSync(key_path),
+            rejectUnauthorized: false,
+          };
+          socket = new WS(action.host, options);
         } catch {
+          connected = false;
+          store.dispatch(actions.wsDisconnected());
           console.log('Failed connection to', action.host);
           break;
         }

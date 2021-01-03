@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Callable, Dict, Any, List, Optional
 
 import aiohttp
@@ -7,6 +8,8 @@ import json
 import traceback
 
 from src.server.outbound_message import NodeType
+from src.server.server import ssl_context_for_server
+from src.server.ssl_context import load_ssl_paths
 from src.types.peer_info import PeerInfo
 from src.util.byte_types import hexstr_to_bytes
 from src.util.json_util import obj_to_response
@@ -22,13 +25,15 @@ class RpcServer:
     Implementation of RPC server.
     """
 
-    def __init__(self, rpc_api: Any, service_name: str, stop_cb: Callable):
+    def __init__(self, rpc_api: Any, service_name: str, stop_cb: Callable, root_path, net_config):
         self.rpc_api = rpc_api
         self.stop_cb: Callable = stop_cb
         self.log = log
         self.shut_down = False
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
         self.service_name = service_name
+        self.root_path = root_path
+        self.net_config = net_config
 
     async def stop(self):
         self.shut_down = True
@@ -256,10 +261,10 @@ class RpcServer:
                 if self.shut_down:
                     break
                 session = aiohttp.ClientSession()
+                cert_path, key_path = load_ssl_paths(self.root_path, self.net_config)
+                ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
                 async with session.ws_connect(
-                    f"ws://{self_hostname}:{daemon_port}",
-                    autoclose=False,
-                    autoping=True,
+                    f"wss://{self_hostname}:{daemon_port}", autoclose=False, autoping=True, ssl_context=ssl_context
                 ) as ws:
                     self.websocket = ws
                     await self.connection(ws)
@@ -282,6 +287,8 @@ async def start_rpc_server(
     daemon_port: uint16,
     rpc_port: uint16,
     stop_cb: Callable,
+    root_path: Path,
+    net_config,
     connect_to_daemon=True,
 ):
     """
@@ -289,7 +296,7 @@ async def start_rpc_server(
     query the node.
     """
     app = aiohttp.web.Application()
-    rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb)
+    rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
     rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
     http_routes: Dict[str, Callable] = rpc_api.get_routes()
 
