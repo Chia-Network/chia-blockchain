@@ -67,6 +67,7 @@ class Service:
 
         self._server = ChiaServer(
             advertised_port,
+            node,
             peer_api,
             node_type,
             ping_interval,

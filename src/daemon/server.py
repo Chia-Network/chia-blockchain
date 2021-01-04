@@ -189,6 +189,9 @@ class WebSocketServer:
             await websocket.close()
 
     def remove_connection(self, websocket):
+        if websocket.remote_address is None:
+            self.log.warning("Remote address is None")
+            return
         remote_address = websocket.remote_address[1]
         service_name = None
         if remote_address in self.remote_address_map:
