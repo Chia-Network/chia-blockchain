@@ -50,8 +50,8 @@ class TestRpc:
             daemon_port,
             test_rpc_port,
             stop_node_cb,
-            None,
-            None,
+            bt.root_path,
+            config,
             connect_to_daemon=False,
         )
         rpc_cleanup_2 = await start_rpc_server(
@@ -60,14 +60,14 @@ class TestRpc:
             daemon_port,
             test_rpc_port_2,
             stop_node_cb_2,
-            None,
-            None,
+            bt.root_path,
+            config,
             connect_to_daemon=False,
         )
 
         try:
-            client = await FarmerRpcClient.create("localhost", test_rpc_port)
-            client_2 = await HarvesterRpcClient.create("localhost", test_rpc_port_2)
+            client = await FarmerRpcClient.create("localhost", test_rpc_port, bt.root_path, config)
+            client_2 = await HarvesterRpcClient.create("localhost", test_rpc_port_2, bt.root_path, config)
 
             async def have_connections():
                 return len(await client.get_connections()) > 0

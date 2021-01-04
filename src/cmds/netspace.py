@@ -53,7 +53,7 @@ async def netstorge_async(args, parser):
             rpc_port = config["full_node"]["rpc_port"]
         else:
             rpc_port = args.rpc_port
-        client = await FullNodeRpcClient.create(self_hostname, rpc_port)
+        client = await FullNodeRpcClient.create(self_hostname, rpc_port, DEFAULT_ROOT_PATH, config)
 
         # print (args.blocks)
         if args.delta_block_height:
