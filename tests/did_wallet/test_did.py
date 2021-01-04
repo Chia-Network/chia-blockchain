@@ -470,7 +470,8 @@ class TestDIDWallet:
         innerpuzhash = innerpuz.get_tree_hash()
 
         puz = did_wallet_puzzles.create_fullpuz(
-            innerpuzhash, did_wallet.did_info.my_did,
+            innerpuzhash,
+            did_wallet.did_info.my_did,
         )
 
         # Add the hacked puzzle to the puzzle store so that it is recognised as "our" puzzle
@@ -584,7 +585,8 @@ class TestDIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = did_wallet.did_info.current_inner
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
-            innerpuz, did_wallet.did_info.my_did,
+            innerpuz,
+            did_wallet.did_info.my_did,
         )
         fullsol = Program.to(
             [
@@ -599,7 +601,10 @@ class TestDIDWallet:
         )
 
         list_of_solutions = [
-            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
+            CoinSolution(
+                coin,
+                clvm.to_sexp_f([full_puzzle, fullsol]),
+            )
         ]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())

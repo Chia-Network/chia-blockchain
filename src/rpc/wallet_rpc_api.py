@@ -650,7 +650,12 @@ class WalletRpcApi:
         if len(request["attest_filenames"]) < wallet.did_info.num_of_backup_ids_needed:
             return {"success": False, "reason": "insufficient messages"}
 
-        info_list, message_spend_bundle = await wallet.load_attest_files_for_recovery_spend(request["attest_filenames"])
+        (
+            info_list,
+            message_spend_bundle,
+        ) = await wallet.load_attest_files_for_recovery_spend(
+            request["attest_filenames"]
+        )
         pubkey = G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
 
         success = await wallet.recovery_spend(
@@ -705,7 +710,7 @@ class WalletRpcApi:
                 )
             ).pubkey
         ).hex()
-        return{
+        return {
             "success": True,
             "my_did": my_did,
             "coin_name": coin_name,
@@ -713,7 +718,8 @@ class WalletRpcApi:
             "pubkey": pubkey,
             "backup_dids": did_wallet.did_info.backup_ids,
         }
-##########################################################################################
+
+    ##########################################################################################
     # Coloured Coins and Trading
     ##########################################################################################
 
