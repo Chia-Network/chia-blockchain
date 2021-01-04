@@ -141,7 +141,7 @@ export const handle_message = async (store, payload) => {
       store.dispatch(get_connection_info());
       store.dispatch(format_message('get_public_keys', {}));
     } else if (payload.origin === service_full_node) {
-      await store.dispatch(getBlockChainState());
+      store.dispatch(getBlockChainState());
       store.dispatch(getFullNodeConnections());
     } else if (payload.origin === service_farmer) {
       store.dispatch(getLatestChallenges());
