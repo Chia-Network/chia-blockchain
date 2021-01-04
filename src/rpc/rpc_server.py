@@ -296,6 +296,8 @@ async def start_rpc_server(
     query the node.
     """
     app = aiohttp.web.Application()
+    cert_path, key_path = load_ssl_paths(root_path, net_config)
+    ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
     rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
     rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
     http_routes: Dict[str, Callable] = rpc_api.get_routes()
@@ -322,7 +324,7 @@ async def start_rpc_server(
         daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
     runner = aiohttp.web.AppRunner(app, access_log=None)
     await runner.setup()
-    site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port))
+    site = aiohttp.web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=ssl_context)
     await site.start()
 
     async def cleanup():

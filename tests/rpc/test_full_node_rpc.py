@@ -39,13 +39,13 @@ class TestRpc:
             daemon_port,
             test_rpc_port,
             stop_node_cb,
-            None,
-            None,
+            bt.root_path,
+            config,
             connect_to_daemon=False,
         )
 
         try:
-            client = await FullNodeRpcClient.create("localhost", test_rpc_port)
+            client = await FullNodeRpcClient.create("localhost", test_rpc_port, bt.root_path, config)
             state = await client.get_blockchain_state()
             assert state["peak"] is None
             assert not state["sync"]["sync_mode"]

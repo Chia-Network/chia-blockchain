@@ -122,7 +122,7 @@ async def show_async(args, parser):
             wallet_rpc_port = config["wallet"]["rpc_port"]
         else:
             wallet_rpc_port = args.wallet_rpc_port
-        wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port)
+        wallet_client = await WalletRpcClient.create(self_hostname, wallet_rpc_port, DEFAULT_ROOT_PATH, config)
         await wallet_loop(wallet_client)
 
     except Exception as e:

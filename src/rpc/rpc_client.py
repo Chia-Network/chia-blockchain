@@ -1,7 +1,12 @@
+from ssl import SSLContext
+
 import aiohttp
 import asyncio
 
 from typing import Dict, Optional, List
+
+from src.server.server import ssl_context_for_client
+from src.server.ssl_context import load_ssl_paths
 from src.util.byte_types import hexstr_to_bytes
 from src.types.sized_bytes import bytes32
 from src.util.ints import uint16
@@ -19,17 +24,20 @@ class RpcClient:
     url: str
     session: aiohttp.ClientSession
     closing_task: Optional[asyncio.Task]
+    ssl_context: Optional[SSLContext]
 
     @classmethod
-    async def create(cls, self_hostname: str, port: uint16):
+    async def create(cls, self_hostname: str, port: uint16, root_path, net_config):
         self = cls()
-        self.url = f"http://{self_hostname}:{str(port)}/"
+        self.url = f"https://{self_hostname}:{str(port)}/"
         self.session = aiohttp.ClientSession()
+        cert_path, key_path = load_ssl_paths(root_path, net_config)
+        self.ssl_context = ssl_context_for_client(cert_path, key_path, auth=True)
         self.closing_task = None
         return self
 
     async def fetch(self, path, request_json):
-        async with self.session.post(self.url + path, json=request_json) as response:
+        async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:
             response.raise_for_status()
             res_json = await response.json()
             if not res_json["success"]:
