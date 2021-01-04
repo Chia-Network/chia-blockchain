@@ -317,7 +317,7 @@ function BalanceCard(props: BalanceCardProps) {
                         balance={balance_ptotal}
                         tooltip={
                           <Trans id="BalanceCard.pendingTotalBalanceTooltip">
-                            This is the total balance + pending balance: it it
+                            This is the total balance + pending balance: it is
                             what your balance will be after all pending
                             transactions are confirmed.
                           </Trans>
