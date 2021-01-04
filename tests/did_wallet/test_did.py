@@ -125,7 +125,6 @@ class TestDIDWallet:
         coins = await did_wallet_2.select_coins(1)
         coin = coins.copy().pop()
         assert did_wallet_3.did_info.temp_coin == coin
-        info = await did_wallet.get_info_for_recovery()
         newpuz = await did_wallet_3.get_new_puzzle()
         newpuzhash = newpuz.get_tree_hash()
         pubkey = bytes(
@@ -139,7 +138,10 @@ class TestDIDWallet:
             did_wallet_3.did_info.temp_coin.name(), newpuzhash, pubkey, "test.attest"
         )
 
-        test_info_list, test_message_spend_bundle = await did_wallet_3.load_attest_files_for_recovery_spend(["test.attest"])
+        (
+            test_info_list,
+            test_message_spend_bundle,
+        ) = await did_wallet_3.load_attest_files_for_recovery_spend(["test.attest"])
         assert message_spend_bundle == test_message_spend_bundle
 
         await did_wallet_3.recovery_spend(
@@ -242,13 +244,20 @@ class TestDIDWallet:
             [message_spend_bundle, message_spend_bundle2]
         )
 
-        test_info_list, test_message_spend_bundle = await did_wallet_3.load_attest_files_for_recovery_spend(["test1.attest", "test2.attest"])
+        (
+            test_info_list,
+            test_message_spend_bundle,
+        ) = await did_wallet_3.load_attest_files_for_recovery_spend(
+            ["test1.attest", "test2.attest"]
+        )
         assert message_spend_bundle == test_message_spend_bundle
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
 
-        await did_wallet_3.recovery_spend(coin, ph, test_info_list, pubkey, message_spend_bundle)
+        await did_wallet_3.recovery_spend(
+            coin, ph, test_info_list, pubkey, message_spend_bundle
+        )
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
@@ -256,7 +265,6 @@ class TestDIDWallet:
         await self.time_out_assert(15, wallet2.get_unconfirmed_balance, 287999999999900)
         await self.time_out_assert(15, did_wallet_3.get_confirmed_balance, 0)
         await self.time_out_assert(15, did_wallet_3.get_unconfirmed_balance, 0)
-
 
     @pytest.mark.asyncio
     async def test_did_recovery_with_empty_set(self, two_wallet_nodes):
@@ -382,7 +390,10 @@ class TestDIDWallet:
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
 
-        info, message_spend_bundle = await did_wallet_2.load_attest_files_for_recovery_spend(["test.attest"])
+        (
+            info,
+            message_spend_bundle,
+        ) = await did_wallet_2.load_attest_files_for_recovery_spend(["test.attest"])
         await did_wallet_2.recovery_spend(
             coin, new_ph, info, pubkey, message_spend_bundle
         )
@@ -402,13 +413,16 @@ class TestDIDWallet:
                 did_wallet.wallet_info.id
             )
         ).pubkey
-        await did_wallet_2.create_attestment(
-            coin.name(), ph, pubkey, "test.attest"
-        )
+        await did_wallet_2.create_attestment(coin.name(), ph, pubkey, "test.attest")
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph2))
-        test_info_list, test_message_spend_bundle = await did_wallet.load_attest_files_for_recovery_spend(["test.attest"])
-        await did_wallet.recovery_spend(coin, ph, test_info_list, pubkey, test_message_spend_bundle)
+        (
+            test_info_list,
+            test_message_spend_bundle,
+        ) = await did_wallet.load_attest_files_for_recovery_spend(["test.attest"])
+        await did_wallet.recovery_spend(
+            coin, ph, test_info_list, pubkey, test_message_spend_bundle
+        )
 
         for i in range(1, num_blocks):
             await full_node_1.farm_new_block(FarmNewBlockProtocol(ph))
@@ -456,8 +470,7 @@ class TestDIDWallet:
         innerpuzhash = innerpuz.get_tree_hash()
 
         puz = did_wallet_puzzles.create_fullpuz(
-            innerpuzhash,
-            did_wallet.did_info.my_did,
+            innerpuzhash, did_wallet.did_info.my_did,
         )
 
         # Add the hacked puzzle to the puzzle store so that it is recognised as "our" puzzle
@@ -571,8 +584,7 @@ class TestDIDWallet:
         # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         innerpuz = did_wallet.did_info.current_inner
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
-            innerpuz,
-            did_wallet.did_info.my_did,
+            innerpuz, did_wallet.did_info.my_did,
         )
         fullsol = Program.to(
             [
@@ -587,10 +599,7 @@ class TestDIDWallet:
         )
 
         list_of_solutions = [
-            CoinSolution(
-                coin,
-                clvm.to_sexp_f([full_puzzle, fullsol]),
-            )
+            CoinSolution(coin, clvm.to_sexp_f([full_puzzle, fullsol]),)
         ]
         # sign for AGG_SIG_ME
         message = bytes(coin.puzzle_hash) + bytes(coin.name())
