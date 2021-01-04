@@ -937,7 +937,6 @@ class FullNode:
             )
 
             block: FullBlock = unfinished_block_to_full_block(
-                self.constants,
                 unfinished_block,
                 request.challenge_chain_ip_vdf,
                 request.challenge_chain_ip_proof,
