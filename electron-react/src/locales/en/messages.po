@@ -213,23 +213,23 @@ msgstr "Weight"
 msgid "Block.weightTooltip"
 msgstr "Weight is the total added difficulty of all blocks up to and including this one"
 
-#: src/components/fullNode/FullNode.jsx:404
+#: src/components/fullNode/FullNode.jsx:378
 msgid "BlocksCard.expectedFinishTime"
 msgstr "Expected finish time"
 
-#: src/components/fullNode/FullNode.jsx:395
+#: src/components/fullNode/FullNode.jsx:369
 msgid "BlocksCard.headerHash"
 msgstr "Header Hash"
 
-#: src/components/fullNode/FullNode.jsx:398
+#: src/components/fullNode/FullNode.jsx:372
 msgid "BlocksCard.height"
 msgstr "Height"
 
-#: src/components/fullNode/FullNode.jsx:401
+#: src/components/fullNode/FullNode.jsx:375
 msgid "BlocksCard.timeCreated"
 msgstr "Time Created"
 
-#: src/components/fullNode/FullNode.jsx:386
+#: src/components/fullNode/FullNode.jsx:358
 msgid "BlocksCard.title"
 msgstr "Blocks"
 
@@ -377,44 +377,44 @@ msgstr "To"
 msgid "ColouredTransactionTable.type"
 msgstr "Type"
 
-#: src/components/fullNode/FullNodeConnections.jsx:192
+#: src/components/fullNode/FullNodeConnections.jsx:199
 msgid "Connections.connect"
 msgstr "Connect"
 
-#: src/components/fullNode/FullNodeConnections.jsx:168
+#: src/components/fullNode/FullNodeConnections.jsx:175
 msgid "Connections.connectToOtherPeersTitle"
 msgstr "Connect to other peers"
 
-#: src/components/fullNode/FullNodeConnections.jsx:109
+#: src/components/fullNode/FullNodeConnections.jsx:110
 msgid "Connections.connected"
 msgstr "Connected"
 
-#: src/components/fullNode/FullNodeConnections.jsx:103
+#: src/components/fullNode/FullNodeConnections.jsx:104
 msgid "Connections.connectionType"
 msgstr "Connection type"
 
-#: src/components/fullNode/FullNodeConnections.jsx:118
+#: src/components/fullNode/FullNodeConnections.jsx:119
 msgid "Connections.delete"
 msgstr "Delete"
 
-#: src/components/fullNode/FullNodeConnections.jsx:94
+#: src/components/fullNode/FullNodeConnections.jsx:95
 msgid "Connections.ipAddress"
 msgstr "Ip address"
 
-#: src/components/fullNode/FullNodeConnections.jsx:175
+#: src/components/fullNode/FullNodeConnections.jsx:182
 msgid "Connections.ipAddressHost"
 msgstr "Ip address / host"
 
-#: src/components/fullNode/FullNodeConnections.jsx:114
+#: src/components/fullNode/FullNodeConnections.jsx:115
 msgid "Connections.lastMessage"
 msgstr "Last message"
 
-#: src/components/fullNode/FullNodeConnections.jsx:91
+#: src/components/fullNode/FullNodeConnections.jsx:92
 msgid "Connections.nodeId"
 msgstr "Node Id"
 
-#: src/components/fullNode/FullNodeConnections.jsx:97
-#: src/components/fullNode/FullNodeConnections.jsx:181
+#: src/components/fullNode/FullNodeConnections.jsx:98
+#: src/components/fullNode/FullNodeConnections.jsx:188
 msgid "Connections.port"
 msgstr "Port"
 
@@ -422,7 +422,7 @@ msgstr "Port"
 msgid "Connections.title"
 msgstr "Connections"
 
-#: src/components/fullNode/FullNodeConnections.jsx:100
+#: src/components/fullNode/FullNodeConnections.jsx:101
 msgid "Connections.upDown"
 msgstr "Up/Down"
 
@@ -819,7 +819,7 @@ msgstr "Up/Down"
 msgid "FarmLastAttemptedProof.emptyDescription"
 msgstr "None of your plots have passed the plot filter yet."
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:42
+#: src/components/farm/FarmLastAttemptedProof.tsx:44
 msgid "FarmLastAttemptedProof.emptySubDescription"
 msgstr "But you are currently farming <0/>"
 
@@ -831,21 +831,20 @@ msgstr "Last Attempted Proof"
 msgid "FarmLastAttemptedProof.tooltip"
 msgstr "This table shows you the last time your farm attempted to win a block a block challenge."
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:40
+#: src/components/farm/FarmLatestBlockChallenges.tsx:34
 msgid "FarmLatestBlockChallenges.bestEstimate"
 msgstr "Best Estimate"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:45
+#: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "FarmLatestBlockChallenges.bestEstimateTooltip"
 msgstr "Best Estimate is how many seconds of time must be proved for your proofs."
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
-#: src/components/farm/FarmLatestBlockChallenges.tsx:27
 msgid "FarmLatestBlockChallenges.challengeHash"
 msgstr "Challenge Hash"
 
+#: src/components/farm/FarmLatestBlockChallenges.tsx:54
 #: src/components/farm/FarmLatestBlockChallenges.tsx:60
-#: src/components/farm/FarmLatestBlockChallenges.tsx:66
 msgid "FarmLatestBlockChallenges.description"
 msgstr "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 
@@ -853,11 +852,11 @@ msgstr "Below are the current block challenges. You may or may not have a proof 
 msgid "FarmLatestBlockChallenges.height"
 msgstr "Height"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:74
+#: src/components/farm/FarmLatestBlockChallenges.tsx:68
 msgid "FarmLatestBlockChallenges.subDescription"
 msgstr "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:58
+#: src/components/farm/FarmLatestBlockChallenges.tsx:52
 msgid "FarmLatestBlockChallenges.title"
 msgstr "Latest Block Challenges"
 
@@ -931,11 +930,11 @@ msgstr "Connected"
 msgid "FormatConnectionStatus.notConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:505
+#: src/components/fullNode/FullNode.jsx:498
 msgid "FullNode.title"
 msgstr "Full Node"
 
-#: src/components/fullNode/FullNode.jsx:360
+#: src/components/fullNode/FullNode.jsx:318
 msgid "FullNodeStatus.title"
 msgstr "Full Node Status"
 
@@ -943,7 +942,7 @@ msgstr "Full Node Status"
 msgid "HistoryCard.title"
 msgstr "History"
 
-#: src/components/core/LocaleToggle/LocaleToggle.tsx:36
+#: src/components/core/LocaleToggle/LocaleToggle.tsx:38
 msgid "LocaleToggle.helpToTranslate"
 msgstr "Help to translate"
 
@@ -1046,11 +1045,11 @@ msgstr "Are you sure you want to delete the plot? The plot cannot be recovered."
 msgid "PlotAction.deleteTitle"
 msgstr "Delete Plot"
 
-#: src/components/plot/add/PlotAdd.tsx:64
+#: src/components/plot/add/PlotAdd.tsx:66
 msgid "PlotAdd.createPlot"
 msgstr "Create Plot"
 
-#: src/components/plot/add/PlotAdd.tsx:52
+#: src/components/plot/add/PlotAdd.tsx:54
 msgid "PlotAdd.title"
 msgstr "Add a Plot"
 
@@ -1178,49 +1177,53 @@ msgstr "Plots are allocated space on your hard drive used to farm and earn Chia.
 msgid "PlotHero.doYouHavePlot"
 msgstr "Do you have existing plots on this machine? <0>Add Plot Directory</0>"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:58
+#: src/components/plot/overview/PlotOverviewPlots.tsx:59
 msgid "PlotOverviewPlots.action"
 msgstr "Action"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:73
+#: src/components/plot/overview/PlotOverviewPlots.tsx:75
 msgid "PlotOverviewPlots.description"
 msgstr "Want to earn more Chia? Add more plots to your farm."
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:35
+#: src/components/plot/overview/PlotOverviewPlots.tsx:36
 msgid "PlotOverviewPlots.harversterId"
 msgstr "Harvester ID"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:45
+#: src/components/plot/overview/PlotOverviewPlots.tsx:46
 msgid "PlotOverviewPlots.plotKey"
 msgstr "Plot Key"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:30
+#: src/components/plot/overview/PlotOverviewPlots.tsx:31
 msgid "PlotOverviewPlots.plotName"
 msgstr "Plot Name"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:40
+#: src/components/plot/overview/PlotOverviewPlots.tsx:41
 msgid "PlotOverviewPlots.plotSeed"
 msgstr "Plot Seed"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:50
+#: src/components/plot/overview/PlotOverviewPlots.tsx:51
 msgid "PlotOverviewPlots.poolKey"
 msgstr "Pool Key"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:25
+#: src/components/plot/overview/PlotOverviewPlots.tsx:26
 msgid "PlotOverviewPlots.size"
 msgstr "K-Size"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:54
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "PlotOverviewPlots.status"
 msgstr "Status"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:67
+#: src/components/plot/overview/PlotOverviewPlots.tsx:69
 msgid "PlotOverviewPlots.title"
 msgstr "Local Harvester Plots"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:80
+#: src/components/plot/overview/PlotOverviewPlots.tsx:82
 msgid "PlotOverviewPlots.totalPlotSize"
 msgstr "Total Plot Size:"
+
+#: src/components/plot/queue/PlotQueueIndicator.tsx:14
+msgid "PlotQueueIndicator.error"
+msgstr "Error"
 
 #: src/components/plot/queue/PlotQueueIndicator.tsx:8
 msgid "PlotQueueIndicator.plotting"
@@ -1561,15 +1564,15 @@ msgstr "Rate Limited User Wallet Setup"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "User Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:468
+#: src/components/fullNode/FullNode.jsx:461
 msgid "SearchBlock.blockHash"
 msgstr "Block hash"
 
-#: src/components/fullNode/FullNode.jsx:479
+#: src/components/fullNode/FullNode.jsx:472
 msgid "SearchBlock.search"
 msgstr "Search"
 
-#: src/components/fullNode/FullNode.jsx:462
+#: src/components/fullNode/FullNode.jsx:455
 msgid "SearchBlock.title"
 msgstr "Search block by header hash"
 
@@ -1669,91 +1672,114 @@ msgstr "syncing"
 msgid "StatusCard.title"
 msgstr "Status"
 
-#: src/components/fullNode/FullNode.jsx:259
-#: src/components/fullNode/FullNode.jsx:266
+#: src/components/fullNode/FullNode.jsx:197
 msgid "StatusItem.connectionStatus"
 msgstr "Connection Status"
 
-#: src/components/fullNode/FullNode.jsx:260
+#: src/components/fullNode/FullNode.jsx:199
 msgid "StatusItem.connectionStatusConnected"
 msgstr "Connected"
 
-#: src/components/fullNode/FullNode.jsx:268
+#: src/components/fullNode/FullNode.jsx:201
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:278
+#: src/components/fullNode/FullNode.jsx:237
 msgid "StatusItem.difficulty"
 msgstr "Difficulty"
 
-#: src/components/fullNode/FullNode.jsx:307
+#: src/components/fullNode/FullNode.jsx:265
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "Estimated network space"
 
-#: src/components/fullNode/FullNode.jsx:313
+#: src/components/fullNode/FullNode.jsx:271
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "Estimated sum of all the plotted disk space of all farmers in the network"
 
 #: src/components/fullNode/FullNode.jsx:286
-msgid "StatusItem.iterationsPerSecond"
-msgstr "Iterations per Second"
+#~ msgid "StatusItem.iterationsPerSecond"
+#~ msgstr "Iterations per Second"
 
 #: src/components/fullNode/FullNode.jsx:290
-msgid "StatusItem.iterationsPerSecondTooltip"
-msgstr "The estimated proof of time speed of the fastest timelord in the network."
+#~ msgid "StatusItem.iterationsPerSecondTooltip"
+#~ msgstr "The estimated proof of time speed of the fastest timelord in the network."
 
 #: src/components/fullNode/FullNode.jsx:198
 #: src/components/fullNode/FullNode.jsx:204
-msgid "StatusItem.lcaBlockHeight"
-msgstr "LCA Block Height"
+#~ msgid "StatusItem.lcaBlockHeight"
+#~ msgstr "LCA Block Height"
 
 #: src/components/fullNode/FullNode.jsx:238
 #: src/components/fullNode/FullNode.jsx:251
-msgid "StatusItem.lcaTime"
-msgstr "LCA Time"
+#~ msgid "StatusItem.lcaTime"
+#~ msgstr "LCA Time"
 
 #: src/components/fullNode/FullNode.jsx:241
-msgid "StatusItem.lcaTimeTooltip"
-msgstr "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height."
+#~ msgid "StatusItem.lcaTimeTooltip"
+#~ msgstr "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height."
 
 #: src/components/fullNode/FullNode.jsx:219
 #: src/components/fullNode/FullNode.jsx:227
-msgid "StatusItem.maxTipBlockHeight"
-msgstr "Max Tip Block Height"
+#~ msgid "StatusItem.maxTipBlockHeight"
+#~ msgstr "Max Tip Block Height"
 
 #: src/components/fullNode/FullNode.jsx:300
-msgid "StatusItem.minIterations"
-msgstr "Min Iterations"
+#~ msgid "StatusItem.minIterations"
+#~ msgstr "Min Iterations"
 
-#: src/components/fullNode/FullNode.jsx:159
-#: src/components/fullNode/FullNode.jsx:176
-#: src/components/fullNode/FullNode.jsx:188
+#: src/components/fullNode/FullNode.jsx:210
+msgid "StatusItem.peakHeight"
+msgstr "Peak Height"
+
+#: src/components/fullNode/FullNode.jsx:216
+msgid "StatusItem.peakSubBlockHeight"
+msgstr "Peak Sub-block Height"
+
+#: src/components/fullNode/FullNode.jsx:222
+msgid "StatusItem.peakTime"
+msgstr "Peak Time"
+
+#: src/components/fullNode/FullNode.jsx:227
+msgid "StatusItem.peakTimeTooltip"
+msgstr "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height."
+
+#: src/components/fullNode/FullNode.jsx:160
+#: src/components/fullNode/FullNode.jsx:177
+#: src/components/fullNode/FullNode.jsx:189
 msgid "StatusItem.status"
 msgstr "Status"
 
-#: src/components/fullNode/FullNode.jsx:189
+#: src/components/fullNode/FullNode.jsx:190
 msgid "StatusItem.statusNotConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:177
+#: src/components/fullNode/FullNode.jsx:178
 msgid "StatusItem.statusSynced"
 msgstr "Synced"
 
-#: src/components/fullNode/FullNode.jsx:177
-msgid "StatusItem.statusNotSynced"
-msgstr "Not Synced"
-
-#: src/components/fullNode/FullNode.jsx:180
+#: src/components/fullNode/FullNode.jsx:181
 msgid "StatusItem.statusSyncedTooltip"
 msgstr "This node is fully caught up and validating the network"
 
-#: src/components/fullNode/FullNode.jsx:167
+#: src/components/fullNode/FullNode.jsx:168
 msgid "StatusItem.statusTooltip"
 msgstr "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 
-#: src/components/fullNode/FullNode.jsx:161
+#: src/components/fullNode/FullNode.jsx:162
 msgid "StatusItem.statusValue"
 msgstr "Syncing {progress}/{tip}"
+
+#: src/components/fullNode/FullNode.jsx:245
+msgid "StatusItem.subSlotIters"
+msgstr "VDF Sub Slot Iterations"
+
+#: src/components/fullNode/FullNode.jsx:253
+msgid "StatusItem.totalIterations"
+msgstr "Total Iterations"
+
+#: src/components/fullNode/FullNode.jsx:257
+msgid "StatusItem.totalIterationsTooltip"
+msgstr "Total iterations since the start of the blockchain"
 
 #: src/components/trading/TradingOverview.jsx:230
 msgid "TradeDetail.acceptedAtTime"

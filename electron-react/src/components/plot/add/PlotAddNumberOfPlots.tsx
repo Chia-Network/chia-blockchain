@@ -43,7 +43,7 @@ export default function PlotAddNumberOfPlots() {
         <Grid xs={12} md={8} lg={6} item>
           <Typography variant="body1">
             <Trans id="PlotAddNumberOfPlots.parallelTitle">
-              Does your machine support parellel plotting?
+              Does your machine support parallel plotting?
             </Trans>
           </Typography>
           <Typography variant="body2">
