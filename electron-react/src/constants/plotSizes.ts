@@ -9,17 +9,17 @@ export const defaultPlotSize: PlotSize = {
   label: '101.4GiB',
   value: 32,
   workspace: '332GiB',
-  defaultRam: 3584,
+  defaultRam: 4072,
 };
 
 const plotSizes: PlotSize[] = [
-  { label: '600MiB', value: 25, workspace: '1.8GiB', defaultRam: 500 },
-  { label: '1.3GiB', value: 26, workspace: '3.6GiB', defaultRam: 500 },
-  { label: '2.7GiB', value: 27, workspace: '9.2GiB', defaultRam: 500 },
-  { label: '5.6GiB', value: 28, workspace: '19GiB', defaultRam: 500 },
-  { label: '11.5GiB', value: 29, workspace: '38GiB', defaultRam: 500 },
-  { label: '23.8GiB', value: 30, workspace: '83GiB', defaultRam: 1000 },
-  { label: '49.1GiB', value: 31, workspace: '165GiB', defaultRam: 2000 },
+  { label: '600MiB', value: 25, workspace: '1.8GiB', defaultRam: 512 },
+  { label: '1.3GiB', value: 26, workspace: '3.6GiB', defaultRam: 512 },
+  { label: '2.7GiB', value: 27, workspace: '9.2GiB', defaultRam: 512 },
+  { label: '5.6GiB', value: 28, workspace: '19GiB', defaultRam: 512 },
+  { label: '11.5GiB', value: 29, workspace: '38GiB', defaultRam: 512 },
+  { label: '23.8GiB', value: 30, workspace: '83GiB', defaultRam: 1024 },
+  { label: '49.1GiB', value: 31, workspace: '165GiB', defaultRam: 2036 },
   defaultPlotSize,
   { label: '208.8GiB', value: 33, workspace: '589GiB', defaultRam: 7168 },
   // workspace are guesses using 55.35% - rounded up - past here
