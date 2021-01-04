@@ -552,7 +552,7 @@ class DIDWallet:
     # Pushes the a SpendBundle to create a message coin on the blockchain
     # Returns a SpendBundle for the recoverer to spend the message coin
     async def create_attestment(
-        self, recovering_coin_name, newpuz, pubkey, filename=""
+        self, recovering_coin_name, newpuz, pubkey, filename=None
     ) -> SpendBundle:
         coins = await self.select_coins(1)
         assert coins is not None and coins != set()
@@ -621,21 +621,24 @@ class DIDWallet:
             trade_id=None,
         )
         await self.standard_wallet.push_transaction(did_record)
-        if filename != "":
+        if filename is not None:
             f = open(filename, "w")
             f.write(self.get_my_DID())
             f.write(":")
             f.write(bytes(message_spend_bundle).hex())
             f.write(":")
-            rec_info = await self.get_info_for_recovery()
-            f.write(rec_info[0])
+            parent = coin.parent_coin_info.hex()
+            innerpuzhash = self.did_info.current_inner.get_tree_hash().hex()
+            amount = coin.amount
+            f.write(parent)
             f.write(":")
-            f.write(rec_info[1])
+            f.write(innerpuzhash)
             f.write(":")
-            f.write(rec_info[2])
+            f.write(str(amount))
             f.close()
         return message_spend_bundle
 
+    # this is just for testing purposes, API should use create_attestment_now
     async def get_info_for_recovery(self):
         coins = await self.select_coins(1)
         coin = coins.pop()
@@ -643,6 +646,43 @@ class DIDWallet:
         innerpuzhash = self.did_info.current_inner.get_tree_hash()
         amount = coin.amount
         return [parent, innerpuzhash, amount]
+
+    async def load_attest_files_for_recovery_spend(self, filenames):
+        spend_bundle_list = []
+        info_dict = {}
+        try:
+            for i in filenames:
+                f = open(i)
+                info = f.read().split(":")
+                info_dict[info[0]] = [
+                    bytes.fromhex(info[2]),
+                    bytes.fromhex(info[3]),
+                    uint64(info[4]),
+                ]
+
+                new_sb = SpendBundle.from_bytes(bytes.fromhex(info[1]))
+                spend_bundle_list.append(new_sb)
+                f.close()
+            # info_dict {0xidentity: "(0xparent_info 0xinnerpuz amount)"}
+            my_recovery_list: List[bytes] = self.did_info.backup_ids
+
+            # convert info dict into recovery list - same order as wallet
+            info_list = []
+            for entry in my_recovery_list:
+                if entry.hex() in info_dict:
+                    info_list.append(
+                        [
+                            info_dict[entry.hex()][0],
+                            info_dict[entry.hex()][1],
+                            info_dict[entry.hex()][2],
+                        ]
+                    )
+                else:
+                    info_list.append([])
+            message_spend_bundle = SpendBundle.aggregate(spend_bundle_list)
+            return info_list, message_spend_bundle
+        except Exception:
+            raise
 
     async def recovery_spend(
         self,
