@@ -4,7 +4,7 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from typing import AsyncGenerator, Optional, Dict, Callable, List, Tuple, Any, Union
+from typing import AsyncGenerator, Optional, Dict, Callable, List, Tuple, Any, Union, Set
 
 import aiosqlite
 from blspy import AugSchemeMPL
@@ -83,6 +83,9 @@ class FullNode:
         self.server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
+        self.pow_pending: Set[bytes32] = set()
+        self.pow_creation: Dict[uint32, asyncio.Event] = {}
+
         if name:
             self.log = logging.getLogger(name)
         else:
@@ -211,10 +214,30 @@ class FullNode:
         ):
             await self.request_and_add_sub_block(peer, request.sub_block_height)
         else:
-            return Message(
-                "request_proof_of_weight",
-                full_node_protocol.RequestProofOfWeight(request.sub_block_height, request.header_hash),
-            )
+            await self.request_proof_of_weight(peer, request.sub_block_height, request.header_hash)
+
+    async def request_proof_of_weight(self, peer, height, header_hash):
+        if peer.peer_node_id in self.pow_pending:
+            self.log.info(f"Already have pending proof-of-weight request for peer: {peer.get_peer_info()}")
+            return
+        self.pow_pending.add(peer.peer_node_id)
+        request = full_node_protocol.RequestProofOfWeight(height, header_hash)
+        response = await peer.request_proof_of_weight(request)
+        self.pow_pending.remove(peer.peer_node_id)
+        if response is not None and isinstance(response, full_node_protocol.RespondProofOfWeight):
+            validated, fork_point = self.weight_proof_handler.validate_weight_proof(response.wp)
+            if validated is True:
+                # get tip params
+                tip_weight = response.wp.recent_chain_data[-1].reward_chain_sub_block.weight
+                tip_height = response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
+                self.sync_store.add_potential_peak(response.tip, tip_height, tip_weight)
+                self.sync_store.add_potential_fork_point(response.tip, fork_point)
+                msg = Message(
+                    "request_sub_block",
+                    full_node_protocol.RequestSubBlock(uint32(tip_height), True),
+                )
+                await peer.send_message(msg)
+        return None
 
     async def send_peak_to_timelords(self):
         """
@@ -314,12 +337,12 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.close())
 
     async def _await_closed(self):
-        await self.connection.close()
         try:
             if self._sync_task is not None:
-                await asyncio.wait_for(self._sync_task, timeout=2)
+                self._sync_task.cancel()
         except asyncio.TimeoutError:
             pass
+        await self.connection.close()
 
     async def _sync(self):
         """
@@ -368,7 +391,6 @@ class FullNode:
             fork_point_height = self.sync_store.get_potential_fork_point(heaviest_peak_hash)
 
             await self.sync_from_fork_point(fork_point_height, heaviest_peak_height, heaviest_peak_hash)
-            await self._finish_sync()
         except asyncio.CancelledError:
             self.log.warning("Syncing failed, CancelledError")
         except Exception as e:

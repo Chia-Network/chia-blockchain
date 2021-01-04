@@ -25,7 +25,7 @@ if [ "$(uname)" = "Linux" ]; then
 	elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ]; then
 		echo "Installing on Ubuntu/Debian 20.04 LTS or newer"
 		sudo apt-get update
-		sudo apt-get install -y python3.8-venv python3.8-distutils
+		sudo apt-get install -y python3.8-venv python3-distutils
 	elif type yum && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ]; then
 		# AMZN 2
 		echo "Installing on Amazon Linux 2"
@@ -47,7 +47,7 @@ fi
 find_python() {
 	set +e
 	unset BEST_VERSION
-	for V in 37 3.7 38 3.8 3; do
+	for V in 37 3.7 38 3.8 39 3.9 3; do
 		if which python$V >/dev/null; then
 			if [ x"$BEST_VERSION" = x ]; then
 				BEST_VERSION=$V
