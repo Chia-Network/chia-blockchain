@@ -28,7 +28,7 @@ export default function PlotAddSelectFinalDirectory() {
     >
       <Typography variant="subtitle1">
         <Trans id="PlotAddSelectFinalDirectory.description">
-          Select the final destination for the folder where you would like the plot to be stored. We rcommend you use a large slow hard drive (like external HDD).
+          Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD).
         </Trans>
       </Typography>
 

@@ -84,7 +84,7 @@ export default function SelectKey() {
         confirmColor="default"
       >
         <Trans id="DeleteAllKeys.description">
-          Deleting all keys will permanatly remove the keys from your
+          Deleting all keys will permanently remove the keys from your
           computer, make sure you have backups. Are you sure you want to
           continue?
         </Trans>
@@ -114,7 +114,7 @@ export default function SelectKey() {
               <Typography variant="subtitle1">
                 <Trans id="SelectKey.signInDescription">
                   Welcome to Chia. Please log in with an existing key, or create
-                  a a new key.
+                  a new key.
                 </Trans>
               </Typography>
             </>
@@ -156,7 +156,7 @@ export default function SelectKey() {
                             <VisibilityIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="DANGER: permanantly delete private key">
+                        <Tooltip title="DANGER: permanently delete private key">
                           <IconButton
                             edge="end"
                             aria-label="delete"
