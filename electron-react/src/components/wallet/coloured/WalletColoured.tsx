@@ -827,7 +827,7 @@ function AddressCard(props: AddressCardProps) {
         <Grid item xs={12}>
           <div className={classes.cardTitle}>
             <Typography component="h6" variant="h6">
-              <Trans id="ColouredAddressCard.title">Receive Addresss</Trans>
+              <Trans id="ColouredAddressCard.title">Receive Address</Trans>
             </Typography>
           </div>
         </Grid>
