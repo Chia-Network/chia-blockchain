@@ -982,9 +982,7 @@ def finish_sub_block(
         difficulty,
     )
 
-    sub_block_record = block_to_sub_block_record(
-        constants, BlockCache(sub_blocks), height_to_hash, required_iters, full_block, None
-    )
+    sub_block_record = block_to_sub_block_record(constants, BlockCache(sub_blocks), required_iters, full_block, None)
     return full_block, sub_block_record
 
 
@@ -1047,7 +1045,6 @@ def load_block_list(
         sub_blocks[full_block.header_hash] = block_to_sub_block_record(
             constants,
             BlockCache(sub_blocks),
-            height_to_hash,
             required_iters,
             full_block,
             None,

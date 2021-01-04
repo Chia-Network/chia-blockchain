@@ -48,7 +48,7 @@ class ReceiveBlockResult(Enum):
 
 
 class Blockchain(BlockchainInterface):
-    SUB_BLOCKS_CACHE_SIZE = 2000
+    SUB_BLOCKS_CACHE_SIZE = 10000
 
     constants: ConsensusConstants
     # peak of the blockchain
@@ -233,7 +233,6 @@ class Blockchain(BlockchainInterface):
         sub_block = block_to_sub_block_record(
             self.constants,
             self,
-            self.__sub_height_to_hash,
             required_iters,
             block,
             None,

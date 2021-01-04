@@ -1007,7 +1007,7 @@ class FullNodeAPI:
         if coin_record is None or coin_record.spent_block_index != sub_height:
             return reject_msg
 
-        header_hash = self.full_node.blockchain.sub_height_to_hash[sub_height]
+        header_hash = self.full_node.blockchain.sub_height_to_hash(sub_height)
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:

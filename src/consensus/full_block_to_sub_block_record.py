@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union, List
+from typing import Optional, Union, List
 
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
@@ -19,7 +19,6 @@ from src.consensus.make_sub_epoch_summary import make_sub_epoch_summary
 def block_to_sub_block_record(
     constants: ConsensusConstants,
     sub_blocks: BlockchainInterface,
-    height_to_hash: Dict[uint32, bytes32],
     required_iters: uint64,
     full_block: Optional[FullBlock],
     header_block: Optional[HeaderBlock],
