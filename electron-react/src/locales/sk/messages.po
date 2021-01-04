@@ -213,23 +213,23 @@ msgstr "Veľkosť"
 msgid "Block.weightTooltip"
 msgstr "Veľkosť je celková pridaná obtiažnosť všetkých blokov až po tento"
 
-#: src/components/fullNode/FullNode.jsx:378
+#: src/components/fullNode/FullNode.jsx:398
 msgid "BlocksCard.expectedFinishTime"
 msgstr "Očakávaný čas dokončenia"
 
-#: src/components/fullNode/FullNode.jsx:369
+#: src/components/fullNode/FullNode.jsx:389
 msgid "BlocksCard.headerHash"
 msgstr "Poradie hlavičky"
 
-#: src/components/fullNode/FullNode.jsx:372
+#: src/components/fullNode/FullNode.jsx:392
 msgid "BlocksCard.height"
 msgstr "Poradie"
 
-#: src/components/fullNode/FullNode.jsx:375
+#: src/components/fullNode/FullNode.jsx:395
 msgid "BlocksCard.timeCreated"
 msgstr "Čas vytvorenia"
 
-#: src/components/fullNode/FullNode.jsx:358
+#: src/components/fullNode/FullNode.jsx:378
 msgid "BlocksCard.title"
 msgstr "Bloky"
 
@@ -930,11 +930,11 @@ msgstr "Pripojené"
 msgid "FormatConnectionStatus.notConnected"
 msgstr "Nepripojené"
 
-#: src/components/fullNode/FullNode.jsx:498
+#: src/components/fullNode/FullNode.jsx:519
 msgid "FullNode.title"
 msgstr "Sieť"
 
-#: src/components/fullNode/FullNode.jsx:318
+#: src/components/fullNode/FullNode.jsx:339
 msgid "FullNodeStatus.title"
 msgstr "Stav siete"
 
@@ -1564,15 +1564,15 @@ msgstr ""
 msgid "RTIncompleteCard.userPubkey"
 msgstr "Používateľov verejný kľúč"
 
-#: src/components/fullNode/FullNode.jsx:461
+#: src/components/fullNode/FullNode.jsx:482
 msgid "SearchBlock.blockHash"
 msgstr "Hash bloku"
 
-#: src/components/fullNode/FullNode.jsx:472
+#: src/components/fullNode/FullNode.jsx:493
 msgid "SearchBlock.search"
 msgstr "Vyhľadať"
 
-#: src/components/fullNode/FullNode.jsx:455
+#: src/components/fullNode/FullNode.jsx:476
 msgid "SearchBlock.title"
 msgstr "Vyhľadať blok podľa hashu"
 
@@ -1672,27 +1672,27 @@ msgstr "synchronizuje sa"
 msgid "StatusCard.title"
 msgstr "Stav"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:208
 msgid "StatusItem.connectionStatus"
 msgstr "Stav pripojenia"
 
-#: src/components/fullNode/FullNode.jsx:199
+#: src/components/fullNode/FullNode.jsx:210
 msgid "StatusItem.connectionStatusConnected"
 msgstr "Pripojené"
 
-#: src/components/fullNode/FullNode.jsx:201
+#: src/components/fullNode/FullNode.jsx:212
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "Nepripojené"
 
-#: src/components/fullNode/FullNode.jsx:237
+#: src/components/fullNode/FullNode.jsx:258
 msgid "StatusItem.difficulty"
 msgstr "Zložitosť"
 
-#: src/components/fullNode/FullNode.jsx:265
+#: src/components/fullNode/FullNode.jsx:286
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "Odhadovaná velkosť siete"
 
-#: src/components/fullNode/FullNode.jsx:271
+#: src/components/fullNode/FullNode.jsx:292
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ťažiarov v sieti"
 
@@ -1727,37 +1727,46 @@ msgstr "Odhadovaný súčet všetkého obsadeného miesta na disku všetkých ť
 #~ msgid "StatusItem.minIterations"
 #~ msgstr "Minumum iterácii"
 
-#: src/components/fullNode/FullNode.jsx:210
+#: src/components/fullNode/FullNode.jsx:231
 msgid "StatusItem.peakHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:216
+#: src/components/fullNode/FullNode.jsx:237
 msgid "StatusItem.peakSubBlockHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:222
+#: src/components/fullNode/FullNode.jsx:243
 msgid "StatusItem.peakTime"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:227
+#: src/components/fullNode/FullNode.jsx:248
 msgid "StatusItem.peakTimeTooltip"
 msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:160
-#: src/components/fullNode/FullNode.jsx:177
-#: src/components/fullNode/FullNode.jsx:189
+#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:194
+#: src/components/fullNode/FullNode.jsx:220
 msgid "StatusItem.status"
 msgstr "Stav"
 
-#: src/components/fullNode/FullNode.jsx:190
+#: src/components/fullNode/FullNode.jsx:221
 msgid "StatusItem.statusNotConnected"
 msgstr "Nepripojené"
 
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:180
+msgid "StatusItem.statusNotSynced"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:186
+msgid "StatusItem.statusNotSyncedTooltip"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:195
 msgid "StatusItem.statusSynced"
 msgstr "synchronizované"
 
-#: src/components/fullNode/FullNode.jsx:181
+#: src/components/fullNode/FullNode.jsx:198
 msgid "StatusItem.statusSyncedTooltip"
 msgstr ""
 
@@ -1769,15 +1778,15 @@ msgstr "Uzol sa synchronizuje, čo znamená, že sťahuje bloky z iných uzlov, 
 msgid "StatusItem.statusValue"
 msgstr "Synchronizácia {progress}/{tip}"
 
-#: src/components/fullNode/FullNode.jsx:245
+#: src/components/fullNode/FullNode.jsx:266
 msgid "StatusItem.subSlotIters"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:253
+#: src/components/fullNode/FullNode.jsx:274
 msgid "StatusItem.totalIterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:257
+#: src/components/fullNode/FullNode.jsx:278
 msgid "StatusItem.totalIterationsTooltip"
 msgstr ""
 

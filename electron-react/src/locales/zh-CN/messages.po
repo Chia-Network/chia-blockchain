@@ -213,23 +213,23 @@ msgstr "权重"
 msgid "Block.weightTooltip"
 msgstr "权重是所有区块（包括该区块在内）的累计难度"
 
-#: src/components/fullNode/FullNode.jsx:378
+#: src/components/fullNode/FullNode.jsx:398
 msgid "BlocksCard.expectedFinishTime"
 msgstr "预计完成时间"
 
-#: src/components/fullNode/FullNode.jsx:369
+#: src/components/fullNode/FullNode.jsx:389
 msgid "BlocksCard.headerHash"
 msgstr "区块头 Hash"
 
-#: src/components/fullNode/FullNode.jsx:372
+#: src/components/fullNode/FullNode.jsx:392
 msgid "BlocksCard.height"
 msgstr "高度"
 
-#: src/components/fullNode/FullNode.jsx:375
+#: src/components/fullNode/FullNode.jsx:395
 msgid "BlocksCard.timeCreated"
 msgstr "创建时间"
 
-#: src/components/fullNode/FullNode.jsx:358
+#: src/components/fullNode/FullNode.jsx:378
 msgid "BlocksCard.title"
 msgstr "区块"
 
@@ -930,11 +930,11 @@ msgstr ""
 msgid "FormatConnectionStatus.notConnected"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:498
+#: src/components/fullNode/FullNode.jsx:519
 msgid "FullNode.title"
 msgstr "全节点"
 
-#: src/components/fullNode/FullNode.jsx:318
+#: src/components/fullNode/FullNode.jsx:339
 msgid "FullNodeStatus.title"
 msgstr "全节点状态"
 
@@ -1564,15 +1564,15 @@ msgstr "费率受限的用户钱包设置"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "用户公钥"
 
-#: src/components/fullNode/FullNode.jsx:461
+#: src/components/fullNode/FullNode.jsx:482
 msgid "SearchBlock.blockHash"
 msgstr "区块哈希"
 
-#: src/components/fullNode/FullNode.jsx:472
+#: src/components/fullNode/FullNode.jsx:493
 msgid "SearchBlock.search"
 msgstr "搜索"
 
-#: src/components/fullNode/FullNode.jsx:455
+#: src/components/fullNode/FullNode.jsx:476
 msgid "SearchBlock.title"
 msgstr "按标题哈希搜索块"
 
@@ -1672,27 +1672,27 @@ msgstr "正在同步"
 msgid "StatusCard.title"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:208
 msgid "StatusItem.connectionStatus"
 msgstr "连接状态"
 
-#: src/components/fullNode/FullNode.jsx:199
+#: src/components/fullNode/FullNode.jsx:210
 msgid "StatusItem.connectionStatusConnected"
 msgstr "已连接"
 
-#: src/components/fullNode/FullNode.jsx:201
+#: src/components/fullNode/FullNode.jsx:212
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:237
+#: src/components/fullNode/FullNode.jsx:258
 msgid "StatusItem.difficulty"
 msgstr "难度"
 
-#: src/components/fullNode/FullNode.jsx:265
+#: src/components/fullNode/FullNode.jsx:286
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "预估的网络空间"
 
-#: src/components/fullNode/FullNode.jsx:271
+#: src/components/fullNode/FullNode.jsx:292
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "网络中矿工的所有已创建的空间的估计总和"
 
@@ -1727,37 +1727,46 @@ msgstr "网络中矿工的所有已创建的空间的估计总和"
 #~ msgid "StatusItem.minIterations"
 #~ msgstr "最小迭代次数"
 
-#: src/components/fullNode/FullNode.jsx:210
+#: src/components/fullNode/FullNode.jsx:231
 msgid "StatusItem.peakHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:216
+#: src/components/fullNode/FullNode.jsx:237
 msgid "StatusItem.peakSubBlockHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:222
+#: src/components/fullNode/FullNode.jsx:243
 msgid "StatusItem.peakTime"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:227
+#: src/components/fullNode/FullNode.jsx:248
 msgid "StatusItem.peakTimeTooltip"
 msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:160
-#: src/components/fullNode/FullNode.jsx:177
-#: src/components/fullNode/FullNode.jsx:189
+#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:194
+#: src/components/fullNode/FullNode.jsx:220
 msgid "StatusItem.status"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:190
+#: src/components/fullNode/FullNode.jsx:221
 msgid "StatusItem.statusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:180
+msgid "StatusItem.statusNotSynced"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:186
+msgid "StatusItem.statusNotSyncedTooltip"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:195
 msgid "StatusItem.statusSynced"
 msgstr "已同步"
 
-#: src/components/fullNode/FullNode.jsx:181
+#: src/components/fullNode/FullNode.jsx:198
 msgid "StatusItem.statusSyncedTooltip"
 msgstr "此节点已同步到最新状态"
 
@@ -1769,15 +1778,15 @@ msgstr "该节点正在同步，这意味着它正在从其他节点下载块，
 msgid "StatusItem.statusValue"
 msgstr "正在同步{progress} / {tip}"
 
-#: src/components/fullNode/FullNode.jsx:245
+#: src/components/fullNode/FullNode.jsx:266
 msgid "StatusItem.subSlotIters"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:253
+#: src/components/fullNode/FullNode.jsx:274
 msgid "StatusItem.totalIterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:257
+#: src/components/fullNode/FullNode.jsx:278
 msgid "StatusItem.totalIterationsTooltip"
 msgstr ""
 

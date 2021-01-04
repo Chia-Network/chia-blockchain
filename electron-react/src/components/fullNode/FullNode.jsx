@@ -183,7 +183,7 @@ const getStatusItems = (state, connected) => {
       ),
       colour: 'red',
       tooltip: (
-        <Trans id="StatusItem.statusTooltip">
+        <Trans id="StatusItem.statusNotSyncedTooltip">
           The node is not synced and currently not syncing
         </Trans>
       ),
