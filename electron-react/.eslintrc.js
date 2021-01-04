@@ -70,6 +70,7 @@ module.exports = {
     "unicorn/consistent-function-scoping": "off",
     "unicorn/prevent-abbreviations": "off",
     "unicorn/no-lonely-if": "off",
+    "unicorn/no-array-reduce": "off",
     "unicorn/filename-case": ["error", {
       "cases": {
         "camelCase": true,
