@@ -7,6 +7,9 @@ from src.util.ints import uint32
 
 
 class BlockchainInterface:
+    def get_peak_height(self) -> Optional[uint32]:
+        pass
+
     def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
         pass
 
@@ -22,10 +25,13 @@ class BlockchainInterface:
     def get_ses_from_height(self, height: uint32) -> List[SubEpochSummary]:
         pass
 
-    def _height_to_hash(self, height: uint32) -> bytes32:
+    def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
         pass
 
     def contains_sub_block(self, header_hash: bytes32) -> bool:
+        pass
+
+    def contains_sub_height(self, height: uint32) -> bool:
         pass
 
     def try_sub_block(self, header_hash: bytes32) -> Optional[SubBlockRecord]:

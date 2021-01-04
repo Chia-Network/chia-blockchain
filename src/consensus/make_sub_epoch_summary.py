@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.consensus.constants import ConsensusConstants
@@ -15,7 +15,6 @@ from src.consensus.difficulty_adjustment import (
 )
 from src.consensus.sub_block_record import SubBlockRecord
 from src.types.full_block import FullBlock
-from src.types.sized_bytes import bytes32
 from src.types.sub_epoch_summary import SubEpochSummary
 from src.types.unfinished_block import UnfinishedBlock
 from src.util.ints import uint32, uint64, uint8, uint128
@@ -74,7 +73,6 @@ def make_sub_epoch_summary(
 def next_sub_epoch_summary(
     constants: ConsensusConstants,
     sub_blocks: BlockchainInterface,
-    height_to_hash: Dict[uint32, bytes32],
     required_iters: uint64,
     block: Union[UnfinishedBlock, FullBlock],
     can_finish_soon: bool = False,
@@ -110,7 +108,6 @@ def next_sub_epoch_summary(
     sub_slot_iters = get_next_sub_slot_iters(
         constants,
         sub_blocks,
-        height_to_hash,
         prev_sb.prev_hash,
         prev_sb.sub_block_height,
         prev_sb.sub_slot_iters,
@@ -149,7 +146,6 @@ def next_sub_epoch_summary(
         next_difficulty = get_next_difficulty(
             constants,
             sub_blocks,
-            height_to_hash,
             block.prev_header_hash,
             uint32(prev_sb.sub_block_height + 1),
             uint64(prev_sb.weight - sub_blocks.sub_block_record(prev_sb.prev_hash).weight),
@@ -161,7 +157,6 @@ def next_sub_epoch_summary(
         next_sub_slot_iters = get_next_sub_slot_iters(
             constants,
             sub_blocks,
-            height_to_hash,
             block.prev_header_hash,
             uint32(prev_sb.sub_block_height + 1),
             sub_slot_iters,

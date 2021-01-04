@@ -77,8 +77,7 @@ class FullNodeRpcApi:
                     max_pp = peak_h
             sync_tip_height = max_pp
             sync_progress_sub_height = uint32(self.service.sync_peers_handler.fully_validated_up_to)
-            hash = self.service.blockchain.sub_height_to_hash[sync_progress_sub_height]
-            sync_block = self.service.blockchain.sub_block_record(hash)
+            sync_block = self.service.blockchain.height_to_sub_block_record(sync_progress_sub_height)
             sync_progress_height = sync_block.height
         else:
             sync_tip_height = 0
@@ -86,9 +85,11 @@ class FullNodeRpcApi:
 
         if full_peak is not None and full_peak.height > 1:
             newer_block_hex = full_peak.header_hash.hex()
-            older_block_hex = self.service.blockchain.sub_height_to_hash[
+            older_block_hash = self.service.blockchain.sub_height_to_hash(
                 uint32(max(1, full_peak.sub_block_height - 1000))
-            ].hex()
+            )
+            assert older_block_hash is not None
+            older_block_hex = older_block_hash.hex()
             space = await self.get_network_space(
                 {
                     "newer_block_header_hash": newer_block_hex,
@@ -153,7 +154,7 @@ class FullNodeRpcApi:
             raise ValueError("No sub_height in request")
         sub_block_height = request["sub_height"]
         header_height = uint32(int(sub_block_height))
-        header_hash: Optional[bytes32] = self.service.blockchain.sub_height_to_hash.get(header_height)
+        header_hash: Optional[bytes32] = self.service.blockchain.sub_height_to_hash(header_height)
         if header_hash is None:
             raise ValueError(f"Sub block height {sub_block_height} not found in chain")
         record: Optional[SubBlockRecord] = self.service.blockchain.try_sub_block(header_hash)

@@ -446,7 +446,6 @@ class BlockTools:
                 sub_epoch_summary = next_sub_epoch_summary(
                     constants,
                     BlockCache(sub_blocks, height_to_hash),
-                    height_to_hash,
                     latest_sub_block.required_iters,
                     block_list[-1],
                     False,

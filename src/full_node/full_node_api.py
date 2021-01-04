@@ -194,11 +194,10 @@ class FullNodeAPI:
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
-        if request.sub_height not in self.full_node.blockchain.sub_height_to_hash:
+        header_hash = self.full_node.blockchain.sub_height_to_hash(request.sub_height)
+        if header_hash is None:
             return None
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-            self.full_node.blockchain.sub_height_to_hash[request.sub_height]
-        )
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
             if not request.include_transaction_block:
                 block = dataclasses.replace(block, transactions_generator=None)
@@ -211,7 +210,7 @@ class FullNodeAPI:
         if request.end_sub_height < request.start_sub_height or request.end_sub_height - request.start_sub_height > 32:
             return None
         for i in range(request.start_sub_height, request.end_sub_height + 1):
-            if i not in self.full_node.blockchain.sub_height_to_hash:
+            if self.full_node.blockchain.sub_height_to_hash(uint32(i)) is None:
                 reject = RejectSubBlocks(request.start_sub_height, request.end_sub_height)
                 msg = Message("reject_sub_blocks", reject)
                 return msg
@@ -220,7 +219,7 @@ class FullNodeAPI:
 
         for i in range(request.start_sub_height, request.end_sub_height + 1):
             block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-                self.full_node.blockchain.sub_height_to_hash[uint32(i)]
+                self.full_node.blockchain.sub_height_to_hash(uint32(i))
             )
             if block is None:
                 reject = RejectSubBlocks(request.start_sub_height, request.end_sub_height)
@@ -807,12 +806,11 @@ class FullNodeAPI:
 
     @api_request
     async def request_sub_block_header(self, request: wallet_protocol.RequestSubBlockHeader) -> Optional[Message]:
-        if request.sub_height not in self.full_node.blockchain.sub_height_to_hash:
+        header_hash = self.full_node.blockchain.sub_height_to_hash(request.sub_height)
+        if header_hash is None:
             msg = Message("reject_sub_block_header", RejectHeaderRequest(request.sub_height))
             return msg
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-            self.full_node.blockchain.sub_height_to_hash[request.sub_height]
-        )
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
             header_block: HeaderBlock = await block.get_block_header()
             msg = Message(
@@ -828,7 +826,7 @@ class FullNodeAPI:
         if (
             block is None
             or block.is_block() is False
-            or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
+            or self.full_node.blockchain.sub_height_to_hash(block.sub_block_height) is None
         ):
             reject = wallet_protocol.RejectAdditionsRequest(request.sub_height, request.header_hash)
 
@@ -886,8 +884,8 @@ class FullNodeAPI:
             block is None
             or block.is_block() is False
             or block.sub_block_height != request.sub_height
-            or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
-            or self.full_node.blockchain.sub_height_to_hash[block.sub_block_height] != block.header_hash
+            or block.sub_block_height > self.full_node.blockchain.get_peak_height()
+            or self.full_node.blockchain.sub_height_to_hash(block.sub_block_height) != block.header_hash
         ):
             reject = wallet_protocol.RejectRemovalsRequest(request.sub_height, request.header_hash)
             msg = Message("reject_removals_request", reject)

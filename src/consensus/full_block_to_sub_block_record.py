@@ -44,7 +44,6 @@ def block_to_sub_block_record(
         sub_slot_iters = get_next_sub_slot_iters(
             constants,
             sub_blocks,
-            height_to_hash,
             prev_sb.prev_hash,
             prev_sb.sub_block_height,
             prev_sb.sub_slot_iters,

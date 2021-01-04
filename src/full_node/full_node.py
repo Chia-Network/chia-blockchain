@@ -215,7 +215,6 @@ class FullNode:
             ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
                 self.constants,
                 self.blockchain,
-                self.blockchain.sub_height_to_hash,
                 peak.required_iters,
                 peak_block,
                 True,
@@ -803,7 +802,6 @@ class FullNode:
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
             self.constants,
             self.blockchain,
-            self.blockchain.sub_height_to_hash,
             required_iters,
             block,
             True,
@@ -818,7 +816,6 @@ class FullNode:
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
             self.constants,
             block,
-            self.blockchain.sub_height_to_hash,
             prev_sb,
             self.blockchain,
         )
@@ -910,7 +907,6 @@ class FullNode:
             sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
                 self.constants,
                 dataclasses.replace(unfinished_block, finished_sub_slots=finished_sub_slots),
-                self.blockchain.sub_height_to_hash,
                 prev_sb,
                 self.blockchain,
             )

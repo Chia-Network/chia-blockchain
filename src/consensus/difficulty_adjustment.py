@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Optional, Tuple
+from typing import List, Union, Optional, Tuple
 
 from src.consensus.blockchain_interface import BlockchainInterface
 from src.types.full_block import FullBlock
@@ -17,7 +17,6 @@ from src.util.significant_bits import (
 
 
 def _get_blocks_at_height(
-    height_to_hash: Dict[uint32, bytes32],
     sub_blocks: BlockchainInterface,
     prev_sb: SubBlockRecord,
     target_sub_block_height: uint32,
@@ -29,19 +28,19 @@ def _get_blocks_at_height(
     in the path of the peak.
 
     Args:
-        height_to_hash: dict from sub_block_height to header hash (for path to peak)
         sub_blocks: dict from header hash to SubBlockRecord.
         prev_sb: prev_sb (to start backwards search).
         target_sub_block_height: target sub-block to start
         max_num_sub_blocks: max number of sub-blocks to fetch (although less might be fetched)
 
     """
-    if height_to_hash[prev_sb.sub_block_height] == prev_sb.header_hash:
+    header_hash = sub_blocks.sub_height_to_hash(prev_sb.sub_block_height)
+    if header_hash == prev_sb.header_hash:
         # Efficient fetching, since we are fetching ancestor blocks within the heaviest chain
         return [
-            sub_blocks.sub_block_record(height_to_hash[uint32(h)])
+            sub_blocks.height_to_sub_block_record(uint32(h))
             for h in range(target_sub_block_height, target_sub_block_height + max_num_sub_blocks)
-            if h in height_to_hash
+            if sub_blocks.contains_sub_height(uint32(h))
         ]
     # slow fetching, goes back one by one
     curr_b: SubBlockRecord = prev_sb
@@ -57,7 +56,6 @@ def _get_blocks_at_height(
 
 def _get_last_block_in_previous_epoch(
     constants: ConsensusConstants,
-    sub_height_to_hash: Dict[uint32, bytes32],
     sub_blocks: BlockchainInterface,
     prev_sb: SubBlockRecord,
 ) -> SubBlockRecord:
@@ -67,7 +65,6 @@ def _get_last_block_in_previous_epoch(
 
     Args:
         constants: consensus constants being used for this chain
-        sub_height_to_hash: sub-block height to header hash map for sub-blocks in peak path
         sub_blocks: dict from header hash to sub-block of all relevant sub-blocks
         prev_sb: last-sub-block in the current epoch.
 
@@ -91,7 +88,7 @@ def _get_last_block_in_previous_epoch(
     if height_prev_epoch_surpass == 0:
         # The genesis block is an edge case, where we measure from the first block in epoch (height 0), as opposed to
         # the last sub-block in the previous epoch, which would be height -1
-        return _get_blocks_at_height(sub_height_to_hash, sub_blocks, prev_sb, uint32(0))[0]
+        return _get_blocks_at_height(sub_blocks, prev_sb, uint32(0))[0]
 
     # If the prev slot is the first slot, the iterations start at 0
     # We will compute the timestamps of the last block in epoch, as well as the total iterations at infusion
@@ -100,7 +97,6 @@ def _get_last_block_in_previous_epoch(
     prev_slot_time_start: uint64
 
     fetched_blocks = _get_blocks_at_height(
-        sub_height_to_hash,
         sub_blocks,
         prev_sb,
         uint32(height_prev_epoch_surpass - constants.MAX_SUB_SLOT_SUB_BLOCKS - 1),
@@ -218,7 +214,6 @@ def can_finish_sub_and_full_epoch(
 def get_next_sub_slot_iters(
     constants: ConsensusConstants,
     sub_blocks: BlockchainInterface,
-    height_to_hash: Dict[uint32, bytes32],
     prev_header_hash: bytes32,
     sub_block_height: uint32,
     curr_sub_slot_iters: uint64,
@@ -234,7 +229,6 @@ def get_next_sub_slot_iters(
     Args:
         constants: consensus constants being used for this chain
         sub_blocks: dictionary from header hash to SBR of all included SBR
-        height_to_hash: sub-block height to header hash map for sub-blocks in peak path
         prev_header_hash: header hash of the previous sub-block
         sub_block_height: the sub-block height of the sub-block to look at
         curr_sub_slot_iters: sub-slot iters at the infusion point of the sub_block at sub_block_height
@@ -261,7 +255,7 @@ def get_next_sub_slot_iters(
         if not new_slot or not can_finish_epoch:
             return curr_sub_slot_iters
 
-    last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(constants, height_to_hash, sub_blocks, prev_sb)
+    last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(constants, sub_blocks, prev_sb)
 
     # Ensure we get a block for the last block as well, and that it is before the signage point
     last_block_curr = prev_sb
@@ -303,7 +297,6 @@ def get_next_sub_slot_iters(
 def get_next_difficulty(
     constants: ConsensusConstants,
     sub_blocks: BlockchainInterface,
-    height_to_hash: Dict[uint32, bytes32],
     prev_header_hash: bytes32,
     sub_block_height: uint32,
     current_difficulty: uint64,
@@ -320,7 +313,6 @@ def get_next_difficulty(
     Args:
         constants: consensus constants being used for this chain
         sub_blocks: dictionary from header hash to SBR of all included SBR
-        height_to_hash: sub-block height to header hash map for sub-blocks in peak path
         prev_header_hash: header hash of the previous sub-block
         sub_block_height: the sub-block height of the sub-block to look at
         current_difficulty: difficulty at the infusion point of the sub_block at sub_block_height
@@ -348,7 +340,7 @@ def get_next_difficulty(
         if not new_slot or not can_finish_epoch:
             return current_difficulty
 
-    last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(constants, height_to_hash, sub_blocks, prev_sb)
+    last_block_prev: SubBlockRecord = _get_last_block_in_previous_epoch(constants, sub_blocks, prev_sb)
 
     # Ensure we get a block for the last block as well, and that it is before the signage point
     last_block_curr = prev_sb
@@ -393,7 +385,6 @@ def get_next_difficulty(
 def get_sub_slot_iters_and_difficulty(
     constants: ConsensusConstants,
     header_block: Union[UnfinishedHeaderBlock, UnfinishedBlock, HeaderBlock, FullBlock],
-    height_to_hash: Dict[uint32, bytes32],
     prev_sb: Optional[SubBlockRecord],
     sub_blocks: BlockchainInterface,
 ) -> Tuple[uint64, uint64]:
@@ -404,7 +395,6 @@ def get_sub_slot_iters_and_difficulty(
     Args:
         constants: consensus constants being used for this chain
         header_block: the current sub-block
-        height_to_hash: sub-block height to header hash map for sub-blocks in peak path
         prev_sb: the previous sub-block before header_block
         sub_blocks: dictionary from header hash to SBR of all included SBR
 
@@ -424,7 +414,6 @@ def get_sub_slot_iters_and_difficulty(
     difficulty: uint64 = get_next_difficulty(
         constants,
         sub_blocks,
-        height_to_hash,
         prev_sb.prev_hash,
         prev_sb.sub_block_height,
         prev_difficulty,
@@ -436,7 +425,6 @@ def get_sub_slot_iters_and_difficulty(
     sub_slot_iters: uint64 = get_next_sub_slot_iters(
         constants,
         sub_blocks,
-        height_to_hash,
         prev_sb.prev_hash,
         prev_sb.sub_block_height,
         prev_sb.sub_slot_iters,

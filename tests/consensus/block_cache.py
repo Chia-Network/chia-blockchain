@@ -25,13 +25,13 @@ class BlockCache(BlockchainInterface):
 
     def sub_block_record(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         if header_hash not in self._sub_blocks:
-            self.log.error("could not find header hash in cache")
+            self.log.warning("could not find header hash in cache")
             return None
 
         return self._sub_blocks[header_hash]
 
     def height_to_sub_block_record(self, height: uint32) -> Optional[SubBlockRecord]:
-        header_hash = self._height_to_hash(height)
+        header_hash = self.sub_height_to_hash(height)
         if header_hash is None:
             return None
         return self.sub_block_record(header_hash)
@@ -50,9 +50,9 @@ class BlockCache(BlockchainInterface):
             ses_l.append(self.get_ses(ses_height))
         return ses_l
 
-    def _height_to_hash(self, height: uint32) -> Optional[bytes32]:
+    def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
         if height not in self._sub_height_to_hash:
-            self.log.error("could not find header hash in cache")
+            self.log.warning("could not find height in cache")
             return None
         return self._sub_height_to_hash[height]
 

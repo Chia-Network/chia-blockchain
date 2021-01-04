@@ -97,9 +97,7 @@ async def validate_unfinished_header_block(
         can_finish_epoch = can_finish_epoch and new_sub_slot
 
         # Gets the difficulty and SSI for this sub-block
-        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-            constants, header_block, height_to_hash, prev_sb, sub_blocks
-        )
+        sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(constants, header_block, prev_sb, sub_blocks)
 
     # 2. Check finished slots that have been crossed since prev_sb
     ses_hash: Optional[bytes32] = None
@@ -799,7 +797,7 @@ async def validate_finished_header_block(
         prev_sb = sub_blocks.sub_block_record(header_block.prev_header_hash)
     new_sub_slot: bool = len(header_block.finished_sub_slots) > 0
     sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-        constants, unfinished_header_block, height_to_hash, prev_sb, sub_blocks
+        constants, unfinished_header_block, prev_sb, sub_blocks
     )
     ip_iters: uint64 = calculate_ip_iters(
         constants,
