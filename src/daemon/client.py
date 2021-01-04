@@ -4,6 +4,8 @@ from typing import Dict, Any
 import asyncio
 import websockets
 
+from src.server.server import ssl_context_for_client
+from src.server.ssl_context import load_ssl_paths
 from src.types.sized_bytes import bytes32
 from src.util.ws_message import create_payload
 from src.util.json_util import dict_to_json_str
@@ -11,18 +13,19 @@ from src.util.config import load_config
 
 
 class DaemonProxy:
-    def __init__(self, uri):
+    def __init__(self, uri, ssl_context):
         self._uri = uri
         self._request_dict: Dict[bytes32, asyncio.Event] = {}
         self.response_dict: Dict[bytes32, Any] = {}
         self.websocket = None
+        self.ssl_context = ssl_context
 
     def format_request(self, command, data=None):
         request = create_payload(command, data, "client", "daemon", False)
         return request
 
     async def start(self):
-        self.websocket = await websockets.connect(self._uri, max_size=None)
+        self.websocket = await websockets.connect(self._uri, max_size=None, ssl=self.ssl_context)
 
         async def listener():
             while True:
@@ -96,12 +99,12 @@ class DaemonProxy:
         return await self._get(request)
 
 
-async def connect_to_daemon(self_hostname: str, daemon_port: int):
+async def connect_to_daemon(self_hostname: str, daemon_port: int, ssl_context):
     """
     Connect to the local daemon.
     """
 
-    client = DaemonProxy(f"ws://{self_hostname}:{daemon_port}")
+    client = DaemonProxy(f"wss://{self_hostname}:{daemon_port}", ssl_context)
     await client.start()
     return client
 
@@ -113,7 +116,9 @@ async def connect_to_daemon_and_validate(root_path):
     """
     try:
         net_config = load_config(root_path, "config.yaml")
-        connection = await connect_to_daemon(net_config["self_hostname"], net_config["daemon_port"])
+        cert_path, key_path = load_ssl_paths(root_path, net_config)
+        ssl_context = ssl_context_for_client(cert_path, key_path, auth=True)
+        connection = await connect_to_daemon(net_config["self_hostname"], net_config["daemon_port"], ssl_context)
         r = await connection.ping()
 
         if r["data"]["value"] == "pong":
