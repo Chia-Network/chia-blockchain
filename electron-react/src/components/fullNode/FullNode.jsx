@@ -404,10 +404,10 @@ const BlocksCard = () => {
           {latestBlocks.map((record) => {
             const isFinished = true; //record.finished_reward_slot_hashes && !!record.finished_reward_slot_hashes.length;
             const {
+              header_hash,
               foliage_block: {
                 height,
                 timestamp,
-                header_hash = 'mocked-hash',
                 prev_block_hash,
               }
             } = record;
