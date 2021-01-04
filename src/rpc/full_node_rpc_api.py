@@ -1,3 +1,5 @@
+import time
+
 from src.consensus.sub_block_record import SubBlockRecord
 from src.full_node.full_node import FullNode
 from typing import Callable, List, Optional, Dict
@@ -33,7 +35,7 @@ class FullNodeRpcApi:
 
     async def _state_changed(self, change: str) -> List[Dict]:
         payloads = []
-        if change == "sub_block":
+        if change == "new_peak":
             data = await self.get_blockchain_state({})
             assert data is not None
             payloads.append(
@@ -55,13 +57,13 @@ class FullNodeRpcApi:
         full_peak: Optional[FullBlock] = await self.service.blockchain.get_block_peak()
 
         if full_peak is not None and full_peak.height > 0:
-            if self.service.blockchain.contains_sub_block(full_peak.header_hash):
-                sub_block: SubBlockRecord = self.service.blockchain.sub_block_record(full_peak.header_hash)
+            if full_peak.header_hash in self.service.blockchain.sub_blocks:
+                sub_block: SubBlockRecord = self.service.blockchain.sub_blocks[full_peak.header_hash]
                 sub_slot_iters = sub_block.sub_slot_iters
             else:
                 sub_slot_iters = self.service.constants.SUB_SLOT_ITERS_STARTING
             difficulty = uint64(
-                full_peak.weight - self.service.blockchain.sub_block_record(full_peak.prev_header_hash).weight
+                full_peak.weight - self.service.blockchain.sub_blocks[full_peak.prev_header_hash].weight
             )
         else:
             difficulty = self.service.constants.DIFFICULTY_STARTING
@@ -69,27 +71,31 @@ class FullNodeRpcApi:
 
         sync_mode: bool = self.service.sync_store.get_sync_mode()
 
-        if sync_mode and self.service.sync_peers_handler is not None:
+        if sync_mode:
             max_pp = 0
             for _, potential_peak_tuple in self.service.sync_store.potential_peaks.items():
                 peak_h, peak_w = potential_peak_tuple
                 if peak_h > max_pp:
                     max_pp = peak_h
             sync_tip_height = max_pp
-            sync_progress_sub_height = uint32(self.service.sync_peers_handler.fully_validated_up_to)
-            sync_block = self.service.blockchain.height_to_sub_block_record(sync_progress_sub_height)
-            sync_progress_height = sync_block.height
+            sync_tip_sub_height = max_pp
+            if full_peak is not None:
+                sync_progress_sub_height = full_peak.sub_block_height
+                sync_progress_height = full_peak.height
+            else:
+                sync_progress_sub_height = 0
+                sync_progress_height = 0
         else:
             sync_tip_height = 0
+            sync_tip_sub_height = 0
+            sync_progress_sub_height = 0
             sync_progress_height = uint32(0)
 
         if full_peak is not None and full_peak.height > 1:
             newer_block_hex = full_peak.header_hash.hex()
-            older_block_hash = self.service.blockchain.sub_height_to_hash(
+            older_block_hex = self.service.blockchain.sub_height_to_hash[
                 uint32(max(1, full_peak.sub_block_height - 1000))
-            )
-            assert older_block_hash is not None
-            older_block_hex = older_block_hash.hex()
+            ].hex()
             space = await self.get_network_space(
                 {
                     "newer_block_header_hash": newer_block_hex,
@@ -98,14 +104,29 @@ class FullNodeRpcApi:
             )
         else:
             space = {"space": uint128(0)}
+
+        now = time.time()
+        if (
+            full_peak is None
+            or full_peak.foliage_block is None
+            or full_peak.foliage_block.timestamp < now - 60 * 10
+            or sync_mode
+        ):
+            synced = False
+        else:
+            synced = True
+
         assert space is not None
         response: Dict = {
             "blockchain_state": {
                 "peak": full_peak,
                 "sync": {
                     "sync_mode": sync_mode,
+                    "synced": synced,
                     "sync_tip_height": sync_tip_height,
+                    "sync_tip_sub_height": sync_tip_sub_height,
                     "sync_progress_height": sync_progress_height,
+                    "sync_progress_sub_height": sync_progress_sub_height,
                 },
                 "difficulty": difficulty,
                 "sub_slot_iters": sub_slot_iters,
@@ -154,10 +175,10 @@ class FullNodeRpcApi:
             raise ValueError("No sub_height in request")
         sub_block_height = request["sub_height"]
         header_height = uint32(int(sub_block_height))
-        header_hash: Optional[bytes32] = self.service.blockchain.sub_height_to_hash(header_height)
+        header_hash: Optional[bytes32] = self.service.blockchain.sub_height_to_hash.get(header_height, None)
         if header_hash is None:
             raise ValueError(f"Sub block height {sub_block_height} not found in chain")
-        record: Optional[SubBlockRecord] = self.service.blockchain.try_sub_block(header_hash)
+        record: Optional[SubBlockRecord] = self.service.blockchain.sub_blocks.get(header_hash, None)
         if record is None:
             # Fetch from DB
             record = await self.service.blockchain.block_store.get_sub_block_record(header_hash)
@@ -170,7 +191,7 @@ class FullNodeRpcApi:
             raise ValueError("header_hash not in request")
         header_hash_str = request["header_hash"]
         header_hash = hexstr_to_bytes(header_hash_str)
-        record: Optional[SubBlockRecord] = self.service.blockchain.try_sub_block(header_hash)
+        record: Optional[SubBlockRecord] = self.service.blockchain.sub_blocks.get(header_hash, None)
         if record is None:
             # Fetch from DB
             record = await self.service.blockchain.block_store.get_sub_block_record(header_hash)

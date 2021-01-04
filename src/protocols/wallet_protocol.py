@@ -17,18 +17,32 @@ Protocol between wallet (SPV node) and full node.
 
 
 @dataclass(frozen=True)
-@streamable
-class RequestGenerator(Streamable):
-    height: uint32
-    header_hash: bytes32
+@cbor_message
+class RequestPuzzleSolution:
+    coin_name: bytes32
+    sub_height: uint32
 
 
 @dataclass(frozen=True)
 @streamable
-class GeneratorResponse(Streamable):
-    height: uint32
-    header_hash: bytes32
-    generator: Optional[Program]
+class PuzzleSolutionResponse(Streamable):
+    coin_name: bytes32
+    sub_height: uint32
+    puzzle: Program
+    solution: Program
+
+
+@dataclass(frozen=True)
+@cbor_message
+class RespondPuzzleSolution:
+    response: PuzzleSolutionResponse
+
+
+@dataclass(frozen=True)
+@streamable
+class RejectPuzzleSolution:
+    coin_name: bytes32
+    sub_height: uint32
 
 
 @dataclass(frozen=True)

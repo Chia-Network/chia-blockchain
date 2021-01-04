@@ -225,6 +225,7 @@ export const handle_message = async (store, payload) => {
   } else if (payload.command === 'state_changed') {
     const { origin } = payload;
     const { state } = payload.data;
+    debugger;
 
     if (origin === service_plotter) {
       const { queue } = payload.data;
@@ -243,6 +244,9 @@ export const handle_message = async (store, payload) => {
         store.dispatch(get_sync_status());
       } else if (state === 'new_block') {
         store.dispatch(get_height_info());
+      } else if (state === 'new_peak') {
+        store.dispatch(get_height_info());
+        store.dispatch(getBlockChainState());
       } else if (state === 'pending_transaction') {
         wallet_id = payload.data.wallet_id;
         store.dispatch(get_balance_for_wallet(wallet_id));

@@ -113,7 +113,7 @@ async def show_async(args, parser):
             rpc_port = config["full_node"]["rpc_port"]
         else:
             rpc_port = args.rpc_port
-        client = await FullNodeRpcClient.create(self_hostname, rpc_port)
+        client = await FullNodeRpcClient.create(self_hostname, rpc_port, DEFAULT_ROOT_PATH, config)
 
         if args.state:
             blockchain_state = await client.get_blockchain_state()
@@ -137,8 +137,13 @@ async def show_async(args, parser):
                 )
             else:
                 print("Current Blockchain Status: Full Node Synced")
-            print("\nPeak: Hash:", peak.header_hash)
-            if peak.is_block():
+            if peak is not None:
+                print("\nPeak: Hash:", peak.header_hash)
+            else:
+                print("\nSearching for an initial chain.")
+                print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
+                print("Errors that follow can be safely ignored:\n")
+            if peak is not None and peak.is_block():
                 peak_time = peak.foliage_block.timestamp
             else:
                 peak_hash = peak.header_hash
@@ -252,7 +257,7 @@ async def show_async(args, parser):
             else:
                 connections = await client.get_connections()
                 for con in connections:
-                    if args.remove_connection == con["node_id"].hex()[:10]:
+                    if args.remove_connection == con["node_id"].hex()[:8]:
                         print("Attempting to disconnect", "NodeID", args.remove_connection)
                         try:
                             await client.close_connection(con["node_id"])
