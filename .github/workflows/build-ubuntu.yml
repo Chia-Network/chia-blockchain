@@ -53,11 +53,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Download Chia test blocks
+    - name: Download Chia test blocks and plots
       run: |
         mkdir $HOME/.chia
         cd $HOME/.chia
         curl -L https://download.chia.net/tests/blocks-2020-12-17.tgz | tar -zx
+        curl -L https://download.chia.net/tests/test-plots-2021-01-04.tgz | tar -zx
 
     - name: Install ubuntu dependencies
       run: |
