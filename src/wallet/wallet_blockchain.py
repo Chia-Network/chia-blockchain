@@ -381,3 +381,49 @@ class WalletBlockchain(BlockchainInterface):
         if len(curr.finished_sub_slots) == 0:
             return None, ip_sub_slot
         return curr.finished_sub_slots[-1], ip_sub_slot
+
+    def sub_block_record(self, header_hash: bytes32) -> SubBlockRecord:
+        sub_block = self.__sub_blocks[header_hash]
+        assert sub_block is not None
+        return sub_block
+
+    def height_to_sub_block_record(self, height: uint32) -> SubBlockRecord:
+        header_hash = self.sub_height_to_hash(height)
+        assert header_hash is not None
+        return self.sub_block_record(header_hash)
+
+    def get_ses_heights(self) -> List[bytes32]:
+        return sorted(self.__sub_epoch_summaries.keys())
+
+    def get_ses(self, height: uint32) -> SubEpochSummary:
+        return self.__sub_epoch_summaries[height]
+
+    def get_ses_from_height(self, height: uint32) -> List[SubEpochSummary]:
+        ses_l = []
+        for ses_height in reversed(self.get_ses_heights()):
+            if ses_height <= height:
+                break
+            ses_l.append(self.get_ses(ses_height))
+        return ses_l
+
+    def sub_height_to_hash(self, height: uint32) -> Optional[bytes32]:
+        if height not in self.__sub_height_to_hash:
+            log.warning("could not find header hash in cache")
+            return None
+        return self.__sub_height_to_hash[height]
+
+    def contains_sub_height(self, height: uint32) -> bool:
+        return height in self.__sub_height_to_hash
+
+    def get_peak_height(self) -> Optional[uint32]:
+        return self.peak_sub_height
+
+    def clean_sub_block_records(self):
+        if len(self.__sub_blocks) % self.constants.SUB_BLOCKS_CACHE_SIZE == 0:
+            peak = self.get_peak()
+            assert peak is not None
+            curr = self.__sub_height_to_hash[peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE]
+            while curr is not None:
+                log.info(f"delete {curr.header_hash} height {curr.sub_block_height} from sub blocks")
+                del self.__sub_blocks[curr.header_hash]
+                curr = self.__sub_blocks[curr.prev_hash]

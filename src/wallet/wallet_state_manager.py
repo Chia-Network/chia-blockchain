@@ -680,7 +680,6 @@ class WalletStateManager:
 
         # Find fork point
         if new_block.prev_header_hash != self.constants.GENESIS_PREV_HASH and self.peak is not None:
-            self.log.info("not genesis")
             # TODO: handle returning of -1
             fork_h = find_fork_point_in_chain(
                 self.blockchain,

@@ -48,8 +48,6 @@ class ReceiveBlockResult(Enum):
 
 
 class Blockchain(BlockchainInterface):
-    SUB_BLOCKS_CACHE_SIZE = 10000
-
     constants: ConsensusConstants
     # peak of the blockchain
     peak_height: Optional[uint32]
@@ -126,7 +124,7 @@ class Blockchain(BlockchainInterface):
             if curr.sub_block_height == 0:
                 break
             #  only keep last SUB_BLOCKS_CACHE_SIZE in mem
-            if len(self.__sub_blocks) < self.SUB_BLOCKS_CACHE_SIZE:
+            if len(self.__sub_blocks) < self.constants.SUB_BLOCKS_CACHE_SIZE:
                 curr = self.__sub_blocks[curr.prev_hash]
         assert len(self.__sub_height_to_hash) == self.peak_height + 1
 
@@ -368,7 +366,7 @@ class Blockchain(BlockchainInterface):
             return None
         is_overflow = self.__sub_blocks[block.header_hash].overflow
 
-        curr_sbr: SubBlockRecord = self.sub_blocks[block.header_hash]
+        curr_sbr: SubBlockRecord = self.sub_block_record(block.header_hash)
         curr: Optional[FullBlock] = block
         assert curr is not None
         while curr_sbr.sub_block_height > 0:
@@ -376,7 +374,7 @@ class Blockchain(BlockchainInterface):
                 curr = await self.block_store.get_full_block(curr_sbr.header_hash)
                 assert curr is not None
                 break
-            curr_sbr = self.sub_blocks[curr_sbr.prev_hash]
+            curr_sbr = self.sub_block_record(curr_sbr.prev_hash)
 
         if len(curr.finished_sub_slots) == 0:
             # This means we got to genesis and still no sub-slots
@@ -394,14 +392,14 @@ class Blockchain(BlockchainInterface):
 
         prev_curr: Optional[FullBlock] = await self.block_store.get_full_block(curr.prev_header_hash)
         assert prev_curr is not None
-        prev_curr_sbr = self.sub_blocks[curr.prev_header_hash]
+        prev_curr_sbr = self.sub_block_record(curr.prev_header_hash)
         assert prev_curr_sbr is not None
         while prev_curr_sbr.sub_block_height > 0:
             if prev_curr_sbr.first_in_sub_slot:
                 prev_curr = await self.block_store.get_full_block(prev_curr_sbr.header_hash)
                 assert prev_curr is not None
                 break
-            prev_curr_sbr = self.sub_blocks[prev_curr_sbr.prev_hash]
+            prev_curr_sbr = self.sub_block_record(prev_curr_sbr.prev_hash)
 
         if len(prev_curr.finished_sub_slots) == 0:
             return None, ip_sub_slot
@@ -546,10 +544,10 @@ class Blockchain(BlockchainInterface):
         return self.peak_height
 
     def clean_sub_block_records(self):
-        if len(self.__sub_blocks) % self.SUB_BLOCKS_CACHE_SIZE == 0:
+        if len(self.__sub_blocks) % self.constants.SUB_BLOCKS_CACHE_SIZE == 0:
             peak = self.get_peak()
             assert peak is not None
-            curr = self.__sub_height_to_hash[peak.sub_block_height - self.SUB_BLOCKS_CACHE_SIZE]
+            curr = self.__sub_height_to_hash[peak.sub_block_height - self.constants.SUB_BLOCKS_CACHE_SIZE]
             while curr is not None:
                 log.info(f"delete {curr.header_hash} height {curr.sub_block_height} from sub blocks")
                 del self.__sub_blocks[curr.header_hash]

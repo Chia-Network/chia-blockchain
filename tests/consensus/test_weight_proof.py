@@ -101,9 +101,7 @@ async def load_blocks_dont_validate(
             cc_sp,
         )
 
-        sub_block = block_to_sub_block_record(
-            test_constants, BlockCache(sub_blocks), height_to_hash, required_iters, block, None
-        )
+        sub_block = block_to_sub_block_record(test_constants, BlockCache(sub_blocks), required_iters, block, None)
 
         sub_blocks[block.header_hash] = sub_block
         height_to_hash[block.sub_block_height] = block.header_hash
