@@ -143,12 +143,13 @@ export const closeConnection = (node_id) => {
   return action;
 };
 
-export const getSubBlock = (header_hash) => {
+export const getSubBlockAction = (header_hash) => {
   const action = fullNodeMessage();
   action.message.command = 'get_sub_block';
   action.message.data = { header_hash };
   return action;
 };
+
 
 export const getSubBlockRecord = (headerHash) => {
   const action = fullNodeMessage();
@@ -164,3 +165,22 @@ export const clearBlock = (header_hash) => {
   };
   return action;
 };
+
+export function getSubBlock(headerHash) {
+  return async (dispatch) => {
+    const {
+      data,
+    } = await async_api(
+      dispatch,
+      fullNodeMessage({
+        command: 'get_sub_block',
+        data: {
+          header_hash: headerHash,
+        },
+      }),
+      false,
+    );
+
+    return data;
+  };
+}
