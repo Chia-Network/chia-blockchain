@@ -631,16 +631,31 @@ class FullNode:
             sub_slot_iters = self.blockchain.get_next_slot_iters(new_peak.header_hash, False)
             self.log.info(f"Difficulty {difficulty} slot iterations {sub_slot_iters}")
 
-            sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
-            assert sub_slots is not None
+            sub_block_record = self.blockchain.sub_blocks[sub_block.header_hash]
+            if sub_block_record.first_in_sub_slot:
+                sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
+                assert sub_slots is not None
 
-            added_eos, added_sps, new_ips = self.full_node_store.new_peak(
-                new_peak,
-                sub_slots[0],
-                sub_slots[1],
-                fork_height != sub_block.sub_block_height - 1 and sub_block.sub_block_height != 0,
-                self.blockchain.sub_blocks,
-            )
+                added_eos, added_sps, new_ips = self.full_node_store.new_peak(
+                    new_peak,
+                    sub_slots[0],
+                    sub_slots[1],
+                    fork_height != sub_block.sub_block_height - 1 and sub_block.sub_block_height != 0,
+                    self.blockchain.sub_blocks,
+                )
+
+                # If there were pending end of slots that happen after this peak, broadcast them if they are added
+                if added_eos is not None:
+                    broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
+                        added_eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
+                        added_eos.challenge_chain.get_hash(),
+                        uint8(0),
+                        added_eos.reward_chain.end_of_slot_vdf.challenge,
+                    )
+                    msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
+                    await self.server.send_to_all([msg], NodeType.FULL_NODE)
+                # TODO: maybe broadcast new SP/IPs as well?
+
             # Ensure the signage point is also in the store, for consistency
             self.full_node_store.new_signage_point(
                 new_peak.signage_point_index,
@@ -654,18 +669,6 @@ class FullNode:
                     sub_block.reward_chain_sp_proof,
                 ),
             )
-            # TODO: maybe broadcast new SP/IPs as well?
-
-            # If there were pending end of slots that happen after this peak, broadcast them if they are added
-            if added_eos is not None:
-                broadcast = full_node_protocol.NewSignagePointOrEndOfSubSlot(
-                    added_eos.challenge_chain.challenge_chain_end_of_slot_vdf.challenge,
-                    added_eos.challenge_chain.get_hash(),
-                    uint8(0),
-                    added_eos.reward_chain.end_of_slot_vdf.challenge,
-                )
-                msg = Message("new_signage_point_or_end_of_sub_slot", broadcast)
-                await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
             if new_peak.sub_block_height % 1000 == 0:
                 # Occasionally clear the seen list to keep it small
