@@ -2,13 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import { FormatBytes, Flex, Card, Loading } from '@chia/core';
 import Grid from '@material-ui/core/Grid';
+import { Switch, Route, Link, useRouteMatch } from 'react-router-dom'; 
 import { makeStyles } from '@material-ui/core/styles';
 import { useSelector, useDispatch } from 'react-redux';
-import Typography from '@material-ui/core/Typography';
-import Box from '@material-ui/core/Box';
-import { Tooltip } from '@material-ui/core';
-import Button from '@material-ui/core/Button';
-import TextField from '@material-ui/core/TextField';
+import { Box, Button, TextField, Tooltip, Typography } from '@material-ui/core';
 import HelpIcon from '@material-ui/icons/Help';
 import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
@@ -353,14 +350,23 @@ const FullNodeStatus = (props) => {
 };
 
 const BlocksCard = () => {
+  const { path, url } = useRouteMatch();
+  const classes = useStyles();
+  const dispatch = useDispatch();
   const latestBlocks = useSelector((state) => state.full_node_state.latest_blocks);
   const unfinishedSubBlockHeaders = useSelector((state) => state.full_node_state.unfinished_sub_block_headers);
 
-  async function getLatestRecords() {
-    if (latestHeaderHash) {
-      const records = await dispatch(getSubBlockRecords(latestHeaderHash, 10));
-      setLatestRecords(records);
-    }
+  function handleShowBlock(record) {
+    const {
+      header_hash,
+      foliage_block: {
+        height,
+        timestamp,
+        prev_block_hash,
+      },
+    } = record;
+
+
   }
 
   function clickedBlock(height, header_hash, prev_header_hash) {
@@ -371,7 +377,7 @@ const BlocksCard = () => {
       }
     };
   }
-  const classes = useStyles();
+
   return (
     <Card
       title={<Trans id="BlocksCard.title">Blocks</Trans>}
@@ -412,41 +418,34 @@ const BlocksCard = () => {
             } = record;
 
             return (
-              <Box
-                className={
-                  isFinished
-                    ? classes.block_row
-                    : classes.block_row_unfinished
-                }
-                onClick={
-                  isFinished
-                    ? clickedBlock(
-                        height,
-                        header_hash,
-                        prev_block_hash,
-                      )
-                    : () => {}
-                }
-                display="flex"
-                key={header_hash}
-                style={{ minWidth: '100%' }}
-              >
-                <Box className={classes.left_block_cell}>
-                  {`${header_hash.slice(0, 12)}...`}
-                  {isFinished ? '' : ' (unfinished)'}
+              <Link to={`${url}/${header_hash}`}>
+                <Box
+                  className={
+                    isFinished
+                      ? classes.block_row
+                      : classes.block_row_unfinished
+                  }
+                  display="flex"
+                  key={header_hash}
+                  style={{ minWidth: '100%' }}
+                >
+                  <Box className={classes.left_block_cell}>
+                    {`${header_hash.slice(0, 12)}...`}
+                    {isFinished ? '' : ' (unfinished)'}
+                  </Box>
+                  <Box className={classes.center_block_cell_small}>
+                    {height}
+                  </Box>
+                  <Box flexGrow={1} className={classes.center_block_cell}>
+                    {unix_to_short_date(Number.parseInt(timestamp))}
+                  </Box>
+                  <Box className={classes.right_block_cell}>
+                    {isFinished
+                      ? 'finished'
+                      : unix_to_short_date(Number.parseInt(timestamp))}
+                  </Box>
                 </Box>
-                <Box className={classes.center_block_cell_small}>
-                  {height}
-                </Box>
-                <Box flexGrow={1} className={classes.center_block_cell}>
-                  {unix_to_short_date(Number.parseInt(timestamp))}
-                </Box>
-                <Box className={classes.right_block_cell}>
-                  {isFinished
-                    ? 'finished'
-                    : unix_to_short_date(Number.parseInt(timestamp))}
-                </Box>
-              </Box>
+              </Link>
             );
           })}
         </>
@@ -455,7 +454,6 @@ const BlocksCard = () => {
           <Loading />
         </Flex>
       )}
-
     </Card>
   );
 };
@@ -498,11 +496,13 @@ const SearchBlock = (props) => {
 
 export default function FullNode() {
   const dispatch = useDispatch();
+  const { path, url } = useRouteMatch();
 
   const connections = useSelector((state) => state.full_node_state.connections);
   const connectionError = useSelector(
     (state) => state.full_node_state.open_connection_error,
   );
+
   const block = useSelector((state) => state.full_node_state.block);
   const header = useSelector((state) => state.full_node_state.header);
 
@@ -518,10 +518,8 @@ export default function FullNode() {
       title={<Trans id="FullNode.title">Full Node</Trans>}
     >
       <Flex flexDirection="column" gap={3}>
-        {block != null ? (
-          <Block block={block} prevHeader={header} />
-        ) : (
-          <>
+        <Switch>
+          <Route path={path} exact>
             <FullNodeStatus />
             <BlocksCard />
             <FullNodeConnections
@@ -531,8 +529,11 @@ export default function FullNode() {
               closeConnection={closeConnectionCallback}
             />
             <SearchBlock />
-          </>
-        )}
+          </Route>
+          <Route path={`${path}/:headerHash`}>
+            <Block />
+          </Route>
+        </Switch>
       </Flex>
     </LayoutMain>
   );
