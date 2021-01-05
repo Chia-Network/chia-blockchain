@@ -171,7 +171,7 @@ class FullNodeAPI:
 
     @api_request
     async def request_proof_of_weight(self, request: full_node_protocol.RequestProofOfWeight) -> Optional[Message]:
-        if not self.full_node.blockchain.contains_sub_block(request.tip):
+        if request.tip not in self.full_node.blockchain.sub_blocks:
             self.log.error(f"got weight proof request for unknown peak {request.tip}")
             return None
         if request.tip in self.full_node.pow_creation:
@@ -212,10 +212,11 @@ class FullNodeAPI:
 
     @api_request
     async def request_sub_block(self, request: full_node_protocol.RequestSubBlock) -> Optional[Message]:
-        header_hash = self.full_node.blockchain.sub_height_to_hash(request.sub_height)
-        if header_hash is None:
+        if request.sub_height not in self.full_node.blockchain.sub_height_to_hash:
             return None
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
+            self.full_node.blockchain.sub_height_to_hash[request.sub_height]
+        )
         if block is not None:
             if not request.include_transaction_block:
                 block = dataclasses.replace(block, transactions_generator=None)
@@ -228,7 +229,7 @@ class FullNodeAPI:
         if request.end_sub_height < request.start_sub_height or request.end_sub_height - request.start_sub_height > 32:
             return None
         for i in range(request.start_sub_height, request.end_sub_height + 1):
-            if self.full_node.blockchain.sub_height_to_hash(uint32(i)) is None:
+            if i not in self.full_node.blockchain.sub_height_to_hash:
                 reject = RejectSubBlocks(request.start_sub_height, request.end_sub_height)
                 msg = Message("reject_sub_blocks", reject)
                 return msg
@@ -237,7 +238,7 @@ class FullNodeAPI:
 
         for i in range(request.start_sub_height, request.end_sub_height + 1):
             block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-                self.full_node.blockchain.sub_height_to_hash(uint32(i))
+                self.full_node.blockchain.sub_height_to_hash[uint32(i)]
             )
             if block is None:
                 reject = RejectSubBlocks(request.start_sub_height, request.end_sub_height)
@@ -431,7 +432,7 @@ class FullNodeAPI:
             peak = self.full_node.blockchain.get_peak()
             if peak is not None and peak.sub_block_height > self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
                 sub_slot_iters = peak.sub_slot_iters
-                difficulty = uint64(peak.weight - self.full_node.blockchain.sub_block_record(peak.prev_hash).weight)
+                difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
                 next_sub_slot_iters = self.full_node.blockchain.get_next_slot_iters(peak.header_hash, True)
                 next_difficulty = self.full_node.blockchain.get_next_difficulty(peak.header_hash, True)
                 sub_slots_for_peak = await self.full_node.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
@@ -446,7 +447,7 @@ class FullNodeAPI:
 
             added = self.full_node.full_node_store.new_signage_point(
                 request.index_from_challenge,
-                self.full_node.blockchain,
+                self.full_node.blockchain.sub_blocks,
                 self.full_node.blockchain.get_peak(),
                 next_sub_slot_iters,
                 SignagePoint(
@@ -594,32 +595,6 @@ class FullNodeAPI:
                     spend_bundle: Optional[SpendBundle] = None
                 else:
                     spend_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(peak.header_hash)
-            if peak is None or peak.sub_block_height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
-                difficulty = self.full_node.constants.DIFFICULTY_STARTING
-                sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
-            else:
-                assert pos_sub_slot is not None
-                if pos_sub_slot[0].challenge_chain.new_difficulty is not None:
-                    assert pos_sub_slot[0].challenge_chain.new_sub_slot_iters is not None
-                    difficulty = pos_sub_slot[0].challenge_chain.new_difficulty
-                    sub_slot_iters = pos_sub_slot[0].challenge_chain.new_sub_slot_iters
-                else:
-                    difficulty = uint64(peak.weight - self.full_node.blockchain.sub_block_record(peak.prev_hash).weight)
-                    sub_slot_iters = peak.sub_slot_iters
-
-            required_iters: uint64 = calculate_iterations_quality(
-                quality_string,
-                request.proof_of_space.size,
-                difficulty,
-                request.challenge_chain_sp,
-            )
-            sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
-            ip_iters: uint64 = calculate_ip_iters(
-                self.full_node.constants,
-                sub_slot_iters,
-                request.signage_point_index,
-                required_iters,
-            )
 
             def get_plot_sig(to_sign, _) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
@@ -659,10 +634,10 @@ class FullNodeAPI:
                         if prev_sb.finished_reward_slot_hashes[-1] == rc_challenge:
                             # This sub-block includes a sub-slot which is where our SP vdf starts. Go back one more
                             # to find the prev sub block
-                            prev_sb = self.full_node.blockchain.try_sub_block(prev_sb.prev_hash)
+                            prev_sb = self.full_node.blockchain.sub_blocks.get(prev_sb.prev_hash, None)
                             found = True
                             break
-                    prev_sb = self.full_node.blockchain.try_sub_block(prev_sb.prev_hash)
+                    prev_sb = self.full_node.blockchain.sub_blocks.get(prev_sb.prev_hash, None)
                     attempts += 1
                 if not found:
                     self.log.warning("Did not find a previous block with the correct reward chain hash")
@@ -670,7 +645,7 @@ class FullNodeAPI:
 
             try:
                 finished_sub_slots: List[EndOfSubSlotBundle] = self.full_node.full_node_store.get_finished_sub_slots(
-                    prev_sb, self.full_node.blockchain, cc_challenge_hash
+                    prev_sb, self.full_node.blockchain.sub_blocks, cc_challenge_hash
                 )
                 if (
                     len(finished_sub_slots) > 0
@@ -690,6 +665,32 @@ class FullNodeAPI:
             else:
                 pool_target = request.pool_target
 
+            if peak is None or peak.sub_block_height <= self.full_node.constants.MAX_SUB_SLOT_SUB_BLOCKS:
+                difficulty = self.full_node.constants.DIFFICULTY_STARTING
+                sub_slot_iters = self.full_node.constants.SUB_SLOT_ITERS_STARTING
+            else:
+                difficulty = uint64(peak.weight - self.full_node.blockchain.sub_blocks[peak.prev_hash].weight)
+                sub_slot_iters = peak.sub_slot_iters
+                for sub_slot in finished_sub_slots:
+                    if sub_slot.challenge_chain.new_difficulty is not None:
+                        difficulty = sub_slot.challenge_chain.new_difficulty
+                    if sub_slot.challenge_chain.new_sub_slot_iters is not None:
+                        sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
+
+            required_iters: uint64 = calculate_iterations_quality(
+                quality_string,
+                request.proof_of_space.size,
+                difficulty,
+                request.challenge_chain_sp,
+            )
+            sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
+            ip_iters: uint64 = calculate_ip_iters(
+                self.full_node.constants,
+                sub_slot_iters,
+                request.signage_point_index,
+                required_iters,
+            )
+
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
                 total_iters_pos_slot,
@@ -705,10 +706,10 @@ class FullNodeAPI:
                 get_pool_sig,
                 sp_vdfs,
                 uint64(int(time.time())),
-                self.full_node.blockchain,
                 b"",
                 spend_bundle,
                 prev_sb,
+                self.full_node.blockchain.sub_blocks,
                 finished_sub_slots,
             )
             if prev_sb is not None:
@@ -824,11 +825,12 @@ class FullNodeAPI:
 
     @api_request
     async def request_sub_block_header(self, request: wallet_protocol.RequestSubBlockHeader) -> Optional[Message]:
-        header_hash = self.full_node.blockchain.sub_height_to_hash(request.sub_height)
-        if header_hash is None:
+        if request.sub_height not in self.full_node.blockchain.sub_height_to_hash:
             msg = Message("reject_sub_block_header", RejectHeaderRequest(request.sub_height))
             return msg
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
+            self.full_node.blockchain.sub_height_to_hash[request.sub_height]
+        )
         if block is not None:
             header_block: HeaderBlock = await block.get_block_header()
             msg = Message(
@@ -844,7 +846,7 @@ class FullNodeAPI:
         if (
             block is None
             or block.is_block() is False
-            or self.full_node.blockchain.sub_height_to_hash(block.sub_block_height) is None
+            or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
         ):
             reject = wallet_protocol.RejectAdditionsRequest(request.sub_height, request.header_hash)
 
@@ -902,8 +904,8 @@ class FullNodeAPI:
             block is None
             or block.is_block() is False
             or block.sub_block_height != request.sub_height
-            or block.sub_block_height > self.full_node.blockchain.get_peak_height()
-            or self.full_node.blockchain.sub_height_to_hash(block.sub_block_height) != block.header_hash
+            or block.sub_block_height not in self.full_node.blockchain.sub_height_to_hash
+            or self.full_node.blockchain.sub_height_to_hash[block.sub_block_height] != block.header_hash
         ):
             reject = wallet_protocol.RejectRemovalsRequest(request.sub_height, request.header_hash)
             msg = Message("reject_removals_request", reject)
@@ -1007,7 +1009,7 @@ class FullNodeAPI:
         if coin_record is None or coin_record.spent_block_index != sub_height:
             return reject_msg
 
-        header_hash = self.full_node.blockchain.sub_height_to_hash(sub_height)
+        header_hash = self.full_node.blockchain.sub_height_to_hash[sub_height]
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
