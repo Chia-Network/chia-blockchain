@@ -126,158 +126,156 @@ class TestBlockchainTransactions:
         assert res == ReceiveBlockResult.INVALID_BLOCK
         assert err == Err.DOUBLE_SPEND
 
+    @pytest.mark.asyncio
+    async def test_validate_blockchain_duplicate_output(self, two_nodes):
+        num_blocks = 3
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_puzzlehash = BURN_PUZZLE_HASH
 
-#     @pytest.mark.asyncio
-#     async def test_validate_blockchain_duplicate_output(self, two_nodes):
-#         num_blocks = 10
-#         wallet_a = WALLET_A
-#         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
-#         receiver_puzzlehash = BURN_PUZZLE_HASH
-#
-#         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
-#         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-#         full_node_1 = full_node_api_1.full_node
-#
-#         for block in blocks:
-#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-#
-#         spent_block = blocks[1]
-#
-#         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spent_block.get_coinbase())
-#         spend_bundle_double = wallet_a.generate_signed_transaction(
-#             1000, receiver_puzzlehash, spent_block.get_coinbase()
-#         )
-#
-#         block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
-#         program = best_solution_program(block_spendbundle)
-#         aggsig = block_spendbundle.aggregated_signature
-#
-#         dic_h = {(num_blocks + 1): (program, aggsig)}
-#         new_blocks = bt.get_consecutive_blocks(test_constants, 1, blocks, 10, b"", coinbase_puzzlehash, dic_h)
-#
-#         next_block = new_blocks[(num_blocks + 1)]
-#         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
-#
-#         assert error is Err.DUPLICATE_OUTPUT
-#
-#     @pytest.mark.asyncio
-#     async def test_validate_blockchain_with_reorg_double_spend(self, two_nodes):
-#         num_blocks = 10
-#         wallet_a = WALLET_A
-#         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
-#         receiver_puzzlehash = BURN_PUZZLE_HASH
-#
-#         blocks = bt.get_consecutive_blocks(test_constants, num_blocks, [], 10, b"", coinbase_puzzlehash)
-#         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-#         full_node_1 = full_node_api_1.full_node
-#
-#         for block in blocks:
-#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-#
-#         spent_block = blocks[1]
-#
-#         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spent_block.get_coinbase())
-#         block_spendbundle = SpendBundle.aggregate([spend_bundle])
-#         program = best_solution_program(block_spendbundle)
-#         aggsig = block_spendbundle.aggregated_signature
-#
-#         dic_h = {11: (program, aggsig)}
-#         blocks = bt.get_consecutive_blocks(test_constants, 10, blocks, 10, b"", coinbase_puzzlehash, dic_h)
-#         # Move chain to height 20, with a spend at height 11
-#         for block in blocks:
-#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-#
-#         # Reorg at block 5, same spend at block 13 and 14 that was previously at block 11
-#         dic_h = {13: (program, aggsig), 14: (program, aggsig)}
-#         new_blocks = bt.get_consecutive_blocks(
-#             test_constants,
-#             9,
-#             blocks[:6],
-#             10,
-#             b"another seed",
-#             coinbase_puzzlehash,
-#             dic_h,
-#         )
-#
-#         for block in new_blocks[:13]:
-#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-#         next_block = new_blocks[13]
-#         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
-#         assert error is None
-#
-#         await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(new_blocks[13]))
-#
-#         next_block = new_blocks[14]
-#         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
-#         assert error is Err.DOUBLE_SPEND
-#
-#         # Now test Reorg at block 5, same spend at block 9 that was previously at block 11
-#         dic_h = {9: (program, aggsig)}
-#         new_blocks = bt.get_consecutive_blocks(
-#             test_constants,
-#             4,
-#             blocks[:6],
-#             10,
-#             b"another seed 2",
-#             coinbase_puzzlehash,
-#             dic_h,
-#         )
-#         for block in new_blocks[:9]:
-#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-#         next_block = new_blocks[9]
-#         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
-#         assert error is None
-#
-#         # Now test Reorg at block 10, same spend at block 11 that was previously at block 11
-#         dic_h = {11: (program, aggsig)}
-#         new_blocks = bt.get_consecutive_blocks(
-#             test_constants,
-#             4,
-#             blocks[:11],
-#             10,
-#             b"another seed 3",
-#             coinbase_puzzlehash,
-#             dic_h,
-#         )
-#         for block in new_blocks[:11]:
-#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-#         next_block = new_blocks[11]
-#         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
-#         assert error is None
-#
-#         # Now test Reorg at block 11, same spend at block 12 that was previously at block 11
-#         dic_h = {12: (program, aggsig)}
-#         new_blocks = bt.get_consecutive_blocks(
-#             test_constants,
-#             4,
-#             blocks[:12],
-#             10,
-#             b"another seed 4",
-#             coinbase_puzzlehash,
-#             dic_h,
-#         )
-#         for block in new_blocks[:12]:
-#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-#         next_block = new_blocks[12]
-#         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
-#         assert error is Err.DOUBLE_SPEND
-#
-#         # Now test Reorg at block 11, same spend at block 15 that was previously at block 11
-#         dic_h = {15: (program, aggsig)}
-#         new_blocks = bt.get_consecutive_blocks(
-#             test_constants,
-#             4,
-#             blocks[:12],
-#             10,
-#             b"another seed 5",
-#             coinbase_puzzlehash,
-#             dic_h,
-#         )
-#         for block in new_blocks[:15]:
-#             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-#         next_block = new_blocks[15]
-#         error = await full_node_1.blockchain._validate_transactions(next_block, next_block.get_fees_coin().amount)
-#         assert error is Err.DOUBLE_SPEND
+        blocks = bt.get_consecutive_blocks(
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+        )
+        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
+        full_node_1 = full_node_api_1.full_node
+
+        for block in blocks:
+            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        spend_block = blocks[1]
+
+        spend_coin = None
+        for coin in list(spend_block.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                spend_coin = coin
+
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+        spend_bundle_double = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin
+        )
+
+        block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
+
+        new_blocks = bt.get_consecutive_blocks(
+            1,
+            block_list_input=blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            transaction_data=block_spendbundle,
+            guarantee_block=True,
+        )
+
+        next_block = new_blocks[-1]
+        res, err, _ = await full_node_1.blockchain.receive_block(next_block)
+        assert res == ReceiveBlockResult.INVALID_BLOCK
+        assert err == Err.DUPLICATE_OUTPUT
+
+    @pytest.mark.asyncio
+    async def test_validate_blockchain_with_reorg_double_spend(self, two_nodes):
+        num_blocks = 10
+        wallet_a = WALLET_A
+        coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
+        receiver_puzzlehash = BURN_PUZZLE_HASH
+
+        blocks = bt.get_consecutive_blocks(
+            num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True
+        )
+        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
+
+        for block in blocks:
+            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        spend_block = blocks[1]
+
+        spend_coin = None
+        for coin in list(spend_block.get_included_reward_coins()):
+            if coin.puzzle_hash == coinbase_puzzlehash:
+                spend_coin = coin
+
+        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
+
+        blocks_spend = bt.get_consecutive_blocks(
+            1, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True, transaction_data=spend_bundle
+        )
+        # Move chain to height 10, with a spend at height 10
+        for block in blocks_spend:
+            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        # Reorg at height 5, up to height 13
+        new_blocks = bt.get_consecutive_blocks(
+            8,
+            blocks[:6],
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_block=True,
+            seed=b"another seed",
+        )
+
+        print(f"Len: {len(new_blocks)} {new_blocks[-1].sub_block_height}")
+        for block in new_blocks:
+            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        # Spend the same coin in the new reorg chain at height 13
+        new_blocks = bt.get_consecutive_blocks(
+            1,
+            new_blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_block=True,
+            transaction_data=spend_bundle
+        )
+
+        res, err, _ = await full_node_api_1.full_node.blockchain.receive_block(new_blocks[-1])
+        print(f"Spend at {new_blocks[-1].sub_block_height}")
+        assert err is None
+        assert res == ReceiveBlockResult.NEW_PEAK
+
+        # But can't spend it twice
+        new_blocks_double = bt.get_consecutive_blocks(
+            1,
+            new_blocks,
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_block=True,
+            transaction_data=spend_bundle
+        )
+
+        res, err, _ = await full_node_api_1.full_node.blockchain.receive_block(new_blocks_double[-1])
+        assert err is Err.DOUBLE_SPEND
+        assert res == ReceiveBlockResult.INVALID_BLOCK
+
+        # Now test Reorg at block 5, same spend at block height 12
+        new_blocks_reorg = bt.get_consecutive_blocks(
+            1,
+            new_blocks[:12],
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_block=True,
+            transaction_data=spend_bundle,
+            seed=b"spend at 12 is ok"
+        )
+        for block in new_blocks_reorg:
+            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        # Spend at height 13 is also OK (same height)
+        new_blocks_reorg = bt.get_consecutive_blocks(
+            1,
+            new_blocks[:13],
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_block=True,
+            transaction_data=spend_bundle,
+            seed=b"spend at 13 is ok"
+        )
+        for block in new_blocks_reorg:
+            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        # Spend at height 14 is not OK (already spend)
+        new_blocks_reorg = bt.get_consecutive_blocks(
+            1,
+            new_blocks[:14],
+            farmer_reward_puzzle_hash=coinbase_puzzlehash,
+            guarantee_block=True,
+            transaction_data=spend_bundle,
+            seed=b"spend at 14 is double spend"
+        )
+        for block in new_blocks_reorg:
+            await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
 #
 #     @pytest.mark.asyncio
 #     async def test_validate_blockchain_spend_reorg_coin(self, two_nodes):

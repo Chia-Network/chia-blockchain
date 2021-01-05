@@ -47,6 +47,7 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
             logger.setLevel(logging.INFO)
         elif logging_config["log_level"] == "DEBUG":
             logger.setLevel(logging.DEBUG)
+            logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
         else:
             logger.setLevel(logging.INFO)
     else:
