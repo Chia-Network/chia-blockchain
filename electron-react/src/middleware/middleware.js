@@ -82,9 +82,8 @@ const socketMiddleware = () => {
         try {
           const key_path = remote.getGlobal('key_path');
           const cert_path = remote.getGlobal('cert_path');
-          debugger;
 
-          var options = {
+          const options = {
             cert: fs.readFileSync(cert_path),
             key: fs.readFileSync(key_path),
             rejectUnauthorized: false,

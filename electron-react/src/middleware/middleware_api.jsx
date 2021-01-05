@@ -225,7 +225,6 @@ export const handle_message = async (store, payload) => {
   } else if (payload.command === 'state_changed') {
     const { origin } = payload;
     const { state } = payload.data;
-    debugger;
 
     if (origin === service_plotter) {
       const { queue } = payload.data;
