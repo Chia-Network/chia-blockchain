@@ -173,7 +173,6 @@ const getStatusItems = (state, connected) => {
     };
     status_items.push(item);
   } else if (!state.sync.synced){
-    debugger
     const item = {
       label: <Trans id="StatusItem.status">Status</Trans>,
       value: (
