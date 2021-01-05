@@ -1,10 +1,8 @@
-import React, { useEffect, useCallback, useState } from 'react';
-import Grid from '@material-ui/core/Grid';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
+import { Button, Grid, Typography, Paper, TableRow, Tooltip } from '@material-ui/core';
 import { Trans } from '@lingui/macro';
+import { useParams } from 'react-router-dom';
 import { withStyles } from '@material-ui/core/styles';
-import Typography from '@material-ui/core/Typography';
-import { Paper, TableRow, Tooltip } from '@material-ui/core';
-import Button from '@material-ui/core/Button';
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
@@ -61,14 +59,25 @@ const styles = (theme) => ({
 });
 
 const Block = (props) => {
-  const [headerHash, setHeaderHash] = useState('');
+  const { headerHash } = useParams();
+  const dispatch = useDispatch();
+
+  console.log('headerHash', headerHash);
+
+  const block = useMemo(async () => {
+    const data = await dispatch(getSubBlock(headerHash));
+    console.log('block data', data);
+    return data;
+  }, [headerHash]);
+
+  // const [headerHash, setHeaderHash] = useState('');
   const [plotId, setPlotId] = useState('');
   const [didMount, setDidMount] = useState(false);
 
   const { prev_header_hash } = props.block.header.data;
   const { height } = props.block.header.data;
 
-  const dispatch = useDispatch();
+  
 
   const handleClearBlock = useCallback(() => dispatch(clearBlock()), [
     dispatch,
@@ -119,7 +128,7 @@ const Block = (props) => {
   );
 
   const { classes } = props;
-  const { block } = props;
+  // const { block } = props;
   const { prevHeader } = props;
 
   let diff = 0;
