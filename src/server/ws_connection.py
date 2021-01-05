@@ -300,7 +300,10 @@ class WSChiaConnection:
             asyncio.create_task(self.close())
             await asyncio.sleep(3)
         elif message.type == WSMsgType.CLOSED:
-            pass
+            if not self.closed:
+                asyncio.create_task(self.close())
+                await asyncio.sleep(3)
+                return None
         elif message.type == WSMsgType.BINARY:
             data = message.data
             full_message_loaded: Any = cbor.loads(data)
