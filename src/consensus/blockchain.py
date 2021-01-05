@@ -361,11 +361,15 @@ class Blockchain:
             return None
         is_overflow = self.sub_blocks[block.header_hash].overflow
 
+        curr_sbr: SubBlockRecord = self.sub_blocks[block.header_hash]
         curr: Optional[FullBlock] = block
         assert curr is not None
-        while len(curr.finished_sub_slots) == 0 and curr.sub_block_height > 0:
-            curr = await self.block_store.get_full_block(curr.prev_header_hash)
-            assert curr is not None
+        while curr_sbr.sub_block_height > 0:
+            if curr_sbr.first_in_sub_slot:
+                curr = await self.block_store.get_full_block(curr_sbr.header_hash)
+                assert curr is not None
+                break
+            curr_sbr = self.sub_blocks[curr_sbr.prev_hash]
 
         if len(curr.finished_sub_slots) == 0:
             # This means we got to genesis and still no sub-slots
@@ -381,15 +385,20 @@ class Blockchain:
             # Have both sub-slots
             return curr.finished_sub_slots[-2], ip_sub_slot
 
-        curr = await self.block_store.get_full_block(curr.prev_header_hash)
-        assert curr is not None
-        while len(curr.finished_sub_slots) == 0 and curr.sub_block_height > 0:
-            curr = await self.block_store.get_full_block(curr.prev_header_hash)
-            assert curr is not None
+        prev_curr: Optional[FullBlock] = await self.block_store.get_full_block(curr.prev_header_hash)
+        assert prev_curr is not None
+        prev_curr_sbr = self.sub_blocks[curr.prev_header_hash]
+        assert prev_curr_sbr is not None
+        while prev_curr_sbr.sub_block_height > 0:
+            if prev_curr_sbr.first_in_sub_slot:
+                prev_curr = await self.block_store.get_full_block(prev_curr_sbr.header_hash)
+                assert prev_curr is not None
+                break
+            prev_curr_sbr = self.sub_blocks[prev_curr_sbr.prev_hash]
 
-        if len(curr.finished_sub_slots) == 0:
+        if len(prev_curr.finished_sub_slots) == 0:
             return None, ip_sub_slot
-        return curr.finished_sub_slots[-1], ip_sub_slot
+        return prev_curr.finished_sub_slots[-1], ip_sub_slot
 
     def get_recent_reward_challenges(self) -> List[Tuple[bytes32, uint128]]:
         peak = self.get_peak()
