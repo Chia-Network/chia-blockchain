@@ -75,7 +75,6 @@ class TestBlockchainTransactions:
         await full_node_1.respond_sub_block(full_node_protocol.RespondSubBlock(next_block))
 
         assert next_block.header_hash == full_node_1.blockchain.get_peak().header_hash
-        print("Adde block ", next_block)
 
         added_coins = next_spendbundle.additions()
 
