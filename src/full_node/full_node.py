@@ -85,6 +85,7 @@ class FullNode:
         self.constants = consensus_constants
         self.pow_pending: Set[bytes32] = set()
         self.pow_creation: Dict[uint32, asyncio.Event] = {}
+        self.state_changed_callback: Optional[Callable] = None
 
         if name:
             self.log = logging.getLogger(name)

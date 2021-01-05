@@ -52,6 +52,7 @@ class Harvester:
         self.constants = constants
         self.cached_challenges = []
         self.log = log
+        self.state_changed_callback: Optional[Callable] = None
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()

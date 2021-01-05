@@ -3,6 +3,7 @@ import logging
 import time
 from typing import Dict, List, Optional, Callable, Tuple, Any
 
+import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from blspy import G1Element
 
 from src.server.ws_connection import WSChiaConnection
@@ -111,6 +112,10 @@ class Farmer:
     def state_changed(self, change: str, sp_hash: bytes32):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, sp_hash)
+
+    def on_disconnect(self, connection: ws.WSChiaConnection):
+        self.log.info(f"peer disconnected {connection.get_peer_info()}")
+        self.state_changed("close_connection", bytes32([0] * 32))
 
     def get_public_keys(self):
         return [child_sk.get_g1() for child_sk in self._private_keys]

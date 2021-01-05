@@ -4,7 +4,7 @@ import io
 import logging
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Callable
 
 from chiavdf import create_discriminant
 
@@ -85,6 +85,7 @@ class Timelord:
         self.vdf_failures_count: int = 0
         self.total_unfinished: int = 0
         self.total_infused: int = 0
+        self.state_changed_callback: Optional[Callable] = None
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
