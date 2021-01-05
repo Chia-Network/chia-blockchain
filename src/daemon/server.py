@@ -710,7 +710,12 @@ def launch_service(root_path, service_command):
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
     else:
         creationflags = 0
-    process = subprocess.Popen(service_array, shell=False, startupinfo=startupinfo, creationflags=creationflags,)
+    process = subprocess.Popen(
+        service_array,
+        shell=False,
+        startupinfo=startupinfo,
+        creationflags=creationflags,
+    )
     pid_path = pid_path_for_service(root_path, service_command)
     try:
         mkdir(pid_path.parent)

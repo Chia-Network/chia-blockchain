@@ -58,7 +58,9 @@ def get_output_amount_for_puzzle_and_solution(puzzle, solution):
     return total
 
 
-def get_discrepancies_for_spend_bundle(trade_offer: SpendBundle,) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
+def get_discrepancies_for_spend_bundle(
+    trade_offer: SpendBundle,
+) -> Tuple[bool, Optional[Dict], Optional[Exception]]:
     try:
         cc_discrepancies: Dict[str, int] = dict()
         for coinsol in trade_offer.coin_solutions:

@@ -12,7 +12,9 @@ from src.util.ints import uint64
 from src.util.errors import Err, ConsensusError
 
 
-def parse_sexp_to_condition(sexp: Program,) -> Tuple[Optional[Err], Optional[ConditionVarPair]]:
+def parse_sexp_to_condition(
+    sexp: Program,
+) -> Tuple[Optional[Err], Optional[ConditionVarPair]]:
     """
     Takes a ChiaLisp sexp and returns a ConditionVarPair.
     If it fails, returns an Error
@@ -31,7 +33,9 @@ def parse_sexp_to_condition(sexp: Program,) -> Tuple[Optional[Err], Optional[Con
     return None, ConditionVarPair(opcode, items[1], None)
 
 
-def parse_sexp_to_conditions(sexp: Program,) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
+def parse_sexp_to_conditions(
+    sexp: Program,
+) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]]]:
     """
     Takes a ChiaLisp sexp (list) and returns the list of ConditionVarPairs
     If it fails, returns as Error
@@ -48,7 +52,9 @@ def parse_sexp_to_conditions(sexp: Program,) -> Tuple[Optional[Err], Optional[Li
     return None, results
 
 
-def conditions_by_opcode(conditions: List[ConditionVarPair],) -> Dict[ConditionOpcode, List[ConditionVarPair]]:
+def conditions_by_opcode(
+    conditions: List[ConditionVarPair],
+) -> Dict[ConditionOpcode, List[ConditionVarPair]]:
     """
     Takes a list of ConditionVarPairs(CVP) and return dictionary of CVPs keyed of their opcode
     """
@@ -62,7 +68,8 @@ def conditions_by_opcode(conditions: List[ConditionVarPair],) -> Dict[ConditionO
 
 
 def pkm_pairs_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], coin_name: bytes32 = None,
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+    coin_name: bytes32 = None,
 ) -> List[Tuple[G1Element, bytes]]:
     ret: List[Tuple[G1Element, bytes]] = []
     for cvp in conditions_dict.get(ConditionOpcode.AGG_SIG, []):
@@ -84,7 +91,8 @@ def aggsig_in_conditions_dict(conditions_dict: Dict[ConditionOpcode, List[Condit
 
 
 def created_outputs_for_conditions_dict(
-    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]], input_coin_name: bytes32,
+    conditions_dict: Dict[ConditionOpcode, List[ConditionVarPair]],
+    input_coin_name: bytes32,
 ) -> List[Coin]:
     output_coins = []
     for cvp in conditions_dict.get(ConditionOpcode.CREATE_COIN, []):
@@ -108,7 +116,9 @@ def conditions_dict_for_solution(
     return None, conditions_by_opcode(result), cost
 
 
-def conditions_for_solution(solution_program,) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]], uint64]:
+def conditions_for_solution(
+    solution_program,
+) -> Tuple[Optional[Err], Optional[List[ConditionVarPair]], uint64]:
     # get the standard script for a puzzle hash and feed in the solution
     args = Program.to(solution_program)
     try:

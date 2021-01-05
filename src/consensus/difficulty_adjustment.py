@@ -279,12 +279,14 @@ def get_next_sub_slot_iters(
     # Only change by a max factor as a sanity check
     max_ssi = uint64(
         truncate_to_significant_bits(
-            constants.DIFFICULTY_FACTOR * last_block_curr.sub_slot_iters, constants.SIGNIFICANT_BITS,
+            constants.DIFFICULTY_FACTOR * last_block_curr.sub_slot_iters,
+            constants.SIGNIFICANT_BITS,
         )
     )
     min_ssi = uint64(
         truncate_to_significant_bits(
-            last_block_curr.sub_slot_iters // constants.DIFFICULTY_FACTOR, constants.SIGNIFICANT_BITS,
+            last_block_curr.sub_slot_iters // constants.DIFFICULTY_FACTOR,
+            constants.SIGNIFICANT_BITS,
         )
     )
     if new_ssi >= last_block_curr.sub_slot_iters:
@@ -370,10 +372,16 @@ def get_next_difficulty(
 
     # Only change by a max factor, to prevent attacks, as in greenpaper, and must be at least 1
     max_diff = uint64(
-        truncate_to_significant_bits(constants.DIFFICULTY_FACTOR * old_difficulty, constants.SIGNIFICANT_BITS,)
+        truncate_to_significant_bits(
+            constants.DIFFICULTY_FACTOR * old_difficulty,
+            constants.SIGNIFICANT_BITS,
+        )
     )
     min_diff = uint64(
-        truncate_to_significant_bits(old_difficulty // constants.DIFFICULTY_FACTOR, constants.SIGNIFICANT_BITS,)
+        truncate_to_significant_bits(
+            old_difficulty // constants.DIFFICULTY_FACTOR,
+            constants.SIGNIFICANT_BITS,
+        )
     )
     if new_difficulty >= old_difficulty:
         return min(new_difficulty, max_diff)

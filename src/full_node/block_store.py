@@ -50,7 +50,13 @@ class BlockStore:
 
         cursor_1 = await self.db.execute(
             "INSERT OR REPLACE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
-            (block.header_hash.hex(), sub_block.height, block.sub_block_height, int(block.is_block()), bytes(block),),
+            (
+                block.header_hash.hex(),
+                sub_block.height,
+                block.sub_block_height,
+                int(block.is_block()),
+                bytes(block),
+            ),
         )
 
         await cursor_1.close()
@@ -103,7 +109,8 @@ class BlockStore:
 
     async def get_sub_block_record(self, header_hash: bytes32) -> Optional[SubBlockRecord]:
         cursor = await self.db.execute(
-            "SELECT sub_block from sub_block_records WHERE header_hash=?", (header_hash.hex(),),
+            "SELECT sub_block from sub_block_records WHERE header_hash=?",
+            (header_hash.hex(),),
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -111,7 +118,9 @@ class BlockStore:
             return SubBlockRecord.from_bytes(row[0])
         return None
 
-    async def get_sub_block_records(self,) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
+    async def get_sub_block_records(
+        self,
+    ) -> Tuple[Dict[bytes32, SubBlockRecord], Optional[bytes32]]:
         """
         Returns a dictionary with all sub blocks, as well as the header hash of the peak,
         if present.
@@ -133,7 +142,8 @@ class BlockStore:
         cursor_1 = await self.db.execute("UPDATE sub_block_records SET is_peak=0 WHERE is_peak=1")
         await cursor_1.close()
         cursor_2 = await self.db.execute(
-            "UPDATE sub_block_records SET is_peak=1 WHERE header_hash=?", (header_hash.hex(),),
+            "UPDATE sub_block_records SET is_peak=1 WHERE header_hash=?",
+            (header_hash.hex(),),
         )
         await cursor_2.close()
         await self.db.commit()

@@ -19,7 +19,11 @@ from src.server.start_service import run_service
 SERVICE_NAME = "timelord"
 
 
-def service_kwargs_for_timelord(root_path: pathlib.Path, config: Dict, constants: ConsensusConstants,) -> Dict:
+def service_kwargs_for_timelord(
+    root_path: pathlib.Path,
+    config: Dict,
+    constants: ConsensusConstants,
+) -> Dict:
 
     connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
 

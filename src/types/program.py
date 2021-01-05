@@ -22,7 +22,15 @@ def run_program(
     max_cost=None,
     pre_eval_f=None,
 ):
-    return default_run_program(program, args, quote_kw, apply_kw, operator_lookup, max_cost, pre_eval_f=pre_eval_f,)
+    return default_run_program(
+        program,
+        args,
+        quote_kw,
+        apply_kw,
+        operator_lookup,
+        max_cost,
+        pre_eval_f=pre_eval_f,
+    )
 
 
 class Program(SExp):

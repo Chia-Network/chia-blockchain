@@ -40,7 +40,9 @@ class Wallet:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any, info: WalletInfo, name: str = None,
+        wallet_state_manager: Any,
+        info: WalletInfo,
+        name: str = None,
     ):
         self = Wallet()
         if name:

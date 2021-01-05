@@ -229,7 +229,10 @@ class WalletRpcApi:
         await self._stop_wallet()
         fingerprint = request["fingerprint"]
         self.service.keychain.delete_key_by_fingerprint(fingerprint)
-        path = path_from_root(self.service.root_path, f"{self.service.config['database_path']}-{fingerprint}",)
+        path = path_from_root(
+            self.service.root_path,
+            f"{self.service.config['database_path']}-{fingerprint}",
+        )
         if path.exists():
             path.unlink()
         return {}
@@ -512,9 +515,11 @@ class WalletRpcApi:
 
         offer = request["ids"]
         file_name = request["filename"]
-        (success, spend_bundle, error,) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-            offer, file_name
-        )
+        (
+            success,
+            spend_bundle,
+            error,
+        ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(offer, file_name)
         if success:
             self.service.wallet_state_manager.trade_manager.write_offer_to_disk(Path(file_name), spend_bundle)
             return {}
@@ -537,9 +542,11 @@ class WalletRpcApi:
     async def respond_to_offer(self, request):
         assert self.service.wallet_state_manager is not None
         file_path = Path(request["filename"])
-        (success, trade_record, error,) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-            file_path
-        )
+        (
+            success,
+            trade_record,
+            error,
+        ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(file_path)
         if not success:
             raise ValueError(error)
         return {}

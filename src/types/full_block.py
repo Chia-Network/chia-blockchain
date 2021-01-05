@@ -75,7 +75,9 @@ class FullBlock(Streamable):
             assert self.transactions_info is not None
             farmer_amount = uint64(farmer_amount + self.transactions_info.fees)
         pool_coin: Coin = create_pool_coin(
-            self.sub_block_height, self.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash, pool_amount,
+            self.sub_block_height,
+            self.foliage_sub_block.foliage_sub_block_data.pool_target.puzzle_hash,
+            pool_amount,
         )
         farmer_coin: Coin = create_farmer_coin(
             self.sub_block_height,

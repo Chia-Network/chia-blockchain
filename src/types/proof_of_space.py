@@ -30,7 +30,10 @@ class ProofOfSpace(Streamable):
         return self.calculate_plot_id_pk(self.pool_public_key, self.plot_public_key)
 
     def verify_and_get_quality_string(
-        self, constants: ConsensusConstants, original_challenge_hash: bytes32, signage_point: bytes32,
+        self,
+        constants: ConsensusConstants,
+        original_challenge_hash: bytes32,
+        signage_point: bytes32,
     ) -> Optional[bytes32]:
         if (self.pool_public_key is None) and (self.pool_contract_puzzle_hash is None):
             return None
@@ -59,7 +62,10 @@ class ProofOfSpace(Streamable):
 
     @staticmethod
     def passes_plot_filter(
-        constants: ConsensusConstants, plot_id: bytes32, challenge_hash: bytes32, signage_point: bytes32,
+        constants: ConsensusConstants,
+        plot_id: bytes32,
+        challenge_hash: bytes32,
+        signage_point: bytes32,
     ) -> bool:
         plot_filter: BitArray = BitArray(
             ProofOfSpace.calculate_plot_filter_input(plot_id, challenge_hash, signage_point)
@@ -75,11 +81,17 @@ class ProofOfSpace(Streamable):
         return std_hash(ProofOfSpace.calculate_plot_filter_input(plot_id, challenge_hash, signage_point))
 
     @staticmethod
-    def calculate_plot_id_pk(pool_public_key: G1Element, plot_public_key: G1Element,) -> bytes32:
+    def calculate_plot_id_pk(
+        pool_public_key: G1Element,
+        plot_public_key: G1Element,
+    ) -> bytes32:
         return bytes32(std_hash(bytes(pool_public_key) + bytes(plot_public_key)))
 
     @staticmethod
-    def calculate_plot_id_ph(pool_contract_puzzle_hash: bytes32, plot_public_key: G1Element,) -> bytes32:
+    def calculate_plot_id_ph(
+        pool_contract_puzzle_hash: bytes32,
+        plot_public_key: G1Element,
+    ) -> bytes32:
         return bytes32(std_hash(bytes(pool_contract_puzzle_hash) + bytes(plot_public_key)))
 
     @staticmethod

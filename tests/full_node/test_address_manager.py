@@ -30,7 +30,14 @@ class AddressManagerTest(AddressManager):
         await self.attempt(peer.peer_info, False, time.time() - 61)
 
     async def add_peer_info(self, peers, peer_src=None):
-        timestamped_peers = [TimestampedPeerInfo(peer.host, peer.port, 0,) for peer in peers]
+        timestamped_peers = [
+            TimestampedPeerInfo(
+                peer.host,
+                peer.port,
+                0,
+            )
+            for peer in peers
+        ]
         added = await self.add_to_new_table(timestamped_peers, peer_src)
         return added
 

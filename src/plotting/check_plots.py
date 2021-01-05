@@ -29,7 +29,13 @@ def check_plots(args, root_path):
     pks = [master_sk_to_farmer_sk(sk).get_g1() for sk, _ in kc.get_all_private_keys()]
     pool_public_keys = [G1Element.from_bytes(bytes.fromhex(pk)) for pk in config["farmer"]["pool_public_keys"]]
     _, provers, failed_to_open_filenames, no_key_filenames = load_plots(
-        {}, {}, pks, pool_public_keys, match_str, root_path, open_no_key_filenames=True,
+        {},
+        {},
+        pks,
+        pool_public_keys,
+        match_str,
+        root_path,
+        open_no_key_filenames=True,
     )
     if len(provers) > 0:
         log.info("")

@@ -28,7 +28,10 @@ def get_discriminant(challenge, size_bites):
     if (challenge, size_bites) in discriminant_cache:
         return discriminant_cache[(challenge, size_bites)]
     else:
-        dsc = int(create_discriminant(challenge, size_bites), 16,)
+        dsc = int(
+            create_discriminant(challenge, size_bites),
+            16,
+        )
         add_to_cache((challenge, size_bites), dsc)
         return dsc
 

@@ -155,7 +155,8 @@ class WalletCoinStore:
         coins = set()
 
         cursor = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=0 and wallet_id=?", (wallet_id,),
+            "SELECT * from coin_record WHERE spent=0 and wallet_id=?",
+            (wallet_id,),
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -192,7 +193,12 @@ class WalletCoinStore:
         await cursor_coinbase_coins.close()
 
         cursor_regular_coins = await self.db_connection.execute(
-            "SELECT * from coin_record WHERE spent=? and wallet_id=? and coinbase=?", (0, wallet_id, 0,),
+            "SELECT * from coin_record WHERE spent=? and wallet_id=? and coinbase=?",
+            (
+                0,
+                wallet_id,
+                0,
+            ),
         )
 
         regular_rows = await cursor_regular_coins.fetchall()
@@ -257,7 +263,8 @@ class WalletCoinStore:
         c1 = await self.db_connection.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
         await c1.close()
         c2 = await self.db_connection.execute(
-            "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,),
+            "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?",
+            (block_index,),
         )
         await c2.close()
         await self.db_connection.commit()

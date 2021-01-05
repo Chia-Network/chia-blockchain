@@ -71,7 +71,8 @@ class WalletTransactionStore:
         return self
 
     async def _init_cache(self):
-        print("init cache here")
+        # init cache here
+        pass
 
     async def _clear_database(self):
         cursor = await self.db_connection.execute("DELETE FROM transaction_record")
@@ -156,7 +157,11 @@ class WalletTransactionStore:
         return result
 
     async def increment_sent(
-        self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Optional[Err],
+        self,
+        id: bytes32,
+        name: str,
+        send_status: MempoolInclusionStatus,
+        err: Optional[Err],
     ) -> bool:
         """
         Updates transaction sent count (Full Node has received spend_bundle and sent ack).
@@ -243,7 +248,11 @@ class WalletTransactionStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE sent<? and confirmed=?", (4, 0,),
+            "SELECT * from transaction_record WHERE sent<? and confirmed=?",
+            (
+                4,
+                0,
+            ),
         )
         rows = await cursor.fetchall()
         await cursor.close()
@@ -276,7 +285,11 @@ class WalletTransactionStore:
         """
 
         cursor = await self.db_connection.execute(
-            "SELECT * from transaction_record WHERE confirmed=? and wallet_id=?", (0, wallet_id,),
+            "SELECT * from transaction_record WHERE confirmed=? and wallet_id=?",
+            (
+                0,
+                wallet_id,
+            ),
         )
         rows = await cursor.fetchall()
         await cursor.close()

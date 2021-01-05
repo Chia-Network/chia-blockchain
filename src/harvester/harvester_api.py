@@ -81,7 +81,9 @@ class HarvesterAPI:
             # so it should be run in a thread pool.
             try:
                 sp_challenge_hash = ProofOfSpace.calculate_pos_challenge(
-                    plot_info.prover.get_id(), new_challenge.challenge_hash, new_challenge.sp_hash,
+                    plot_info.prover.get_id(),
+                    new_challenge.challenge_hash,
+                    new_challenge.sp_hash,
                 )
                 quality_strings = plot_info.prover.get_qualities_for_challenge(sp_challenge_hash)
             except Exception as e:
@@ -94,7 +96,10 @@ class HarvesterAPI:
                 # Found proofs of space (on average 1 is expected per plot)
                 for index, quality_str in enumerate(quality_strings):
                     required_iters: uint64 = calculate_iterations_quality(
-                        quality_str, plot_info.prover.get_size(), new_challenge.difficulty, new_challenge.sp_hash,
+                        quality_str,
+                        plot_info.prover.get_size(),
+                        new_challenge.difficulty,
+                        new_challenge.sp_hash,
                     )
                     sp_interval_iters = calculate_sp_interval_iters(
                         self.harvester.constants, new_challenge.sub_slot_iters
