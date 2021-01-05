@@ -51,13 +51,7 @@ class RpcServer:
             data = await self.get_connections({})
             if data is not None:
 
-                payload = create_payload(
-                    "get_connections",
-                    data,
-                    self.service_name,
-                    "wallet_ui",
-                    string=False,
-                )
+                payload = create_payload("get_connections", data, self.service_name, "wallet_ui", string=False,)
                 payloads.append(payload)
         for payload in payloads:
             if "success" not in payload["data"]:
@@ -305,18 +299,9 @@ async def start_rpc_server(
 
     routes = [aiohttp.web.post(route, rpc_server._wrap_http_handler(func)) for (route, func) in http_routes.items()]
     routes += [
-        aiohttp.web.post(
-            "/get_connections",
-            rpc_server._wrap_http_handler(rpc_server.get_connections),
-        ),
-        aiohttp.web.post(
-            "/open_connection",
-            rpc_server._wrap_http_handler(rpc_server.open_connection),
-        ),
-        aiohttp.web.post(
-            "/close_connection",
-            rpc_server._wrap_http_handler(rpc_server.close_connection),
-        ),
+        aiohttp.web.post("/get_connections", rpc_server._wrap_http_handler(rpc_server.get_connections),),
+        aiohttp.web.post("/open_connection", rpc_server._wrap_http_handler(rpc_server.open_connection),),
+        aiohttp.web.post("/close_connection", rpc_server._wrap_http_handler(rpc_server.close_connection),),
         aiohttp.web.post("/stop_node", rpc_server._wrap_http_handler(rpc_server.stop_node)),
     ]
 

@@ -90,8 +90,7 @@ class WalletPuzzleStore:
             )
 
         cursor = await self.db_connection.executemany(
-            "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?, ?)",
-            sql_records,
+            "INSERT OR REPLACE INTO derivation_paths VALUES(?, ?, ?, ?, ?, ?)", sql_records,
         )
 
         await cursor.close()
@@ -102,22 +101,14 @@ class WalletPuzzleStore:
         Returns the derivation record by index and wallet id.
         """
         cursor = await self.db_connection.execute(
-            "SELECT * FROM derivation_paths WHERE derivation_index=? and wallet_id=?;",
-            (
-                index,
-                wallet_id,
-            ),
+            "SELECT * FROM derivation_paths WHERE derivation_index=? and wallet_id=?;", (index, wallet_id,),
         )
         row = await cursor.fetchone()
         await cursor.close()
 
         if row is not None and row[0] is not None:
             return DerivationRecord(
-                row[0],
-                bytes.fromhex(row[2]),
-                G1Element.from_bytes(bytes.fromhex(row[1])),
-                row[3],
-                row[4],
+                row[0], bytes.fromhex(row[2]), G1Element.from_bytes(bytes.fromhex(row[1])), row[3], row[4],
             )
 
         return None
@@ -127,19 +118,14 @@ class WalletPuzzleStore:
         Returns the derivation record by index and wallet id.
         """
         cursor = await self.db_connection.execute(
-            "SELECT * FROM derivation_paths WHERE puzzle_hash=?;",
-            (puzzle_hash,),
+            "SELECT * FROM derivation_paths WHERE puzzle_hash=?;", (puzzle_hash,),
         )
         row = await cursor.fetchone()
         await cursor.close()
 
         if row is not None and row[0] is not None:
             return DerivationRecord(
-                row[0],
-                bytes.fromhex(row[2]),
-                G1Element.from_bytes(bytes.fromhex(row[1])),
-                row[3],
-                row[4],
+                row[0], bytes.fromhex(row[2]), G1Element.from_bytes(bytes.fromhex(row[1])), row[3], row[4],
             )
 
         return None
@@ -149,8 +135,7 @@ class WalletPuzzleStore:
         Sets a derivation path to used so we don't use it again.
         """
         cursor = await self.db_connection.execute(
-            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
-            (index,),
+            "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?", (index,),
         )
         await cursor.close()
         await self.db_connection.commit()
@@ -220,11 +205,7 @@ class WalletPuzzleStore:
         Returns None if not present.
         """
         cursor = await self.db_connection.execute(
-            "SELECT * from derivation_paths WHERE puzzle_hash=? and wallet_id=?;",
-            (
-                puzzle_hash.hex(),
-                wallet_id,
-            ),
+            "SELECT * from derivation_paths WHERE puzzle_hash=? and wallet_id=?;", (puzzle_hash.hex(), wallet_id,),
         )
         row = await cursor.fetchone()
         await cursor.close()

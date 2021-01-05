@@ -38,15 +38,7 @@ class FullNodeRpcApi:
         if change == "new_peak":
             data = await self.get_blockchain_state({})
             assert data is not None
-            payloads.append(
-                create_payload(
-                    "get_blockchain_state",
-                    data,
-                    self.service_name,
-                    "wallet_ui",
-                    string=False,
-                )
-            )
+            payloads.append(create_payload("get_blockchain_state", data, self.service_name, "wallet_ui", string=False,))
             return payloads
         return []
 
@@ -97,10 +89,7 @@ class FullNodeRpcApi:
                 uint32(max(1, full_peak.sub_block_height - 1000))
             ].hex()
             space = await self.get_network_space(
-                {
-                    "newer_block_header_hash": newer_block_hex,
-                    "older_block_header_hash": older_block_hex,
-                }
+                {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
             )
         else:
             space = {"space": uint128(0)}

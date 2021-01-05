@@ -56,16 +56,7 @@ def cc_puzzle_hash_for_inner_puzzle_hash(mod_code, genesis_coin_checker, inner_p
 
 
 def lineage_proof_for_cc_parent(parent_coin: Coin, parent_inner_puzzle_hash: bytes32) -> Program:
-    return Program.to(
-        (
-            1,
-            [
-                parent_coin.parent_coin_info,
-                parent_inner_puzzle_hash,
-                parent_coin.amount,
-            ],
-        )
-    )
+    return Program.to((1, [parent_coin.parent_coin_info, parent_inner_puzzle_hash, parent_coin.amount],))
 
 
 def subtotals_for_deltas(deltas) -> List[int]:
@@ -87,11 +78,7 @@ def subtotals_for_deltas(deltas) -> List[int]:
     return subtotals
 
 
-def coin_solution_for_lock_coin(
-    prev_coin: Coin,
-    subtotal: int,
-    coin: Coin,
-) -> CoinSolution:
+def coin_solution_for_lock_coin(prev_coin: Coin, subtotal: int, coin: Coin,) -> CoinSolution:
     puzzle_reveal = LOCK_INNER_PUZZLE.curry(prev_coin.as_list(), subtotal)
     coin = Coin(coin.name(), puzzle_reveal.get_tree_hash(), uint64(0))
     coin_solution = CoinSolution(coin, Program.to([puzzle_reveal, 0]))

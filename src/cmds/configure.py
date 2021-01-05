@@ -7,19 +7,11 @@ from src.util.default_root import DEFAULT_ROOT_PATH
 def make_parser(parser: ArgumentParser):
 
     parser.add_argument(
-        "--set-node-introducer",
-        help="Set the introducer for node - IP:Port",
-        type=str,
-        nargs="?",
-        default="",
+        "--set-node-introducer", help="Set the introducer for node - IP:Port", type=str, nargs="?", default="",
     )
 
     parser.add_argument(
-        "--set-fullnode-port",
-        help="Set the port to use for the fullnode",
-        type=str,
-        nargs="?",
-        default="",
+        "--set-fullnode-port", help="Set the port to use for the fullnode", type=str, nargs="?", default="",
     )
 
     parser.add_argument(

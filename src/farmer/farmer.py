@@ -29,11 +29,7 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 
 class Farmer:
     def __init__(
-        self,
-        farmer_config: Dict,
-        pool_config: Dict,
-        keychain: Keychain,
-        consensus_constants: ConsensusConstants,
+        self, farmer_config: Dict, pool_config: Dict, keychain: Keychain, consensus_constants: ConsensusConstants,
     ):
         self.config = farmer_config
         # Keep track of all sps, keyed on challenge chain signage point hash
@@ -98,10 +94,7 @@ class Farmer:
 
     async def on_connect(self, peer: WSChiaConnection):
         # Sends a handshake to the harvester
-        msg = harvester_protocol.HarvesterHandshake(
-            self.get_public_keys(),
-            self.pool_public_keys,
-        )
+        msg = harvester_protocol.HarvesterHandshake(self.get_public_keys(), self.pool_public_keys,)
         if peer.connection_type is NodeType.HARVESTER:
             msg = Message("harvester_handshake", msg)
             await peer.send_message(msg)

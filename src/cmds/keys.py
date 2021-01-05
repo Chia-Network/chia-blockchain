@@ -46,65 +46,33 @@ def help_message():
 
 def make_parser(parser):
     parser.add_argument(
-        "-m",
-        "--mnemonic",
-        type=str,
-        nargs=24,
-        default=None,
-        help="Enter mnemonic you want to use",
+        "-m", "--mnemonic", type=str, nargs=24, default=None, help="Enter mnemonic you want to use",
     )
     parser.add_argument(
-        "-k",
-        "--key",
-        type=str,
-        default=None,
-        help="Enter the raw private key in hex",
+        "-k", "--key", type=str, default=None, help="Enter the raw private key in hex",
     )
     parser.add_argument(
-        "-f",
-        "--fingerprint",
-        type=int,
-        default=None,
-        help="Enter the fingerprint of the key you want to use",
+        "-f", "--fingerprint", type=int, default=None, help="Enter the fingerprint of the key you want to use",
     )
 
     parser.add_argument(
-        "-t",
-        "--hd_path",
-        type=str,
-        default=None,
-        help="Enter the HD path in the form 'm/12381/8444/n/n'",
+        "-t", "--hd_path", type=str, default=None, help="Enter the HD path in the form 'm/12381/8444/n/n'",
     )
 
     parser.add_argument(
-        "-d",
-        "--message",
-        type=str,
-        default=None,
-        help="Enter the message to sign in UTF-8",
+        "-d", "--message", type=str, default=None, help="Enter the message to sign in UTF-8",
     )
 
     parser.add_argument(
-        "-p",
-        "--public_key",
-        type=str,
-        default=None,
-        help="Enter the pk in hex",
+        "-p", "--public_key", type=str, default=None, help="Enter the pk in hex",
     )
 
     parser.add_argument(
-        "-s",
-        "--signature",
-        type=str,
-        default=None,
-        help="Enter the signature in hex",
+        "-s", "--signature", type=str, default=None, help="Enter the signature in hex",
     )
 
     parser.add_argument(
-        "command",
-        help=f"Command can be any one of {command_list}",
-        type=str,
-        nargs="?",
+        "command", help=f"Command can be any one of {command_list}", type=str, nargs="?",
     )
     parser.set_defaults(function=handler)
     parser.print_help = lambda self=parser: help_message()
@@ -168,13 +136,11 @@ def show_all_keys():
         print("Master public key (m):", sk.get_g1())
         print("Master private key (m):", bytes(sk).hex())
         print(
-            "Farmer public key (m/12381/8444/0/0)::",
-            master_sk_to_farmer_sk(sk).get_g1(),
+            "Farmer public key (m/12381/8444/0/0)::", master_sk_to_farmer_sk(sk).get_g1(),
         )
         print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
         print(
-            "First wallet key (m/12381/8444/2/0):",
-            master_sk_to_wallet_sk(sk, uint32(0)).get_g1(),
+            "First wallet key (m/12381/8444/2/0):", master_sk_to_wallet_sk(sk, uint32(0)).get_g1(),
         )
         print(
             "First wallet address:",

@@ -31,13 +31,10 @@ log = logging.getLogger(__name__)
 # This is a Python port from 'CAddrInfo' class from Bitcoin core code.
 class ExtendedPeerInfo:
     def __init__(
-        self,
-        addr: TimestampedPeerInfo,
-        src_peer: Optional[PeerInfo],
+        self, addr: TimestampedPeerInfo, src_peer: Optional[PeerInfo],
     ):
         self.peer_info: PeerInfo = PeerInfo(
-            addr.host,
-            addr.port,
+            addr.host, addr.port,
         )
         self.timestamp: int = addr.timestamp
         self.src: Optional[PeerInfo] = src_peer
@@ -76,8 +73,7 @@ class ExtendedPeerInfo:
 
     def get_tried_bucket(self, key: int) -> int:
         hash1 = int.from_bytes(
-            bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_key())[:8]),
-            byteorder="big",
+            bytes(std_hash(key.to_bytes(32, byteorder="big") + self.peer_info.get_key())[:8]), byteorder="big",
         )
         hash1 = hash1 % TRIED_BUCKETS_PER_GROUP
         hash2 = int.from_bytes(
@@ -318,10 +314,7 @@ class AddressManager:
 
     def add_to_new_table_(self, addr: TimestampedPeerInfo, source: Optional[PeerInfo], penalty: int) -> bool:
         is_unique = False
-        peer_info = PeerInfo(
-            addr.host,
-            addr.port,
-        )
+        peer_info = PeerInfo(addr.host, addr.port,)
         if not peer_info.is_valid():
             return False
         (info, node_id) = self.find_(peer_info)
@@ -487,9 +480,7 @@ class AddressManager:
                 continue
             if not info.is_terrible():
                 cur_peer_info = TimestampedPeerInfo(
-                    info.peer_info.host,
-                    uint16(info.peer_info.port),
-                    uint64(info.timestamp),
+                    info.peer_info.host, uint16(info.peer_info.port), uint64(info.timestamp),
                 )
                 addr.append(cur_peer_info)
 
@@ -526,10 +517,7 @@ class AddressManager:
             return len(self.random_pos)
 
     async def add_to_new_table(
-        self,
-        addresses: List[TimestampedPeerInfo],
-        source: Optional[PeerInfo] = None,
-        penalty: int = 0,
+        self, addresses: List[TimestampedPeerInfo], source: Optional[PeerInfo] = None, penalty: int = 0,
     ) -> bool:
         is_added = False
         async with self.lock:
@@ -540,10 +528,7 @@ class AddressManager:
 
     # Mark an entry as accesible.
     async def mark_good(
-        self,
-        addr: PeerInfo,
-        test_before_evict: bool = True,
-        timestamp: int = -1,
+        self, addr: PeerInfo, test_before_evict: bool = True, timestamp: int = -1,
     ):
         if timestamp == -1:
             timestamp = math.floor(time.time())
@@ -552,10 +537,7 @@ class AddressManager:
 
     # Mark an entry as connection attempted to.
     async def attempt(
-        self,
-        addr: PeerInfo,
-        count_failures: bool,
-        timestamp: int = -1,
+        self, addr: PeerInfo, count_failures: bool, timestamp: int = -1,
     ):
         if timestamp == -1:
             timestamp = math.floor(time.time())

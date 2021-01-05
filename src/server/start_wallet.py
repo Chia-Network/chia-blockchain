@@ -24,10 +24,7 @@ SERVICE_NAME = "wallet"
 
 
 def service_kwargs_for_wallet(
-    root_path: pathlib.Path,
-    config: Dict,
-    consensus_constants: ConsensusConstants,
-    keychain: Keychain,
+    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants, keychain: Keychain,
 ) -> Dict:
     node = WalletNode(config, keychain, root_path, consensus_constants=consensus_constants)
     peer_api = WalletNodeAPI(node)
@@ -51,8 +48,7 @@ def service_kwargs_for_wallet(
     port = config.get("port")
     if port is not None:
         kwargs.update(
-            advertised_port=config["port"],
-            server_listen_ports=[config["port"]],
+            advertised_port=config["port"], server_listen_ports=[config["port"]],
         )
     rpc_port = config.get("rpc_port")
     if rpc_port is not None:

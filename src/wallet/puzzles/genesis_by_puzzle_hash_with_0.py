@@ -18,9 +18,7 @@ def create_genesis_puzzle_or_zero_coin_checker(genesis_puzzle_hash: bytes32) -> 
     return genesis_coin_mod.curry(genesis_puzzle_hash)
 
 
-def genesis_puzzle_hash_for_genesis_coin_checker(
-    genesis_coin_checker: Program,
-) -> Optional[bytes32]:
+def genesis_puzzle_hash_for_genesis_coin_checker(genesis_coin_checker: Program,) -> Optional[bytes32]:
     """
     Given a `genesis_coin_checker` program, pull out the genesis puzzle hash.
     """

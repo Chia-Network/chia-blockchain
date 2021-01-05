@@ -188,9 +188,7 @@ class Keychain:
             return key
 
         keyring.set_password(
-            self._get_service(),
-            self._get_private_key_user(index),
-            bytes(key.get_g1()).hex() + entropy.hex(),
+            self._get_service(), self._get_private_key_user(index), bytes(key.get_g1()).hex() + entropy.hex(),
         )
         return key
 

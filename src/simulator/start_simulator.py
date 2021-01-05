@@ -22,19 +22,11 @@ SERVICE_NAME = "full_node"
 
 
 def service_kwargs_for_full_node_simulator(
-    root_path: Path,
-    config: Dict,
-    consensus_constants: ConsensusConstants,
-    bt: BlockTools,
+    root_path: Path, config: Dict, consensus_constants: ConsensusConstants, bt: BlockTools,
 ) -> Dict:
     mkdir(path_from_root(root_path, config["database_path"]).parent)
 
-    node = FullNode(
-        config,
-        root_path=root_path,
-        consensus_constants=consensus_constants,
-        name=SERVICE_NAME,
-    )
+    node = FullNode(config, root_path=root_path, consensus_constants=consensus_constants, name=SERVICE_NAME,)
 
     peer_api = FullNodeSimulator(node, bt)
 
@@ -56,10 +48,7 @@ def main():
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config["database_path"] = config["simulator_database_path"]
     kwargs = service_kwargs_for_full_node_simulator(
-        DEFAULT_ROOT_PATH,
-        config,
-        test_constants,
-        BlockTools(test_constants),
+        DEFAULT_ROOT_PATH, config, test_constants, BlockTools(test_constants),
     )
     return run_service(**kwargs)
 

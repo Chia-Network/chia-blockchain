@@ -13,8 +13,7 @@ class UserSettings:
 
     @staticmethod
     async def create(
-        store: KeyValStore,
-        name: str = None,
+        store: KeyValStore, name: str = None,
     ):
         self = UserSettings()
         self.basic_store = store
@@ -47,32 +46,17 @@ class UserSettings:
         self.settings[name] = setting
 
     async def user_skipped_backup_import(self):
-        new = BackupInitialized(
-            user_initialized=True,
-            user_skipped=True,
-            backup_info_imported=False,
-            new_wallet=False,
-        )
+        new = BackupInitialized(user_initialized=True, user_skipped=True, backup_info_imported=False, new_wallet=False,)
         await self.setting_updated(new)
         return new
 
     async def user_imported_backup(self):
-        new = BackupInitialized(
-            user_initialized=True,
-            user_skipped=False,
-            backup_info_imported=True,
-            new_wallet=False,
-        )
+        new = BackupInitialized(user_initialized=True, user_skipped=False, backup_info_imported=True, new_wallet=False,)
         await self.setting_updated(new)
         return new
 
     async def user_created_new_wallet(self):
-        new = BackupInitialized(
-            user_initialized=True,
-            user_skipped=False,
-            backup_info_imported=False,
-            new_wallet=True,
-        )
+        new = BackupInitialized(user_initialized=True, user_skipped=False, backup_info_imported=False, new_wallet=True,)
         await self.setting_updated(new)
         return new
 

@@ -48,8 +48,7 @@ class FullNodeDiscovery:
         self.peer_db_path = path_from_root(root_path, peer_db_path)
         if introducer_info is not None:
             self.introducer_info: Optional[PeerInfo] = PeerInfo(
-                introducer_info["host"],
-                introducer_info["port"],
+                introducer_info["host"], introducer_info["port"],
             )
         else:
             self.introducer_info = None
@@ -93,9 +92,7 @@ class FullNodeDiscovery:
             and self.address_manager is not None
         ):
             timestamped_peer_info = TimestampedPeerInfo(
-                peer.peer_host,
-                peer.peer_server_port,
-                uint64(int(time.time())),
+                peer.peer_host, peer.peer_server_port, uint64(int(time.time())),
             )
             await self.address_manager.add_to_new_table([timestamped_peer_info], peer.get_peer_info(), 0)
             if self.relay_queue is not None:
@@ -236,9 +233,7 @@ class FullNodeDiscovery:
                 if addr is not None and initiate_connection:
                     try:
                         connected = await self.server.start_client(
-                            addr,
-                            is_feeler=disconnect_after_handshake,
-                            on_connect=self.server.on_connect,
+                            addr, is_feeler=disconnect_after_handshake, on_connect=self.server.on_connect,
                         )
                     except Exception as e:
                         self.log.error(f"Exception in create outbound connections: {e}")
@@ -295,19 +290,11 @@ class FullNodeDiscovery:
         for peer in request.peer_list:
             if peer.timestamp < 100000000 or peer.timestamp > time.time() + 10 * 60:
                 # Invalid timestamp, predefine a bad one.
-                current_peer = TimestampedPeerInfo(
-                    peer.host,
-                    peer.port,
-                    uint64(int(time.time() - 5 * 24 * 60 * 60)),
-                )
+                current_peer = TimestampedPeerInfo(peer.host, peer.port, uint64(int(time.time() - 5 * 24 * 60 * 60)),)
             else:
                 current_peer = peer
             if not is_full_node:
-                current_peer = TimestampedPeerInfo(
-                    peer.host,
-                    peer.port,
-                    uint64(0),
-                )
+                current_peer = TimestampedPeerInfo(peer.host, peer.port, uint64(0),)
             peers_adjusted_timestamp.append(current_peer)
 
         if is_full_node:
@@ -329,13 +316,7 @@ class FullNodePeers(FullNodeDiscovery):
         log,
     ):
         super().__init__(
-            server,
-            root_path,
-            target_outbound_count,
-            peer_db_path,
-            introducer_info,
-            peer_connect_interval,
-            log,
+            server, root_path, target_outbound_count, peer_db_path, introducer_info, peer_connect_interval, log,
         )
         self.relay_queue = asyncio.Queue()
         self.lock = asyncio.Lock()
@@ -365,17 +346,8 @@ class FullNodePeers(FullNodeDiscovery):
                 peer = await self.server.get_peer_info()
                 if peer is None:
                     continue
-                timestamped_peer = [
-                    TimestampedPeerInfo(
-                        peer.host,
-                        peer.port,
-                        uint64(int(time.time())),
-                    )
-                ]
-                msg = Message(
-                    "respond_peers",
-                    full_node_protocol.RespondPeers(timestamped_peer),
-                )
+                timestamped_peer = [TimestampedPeerInfo(peer.host, peer.port, uint64(int(time.time())),)]
+                msg = Message("respond_peers", full_node_protocol.RespondPeers(timestamped_peer),)
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
             except Exception as e:
@@ -405,10 +377,7 @@ class FullNodePeers(FullNodeDiscovery):
             peers = await self.address_manager.get_peers()
             await self.add_peers_neighbour(peers, peer_info)
 
-            msg = Message(
-                "respond_peers",
-                full_node_protocol.RespondPeers(peers),
-            )
+            msg = Message("respond_peers", full_node_protocol.RespondPeers(peers),)
 
             return msg
         except Exception as e:
@@ -463,10 +432,7 @@ class FullNodePeers(FullNodeDiscovery):
                         self.neighbour_known_peers[pair].add(relay_peer.host)
                     if connection.peer_node_id is None:
                         continue
-                    msg = Message(
-                        "respond_peers",
-                        full_node_protocol.RespondPeers([relay_peer]),
-                    )
+                    msg = Message("respond_peers", full_node_protocol.RespondPeers([relay_peer]),)
                     await connection.send_message(msg)
             except Exception as e:
                 self.log.error(f"Exception in address relay: {e}")
@@ -475,23 +441,10 @@ class FullNodePeers(FullNodeDiscovery):
 
 class WalletPeers(FullNodeDiscovery):
     def __init__(
-        self,
-        server,
-        root_path,
-        target_outbound_count,
-        peer_db_path,
-        introducer_info,
-        peer_connect_interval,
-        log,
+        self, server, root_path, target_outbound_count, peer_db_path, introducer_info, peer_connect_interval, log,
     ):
         super().__init__(
-            server,
-            root_path,
-            target_outbound_count,
-            peer_db_path,
-            introducer_info,
-            peer_connect_interval,
-            log,
+            server, root_path, target_outbound_count, peer_db_path, introducer_info, peer_connect_interval, log,
         )
 
     async def start(self):

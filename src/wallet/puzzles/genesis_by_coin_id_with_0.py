@@ -18,9 +18,7 @@ def create_genesis_or_zero_coin_checker(genesis_coin_id: bytes32) -> Program:
     return genesis_coin_mod.curry(genesis_coin_id)
 
 
-def genesis_coin_id_for_genesis_coin_checker(
-    genesis_coin_checker: Program,
-) -> Optional[bytes32]:
+def genesis_coin_id_for_genesis_coin_checker(genesis_coin_checker: Program,) -> Optional[bytes32]:
     """
     Given a `genesis_coin_checker` program, pull out the genesis coin id.
     """

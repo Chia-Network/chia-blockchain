@@ -10,12 +10,7 @@ from src.util.ints import uint8, uint64
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from pytest import raises
 
-test_constants = DEFAULT_CONSTANTS.replace(
-    **{
-        "NUM_SPS_SUB_SLOT": 32,
-        "SUB_SLOT_TIME_TARGET": 300,
-    }
-)
+test_constants = DEFAULT_CONSTANTS.replace(**{"NUM_SPS_SUB_SLOT": 32, "SUB_SLOT_TIME_TARGET": 300})
 
 
 class TestPotIterations:
@@ -72,12 +67,7 @@ class TestPotIterations:
 
         # Overflow
         sp_iters = sp_interval_iters * (test_constants.NUM_SPS_SUB_SLOT - 1)
-        ip_iters = calculate_ip_iters(
-            test_constants,
-            ssi,
-            uint8(test_constants.NUM_SPS_SUB_SLOT - 1),
-            required_iters,
-        )
+        ip_iters = calculate_ip_iters(test_constants, ssi, uint8(test_constants.NUM_SPS_SUB_SLOT - 1), required_iters,)
         assert ip_iters == (sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters) % ssi
         assert sp_iters > ip_iters
 

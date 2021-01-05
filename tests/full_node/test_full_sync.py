@@ -104,8 +104,7 @@ class TestFullSync:
             await full_node_2.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
         await server_2.start_client(
-            PeerInfo("localhost", uint16(server_1._port)),
-            on_connect=full_node_2.full_node.on_connect,
+            PeerInfo("localhost", uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect,
         )
         await time_out_assert(60, node_height_at_least, True, full_node_2, num_blocks - 1)
 

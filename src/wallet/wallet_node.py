@@ -264,10 +264,7 @@ class WalletNode:
         for record in records:
             if record.spend_bundle is None:
                 continue
-            msg = Message(
-                "send_transaction",
-                wallet_protocol.SendTransaction(record.spend_bundle),
-            )
+            msg = Message("send_transaction", wallet_protocol.SendTransaction(record.spend_bundle),)
             messages.append(msg)
 
         return messages
@@ -305,10 +302,7 @@ class WalletNode:
         if self.server is None:
             return False
         if "full_node_peer" in self.config:
-            full_node_peer = PeerInfo(
-                self.config["full_node_peer"]["host"],
-                self.config["full_node_peer"]["port"],
-            )
+            full_node_peer = PeerInfo(self.config["full_node_peer"]["host"], self.config["full_node_peer"]["port"],)
             peers = [c.get_peer_info() for c in self.server.get_full_node_connections()]
             full_node_resolved = PeerInfo(socket.gethostbyname(full_node_peer.host), full_node_peer.port)
             if full_node_peer in peers or full_node_resolved in peers:
@@ -330,10 +324,9 @@ class WalletNode:
         for block in header_blocks:
             if block.is_block:
                 # Find additions and removals
-                (
-                    additions,
-                    removals,
-                ) = await self.wallet_state_manager.get_filter_additions_removals(block, block.transactions_filter)
+                (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
+                    block, block.transactions_filter
+                )
 
                 # Get Additions
                 added_coins = await self.get_additions(peer, block, additions)
@@ -348,11 +341,7 @@ class WalletNode:
             else:
                 hbr = HeaderBlockRecord(block, [], [])
                 header_block_records.append(hbr)
-            (
-                result,
-                error,
-                fork_h,
-            ) = await self.wallet_state_manager.blockchain.receive_block(hbr)
+            (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(hbr)
             if result == ReceiveBlockResult.NEW_PEAK:
                 self.wallet_state_manager.state_changed("new_block")
             elif result == ReceiveBlockResult.INVALID_BLOCK:
@@ -513,10 +502,9 @@ class WalletNode:
 
             if block_i.is_block:
                 # Find additions and removals
-                (
-                    additions,
-                    removals,
-                ) = await self.wallet_state_manager.get_filter_additions_removals(block_i, block_i.transactions_filter)
+                (additions, removals,) = await self.wallet_state_manager.get_filter_additions_removals(
+                    block_i, block_i.transactions_filter
+                )
 
                 # Get Additions
                 added_coins = await self.get_additions(peer, block_i, additions)
@@ -532,11 +520,7 @@ class WalletNode:
             else:
                 header_block_record = HeaderBlockRecord(block_i, [], [])
 
-            (
-                result,
-                error,
-                fork_h,
-            ) = await self.wallet_state_manager.blockchain.receive_block(header_block_record)
+            (result, error, fork_h,) = await self.wallet_state_manager.blockchain.receive_block(header_block_record)
             if result == ReceiveBlockResult.NEW_PEAK:
                 self.wallet_state_manager.state_changed("new_block")
                 self.log.info("New Peak")
@@ -571,32 +555,20 @@ class WalletNode:
                 coin_list_proof: Optional[bytes32] = proofs[i][2]
                 if len(coin_list_1) == 0:
                     # Verify exclusion proof for puzzle hash
-                    not_included = confirm_not_included_already_hashed(
-                        root,
-                        coins[i],
-                        puzzle_hash_proof,
-                    )
+                    not_included = confirm_not_included_already_hashed(root, coins[i], puzzle_hash_proof,)
                     if not_included is False:
                         return False
                 else:
                     try:
                         # Verify inclusion proof for coin list
-                        included = confirm_included_already_hashed(
-                            root,
-                            hash_coin_list(coin_list_1),
-                            coin_list_proof,
-                        )
+                        included = confirm_included_already_hashed(root, hash_coin_list(coin_list_1), coin_list_proof,)
                         if included is False:
                             return False
                     except AssertionError:
                         return False
                     try:
                         # Verify inclusion proof for puzzle hash
-                        included = confirm_included_already_hashed(
-                            root,
-                            coins[i][0],
-                            puzzle_hash_proof,
-                        )
+                        included = confirm_included_already_hashed(root, coins[i][0], puzzle_hash_proof,)
                         if included is False:
                             return False
                     except AssertionError:
@@ -631,22 +603,14 @@ class WalletNode:
                 coin = coins[i][1]
                 if coin is None:
                     # Verifies merkle proof of exclusion
-                    not_included = confirm_not_included_already_hashed(
-                        root,
-                        coins[i][0],
-                        proofs[i][1],
-                    )
+                    not_included = confirm_not_included_already_hashed(root, coins[i][0], proofs[i][1],)
                     if not_included is False:
                         return False
                 else:
                     # Verifies merkle proof of inclusion of coin name
                     if coins[i][0] != coin.name():
                         return False
-                    included = confirm_included_already_hashed(
-                        root,
-                        coin.name(),
-                        proofs[i][1],
-                    )
+                    included = confirm_included_already_hashed(root, coin.name(), proofs[i][1],)
                     if included is False:
                         return False
         return True
@@ -662,9 +626,7 @@ class WalletNode:
                 return None
             elif isinstance(additions_res, RespondAdditions):
                 validated = self.validate_additions(
-                    additions_res.coins,
-                    additions_res.proofs,
-                    block_i.foliage_block.additions_root,
+                    additions_res.coins, additions_res.proofs, block_i.foliage_block.additions_root,
                 )
                 if not validated:
                     await peer.close()
@@ -713,9 +675,7 @@ class WalletNode:
                 return None
             elif isinstance(removals_res, RespondRemovals):
                 validated = self.validate_removals(
-                    removals_res.coins,
-                    removals_res.proofs,
-                    block_i.foliage_block.removals_root,
+                    removals_res.coins, removals_res.proofs, block_i.foliage_block.removals_root,
                 )
                 if validated is False:
                     await peer.close()

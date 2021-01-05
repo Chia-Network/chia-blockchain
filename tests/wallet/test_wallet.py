@@ -88,9 +88,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
 
         tx = await wallet.generate_signed_transaction(
-            10,
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            0,
+            10, await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), 0,
         )
         await wallet.push_transaction(tx)
 
@@ -226,9 +224,7 @@ class TestWalletSimulator:
         assert await wallet_0.get_unconfirmed_balance() == funds
 
         tx = await wallet_0.generate_signed_transaction(
-            10,
-            await wallet_node_1.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            0,
+            10, await wallet_node_1.wallet_state_manager.main_wallet.get_new_puzzlehash(), 0,
         )
 
         await wallet_0.push_transaction(tx)
@@ -331,9 +327,7 @@ class TestWalletSimulator:
         tx_amount = 3200000000000
         tx_fee = 10
         tx = await wallet.generate_signed_transaction(
-            tx_amount,
-            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-            tx_fee,
+            tx_amount, await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(), tx_fee,
         )
 
         fees = tx.spend_bundle.fees()

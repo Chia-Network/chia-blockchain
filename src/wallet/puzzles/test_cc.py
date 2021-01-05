@@ -19,12 +19,8 @@ from src.wallet.cc_wallet.cc_utils import (
     spend_bundle_for_spendable_ccs,
     CC_MOD,
 )
-from src.wallet.puzzles.genesis_by_coin_id_with_0 import (
-    create_genesis_or_zero_coin_checker,
-)
-from src.wallet.puzzles.genesis_by_puzzle_hash_with_0 import (
-    create_genesis_puzzle_or_zero_coin_checker,
-)
+from src.wallet.puzzles.genesis_by_coin_id_with_0 import create_genesis_or_zero_coin_checker
+from src.wallet.puzzles.genesis_by_puzzle_hash_with_0 import create_genesis_puzzle_or_zero_coin_checker
 
 
 CONDITIONS = dict((k, bytes(v)[0]) for k, v in ConditionOpcode.__members__.items())
@@ -52,11 +48,7 @@ def int_as_bytes32(v: int) -> bytes32:
     return v.to_bytes(32, byteorder="big")
 
 
-def generate_farmed_coin(
-    block_index: int,
-    puzzle_hash: bytes32,
-    amount: int,
-) -> Coin:
+def generate_farmed_coin(block_index: int, puzzle_hash: bytes32, amount: int,) -> Coin:
     """
     Generate a (fake) coin which can be used as a starting point for a chain
     of coin tests.
@@ -65,11 +57,7 @@ def generate_farmed_coin(
 
 
 def issue_cc_from_farmed_coin(
-    mod_code: Program,
-    coin_checker_for_farmed_coin,
-    block_id: int,
-    inner_puzzle_hash: bytes32,
-    amount: int,
+    mod_code: Program, coin_checker_for_farmed_coin, block_id: int, inner_puzzle_hash: bytes32, amount: int,
 ) -> Tuple[Program, SpendBundle]:
     """
     This is an example of how to issue a cc.
@@ -149,10 +137,7 @@ def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n):
     inner_puzzle_solution = Program.to(output_conditions)
 
     spend_bundle = spend_bundle_for_spendable_ccs(
-        mod_code,
-        genesis_coin_checker,
-        spendable_cc_list,
-        [inner_puzzle_solution],
+        mod_code, genesis_coin_checker, spendable_cc_list, [inner_puzzle_solution],
     )
 
     debug_spend_bundle(spend_bundle)
@@ -173,12 +158,7 @@ def test_spend_through_n(mod_code, coin_checker_for_farmed_coin, n):
         solution_for_pay_to_any([(eve_inner_puzzle_hash, amount)] if amount else []) for amount in output_amounts
     ]
 
-    spend_bundle = spend_bundle_for_spendable_ccs(
-        mod_code,
-        genesis_coin_checker,
-        spendable_cc_list,
-        inner_solutions,
-    )
+    spend_bundle = spend_bundle_for_spendable_ccs(mod_code, genesis_coin_checker, spendable_cc_list, inner_solutions,)
 
     debug_spend_bundle(spend_bundle)
 

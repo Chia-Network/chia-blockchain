@@ -150,9 +150,7 @@ class TestBlockchainTransactions:
                 spend_coin = coin
 
         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
-        spend_bundle_double = wallet_a.generate_signed_transaction(
-            1000, receiver_puzzlehash, spend_coin
-        )
+        spend_bundle_double = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
 
         block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
 
@@ -202,11 +200,7 @@ class TestBlockchainTransactions:
 
         # Reorg at height 5, up to height 13
         new_blocks = bt.get_consecutive_blocks(
-            8,
-            blocks[:6],
-            farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
-            seed=b"another seed",
+            8, blocks[:6], farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True, seed=b"another seed",
         )
 
         print(f"Len: {len(new_blocks)} {new_blocks[-1].sub_block_height}")
@@ -219,7 +213,7 @@ class TestBlockchainTransactions:
             new_blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             guarantee_block=True,
-            transaction_data=spend_bundle
+            transaction_data=spend_bundle,
         )
 
         res, err, _ = await full_node_api_1.full_node.blockchain.receive_block(new_blocks[-1])
@@ -233,7 +227,7 @@ class TestBlockchainTransactions:
             new_blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             guarantee_block=True,
-            transaction_data=spend_bundle
+            transaction_data=spend_bundle,
         )
 
         res, err, _ = await full_node_api_1.full_node.blockchain.receive_block(new_blocks_double[-1])
@@ -247,7 +241,7 @@ class TestBlockchainTransactions:
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             guarantee_block=True,
             transaction_data=spend_bundle,
-            seed=b"spend at 12 is ok"
+            seed=b"spend at 12 is ok",
         )
         for block in new_blocks_reorg:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
@@ -259,7 +253,7 @@ class TestBlockchainTransactions:
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             guarantee_block=True,
             transaction_data=spend_bundle,
-            seed=b"spend at 13 is ok"
+            seed=b"spend at 13 is ok",
         )
         for block in new_blocks_reorg:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
@@ -271,10 +265,11 @@ class TestBlockchainTransactions:
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             guarantee_block=True,
             transaction_data=spend_bundle,
-            seed=b"spend at 14 is double spend"
+            seed=b"spend at 14 is double spend",
         )
         for block in new_blocks_reorg:
             await full_node_api_1.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
 
 #
 #     @pytest.mark.asyncio
