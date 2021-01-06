@@ -85,6 +85,7 @@ class FullNode:
         self.constants = consensus_constants
         self.pow_pending: Set[bytes32] = set()
         self.pow_creation: Dict[uint32, asyncio.Event] = {}
+        self.state_changed_callback: Optional[Callable] = None
 
         if name:
             self.log = logging.getLogger(name)
@@ -284,6 +285,7 @@ class FullNode:
         and challenges to timelords.
         """
 
+        self._state_changed("add_connection")
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.on_connect(connection))
 
@@ -321,8 +323,9 @@ class FullNode:
             elif connection.connection_type is NodeType.TIMELORD:
                 await self.send_peak_to_timelords()
 
-    async def _on_disconnect(self, connection: ws.WSChiaConnection):
+    def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_info()}")
+        self._state_changed("close_connection")
 
     def _num_needed_peers(self) -> int:
         assert self.server is not None

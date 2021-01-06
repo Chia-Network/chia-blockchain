@@ -37,12 +37,7 @@ class PeerInfo(Streamable):
             ip_v4 = ipaddress.IPv4Address(self.host)
             ip = ipaddress.IPv6Address(int(ipaddress.IPv6Address("2002::")) | (int(ip_v4) << 80))
         key = ip.packed
-        key += bytes(
-            [
-                self.port // 0x100,
-                self.port & 0x0FF,
-            ]
-        )
+        key += bytes([self.port // 0x100, self.port & 0x0FF])
         return key
 
     def get_group(self):

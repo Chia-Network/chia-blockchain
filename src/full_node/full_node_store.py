@@ -382,6 +382,11 @@ class FullNodeStore:
                     cc_vdf_info_expected,
                 ):
                     return False
+
+                if rc_vdf_info_expected.challenge != signage_point.rc_vdf.challenge:
+                    # This signage point is probably outdated
+                    return False
+
                 if not signage_point.rc_proof.is_valid(
                     self.constants,
                     ClassgroupElement.get_default_element(),

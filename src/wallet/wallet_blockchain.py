@@ -20,9 +20,7 @@ from src.types.unfinished_block import UnfinishedBlock
 from src.util.errors import Err
 from src.util.ints import uint32, uint64
 from src.consensus.find_fork_point import find_fork_point_in_chain
-from src.consensus.block_header_validation import (
-    validate_finished_header_block,
-)
+from src.consensus.block_header_validation import validate_finished_header_block
 from src.wallet.block_record import HeaderBlockRecord
 from src.wallet.wallet_coin_store import WalletCoinStore
 from src.wallet.wallet_block_store import WalletBlockStore

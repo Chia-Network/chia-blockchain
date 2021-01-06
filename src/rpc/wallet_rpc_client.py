@@ -21,12 +21,9 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {
-                    "host": "https://backup.chia.net",
-                    "fingerprint": fingerprint,
-                    "type": "start",
-                },
+                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "start"},
             )
+
         except ValueError as e:
             return e.args[0]
 
@@ -48,11 +45,7 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {
-                    "host": "https://backup.chia.net",
-                    "fingerprint": fingerprint,
-                    "type": "skip",
-                },
+                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "skip"},
             )
         except ValueError as e:
             return e.args[0]
