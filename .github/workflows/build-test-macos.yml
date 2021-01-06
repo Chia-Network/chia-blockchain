@@ -51,9 +51,10 @@ jobs:
         repository: 'Chia-Network/test-cache'
         path: '~/.chia'
 
-    - name: Find test-cache
+    - name: Link home directory
       run: |
-        ls -al $HOME
+        cd $HOME
+        ln -s $GITHUB_WORKSPACE/.chia
         echo "$HOME/.chia"
         ls -al $HOME/.chia
 

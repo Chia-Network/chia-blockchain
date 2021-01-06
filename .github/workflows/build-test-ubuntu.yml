@@ -57,11 +57,12 @@ jobs:
       uses: actions/checkout@v2
       with:
         repository: 'Chia-Network/test-cache'
-        path: '~/.chia'
+        path: '.chia'
 
-    - name: Find test-cache
+    - name: Link home directory
       run: |
-        ls -al $HOME
+        cd $HOME
+        ln -s $GITHUB_WORKSPACE/.chia
         echo "$HOME/.chia"
         ls -al $HOME/.chia
 
