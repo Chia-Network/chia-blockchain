@@ -9,7 +9,7 @@ export const defaultPlotSize: PlotSize = {
   label: '101.4GiB',
   value: 32,
   workspace: '332GiB',
-  defaultRam: 4072,
+  defaultRam: 4608,
 };
 
 const plotSizes: PlotSize[] = [
@@ -21,10 +21,10 @@ const plotSizes: PlotSize[] = [
   { label: '23.8GiB', value: 30, workspace: '83GiB', defaultRam: 1024 },
   { label: '49.1GiB', value: 31, workspace: '165GiB', defaultRam: 2036 },
   defaultPlotSize,
-  { label: '208.8GiB', value: 33, workspace: '589GiB', defaultRam: 7168 },
+  { label: '208.8GiB', value: 33, workspace: '589GiB', defaultRam: 9216 },
   // workspace are guesses using 55.35% - rounded up - past here
-  { label: '429.8GiB', value: 34, workspace: '1177GiB', defaultRam: 14336 },
-  { label: '884.1GiB', value: 35, workspace: '2355GiB', defaultRam: 28672 },
+  { label: '429.8GiB', value: 34, workspace: '1177GiB', defaultRam: 18432 },
+  { label: '884.1GiB', value: 35, workspace: '2355GiB', defaultRam: 36864 },
 ];
 
 export const plotSizeOptions = plotSizes.map((item) => ({
