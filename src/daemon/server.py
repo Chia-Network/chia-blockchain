@@ -17,6 +17,7 @@ from src.cmds.init import chia_init
 from src.daemon.windows_signal import kill
 from src.server.server import ssl_context_for_server
 from src.server.ssl_context import load_ssl_paths
+from src.util.setproctitle import setproctitle
 from src.util.ws_message import format_response, create_payload
 from src.util.json_util import dict_to_json_str
 from src.util.config import load_config
@@ -845,6 +846,8 @@ def singleton(lockfile, text="semaphore"):
 async def async_run_daemon(root_path):
     chia_init(root_path)
     config = load_config(root_path, "config.yaml")
+    proctitle_name = f"chia_daemon"
+    setproctitle(proctitle_name)
     initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
     cert_path, key_path = load_ssl_paths(root_path, config)
