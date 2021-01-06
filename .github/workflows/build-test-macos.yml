@@ -51,6 +51,11 @@ jobs:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
 
+    - name: Find test-cache
+      run: |
+        ls -al
+        ls -al .chia
+
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}

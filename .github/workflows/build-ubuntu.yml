@@ -59,6 +59,11 @@ jobs:
         repository: 'Chia-Network/test-cache'
         path: '.chia'
 
+    - name: Find test-cache
+      run: |
+        ls -al
+        ls -al .chia
+
     - name: Install ubuntu dependencies
       run: |
         sudo apt-get install software-properties-common
