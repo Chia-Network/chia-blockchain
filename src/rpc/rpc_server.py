@@ -45,6 +45,7 @@ class RpcServer:
         if self.websocket is None:
             return
         payloads: List[Dict] = await self.rpc_api._state_changed(*args)
+        log.error(f"State changed: {change}")
 
         if change == "add_connection" or change == "close_connection":
             data = await self.get_connections({})

@@ -97,10 +97,7 @@ class FullNodeRpcApi:
                 uint32(max(1, full_peak.sub_block_height - 1000))
             ].hex()
             space = await self.get_network_space(
-                {
-                    "newer_block_header_hash": newer_block_hex,
-                    "older_block_header_hash": older_block_hex,
-                }
+                {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
             )
         else:
             space = {"space": uint128(0)}

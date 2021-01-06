@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import time
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable
 from src.types.sized_bytes import bytes32
 from src.server.server import ChiaServer
 
@@ -15,6 +15,7 @@ class Introducer:
         self._shut_down = False
         self.server: Optional[ChiaServer] = None
         self.log = logging.getLogger(__name__)
+        self.state_changed_callback: Optional[Callable] = None
 
     async def _start(self):
         self._vetting_task = asyncio.create_task(self._vetting_loop())

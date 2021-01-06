@@ -11,9 +11,7 @@ from aiohttp import web, ClientTimeout, client_exceptions, ClientSession
 
 from src.server.introducer_peers import IntroducerPeers
 from src.server.outbound_message import NodeType, Message, Payload
-from src.server.ssl_context import (
-    load_ssl_paths,
-)
+from src.server.ssl_context import load_ssl_paths
 from src.server.ws_connection import WSChiaConnection
 from src.types.peer_info import PeerInfo
 from src.types.sized_bytes import bytes32
@@ -49,6 +47,7 @@ class ChiaServer:
     def __init__(
         self,
         port: int,
+        node: Any,
         api: Any,
         local_type: NodeType,
         ping_interval: int,
@@ -78,7 +77,7 @@ class ChiaServer:
         # Open connection tasks. These will be cancelled if
         self._oc_tasks: List[asyncio.Task] = []
 
-        # Taks list to keep references to tasks, so they don'y get GCd
+        # Taks list to keep references to tasks, so they don't get GCd
         self._tasks: List[asyncio.Task] = []
 
         if name:
@@ -89,6 +88,7 @@ class ChiaServer:
         # Our unique random node id that we will send to other peers, regenerated on launch
         self.node_id = create_node_id()
         self.api = api
+        self.node = node
         self.root_path = root_path
         self.config = config
         self.on_connect: Optional[Callable] = None
@@ -293,6 +293,9 @@ class ChiaServer:
                 self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
         else:
             self.log.error(f"Invalid connection type for connection {connection}, while closing")
+        on_disconnect = getattr(self.node, "on_disconnect", None)
+        if on_disconnect is not None:
+            on_disconnect(connection)
 
     async def incoming_api_task(self):
         self.tasks = set()

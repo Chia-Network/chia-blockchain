@@ -31,6 +31,10 @@ from src.util.errors import Err
 from src.util.hash import std_hash
 from src.util.ints import uint64, uint32
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 async def validate_block_body(
     constants: ConsensusConstants,
@@ -232,6 +236,7 @@ async def validate_block_body(
                 additions_since_fork[c.name()] = (c, curr.sub_block_height)
 
             for coinbase_coin in curr.get_included_reward_coins():
+                additions_since_fork[coinbase_coin.name()] = (coinbase_coin, curr.sub_block_height)
                 coinbases_since_fork[coinbase_coin.name()] = curr.sub_block_height
             if curr.sub_block_height == 0:
                 break

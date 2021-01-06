@@ -4,7 +4,7 @@ import io
 import logging
 import time
 import traceback
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Callable
 
 from chiavdf import create_discriminant
 
@@ -21,9 +21,7 @@ from src.timelord.timelord_state import LastState
 from src.timelord.types import Chain, IterationType, StateType
 from src.types.classgroup import ClassgroupElement
 from src.types.end_of_slot_bundle import EndOfSubSlotBundle
-from src.types.reward_chain_sub_block import (
-    RewardChainSubBlock,
-)
+from src.types.reward_chain_sub_block import RewardChainSubBlock
 from src.types.sized_bytes import bytes32
 from src.types.slots import (
     ChallengeChainSubSlot,
@@ -85,6 +83,7 @@ class Timelord:
         self.vdf_failures_count: int = 0
         self.total_unfinished: int = 0
         self.total_infused: int = 0
+        self.state_changed_callback: Optional[Callable] = None
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()

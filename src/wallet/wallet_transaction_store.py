@@ -71,7 +71,8 @@ class WalletTransactionStore:
         return self
 
     async def _init_cache(self):
-        print("init cache here")
+        # init cache here
+        pass
 
     async def _clear_database(self):
         cursor = await self.db_connection.execute("DELETE FROM transaction_record")

@@ -1,6 +1,9 @@
 import asyncio
 import time
+import logging
 from typing import Callable
+
+log = logging.getLogger(__name__)
 
 
 async def time_out_assert_custom_interval(timeout: int, interval, function, value=True, *args, **kwargs):
@@ -40,7 +43,7 @@ def time_out_messages(incoming_queue: asyncio.Queue, msg_name: str, count: int =
         for _ in range(count):
             response = (await incoming_queue.get())[0].msg.function
             if response != msg_name:
-                print(f"Error, found {response} instead of {msg_name}")
+                log.error(f"Error, found {response} instead of {msg_name}")
                 return False
         return True
 

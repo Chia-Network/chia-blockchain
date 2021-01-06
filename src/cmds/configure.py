@@ -1,4 +1,7 @@
-from src.util.config import load_config, save_config
+from src.util.config import (
+    load_config,
+    save_config,
+)
 from argparse import ArgumentParser
 from typing import Dict
 from src.util.default_root import DEFAULT_ROOT_PATH

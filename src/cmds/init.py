@@ -237,6 +237,7 @@ def chia_init(root_path: Path):
     DO_NOT_MIGRATE_SETTINGS: List[str] = [
         "full_node.introducer_peer",
         "wallet.introducer_peer",
+        "wallet.full_node_peer",
         "full_node.database_path",
         "wallet.database_path",
         "full_node.simulator_database_path",

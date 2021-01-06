@@ -16,9 +16,7 @@ from src.consensus.deficit import calculate_deficit
 
 from src.cmds.init import create_default_chia_config, initialize_ssl
 from src.cmds.plots import create_plots
-from src.consensus.coinbase import (
-    create_puzzlehash_for_pk,
-)
+from src.consensus.coinbase import create_puzzlehash_for_pk
 from src.consensus.constants import ConsensusConstants
 from src.consensus.pot_iterations import (
     calculate_ip_iters,
@@ -246,7 +244,7 @@ class BlockTools:
                 timestamp=uint64(int(time.time())),
                 farmer_reward_puzzle_hash=farmer_reward_puzzle_hash,
             )
-            print(f"Created block 0 iters: {genesis.total_iters}")
+            log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
             block_list = [genesis]
             num_blocks -= 1
@@ -384,7 +382,7 @@ class BlockTools:
                         sub_blocks_added_this_sub_slot += 1
 
                         sub_blocks[full_block.header_hash] = sub_block_record
-                        print(
+                        log.info(
                             f"Created block {sub_block_record.sub_block_height} ove=False, iters "
                             f"{sub_block_record.total_iters}"
                         )
@@ -456,7 +454,7 @@ class BlockTools:
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
-                print("Sub epoch summary:", sub_epoch_summary)
+                log.info(f"Sub epoch summary: {sub_epoch_summary}")
             else:
                 ses_hash = None
                 new_sub_slot_iters = None
@@ -518,7 +516,7 @@ class BlockTools:
             if transaction_data_included:
                 transaction_data = None
             sub_slots_finished += 1
-            print(
+            log.info(
                 f"Sub slot finished. Sub-blocks included: {sub_blocks_added_this_sub_slot} sub_blocks_per_slot: "
                 f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
             )
@@ -597,7 +595,7 @@ class BlockTools:
 
                         block_list.append(full_block)
                         sub_blocks_added_this_sub_slot += 1
-                        print(
+                        log.info(
                             f"Created block {sub_block_record.sub_block_height } ov=True, iters "
                             f"{sub_block_record.total_iters}"
                         )

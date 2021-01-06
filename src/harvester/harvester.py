@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import src.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, Optional, Tuple, List, Callable, Set
@@ -51,6 +52,7 @@ class Harvester:
         self.constants = constants
         self.cached_challenges = []
         self.log = log
+        self.state_changed_callback: Optional[Callable] = None
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -68,6 +70,10 @@ class Harvester:
     def _state_changed(self, change: str):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change)
+
+    def on_disconnect(self, connection: ws.WSChiaConnection):
+        self.log.info(f"peer disconnected {connection.get_peer_info()}")
+        self._state_changed("close_connection")
 
     def get_plots(self) -> Tuple[List[Dict], List[str], List[str]]:
         response_plots: List[Dict] = []

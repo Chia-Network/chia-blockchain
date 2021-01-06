@@ -75,7 +75,6 @@ class TestRpc:
             await time_out_assert(15, have_connections, True)
 
             assert (await client.get_signage_point(std_hash(b"2"))) is None
-            print(await client.get_signage_points())
             assert len(await client.get_signage_points()) == 0
 
             async def have_signage_points():
@@ -119,7 +118,6 @@ class TestRpc:
             res_2 = await client_2.get_plots()
             assert len(res_2["plots"]) == num_plots
 
-            print(await client_2.get_plot_directories())
             assert len(await client_2.get_plot_directories()) == 1
 
             await client_2.add_plot_directory(str(plot_dir))
@@ -134,7 +132,6 @@ class TestRpc:
             assert len(res_3["plots"]) == num_plots
 
             await client_2.remove_plot_directory(str(plot_dir))
-            print(await client_2.get_plot_directories())
             assert len(await client_2.get_plot_directories()) == 1
 
         finally:

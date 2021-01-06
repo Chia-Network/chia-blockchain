@@ -2,6 +2,7 @@ import time
 from typing import Callable
 
 from blspy import AugSchemeMPL, G2Element
+import src.server.ws_connection as ws
 
 from src.consensus.pot_iterations import (
     calculate_iterations_quality,
@@ -12,7 +13,7 @@ from src.protocols import harvester_protocol, farmer_protocol
 from src.server.outbound_message import Message, NodeType
 from src.types.pool_target import PoolTarget
 from src.types.proof_of_space import ProofOfSpace
-from src.util.api_decorators import api_request
+from src.util.api_decorators import api_request, peer_required
 from src.util.ints import uint32, uint64
 
 
@@ -26,7 +27,10 @@ class FarmerAPI:
         self.farmer.state_changed_callback = callback
 
     @api_request
-    async def new_proof_of_space(self, new_proof_of_space: harvester_protocol.NewProofOfSpace):
+    @peer_required
+    async def new_proof_of_space(
+        self, new_proof_of_space: harvester_protocol.NewProofOfSpace, peer: ws.WSChiaConnection
+    ):
         """
         This is a response from the harvester, for a NewChallenge. Here we check if the proof
         of space is sufficiently good, and if so, we ask for the whole proof.
@@ -100,11 +104,11 @@ class FarmerAPI:
                 new_proof_of_space.plot_identifier,
                 new_proof_of_space.challenge_hash,
                 new_proof_of_space.sp_hash,
+                peer.peer_node_id,
             )
             self.farmer.cache_add_time[computed_quality_string] = uint64(int(time.time()))
 
-            msg = Message("request_signatures", request)
-            await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
+            return Message("request_signatures", request)
 
     @api_request
     async def respond_signatures(self, response: harvester_protocol.RespondSignatures):
@@ -250,20 +254,15 @@ class FarmerAPI:
             self.farmer.log.error(f"Do not have quality string {full_node_request.quality_string}")
             return
 
-        (
-            plot_identifier,
-            challenge_hash,
-            sp_hash,
-        ) = self.farmer.quality_str_to_identifiers[full_node_request.quality_string]
+        (plot_identifier, challenge_hash, sp_hash, node_id) = self.farmer.quality_str_to_identifiers[
+            full_node_request.quality_string
+        ]
         request = harvester_protocol.RequestSignatures(
             plot_identifier,
             challenge_hash,
             sp_hash,
-            [
-                full_node_request.foliage_sub_block_hash,
-                full_node_request.foliage_block_hash,
-            ],
+            [full_node_request.foliage_sub_block_hash, full_node_request.foliage_block_hash],
         )
 
         msg = Message("request_signatures", request)
-        await self.farmer.server.send_to_all([msg], NodeType.HARVESTER)
+        await self.farmer.server.send_to_specific([msg], node_id)

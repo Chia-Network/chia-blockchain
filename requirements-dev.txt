@@ -1,4 +1,4 @@
-black>=19.10b0
+black>=20.8b1
 # black Dependencies
 appdirs~=1.4.4
 attrs>=18.1.0
