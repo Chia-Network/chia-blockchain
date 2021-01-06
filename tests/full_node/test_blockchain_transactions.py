@@ -490,7 +490,6 @@ class TestBlockchainTransactions:
             bad_spend_coin.name(),
             None,
         )
-        print(f"Bad spend coin {bad_spend_coin}, spend coin: {spend_coin}")
 
         bad_dic = {bad_cvp.opcode: [bad_cvp]}
         bad_spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin, bad_dic)
