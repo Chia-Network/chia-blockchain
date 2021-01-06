@@ -509,34 +509,45 @@ class TestFullNodeProtocol:
         assert msg is not None
         assert msg.data == fnp.RespondTransaction(spend_bundle)
 
-    # @pytest.mark.asyncio
-    # async def test_respond_transaction_fail(self, two_nodes, wallet_blocks):
-    #     full_node_1, full_node_2, server_1, server_2 = two_nodes
-    #     wallet_a, wallet_receiver, blocks = wallet_blocks
-    #
-    #     incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
-    #
-    #     tx_id = token_bytes(32)
-    #     request_transaction = fnp.RequestTransaction(tx_id)
-    #     msg = await full_node_1.request_transaction(request_transaction)
-    #     assert msg is None
-    #
-    #     receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
-    #
-    #     # Invalid transaction does not propagate
-    #     spend_bundle = wallet_a.generate_signed_transaction(
-    #         100000000000000,
-    #         receiver_puzzlehash,
-    #         blocks[3].get_coinbase(),
-    #     )
-    #     while incoming_queue.qsize() > 0:
-    #         await incoming_queue.get()
-    #     assert spend_bundle is not None
-    #     respond_transaction = fnp.RespondTransaction(spend_bundle)
-    #     msg = await full_node_1.respond_transaction(respond_transaction)
-    #     assert msg is None
-    #     await asyncio.sleep(1)
-    #     assert incoming_queue.qsize() == 0
+    @pytest.mark.asyncio
+    async def test_respond_transaction_fail(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+        cb_ph = wallet_a.get_new_puzzlehash()
+
+        incoming_queue, dummy_node_id = await add_dummy_connection(server_1, 12312)
+        peer = await connect_and_get_peer(server_1, server_2)
+
+        tx_id = token_bytes(32)
+        request_transaction = fnp.RequestTransaction(tx_id)
+        msg = await full_node_1.request_transaction(request_transaction)
+        assert msg is None
+
+        receiver_puzzlehash = wallet_receiver.get_new_puzzlehash()
+
+        blocks_new = bt.get_consecutive_blocks(
+            2,
+            block_list_input=blocks,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=cb_ph,
+            pool_reward_puzzle_hash=cb_ph,
+        )
+
+        # Invalid transaction does not propagate
+        spend_bundle = wallet_a.generate_signed_transaction(
+            100000000000000,
+            receiver_puzzlehash,
+            list(blocks_new[-1].get_included_reward_coins())[0],
+        )
+        while incoming_queue.qsize() > 0:
+            await incoming_queue.get()
+        assert spend_bundle is not None
+        respond_transaction = fnp.RespondTransaction(spend_bundle)
+        msg = await full_node_1.respond_transaction(respond_transaction, peer)
+        assert msg is None
+
+        await asyncio.sleep(1)
+        assert incoming_queue.qsize() == 0
 
     # @pytest.mark.asyncio
     # async def test_new_unfinished(self, two_nodes, wallet_blocks):
