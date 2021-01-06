@@ -846,8 +846,7 @@ def singleton(lockfile, text="semaphore"):
 async def async_run_daemon(root_path):
     chia_init(root_path)
     config = load_config(root_path, "config.yaml")
-    proctitle_name = f"chia_daemon"
-    setproctitle(proctitle_name)
+    setproctitle("chia_daemon")
     initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
     cert_path, key_path = load_ssl_paths(root_path, config)
