@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Button, Paper, TableRow, Table, TableBody, TableCell, TableContainer } from '@material-ui/core';
 import { Alert } from '@material-ui/lab';
 import { Trans } from '@lingui/macro';
+import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useParams, useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { Card, Loading, TooltipIcon, Flex } from '@chia/core';
@@ -84,6 +85,10 @@ export default function Block() {
     if (prevBlockHash) {
       history.push(`/dashboard/block/${prevBlockHash}`);
     }
+  }
+
+  function handleGoBack() {
+    history.push('/dashboard');
   }
 
   if (loading) {
@@ -273,10 +278,17 @@ export default function Block() {
     >
       <Card
         title={(
-          <Trans id="Block.description">
-            Block at height {blockRecord.height} in the Chia
-            blockchain
-          </Trans>
+          <Flex gap={1} alignItems="center">
+            <ArrowBackIosIcon onClick={handleGoBack}>
+              {' '}
+            </ArrowBackIosIcon>
+            <span>
+              <Trans id="Block.description">
+                Block at height {blockRecord.height} in the Chia
+                blockchain
+              </Trans>
+            </span>
+          </Flex>
         )}
         action={hasPreviousBlock ? (
           <Button onClick={handleShowPreviousBlock}>
