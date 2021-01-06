@@ -39,11 +39,7 @@ def make_parser(parser):
     )
 
     parser.add_argument(
-        "-b",
-        "--sub-block-by-header-hash",
-        help="Look up a sub-block by block header hash.",
-        type=str,
-        default="",
+        "-b", "--sub-block-by-header-hash", help="Look up a sub-block by block header hash.", type=str, default="",
     )
 
     parser.add_argument(
@@ -55,28 +51,15 @@ def make_parser(parser):
     )
 
     parser.add_argument(
-        "-a",
-        "--add-connection",
-        help="Connect to another Full Node by ip:port",
-        type=str,
-        default="",
+        "-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="",
     )
 
     parser.add_argument(
-        "-r",
-        "--remove-connection",
-        help="Remove a Node by the first 10 characters of NodeID",
-        type=str,
-        default="",
+        "-r", "--remove-connection", help="Remove a Node by the first 10 characters of NodeID", type=str, default="",
     )
 
     parser.add_argument(
-        "-e",
-        "--exit-node",
-        help="Shut down the running Full Node",
-        nargs="?",
-        const=True,
-        default=False,
+        "-e", "--exit-node", help="Shut down the running Full Node", nargs="?", const=True, default=False,
     )
 
     parser.add_argument(

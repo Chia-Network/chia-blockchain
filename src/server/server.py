@@ -124,12 +124,7 @@ class ChiaServer:
         require_cert = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
         ssl_context = ssl_context_for_server(self._private_cert_path, self._private_key_path, require_cert)
         if self._local_type not in [NodeType.WALLET, NodeType.HARVESTER]:
-            self.site = web.TCPSite(
-                self.runner,
-                port=self._port,
-                shutdown_timeout=3,
-                ssl_context=ssl_context,
-            )
+            self.site = web.TCPSite(self.runner, port=self._port, shutdown_timeout=3, ssl_context=ssl_context,)
             await self.site.start()
             self.log.info(f"Started listening on port: {self._port}")
 
@@ -152,11 +147,7 @@ class ChiaServer:
                 close_event,
             )
             handshake = await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self.node_id,
-                self._port,
-                self._local_type,
+                self._network_id, protocol_version, self.node_id, self._port, self._local_type,
             )
 
             assert handshake is True
@@ -192,11 +183,7 @@ class ChiaServer:
             self.log.error(f"Invalid connection type for connection {connection}")
 
     async def start_client(
-        self,
-        target_node: PeerInfo,
-        on_connect: Callable = None,
-        auth: bool = False,
-        is_feeler: bool = False,
+        self, target_node: PeerInfo, on_connect: Callable = None, auth: bool = False, is_feeler: bool = False,
     ) -> bool:
         """
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
@@ -248,11 +235,7 @@ class ChiaServer:
                     session=session,
                 )
                 handshake = await connection.perform_handshake(
-                    self._network_id,
-                    protocol_version,
-                    self.node_id,
-                    self._port,
-                    self._local_type,
+                    self._network_id, protocol_version, self.node_id, self._port, self._local_type,
                 )
                 assert handshake is True
                 await self.connection_added(connection, on_connect)
@@ -346,10 +329,7 @@ class ChiaServer:
             asyncio.create_task(api_call(payload_inc, connection_inc))
 
     async def send_to_others(
-        self,
-        messages: List[Message],
-        node_type: NodeType,
-        origin_peer: WSChiaConnection,
+        self, messages: List[Message], node_type: NodeType, origin_peer: WSChiaConnection,
     ):
         for node_id, connection in self.all_connections.items():
             if node_id == origin_peer.peer_node_id:

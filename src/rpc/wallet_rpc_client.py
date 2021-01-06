@@ -20,9 +20,9 @@ class WalletRpcClient(RpcClient):
     async def log_in(self, fingerprint: int) -> Dict:
         try:
             return await self.fetch(
-                "log_in",
-                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "start"},
+                "log_in", {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "start"},
             )
+
         except ValueError as e:
             return e.args[0]
 
@@ -43,8 +43,7 @@ class WalletRpcClient(RpcClient):
     async def log_in_and_skip(self, fingerprint: int) -> Dict:
         try:
             return await self.fetch(
-                "log_in",
-                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "skip"},
+                "log_in", {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "skip"},
             )
         except ValueError as e:
             return e.args[0]
@@ -86,20 +85,11 @@ class WalletRpcClient(RpcClient):
         return (await self.fetch("get_wallet_balance", {"wallet_id": wallet_id}))["wallet_balance"]
 
     async def get_transaction(self, wallet_id: str, transaction_id: bytes32) -> TransactionRecord:
-        res = await self.fetch(
-            "get_transaction",
-            {"walled_id": wallet_id, "transaction_id": transaction_id.hex()},
-        )
+        res = await self.fetch("get_transaction", {"walled_id": wallet_id, "transaction_id": transaction_id.hex()},)
         return TransactionRecord.from_json_dict(res["transaction"])
 
-    async def get_transactions(
-        self,
-        wallet_id: str,
-    ) -> List[TransactionRecord]:
-        res = await self.fetch(
-            "get_transactions",
-            {"wallet_id": wallet_id},
-        )
+    async def get_transactions(self, wallet_id: str,) -> List[TransactionRecord]:
+        res = await self.fetch("get_transactions", {"wallet_id": wallet_id},)
         reverted_tx: List[TransactionRecord] = []
         for modified_tx in res["transactions"]:
             # Server returns address instead of ph, but TransactionRecord requires ph
@@ -116,8 +106,7 @@ class WalletRpcClient(RpcClient):
     ) -> TransactionRecord:
 
         res = await self.fetch(
-            "send_transaction",
-            {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee},
+            "send_transaction", {"wallet_id": wallet_id, "amount": amount, "address": address, "fee": fee},
         )
         return TransactionRecord.from_json_dict(res["transaction"])
 

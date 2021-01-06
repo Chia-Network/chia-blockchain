@@ -71,8 +71,7 @@ async def setup_full_node(
         kwargs = service_kwargs_for_full_node(bt.root_path, config, consensus_constants)
 
     kwargs.update(
-        parse_cli_args=False,
-        connect_to_daemon=False,
+        parse_cli_args=False, connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
@@ -129,8 +128,7 @@ async def setup_wallet_node(
 
     kwargs = service_kwargs_for_wallet(bt.root_path, config, consensus_constants, keychain)
     kwargs.update(
-        parse_cli_args=False,
-        connect_to_daemon=False,
+        parse_cli_args=False, connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
@@ -167,9 +165,7 @@ async def setup_harvester(port, farmer_port, consensus_constants: ConsensusConst
 
 
 async def setup_farmer(
-    port,
-    consensus_constants: ConsensusConstants,
-    full_node_port: Optional[uint16] = None,
+    port, consensus_constants: ConsensusConstants, full_node_port: Optional[uint16] = None,
 ):
     config = bt.config["farmer"]
     config_pool = bt.config["pool"]
@@ -187,8 +183,7 @@ async def setup_farmer(
 
     kwargs = service_kwargs_for_farmer(bt.root_path, config, config_pool, bt.keychain, consensus_constants)
     kwargs.update(
-        parse_cli_args=False,
-        connect_to_daemon=False,
+        parse_cli_args=False, connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
@@ -202,14 +197,9 @@ async def setup_farmer(
 
 
 async def setup_introducer(port):
-    kwargs = service_kwargs_for_introducer(
-        bt.root_path,
-        bt.config["introducer"],
-    )
+    kwargs = service_kwargs_for_introducer(bt.root_path, bt.config["introducer"],)
     kwargs.update(
-        advertised_port=port,
-        parse_cli_args=False,
-        connect_to_daemon=False,
+        advertised_port=port, parse_cli_args=False, connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
@@ -248,8 +238,7 @@ async def setup_timelord(port, full_node_port, sanitizer, consensus_constants: C
 
     kwargs = service_kwargs_for_timelord(bt.root_path, config, consensus_constants)
     kwargs.update(
-        parse_cli_args=False,
-        connect_to_daemon=False,
+        parse_cli_args=False, connect_to_daemon=False,
     )
 
     service = Service(**kwargs)
@@ -295,10 +284,7 @@ async def setup_node_and_wallet(consensus_constants: ConsensusConstants, startin
 
 
 async def setup_simulators_and_wallets(
-    simulator_count: int,
-    wallet_count: int,
-    dic: Dict,
-    starting_height=None,
+    simulator_count: int, wallet_count: int, dic: Dict, starting_height=None,
 ):
     simulators: List[FullNodeAPI] = []
     wallets = []
@@ -315,13 +301,7 @@ async def setup_simulators_and_wallets(
     for index in range(0, wallet_count):
         seed = bytes(uint32(index))
         port = 55000 + index
-        wlt = setup_wallet_node(
-            port,
-            consensus_constants,
-            None,
-            key_seed=seed,
-            starting_height=starting_height,
-        )
+        wlt = setup_wallet_node(port, consensus_constants, None, key_seed=seed, starting_height=starting_height,)
         wallets.append(await wlt.__anext__())
         node_iters.append(wlt)
 

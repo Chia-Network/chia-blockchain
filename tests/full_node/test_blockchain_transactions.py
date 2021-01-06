@@ -200,11 +200,7 @@ class TestBlockchainTransactions:
 
         # Reorg at height 5, add up to and including height 12
         new_blocks = bt.get_consecutive_blocks(
-            7,
-            blocks[:6],
-            farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            guarantee_block=True,
-            seed=b"another seed",
+            7, blocks[:6], farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_block=True, seed=b"another seed",
         )
 
         for block in new_blocks:

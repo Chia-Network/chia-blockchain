@@ -30,11 +30,7 @@ from src.wallet.chialisp import (
 
 
 def rl_puzzle_for_pk(
-    pubkey: bytes,
-    rate_amount: uint64,
-    interval_time: uint64,
-    origin_id: bytes32,
-    clawback_pk: bytes,
+    pubkey: bytes, rate_amount: uint64, interval_time: uint64, origin_id: bytes32, clawback_pk: bytes,
 ):
     """
     Solution to this puzzle must be in format:
@@ -60,20 +56,13 @@ def rl_puzzle_for_pk(
 
     TEMPLATE_MY_PARENT_ID = sha256(args(6), args(1), args(7))
     TEMPLATE_SINGLETON_RL = make_if(
-        iff(
-            equal(TEMPLATE_MY_PARENT_ID, args(0)),
-            quote(1),
-            equal(args(0), hexstr(origin_id)),
-        ),
+        iff(equal(TEMPLATE_MY_PARENT_ID, args(0)), quote(1), equal(args(0), hexstr(origin_id)),),
         sexp(),
         fail(quote("Parent doesnt satisfy RL conditions")),
     )
     TEMPLATE_BLOCK_AGE = make_if(
         iff(
-            equal(
-                multiply(args(5), quote(rate_amount)),
-                multiply(args(4), quote(interval_time)),
-            ),
+            equal(multiply(args(5), quote(rate_amount)), multiply(args(4), quote(interval_time)),),
             quote(1),
             quote(
                 greater(
@@ -91,28 +80,13 @@ def rl_puzzle_for_pk(
     CREATE_NEW_COIN = make_list(hexstr(opcode_create), args(3), args(4))
     RATE_LIMIT_PUZZLE = make_if(
         TEMPLATE_SINGLETON_RL,
-        make_list(
-            TEMPLATE_SINGLETON_RL,
-            TEMPLATE_BLOCK_AGE,
-            CREATE_CHANGE,
-            TEMPLATE_MY_ID,
-            CREATE_NEW_COIN,
-        ),
-        make_list(
-            TEMPLATE_BLOCK_AGE,
-            CREATE_CHANGE,
-            TEMPLATE_MY_ID,
-            CREATE_NEW_COIN,
-        ),
+        make_list(TEMPLATE_SINGLETON_RL, TEMPLATE_BLOCK_AGE, CREATE_CHANGE, TEMPLATE_MY_ID, CREATE_NEW_COIN,),
+        make_list(TEMPLATE_BLOCK_AGE, CREATE_CHANGE, TEMPLATE_MY_ID, CREATE_NEW_COIN,),
     )
 
     TEMPLATE_MY_PARENT_ID_2 = sha256(args(8), args(1), args(7))
     TEMPLATE_SINGLETON_RL_2 = make_if(
-        iff(
-            equal(TEMPLATE_MY_PARENT_ID_2, args(5)),
-            quote(1),
-            equal(hexstr(origin_id), args(5)),
-        ),
+        iff(equal(TEMPLATE_MY_PARENT_ID_2, args(5)), quote(1), equal(hexstr(origin_id), args(5)),),
         sexp(),
         fail(quote("Parent doesnt satisfy RL conditions")),
     )
@@ -123,38 +97,22 @@ def rl_puzzle_for_pk(
         sha256tree(
             make_list(
                 quote(7),
-                make_list(
-                    quote(5),
-                    make_list(quote(1), sha256(args(2), args(3), args(4))),
-                    quote(make_list()),
-                ),
+                make_list(quote(5), make_list(quote(1), sha256(args(2), args(3), args(4))), quote(make_list()),),
             )
         ),  # why?
         quote(0),
     )
     MODE_TWO = make_if(
         TEMPLATE_SINGLETON_RL_2,
-        make_list(
-            TEMPLATE_SINGLETON_RL_2,
-            MODE_TWO_ME_STRING,
-            CREATE_LOCK,
-            CREATE_CONSOLIDATED,
-        ),
+        make_list(TEMPLATE_SINGLETON_RL_2, MODE_TWO_ME_STRING, CREATE_LOCK, CREATE_CONSOLIDATED,),
         make_list(MODE_TWO_ME_STRING, CREATE_LOCK, CREATE_CONSOLIDATED),
     )
     AGGSIG_ENTIRE_SOLUTION = make_list(hexstr(opcode_aggsig), hexstr(hex_pk), sha256tree(args()))
     WHOLE_PUZZLE = cons(
         AGGSIG_ENTIRE_SOLUTION,
-        make_if(
-            equal(args(0), quote(1)),
-            eval(quote(RATE_LIMIT_PUZZLE), rest(args())),
-            MODE_TWO,
-        ),
+        make_if(equal(args(0), quote(1)), eval(quote(RATE_LIMIT_PUZZLE), rest(args())), MODE_TWO,),
     )
-    CLAWBACK = cons(
-        make_list(hexstr(opcode_aggsig), hexstr(clawback_pk_str), sha256tree(args())),
-        rest(args()),
-    )
+    CLAWBACK = cons(make_list(hexstr(opcode_aggsig), hexstr(clawback_pk_str), sha256tree(args())), rest(args()),)
 
     WHOLE_PUZZLE_WITH_CLAWBACK = make_if(equal(args(0), quote(3)), CLAWBACK, WHOLE_PUZZLE)
 
@@ -247,10 +205,7 @@ def rl_make_aggregation_puzzle(wallet_puzzle):
 
     # lock_puzzle is the hash of '(r (c (q "merge in ID") (q ())))'
     lock_puzzle = sha256tree(
-        make_list(
-            quote(7),
-            make_list(quote(5), make_list(quote(1), args(0)), quote(quote(sexp()))),
-        )
+        make_list(quote(7), make_list(quote(5), make_list(quote(1), args(0)), quote(quote(sexp()))),)
     )
     parent_coin_id = sha256(args(1), hexstr(wallet_puzzle), args(2))
     input_of_lock = make_list(hexstr(opcode_consumed), sha256(parent_coin_id, lock_puzzle, quote(0)))

@@ -55,15 +55,7 @@ async def add_dummy_connection(server: ChiaServer, dummy_port: int) -> Tuple[asy
     url = f"wss://127.0.0.1:{server._port}/ws"
     ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
     wsc = WSChiaConnection(
-        NodeType.FULL_NODE,
-        ws,
-        server._port,
-        log,
-        True,
-        False,
-        "127.0.0.1",
-        incoming_queue,
-        lambda x: x,
+        NodeType.FULL_NODE, ws, server._port, log, True, False, "127.0.0.1", incoming_queue, lambda x: x,
     )
     node_id = std_hash(b"123")
     handshake = await wsc.perform_handshake(
@@ -157,8 +149,7 @@ class TestFullNodeProtocol:
 
         async def have_msgs():
             await full_node_2.full_node.full_node_peers.address_manager.add_to_new_table(
-                [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000)],
-                None,
+                [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000)], None,
             )
             msg = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("[::1]", server_2._port))
 
@@ -208,12 +199,7 @@ class TestFullNodeProtocol:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
         num_sub_slots_added = len(blocks[-1].finished_sub_slots[:-2])
         await time_out_assert(
-            10,
-            time_out_messages(
-                incoming_queue,
-                "new_signage_point_or_end_of_sub_slot",
-                num_sub_slots_added,
-            ),
+            10, time_out_messages(incoming_queue, "new_signage_point_or_end_of_sub_slot", num_sub_slots_added,),
         )
 
         # Add empty slots unsuccessful
@@ -233,12 +219,7 @@ class TestFullNodeProtocol:
             await full_node_1.respond_end_of_sub_slot(fnp.RespondEndOfSubSlot(slot), peer)
         num_sub_slots_added = len(blocks[-1].finished_sub_slots)
         await time_out_assert(
-            10,
-            time_out_messages(
-                incoming_queue,
-                "new_signage_point_or_end_of_sub_slot",
-                num_sub_slots_added,
-            ),
+            10, time_out_messages(incoming_queue, "new_signage_point_or_end_of_sub_slot", num_sub_slots_added,),
         )
 
     @pytest.mark.asyncio
@@ -404,10 +385,7 @@ class TestFullNodeProtocol:
             conditions_dict[ConditionOpcode.CREATE_COIN].append(output)
 
         spend_bundle = wallet_a.generate_signed_transaction(
-            100,
-            puzzle_hashes[0],
-            blocks[1].get_future_reward_coins(1)[0],
-            condition_dic=conditions_dict,
+            100, puzzle_hashes[0], blocks[1].get_future_reward_coins(1)[0], condition_dic=conditions_dict,
         )
         assert spend_bundle is not None
 
@@ -420,10 +398,7 @@ class TestFullNodeProtocol:
         await full_node_1.respond_transaction(respond_transaction_2, peer)
 
         blocks_new = bt.get_consecutive_blocks(
-            2,
-            block_list_input=blocks,
-            guarantee_block=True,
-            transaction_data=spend_bundle,
+            2, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle,
         )
 
         # Already seen
@@ -459,10 +434,7 @@ class TestFullNodeProtocol:
 
         agg_bundle: SpendBundle = SpendBundle.aggregate(spend_bundles)
         blocks_new = bt.get_consecutive_blocks(
-            1,
-            block_list_input=blocks_new,
-            transaction_data=agg_bundle,
-            guarantee_block=True,
+            1, block_list_input=blocks_new, transaction_data=agg_bundle, guarantee_block=True,
         )
         # Farm one block to clear mempool
         await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]), peer)

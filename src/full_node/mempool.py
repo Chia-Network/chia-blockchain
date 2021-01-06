@@ -49,10 +49,7 @@ class Mempool:
             del self.sorted_spends[item.fee_per_cost]
 
     def add_to_pool(
-        self,
-        item: MempoolItem,
-        additions: List[Coin],
-        removals_dic: Dict[bytes32, Coin],
+        self, item: MempoolItem, additions: List[Coin], removals_dic: Dict[bytes32, Coin],
     ):
         if self.at_full_capacity():
             # Val is Dict[hash, MempoolItem]

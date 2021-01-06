@@ -48,9 +48,7 @@ class TradeManager:
 
     @staticmethod
     async def create(
-        wallet_state_manager: Any,
-        db_connection,
-        name: str = None,
+        wallet_state_manager: Any, db_connection, name: str = None,
     ):
         self = TradeManager()
         if name:
@@ -66,9 +64,7 @@ class TradeManager:
         records = await self.trade_store.get_trade_record_with_status(status)
         return records
 
-    async def get_coins_of_interest(
-        self,
-    ) -> Tuple[Dict[bytes32, Coin], Dict[bytes32, Coin]]:
+    async def get_coins_of_interest(self,) -> Tuple[Dict[bytes32, Coin], Dict[bytes32, Coin]]:
         """
         Returns list of coins we want to check if they are included in filter,
         These will include coins that belong to us and coins that that on other side of treade
@@ -505,19 +501,11 @@ class TradeManager:
             aggsig = AugSchemeMPL.aggregate(sigs)
             if spend_bundle is None:
                 spend_bundle = spend_bundle_for_spendable_ccs(
-                    CC_MOD,
-                    Program.from_bytes(bytes.fromhex(colour)),
-                    spendable_cc_list,
-                    innersol_list,
-                    [aggsig],
+                    CC_MOD, Program.from_bytes(bytes.fromhex(colour)), spendable_cc_list, innersol_list, [aggsig],
                 )
             else:
                 new_spend_bundle = spend_bundle_for_spendable_ccs(
-                    CC_MOD,
-                    Program.from_bytes(bytes.fromhex(colour)),
-                    spendable_cc_list,
-                    innersol_list,
-                    [aggsig],
+                    CC_MOD, Program.from_bytes(bytes.fromhex(colour)), spendable_cc_list, innersol_list, [aggsig],
                 )
                 spend_bundle = SpendBundle.aggregate([spend_bundle, new_spend_bundle])
             # reset sigs and aggsig so that they aren't included next time around

@@ -87,17 +87,12 @@ async def load_blocks_dont_validate(
             cc_sp = block.reward_chain_sub_block.challenge_chain_sp_vdf.output.get_hash()
 
         quality_string: Optional[bytes32] = block.reward_chain_sub_block.proof_of_space.verify_and_get_quality_string(
-            test_constants,
-            block.reward_chain_sub_block.pos_ss_cc_challenge_hash,
-            cc_sp,
+            test_constants, block.reward_chain_sub_block.pos_ss_cc_challenge_hash, cc_sp,
         )
         assert quality_string is not None
 
         required_iters: uint64 = calculate_iterations_quality(
-            quality_string,
-            block.reward_chain_sub_block.proof_of_space.size,
-            difficulty,
-            cc_sp,
+            quality_string, block.reward_chain_sub_block.proof_of_space.size, difficulty, cc_sp,
         )
 
         sub_block = block_to_sub_block_record(test_constants, sub_blocks, height_to_hash, required_iters, block, None)
@@ -176,10 +171,7 @@ class TestWeightProof:
     async def test_weight_proof_bad_peak_hash(self, default_1000_blocks):
         blocks = default_1000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
-        wpf = WeightProofHandler(
-            test_constants,
-            BlockCache(sub_blocks, height_to_hash, header_cache, summaries),
-        )
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, height_to_hash, header_cache, summaries),)
         wpf.log.setLevel(logging.INFO)
         initialize_logging("", {"log_stdout": True}, DEFAULT_ROOT_PATH)
         wp = await wpf.get_proof_of_weight(b"sadgfhjhgdgsfadfgh")

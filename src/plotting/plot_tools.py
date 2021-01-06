@@ -68,9 +68,7 @@ def parse_plot_info(memo: bytes) -> Tuple[G1Element, G1Element, PrivateKey]:
 
 
 def stream_plot_info(
-    pool_public_key: G1Element,
-    farmer_public_key: G1Element,
-    local_master_sk: PrivateKey,
+    pool_public_key: G1Element, farmer_public_key: G1Element, local_master_sk: PrivateKey,
 ):
     # Streams the plot info keys into bytes
     data = bytes(pool_public_key) + bytes(farmer_public_key) + bytes(local_master_sk)
@@ -147,11 +145,7 @@ def load_plots(
                     continue
             try:
                 prover = DiskProver(str(filename))
-                (
-                    pool_public_key,
-                    farmer_public_key,
-                    local_master_sk,
-                ) = parse_plot_info(prover.get_memo())
+                (pool_public_key, farmer_public_key, local_master_sk,) = parse_plot_info(prover.get_memo())
                 # Only use plots that correct keys associated with them
                 if farmer_public_keys is not None and farmer_public_key not in farmer_public_keys:
                     log.warning(f"Plot {filename} has a farmer public key that is not in the farmer's pk list.")

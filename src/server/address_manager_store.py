@@ -86,28 +86,21 @@ class AddressManagerStore:
 
     async def set_metadata(self, metadata):
         for key, value in metadata:
-            cursor = await self.db.execute(
-                "INSERT OR REPLACE INTO peer_metadata VALUES(?, ?)",
-                (key, value),
-            )
+            cursor = await self.db.execute("INSERT OR REPLACE INTO peer_metadata VALUES(?, ?)", (key, value),)
             await cursor.close()
             await self.db.commit()
 
     async def set_nodes(self, node_list):
         for node_id, peer_info in node_list:
             cursor = await self.db.execute(
-                "INSERT OR REPLACE INTO peer_nodes VALUES(?, ?)",
-                (node_id, peer_info.to_string()),
+                "INSERT OR REPLACE INTO peer_nodes VALUES(?, ?)", (node_id, peer_info.to_string()),
             )
             await cursor.close()
             await self.db.commit()
 
     async def set_new_table(self, entries):
         for node_id, bucket in entries:
-            cursor = await self.db.execute(
-                "INSERT OR REPLACE INTO peer_new_table VALUES(?, ?)",
-                (node_id, bucket),
-            )
+            cursor = await self.db.execute("INSERT OR REPLACE INTO peer_new_table VALUES(?, ?)", (node_id, bucket),)
             await cursor.close()
             await self.db.commit()
 

@@ -20,15 +20,7 @@ class FarmerRpcApi:
     async def _state_changed(self, change: str, sp_hash: bytes32) -> List[Dict]:
         if change == "signage_point":
             data = await self.get_signage_point({"sp_hash": sp_hash.hex()})
-            return [
-                create_payload(
-                    "get_signage_point",
-                    data,
-                    self.service_name,
-                    "wallet_ui",
-                    string=False,
-                )
-            ]
+            return [create_payload("get_signage_point", data, self.service_name, "wallet_ui", string=False,)]
         return []
 
     async def get_signage_point(self, request: Dict) -> Dict:

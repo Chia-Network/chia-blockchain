@@ -63,20 +63,13 @@ class WalletActionStore:
         return WalletAction(row[0], row[1], row[2], WalletType(row[3]), row[4], bool(row[5]), row[6])
 
     async def create_action(
-        self,
-        name: str,
-        wallet_id: int,
-        type: int,
-        callback: str,
-        done: bool,
-        data: str,
+        self, name: str, wallet_id: int, type: int, callback: str, done: bool, data: str,
     ):
         """
         Creates Wallet Action
         """
         cursor = await self.db_connection.execute(
-            "INSERT INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
-            (None, name, wallet_id, type, callback, done, data),
+            "INSERT INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)", (None, name, wallet_id, type, callback, done, data),
         )
         await cursor.close()
         await self.db_connection.commit()
@@ -90,15 +83,7 @@ class WalletActionStore:
 
         cursor = await self.db_connection.execute(
             "Replace INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
-            (
-                action.id,
-                action.name,
-                action.wallet_id,
-                action.type.value,
-                action.wallet_callback,
-                True,
-                action.data,
-            ),
+            (action.id, action.name, action.wallet_id, action.type.value, action.wallet_callback, True, action.data,),
         )
 
         await cursor.close()

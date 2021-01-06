@@ -97,11 +97,7 @@ class WalletStateManager:
 
     @staticmethod
     async def create(
-        private_key: PrivateKey,
-        config: Dict,
-        db_path: Path,
-        constants: ConsensusConstants,
-        name: str = None,
+        private_key: PrivateKey, config: Dict, db_path: Path, constants: ConsensusConstants, name: str = None,
     ):
         self = WalletStateManager()
         self.new_wallet = False
@@ -125,10 +121,7 @@ class WalletStateManager:
         self.user_settings = await UserSettings.create(self.basic_store)
         self.block_store = await WalletBlockStore.create(self.db_connection)
         self.blockchain = await WalletBlockchain.create(
-            self.block_store,
-            self.constants,
-            self.coins_of_interest_received,
-            self.reorg_rollback,
+            self.block_store, self.constants, self.coins_of_interest_received, self.reorg_rollback,
         )
         self.weight_proof_handler = WeightProofHandler(self.constants, await init_wallet_block_cache(self.blockchain))
 
@@ -157,11 +150,7 @@ class WalletStateManager:
                 wallet = await Wallet.create(config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN:
-                wallet = await CCWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
+                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.RATE_LIMITED:
                 wallet = await RLWallet.create(self, wallet_info)
@@ -199,11 +188,7 @@ class WalletStateManager:
                 wallet = await Wallet.create(self.config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
             elif wallet_info.type == WalletType.COLOURED_COIN:
-                wallet = await CCWallet.create(
-                    self,
-                    self.main_wallet,
-                    wallet_info,
-                )
+                wallet = await CCWallet.create(self, self.main_wallet, wallet_info,)
                 self.wallets[wallet_info.id] = wallet
 
     async def get_keys(self, hash: bytes32) -> Optional[Tuple[G1Element, PrivateKey]]:
@@ -267,11 +252,7 @@ class WalletStateManager:
 
                     derivation_paths.append(
                         DerivationRecord(
-                            uint32(rl_index),
-                            puzzle_hash,
-                            rl_pubkey,
-                            target_wallet.type(),
-                            uint32(target_wallet.id()),
+                            uint32(rl_index), puzzle_hash, rl_pubkey, target_wallet.type(), uint32(target_wallet.id()),
                         )
                     )
                     break
@@ -285,11 +266,7 @@ class WalletStateManager:
                 self.log.info(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
                 derivation_paths.append(
                     DerivationRecord(
-                        uint32(index),
-                        puzzlehash,
-                        pubkey,
-                        target_wallet.type(),
-                        uint32(target_wallet.id()),
+                        uint32(index), puzzlehash, pubkey, target_wallet.type(), uint32(target_wallet.id()),
                     )
                 )
 
@@ -475,10 +452,7 @@ class WalletStateManager:
             await self.trade_manager.coins_of_interest_farmed(trade_removals, trade_additions, height, sub_height)
 
     async def coins_of_interest_added(self, coins: List[Coin], height: uint32, sub_height: uint32) -> List[Coin]:
-        (
-            trade_removals,
-            trade_additions,
-        ) = await self.trade_manager.get_coins_of_interest()
+        (trade_removals, trade_additions,) = await self.trade_manager.get_coins_of_interest()
         trade_adds: List[Coin] = []
         for coin in coins:
             if coin.name() in trade_additions:
@@ -502,10 +476,7 @@ class WalletStateManager:
 
     async def coins_of_interest_removed(self, coins: List[Coin], height: uint32, sub_height: uint32) -> List[Coin]:
         "This get's called when coins of our interest are spent on chain"
-        (
-            trade_removals,
-            trade_additions,
-        ) = await self.trade_manager.get_coins_of_interest()
+        (trade_removals, trade_additions,) = await self.trade_manager.get_coins_of_interest()
 
         # Keep track of trade coins that are removed
         trade_coin_removed: List[Coin] = []
@@ -639,11 +610,7 @@ class WalletStateManager:
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
     async def remove_from_queue(
-        self,
-        spendbundle_id: bytes32,
-        name: str,
-        send_status: MempoolInclusionStatus,
-        error: Optional[Err],
+        self, spendbundle_id: bytes32, name: str, send_status: MempoolInclusionStatus, error: Optional[Err],
     ):
         """
         Full node received our transaction, no need to keep it in queue anymore
@@ -684,9 +651,7 @@ class WalletStateManager:
             self.log.info("not genesis")
             # TODO: handle returning of -1
             fork_h = find_fork_point_in_chain(
-                self.blockchain.sub_blocks,
-                self.blockchain.sub_blocks[self.peak.header_hash],
-                new_block,
+                self.blockchain.sub_blocks, self.blockchain.sub_blocks[self.peak.header_hash], new_block,
             )
         else:
             fork_h = 0
@@ -728,10 +693,7 @@ class WalletStateManager:
         removals_of_interest: bytes32 = []
         additions_of_interest: bytes32 = []
 
-        (
-            trade_removals,
-            trade_additions,
-        ) = await self.trade_manager.get_coins_of_interest()
+        (trade_removals, trade_additions,) = await self.trade_manager.get_coins_of_interest()
         for name, trade_coin in trade_removals.items():
             if tx_filter.Match(bytearray(trade_coin.name())):
                 removals_of_interest.append(trade_coin.name())
@@ -892,10 +854,7 @@ class WalletStateManager:
 
         for wallet_info in wallet_list_json:
             await self.user_store.create_wallet(
-                wallet_info["name"],
-                wallet_info["type"],
-                wallet_info["data"],
-                wallet_info["id"],
+                wallet_info["name"], wallet_info["type"], wallet_info["data"], wallet_info["id"],
             )
 
         await self.load_wallets()
@@ -946,13 +905,7 @@ class WalletStateManager:
         return filtered
 
     async def create_action(
-        self,
-        name: str,
-        wallet_id: int,
-        type: int,
-        callback: str,
-        done: bool,
-        data: str,
+        self, name: str, wallet_id: int, type: int, callback: str, done: bool, data: str,
     ):
         await self.action_store.create_action(name, wallet_id, type, callback, done, data)
         self.tx_pending_changed()

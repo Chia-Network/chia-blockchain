@@ -51,11 +51,7 @@ def make_parser(parser):
         help="Enter the alternative fingerprint of the key you want to use",
     )
     parser.add_argument(
-        "-f",
-        "--farmer_public_key",
-        help="Hex farmer public key",
-        type=str,
-        default=None,
+        "-f", "--farmer_public_key", help="Hex farmer public key", type=str, default=None,
     )
     parser.add_argument("-p", "--pool_public_key", help="Hex public key of pool", type=str, default=None)
     parser.add_argument(
@@ -66,52 +62,25 @@ def make_parser(parser):
         default=None,
     )
     parser.add_argument(
-        "-t",
-        "--tmp_dir",
-        help="Temporary directory for plotting files",
-        type=Path,
-        default=Path("."),
+        "-t", "--tmp_dir", help="Temporary directory for plotting files", type=Path, default=Path("."),
     )
     parser.add_argument(
-        "-2",
-        "--tmp2_dir",
-        help="Second temporary directory for plotting files",
-        type=Path,
-        default=None,
+        "-2", "--tmp2_dir", help="Second temporary directory for plotting files", type=Path, default=None,
     )
     parser.add_argument(
-        "-d",
-        "--final_dir",
-        help="Final directory for plots (relative or absolute)",
-        type=Path,
-        default=Path("."),
+        "-d", "--final_dir", help="Final directory for plots (relative or absolute)", type=Path, default=Path("."),
     )
     parser.add_argument(
-        "-i",
-        "--plotid",
-        help="PlotID in hex for reproducing plots (debugging only)",
-        type=str,
-        default=None,
+        "-i", "--plotid", help="PlotID in hex for reproducing plots (debugging only)", type=str, default=None,
     )
     parser.add_argument(
-        "-m",
-        "--memo",
-        help="Memo in hex for reproducing plots (debugging only)",
-        type=str,
-        default=None,
+        "-m", "--memo", help="Memo in hex for reproducing plots (debugging only)", type=str, default=None,
     )
     parser.add_argument(
-        "-e",
-        "--nobitfield",
-        help="Disable bitfield",
-        default=False,
-        action="store_true",
+        "-e", "--nobitfield", help="Disable bitfield", default=False, action="store_true",
     )
     parser.add_argument(
-        "command",
-        help=f"Command can be any one of {command_list}",
-        type=str,
-        nargs="?",
+        "command", help=f"Command can be any one of {command_list}", type=str, nargs="?",
     )
 
     parser.set_defaults(function=handler)

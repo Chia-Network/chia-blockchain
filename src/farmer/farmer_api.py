@@ -56,9 +56,7 @@ class FarmerAPI:
         sps = self.farmer.sps[new_proof_of_space.sp_hash]
         for sp in sps:
             computed_quality_string = new_proof_of_space.proof.verify_and_get_quality_string(
-                self.farmer.constants,
-                new_proof_of_space.challenge_hash,
-                new_proof_of_space.sp_hash,
+                self.farmer.constants, new_proof_of_space.challenge_hash, new_proof_of_space.sp_hash,
             )
             if computed_quality_string is None:
                 self.farmer.log.error(f"Invalid proof of space {new_proof_of_space.proof}")
@@ -67,10 +65,7 @@ class FarmerAPI:
             self.farmer.number_of_responses[new_proof_of_space.sp_hash] += 1
 
             required_iters: uint64 = calculate_iterations_quality(
-                computed_quality_string,
-                new_proof_of_space.proof.size,
-                sp.difficulty,
-                new_proof_of_space.sp_hash,
+                computed_quality_string, new_proof_of_space.proof.size, sp.difficulty, new_proof_of_space.sp_hash,
             )
             # Double check that the iters are good
             assert required_iters < calculate_sp_interval_iters(self.farmer.constants, sp.sub_slot_iters)
@@ -87,17 +82,11 @@ class FarmerAPI:
 
             if new_proof_of_space.sp_hash not in self.farmer.proofs_of_space:
                 self.farmer.proofs_of_space[new_proof_of_space.sp_hash] = [
-                    (
-                        new_proof_of_space.plot_identifier,
-                        new_proof_of_space.proof,
-                    )
+                    (new_proof_of_space.plot_identifier, new_proof_of_space.proof,)
                 ]
             else:
                 self.farmer.proofs_of_space[new_proof_of_space.sp_hash].append(
-                    (
-                        new_proof_of_space.plot_identifier,
-                        new_proof_of_space.proof,
-                    )
+                    (new_proof_of_space.plot_identifier, new_proof_of_space.proof,)
                 )
             self.farmer.cache_add_time[new_proof_of_space.sp_hash] = uint64(int(time.time()))
             self.farmer.quality_str_to_identifiers[computed_quality_string] = (
@@ -144,10 +133,7 @@ class FarmerAPI:
             return
 
         if is_sp_signatures:
-            (
-                challenge_chain_sp,
-                challenge_chain_sp_harv_sig,
-            ) = response.message_signatures[0]
+            (challenge_chain_sp, challenge_chain_sp_harv_sig,) = response.message_signatures[0]
             reward_chain_sp, reward_chain_sp_harv_sig = response.message_signatures[1]
             for sk in self.farmer.get_private_keys():
                 pk = sk.get_g1()
@@ -194,14 +180,8 @@ class FarmerAPI:
         else:
             # This is a response with block signatures
             for sk in self.farmer.get_private_keys():
-                (
-                    foliage_sub_block_hash,
-                    foliage_sub_block_sig_harvester,
-                ) = response.message_signatures[0]
-                (
-                    foliage_block_hash,
-                    foliage_block_sig_harvester,
-                ) = response.message_signatures[1]
+                (foliage_sub_block_hash, foliage_sub_block_sig_harvester,) = response.message_signatures[0]
+                (foliage_block_hash, foliage_block_sig_harvester,) = response.message_signatures[1]
                 pk = sk.get_g1()
                 if pk == response.farmer_pk:
                     agg_pk = ProofOfSpace.generate_plot_public_key(response.local_pk, pk)
@@ -218,9 +198,7 @@ class FarmerAPI:
                     assert AugSchemeMPL.verify(agg_pk, foliage_block_hash, foliage_block_agg_sig)
 
                     request_to_nodes = farmer_protocol.SignedValues(
-                        computed_quality_string,
-                        foliage_sub_block_agg_sig,
-                        foliage_block_agg_sig,
+                        computed_quality_string, foliage_sub_block_agg_sig, foliage_block_agg_sig,
                     )
 
                     msg = Message("signed_values", request_to_nodes)

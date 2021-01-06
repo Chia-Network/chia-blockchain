@@ -90,9 +90,7 @@ class Timelord:
         self.main_loop = asyncio.create_task(self._manage_chains())
 
         self.vdf_server = await asyncio.start_server(
-            self._handle_client,
-            self.config["vdf_server"]["host"],
-            self.config["vdf_server"]["port"],
+            self._handle_client, self.config["vdf_server"]["host"], self.config["vdf_server"]["port"],
         )
         log.info("Started timelord.")
 
@@ -148,12 +146,7 @@ class Timelord:
         ip_iters = self.last_state.get_last_ip()
         rc_block = block.reward_chain_sub_block
         try:
-            block_sp_iters, block_ip_iters = iters_from_sub_block(
-                self.constants,
-                rc_block,
-                sub_slot_iters,
-                difficulty,
-            )
+            block_sp_iters, block_ip_iters = iters_from_sub_block(self.constants, rc_block, sub_slot_iters, difficulty,)
         except Exception as e:
             log.warning(f"Received invalid unfinished block: {e}.")
             return None
@@ -451,13 +444,7 @@ class Timelord:
 
                     cc_info = dataclasses.replace(cc_info, number_of_iterations=ip_iters)
                     response = timelord_protocol.NewInfusionPointVDF(
-                        challenge,
-                        cc_info,
-                        cc_proof,
-                        rc_info,
-                        rc_proof,
-                        icc_info,
-                        icc_proof,
+                        challenge, cc_info, cc_proof, rc_info, rc_proof, icc_info, icc_proof,
                     )
                     msg = Message("new_infusion_point_vdf", response)
                     if self.server is not None:
@@ -476,9 +463,7 @@ class Timelord:
                         ip_total_iters
                         - ip_iters
                         + calculate_sp_iters(
-                            self.constants,
-                            block.sub_slot_iters,
-                            block.reward_chain_sub_block.signage_point_index,
+                            self.constants, block.sub_slot_iters, block.reward_chain_sub_block.signage_point_index,
                         )
                         - (block.sub_slot_iters if overflow else 0)
                     )
@@ -650,16 +635,10 @@ class Timelord:
                 eos_deficit,
             )
             eos_bundle = EndOfSubSlotBundle(
-                cc_sub_slot,
-                icc_sub_slot,
-                rc_sub_slot,
-                SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
+                cc_sub_slot, icc_sub_slot, rc_sub_slot, SubSlotProofs(cc_proof, icc_ip_proof, rc_proof),
             )
             if self.server is not None:
-                msg = Message(
-                    "new_end_of_sub_slot_vdf",
-                    timelord_protocol.NewEndOfSubSlotVDF(eos_bundle),
-                )
+                msg = Message("new_end_of_sub_slot_vdf", timelord_protocol.NewEndOfSubSlotVDF(eos_bundle),)
                 await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
             log.info(
@@ -782,11 +761,7 @@ class Timelord:
             while True:
                 try:
                     data = await reader.readexactly(4)
-                except (
-                    asyncio.IncompleteReadError,
-                    ConnectionResetError,
-                    Exception,
-                ) as e:
+                except (asyncio.IncompleteReadError, ConnectionResetError, Exception,) as e:
                     log.warning(f"{type(e)} {e}")
                     async with self.lock:
                         self.vdf_failures.append(chain)
@@ -810,11 +785,7 @@ class Timelord:
                         length = int.from_bytes(data, "big")
                         proof = await reader.readexactly(length)
                         stdout_bytes_io: io.BytesIO = io.BytesIO(bytes.fromhex(proof.decode()))
-                    except (
-                        asyncio.IncompleteReadError,
-                        ConnectionResetError,
-                        Exception,
-                    ) as e:
+                    except (asyncio.IncompleteReadError, ConnectionResetError, Exception,) as e:
                         log.warning(f"{type(e)} {e}")
                         async with self.lock:
                             self.vdf_failures.append(chain)
@@ -843,13 +814,10 @@ class Timelord:
                     )
 
                     vdf_info: VDFInfo = VDFInfo(
-                        challenge,
-                        iterations_needed,
-                        output,
+                        challenge, iterations_needed, output,
                     )
                     vdf_proof: VDFProof = VDFProof(
-                        witness_type,
-                        proof_bytes,
+                        witness_type, proof_bytes,
                     )
 
                     if not vdf_proof.is_valid(self.constants, initial_form, vdf_info):

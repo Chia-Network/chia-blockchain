@@ -38,15 +38,7 @@ class FullNodeRpcApi:
         if change == "new_peak":
             data = await self.get_blockchain_state({})
             assert data is not None
-            payloads.append(
-                create_payload(
-                    "get_blockchain_state",
-                    data,
-                    self.service_name,
-                    "wallet_ui",
-                    string=False,
-                )
-            )
+            payloads.append(create_payload("get_blockchain_state", data, self.service_name, "wallet_ui", string=False,))
             return payloads
         return []
 
