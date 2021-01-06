@@ -1,3 +1,4 @@
+# flake8: noqa: F811, F401
 import asyncio
 
 import aiohttp
@@ -31,6 +32,9 @@ from tests.time_out_assert import (
     time_out_assert,
     time_out_assert_custom_interval,
     time_out_messages,
+)
+from tests.full_node.fixtures import (
+    default_1000_blocks,
 )
 from src.protocols.shared_protocol import protocol_version
 
@@ -532,15 +536,21 @@ class TestFullNodeProtocol:
             farmer_reward_puzzle_hash=cb_ph,
             pool_reward_puzzle_hash=cb_ph,
         )
+        await asyncio.sleep(1)
+        while incoming_queue.qsize() > 0:
+            await incoming_queue.get()
 
+        await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-2]), peer)
+        await full_node_1.respond_sub_block(fnp.RespondSubBlock(blocks_new[-1]), peer)
+
+        await time_out_assert(10, time_out_messages(incoming_queue, "new_peak", 2))
         # Invalid transaction does not propagate
         spend_bundle = wallet_a.generate_signed_transaction(
             100000000000000,
             receiver_puzzlehash,
             list(blocks_new[-1].get_included_reward_coins())[0],
         )
-        while incoming_queue.qsize() > 0:
-            await incoming_queue.get()
+
         assert spend_bundle is not None
         respond_transaction = fnp.RespondTransaction(spend_bundle)
         msg = await full_node_1.respond_transaction(respond_transaction, peer)
@@ -548,6 +558,129 @@ class TestFullNodeProtocol:
 
         await asyncio.sleep(1)
         assert incoming_queue.qsize() == 0
+
+    @pytest.mark.asyncio
+    async def test_request_proof_of_weight(self, two_nodes, default_1000_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+
+        for block in default_1000_blocks:
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
+
+        # Have the request header hash
+        res = await full_node_1.request_proof_of_weight(
+            fnp.RequestProofOfWeight(default_1000_blocks[-1].sub_block_height + 1, default_1000_blocks[-1].header_hash)
+        )
+        assert res is not None
+        validated, _ = full_node_1.full_node.weight_proof_handler.validate_weight_proof(res.data.wp)
+        assert validated
+
+        # Don't have the request header hash
+        res = await full_node_1.request_proof_of_weight(
+            fnp.RequestProofOfWeight(default_1000_blocks[-1].sub_block_height + 1, std_hash(b"12"))
+        )
+        assert res is None
+
+    @pytest.mark.asyncio
+    async def test_request_sub_block(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+
+        blocks = bt.get_consecutive_blocks(
+            2,
+            block_list_input=blocks,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
+            pool_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
+        )
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1123,
+            wallet_receiver.get_new_puzzlehash(),
+            list(blocks[-1].get_included_reward_coins())[0],
+        )
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
+        )
+
+        for block in blocks:
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
+
+        # Don't have height
+        res = await full_node_1.request_sub_block(fnp.RequestSubBlock(uint32(1248921), False))
+        assert res is None
+
+        # Ask without transactions
+        res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height, False))
+        assert res is not None
+        assert res.data.sub_block.transactions_generator is None
+
+        # Ask with transactions
+        res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height, True))
+        assert res is not None
+        assert res.data.sub_block.transactions_generator is not None
+
+        # Ask for another one
+        res = await full_node_1.request_sub_block(fnp.RequestSubBlock(blocks[-1].sub_block_height - 1, True))
+        assert res is not None
+
+    @pytest.mark.asyncio
+    async def test_request_sub_blocks(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+
+        blocks = bt.get_consecutive_blocks(
+            30,
+            block_list_input=blocks,
+            guarantee_block=True,
+            farmer_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
+            pool_reward_puzzle_hash=wallet_a.get_new_puzzlehash(),
+        )
+
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1123,
+            wallet_receiver.get_new_puzzlehash(),
+            list(blocks[-1].get_included_reward_coins())[0],
+        )
+        blocks = bt.get_consecutive_blocks(
+            1, block_list_input=blocks, guarantee_block=True, transaction_data=spend_bundle
+        )
+
+        for block in blocks:
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
+
+        peak_height = blocks[-1].sub_block_height
+
+        # Start >= End
+        res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(4), uint32(4), False))
+        assert res is not None
+        assert len(res.data.sub_blocks) == 1
+        assert res.data.sub_blocks[0].header_hash == blocks[4].header_hash
+        res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(5), uint32(4), False))
+        assert res is None
+        # Invalid range
+        res = await full_node_1.request_sub_blocks(
+            fnp.RequestSubBlocks(uint32(peak_height - 5), uint32(peak_height + 5), False)
+        )
+        assert isinstance(res.data, fnp.RejectSubBlocks)
+
+        # Too many
+        res = await full_node_1.request_sub_blocks(fnp.RequestSubBlocks(uint32(0), uint32(peak_height), False))
+        assert res is None
+
+        # Ask without transactions
+        res = await full_node_1.request_sub_blocks(
+            fnp.RequestSubBlocks(uint32(peak_height - 5), uint32(peak_height), False)
+        )
+        assert len(res.data.sub_blocks) == 6
+        for b in res.data.sub_blocks:
+            assert b.transactions_generator is None
+
+        # Ask with transactions
+        res = await full_node_1.request_sub_blocks(
+            fnp.RequestSubBlocks(uint32(peak_height - 5), uint32(peak_height), True)
+        )
+        assert len(res.data.sub_blocks) == 6
+        assert res.data.sub_blocks[-1].transactions_generator is not None
+        assert res.data.sub_blocks[-1] == blocks[-1]
 
     # @pytest.mark.asyncio
     # async def test_new_unfinished(self, two_nodes, wallet_blocks):
