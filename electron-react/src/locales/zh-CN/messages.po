@@ -105,107 +105,107 @@ msgstr "这是 LCA 区块（最新的共同祖先）在区块链中的总余额�
 msgid "BalanceCard.viewPendingBalances"
 msgstr "查看未确认金额"
 
-#: src/components/block/Block.jsx:193
+#: src/components/block/Block.jsx:195
 msgid "Block.blockVDFIterations"
 msgstr "阻止 VDF 迭代"
 
-#: src/components/block/Block.jsx:196
+#: src/components/block/Block.jsx:198
 msgid "Block.blockVDFIterationsTooltip"
 msgstr "此块上的 VDF（可验证的延迟函数）总数或时间迭代的总数。"
 
-#: src/components/block/Block.jsx:241
+#: src/components/block/Block.jsx:243
 msgid "Block.coinbaseAmount"
 msgstr "区块奖励"
 
-#: src/components/block/Block.jsx:244
+#: src/components/block/Block.jsx:246
 msgid "Block.coinbaseAmountTooltip"
 msgstr "区块奖励，转到矿池（或者不在矿池挖矿）"
 
-#: src/components/block/Block.jsx:250
+#: src/components/block/Block.jsx:252
 msgid "Block.coinbasePuzzleHash"
 msgstr "区块奖励的 Puzzle Hash"
 
-#: src/components/block/Block.jsx:274
+#: src/components/block/Block.jsx:276
 msgid "Block.description"
 msgstr "在区块链中位于高度{0}处的区块"
 
-#: src/components/block/Block.jsx:179
+#: src/components/block/Block.jsx:181
 msgid "Block.difficulty"
 msgstr "难度"
 
-#: src/components/block/Block.jsx:254
+#: src/components/block/Block.jsx:256
 msgid "Block.feesAmount"
 msgstr "手续费"
 
-#: src/components/block/Block.jsx:257
+#: src/components/block/Block.jsx:259
 msgid "Block.feesAmountTooltip"
 msgstr "此区块的所有手续费都归矿工所有"
 
-#: src/components/block/Block.jsx:263
+#: src/components/block/Block.jsx:265
 msgid "Block.feesPuzzleHash"
 msgstr "手续费的 Puzzle Hash"
 
-#: src/components/block/Block.jsx:146
+#: src/components/block/Block.jsx:148
 msgid "Block.headerHash"
 msgstr "区块头部 Hash"
 
-#: src/components/block/Block.jsx:160
+#: src/components/block/Block.jsx:162
 msgid "Block.height"
 msgstr "高度"
 
-#: src/components/block/Block.jsx:118
+#: src/components/block/Block.jsx:119
 msgid "Block.notFound"
 msgstr ""
 
-#: src/components/block/Block.jsx:215
+#: src/components/block/Block.jsx:217
 msgid "Block.plotId"
 msgstr "算力 ID"
 
-#: src/components/block/Block.jsx:218
+#: src/components/block/Block.jsx:220
 msgid "Block.plotIdTooltip"
 msgstr "用于创建 算力ID，这取决于 矿池公钥 和 算力公钥"
 
-#: src/components/block/Block.jsx:207
+#: src/components/block/Block.jsx:209
 msgid "Block.plotPublicKey"
 msgstr "算力公钥"
 
-#: src/components/block/Block.jsx:211
+#: src/components/block/Block.jsx:213
 msgid "Block.poolPublicKey"
 msgstr "矿池公钥"
 
-#: src/components/block/Block.jsx:174
-#: src/components/block/Block.jsx:281
+#: src/components/block/Block.jsx:176
+#: src/components/block/Block.jsx:283
 msgid "Block.previousBlock"
 msgstr "前一个区块"
 
-#: src/components/block/Block.jsx:203
+#: src/components/block/Block.jsx:205
 msgid "Block.proofOfSpaceSize"
 msgstr "空间证明"
 
-#: src/components/block/Block.jsx:150
+#: src/components/block/Block.jsx:152
 msgid "Block.timestamp"
 msgstr "时间戳"
 
-#: src/components/block/Block.jsx:153
+#: src/components/block/Block.jsx:155
 msgid "Block.timestampTooltip"
 msgstr "这是矿工创建区块的时间，这是在用时间证明最终确定之前的时间"
 
-#: src/components/block/Block.jsx:91
-#: src/components/block/Block.jsx:103
-#: src/components/block/Block.jsx:115
-#: src/components/block/Block.jsx:270
+#: src/components/block/Block.jsx:92
+#: src/components/block/Block.jsx:104
+#: src/components/block/Block.jsx:116
+#: src/components/block/Block.jsx:272
 msgid "Block.title"
 msgstr "区块"
 
-#: src/components/block/Block.jsx:183
+#: src/components/block/Block.jsx:185
 msgid "Block.totalVDFIterations"
 msgstr "VDF总迭代次数"
 
-#: src/components/block/Block.jsx:186
+#: src/components/block/Block.jsx:188
 msgid "Block.totalVDFIterationsTooltip"
 msgstr "到该块为止的整个链上的VDF（可验证的延迟函数）总数或时间迭代的总数。"
 
-#: src/components/block/Block.jsx:226
+#: src/components/block/Block.jsx:228
 msgid "Block.transactionsFilterHash"
 msgstr "交易过滤器哈希"
 
@@ -213,20 +213,20 @@ msgstr "交易过滤器哈希"
 #~ msgid "Block.transactionsGeneratorHash"
 #~ msgstr "交易生成器哈希"
 
-#: src/components/block/Block.jsx:164
+#: src/components/block/Block.jsx:166
 msgid "Block.weight"
 msgstr "权重"
 
-#: src/components/block/Block.jsx:167
+#: src/components/block/Block.jsx:169
 msgid "Block.weightTooltip"
 msgstr "权重是所有区块（包括该区块在内）的累计难度"
 
 #: src/components/fullNode/FullNode.jsx:91
-msgid "BlocksCard.expectedFinishTime"
-msgstr "预计完成时间"
+#~ msgid "BlocksCard.expectedFinishTime"
+#~ msgstr "预计完成时间"
 
 #: src/components/fullNode/FullNode.jsx:41
-#: src/components/fullNode/FullNode.jsx:84
+#: src/components/fullNode/FullNode.jsx:88
 msgid "BlocksCard.finished"
 msgstr ""
 
@@ -234,7 +234,7 @@ msgstr ""
 msgid "BlocksCard.headerHash"
 msgstr "区块头 Hash"
 
-#: src/components/fullNode/FullNode.jsx:58
+#: src/components/fullNode/FullNode.jsx:63
 msgid "BlocksCard.height"
 msgstr "高度"
 
@@ -242,13 +242,21 @@ msgstr "高度"
 msgid "BlocksCard.inProgress"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:70
+#: src/components/fullNode/FullNode.jsx:92
+msgid "BlocksCard.state"
+msgstr ""
+
+#: src/components/fullNode/FullNode.jsx:75
 msgid "BlocksCard.timeCreated"
 msgstr "创建时间"
 
-#: src/components/fullNode/FullNode.jsx:322
+#: src/components/fullNode/FullNode.jsx:325
 msgid "BlocksCard.title"
 msgstr "区块"
+
+#: src/components/fullNode/FullNode.jsx:89
+msgid "BlocksCard.unfinished"
+msgstr ""
 
 #: src/components/wallet/create/WalletCreate.jsx:163
 msgid "CCListItems.title"
@@ -860,8 +868,8 @@ msgstr ""
 msgid "FarmLatestBlockChallenges.challengeHash"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:54
-#: src/components/farm/FarmLatestBlockChallenges.tsx:60
+#: src/components/farm/FarmLatestBlockChallenges.tsx:55
+#: src/components/farm/FarmLatestBlockChallenges.tsx:61
 msgid "FarmLatestBlockChallenges.description"
 msgstr ""
 
@@ -869,11 +877,11 @@ msgstr ""
 msgid "FarmLatestBlockChallenges.height"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:68
+#: src/components/farm/FarmLatestBlockChallenges.tsx:69
 msgid "FarmLatestBlockChallenges.subDescription"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:52
+#: src/components/farm/FarmLatestBlockChallenges.tsx:53
 msgid "FarmLatestBlockChallenges.title"
 msgstr ""
 
@@ -947,11 +955,11 @@ msgstr ""
 msgid "FormatConnectionStatus.notConnected"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:395
+#: src/components/fullNode/FullNode.jsx:398
 msgid "FullNode.title"
 msgstr "全节点"
 
-#: src/components/fullNode/FullNode.jsx:280
+#: src/components/fullNode/FullNode.jsx:281
 msgid "FullNodeStatus.title"
 msgstr "全节点状态"
 
@@ -1581,15 +1589,15 @@ msgstr "费率受限的用户钱包设置"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "用户公钥"
 
-#: src/components/fullNode/FullNode.jsx:360
+#: src/components/fullNode/FullNode.jsx:363
 msgid "SearchBlock.blockHash"
 msgstr "区块哈希"
 
-#: src/components/fullNode/FullNode.jsx:371
+#: src/components/fullNode/FullNode.jsx:374
 msgid "SearchBlock.search"
 msgstr "搜索"
 
-#: src/components/fullNode/FullNode.jsx:354
+#: src/components/fullNode/FullNode.jsx:357
 msgid "SearchBlock.title"
 msgstr "按标题哈希搜索块"
 
@@ -1689,27 +1697,27 @@ msgstr "正在同步"
 msgid "StatusCard.title"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:151
+#: src/components/fullNode/FullNode.jsx:152
 msgid "StatusItem.connectionStatus"
 msgstr "连接状态"
 
-#: src/components/fullNode/FullNode.jsx:153
+#: src/components/fullNode/FullNode.jsx:154
 msgid "StatusItem.connectionStatusConnected"
 msgstr "已连接"
 
-#: src/components/fullNode/FullNode.jsx:155
+#: src/components/fullNode/FullNode.jsx:156
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:199
+#: src/components/fullNode/FullNode.jsx:200
 msgid "StatusItem.difficulty"
 msgstr "难度"
 
-#: src/components/fullNode/FullNode.jsx:227
+#: src/components/fullNode/FullNode.jsx:228
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "预估的网络空间"
 
-#: src/components/fullNode/FullNode.jsx:233
+#: src/components/fullNode/FullNode.jsx:234
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "网络中矿工的所有已创建的空间的估计总和"
 
@@ -1744,66 +1752,66 @@ msgstr "网络中矿工的所有已创建的空间的估计总和"
 #~ msgid "StatusItem.minIterations"
 #~ msgstr "最小迭代次数"
 
-#: src/components/fullNode/FullNode.jsx:172
+#: src/components/fullNode/FullNode.jsx:173
 msgid "StatusItem.peakHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:178
+#: src/components/fullNode/FullNode.jsx:179
 msgid "StatusItem.peakSubBlockHeight"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:184
+#: src/components/fullNode/FullNode.jsx:185
 msgid "StatusItem.peakTime"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:189
+#: src/components/fullNode/FullNode.jsx:190
 msgid "StatusItem.peakTimeTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:104
-#: src/components/fullNode/FullNode.jsx:121
-#: src/components/fullNode/FullNode.jsx:137
-#: src/components/fullNode/FullNode.jsx:163
+#: src/components/fullNode/FullNode.jsx:105
+#: src/components/fullNode/FullNode.jsx:122
+#: src/components/fullNode/FullNode.jsx:138
+#: src/components/fullNode/FullNode.jsx:164
 msgid "StatusItem.status"
 msgstr "状态"
 
-#: src/components/fullNode/FullNode.jsx:164
+#: src/components/fullNode/FullNode.jsx:165
 msgid "StatusItem.statusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:123
+#: src/components/fullNode/FullNode.jsx:124
 msgid "StatusItem.statusNotSynced"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:129
+#: src/components/fullNode/FullNode.jsx:130
 msgid "StatusItem.statusNotSyncedTooltip"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:138
+#: src/components/fullNode/FullNode.jsx:139
 msgid "StatusItem.statusSynced"
 msgstr "已同步"
 
-#: src/components/fullNode/FullNode.jsx:141
+#: src/components/fullNode/FullNode.jsx:142
 msgid "StatusItem.statusSyncedTooltip"
 msgstr "此节点已同步到最新状态"
 
-#: src/components/fullNode/FullNode.jsx:112
+#: src/components/fullNode/FullNode.jsx:113
 msgid "StatusItem.statusTooltip"
 msgstr "该节点正在同步，这意味着它正在从其他节点下载块，以到达链中的最新块"
 
-#: src/components/fullNode/FullNode.jsx:106
+#: src/components/fullNode/FullNode.jsx:107
 msgid "StatusItem.statusValue"
 msgstr "正在同步{progress} / {tip}"
 
-#: src/components/fullNode/FullNode.jsx:207
+#: src/components/fullNode/FullNode.jsx:208
 msgid "StatusItem.subSlotIters"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:215
+#: src/components/fullNode/FullNode.jsx:216
 msgid "StatusItem.totalIterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:219
+#: src/components/fullNode/FullNode.jsx:220
 msgid "StatusItem.totalIterationsTooltip"
 msgstr ""
 
