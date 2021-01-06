@@ -298,8 +298,8 @@ const FullNodeStatus = (props) => {
 const BlocksCard = () => {
   const { url } = useRouteMatch();
   const history = useHistory();
-  const latestBlocks = useSelector((state) => state.full_node_state.latest_blocks);
-  const unfinishedSubBlockHeaders = useSelector((state) => state.full_node_state.unfinished_sub_block_headers);
+  const latestBlocks = useSelector((state) => state.full_node_state.latest_blocks ?? []);
+  const unfinishedSubBlockHeaders = useSelector((state) => state.full_node_state.unfinished_sub_block_headers ?? []);
 
   const rows = [
     ...unfinishedSubBlockHeaders,
@@ -321,7 +321,7 @@ const BlocksCard = () => {
     <Card
       title={<Trans id="BlocksCard.title">Blocks</Trans>}
     >
-      {latestBlocks ? (
+      {rows ? (
         <Table
           cols={cols}
           rows={rows}
