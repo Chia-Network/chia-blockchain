@@ -103,7 +103,7 @@ class FullNodeDiscovery:
                 self.relay_queue.put_nowait((timestamped_peer_info, 1))
 
     # Updates timestamps each time we receive a message for outbound connections.
-    async def update_peer_timestamp_on_message(self, peer: WSChiaConnection):
+    async def update_peer_timestamp_on_message(self, peer: ws.WSChiaConnection):
         if (
             peer.is_outbound
             and peer.peer_server_port is not None
