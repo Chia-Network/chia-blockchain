@@ -6,4 +6,4 @@ build-backend = "setuptools.build_meta"
 local_scheme = "no-local-version"
 
 [tool.black]
-line_length = 120
+line-length = 120

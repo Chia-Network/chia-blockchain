@@ -51,6 +51,7 @@ jobs:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: master
           LINTER_RULES_PATH: .github/linters
+          PYTHON_BLACK_CONFIG_FILE: .python-black
           VALIDATE_BASH: true
           VALIDATE_CSS: true
           VALIDATE_DOCKER: true
