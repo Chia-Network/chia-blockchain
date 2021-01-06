@@ -78,10 +78,9 @@ class VDFProof(Streamable):
         # TODO: check for maximum witness type
         return verify_n_wesolowski(
             str(disc),
-            str(input_el.a), str(input_el.b),
+            str(x.a), str(x.b),
             y.serialize() + bytes(self.witness),
             info.number_of_iterations,
             constants.DISCRIMINANT_SIZE_BITS,
             self.witness_type,
         )
-
