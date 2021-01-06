@@ -57,7 +57,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         repository: 'Chia-Network/test-cache'
-        path: '${{ HOME }}/.chia'
+        path: '${{ github.home }}/.chia'
 
     - name: Find test-cache
       run: |
