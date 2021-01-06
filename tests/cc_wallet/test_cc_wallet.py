@@ -33,47 +33,41 @@ class TestCCWallet:
         async for _ in setup_simulators_and_wallets(1, 3, {}):
             yield _
 
-    #
-    #     @pytest.mark.asyncio
-    #     async def test_colour_creation(self, two_wallet_nodes):
-    #         num_blocks = 5
-    #         full_nodes, wallets = two_wallet_nodes
-    #         full_node__api = full_nodes[0]
-    #         full_node_server = full_node__api.server
-    #         wallet_node, server_2 = wallets[0]
-    #         wallet = wallet_node.wallet_state_manager.main_wallet
-    #
-    #         ph = await wallet.get_new_puzzlehash()
-    #
-    #         await server_2.start_client(
-    #             PeerInfo("localhost", uint16(full_node_server._port)), None
-    #         )
-    #         for i in range(1, 4):
-    #             await full_node__api.farm_new_block(FarmNewBlockProtocol(ph))
-    #
-    #         funds = sum(
-    #             [
-    #                 calculate_base_fee(uint32(i)) + calculate_block_reward(uint32(i))
-    #                 for i in range(1, 4 - 2)
-    #             ]
-    #         )
-    #
-    #         await time_out_assert(15, wallet.get_confirmed_balance, funds)
-    #
-    #         cc_wallet: CCWallet = await CCWallet.create_new_cc(
-    #             wallet_node.wallet_state_manager, wallet, uint64(100)
-    #         )
-    #
-    #         for i in range(1, num_blocks):
-    #             await full_node__api.farm_new_block(FarmNewBlockProtocol(ph))
-    #
-    #         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
-    #         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
-    #
+    @pytest.mark.asyncio
+    async def test_colour_creation(self, two_wallet_nodes):
+        num_blocks = 3
+        full_nodes, wallets = two_wallet_nodes
+        full_node__api = full_nodes[0]
+        full_node_server = full_node__api.server
+        wallet_node, server_2 = wallets[0]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        ph = await wallet.get_new_puzzlehash()
+
+        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        for i in range(1, num_blocks):
+            await full_node__api.farm_new_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks - 1)
+            ]
+        )
+
+        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+
+        cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100))
+
+        for i in range(1, num_blocks):
+            await full_node__api.farm_new_block(FarmNewBlockProtocol(32 * b"0"))
+
+        await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
+        await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
 
     @pytest.mark.asyncio
     async def test_cc_spend(self, two_wallet_nodes):
-        num_blocks = 8
+        num_blocks = 3
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
@@ -87,11 +81,14 @@ class TestCCWallet:
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-        for i in range(1, 4):
+        for i in range(1, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
 
         funds = sum(
-            [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 4 - 1)]
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks - 1)
+            ]
         )
 
         await time_out_assert(15, wallet.get_confirmed_balance, funds)
@@ -99,7 +96,7 @@ class TestCCWallet:
         cc_wallet: CCWallet = await CCWallet.create_new_cc(wallet_node.wallet_state_manager, wallet, uint64(100))
 
         for i in range(1, num_blocks):
-            await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_block(FarmNewBlockProtocol(32 * b"0"))
 
         await time_out_assert(15, cc_wallet.get_confirmed_balance, 100)
         await time_out_assert(15, cc_wallet.get_unconfirmed_balance, 100)
