@@ -18,7 +18,7 @@ import {
   getSubBlock,
 } from '../../modules/fullnodeMessages';
 import { chia_formatter } from '../../util/chia';
-import { calculate_block_reward } from '../../util/block_rewards';
+// import { calculate_block_reward } from '../../util/block_rewards';
 import LayoutMain from '../layout/LayoutMain';
 
 /* global BigInt */

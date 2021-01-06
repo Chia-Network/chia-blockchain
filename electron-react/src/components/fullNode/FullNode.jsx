@@ -79,9 +79,6 @@ const cols = [
     field(row) {
       const {
         isFinished = false,
-        foliage_sub_block: {
-          expected_finish_time = '',
-        },
       } = row;
 
       return isFinished
