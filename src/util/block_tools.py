@@ -428,7 +428,7 @@ class BlockTools:
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
-                log.info("Sub epoch summary:", sub_epoch_summary)
+                log.info(f"Sub epoch summary: {sub_epoch_summary}")
             else:
                 ses_hash = None
                 new_sub_slot_iters = None
