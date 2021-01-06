@@ -80,15 +80,7 @@ export function getSubBlockRecords(headerHash, count = 1) {
     let currentHash = headerHash;
 
     for (let i = 0; i < count; i++) {
-      const response = await async_api(
-        dispatch,
-        getSubBlockRecord(currentHash),
-        false,
-      );
-      const subBlockRecord = response?.data?.sub_block_record;
-      if (subBlockRecord) {
-        records.push(subBlockRecord);
-      }
+      const subBlockRecord = await getSubBlockRecord(currentHash);
 
       currentHash = subBlockRecord?.prev_hash;
       if (!currentHash) {
@@ -150,8 +142,7 @@ export const getSubBlockAction = (header_hash) => {
   return action;
 };
 
-
-export const getSubBlockRecord = (headerHash) => {
+export const getSubBlockRecordAction = (headerHash) => {
   const action = fullNodeMessage();
   action.message.command = 'get_sub_block_record';
   action.message.data = { header_hash: headerHash };
@@ -168,9 +159,7 @@ export const clearBlock = (header_hash) => {
 
 export function getSubBlock(headerHash) {
   return async (dispatch) => {
-    const {
-      data,
-    } = await async_api(
+    const response = await async_api(
       dispatch,
       fullNodeMessage({
         command: 'get_sub_block',
@@ -181,6 +170,23 @@ export function getSubBlock(headerHash) {
       false,
     );
 
-    return data;
+    return response?.data?.sub_block;
+  };
+}
+
+export function getSubBlockRecord(headerHash) {
+  return async (dispatch) => {
+    const response = await async_api(
+      dispatch,
+      fullNodeMessage({
+        command: 'get_sub_block_record',
+        data: {
+          header_hash: headerHash,
+        },
+      }),
+      false,
+    );
+
+    return response?.data?.sub_block_record;
   };
 }
