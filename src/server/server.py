@@ -111,6 +111,10 @@ class ChiaServer:
         self.connection_close_task: Optional[asyncio.Task] = None
         self.site_shutdown_task: Optional[asyncio.Task] = None
         self.app_shut_down_task: Optional[asyncio.Task] = None
+        self.received_message_callback: Optional[Callable] = None
+
+    def set_received_message_callback(self, callback: Callable):
+        self.received_message_callback = callback
 
     async def start_server(self, on_connect: Callable = None):
         self.app = web.Application()
@@ -191,6 +195,17 @@ class ChiaServer:
         else:
             self.log.error(f"Invalid connection type for connection {connection}")
 
+    def is_duplicate_or_self_connection(self, target_node: PeerInfo) -> bool:
+        if (target_node.host == "127.0.0.1" or target_node.host == "localhost") and target_node.port == self._port:
+            # Don't connect to self
+            self.log.debug(f"Not connecting to {target_node}")
+            return True
+        for connection in self.all_connections.values():
+            if connection.host == target_node.host and connection.peer_server_port == target_node.port:
+                self.log.debug(f"Not connecting to {target_node}, duplicate connection")
+                return True
+        return False
+
     async def start_client(
         self,
         target_node: PeerInfo,
@@ -202,15 +217,8 @@ class ChiaServer:
         Tries to connect to the target node, adding one connection into the pipeline, if successful.
         An on connect method can also be specified, and this will be saved into the instance variables.
         """
-        if (target_node.host == "127.0.0.1" or target_node.host == "localhost") and target_node.port == self._port:
-            # Don't connect to self
-            self.log.debug(f"Not connecting to {target_node}")
+        if self.is_duplicate_or_self_connection(target_node):
             return False
-
-        for connection in self.all_connections.values():
-            if connection.host == target_node.host and connection.peer_server_port == target_node.port:
-                self.log.debug(f"Not connecting to {target_node}, duplicate connection")
-                return False
 
         ssl_context = ssl_context_for_client(self._private_cert_path, self._private_key_path, auth)
         session = None
@@ -303,6 +311,8 @@ class ChiaServer:
             payload_inc, connection_inc = await self.incoming_messages.get()
             if payload_inc is None or connection_inc is None:
                 continue
+            if self.received_message_callback is not None:
+                await self.received_message_callback(connection_inc)
 
             async def api_call(payload: Payload, connection: WSChiaConnection):
                 try:
