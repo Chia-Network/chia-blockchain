@@ -6,7 +6,7 @@ import pytest
 from src.types.peer_info import PeerInfo
 from src.protocols import full_node_protocol
 from src.util.ints import uint16
-from tests.full_node.fixtures import default_400_blocks
+from tests.full_node.fixtures import default_400_blocks, default_1000_blocks
 from tests.setup_nodes import setup_node_and_wallet, test_constants, bt
 from tests.time_out_assert import time_out_assert
 
@@ -60,28 +60,28 @@ class TestWalletSync:
             40, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
         )
 
+    @pytest.mark.asyncio
+    async def test_long_sync_wallet(self, wallet_node, default_1000_blocks):
 
-# @pytest.mark.asyncio
-# async def test_long_sync_wallet(self, wallet_node, default_10000_blocks):
-#
-#     full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
-#
-#     for block in default_10000_blocks:
-#         await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
-#
-#     await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-#
-#     # The second node should eventually catch up to the first one, and have the
-#     # same tip at height num_blocks - 1.
-#     await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_10000_blocks) - 1)
-#
-#     # Tests a reorg with the wallet
-#     num_blocks = 30
-#     blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_10000_blocks[:-5])
-#     breakpoint()
-#     for i in range(1, len(blocks_reorg)):
-#         await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks_reorg[i]))
-#
+        full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
+
+        for block in default_1000_blocks:
+            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
+
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+        # The second node should eventually catch up to the first one, and have the
+        # same tip at height num_blocks - 1.
+        await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
+
+        # Tests a reorg with the wallet
+        num_blocks = 30
+        blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_1000_blocks[:-5])
+
+        for i in range(1, len(blocks_reorg)):
+            await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(blocks_reorg[i]))
+
+
 #  await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_10000_blocks) + num_blocks - 5 - 1)
 #
 #     @pytest.mark.asyncio
