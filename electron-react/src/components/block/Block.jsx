@@ -6,6 +6,7 @@ import { ArrowBackIos as ArrowBackIosIcon } from '@material-ui/icons';
 import { useParams, useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { Card, Loading, TooltipIcon, Flex } from '@chia/core';
+import styled from 'styled-components';
 import {
   unix_to_short_date,
   hex_to_array,
@@ -21,6 +22,11 @@ import { calculate_block_reward } from '../../util/block_rewards';
 import LayoutMain from '../layout/LayoutMain';
 
 /* global BigInt */
+
+const BackIcon = styled(ArrowBackIosIcon)`
+  font-size: 1.25rem;
+  cursor: pointer;
+`;
 
 async function computeNewPlotId(block) {
   const { pool_public_key, plot_public_key } = block.reward_chain_sub_block.proof_of_space;
@@ -278,10 +284,10 @@ export default function Block() {
     >
       <Card
         title={(
-          <Flex gap={1} alignItems="center">
-            <ArrowBackIosIcon onClick={handleGoBack}>
+          <Flex gap={1} alignItems="baseline">
+            <BackIcon onClick={handleGoBack}>
               {' '}
-            </ArrowBackIosIcon>
+            </BackIcon>
             <span>
               <Trans id="Block.description">
                 Block at height {blockRecord.height} in the Chia
