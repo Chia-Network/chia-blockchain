@@ -4,7 +4,7 @@ from random import randrange, choice
 
 from src.types.peer_info import PeerInfo, TimestampedPeerInfo
 from src.util.ints import uint16, uint64
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Set
 from asyncio import Lock
 import logging
 import time
@@ -452,8 +452,8 @@ class AddressManager:
                     while self.tried_matrix[tried_bucket][tried_buket_pos] == -1:
                         tried_bucket = (tried_bucket + randbits(LOG_TRIED_BUCKET_COUNT)) % TRIED_BUCKET_COUNT
                         tried_buket_pos = (tried_buket_pos + randbits(LOG_BUCKET_SIZE)) % BUCKET_SIZE
-                    
-                node_id = self.tried_matrix[tried_bucket][tried_buket_pos]
+
+                node_id = self.tried_matrix[tried_bucket][tried_bucket_pos]
                 assert node_id != -1
                 info = self.map_info[node_id]
                 if randbits(30) < (chance * info.get_selection_chance() * (1 << 30)):
@@ -465,7 +465,7 @@ class AddressManager:
             chance = 1.0
             start = time.time()
             if len(self.used_new_matrix_positions) < math.sqrt(NEW_BUCKET_COUNT * BUCKET_SIZE):
-                cached_new_matrix_positions = list(used_new_matrix_positions)
+                cached_new_matrix_positions = list(self.used_new_matrix_positions)
             while True:
                 if len(self.used_new_matrix_positions) < math.sqrt(NEW_BUCKET_COUNT * BUCKET_SIZE):
                     index = randrange(len(cached_new_matrix_positions))
