@@ -15,6 +15,7 @@ from src.protocols import full_node_protocol as fnp
 from src.server.outbound_message import NodeType
 from src.server.server import ssl_context_for_client, ChiaServer
 from src.server.ws_connection import WSChiaConnection
+from src.types.full_block import FullBlock
 from src.types.peer_info import TimestampedPeerInfo, PeerInfo
 from src.server.address_manager import AddressManager
 from src.types.sized_bytes import bytes32
@@ -681,6 +682,33 @@ class TestFullNodeProtocol:
         assert len(res.data.sub_blocks) == 6
         assert res.data.sub_blocks[-1].transactions_generator is not None
         assert res.data.sub_blocks[-1] == blocks[-1]
+
+    @pytest.mark.asyncio
+    async def test_new_unfinished_sub_block(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+        peer = await connect_and_get_peer(server_1, server_2)
+
+        block: FullBlock = blocks[0]
+        unf = UnfinishedBlock(
+            block.finished_sub_slots,
+            block.reward_chain_sub_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+
+        # Don't have
+        res = await full_node_1.new_unfinished_sub_block(fnp.NewUnfinishedSubBlock(unf.partial_hash))
+        assert res is not None
+        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedSubBlock(unf), peer)
+
+        # Have
+        res = await full_node_1.new_unfinished_sub_block(fnp.NewUnfinishedSubBlock(unf.partial_hash))
+        assert res is None
 
     # @pytest.mark.asyncio
     # async def test_new_unfinished(self, two_nodes, wallet_blocks):
