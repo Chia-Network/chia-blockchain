@@ -1,13 +1,13 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
-import moment from 'moment';
+// import moment from 'moment';
 import {
   Typography,
   Link,
   Tooltip,
 } from '@material-ui/core';
-import { Flex, Table, TooltipIcon, Card } from '@chia/core';
+import { Table, Card } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 import type { Row } from '../core/Table/Table';
 
