@@ -1,5 +1,6 @@
-import React, { ReactNode, useMemo, useState } from 'react';
+import React, { ReactNode, useMemo, useState, SyntheticEvent } from 'react';
 import styled from 'styled-components';
+import { get } from 'lodash';
 import {
   TableContainer,
   TableHead,
@@ -66,10 +67,12 @@ type Props = {
   rowsPerPage?: number;
   hideHeader?: boolean;
   caption?: ReactNode;
+  onRowClick?: (e: SyntheticEvent, row: Row) => void;
+  rowHover?: boolean;
 };
 
 export default function Table(props: Props) {
-  const { cols, rows, children, pages, rowsPerPageOptions, rowsPerPage: defaultRowsPerPage, hideHeader, caption } = props;
+  const { cols, rows, children, pages, rowsPerPageOptions, rowsPerPage: defaultRowsPerPage, hideHeader, caption, onRowClick, rowHover } = props;
   const [page, setPage] = useState<number>(0);
   const [rowsPerPage, setRowsPerPage] = useState<number>(defaultRowsPerPage ?? 10);
 
@@ -109,6 +112,12 @@ export default function Table(props: Props) {
     return preparedRows.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
   }, [preparedRows, pages, page, rowsPerPage]);
 
+  function handleRowClick(e: SyntheticEvent, row: Row) {
+    if (onRowClick) {
+      onRowClick(e, row);
+    }
+  }
+
   return (
     <TableContainer component={Paper}>
       <TableBase>
@@ -136,14 +145,18 @@ export default function Table(props: Props) {
         <TableBody>
           {children}
           {currentRows.map((row) => (
-            <StyledTableRow key={row.id}>
+            <StyledTableRow 
+              key={row.id} 
+              onClick={(e) => handleRowClick(e, row)} 
+              hover={rowHover}
+            >
               {currentCols.map((col) => {
                 const { field, tooltip } = col;
                 const value =
                   typeof field === 'function'
                     ? field(row)
                     : // @ts-ignore
-                      row[field];
+                      get(row, field);
 
                 let tooltipValue;
                 if (tooltip) {
@@ -200,4 +213,5 @@ Table.defaultProps = {
   hideHeader: false,
   caption: undefined,
   children: undefined,
+  rowHover: false,
 };

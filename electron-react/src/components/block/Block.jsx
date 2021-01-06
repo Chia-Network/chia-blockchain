@@ -1,14 +1,10 @@
-import React, { useEffect, useCallback, useState, useMemo } from 'react';
-import { Button, Grid, Typography, Paper, TableRow, Tooltip } from '@material-ui/core';
+import React, { useEffect, useState } from 'react';
+import { Button, Paper, TableRow, Table, TableBody, TableCell, TableContainer } from '@material-ui/core';
+import { Alert } from '@material-ui/lab';
 import { Trans } from '@lingui/macro';
-import { useParams } from 'react-router-dom';
-import { withStyles } from '@material-ui/core/styles';
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableContainer from '@material-ui/core/TableContainer';
+import { useParams, useHistory } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import HelpIcon from '@material-ui/icons/Help';
+import { Card, Loading, TooltipIcon, Flex } from '@chia/core';
 import {
   unix_to_short_date,
   hex_to_array,
@@ -16,138 +12,130 @@ import {
   sha256,
 } from '../../util/utils';
 import {
-  clearBlock,
   getSubBlockRecord,
   getSubBlock,
 } from '../../modules/fullnodeMessages';
 import { chia_formatter } from '../../util/chia';
-
-import { hash_header } from '../../util/header';
 import { calculate_block_reward } from '../../util/block_rewards';
+import LayoutMain from '../layout/LayoutMain';
 
 /* global BigInt */
 
-const styles = (theme) => ({
-  form: {
-    margin: theme.spacing(1),
-  },
-  clickable: {
-    cursor: 'pointer',
-  },
-  error: {
-    color: 'red',
-  },
-  container: {
-    paddingTop: theme.spacing(0),
-    paddingBottom: theme.spacing(0),
-    paddingRight: theme.spacing(0),
-  },
-  balancePaper: {
-    marginTop: theme.spacing(2),
-  },
-  cardTitle: {
-    paddingLeft: theme.spacing(1),
-    paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1),
-  },
-  table: {
-    minWidth: 650,
-  },
-  connect: {
-    marginLeft: theme.spacing(1),
-  },
-});
+async function computeNewPlotId(block) {
+  const { pool_public_key, plot_public_key } = block.reward_chain_sub_block.proof_of_space;
 
-const Block = (props) => {
+  let buf = hex_to_array(pool_public_key);
+  buf = buf.concat(hex_to_array(plot_public_key));
+  const bufHash = await sha256(buf);
+  return arr_to_hex(bufHash);
+}
+
+export default function Block() {
   const { headerHash } = useParams();
+  const history = useHistory();
   const dispatch = useDispatch();
+  const [block, setBlock] = useState();
+  const [blockRecord, setBlockRecord] = useState();
+  const [prevBlockRecord, setPrevBlockRecord] = useState();
+  const [newPlotId, setNewPlotId] = useState();
 
-  console.log('headerHash', headerHash);
+  const [error, setError] = useState();
+  const [loading, setLoading] = useState(true);
 
-  const block = useMemo(async () => {
-    const data = await dispatch(getSubBlock(headerHash));
-    console.log('block data', data);
-    return data;
+  const hasPreviousBlock = !!blockRecord?.prev_block_hash;
+
+  async function prepareData(headerHash) {
+    setLoading(true);
+
+    try {
+      setBlock();
+      setBlockRecord();
+      setPrevBlockRecord();
+      setNewPlotId();
+
+      const block = await dispatch(getSubBlock(headerHash));
+      setBlock(block);
+
+      if (block) {
+        setNewPlotId(await computeNewPlotId(block));
+      }
+
+      const blockRecord = await dispatch(getSubBlockRecord(headerHash));
+      setBlockRecord(blockRecord);
+
+      if (blockRecord?.prev_block_hash) {
+        const prevBlockRecord = await dispatch(getSubBlockRecord(blockRecord?.prev_block_hash));
+        setPrevBlockRecord(prevBlockRecord);
+      }
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    prepareData(headerHash);
   }, [headerHash]);
 
-  // const [headerHash, setHeaderHash] = useState('');
-  const [plotId, setPlotId] = useState('');
-  const [didMount, setDidMount] = useState(false);
-
-  const { prev_header_hash } = props.block.header.data;
-  const { height } = props.block.header.data;
-
-  
-
-  const handleClearBlock = useCallback(() => dispatch(clearBlock()), [
-    dispatch,
-  ]);
-
-  const handleGetHeader = useCallback(
-    (headerHash) => dispatch(getSubBlockRecord(headerHash)),
-    [dispatch],
-  );
-
-  const handleGetBlock = useCallback(
-    (headerHash) => dispatch(getSubBlock(headerHash)),
-    [dispatch],
-  );
-
-  const fetchHeaderIfNecessary = useCallback(async () => {
-    if (props.prevHeader) {
-      const phh = await hash_header(props.prevHeader);
-      let phh_expected = props.block.header.data.prev_header_hash;
-      if (phh_expected.startsWith('0x') || phh_expected.startsWith('0X')) {
-        phh_expected = phh_expected.slice(2);
-      }
-      if (phh !== phh_expected) {
-        handleGetHeader(props.block.header.data.prev_header_hash);
-      }
-    } else {
-      handleGetHeader(props.block.header.data.prev_header_hash);
+  function handleShowPreviousBlock() {
+    const prevBlockHash = blockRecord?.prev_block_hash;
+    if (prevBlockHash) {
+      history.push(`/dashboard/block/${prevBlockHash}`);
     }
-    const newHeaderHash = await hash_header(props.block.header);
-
-    let buf = hex_to_array(props.block.proof_of_space.pool_public_key);
-    buf = buf.concat(hex_to_array(props.block.proof_of_space.plot_public_key));
-    const bufHash = await sha256(buf);
-    const newPlotId = arr_to_hex(bufHash);
-    setHeaderHash(newHeaderHash);
-    setPlotId(newPlotId);
-  }, [handleGetHeader, props]);
-
-  useEffect(
-    (prevProps) => {
-      (async () => {
-        if (!didMount || height > 0) {
-          await fetchHeaderIfNecessary();
-        }
-      })();
-    },
-    [prev_header_hash, height, didMount, setDidMount, fetchHeaderIfNecessary],
-  );
-
-  const { classes } = props;
-  // const { block } = props;
-  const { prevHeader } = props;
-
-  let diff = 0;
-  if (block.header.data.height === 0) {
-    diff = block.header.data.weight;
-  } else if (prevHeader) {
-    diff = block.header.data.weight - prevHeader.data.weight;
   }
-  const newHeaderHash = `0x${headerHash}`;
-  const newPlotId = `0x${plotId}`;
+
+  if (loading) {
+    return (
+      <LayoutMain
+        title={<Trans id="Block.title">Block</Trans>}
+      >
+        <Flex justifyContent="center">
+          <Loading />
+        </Flex>
+      </LayoutMain>
+    );
+  }
+
+  if (error) {
+    return (
+      <LayoutMain
+        title={<Trans id="Block.title">Block</Trans>}
+      >
+        <Alert severity="error">
+          {error.message}
+        </Alert>
+      </LayoutMain>
+    );
+  }
+
+  if (!block) {
+    return (
+      <LayoutMain
+        title={<Trans id="Block.title">Block</Trans>}
+      >
+        <Alert severity="warning">
+          <Trans id="Block.notFound">
+            Block with hash {headerHash} does not exists.
+          </Trans>
+        </Alert>
+        
+      </LayoutMain>
+    );
+  }
+
+  const difficulty = prevBlockRecord && blockRecord
+    ? blockRecord.weight - prevBlockRecord.weight
+    : blockRecord?.weight ?? 0;
 
   const chia_cb = chia_formatter(
-    Number.parseFloat(calculate_block_reward(block.header.data.height)),
+    Number.parseFloat(calculate_block_reward(blockRecord.height)),
     'mojo',
   )
     .to('chia')
     .toString();
   const chia_fees = chia_formatter(
-    Number.parseFloat(BigInt(block.header.data.total_transaction_fees)),
+    Number.parseFloat(BigInt(blockRecord.fees)),
     'mojo',
   )
     .to('chia')
@@ -156,11 +144,11 @@ const Block = (props) => {
   const rows = [
     {
       name: <Trans id="Block.headerHash">Header hash</Trans>,
-      value: newHeaderHash,
+      value: blockRecord.header_hash,
     },
     {
       name: <Trans id="Block.timestamp">Timestamp</Trans>,
-      value: unix_to_short_date(block.header.data.timestamp),
+      value: unix_to_short_date(blockRecord.timestamp),
       tooltip: (
         <Trans id="Block.timestampTooltip">
           This is the time the block was created by the farmer, which is before
@@ -170,11 +158,11 @@ const Block = (props) => {
     },
     {
       name: <Trans id="Block.height">Height</Trans>,
-      value: block.header.data.height,
+      value: blockRecord.height,
     },
     {
       name: <Trans id="Block.weight">Weight</Trans>,
-      value: BigInt(block.header.data.weight).toLocaleString(),
+      value: BigInt(blockRecord.weight).toLocaleString(),
       tooltip: (
         <Trans id="Block.weightTooltip">
           Weight is the total added difficulty of all blocks up to and including
@@ -184,16 +172,16 @@ const Block = (props) => {
     },
     {
       name: <Trans id="Block.previousBlock">Previous block</Trans>,
-      value: block.header.data.prev_header_hash,
+      value: blockRecord.prev_block_hash,
       previousBlock: true,
     },
     {
       name: <Trans id="Block.difficulty">Difficulty</Trans>,
-      value: BigInt(diff).toLocaleString(),
+      value: BigInt(difficulty).toLocaleString(),
     },
     {
       name: <Trans id="Block.totalVDFIterations">Total VDF Iterations</Trans>,
-      value: BigInt(block.header.data.total_iters).toLocaleString(),
+      value: BigInt(blockRecord.total_iters).toLocaleString(),
       tooltip: (
         <Trans id="Block.totalVDFIterationsTooltip">
           The total number of VDF (verifiable delay function) or proof of time
@@ -203,7 +191,7 @@ const Block = (props) => {
     },
     {
       name: <Trans id="Block.blockVDFIterations">Block VDF Iterations</Trans>,
-      value: BigInt(block.proof_of_time.number_of_iterations).toLocaleString(),
+      value: BigInt(block.reward_chain_sub_block.challenge_chain_ip_vdf.number_of_iterations).toLocaleString(),
       tooltip: (
         <Trans id="Block.blockVDFIterationsTooltip">
           The total number of VDF (verifiable delay function) or proof of time
@@ -213,15 +201,15 @@ const Block = (props) => {
     },
     {
       name: <Trans id="Block.proofOfSpaceSize">Proof of Space Size</Trans>,
-      value: block.proof_of_space.size,
+      value: block.reward_chain_sub_block.proof_of_space.size,
     },
     {
       name: <Trans id="Block.plotPublicKey">Plot Public Key</Trans>,
-      value: block.proof_of_space.plot_public_key,
+      value: block.reward_chain_sub_block.proof_of_space.plot_public_key,
     },
     {
       name: <Trans id="Block.poolPublicKey">Pool Public Key</Trans>,
-      value: block.proof_of_space.pool_public_key,
+      value: block.reward_chain_sub_block.proof_of_space.pool_public_key,
     },
     {
       name: <Trans id="Block.plotId">Plot Id</Trans>,
@@ -239,16 +227,16 @@ const Block = (props) => {
           Transactions Filter Hash
         </Trans>
       ),
-      value: block.header.data.filter_hash,
-    },
+      value: block.foliage_block.filter_hash,
+    }, /*
     {
       name: (
         <Trans id="Block.transactionsGeneratorHash">
           Transactions Generator Hash
         </Trans>
       ),
-      value: block.header.data.generator_hash,
-    },
+      value: block.foliage_block.generator_hash,
+    }, */
     {
       name: <Trans id="Block.coinbaseAmount">Coinbase Amount</Trans>,
       value: `${chia_cb} TXCH`,
@@ -260,7 +248,7 @@ const Block = (props) => {
     },
     {
       name: <Trans id="Block.coinbasePuzzleHash">Coinbase Puzzle Hash</Trans>,
-      value: block.header.data.pool_target.puzzle_hash,
+      value: blockRecord.pool_puzzle_hash,
     },
     {
       name: <Trans id="Block.feesAmount">Fees Amount</Trans>,
@@ -273,61 +261,54 @@ const Block = (props) => {
     },
     {
       name: <Trans id="Block.feesPuzzleHash">Fees Puzzle Hash</Trans>,
-      value: block.header.data.farmer_rewards_puzzle_hash,
+      value: blockRecord.farmer_puzzle_hash,
     },
   ];
 
   return (
-    <Paper className={classes.balancePaper}>
-      <Grid container spacing={0}>
-        <Grid item xs={12}>
-          <Button onClick={handleClearBlock}>
-            <Trans id="Block.title">Block</Trans>
+    <LayoutMain
+      title={<Trans id="Block.title">Block</Trans>}
+    >
+      <Card
+        title={(
+          <Trans id="Block.description">
+            Block at height {blockRecord.height} in the Chia
+            blockchain
+          </Trans>
+        )}
+        action={hasPreviousBlock ? (
+          <Button onClick={handleShowPreviousBlock}>
+            <Trans id="Block.previousBlock">
+              Previous Block
+            </Trans>
           </Button>
-          <div className={classes.cardTitle}>
-            <Typography component="h6" variant="h6">
-              <Trans id="Block.description">
-                Block at height {block.header.data.height} in the Chia
-                blockchain
-              </Trans>
-            </Typography>
-          </div>
-          <TableContainer component={Paper}>
-            <Table className={classes.table} aria-label="simple table">
-              <TableBody>
-                {rows.map((row) => (
-                  <TableRow key={row.name}>
-                    <TableCell component="th" scope="row">
-                      {row.name}{' '}
-                      {row.tooltip ? (
-                        <Tooltip title={row.tooltip}>
-                          <HelpIcon
-                            style={{ color: '#c8c8c8', fontSize: 12 }}
-                          />
-                        </Tooltip>
-                      ) : (
-                        ''
-                      )}
-                    </TableCell>
-                    <TableCell
-                      onClick={
-                        row.previousBlock
-                          ? () => handleGetBlock(row.value)
-                          : () => {}
-                      }
-                      align="right"
-                    >
-                      {row.value}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Grid>
-      </Grid>
-    </Paper>
+        ) : null}
+      >
+        <TableContainer component={Paper}>
+          <Table>
+            <TableBody>
+              {rows.map((row, index) => (
+                <TableRow key={index}>
+                  <TableCell component="th" scope="row">
+                    {row.name}{' '}
+                    {row.tooltip && (
+                      <TooltipIcon>
+                        {row.tooltip}
+                      </TooltipIcon>
+                    )}
+                  </TableCell>
+                  <TableCell
+                    onClick={row.previousBlock ? handleShowPreviousBlock : undefined}
+                    align="right"
+                  >
+                    {row.value}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
+    </LayoutMain>
   );
-};
-
-export default withStyles(styles)(Block);
+}

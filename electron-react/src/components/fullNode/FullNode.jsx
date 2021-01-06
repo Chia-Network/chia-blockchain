@@ -1,152 +1,99 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { FormatBytes, Flex, Card, Loading } from '@chia/core';
-import Grid from '@material-ui/core/Grid';
-import { Switch, Route, Link, useRouteMatch } from 'react-router-dom'; 
-import { makeStyles } from '@material-ui/core/styles';
+import { FormatBytes, Flex, Card, Loading, Table } from '@chia/core';
+import { Status } from '@chia/icons';
+import { useRouteMatch, useHistory } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { Box, Button, TextField, Tooltip, Typography } from '@material-ui/core';
+import { Box, Button, Grid, TextField, Tooltip, Typography } from '@material-ui/core';
 import HelpIcon from '@material-ui/icons/Help';
 import { unix_to_short_date } from '../../util/utils';
 import FullNodeConnections from './FullNodeConnections';
-import Block from '../block/Block';
 import {
   closeConnection,
   openConnection,
-  getSubBlock,
-  getSubBlockRecord,
-  getSubBlockRecords,
 } from '../../modules/fullnodeMessages';
 import LayoutMain from '../layout/LayoutMain';
+import StateColor from '../../constants/StateColor';
 
 /* global BigInt */
 
-const drawerWidth = 180;
+const cols = [
+  {
+    minWidth: '200px',
+    field(row) {
+      const {
+        isFinished = false,
+        header_hash,
+        foliage_sub_block: {
+          foliage_block_hash,
+        },
+      } = row;
 
-const useStyles = makeStyles((theme) => ({
-  menuButton: {
-    marginRight: 36,
-  },
-  searchHashButton: {
-    marginLeft: '10px',
-    height: '100%',
-  },
-  menuButtonHidden: {
-    display: 'none',
-  },
-  title: {
-    flexGrow: 1,
-  },
-  drawerPaper: {
-    position: 'relative',
-    whiteSpace: 'nowrap',
-    width: drawerWidth,
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  },
-  drawerPaperClose: {
-    overflowX: 'hidden',
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen,
-    }),
-    width: theme.spacing(7),
-    [theme.breakpoints.up('sm')]: {
-      width: theme.spacing(9),
+      const value = isFinished 
+        ? header_hash
+        : <span>{foliage_block_hash}</span>;
+
+      const color = isFinished
+        ? StateColor.SUCCESS
+        : StateColor.WARNING;
+
+      const tooltip = isFinished
+        ? <Trans id="BlocksCard.finished">Finished</Trans>
+        : <Trans id="BlocksCard.inProgress">In Progress</Trans>;
+
+      return (
+        <Flex gap={1} alignItems="center">
+          <Tooltip title={<span>{tooltip}</span>}>
+            <Status color={color} />
+          </Tooltip>
+          <span>{value}</span>
+        </Flex>
+      )
     },
+    title: <Trans id="BlocksCard.headerHash">Header Hash</Trans>,
   },
-  content: {
-    flexGrow: 1,
-    height: 'calc(100vh - 64px)',
-    overflowX: 'hidden',
+  {
+    width: '150px',
+    field: 'foliage_block.height',
+    title: <Trans id="BlocksCard.height">Height</Trans>,
   },
-  container: {
-    paddingTop: theme.spacing(3),
-    paddingLeft: theme.spacing(6),
-    paddingRight: theme.spacing(6),
-    paddingBottom: theme.spacing(3),
-  },
-  paper: {
-    padding: theme.spacing(0),
-    display: 'flex',
-    overflow: 'auto',
-    flexDirection: 'column',
-  },
-  fixedHeight: {
-    height: 240,
-  },
-  drawerWallet: {
-    position: 'relative',
-    whiteSpace: 'nowrap',
-    width: drawerWidth,
-    height: '100%',
-    transition: theme.transitions.create('width', {
-      easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen,
-    }),
-  },
-  balancePaper: {
-    padding: theme.spacing(2),
-    marginTop: theme.spacing(2),
-  },
-  bottomOptions: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-  },
-  cardTitle: {
-    paddingLeft: theme.spacing(1),
-    paddingTop: theme.spacing(1),
-    marginBottom: theme.spacing(1),
-  },
-  cardSubSection: {
-    paddingLeft: theme.spacing(3),
-    paddingRight: theme.spacing(3),
-    paddingTop: theme.spacing(1),
-  },
-  left_block_cell: {
-    marginLeft: 10,
-    width: '25%',
-    textAlign: 'left',
-    overflowWrap: 'break-word',
-  },
-  center_block_cell: {
-    width: '25%',
-    textAlign: 'center',
-    overflowWrap: 'break-word',
-  },
-  center_block_cell_small: {
-    width: '15%',
-    textAlign: 'center',
-    overflowWrap: 'break-word',
-  },
-  right_block_cell: {
-    marginLeft: 30,
-    marginRight: 10,
-    width: '25%',
-    textAlign: 'right',
-    overflowWrap: 'break-word',
-  },
-  block_row: {
-    height: '30px',
-    cursor: 'pointer',
-    borderBottom: '1px solid #eeeeee',
-    /* mouse over link */
-    '&:hover': {
-      // backgroundColor: "#eeeeee"
+  {
+    width: '180px',
+    field(row) {
+      const {
+        foliage_block: {
+          timestamp,
+        },
+      } = row;
+      return unix_to_short_date(Number.parseInt(timestamp));
     },
+    title: <Trans id="BlocksCard.timeCreated">Time Created</Trans>,
   },
-  block_row_unfinished: {
-    height: '30px',
-    borderBottom: '1px solid #eeeeee',
-    color: 'orange',
+  {
+    width: '200px',
+    field(row) {
+      const {
+        isFinished = false,
+        foliage_sub_block: {
+          expected_finish_time = '',
+        },
+      } = row;
+
+      return isFinished
+        ? (
+          <Trans id="BlocksCard.finished">
+            Finished
+          </Trans>
+        )
+        : expected_finish_time && unix_to_short_date(Number.parseInt(expected_finish_time))
+    },
+    title: (
+      <Trans id="BlocksCard.expectedFinishTime">
+        Expected Finish Time
+      </Trans>
+    ),
   },
-  block_header: {
-    marginBottom: 10,
-  },
-}));
+];
 
 const getStatusItems = (state, connected) => {
   const status_items = [];
@@ -219,8 +166,6 @@ const getStatusItems = (state, connected) => {
     };
     status_items.push(item);
   }
-
-
 
   const peakHeight = state.peak?.foliage_block?.height ?? 0;
   status_items.push({
@@ -350,32 +295,26 @@ const FullNodeStatus = (props) => {
 };
 
 const BlocksCard = () => {
-  const { path, url } = useRouteMatch();
-  const classes = useStyles();
+  const { url } = useRouteMatch();
+  const history = useHistory();
   const dispatch = useDispatch();
   const latestBlocks = useSelector((state) => state.full_node_state.latest_blocks);
   const unfinishedSubBlockHeaders = useSelector((state) => state.full_node_state.unfinished_sub_block_headers);
 
-  function handleShowBlock(record) {
-    const {
-      header_hash,
-      foliage_block: {
-        height,
-        timestamp,
-        prev_block_hash,
-      },
-    } = record;
+  const rows = [
+    ...unfinishedSubBlockHeaders,
+    ...latestBlocks.map(row => ({
+      ...row,
+      isFinished: true,
+    })),
+  ];
 
+  function handleRowClick(event, row) {
+    const { isFinished, header_hash } = row;
 
-  }
-
-  function clickedBlock(height, header_hash, prev_header_hash) {
-    return () => {
-      dispatch(getSubBlock(header_hash));
-      if (height > 0) {
-        dispatch(getSubBlockRecord(prev_header_hash));
-      }
-    };
+    if (isFinished && header_hash) {
+      history.push(`${url}/block/${header_hash}`);
+    }
   }
 
   return (
@@ -383,72 +322,11 @@ const BlocksCard = () => {
       title={<Trans id="BlocksCard.title">Blocks</Trans>}
     >
       {latestBlocks ? (
-        <>
-          <Box
-            className={classes.block_header}
-            display="flex"
-            key="header"
-            style={{ minWidth: '100%' }}
-          >
-            <Box className={classes.left_block_cell}>
-              <Trans id="BlocksCard.headerHash">Header Hash</Trans>
-            </Box>
-            <Box className={classes.center_block_cell_small}>
-              <Trans id="BlocksCard.height">Height</Trans>
-            </Box>
-            <Box flexGrow={1} className={classes.center_block_cell}>
-              <Trans id="BlocksCard.timeCreated">Time Created</Trans>
-            </Box>
-            <Box className={classes.right_block_cell}>
-              <Trans id="BlocksCard.expectedFinishTime">
-                Expected finish time
-              </Trans>
-            </Box>
-          </Box>
-
-          {latestBlocks.map((record) => {
-            const isFinished = true; //record.finished_reward_slot_hashes && !!record.finished_reward_slot_hashes.length;
-            const {
-              header_hash,
-              foliage_block: {
-                height,
-                timestamp,
-                prev_block_hash,
-              }
-            } = record;
-
-            return (
-              <Link to={`${url}/${header_hash}`}>
-                <Box
-                  className={
-                    isFinished
-                      ? classes.block_row
-                      : classes.block_row_unfinished
-                  }
-                  display="flex"
-                  key={header_hash}
-                  style={{ minWidth: '100%' }}
-                >
-                  <Box className={classes.left_block_cell}>
-                    {`${header_hash.slice(0, 12)}...`}
-                    {isFinished ? '' : ' (unfinished)'}
-                  </Box>
-                  <Box className={classes.center_block_cell_small}>
-                    {height}
-                  </Box>
-                  <Box flexGrow={1} className={classes.center_block_cell}>
-                    {unix_to_short_date(Number.parseInt(timestamp))}
-                  </Box>
-                  <Box className={classes.right_block_cell}>
-                    {isFinished
-                      ? 'finished'
-                      : unix_to_short_date(Number.parseInt(timestamp))}
-                  </Box>
-                </Box>
-              </Link>
-            );
-          })}
-        </>
+        <Table
+          cols={cols}
+          rows={rows}
+          onRowClick={handleRowClick}
+        />
       ) : (
         <Flex justifyContent="center">
           <Loading />
@@ -458,16 +336,19 @@ const BlocksCard = () => {
   );
 };
 
-const SearchBlock = (props) => {
-  const dispatch = useDispatch();
-  const [searchHash, setSearchHash] = React.useState('');
-  const handleChangeSearchHash = (event) => {
+function SearchBlock() {
+  const history = useHistory();
+  const [searchHash, setSearchHash] = useState('');
+
+  function handleChangeSearchHash(event) {
     setSearchHash(event.target.value);
-  };
-  const clickSearch = () => {
+  }
+
+  function handleSearch() {
+    history.push(`/dashboard/block/${searchHash}`);
     setSearchHash('');
-    dispatch(getBlock(searchHash));
-  };
+  }
+
   return (
     <Card
       title={<Trans id="SearchBlock.title">Search block by header hash</Trans>}
@@ -483,7 +364,7 @@ const SearchBlock = (props) => {
           />
         </Box>
         <Button
-          onClick={clickSearch}
+          onClick={handleSearch}
           variant="contained"
           disableElevation
         >
@@ -492,19 +373,15 @@ const SearchBlock = (props) => {
       </Flex>
     </Card>
   );
-};
+}
 
 export default function FullNode() {
   const dispatch = useDispatch();
-  const { path, url } = useRouteMatch();
 
   const connections = useSelector((state) => state.full_node_state.connections);
   const connectionError = useSelector(
     (state) => state.full_node_state.open_connection_error,
   );
-
-  const block = useSelector((state) => state.full_node_state.block);
-  const header = useSelector((state) => state.full_node_state.header);
 
   const openConnectionCallback = (host, port) => {
     dispatch(openConnection(host, port));
@@ -518,22 +395,15 @@ export default function FullNode() {
       title={<Trans id="FullNode.title">Full Node</Trans>}
     >
       <Flex flexDirection="column" gap={3}>
-        <Switch>
-          <Route path={path} exact>
-            <FullNodeStatus />
-            <BlocksCard />
-            <FullNodeConnections
-              connections={connections}
-              connectionError={connectionError}
-              openConnection={openConnectionCallback}
-              closeConnection={closeConnectionCallback}
-            />
-            <SearchBlock />
-          </Route>
-          <Route path={`${path}/:headerHash`}>
-            <Block />
-          </Route>
-        </Switch>
+        <FullNodeStatus />
+        <BlocksCard />
+        <FullNodeConnections
+          connections={connections}
+          connectionError={connectionError}
+          openConnection={openConnectionCallback}
+          closeConnection={closeConnectionCallback}
+        />
+        <SearchBlock />
       </Flex>
     </LayoutMain>
   );
