@@ -321,7 +321,7 @@ const BlocksCard = () => {
     <Card
       title={<Trans id="BlocksCard.title">Blocks</Trans>}
     >
-      {rows ? (
+      {!!rows.length ? (
         <Table
           cols={cols}
           rows={rows}
