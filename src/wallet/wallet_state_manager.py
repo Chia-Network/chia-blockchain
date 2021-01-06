@@ -198,6 +198,7 @@ class WalletStateManager:
                     continue
                 wallet = await Wallet.create(self.config, wallet_info)
                 self.wallets[wallet_info.id] = wallet
+            # TODO add RL AND DiD WALLETS HERE
             elif wallet_info.type == WalletType.COLOURED_COIN:
                 wallet = await CCWallet.create(
                     self,
@@ -897,9 +898,9 @@ class WalletStateManager:
                 wallet_info["data"],
                 wallet_info["id"],
             )
-
         await self.load_wallets()
         await self.user_settings.user_imported_backup()
+        await self.create_more_puzzle_hashes(from_zero=True)
 
     async def get_wallet_for_colour(self, colour):
         for wallet_id in self.wallets:
