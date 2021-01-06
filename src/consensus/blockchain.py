@@ -72,7 +72,9 @@ class Blockchain:
 
     @staticmethod
     async def create(
-        coin_store: CoinStore, block_store: BlockStore, consensus_constants: ConsensusConstants,
+        coin_store: CoinStore,
+        block_store: BlockStore,
+        consensus_constants: ConsensusConstants,
     ):
         """
         Initializes a blockchain with the SubBlockRecords from disk, assuming they have all been
@@ -175,7 +177,9 @@ class Blockchain:
         return await self.block_store.get_full_block(header_hash)
 
     async def receive_block(
-        self, block: FullBlock, pre_validated: bool = False,
+        self,
+        block: FullBlock,
+        pre_validated: bool = False,
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -196,7 +200,11 @@ class Blockchain:
             )
 
         required_iters, error = await validate_finished_header_block(
-            self.constants, self.sub_blocks, self.sub_height_to_hash, await block.get_block_header(), False,
+            self.constants,
+            self.sub_blocks,
+            self.sub_height_to_hash,
+            await block.get_block_header(),
+            False,
         )
 
         if error is not None:
@@ -218,7 +226,12 @@ class Blockchain:
             return ReceiveBlockResult.INVALID_BLOCK, error_code, None
 
         sub_block = block_to_sub_block_record(
-            self.constants, self.sub_blocks, self.sub_height_to_hash, required_iters, block, None,
+            self.constants,
+            self.sub_blocks,
+            self.sub_height_to_hash,
+            required_iters,
+            block,
+            None,
         )
 
         # Always add the block to the database

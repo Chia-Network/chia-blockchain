@@ -54,7 +54,8 @@ class WalletUserStore:
         self, name: str, wallet_type: int, data: str, id: Optional[int] = None
     ) -> Optional[WalletInfo]:
         cursor = await self.db_connection.execute(
-            "INSERT INTO users_wallets VALUES(?, ?, ?, ?)", (id, name, wallet_type, data),
+            "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
+            (id, name, wallet_type, data),
         )
         await cursor.close()
         await self.db_connection.commit()
@@ -68,7 +69,12 @@ class WalletUserStore:
     async def update_wallet(self, wallet_info: WalletInfo):
         cursor = await self.db_connection.execute(
             "INSERT or REPLACE INTO users_wallets VALUES(?, ?, ?, ?)",
-            (wallet_info.id, wallet_info.name, wallet_info.type, wallet_info.data,),
+            (
+                wallet_info.id,
+                wallet_info.name,
+                wallet_info.type,
+                wallet_info.data,
+            ),
         )
         await cursor.close()
         await self.db_connection.commit()

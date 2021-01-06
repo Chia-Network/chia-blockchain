@@ -59,7 +59,10 @@ class FullNodeStore:
         return self
 
     def add_candidate_block(
-        self, quality_string: bytes32, sub_height: uint32, unfinished_block: UnfinishedBlock,
+        self,
+        quality_string: bytes32,
+        sub_height: uint32,
+        unfinished_block: UnfinishedBlock,
     ):
         self.candidate_blocks[quality_string] = (sub_height, unfinished_block)
 
@@ -123,7 +126,10 @@ class FullNodeStore:
 
     def clear_unfinished_blocks_below(self, sub_height: uint32) -> None:
         del_keys: List[bytes32] = []
-        for partial_reward_hash, (unf_height, unfinished_block,) in self.unfinished_blocks.items():
+        for partial_reward_hash, (
+            unf_height,
+            unfinished_block,
+        ) in self.unfinished_blocks.items():
             if unf_height < sub_height:
                 del_keys.append(partial_reward_hash)
         for del_key in del_keys:
@@ -157,7 +163,10 @@ class FullNodeStore:
         self.finished_sub_slots = [(None, [None] * self.constants.NUM_SPS_SUB_SLOT, uint128(0))]
 
     def new_finished_sub_slot(
-        self, eos: EndOfSubSlotBundle, sub_blocks: Dict[bytes32, SubBlockRecord], peak: Optional[SubBlockRecord],
+        self,
+        eos: EndOfSubSlotBundle,
+        sub_blocks: Dict[bytes32, SubBlockRecord],
+        peak: Optional[SubBlockRecord],
     ) -> Optional[List[timelord_protocol.NewInfusionPointVDF]]:
         """
         Returns false if not added. Returns a list if added. The list contains all infusion points that depended
@@ -336,14 +345,24 @@ class FullNodeStore:
 
                 if check_from_start_of_ss:
                     # Check VDFs from start of sub slot
-                    cc_vdf_info_expected = VDFInfo(ss_challenge_hash, delta_iters, signage_point.cc_vdf.output,)
+                    cc_vdf_info_expected = VDFInfo(
+                        ss_challenge_hash,
+                        delta_iters,
+                        signage_point.cc_vdf.output,
+                    )
 
-                    rc_vdf_info_expected = VDFInfo(ss_reward_hash, delta_iters, signage_point.rc_vdf.output,)
+                    rc_vdf_info_expected = VDFInfo(
+                        ss_reward_hash,
+                        delta_iters,
+                        signage_point.rc_vdf.output,
+                    )
                 else:
                     # Check VDFs from curr
                     assert curr is not None
                     cc_vdf_info_expected = VDFInfo(
-                        ss_challenge_hash, uint64(sp_total_iters - curr.total_iters), signage_point.cc_vdf.output,
+                        ss_challenge_hash,
+                        uint64(sp_total_iters - curr.total_iters),
+                        signage_point.cc_vdf.output,
                     )
                     rc_vdf_info_expected = VDFInfo(
                         curr.reward_infusion_new_challenge,
@@ -357,7 +376,11 @@ class FullNodeStore:
                 else:
                     assert curr is not None
                     start_ele = curr.challenge_vdf_output
-                if not signage_point.cc_proof.is_valid(self.constants, start_ele, cc_vdf_info_expected,):
+                if not signage_point.cc_proof.is_valid(
+                    self.constants,
+                    start_ele,
+                    cc_vdf_info_expected,
+                ):
                     return False
 
                 if rc_vdf_info_expected.challenge != signage_point.rc_vdf.challenge:
@@ -365,7 +388,10 @@ class FullNodeStore:
                     return False
 
                 if not signage_point.rc_proof.is_valid(
-                    self.constants, ClassgroupElement.get_default_element(), signage_point.rc_vdf, rc_vdf_info_expected,
+                    self.constants,
+                    ClassgroupElement.get_default_element(),
+                    signage_point.rc_vdf,
+                    rc_vdf_info_expected,
                 ):
                     return False
 
@@ -477,9 +503,19 @@ class FullNodeStore:
                 prev_sub_slot_total_iters = peak.sp_sub_slot_total_iters(self.constants)
                 assert total_iters_peak != prev_sub_slot_total_iters
                 self.finished_sub_slots = [
-                    (sp_sub_slot, [None] * self.constants.NUM_SPS_SUB_SLOT, prev_sub_slot_total_iters,)
+                    (
+                        sp_sub_slot,
+                        [None] * self.constants.NUM_SPS_SUB_SLOT,
+                        prev_sub_slot_total_iters,
+                    )
                 ]
-            self.finished_sub_slots.append((ip_sub_slot, [None] * self.constants.NUM_SPS_SUB_SLOT, total_iters_peak,))
+            self.finished_sub_slots.append(
+                (
+                    ip_sub_slot,
+                    [None] * self.constants.NUM_SPS_SUB_SLOT,
+                    total_iters_peak,
+                )
+            )
 
         new_eos: Optional[EndOfSubSlotBundle] = None
         new_sps: List[SignagePoint] = []

@@ -98,7 +98,9 @@ class BlockTools:
     """
 
     def __init__(
-        self, constants: ConsensusConstants = test_constants, root_path: Optional[Path] = None,
+        self,
+        constants: ConsensusConstants = test_constants,
+        root_path: Optional[Path] = None,
     ):
         self._tempdir = None
         if root_path is None:
@@ -163,7 +165,10 @@ class BlockTools:
         try:
             # No datetime in the filename, to get deterministic filenames and not re-plot
             create_plots(
-                args, root_path, use_datetime=False, test_private_keys=test_private_keys,
+                args,
+                root_path,
+                use_datetime=False,
+                test_private_keys=test_private_keys,
             )
         except KeyboardInterrupt:
             shutil.rmtree(plot_dir, ignore_errors=True)
@@ -278,7 +283,10 @@ class BlockTools:
         # Get the challenge for that slot
         while True:
             slot_cc_challenge, slot_rc_challenge = get_challenges(
-                constants, sub_blocks, finished_sub_slots_at_sp, latest_sub_block.header_hash,
+                constants,
+                sub_blocks,
+                finished_sub_slots_at_sp,
+                latest_sub_block.header_hash,
             )
             prev_num_of_blocks = num_blocks
             if num_empty_slots_added < skip_slots:
@@ -318,7 +326,12 @@ class BlockTools:
                         cc_sp_output_hash = signage_point.cc_vdf.output.get_hash()
 
                     qualified_proofs: List[Tuple[uint64, ProofOfSpace]] = self.get_pospaces_for_challenge(
-                        constants, slot_cc_challenge, cc_sp_output_hash, seed, difficulty, sub_slot_iters,
+                        constants,
+                        slot_cc_challenge,
+                        cc_sp_output_hash,
+                        seed,
+                        difficulty,
+                        sub_slot_iters,
                     )
 
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
@@ -392,9 +405,17 @@ class BlockTools:
                 eos_iters = sub_slot_iters
                 cc_input = ClassgroupElement.get_default_element()
                 rc_challenge = slot_rc_challenge
-            cc_vdf, cc_proof = get_vdf_info_and_proof(constants, cc_input, slot_cc_challenge, eos_iters,)
+            cc_vdf, cc_proof = get_vdf_info_and_proof(
+                constants,
+                cc_input,
+                slot_cc_challenge,
+                eos_iters,
+            )
             rc_vdf, rc_proof = get_vdf_info_and_proof(
-                constants, ClassgroupElement.get_default_element(), rc_challenge, eos_iters,
+                constants,
+                ClassgroupElement.get_default_element(),
+                rc_challenge,
+                eos_iters,
             )
 
             eos_deficit: uint8 = (
@@ -419,7 +440,12 @@ class BlockTools:
                 sub_epoch_summary: Optional[SubEpochSummary] = None
             else:
                 sub_epoch_summary = next_sub_epoch_summary(
-                    constants, sub_blocks, height_to_hash, latest_sub_block.required_iters, block_list[-1], False,
+                    constants,
+                    sub_blocks,
+                    height_to_hash,
+                    latest_sub_block.required_iters,
+                    block_list[-1],
+                    False,
                 )
                 pending_ses = True
 
@@ -448,12 +474,20 @@ class BlockTools:
                 else:
                     # This means there are no sub-blocks in this sub-slot
                     icc_eos_iters = sub_slot_iters
-                icc_ip_vdf = VDFInfo(icc_ip_vdf.challenge, icc_eos_iters, icc_ip_vdf.output,)
+                icc_ip_vdf = VDFInfo(
+                    icc_ip_vdf.challenge,
+                    icc_eos_iters,
+                    icc_ip_vdf.output,
+                )
                 icc_sub_slot: Optional[InfusedChallengeChainSubSlot] = InfusedChallengeChainSubSlot(icc_ip_vdf)
                 assert icc_sub_slot is not None
                 icc_sub_slot_hash = icc_sub_slot.get_hash() if latest_sub_block.deficit == 0 else None
                 cc_sub_slot = ChallengeChainSubSlot(
-                    cc_vdf, icc_sub_slot_hash, ses_hash, new_sub_slot_iters, new_difficulty,
+                    cc_vdf,
+                    icc_sub_slot_hash,
+                    ses_hash,
+                    new_sub_slot_iters,
+                    new_difficulty,
                 )
             else:
                 # No icc
@@ -491,7 +525,8 @@ class BlockTools:
             # Handle overflows: No overflows on new epoch
             if new_sub_slot_iters is None and num_empty_slots_added >= skip_slots and new_difficulty is None:
                 for signage_point_index in range(
-                    constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA, constants.NUM_SPS_SUB_SLOT,
+                    constants.NUM_SPS_SUB_SLOT - constants.NUM_SP_INTERVALS_EXTRA,
+                    constants.NUM_SPS_SUB_SLOT,
                 ):
                     # note that we are passing in the finished slots which include the last slot
                     signage_point = get_signage_point(
@@ -512,7 +547,12 @@ class BlockTools:
 
                     # If did not reach the target slots to skip, don't make any proofs for this sub-slot
                     qualified_proofs = self.get_pospaces_for_challenge(
-                        constants, slot_cc_challenge, cc_sp_output_hash, seed, difficulty, sub_slot_iters,
+                        constants,
+                        slot_cc_challenge,
+                        cc_sp_output_hash,
+                        seed,
+                        difficulty,
+                        sub_slot_iters,
                     )
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
                         if sub_blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_SUB_BLOCKS:
@@ -630,7 +670,9 @@ class BlockTools:
                 # Try each of the proofs of space
                 for required_iters, proof_of_space in qualified_proofs:
                     sp_iters: uint64 = calculate_sp_iters(
-                        constants, uint64(constants.SUB_SLOT_ITERS_STARTING), uint8(signage_point_index),
+                        constants,
+                        uint64(constants.SUB_SLOT_ITERS_STARTING),
+                        uint8(signage_point_index),
                     )
                     ip_iters = calculate_ip_iters(
                         constants,
@@ -665,11 +707,17 @@ class BlockTools:
                     assert unfinished_block is not None
                     if not is_overflow_block:
                         cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
-                            constants, ClassgroupElement.get_default_element(), cc_challenge, ip_iters,
+                            constants,
+                            ClassgroupElement.get_default_element(),
+                            cc_challenge,
+                            ip_iters,
                         )
                         cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
                         rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
-                            constants, ClassgroupElement.get_default_element(), rc_challenge, ip_iters,
+                            constants,
+                            ClassgroupElement.get_default_element(),
+                            rc_challenge,
+                            ip_iters,
                         )
                         assert unfinished_block is not None
                         total_iters_sp = uint128(sub_slot_total_iters + sp_iters)
@@ -708,7 +756,10 @@ class BlockTools:
                             cc_slot,
                             None,
                             RewardChainSubSlot(
-                                rc_vdf, cc_slot.get_hash(), None, uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK),
+                                rc_vdf,
+                                cc_slot.get_hash(),
+                                None,
+                                uint8(constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK),
                             ),
                             SubSlotProofs(cc_proof, None, rc_proof),
                         )
@@ -774,12 +825,16 @@ class BlockTools:
                 for proof_index, quality_str in enumerate(qualities):
 
                     required_iters = calculate_iterations_quality(
-                        quality_str, plot_info.prover.get_size(), difficulty, signage_point,
+                        quality_str,
+                        plot_info.prover.get_size(),
+                        difficulty,
+                        signage_point,
                     )
                     if required_iters < calculate_sp_interval_iters(constants, sub_slot_iters):
                         proof_xs: bytes = plot_info.prover.get_full_proof(new_challenge, proof_index)
                         plot_pk = ProofOfSpace.generate_plot_public_key(
-                            plot_info.local_sk.get_g1(), plot_info.farmer_public_key,
+                            plot_info.local_sk.get_g1(),
+                            plot_info.farmer_public_key,
                         )
                         proof_of_space: ProofOfSpace = ProofOfSpace(
                             new_challenge,
@@ -823,11 +878,27 @@ def get_signage_point(
         cc_vdf_iters,
         rc_vdf_iters,
     ) = get_signage_point_vdf_info(
-        constants, finished_sub_slots, overflow, latest_sub_block, sub_blocks, sp_total_iters, sp_iters,
+        constants,
+        finished_sub_slots,
+        overflow,
+        latest_sub_block,
+        sub_blocks,
+        sp_total_iters,
+        sp_iters,
     )
 
-    cc_sp_vdf, cc_sp_proof = get_vdf_info_and_proof(constants, cc_vdf_input, cc_vdf_challenge, cc_vdf_iters,)
-    rc_sp_vdf, rc_sp_proof = get_vdf_info_and_proof(constants, rc_vdf_input, rc_vdf_challenge, rc_vdf_iters,)
+    cc_sp_vdf, cc_sp_proof = get_vdf_info_and_proof(
+        constants,
+        cc_vdf_input,
+        cc_vdf_challenge,
+        cc_vdf_iters,
+    )
+    rc_sp_vdf, rc_sp_proof = get_vdf_info_and_proof(
+        constants,
+        rc_vdf_input,
+        rc_vdf_challenge,
+        rc_vdf_iters,
+    )
     cc_sp_vdf = replace(cc_sp_vdf, number_of_iterations=sp_iters)
     return SignagePoint(cc_sp_vdf, cc_sp_proof, rc_sp_vdf, rc_sp_proof)
 
@@ -858,7 +929,12 @@ def finish_sub_block(
         new_ip_iters = ip_iters
         cc_vdf_input = ClassgroupElement.get_default_element()
         rc_vdf_challenge = slot_rc_challenge
-    cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(constants, cc_vdf_input, cc_vdf_challenge, new_ip_iters,)
+    cc_ip_vdf, cc_ip_proof = get_vdf_info_and_proof(
+        constants,
+        cc_vdf_input,
+        cc_vdf_challenge,
+        new_ip_iters,
+    )
     cc_ip_vdf = replace(cc_ip_vdf, number_of_iterations=ip_iters)
     deficit = calculate_deficit(
         constants,
@@ -879,7 +955,10 @@ def finish_sub_block(
     )
 
     rc_ip_vdf, rc_ip_proof = get_vdf_info_and_proof(
-        constants, ClassgroupElement.get_default_element(), rc_vdf_challenge, new_ip_iters,
+        constants,
+        ClassgroupElement.get_default_element(),
+        rc_vdf_challenge,
+        new_ip_iters,
     )
     assert unfinished_block is not None
     sp_total_iters = uint128(
@@ -956,11 +1035,19 @@ def load_block_list(
             constants, challenge, sp_hash
         )
         required_iters: uint64 = calculate_iterations_quality(
-            quality_str, full_block.reward_chain_sub_block.proof_of_space.size, difficulty, sp_hash,
+            quality_str,
+            full_block.reward_chain_sub_block.proof_of_space.size,
+            difficulty,
+            sp_hash,
         )
 
         sub_blocks[full_block.header_hash] = block_to_sub_block_record(
-            constants, sub_blocks, height_to_hash, required_iters, full_block, None,
+            constants,
+            sub_blocks,
+            height_to_hash,
+            required_iters,
+            full_block,
+            None,
         )
         height_to_hash[uint32(full_block.sub_block_height)] = full_block.header_hash
     return height_to_hash, uint64(difficulty), sub_blocks
@@ -1013,7 +1100,12 @@ def get_icc(
         assert curr.finished_infused_challenge_slot_hashes is not None
         # First sub block in sub slot has deficit 0,1,2 or 3
         icc_challenge_hash = curr.finished_infused_challenge_slot_hashes[-1]
-    return get_vdf_info_and_proof(constants, icc_input, icc_challenge_hash, icc_iters,)
+    return get_vdf_info_and_proof(
+        constants,
+        icc_input,
+        icc_challenge_hash,
+        icc_iters,
+    )
 
 
 def get_full_block_and_sub_record(

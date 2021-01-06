@@ -64,7 +64,12 @@ class CoinStore:
 
         for coin in additions:
             record: CoinRecord = CoinRecord(
-                coin, block.height, uint32(0), False, False, block.foliage_block.timestamp,
+                coin,
+                block.height,
+                uint32(0),
+                False,
+                False,
+                block.foliage_block.timestamp,
             )
             await self._add_coin_record(record)
 
@@ -79,7 +84,12 @@ class CoinStore:
 
         for coin in included_reward_coins:
             reward_coin_r: CoinRecord = CoinRecord(
-                coin, block.height, uint32(0), False, True, block.foliage_block.timestamp,
+                coin,
+                block.height,
+                uint32(0),
+                False,
+                True,
+                block.foliage_block.timestamp,
             )
             await self._add_coin_record(reward_coin_r)
 
@@ -136,7 +146,8 @@ class CoinStore:
         c1 = await self.coin_record_db.execute("DELETE FROM coin_record WHERE confirmed_index>?", (block_index,))
         await c1.close()
         c2 = await self.coin_record_db.execute(
-            "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,),
+            "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?",
+            (block_index,),
         )
         await c2.close()
         await self.coin_record_db.commit()
@@ -181,6 +192,11 @@ class CoinStore:
         if current is None:
             return
         spent: CoinRecord = CoinRecord(
-            current.coin, current.confirmed_block_index, index, True, current.coinbase, current.timestamp,
+            current.coin,
+            current.confirmed_block_index,
+            index,
+            True,
+            current.coinbase,
+            current.timestamp,
         )  # type: ignore # noqa
         await self._add_coin_record(spent)

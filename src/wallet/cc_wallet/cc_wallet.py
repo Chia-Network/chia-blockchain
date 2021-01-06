@@ -61,7 +61,9 @@ class CCWallet:
 
     @staticmethod
     async def create_new_cc(
-        wallet_state_manager: Any, wallet: Wallet, amount: uint64,
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        amount: uint64,
     ):
         self = CCWallet()
         self.base_puzzle_program = None
@@ -140,7 +142,11 @@ class CCWallet:
         return self
 
     @staticmethod
-    async def create_wallet_for_cc(wallet_state_manager: Any, wallet: Wallet, genesis_checker_hex: str,) -> CCWallet:
+    async def create_wallet_for_cc(
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        genesis_checker_hex: str,
+    ) -> CCWallet:
 
         self = CCWallet()
         self.base_puzzle_program = None
@@ -162,7 +168,11 @@ class CCWallet:
         return self
 
     @staticmethod
-    async def create(wallet_state_manager: Any, wallet: Wallet, wallet_info: WalletInfo,) -> CCWallet:
+    async def create(
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        wallet_info: WalletInfo,
+    ) -> CCWallet:
         self = CCWallet()
 
         self.log = logging.getLogger(__name__)
@@ -339,7 +349,13 @@ class CCWallet:
         eve_coin = Coin(origin_id, cc_puzzle_hash, uint64(0))
 
         await self.add_lineage(
-            eve_coin.name(), Program.to((1, [eve_coin.parent_coin_info, cc_inner, eve_coin.amount],)),
+            eve_coin.name(),
+            Program.to(
+                (
+                    1,
+                    [eve_coin.parent_coin_info, cc_inner, eve_coin.amount],
+                )
+            ),
         )
         await self.add_lineage(eve_coin.parent_coin_info, Program.to((0, [origin.as_list(), 1])))
 
@@ -548,7 +564,11 @@ class CCWallet:
             innersol_list.append(innersol)
             sigs = sigs + await self.get_sigs(coin_inner_puzzle, innersol, coin.name())
         spend_bundle = spend_bundle_for_spendable_ccs(
-            CC_MOD, self.cc_info.my_genesis_checker, spendable_cc_list, innersol_list, sigs,
+            CC_MOD,
+            self.cc_info.my_genesis_checker,
+            spendable_cc_list,
+            innersol_list,
+            sigs,
         )
         # TODO add support for array in stored records
         return TransactionRecord(

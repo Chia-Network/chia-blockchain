@@ -56,7 +56,9 @@ class RLWallet:
     private_key: PrivateKey
 
     @staticmethod
-    async def create_rl_admin(wallet_state_manager: Any,):
+    async def create_rl_admin(
+        wallet_state_manager: Any,
+    ):
         unused: Optional[uint32] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
         if unused is None:
             await wallet_state_manager.create_more_puzzle_hashes()
@@ -75,7 +77,15 @@ class RLWallet:
             raise Exception("wallet_info is None")
 
         await wallet_state_manager.puzzle_store.add_derivation_paths(
-            [DerivationRecord(unused, token_bytes(), pubkey_bytes, WalletType.RATE_LIMITED, wallet_info.id,)]
+            [
+                DerivationRecord(
+                    unused,
+                    token_bytes(),
+                    pubkey_bytes,
+                    WalletType.RATE_LIMITED,
+                    wallet_info.id,
+                )
+            ]
         )
         await wallet_state_manager.puzzle_store.set_used_up_to(unused)
 
@@ -84,7 +94,9 @@ class RLWallet:
         return self
 
     @staticmethod
-    async def create_rl_user(wallet_state_manager: Any,):
+    async def create_rl_user(
+        wallet_state_manager: Any,
+    ):
         async with wallet_state_manager.puzzle_store.lock:
             unused: Optional[uint32] = await wallet_state_manager.puzzle_store.get_unused_derivation_path()
             if unused is None:
@@ -106,7 +118,15 @@ class RLWallet:
             self = await RLWallet.create(wallet_state_manager, wallet_info)
 
             await wallet_state_manager.puzzle_store.add_derivation_paths(
-                [DerivationRecord(unused, token_bytes(), pubkey_bytes, WalletType.RATE_LIMITED, wallet_info.id,)]
+                [
+                    DerivationRecord(
+                        unused,
+                        token_bytes(),
+                        pubkey_bytes,
+                        WalletType.RATE_LIMITED,
+                        wallet_info.id,
+                    )
+                ]
             )
             await wallet_state_manager.puzzle_store.set_used_up_to(unused)
 
@@ -134,7 +154,12 @@ class RLWallet:
         return self.wallet_info.id
 
     async def admin_create_coin(
-        self, interval: uint64, limit: uint64, user_pubkey: str, amount: uint64, fee: uint64,
+        self,
+        interval: uint64,
+        limit: uint64,
+        user_pubkey: str,
+        amount: uint64,
+        fee: uint64,
     ) -> bool:
         coins = await self.wallet_state_manager.main_wallet.select_coins(amount)
         if coins is None:
@@ -161,7 +186,13 @@ class RLWallet:
         )
 
         assert index is not None
-        record = DerivationRecord(index, rl_puzzle_hash, self.rl_info.admin_pubkey, WalletType.RATE_LIMITED, self.id(),)
+        record = DerivationRecord(
+            index,
+            rl_puzzle_hash,
+            self.rl_info.admin_pubkey,
+            WalletType.RATE_LIMITED,
+            self.id(),
+        )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record])
 
         spend_bundle = await self.main_wallet.generate_signed_transaction(amount, rl_puzzle_hash, fee, origin_id, coins)
@@ -202,7 +233,11 @@ class RLWallet:
         admin_pubkey_bytes = hexstr_to_bytes(admin_pubkey)
 
         assert self.rl_info.user_pubkey is not None
-        origin = Coin(hexstr_to_bytes(origin_parent_id), hexstr_to_bytes(origin_puzzle_hash), origin_amount,)
+        origin = Coin(
+            hexstr_to_bytes(origin_parent_id),
+            hexstr_to_bytes(origin_puzzle_hash),
+            origin_amount,
+        )
         rl_puzzle = rl_puzzle_for_pk(
             pubkey=self.rl_info.user_pubkey,
             rate_amount=limit,
@@ -233,11 +268,21 @@ class RLWallet:
             G1Element.from_bytes(self.rl_info.user_pubkey)
         )
         assert index is not None
-        record = DerivationRecord(index, rl_puzzle_hash, self.rl_info.user_pubkey, WalletType.RATE_LIMITED, self.id(),)
+        record = DerivationRecord(
+            index,
+            rl_puzzle_hash,
+            self.rl_info.user_pubkey,
+            WalletType.RATE_LIMITED,
+            self.id(),
+        )
 
         aggregation_puzzlehash = self.rl_get_aggregation_puzzlehash(new_rl_info.rl_puzzle_hash)
         record2 = DerivationRecord(
-            index + 1, aggregation_puzzlehash, self.rl_info.user_pubkey, WalletType.RATE_LIMITED, self.id(),
+            index + 1,
+            aggregation_puzzlehash,
+            self.rl_info.user_pubkey,
+            WalletType.RATE_LIMITED,
+            self.id(),
         )
         await self.wallet_state_manager.puzzle_store.add_derivation_paths([record, record2])
         self.wallet_state_manager.set_coin_with_puzzlehash_created_callback(
@@ -584,7 +629,11 @@ class RLWallet:
         pubkey, secretkey = await self.get_keys(self.rl_coin_record.coin.puzzle_hash)
         # Spend wallet coin
         puzzle = rl_puzzle_for_pk(
-            rl_info.user_pubkey, rl_info.limit, rl_info.interval, rl_info.rl_origin_id, rl_info.admin_pubkey,
+            rl_info.user_pubkey,
+            rl_info.limit,
+            rl_info.interval,
+            rl_info.rl_origin_id,
+            rl_info.admin_pubkey,
         )
 
         solution = rl_make_solution_mode_2(
@@ -605,7 +654,9 @@ class RLWallet:
         # Spend consolidating coin
         puzzle = rl_make_aggregation_puzzle(self.rl_coin_record.coin.puzzle_hash)
         solution = rl_make_aggregation_solution(
-            consolidating_coin.name(), self.rl_coin_record.coin.parent_coin_info, self.rl_coin_record.coin.amount,
+            consolidating_coin.name(),
+            self.rl_coin_record.coin.parent_coin_info,
+            self.rl_coin_record.coin.amount,
         )
         agg_spend = CoinSolution(consolidating_coin, Program.to([puzzle, solution]))
 
@@ -617,7 +668,8 @@ class RLWallet:
         solution = Program.to(binutils.assemble("()"))
 
         ephemeral = CoinSolution(
-            Coin(self.rl_coin_record.coin.name(), puzzle.get_tree_hash(), uint64(0)), Program.to([puzzle, solution]),
+            Coin(self.rl_coin_record.coin.name(), puzzle.get_tree_hash(), uint64(0)),
+            Program.to([puzzle, solution]),
         )
         list_of_coinsolutions.append(ephemeral)
 

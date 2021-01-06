@@ -95,7 +95,11 @@ class TradeStore:
         await self.add_trade_record(tx)
 
     async def increment_sent(
-        self, id: bytes32, name: str, send_status: MempoolInclusionStatus, err: Optional[Err],
+        self,
+        id: bytes32,
+        name: str,
+        send_status: MempoolInclusionStatus,
+        err: Optional[Err],
     ) -> bool:
         """
         Updates trade sent count (Full Node has received spend_bundle and sent ack).
@@ -191,7 +195,13 @@ class TradeStore:
         Returns the list of trades that have not been received by full node yet.
         """
 
-        cursor = await self.db_connection.execute("SELECT * from trade_records WHERE sent<? and confirmed=?", (4, 0,),)
+        cursor = await self.db_connection.execute(
+            "SELECT * from trade_records WHERE sent<? and confirmed=?",
+            (
+                4,
+                0,
+            ),
+        )
         rows = await cursor.fetchall()
         await cursor.close()
         records = []

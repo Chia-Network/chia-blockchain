@@ -9,10 +9,16 @@ from src.util.service_groups import all_groups, services_for_groups
 def make_parser(parser):
 
     parser.add_argument(
-        "-r", "--restart", action="store_true", help="Restart of running processes",
+        "-r",
+        "--restart",
+        action="store_true",
+        help="Restart of running processes",
     )
     parser.add_argument(
-        "group", choices=all_groups(), type=str, nargs="+",
+        "group",
+        choices=all_groups(),
+        type=str,
+        nargs="+",
     )
     parser.set_defaults(function=start)
 

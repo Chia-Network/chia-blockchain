@@ -51,7 +51,8 @@ class KeyValStore:
         Adds object to key val store
         """
         cursor = await self.db_connection.execute(
-            "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)", (key, bytes(obj).hex()),
+            "INSERT OR REPLACE INTO key_val_store VALUES(?, ?)",
+            (key, bytes(obj).hex()),
         )
         await cursor.close()
         await self.db_connection.commit()

@@ -118,11 +118,16 @@ def create_foliage(
     assert pool_target_signature is not None
 
     foliage_sub_block_data = FoliageSubBlockData(
-        reward_sub_block.get_hash(), pool_target, pool_target_signature, farmer_reward_puzzlehash, extension_data,
+        reward_sub_block.get_hash(),
+        pool_target,
+        pool_target_signature,
+        farmer_reward_puzzlehash,
+        extension_data,
     )
 
     foliage_sub_block_signature: G2Element = get_plot_signature(
-        foliage_sub_block_data.get_hash(), reward_sub_block.proof_of_space.plot_public_key,
+        foliage_sub_block_data.get_hash(),
+        reward_sub_block.proof_of_space.plot_public_key,
     )
 
     prev_sub_block_hash: bytes32 = constants.GENESIS_PREV_HASH
@@ -155,7 +160,9 @@ def create_foliage(
 
             assert curr.fees is not None
             pool_coin = create_pool_coin(
-                curr.sub_block_height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height),
+                curr.sub_block_height,
+                curr.pool_puzzle_hash,
+                calculate_pool_reward(curr.height),
             )
 
             farmer_coin = create_farmer_coin(
@@ -171,10 +178,14 @@ def create_foliage(
                 # Prev block is not genesis
                 while not curr.is_block:
                     pool_coin = create_pool_coin(
-                        curr.sub_block_height, curr.pool_puzzle_hash, calculate_pool_reward(curr.height),
+                        curr.sub_block_height,
+                        curr.pool_puzzle_hash,
+                        calculate_pool_reward(curr.height),
                     )
                     farmer_coin = create_farmer_coin(
-                        curr.sub_block_height, curr.farmer_puzzle_hash, calculate_base_farmer_reward(curr.height),
+                        curr.sub_block_height,
+                        curr.farmer_puzzle_hash,
+                        calculate_base_farmer_reward(curr.height),
                     )
                     reward_claims_incorporated += [pool_coin, farmer_coin]
                     curr = sub_blocks[curr.prev_hash]
@@ -221,7 +232,12 @@ def create_foliage(
         filter_hash: bytes32 = std_hash(encoded)
 
         transactions_info: Optional[TransactionsInfo] = TransactionsInfo(
-            bytes([0] * 32), generator_hash, aggregate_sig, uint64(spend_bundle_fees), cost, reward_claims_incorporated,
+            bytes([0] * 32),
+            generator_hash,
+            aggregate_sig,
+            uint64(spend_bundle_fees),
+            cost,
+            reward_claims_incorporated,
         )
         if prev_block is None:
             prev_block_hash: bytes32 = constants.GENESIS_PREV_HASH
@@ -484,4 +500,8 @@ def unfinished_block_to_full_block(
         new_tx_info,
         new_generator,
     )
-    return recursive_replace(ret, "foliage_sub_block.reward_block_hash", ret.reward_chain_sub_block.get_hash(),)
+    return recursive_replace(
+        ret,
+        "foliage_sub_block.reward_block_hash",
+        ret.reward_chain_sub_block.get_hash(),
+    )

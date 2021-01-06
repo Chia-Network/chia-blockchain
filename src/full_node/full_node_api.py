@@ -156,7 +156,11 @@ class FullNodeAPI:
                 fees = tx.transaction.fees()
                 assert fees >= 0
                 assert cost is not None
-                new_tx = full_node_protocol.NewTransaction(tx.transaction.name(), cost, uint64(tx.transaction.fees()),)
+                new_tx = full_node_protocol.NewTransaction(
+                    tx.transaction.name(),
+                    cost,
+                    uint64(tx.transaction.fees()),
+                )
                 message = Message("new_transaction", new_tx)
                 await self.server.send_to_all_except([message], NodeType.FULL_NODE, peer.peer_node_id)
             else:
@@ -200,7 +204,10 @@ class FullNodeAPI:
             tip_height = response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
             self.full_node.sync_store.add_potential_peak(response.tip, tip_height, tip_weight)
             self.full_node.sync_store.add_potential_fork_point(response.tip, fork_point)
-            return Message("request_sub_block", full_node_protocol.RequestSubBlock(uint32(tip_height), True),)
+            return Message(
+                "request_sub_block",
+                full_node_protocol.RequestSubBlock(uint32(tip_height), True),
+            )
         return None
 
     @api_request
@@ -259,7 +266,9 @@ class FullNodeAPI:
     @api_request
     @peer_required
     async def respond_sub_block(
-        self, respond_sub_block: full_node_protocol.RespondSubBlock, peer: ws.WSChiaConnection,
+        self,
+        respond_sub_block: full_node_protocol.RespondSubBlock,
+        peer: ws.WSChiaConnection,
     ) -> Optional[Message]:
         """
         Receive a full block from a peer full node (or ourselves).
@@ -299,7 +308,8 @@ class FullNodeAPI:
         )
         if unfinished_block is not None:
             msg = Message(
-                "respond_unfinished_sub_block", full_node_protocol.RespondUnfinishedSubBlock(unfinished_block),
+                "respond_unfinished_sub_block",
+                full_node_protocol.RespondUnfinishedSubBlock(unfinished_block),
             )
             return msg
         return None
@@ -307,7 +317,9 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def respond_unfinished_sub_block(
-        self, respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedSubBlock, peer: ws.WSChiaConnection,
+        self,
+        respond_unfinished_sub_block: full_node_protocol.RespondUnfinishedSubBlock,
+        peer: ws.WSChiaConnection,
     ) -> Optional[Message]:
         if self.full_node.sync_store.get_sync_mode():
             return None
@@ -323,7 +335,9 @@ class FullNodeAPI:
             return None
         if (
             self.full_node.full_node_store.get_signage_point_by_index(
-                new_sp.challenge_hash, new_sp.index_from_challenge, new_sp.last_rc_infusion,
+                new_sp.challenge_hash,
+                new_sp.index_from_challenge,
+                new_sp.last_rc_infusion,
             )
             is not None
         ):
@@ -368,14 +382,19 @@ class FullNodeAPI:
                 request.challenge_hash
             )
             if sub_slot is not None:
-                return Message("respond_end_of_sub_slot", full_node_protocol.RespondEndOfSubSlot(sub_slot[0]),)
+                return Message(
+                    "respond_end_of_sub_slot",
+                    full_node_protocol.RespondEndOfSubSlot(sub_slot[0]),
+                )
         else:
             if self.full_node.full_node_store.get_sub_slot(request.challenge_hash) is None:
                 if request.challenge_hash != self.full_node.constants.FIRST_CC_CHALLENGE:
                     self.log.warning(f"Don't have challenge hash {request.challenge_hash}")
 
             sp: Optional[SignagePoint] = self.full_node.full_node_store.get_signage_point_by_index(
-                request.challenge_hash, request.index_from_challenge, request.last_rc_infusion,
+                request.challenge_hash,
+                request.index_from_challenge,
+                request.last_rc_infusion,
             )
             if sp is not None:
                 assert (
@@ -385,7 +404,11 @@ class FullNodeAPI:
                     and sp.rc_proof is not None
                 )
                 full_node_response = full_node_protocol.RespondSignagePoint(
-                    request.index_from_challenge, sp.cc_vdf, sp.cc_proof, sp.rc_vdf, sp.rc_proof,
+                    request.index_from_challenge,
+                    sp.cc_vdf,
+                    sp.cc_proof,
+                    sp.rc_vdf,
+                    sp.rc_proof,
                 )
                 return Message("respond_signage_point", full_node_response)
             else:
@@ -495,7 +518,9 @@ class FullNodeAPI:
     @peer_required
     @api_request
     async def request_mempool_transactions(
-        self, request: full_node_protocol.RequestMempoolTransactions, peer: ws.WSChiaConnection,
+        self,
+        request: full_node_protocol.RequestMempoolTransactions,
+        peer: ws.WSChiaConnection,
     ) -> Optional[Message]:
         received_filter = PyBIP158(bytearray(request.filter))
 
@@ -633,7 +658,10 @@ class FullNodeAPI:
                 self.log.warning(f"Value Error: {e}")
                 return None
             if prev_sb is None:
-                pool_target = PoolTarget(self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH, uint32(0),)
+                pool_target = PoolTarget(
+                    self.full_node.constants.GENESIS_PRE_FARM_POOL_PUZZLE_HASH,
+                    uint32(0),
+                )
             else:
                 pool_target = request.pool_target
 
@@ -650,11 +678,17 @@ class FullNodeAPI:
                         sub_slot_iters = sub_slot.challenge_chain.new_sub_slot_iters
 
             required_iters: uint64 = calculate_iterations_quality(
-                quality_string, request.proof_of_space.size, difficulty, request.challenge_chain_sp,
+                quality_string,
+                request.proof_of_space.size,
+                difficulty,
+                request.challenge_chain_sp,
             )
             sp_iters: uint64 = calculate_sp_iters(self.full_node.constants, sub_slot_iters, request.signage_point_index)
             ip_iters: uint64 = calculate_ip_iters(
-                self.full_node.constants, sub_slot_iters, request.signage_point_index, required_iters,
+                self.full_node.constants,
+                sub_slot_iters,
+                request.signage_point_index,
+                required_iters,
             )
 
             unfinished_block: UnfinishedBlock = create_unfinished_block(
@@ -690,7 +724,11 @@ class FullNodeAPI:
             else:
                 foliage_block_hash = bytes([0] * 32)
 
-            message = farmer_protocol.RequestSignedValues(quality_string, foliage_sb_data_hash, foliage_block_hash,)
+            message = farmer_protocol.RequestSignedValues(
+                quality_string,
+                foliage_sb_data_hash,
+                foliage_block_hash,
+            )
             return Message("request_signed_values", message)
 
     @api_request
@@ -717,7 +755,8 @@ class FullNodeAPI:
             return None
 
         fsb2 = dataclasses.replace(
-            candidate.foliage_sub_block, foliage_sub_block_signature=farmer_request.foliage_sub_block_signature,
+            candidate.foliage_sub_block,
+            foliage_sub_block_signature=farmer_request.foliage_sub_block_signature,
         )
         if candidate.is_block():
             fsb2 = dataclasses.replace(fsb2, foliage_block_signature=farmer_request.foliage_block_signature)
@@ -794,7 +833,10 @@ class FullNodeAPI:
         )
         if block is not None:
             header_block: HeaderBlock = await block.get_block_header()
-            msg = Message("respond_sub_block_header", wallet_protocol.RespondSubBlockHeader(header_block),)
+            msg = Message(
+                "respond_sub_block_header",
+                wallet_protocol.RespondSubBlockHeader(header_block),
+            )
             return msg
         return None
 
@@ -931,7 +973,9 @@ class FullNodeAPI:
                     assert fees >= 0
                     assert cost is not None
                     new_tx = full_node_protocol.NewTransaction(
-                        request.transaction.name(), cost, uint64(request.transaction.fees()),
+                        request.transaction.name(),
+                        cost,
+                        uint64(request.transaction.fees()),
                     )
                     msg = Message("new_transaction", new_tx)
                     await self.full_node.server.send_to_all([msg], NodeType.FULL_NODE)

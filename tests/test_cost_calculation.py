@@ -35,7 +35,11 @@ class TestCostCalculation:
                 coinbase = coin
                 break
         assert coinbase is not None
-        spend_bundle = wallet_tool.generate_signed_transaction(coinbase.amount, BURN_PUZZLE_HASH, coinbase,)
+        spend_bundle = wallet_tool.generate_signed_transaction(
+            coinbase.amount,
+            BURN_PUZZLE_HASH,
+            coinbase,
+        )
         assert spend_bundle is not None
         program = best_solution_program(spend_bundle)
 
@@ -66,7 +70,11 @@ class TestCostCalculation:
                 coinbase = coin
                 break
         assert coinbase is not None
-        spend_bundle = wallet_tool.generate_signed_transaction(coinbase.amount, BURN_PUZZLE_HASH, coinbase,)
+        spend_bundle = wallet_tool.generate_signed_transaction(
+            coinbase.amount,
+            BURN_PUZZLE_HASH,
+            coinbase,
+        )
         assert spend_bundle is not None
         program = binutils.assemble(
             "(q ((0x3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"

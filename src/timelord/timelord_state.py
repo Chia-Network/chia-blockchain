@@ -51,7 +51,10 @@ class LastState:
             self.peak = state
             self.subslot_end = None
             _, self.last_ip = iters_from_sub_block(
-                self.constants, state.reward_chain_sub_block, state.sub_slot_iters, state.difficulty,
+                self.constants,
+                state.reward_chain_sub_block,
+                state.sub_slot_iters,
+                state.difficulty,
             )
             self.deficit = state.deficit
             self.sub_epoch_summary = state.sub_epoch_summary

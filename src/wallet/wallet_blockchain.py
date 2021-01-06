@@ -167,7 +167,9 @@ class WalletBlockchain:
         return await self.block_store.get_header_block(header_hash)
 
     async def receive_block(
-        self, block_record: HeaderBlockRecord, pre_validated: bool = False,
+        self,
+        block_record: HeaderBlockRecord,
+        pre_validated: bool = False,
     ) -> Tuple[ReceiveBlockResult, Optional[Err], Optional[uint32]]:
         """
         Adds a new block into the blockchain, if it's valid and connected to the current
@@ -189,7 +191,11 @@ class WalletBlockchain:
             )
 
         required_iters, error = await validate_finished_header_block(
-            self.constants, self.sub_blocks, self.sub_height_to_hash, block, False,
+            self.constants,
+            self.sub_blocks,
+            self.sub_height_to_hash,
+            block,
+            False,
         )
 
         if error is not None:
@@ -197,7 +203,12 @@ class WalletBlockchain:
         assert required_iters is not None
 
         sub_block = block_to_sub_block_record(
-            self.constants, self.sub_blocks, self.sub_height_to_hash, required_iters, None, block,
+            self.constants,
+            self.sub_blocks,
+            self.sub_height_to_hash,
+            required_iters,
+            None,
+            block,
         )
 
         # Always add the block to the database

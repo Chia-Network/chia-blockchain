@@ -9,7 +9,8 @@ from src.util.condition_tools import (
 
 
 async def sign_coin_solutions(
-    coin_solutions: List[CoinSolution], secret_key_for_public_key_f: Callable[[bytes], Optional[PrivateKey]],
+    coin_solutions: List[CoinSolution],
+    secret_key_for_public_key_f: Callable[[bytes], Optional[PrivateKey]],
 ) -> SpendBundle:
     signatures = []
     pk_list = []

@@ -92,7 +92,14 @@ class WSChiaConnection:
     async def perform_handshake(self, network_id, protocol_version, node_id, server_port, local_type):
         if self.is_outbound:
             outbound_handshake = Message(
-                "handshake", Handshake(network_id, protocol_version, node_id, uint16(server_port), local_type,),
+                "handshake",
+                Handshake(
+                    network_id,
+                    protocol_version,
+                    node_id,
+                    uint16(server_port),
+                    local_type,
+                ),
             )
             payload = Payload(outbound_handshake, None)
             await self._send_message(payload)
@@ -110,7 +117,14 @@ class WSChiaConnection:
             if payload.msg.function != "handshake" or not inbound_handshake or not inbound_handshake.node_type:
                 raise ProtocolError(Err.INVALID_HANDSHAKE)
             outbound_handshake = Message(
-                "handshake", Handshake(network_id, protocol_version, node_id, uint16(server_port), local_type,),
+                "handshake",
+                Handshake(
+                    network_id,
+                    protocol_version,
+                    node_id,
+                    uint16(server_port),
+                    local_type,
+                ),
             )
             payload = Payload(outbound_handshake, None)
             await self._send_message(payload)

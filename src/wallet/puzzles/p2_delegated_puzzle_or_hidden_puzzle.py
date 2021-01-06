@@ -86,7 +86,9 @@ def solution_for_delegated_puzzle(delegated_puzzle: Program, solution: Program) 
 
 
 def solution_with_hidden_puzzle(
-    hidden_public_key: G1Element, hidden_puzzle: Program, solution_to_hidden_puzzle: Program,
+    hidden_public_key: G1Element,
+    hidden_puzzle: Program,
+    solution_to_hidden_puzzle: Program,
 ) -> Program:
     synthetic_public_key = calculate_synthetic_public_key(hidden_public_key, hidden_puzzle)
     puzzle = puzzle_for_synthetic_public_key(synthetic_public_key)

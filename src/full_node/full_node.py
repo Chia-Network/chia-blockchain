@@ -72,7 +72,11 @@ class FullNode:
     timelord_lock: asyncio.Lock
 
     def __init__(
-        self, config: Dict, root_path: Path, consensus_constants: ConsensusConstants, name: str = None,
+        self,
+        config: Dict,
+        root_path: Path,
+        consensus_constants: ConsensusConstants,
+        name: str = None,
     ):
         self.root_path = root_path
         self.config = config
@@ -134,7 +138,11 @@ class FullNode:
         if peak is not None:
             sp_sub_slot, ip_sub_slot = await self.blockchain.get_sp_and_ip_sub_slots(peak.header_hash)
             self.full_node_store.new_peak(
-                peak, sp_sub_slot, ip_sub_slot, False, self.blockchain.sub_blocks,
+                peak,
+                sp_sub_slot,
+                ip_sub_slot,
+                False,
+                self.blockchain.sub_blocks,
             )
 
     def set_server(self, server: ChiaServer):
@@ -225,7 +233,10 @@ class FullNode:
                 tip_height = response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
                 self.sync_store.add_potential_peak(response.tip, tip_height, tip_weight)
                 self.sync_store.add_potential_fork_point(response.tip, fork_point)
-                msg = Message("request_sub_block", full_node_protocol.RequestSubBlock(uint32(tip_height), True),)
+                msg = Message(
+                    "request_sub_block",
+                    full_node_protocol.RequestSubBlock(uint32(tip_height), True),
+                )
                 await peer.send_message(msg)
         return None
 
@@ -303,7 +314,10 @@ class FullNode:
             elif connection.connection_type is NodeType.WALLET:
                 # If connected to a wallet, send the Peak
                 request_wallet = wallet_protocol.NewPeak(
-                    peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height,
+                    peak.header_hash,
+                    peak.sub_block_height,
+                    peak.weight,
+                    peak.sub_block_height,
                 )
                 await connection.send_message(Message("new_peak", request_wallet))
             elif connection.connection_type is NodeType.TIMELORD:
@@ -451,7 +465,11 @@ class FullNode:
     async def receive_sub_block_batch(self, blocks: List[FullBlock], peer: ws.WSChiaConnection) -> bool:
         async with self.blockchain.lock:
             for block in blocks:
-                (result, error, fork_height,) = await self.blockchain.receive_block(block)
+                (
+                    result,
+                    error,
+                    fork_height,
+                ) = await self.blockchain.receive_block(block)
                 if result == ReceiveBlockResult.INVALID_BLOCK or result == ReceiveBlockResult.DISCONNECTED_BLOCK:
                     if error is not None:
                         self.log.info(f"Error: {error}, Invalid block from peer: {peer.get_peer_info()} ")
@@ -485,7 +503,10 @@ class FullNode:
         if peak is not None:
             await self.weight_proof_handler.get_proof_of_weight(peak.header_hash)
             request_wallet = wallet_protocol.NewPeak(
-                peak.header_hash, peak.sub_block_height, peak.weight, peak.sub_block_height,
+                peak.header_hash,
+                peak.sub_block_height,
+                peak.weight,
+                peak.sub_block_height,
             )
             msg = Message("new_peak", request_wallet)
             await self.server.send_to_all([msg], NodeType.WALLET)
@@ -506,7 +527,9 @@ class FullNode:
         return True
 
     async def respond_sub_block(
-        self, respond_sub_block: full_node_protocol.RespondSubBlock, peer: Optional[ws.WSChiaConnection] = None,
+        self,
+        respond_sub_block: full_node_protocol.RespondSubBlock,
+        peer: Optional[ws.WSChiaConnection] = None,
     ) -> Optional[Message]:
         """
         Receive a full block from a peer full node (or ourselves).
@@ -676,7 +699,10 @@ class FullNode:
             msg = Message(
                 "new_peak",
                 wallet_protocol.NewPeak(
-                    sub_block.header_hash, sub_block.sub_block_height, sub_block.weight, fork_height,
+                    sub_block.header_hash,
+                    sub_block.sub_block_height,
+                    sub_block.weight,
+                    fork_height,
                 ),
             )
             await self.server.send_to_all([msg], NodeType.WALLET)
@@ -796,7 +822,10 @@ class FullNode:
 
         async with self.blockchain.lock:
             # TODO: pre-validate VDFs outside of lock
-            (required_iters, error_code,) = await self.blockchain.validate_unfinished_block(block)
+            (
+                required_iters,
+                error_code,
+            ) = await self.blockchain.validate_unfinished_block(block)
             if error_code is not None:
                 raise ConsensusError(error_code)
 
@@ -812,7 +841,12 @@ class FullNode:
             sub_height = uint32(self.blockchain.sub_blocks[block.prev_header_hash].sub_block_height + 1)
 
         ses: Optional[SubEpochSummary] = next_sub_epoch_summary(
-            self.constants, self.blockchain.sub_blocks, self.blockchain.sub_height_to_hash, required_iters, block, True,
+            self.constants,
+            self.blockchain.sub_blocks,
+            self.blockchain.sub_height_to_hash,
+            required_iters,
+            block,
+            True,
         )
 
         self.full_node_store.add_unfinished_block(sub_height, block)
@@ -822,7 +856,11 @@ class FullNode:
             self.log.info(f"Added unfinished_block {block.partial_hash}, not farmed")
 
         sub_slot_iters, difficulty = get_sub_slot_iters_and_difficulty(
-            self.constants, block, self.blockchain.sub_height_to_hash, prev_sb, self.blockchain.sub_blocks,
+            self.constants,
+            block,
+            self.blockchain.sub_height_to_hash,
+            prev_sb,
+            self.blockchain.sub_blocks,
         )
 
         if block.reward_chain_sub_block.signage_point_index == 0:
@@ -836,7 +874,12 @@ class FullNode:
             rc_prev = block.reward_chain_sub_block.reward_chain_sp_vdf.challenge
 
         timelord_request = timelord_protocol.NewUnfinishedSubBlock(
-            block.reward_chain_sub_block, difficulty, sub_slot_iters, block.foliage_sub_block, ses, rc_prev,
+            block.reward_chain_sub_block,
+            difficulty,
+            sub_slot_iters,
+            block.foliage_sub_block,
+            ses,
+            rc_prev,
         )
 
         msg = Message("new_unfinished_sub_block", timelord_request)
@@ -895,7 +938,8 @@ class FullNode:
 
             # TODO: finished slots is not correct
             overflow = is_overflow_sub_block(
-                self.constants, unfinished_block.reward_chain_sub_block.signage_point_index,
+                self.constants,
+                unfinished_block.reward_chain_sub_block.signage_point_index,
             )
             finished_sub_slots = self.full_node_store.get_finished_sub_slots(
                 prev_sb,
@@ -926,7 +970,9 @@ class FullNode:
             sp_total_iters = uint128(
                 sub_slot_start_iters
                 + calculate_sp_iters(
-                    self.constants, sub_slot_iters, unfinished_block.reward_chain_sub_block.signage_point_index,
+                    self.constants,
+                    sub_slot_iters,
+                    unfinished_block.reward_chain_sub_block.signage_point_index,
                 )
             )
 
@@ -1005,7 +1051,9 @@ class FullNode:
 
             # Adds the sub slot and potentially get new infusions
             new_infusions = self.full_node_store.new_finished_sub_slot(
-                request.end_of_slot_bundle, self.blockchain.sub_blocks, self.blockchain.get_peak(),
+                request.end_of_slot_bundle,
+                self.blockchain.sub_blocks,
+                self.blockchain.get_peak(),
             )
             # It may be an empty list, even if it's not None. Not None means added successfully
             if new_infusions is not None:
