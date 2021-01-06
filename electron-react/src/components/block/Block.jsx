@@ -74,6 +74,7 @@ export default function Block() {
     }
   }
 
+
   useEffect(() => {
     prepareData(headerHash);
   }, [headerHash]);
@@ -128,12 +129,13 @@ export default function Block() {
     ? blockRecord.weight - prevBlockRecord.weight
     : blockRecord?.weight ?? 0;
 
-  const chia_cb = chia_formatter(
+  const chia_cb = '';/*chia_formatter(
     Number.parseFloat(calculate_block_reward(blockRecord.height)),
     'mojo',
   )
     .to('chia')
     .toString();
+    */
   const chia_fees = chia_formatter(
     Number.parseFloat(BigInt(blockRecord.fees)),
     'mojo',
