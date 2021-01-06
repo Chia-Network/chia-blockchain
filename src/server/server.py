@@ -231,7 +231,7 @@ class ChiaServer:
                     url, autoclose=False, autoping=True, heartbeat=30, ssl=ssl_context, max_msg_size=50 * 1024 * 1024
                 )
             except asyncio.TimeoutError:
-                self.log.warning(f"Timeout error connecting to {url}")
+                self.log.info(f"Timeout error connecting to {url}")
                 await session.close()
                 return False
             if ws is not None:
