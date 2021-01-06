@@ -171,7 +171,7 @@ export default function Block() {
       ),
     },
     {
-      name: <Trans id="Block.previousBlock">Previous block</Trans>,
+      name: <Trans id="Block.previousBlock">Previous Block</Trans>,
       value: blockRecord.prev_block_hash,
       previousBlock: true,
     },
