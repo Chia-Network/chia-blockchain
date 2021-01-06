@@ -28,8 +28,8 @@ const cols = [
   {
     width: '150px',
     field: (row: Row) => row.sp.signage_point_index,
-    title: <Trans id="FarmLatestBlockChallenges.height">Height</Trans>,
-  },
+    title: <Trans id="FarmLatestBlockChallenges.index">Index</Trans>,
+  }, /*
   {
     width: '200px',
     field(row: Row) {
@@ -55,7 +55,7 @@ const cols = [
         </TooltipIcon>
       </Flex>
     ),
-  },
+  }, */
 ];
 
 export default function FarmLatestBlockChallenges() {
@@ -68,7 +68,7 @@ export default function FarmLatestBlockChallenges() {
   );
 
   const hasPlots = !!plots && plots.length > 0;
-  const reducedSignagePoints = signagePoints.slice(0, 5);
+  const reducedSignagePoints = signagePoints;
 
   return (
     <Card
@@ -94,9 +94,12 @@ export default function FarmLatestBlockChallenges() {
           </Trans>
         </Typography>
       )}
-      <Table 
-        cols={cols} 
-        rows={reducedSignagePoints} 
+      <Table
+        cols={cols}
+        rows={reducedSignagePoints}
+        rowsPerPageOptions={[5, 10, 25, 100]}
+        rowsPerPage={5}
+        pages
       />
       <Typography variant="caption">
         <Trans id="FarmLatestBlockChallenges.subDescription">

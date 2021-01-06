@@ -309,9 +309,6 @@ const BlocksCard = () => {
     })),
   ];
 
-  console.log('latestBlocks', latestBlocks);
-  console.log('unfinishedSubBlockHeaders', unfinishedSubBlockHeaders);
-
   function handleRowClick(event, row) {
     const { isFinished, header_hash } = row;
 
