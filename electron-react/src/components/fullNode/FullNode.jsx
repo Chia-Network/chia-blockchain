@@ -51,9 +51,14 @@ const cols = [
       )
     },
     title: <Trans id="BlocksCard.headerHash">Header Hash</Trans>,
-  },
+  },/*
   {
-    width: '150px',
+    width: '120px',
+    field: 'foliage_sub_block.height',
+    title: <Trans id="BlocksCard.sbHeight">SB Height</Trans>,
+  },*/
+  {
+    width: '120px',
     field: 'foliage_block.height',
     title: <Trans id="BlocksCard.height">Height</Trans>,
   },
@@ -70,7 +75,7 @@ const cols = [
     title: <Trans id="BlocksCard.timeCreated">Time Created</Trans>,
   },
   {
-    width: '200px',
+    width: '130px',
     field(row) {
       const {
         isFinished = false,
@@ -80,16 +85,12 @@ const cols = [
       } = row;
 
       return isFinished
-        ? (
-          <Trans id="BlocksCard.finished">
-            Finished
-          </Trans>
-        )
-        : expected_finish_time && unix_to_short_date(Number.parseInt(expected_finish_time))
+        ? <Trans id="BlocksCard.finished">Finished</Trans>
+        : <Trans id="BlocksCard.unfinished">Unfinished</Trans>;
     },
     title: (
-      <Trans id="BlocksCard.expectedFinishTime">
-        Expected Finish Time
+      <Trans id="BlocksCard.state">
+        State
       </Trans>
     ),
   },
@@ -297,7 +298,6 @@ const FullNodeStatus = (props) => {
 const BlocksCard = () => {
   const { url } = useRouteMatch();
   const history = useHistory();
-  const dispatch = useDispatch();
   const latestBlocks = useSelector((state) => state.full_node_state.latest_blocks);
   const unfinishedSubBlockHeaders = useSelector((state) => state.full_node_state.unfinished_sub_block_headers);
 
@@ -308,6 +308,9 @@ const BlocksCard = () => {
       isFinished: true,
     })),
   ];
+
+  console.log('latestBlocks', latestBlocks);
+  console.log('unfinishedSubBlockHeaders', unfinishedSubBlockHeaders);
 
   function handleRowClick(event, row) {
     const { isFinished, header_hash } = row;
