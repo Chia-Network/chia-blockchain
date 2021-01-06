@@ -80,6 +80,7 @@ class WalletRpcApi:
             "/did_get_recovery_list": self.did_get_recovery_list,
             "/did_create_attest": self.did_create_attest,
             "/did_get_information_needed_for_recovery": self.did_get_information_needed_for_recovery,
+            "/did_create_backup_file": self.did_create_backup_file,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_discrepancies_for_offer": self.get_discrepancies_for_offer,
             "/respond_to_offer": self.respond_to_offer,
@@ -718,6 +719,15 @@ class WalletRpcApi:
             "pubkey": pubkey,
             "backup_dids": did_wallet.did_info.backup_ids,
         }
+
+    async def did_create_backup_file(self, request):
+        try:
+            wallet_id = int(request["wallet_id"])
+            did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+            did_wallet.create_backup(request["filename"])
+            return {"success": True}
+        except Exception:
+            return {"success": False}
 
     ##########################################################################################
     # Coloured Coins and Trading
