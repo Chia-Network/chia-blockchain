@@ -250,7 +250,7 @@ msgstr "State"
 msgid "BlocksCard.timeCreated"
 msgstr "Time Created"
 
-#: src/components/fullNode/FullNode.jsx:325
+#: src/components/fullNode/FullNode.jsx:322
 msgid "BlocksCard.title"
 msgstr "Blocks"
 
@@ -694,8 +694,12 @@ msgid "DashboardSideBar.keys"
 msgstr "Keys"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
-msgid "DashboardSideBar.plot"
-msgstr "Plot"
+#~ msgid "DashboardSideBar.plot"
+#~ msgstr "Plot"
+
+#: src/components/dashboard/DashboardSideBar.tsx:25
+msgid "DashboardSideBar.plots"
+msgstr "Plots"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
 msgid "DashboardSideBar.trade"
@@ -857,31 +861,35 @@ msgid "FarmLastAttemptedProof.tooltip"
 msgstr "This table shows you the last time your farm attempted to win a block a block challenge."
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:34
-msgid "FarmLatestBlockChallenges.bestEstimate"
-msgstr "Best Estimate"
+#~ msgid "FarmLatestBlockChallenges.bestEstimate"
+#~ msgstr "Best Estimate"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
-msgid "FarmLatestBlockChallenges.bestEstimateTooltip"
-msgstr "Best Estimate is how many seconds of time must be proved for your proofs."
+#~ msgid "FarmLatestBlockChallenges.bestEstimateTooltip"
+#~ msgstr "Best Estimate is how many seconds of time must be proved for your proofs."
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "FarmLatestBlockChallenges.challengeHash"
 msgstr "Challenge Hash"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:55
-#: src/components/farm/FarmLatestBlockChallenges.tsx:61
+#: src/components/farm/FarmLatestBlockChallenges.tsx:30
+#: src/components/farm/FarmLatestBlockChallenges.tsx:36
 msgid "FarmLatestBlockChallenges.description"
 msgstr "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:20
-msgid "FarmLatestBlockChallenges.height"
-msgstr "Height"
+#~ msgid "FarmLatestBlockChallenges.height"
+#~ msgstr "Height"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:69
+#: src/components/farm/FarmLatestBlockChallenges.tsx:20
+msgid "FarmLatestBlockChallenges.index"
+msgstr "Index"
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:44
 msgid "FarmLatestBlockChallenges.subDescription"
 msgstr "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:53
+#: src/components/farm/FarmLatestBlockChallenges.tsx:28
 msgid "FarmLatestBlockChallenges.title"
 msgstr "Latest Block Challenges"
 
@@ -955,7 +963,7 @@ msgstr "Connected"
 msgid "FormatConnectionStatus.notConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:398
+#: src/components/fullNode/FullNode.jsx:395
 msgid "FullNode.title"
 msgstr "Full Node"
 
@@ -1589,15 +1597,15 @@ msgstr "Rate Limited User Wallet Setup"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "User Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:363
+#: src/components/fullNode/FullNode.jsx:360
 msgid "SearchBlock.blockHash"
 msgstr "Block hash"
 
-#: src/components/fullNode/FullNode.jsx:374
+#: src/components/fullNode/FullNode.jsx:371
 msgid "SearchBlock.search"
 msgstr "Search"
 
-#: src/components/fullNode/FullNode.jsx:357
+#: src/components/fullNode/FullNode.jsx:354
 msgid "SearchBlock.title"
 msgstr "Search block by header hash"
 

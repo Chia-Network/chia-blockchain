@@ -250,7 +250,7 @@ msgstr ""
 msgid "BlocksCard.timeCreated"
 msgstr "Čas vytvorenia"
 
-#: src/components/fullNode/FullNode.jsx:325
+#: src/components/fullNode/FullNode.jsx:322
 msgid "BlocksCard.title"
 msgstr "Bloky"
 
@@ -694,7 +694,11 @@ msgid "DashboardSideBar.keys"
 msgstr "Kľúče"
 
 #: src/components/dashboard/DashboardSideBar.tsx:25
-msgid "DashboardSideBar.plot"
+#~ msgid "DashboardSideBar.plot"
+#~ msgstr "Polia"
+
+#: src/components/dashboard/DashboardSideBar.tsx:25
+msgid "DashboardSideBar.plots"
 msgstr "Polia"
 
 #: src/components/dashboard/DashboardSideBar.tsx:27
@@ -857,31 +861,35 @@ msgid "FarmLastAttemptedProof.tooltip"
 msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:34
-msgid "FarmLatestBlockChallenges.bestEstimate"
-msgstr "Najlepší odhad"
+#~ msgid "FarmLatestBlockChallenges.bestEstimate"
+#~ msgstr "Najlepší odhad"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:39
-msgid "FarmLatestBlockChallenges.bestEstimateTooltip"
-msgstr "Najlepší odhad je, koľko sekúnd musí byť preukázaních pre vaše dôkazy."
+#~ msgid "FarmLatestBlockChallenges.bestEstimateTooltip"
+#~ msgstr "Najlepší odhad je, koľko sekúnd musí byť preukázaních pre vaše dôkazy."
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "FarmLatestBlockChallenges.challengeHash"
 msgstr "Hash"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:55
-#: src/components/farm/FarmLatestBlockChallenges.tsx:61
+#: src/components/farm/FarmLatestBlockChallenges.tsx:30
+#: src/components/farm/FarmLatestBlockChallenges.tsx:36
 msgid "FarmLatestBlockChallenges.description"
 msgstr ""
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:20
-msgid "FarmLatestBlockChallenges.height"
-msgstr "Pozícia"
+#~ msgid "FarmLatestBlockChallenges.height"
+#~ msgstr "Pozícia"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:69
+#: src/components/farm/FarmLatestBlockChallenges.tsx:20
+msgid "FarmLatestBlockChallenges.index"
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:44
 msgid "FarmLatestBlockChallenges.subDescription"
 msgstr "* Chcete viac preskúmať Chia bloky? Vyskúšajte aplikáciu <0>Chia Explorer</0> vytvorenú open source vývojárom."
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:53
+#: src/components/farm/FarmLatestBlockChallenges.tsx:28
 msgid "FarmLatestBlockChallenges.title"
 msgstr "Najnovšie blokové výzvy"
 
@@ -955,7 +963,7 @@ msgstr "Pripojené"
 msgid "FormatConnectionStatus.notConnected"
 msgstr "Nepripojené"
 
-#: src/components/fullNode/FullNode.jsx:398
+#: src/components/fullNode/FullNode.jsx:395
 msgid "FullNode.title"
 msgstr "Sieť"
 
@@ -1589,15 +1597,15 @@ msgstr ""
 msgid "RTIncompleteCard.userPubkey"
 msgstr "Používateľov verejný kľúč"
 
-#: src/components/fullNode/FullNode.jsx:363
+#: src/components/fullNode/FullNode.jsx:360
 msgid "SearchBlock.blockHash"
 msgstr "Hash bloku"
 
-#: src/components/fullNode/FullNode.jsx:374
+#: src/components/fullNode/FullNode.jsx:371
 msgid "SearchBlock.search"
 msgstr "Vyhľadať"
 
-#: src/components/fullNode/FullNode.jsx:357
+#: src/components/fullNode/FullNode.jsx:354
 msgid "SearchBlock.title"
 msgstr "Vyhľadať blok podľa hashu"
 
