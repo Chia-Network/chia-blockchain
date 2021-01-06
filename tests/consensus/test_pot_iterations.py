@@ -10,12 +10,7 @@ from src.util.ints import uint8, uint64
 from src.consensus.default_constants import DEFAULT_CONSTANTS
 from pytest import raises
 
-test_constants = DEFAULT_CONSTANTS.replace(
-    **{
-        "NUM_SPS_SUB_SLOT": 32,
-        "SUB_SLOT_TIME_TARGET": 300,
-    }
-)
+test_constants = DEFAULT_CONSTANTS.replace(**{"NUM_SPS_SUB_SLOT": 32, "SUB_SLOT_TIME_TARGET": 300})
 
 
 class TestPotIterations:
@@ -58,7 +53,6 @@ class TestPotIterations:
 
         required_iters = sp_interval_iters - 1
         ip_iters = calculate_ip_iters(test_constants, ssi, uint8(13), required_iters)
-        print(sp_iters, sp_interval_iters, required_iters)
         assert ip_iters == sp_iters + test_constants.NUM_SP_INTERVALS_EXTRA * sp_interval_iters + required_iters
 
         required_iters = uint64(1)
@@ -115,8 +109,6 @@ class TestPotIterations:
                             total_wins_in_slot += 1
 
         win_percentage = {k: wins[k] / sum(wins.values()) for k in farmer_ks.keys()}
-        print(win_percentage)
-        print(percentage_space)
         for k in farmer_ks.keys():
             # Win rate is proportional to percentage of space
             assert abs(win_percentage[k] - percentage_space[k]) < 0.01

@@ -95,7 +95,7 @@ class WebSocketServer:
         self.services: Dict = dict()
         self.plots_queue: List[Dict] = []
         self.connections: Dict[str, List[Any]] = dict()  # service_name : [WebSocket]
-        self.remote_address_map: Dict[str, str] = dict()  # remote_address: service_name
+        self.remote_address_map: Dict[Any, str] = dict()  # socket: service_name
         self.ping_job = None
         self.net_config = load_config(root_path, "config.yaml")
         self.self_hostname = self.net_config["self_hostname"]
@@ -103,12 +103,6 @@ class WebSocketServer:
         self.websocket_server = None
         cert_path, key_path = load_ssl_paths(root_path, self.net_config)
         self.ssl_context = ssl_context_for_server(cert_path, key_path, require_cert=True)
-        sys.stdout.flush()
-        json_msg = dict_to_json_str(
-            {"message": "cert_path", "success": True, "cert": f"{cert_path}", "key": f"{key_path}"}
-        )
-        sys.stdout.write("\n" + json_msg + "\n")
-        sys.stdout.flush()
 
     async def start(self):
         self.log.info("Starting Daemon Server")
@@ -173,11 +167,10 @@ class WebSocketServer:
                             self.remove_connection(socket)
                             await socket.close()
         except Exception as e:
-            remote_address = websocket.remote_address[1]
             tb = traceback.format_exc()
             service_name = "Unknown"
-            if remote_address in self.remote_address_map:
-                service_name = self.remote_address_map[remote_address]
+            if websocket in self.remote_address_map:
+                service_name = self.remote_address_map[websocket]
             if isinstance(e, ConnectionClosedOK):
                 self.log.info(f"ConnectionClosedOk. Closing websocket with {service_name} {e}")
             elif isinstance(e, WebSocketException):
@@ -189,15 +182,14 @@ class WebSocketServer:
             await websocket.close()
 
     def remove_connection(self, websocket):
-        remote_address = websocket.remote_address[1]
         service_name = None
-        if remote_address in self.remote_address_map:
-            service_name = self.remote_address_map[remote_address]
-            self.remote_address_map.pop(remote_address)
+        if websocket in self.remote_address_map:
+            service_name = self.remote_address_map[websocket]
+            self.remote_address_map.pop(websocket)
         if service_name in self.connections:
             after_removal = []
             for connection in self.connections[service_name]:
-                if connection.remote_address[1] == remote_address:
+                if connection == websocket:
                     continue
                 else:
                     after_removal.append(connection)
@@ -621,7 +613,7 @@ class WebSocketServer:
                 "queue": self.extract_plot_queue(),
             }
         else:
-            self.remote_address_map[websocket.remote_address[1]] = service
+            self.remote_address_map[websocket] = service
             if self.ping_job is None:
                 self.ping_job = asyncio.create_task(self.ping_task())
             response = {"success": True}
@@ -855,6 +847,11 @@ async def async_run_daemon(root_path):
     config = load_config(root_path, "config.yaml")
     initialize_logging("daemon", config["logging"], root_path)
     lockfile = singleton(daemon_launch_lock_path(root_path))
+    cert_path, key_path = load_ssl_paths(root_path, config)
+    sys.stdout.flush()
+    json_msg = dict_to_json_str({"message": "cert_path", "success": True, "cert": f"{cert_path}", "key": f"{key_path}"})
+    sys.stdout.write("\n" + json_msg + "\n")
+    sys.stdout.flush()
     if lockfile is None:
         print("daemon: already launching")
         return 2

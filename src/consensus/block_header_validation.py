@@ -253,9 +253,12 @@ async def validate_unfinished_header_block(
 
             # 2o. Check challenge sub-slot hash in reward sub-slot
             if sub_slot.challenge_chain.get_hash() != sub_slot.reward_chain.challenge_chain_sub_slot_hash:
-                return None, ValidationError(
-                    Err.INVALID_CHALLENGE_SLOT_HASH_RC,
-                    "sub-slot hash in reward sub-slot mismatch",
+                return (
+                    None,
+                    ValidationError(
+                        Err.INVALID_CHALLENGE_SLOT_HASH_RC,
+                        "sub-slot hash in reward sub-slot mismatch",
+                    ),
                 )
 
             eos_vdf_iters: uint64 = sub_slot_iters
@@ -330,9 +333,12 @@ async def validate_unfinished_header_block(
             if genesis_block:
                 # 2r. Check deficit (MIN_SUB.. deficit edge case for genesis block)
                 if sub_slot.reward_chain.deficit != constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK:
-                    return None, ValidationError(
-                        Err.INVALID_DEFICIT,
-                        f"genesis, expected deficit {constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK}",
+                    return (
+                        None,
+                        ValidationError(
+                            Err.INVALID_DEFICIT,
+                            f"genesis, expected deficit {constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK}",
+                        ),
                     )
             else:
                 assert prev_sb is not None
@@ -342,10 +348,13 @@ async def validate_unfinished_header_block(
                         log.error(
                             constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK,
                         )
-                        return None, ValidationError(
-                            Err.INVALID_DEFICIT,
-                            f"expected deficit {constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK}, saw "
-                            f"{sub_slot.reward_chain.deficit}",
+                        return (
+                            None,
+                            ValidationError(
+                                Err.INVALID_DEFICIT,
+                                f"expected deficit {constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK}, saw "
+                                f"{sub_slot.reward_chain.deficit}",
+                            ),
                         )
                 else:
                     # 2t. Otherwise, deficit stays the same at the slot ends, cannot reset until 0
@@ -358,17 +367,23 @@ async def validate_unfinished_header_block(
             if ses_hash is not None:
                 # 3a. Check that genesis block does not have sub-epoch summary
                 if genesis_block:
-                    return None, ValidationError(
-                        Err.INVALID_SUB_EPOCH_SUMMARY_HASH,
-                        "genesis with sub-epoch-summary hash",
+                    return (
+                        None,
+                        ValidationError(
+                            Err.INVALID_SUB_EPOCH_SUMMARY_HASH,
+                            "genesis with sub-epoch-summary hash",
+                        ),
                     )
                 assert prev_sb is not None
 
                 # 3b. Check that we finished a slot and we finished a sub-epoch
                 if not new_sub_slot or not can_finish_se:
-                    return None, ValidationError(
-                        Err.INVALID_SUB_EPOCH_SUMMARY_HASH,
-                        f"new sub-slot: {new_sub_slot} finishes sub-epoch {can_finish_se}",
+                    return (
+                        None,
+                        ValidationError(
+                            Err.INVALID_SUB_EPOCH_SUMMARY_HASH,
+                            f"new sub-slot: {new_sub_slot} finishes sub-epoch {can_finish_se}",
+                        ),
                     )
 
                 # 3c. Check the actual sub-epoch is correct
@@ -383,16 +398,22 @@ async def validate_unfinished_header_block(
                 expected_hash = expected_sub_epoch_summary.get_hash()
                 if expected_hash != ses_hash:
                     log.error(f"{expected_sub_epoch_summary}")
-                    return None, ValidationError(
-                        Err.INVALID_SUB_EPOCH_SUMMARY,
-                        f"expected ses hash: {expected_hash} got {ses_hash} ",
+                    return (
+                        None,
+                        ValidationError(
+                            Err.INVALID_SUB_EPOCH_SUMMARY,
+                            f"expected ses hash: {expected_hash} got {ses_hash} ",
+                        ),
                     )
             elif new_sub_slot and not genesis_block:
                 # 3d. Check that we don't have to include a sub-epoch summary
                 if can_finish_se or can_finish_epoch:
-                    return None, ValidationError(
-                        Err.INVALID_SUB_EPOCH_SUMMARY,
-                        "block finishes sub-epoch but ses-hash is None",
+                    return (
+                        None,
+                        ValidationError(
+                            Err.INVALID_SUB_EPOCH_SUMMARY,
+                            "block finishes sub-epoch but ses-hash is None",
+                        ),
                     )
 
     # 4. Check if the number of sub-blocks is less than the max
@@ -511,9 +532,12 @@ async def validate_unfinished_header_block(
             total_iters = uint128(prev_sb.total_iters - prev_sb.ip_iters(constants))
     total_iters = uint128(total_iters + ip_iters)
     if total_iters != header_block.reward_chain_sub_block.total_iters:
-        return None, ValidationError(
-            Err.INVALID_TOTAL_ITERS,
-            f"expected {total_iters} got {header_block.reward_chain_sub_block.total_iters}",
+        return (
+            None,
+            ValidationError(
+                Err.INVALID_TOTAL_ITERS,
+                f"expected {total_iters} got {header_block.reward_chain_sub_block.total_iters}",
+            ),
         )
 
     sp_total_iters: uint128 = uint128(total_iters - ip_iters + sp_iters - (sub_slot_iters if overflow else 0))
@@ -919,9 +943,12 @@ async def validate_finished_header_block(
             assert header_block.infused_challenge_chain_ip_proof is not None
             # If we have an ICC chain, deficit must be 0, 1, 2 or 3
             if deficit >= constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1:
-                return None, ValidationError(
-                    Err.INVALID_ICC_VDF,
-                    f"icc vdf and deficit is bigger or equal to {constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1}",
+                return (
+                    None,
+                    ValidationError(
+                        Err.INVALID_ICC_VDF,
+                        f"icc vdf and deficit is bigger or equal to {constants.MIN_SUB_BLOCKS_PER_CHALLENGE_BLOCK - 1}",
+                    ),
                 )
             if new_sub_slot:
                 last_ss = header_block.finished_sub_slots[-1]

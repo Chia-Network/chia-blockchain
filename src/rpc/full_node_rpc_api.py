@@ -99,10 +99,7 @@ class FullNodeRpcApi:
             assert older_block_hash is not None
             older_block_hex = older_block_hash.hex()
             space = await self.get_network_space(
-                {
-                    "newer_block_header_hash": newer_block_hex,
-                    "older_block_header_hash": older_block_hex,
-                }
+                {"newer_block_header_hash": newer_block_hex, "older_block_header_hash": older_block_hex}
             )
         else:
             space = {"space": uint128(0)}

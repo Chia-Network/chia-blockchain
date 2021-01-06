@@ -155,7 +155,7 @@ const getStatusItems = (state, connected) => {
   const status_items = [];
   if (state.sync && state.sync.sync_mode) {
     const progress = state.sync.sync_progress_sub_height;
-    const tip = state.sync.sync_tip_height;
+    const tip = state.sync.sync_tip_sub_height;
     const item = {
       label: <Trans id="StatusItem.status">Status</Trans>,
       value: (
@@ -202,7 +202,7 @@ const getStatusItems = (state, connected) => {
     };
     status_items.push(item);
   }
-  
+
   if (connected) {
     status_items.push({
       label: <Trans id="StatusItem.connectionStatus">Connection Status</Trans>,
@@ -241,7 +241,7 @@ const getStatusItems = (state, connected) => {
   const peakTimestamp = state.peak?.foliage_block?.timestamp;
   status_items.push({
     label: <Trans id="StatusItem.peakTime">Peak Time</Trans>,
-    value: peakTimestamp 
+    value: peakTimestamp
       ? unix_to_short_date(Number.parseInt(peakTimestamp))
       : '',
     tooltip: (
@@ -400,16 +400,16 @@ const BlocksCard = () => {
               </Trans>
             </Box>
           </Box>
-        
+
           {latestBlocks.map((record) => {
             const isFinished = true; //record.finished_reward_slot_hashes && !!record.finished_reward_slot_hashes.length;
-            const { 
+            const {
               foliage_block: {
                 height,
                 timestamp,
                 header_hash = 'mocked-hash',
                 prev_block_hash,
-              } 
+              }
             } = record;
 
             return (
@@ -456,7 +456,7 @@ const BlocksCard = () => {
           <Loading />
         </Flex>
       )}
-        
+
     </Card>
   );
 };

@@ -157,9 +157,7 @@ class TestFullNodeProtocol:
 
         async def have_msgs():
             await full_node_2.full_node.full_node_peers.address_manager.add_to_new_table(
-                [
-                    TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000),
-                ],
+                [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000)],
                 None,
             )
             msg = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("[::1]", server_2._port))

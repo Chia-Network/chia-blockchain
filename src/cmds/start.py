@@ -33,10 +33,12 @@ def launch_start_daemon(root_path):
 async def create_start_daemon_connection(root_path):
     connection = await connect_to_daemon_and_validate(root_path)
     if connection is None:
+        print("Starting daemon")
         # launch a daemon
         process = launch_start_daemon(root_path)
         # give the daemon a chance to start up
         process.stdout.readline()
+        await asyncio.sleep(1)
         # it prints "daemon: listening"
         connection = await connect_to_daemon_and_validate(root_path)
     if connection:
