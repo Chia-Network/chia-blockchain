@@ -1,6 +1,7 @@
 # flake8: noqa: F811, F401
 import asyncio
 from dataclasses import replace
+import logging
 import pytest
 from blspy import AugSchemeMPL, G2Element
 
