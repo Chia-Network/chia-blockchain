@@ -22,6 +22,13 @@ export default function PlotAddSelectTemporaryDirectory() {
     }
   }
 
+  async function handleSelect2() {
+    const location = await selectDirectory();
+    if (location) {
+      setValue('workspaceLocation2', location, { shouldValidate: true });
+    }
+  }
+
   return (
     <CardStep
       step="3"
@@ -80,7 +87,7 @@ export default function PlotAddSelectTemporaryDirectory() {
           </Typography>
           <Flex gap={2}>
             <TextField
-              onClick={handleSelect}
+              onClick={handleSelect2}
               fullWidth
               label={
                 <Trans id="PlotAddSelectTemporaryDirectory.workspaceLocation2">
