@@ -53,6 +53,8 @@
 #         await asyncio.sleep(2)
 #         print(await wallet.get_confirmed_balance(), funds)
 #         await time_out_assert(10, wallet.get_confirmed_balance, funds)
+
+
 #
 #     @pytest.mark.asyncio
 #     async def test_tx_propagation(self, three_nodes_two_wallets):
