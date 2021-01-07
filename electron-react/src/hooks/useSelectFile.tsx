@@ -19,7 +19,7 @@ export default function useSelectFile(): () => Promise<string | undefined> {
     openDialog(
       <AlertDialog>
         <Trans id="useSelectFile.availableOnlyFromElectron">
-          This feature is available only from electron app
+          This feature is available only from the GUI.
         </Trans>
       </AlertDialog>,
     );

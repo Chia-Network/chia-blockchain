@@ -270,10 +270,10 @@ function BalanceCard(props: BalanceCardProps) {
           balance={balance}
           tooltip={
             <Trans id="BalanceCard.totalBalanceTooltip">
-              This is the total amount of Chia in the blockchain at the LCA
-              block (latest common ancestor) that is controlled by your private
-              keys. It includes frozen farming rewards, but not pending incoming
-              and outgoing transactions.
+              This is the total amount of chia in the blockchain at the current
+              peak sub block that is controlled by your private keys.
+              It includes frozen farming rewards,
+              but not pending incoming and outgoing transactions.
             </Trans>
           }
         />
@@ -350,8 +350,7 @@ function BalanceCard(props: BalanceCardProps) {
                           <Trans id="BalanceCard.pendingFarmingRewardsTooltip">
                             This is the total amount of farming rewards farmed
                             recently, that have been confirmed but are not yet
-                            spendable. Farming rewards are frozen for 200
-                            blocks.
+                            spendable.
                           </Trans>
                         }
                       />
