@@ -477,12 +477,14 @@ class FullNodeStore:
         assert len(self.finished_sub_slots) >= 1
         new_finished_sub_slots = []
         total_iters_peak = peak.ip_sub_slot_total_iters(self.constants)
+        ip_sub_slot_found = False
         if not reorg:
             # This is a new peak that adds to the last peak. We can clear data in old sub-slots. (and new ones)
             for index, (sub_slot, sps, total_iters) in enumerate(self.finished_sub_slots):
                 if sub_slot == sp_sub_slot:
                     # In the case of a peak overflow sub-block (or first ss), the previous sub-slot is added
                     if sp_sub_slot is None:
+                        # This is a non-overflow sub block
                         if (
                             ip_sub_slot is not None
                             and ip_sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
@@ -490,12 +492,14 @@ class FullNodeStore:
                             new_finished_sub_slots.append((sub_slot, sps, total_iters))
                             continue
                     else:
+                        # Overflow sub block
                         new_finished_sub_slots.append((sub_slot, sps, total_iters))
                         continue
                 if sub_slot == ip_sub_slot:
+                    ip_sub_slot_found = True
                     new_finished_sub_slots.append((sub_slot, sps, total_iters))
             self.finished_sub_slots = new_finished_sub_slots
-        if reorg or len(new_finished_sub_slots) == 0:
+        if reorg or not ip_sub_slot_found:
             # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current
             # cache, delete the entire cache and add this sub slot.
             self.clear_slots()
