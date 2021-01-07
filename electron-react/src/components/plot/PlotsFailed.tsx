@@ -36,7 +36,7 @@ export default function PlotsFailed() {
     >
       <Typography component="h6" variant="body2">
         <Trans id="PlotsFailed.description">
-          These plots are invalid, you might want to delete them forever.
+          These plots are invalid, you might want to delete them.
         </Trans>
       </Typography>
 

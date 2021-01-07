@@ -13,19 +13,19 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/wallet/standard/WalletStandard.tsx:522
+#: src/components/wallet/standard/WalletStandard.tsx:525
 msgid "AddressCard.address"
 msgstr "Address"
 
-#: src/components/wallet/standard/WalletStandard.tsx:526
+#: src/components/wallet/standard/WalletStandard.tsx:529
 msgid "AddressCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/standard/WalletStandard.tsx:538
+#: src/components/wallet/standard/WalletStandard.tsx:541
 msgid "AddressCard.newAddress"
 msgstr "New Address"
 
-#: src/components/wallet/standard/WalletStandard.tsx:514
+#: src/components/wallet/standard/WalletStandard.tsx:517
 msgid "AddressCard.title"
 msgstr "Receive Address"
 
@@ -49,15 +49,15 @@ msgstr "Connecting to wallet"
 msgid "Application.loggingIn"
 msgstr "Logging in"
 
-#: src/components/wallet/standard/WalletStandard.tsx:202
+#: src/components/wallet/standard/WalletStandard.tsx:203
 msgid "BalanceCard.balance"
 msgstr "Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:239
+#: src/components/wallet/standard/WalletStandard.tsx:240
 msgid "BalanceCard.pendingBalance"
 msgstr "Pending Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:241
+#: src/components/wallet/standard/WalletStandard.tsx:242
 msgid "BalanceCard.pendingBalanceTooltip"
 msgstr "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
 
@@ -69,39 +69,39 @@ msgstr "Pending Change"
 msgid "BalanceCard.pendingChangeTooltip"
 msgstr "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
 
-#: src/components/wallet/standard/WalletStandard.tsx:246
+#: src/components/wallet/standard/WalletStandard.tsx:247
 msgid "BalanceCard.pendingFarmingRewards"
 msgstr "Pending Farming Rewards"
 
-#: src/components/wallet/standard/WalletStandard.tsx:248
+#: src/components/wallet/standard/WalletStandard.tsx:249
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
 msgstr "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable."
 
-#: src/components/wallet/standard/WalletStandard.tsx:232
+#: src/components/wallet/standard/WalletStandard.tsx:233
 msgid "BalanceCard.pendingTotalBalance"
 msgstr "Pending Total Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:234
+#: src/components/wallet/standard/WalletStandard.tsx:235
 msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 
-#: src/components/wallet/standard/WalletStandard.tsx:212
+#: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "BalanceCard.spendableBalance"
 msgstr "Spendable Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:212
+#: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "BalanceCard.spendableBalanceTooltip"
 msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
 
-#: src/components/wallet/standard/WalletStandard.tsx:206
+#: src/components/wallet/standard/WalletStandard.tsx:207
 msgid "BalanceCard.totalBalance"
 msgstr "Total Balance"
 
-#: src/components/wallet/standard/WalletStandard.tsx:206
+#: src/components/wallet/standard/WalletStandard.tsx:207
 msgid "BalanceCard.totalBalanceTooltip"
 msgstr "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 
-#: src/components/wallet/standard/WalletStandard.tsx:225
+#: src/components/wallet/standard/WalletStandard.tsx:226
 msgid "BalanceCard.viewPendingBalances"
 msgstr "View pending balances"
 
@@ -250,7 +250,7 @@ msgstr "State"
 msgid "BlocksCard.timeCreated"
 msgstr "Time Created"
 
-#: src/components/fullNode/FullNode.jsx:319
+#: src/components/fullNode/FullNode.jsx:317
 msgid "BlocksCard.title"
 msgstr "Blocks"
 
@@ -282,123 +282,123 @@ msgstr "Coloured Coin Options"
 #~ msgid "Challenges.title"
 #~ msgstr "Challenges"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:195
+#: src/components/wallet/coloured/WalletColoured.tsx:196
 msgid "ColourCard.colour"
 msgstr "Colour:"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:211
+#: src/components/wallet/coloured/WalletColoured.tsx:212
 msgid "ColourCard.nickname"
 msgstr "Nickname"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:217
+#: src/components/wallet/coloured/WalletColoured.tsx:218
 msgid "ColourCard.rename"
 msgstr "Rename"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:186
+#: src/components/wallet/coloured/WalletColoured.tsx:187
 msgid "ColourCard.title"
 msgstr "Colour Info"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:597
+#: src/components/wallet/coloured/WalletColoured.tsx:601
 msgid "ColouredAddressCard.address"
 msgstr "Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:601
+#: src/components/wallet/coloured/WalletColoured.tsx:605
 msgid "ColouredAddressCard.copy"
 msgstr "Copy"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:613
+#: src/components/wallet/coloured/WalletColoured.tsx:617
 msgid "ColouredAddressCard.newAddress"
 msgstr "New Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:589
+#: src/components/wallet/coloured/WalletColoured.tsx:593
 msgid "ColouredAddressCard.title"
 msgstr "Receive Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:313
+#: src/components/wallet/coloured/WalletColoured.tsx:314
 msgid "ColouredBalanceCard.spendableBalance"
 msgstr "Spendable Balance"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:308
+#: src/components/wallet/coloured/WalletColoured.tsx:309
 msgid "ColouredBalanceCard.title"
 msgstr "Balance"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:312
+#: src/components/wallet/coloured/WalletColoured.tsx:313
 msgid "ColouredBalanceCard.totalBalance"
 msgstr "Total Balance"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:322
+#: src/components/wallet/coloured/WalletColoured.tsx:323
 msgid "ColouredBalanceCard.viewPendingBalances"
 msgstr "View pending balances..."
 
-#: src/components/wallet/coloured/WalletColoured.tsx:563
+#: src/components/wallet/coloured/WalletColoured.tsx:567
 msgid "ColouredHistoryCard.title"
 msgstr "History"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:443
+#: src/components/wallet/coloured/WalletColoured.tsx:444
 msgid "ColouredSendCard.address"
 msgstr "Address"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:455
+#: src/components/wallet/coloured/WalletColoured.tsx:456
 msgid "ColouredSendCard.amount"
 msgstr "Amount ({cc_unit})"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:472
+#: src/components/wallet/coloured/WalletColoured.tsx:473
 msgid "ColouredSendCard.farm"
 msgstr "Farm"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:462
+#: src/components/wallet/coloured/WalletColoured.tsx:463
 msgid "ColouredSendCard.fee"
 msgstr "Fee (TXCH)"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:477
+#: src/components/wallet/coloured/WalletColoured.tsx:478
 msgid "ColouredSendCard.send"
 msgstr "Send"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:428
+#: src/components/wallet/coloured/WalletColoured.tsx:429
 msgid "ColouredSendCard.title"
 msgstr "Create Transaction"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:523
+#: src/components/wallet/coloured/WalletColoured.tsx:527
 msgid "ColouredTransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:504
+#: src/components/wallet/coloured/WalletColoured.tsx:508
 msgid "ColouredTransactionTable.confirmed"
 msgstr "Confirmed"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:517
+#: src/components/wallet/coloured/WalletColoured.tsx:521
 msgid "ColouredTransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:526
+#: src/components/wallet/coloured/WalletColoured.tsx:530
 msgid "ColouredTransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:499
+#: src/components/wallet/coloured/WalletColoured.tsx:505
 msgid "ColouredTransactionTable.incoming"
 msgstr "Incoming"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:492
+#: src/components/wallet/coloured/WalletColoured.tsx:493
 msgid "ColouredTransactionTable.noPreviousTransactions"
 msgstr "No previous transactions"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:501
+#: src/components/wallet/coloured/WalletColoured.tsx:504
 msgid "ColouredTransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:504
+#: src/components/wallet/coloured/WalletColoured.tsx:508
 msgid "ColouredTransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:520
+#: src/components/wallet/coloured/WalletColoured.tsx:524
 msgid "ColouredTransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:514
+#: src/components/wallet/coloured/WalletColoured.tsx:518
 msgid "ColouredTransactionTable.to"
 msgstr "To"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:511
+#: src/components/wallet/coloured/WalletColoured.tsx:515
 msgid "ColouredTransactionTable.type"
 msgstr "Type"
 
@@ -509,7 +509,7 @@ msgstr "Amount"
 
 #: src/components/trading/CreateOffer.jsx:132
 msgid "CreateOffer.availableOnlyFromElectron"
-msgstr "This feature is available only from the GUI"
+msgstr "This feature is available only from the GUI."
 
 #: src/components/trading/CreateOffer.jsx:174
 msgid "CreateOffer.buyOrSell"
@@ -963,15 +963,15 @@ msgstr "Connected"
 msgid "FormatConnectionStatus.notConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:392
+#: src/components/fullNode/FullNode.jsx:390
 msgid "FullNode.title"
 msgstr "Full Node"
 
-#: src/components/fullNode/FullNode.jsx:278
+#: src/components/fullNode/FullNode.jsx:276
 msgid "FullNodeStatus.title"
 msgstr "Full Node Status"
 
-#: src/components/wallet/standard/WalletStandard.tsx:488
+#: src/components/wallet/standard/WalletStandard.tsx:491
 msgid "HistoryCard.title"
 msgstr "History"
 
@@ -1525,23 +1525,23 @@ msgstr "Create Transaction"
 msgid "RLSendCard.waitForSyncing"
 msgstr "Please finish syncing before making a transaction"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:937
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:942
 msgid "RLTransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:913
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:918
 msgid "RLTransactionTable.confirmed"
 msgstr "Confirmed"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:931
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:936
 msgid "RLTransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:940
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:945
 msgid "RLTransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:907
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:913
 msgid "RLTransactionTable.incoming"
 msgstr "Incoming"
 
@@ -1549,23 +1549,23 @@ msgstr "Incoming"
 msgid "RLTransactionTable.noPreviousTransactions"
 msgstr "No previous transactions"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:909
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:912
 msgid "RLTransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:915
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:920
 msgid "RLTransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:934
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:939
 msgid "RLTransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:928
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:933
 msgid "RLTransactionTable.to"
 msgstr "To"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:925
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:930
 msgid "RLTransactionTable.type"
 msgstr "Type"
 
@@ -1597,15 +1597,15 @@ msgstr "Rate Limited User Wallet Setup"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "User Pubkey"
 
-#: src/components/fullNode/FullNode.jsx:357
+#: src/components/fullNode/FullNode.jsx:355
 msgid "SearchBlock.blockHash"
 msgstr "Block hash"
 
-#: src/components/fullNode/FullNode.jsx:368
+#: src/components/fullNode/FullNode.jsx:366
 msgid "SearchBlock.search"
 msgstr "Search"
 
-#: src/components/fullNode/FullNode.jsx:351
+#: src/components/fullNode/FullNode.jsx:349
 msgid "SearchBlock.title"
 msgstr "Search block by header hash"
 
@@ -1717,15 +1717,15 @@ msgstr "Connected"
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "Not connected"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:195
 msgid "StatusItem.difficulty"
 msgstr "Difficulty"
 
-#: src/components/fullNode/FullNode.jsx:225
+#: src/components/fullNode/FullNode.jsx:223
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "Estimated network space"
 
-#: src/components/fullNode/FullNode.jsx:231
+#: src/components/fullNode/FullNode.jsx:229
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "Estimated sum of all the plotted disk space of all farmers in the network"
 
@@ -1811,15 +1811,15 @@ msgstr "The node is syncing, which means it is downloading blocks from other nod
 msgid "StatusItem.statusValue"
 msgstr "Syncing {progress}/{tip}"
 
-#: src/components/fullNode/FullNode.jsx:205
+#: src/components/fullNode/FullNode.jsx:203
 msgid "StatusItem.subSlotIters"
 msgstr "VDF Sub Slot Iterations"
 
-#: src/components/fullNode/FullNode.jsx:213
+#: src/components/fullNode/FullNode.jsx:211
 msgid "StatusItem.totalIterations"
 msgstr "Total Iterations"
 
-#: src/components/fullNode/FullNode.jsx:217
+#: src/components/fullNode/FullNode.jsx:215
 msgid "StatusItem.totalIterationsTooltip"
 msgstr "Total iterations since the start of the blockchain"
 
@@ -1971,43 +1971,43 @@ msgstr "Sell"
 msgid "TradingHistory.title"
 msgstr "Trading History"
 
-#: src/components/wallet/standard/WalletStandard.tsx:444
+#: src/components/wallet/standard/WalletStandard.tsx:447
 msgid "TransactionTable.amount"
 msgstr "Amount"
 
-#: src/components/wallet/standard/WalletStandard.tsx:423
+#: src/components/wallet/standard/WalletStandard.tsx:426
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "Confirmed at height {0}"
 
-#: src/components/wallet/standard/WalletStandard.tsx:438
+#: src/components/wallet/standard/WalletStandard.tsx:441
 msgid "TransactionTable.date"
 msgstr "Date"
 
-#: src/components/wallet/standard/WalletStandard.tsx:447
+#: src/components/wallet/standard/WalletStandard.tsx:450
 msgid "TransactionTable.fee"
 msgstr "Fee"
 
-#: src/components/wallet/standard/WalletStandard.tsx:418
+#: src/components/wallet/standard/WalletStandard.tsx:423
 msgid "TransactionTable.incoming"
 msgstr "Incoming"
 
-#: src/components/wallet/standard/WalletStandard.tsx:420
+#: src/components/wallet/standard/WalletStandard.tsx:422
 msgid "TransactionTable.outgoing"
 msgstr "Outgoing"
 
-#: src/components/wallet/standard/WalletStandard.tsx:425
+#: src/components/wallet/standard/WalletStandard.tsx:428
 msgid "TransactionTable.pending"
 msgstr "Pending"
 
-#: src/components/wallet/standard/WalletStandard.tsx:441
+#: src/components/wallet/standard/WalletStandard.tsx:444
 msgid "TransactionTable.status"
 msgstr "Status"
 
-#: src/components/wallet/standard/WalletStandard.tsx:435
+#: src/components/wallet/standard/WalletStandard.tsx:438
 msgid "TransactionTable.to"
 msgstr "To"
 
-#: src/components/wallet/standard/WalletStandard.tsx:432
+#: src/components/wallet/standard/WalletStandard.tsx:435
 msgid "TransactionTable.type"
 msgstr "Type"
 
