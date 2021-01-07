@@ -1,5 +1,7 @@
 # flake8: noqa: F811, F401
 import asyncio
+import multiprocessing
+import time
 from dataclasses import replace
 import logging
 import pytest
@@ -97,6 +99,27 @@ class TestGenesisBlock:
 
 
 class TestBlockHeaderValidation:
+    @pytest.mark.asyncio
+    async def test_very_long_chain(self, empty_blockchain, default_1000_blocks):
+        start = time.time()
+        blocks = default_1000_blocks
+        n_at_a_time = multiprocessing.cpu_count()
+        for i in range(0, len(blocks), n_at_a_time):
+            blocks_to_validate = blocks[i : i + n_at_a_time]
+            res = await empty_blockchain.pre_validate_blocks_multiprocessing(blocks_to_validate)
+            assert res is not None
+            for n in range(n_at_a_time):
+                block = blocks_to_validate[n]
+                result, err, _ = await empty_blockchain.receive_block(block, True, res[n])
+                assert err is None
+                assert result == ReceiveBlockResult.NEW_PEAK
+                log.info(
+                    f"Added block {block.sub_block_height} total iters {block.total_iters} "
+                    f"new slot? {len(block.finished_sub_slots)}"
+                )
+        end = time.time()
+        log.info(f"Total time: {end - start} seconds")
+
     @pytest.mark.asyncio
     async def test_long_chain(self, empty_blockchain, default_1000_blocks):
         blocks = default_1000_blocks

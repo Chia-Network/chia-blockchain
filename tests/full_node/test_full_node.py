@@ -738,35 +738,35 @@ class TestFullNodeProtocol:
         res = await full_node_1.request_unfinished_sub_block(fnp.RequestUnfinishedSubBlock(unf.partial_hash))
         assert res is not None
 
-    # @pytest.mark.asyncio
-    # async def test_new_signage_point_or_end_of_sub_slot(self, two_nodes, wallet_blocks):
-    #     full_node_1, full_node_2, server_1, server_2 = two_nodes
-    #     wallet_a, wallet_receiver, blocks = wallet_blocks
-    #
-    #     for block in blocks:
-    #         await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
-    #
-    #     blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
-    #     await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks[-1]))
-    #
-    #     blockchain = full_node_1.full_node.blockchain
-    #     peak = blockchain.get_peak()
-    #     log.info(f"Peak: {peak}")
-    #
-    #     sp = get_signage_point(
-    #         test_constants,
-    #         blockchain.sub_blocks,
-    #         peak,
-    #         peak.ip_sub_slot_total_iters(test_constants),
-    #         uint8(11),
-    #         [],
-    #         peak.sub_slot_iters,
-    #     )
-    #
-    #     res = await full_node_1.new_signage_point_or_end_of_sub_slot(
-    #         fnp.NewSignagePointOrEndOfSubSlot(None, sp.cc_vdf.challenge, uint8(11), sp.rc_vdf.challenge)
-    #     )
-    #     log.info(f"Res: {res}")
+    @pytest.mark.asyncio
+    async def test_new_signage_point_or_end_of_sub_slot(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+
+        for block in blocks:
+            await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+        await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks[-1]))
+
+        blockchain = full_node_1.full_node.blockchain
+        peak = blockchain.get_peak()
+        log.info(f"Peak: {peak}")
+
+        sp = get_signage_point(
+            test_constants,
+            blockchain.sub_blocks,
+            peak,
+            peak.ip_sub_slot_total_iters(test_constants),
+            uint8(11),
+            [],
+            peak.sub_slot_iters,
+        )
+
+        res = await full_node_1.new_signage_point_or_end_of_sub_slot(
+            fnp.NewSignagePointOrEndOfSubSlot(None, sp.cc_vdf.challenge, uint8(11), sp.rc_vdf.challenge)
+        )
+        log.info(f"Res: {res}")
 
     # @pytest.mark.asyncio
     # async def test_new_unfinished(self, two_nodes, wallet_blocks):

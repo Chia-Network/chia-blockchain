@@ -483,6 +483,7 @@ class FullNodeStore:
                 if sub_slot == sp_sub_slot:
                     # In the case of a peak overflow sub-block (or first ss), the previous sub-slot is added
                     if sp_sub_slot is None:
+                        # This is a non-overflow sub block
                         if (
                             ip_sub_slot is not None
                             and ip_sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
@@ -490,11 +491,13 @@ class FullNodeStore:
                             new_finished_sub_slots.append((sub_slot, sps, total_iters))
                             continue
                     else:
+                        # Overflow sub block
                         new_finished_sub_slots.append((sub_slot, sps, total_iters))
                         continue
                 if sub_slot == ip_sub_slot:
+                    # sub_slot_found =
                     new_finished_sub_slots.append((sub_slot, sps, total_iters))
-            # log.warning(f"Updated at not reorg")
+            log.warning(f"Updated at not reorg")
             self.finished_sub_slots = new_finished_sub_slots
         if reorg or len(new_finished_sub_slots) == 0:
             # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current
@@ -510,7 +513,7 @@ class FullNodeStore:
                         prev_sub_slot_total_iters,
                     )
                 ]
-            # log.warning(f"Updated at reorg")
+            log.warning(f"Updated at reorg")
             self.finished_sub_slots.append(
                 (
                     ip_sub_slot,
