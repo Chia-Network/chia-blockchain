@@ -757,6 +757,16 @@ export const create_did_action = (amount, backup_dids, num_of_backup_ids_needed)
   };
 };
 
+export const recover_did_wallet = (filename) => {
+  var action = walletMessage();
+  action.message.command = "create_new_wallet";
+  action.message.data = {
+    wallet_type: "did_wallet",
+    did_type: "recovery",
+    filename: filename
+  };
+}
+
 export const did_update_recovery_ids = (wallet_id, new_list, num_verifications_required) => {
   var action = walletMessage();
   action.message.command = "did_update_recovery_ids";
@@ -812,13 +822,23 @@ export const did_recovery_spend = (wallet_id, spend_bundles, info_dict, coin_nam
   return action;
 };
 
-export const did_create_attest = (wallet_id, coin_name, puzhash) => {
+export const did_create_attest = (wallet_id, coin_name, pubkey, puzhash) => {
   var action = walletMessage();
   action.message.command = "did_create_attest";
   action.message.data = {
     wallet_id: wallet_id,
     coin_name: coin_name,
+    pubkey: pubkey,
     puzhash: puzhash
+  };
+  return action;
+};
+
+export const did_generate_backup_file = (wallet_id) => {
+  var action = walletMessage();
+  action.message.command = "did_get_information_needed_for_recovery";
+  action.message.data = {
+    wallet_id: wallet_id
   };
   return action;
 };

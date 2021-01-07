@@ -12,7 +12,7 @@ import {
 import {
   createState,
   changeCreateWallet,
-  ALL_OPTIONS
+  CREATE_DID_WALLET_OPTIONS
 } from "../modules/createWalletReducer";
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
@@ -130,7 +130,7 @@ export const CreateDIDWallet = () => {
   };
 
   function goBack() {
-    dispatch(changeCreateWallet(ALL_OPTIONS));
+    dispatch(changeCreateWallet(CREATE_DID_WALLET_OPTIONS));
   }
 
   return (

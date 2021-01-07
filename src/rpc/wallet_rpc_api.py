@@ -626,10 +626,10 @@ class WalletRpcApi:
         my_did: str = wallet.get_my_DID()
         coins = await wallet.select_coins(1)
         if coins is None or coins == set():
-            return {"success": True, "my_did": my_did}
+            return {"success": True, "wallet_id": wallet_id, "my_did": my_did}
         else:
             coin = coins.pop()
-            return {"success": True, "my_did": my_did, "coin_id": coin.name()}
+            return {"success": True, "wallet_id": wallet_id, "my_did": my_did, "coin_id": coin.name()}
 
     async def did_get_recovery_list(self, request):
         wallet_id = int(request["wallet_id"])
@@ -678,7 +678,7 @@ class WalletRpcApi:
                 )
             ).pubkey
         ).hex()
-        return {"success": True, "punkey": pubkey}
+        return {"success": True, "pubkey": pubkey}
 
     async def did_create_attest(self, request):
         wallet_id = int(request["wallet_id"])

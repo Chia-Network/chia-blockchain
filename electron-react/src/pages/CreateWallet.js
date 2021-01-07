@@ -21,7 +21,9 @@ import {
   CREATE_RL_WALLET_OPTIONS,
   CREATE_RL_ADMIN,
   CREATE_RL_USER,
-  CREATE_DID_WALLET
+  CREATE_DID_WALLET_OPTIONS,
+  CREATE_DID_WALLET,
+  RECOVER_DID_WALLET
 } from "../modules/createWalletReducer";
 import { useDispatch, useSelector } from "react-redux";
 import ArrowBackIosIcon from "@material-ui/icons/ArrowBackIos";
@@ -30,6 +32,7 @@ import { CreateExistingCCWallet } from "./createExistingColouredCoin";
 import { CreateRLAdminWallet } from "./createRLAdmin";
 import { CreateRLUserWallet } from "./createRLUser";
 import { CreateDIDWallet } from "./createDIDWallet";
+import { RecoverDIDWallet } from "./recoverDIDWallet";
 import InvertColorsIcon from "@material-ui/icons/InvertColors";
 
 export const useStyles = makeStyles(theme => ({
@@ -93,7 +96,7 @@ export const MainWalletList = () => {
   }
 
   function select_option_did() {
-    dispatch(changeCreateWallet(CREATE_DID_WALLET));
+    dispatch(changeCreateWallet(CREATE_DID_WALLET_OPTIONS));
   }
 
   return (
@@ -237,6 +240,58 @@ export const RLListItems = () => {
   );
 };
 
+export const DIDListItems = () => {
+  const classes = useStyles();
+  const dispatch = useDispatch();
+
+  function goBack() {
+    dispatch(changeCreateWallet(ALL_OPTIONS));
+  }
+
+  function select_option_new() {
+    dispatch(changeCreateWallet(CREATE_DID_WALLET));
+  }
+
+  function select_option_recover() {
+    dispatch(changeCreateWallet(RECOVER_DID_WALLET));
+  }
+
+  return (
+    <Grid container spacing={0}>
+      <Grid item xs={12}>
+        <div className={classes.cardTitle}>
+          <Box display="flex">
+            <Box>
+              <Button onClick={goBack}>
+                <ArrowBackIosIcon> </ArrowBackIosIcon>
+              </Button>
+            </Box>
+            <Box flexGrow={1} className={classes.title}>
+              <Typography component="h6" variant="h6">
+                DID Options
+              </Typography>
+            </Box>
+          </Box>
+        </div>
+        <List>
+          <ListItem button onClick={select_option_new}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Create a new DID wallet" />
+          </ListItem>
+          <ListItem button onClick={select_option_recover}>
+            <ListItemIcon>
+              <InvertColorsIcon />
+            </ListItemIcon>
+            <ListItemText primary="Recover existing DID wallet" />
+          </ListItem>
+        </List>
+      </Grid>
+    </Grid>
+  );
+};
+
 const CreateViewSwitch = () => {
   const view = useSelector(state => state.create_options.view);
 
@@ -254,8 +309,12 @@ const CreateViewSwitch = () => {
     return <CreateRLAdminWallet></CreateRLAdminWallet>;
   } else if (view === CREATE_RL_USER) {
     return <CreateRLUserWallet></CreateRLUserWallet>;
+  } else if (view === CREATE_DID_WALLET_OPTIONS) {
+    return <DIDListItems></DIDListItems>;
   } else if (view === CREATE_DID_WALLET) {
     return <CreateDIDWallet></CreateDIDWallet>;
+  } else if (view === RECOVER_DID_WALLET) {
+    return <RecoverDIDWallet></RecoverDIDWallet>;
   }
 };
 

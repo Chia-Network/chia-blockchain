@@ -18,8 +18,10 @@ import Backdrop from "@material-ui/core/Backdrop";
 import CircularProgress from "@material-ui/core/CircularProgress";
 
 import {
+  did_generate_backup_file,
   did_spend,
-  did_update_recovery_ids_action
+  did_update_recovery_ids_action,
+  did_create_attest
 } from "../modules/message";
 import {
   Accordion,
@@ -31,6 +33,7 @@ import { Tooltip } from "@material-ui/core";
 import HelpIcon from "@material-ui/icons/Help";
 import { mojo_to_chia_string } from "../util/chia";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
+import { openDialog } from "../modules/dialogReducer";
 
 import { unix_to_short_date } from "../util/utils";
 
@@ -260,11 +263,17 @@ const useStyles = makeStyles(theme => ({
 }));
 
 const MyDIDCard = props => {
-  var id = props.wallet_id;
-
-  const mydid = useSelector(state => state.wallet_state.wallets[id].mydid);
-
+  let id = props.wallet_id;
+  console.log(id)
+  let mydid = useSelector(state => state.wallet_state.wallets[id].mydid);
+  console.log(mydid)
   const classes = useStyles();
+  const dispatch = useDispatch;
+
+  const GenerateBackup = () => {
+    dispatch(did_generate_backup_file(id));
+  };
+
   return (
     <Paper className={classes.paper}>
       <Grid container spacing={0}>
@@ -279,7 +288,7 @@ const MyDIDCard = props => {
           <div className={classes.cardSubSection}>
             <Box display="flex">
               <Box flexGrow={1} style={{ marginBottom: 20 }}>
-                <Typography variant="subtitle1">DID:</Typography>
+                <Typography variant="subtitle1">My DID:</Typography>
               </Box>
               <Box
                 style={{
@@ -289,6 +298,31 @@ const MyDIDCard = props => {
                 }}
               >
                 <Typography variant="subtitle1">{mydid}</Typography>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1} style={{ marginBottom: 20 }}>
+                <Typography variant="subtitle1">Generate a backup file:</Typography>
+              </Box>
+              <Box
+                style={{
+                  paddingLeft: 20,
+                  width: "80%",
+                  overflowWrap: "break-word"
+                }}
+              >
+                <Button
+                  onClick={GenerateBackup}
+                  className={classes.sendButton}
+                  variant="contained"
+                  color="primary"
+                >
+                  Generate
+                </Button>
               </Box>
             </Box>
           </div>
@@ -411,7 +445,12 @@ const BalanceCard = props => {
 
 const ViewDIDsSubsection = props => {
   const classes = useStyles();
+  let testthing = "123"
   let backup_list = props.backup_did_list
+  let dids_num_req = props.dids_num_req
+  let dids_length = backup_list.length;
+  console.log(props.backup_did_list)
+  console.log(props.dids_num_req)
   let isEmptyList = false
   if (backup_list.length === 0) {
     isEmptyList = true
@@ -428,7 +467,7 @@ const ViewDIDsSubsection = props => {
                 id="panel1a-header"
               >
                 <Typography className={classes.heading}>
-                  View backup DID list
+                  View backup DID list ({dids_num_req}/{dids_length} required for recovery)
                 </Typography>
               </AccordionSummary>
               <AccordionDetails>
@@ -468,7 +507,7 @@ const ManageDIDsCard = props => {
   var pending = useSelector(state => state.create_options.pending);
   var created = useSelector(state => state.create_options.created);
   let backup_did_list = useSelector(state => state.wallet_state.wallets[id].backup_dids);
-  console.log(backup_did_list)
+  let dids_num_req = useSelector(state => state.wallet_state.wallets[id].dids_num_req);
   const { handleSubmit, control } = useForm();
   const { fields, append, remove } = useFieldArray(
     {
@@ -479,9 +518,7 @@ const ManageDIDsCard = props => {
 
   const onSubmit = (data) => {
     const didArray = data.backup_dids?.map((item) => item.backupid) ?? [];
-    console.log("LOOK1:", didArray)
     const cleanDidArray = didArray.filter(function(e) { return e !== "" })
-    console.log("LOOK2:", cleanDidArray)
     const num_verifications_required = parseInt(1)
     dispatch(did_update_recovery_ids_action(id, cleanDidArray, num_verifications_required));
   };
@@ -498,6 +535,7 @@ const ManageDIDsCard = props => {
         </Grid>
         <ViewDIDsSubsection
           backup_did_list={backup_did_list}
+          dids_num_req={dids_num_req}
         />
         <Grid item xs={12}>
           <div className={classes.cardSubSection}>
@@ -572,6 +610,162 @@ const ManageDIDsCard = props => {
         <Backdrop className={classes.backdrop} open={pending && created}>
           <CircularProgress color="inherit" />
         </Backdrop>
+      </Grid>
+    </Paper>
+  );
+};
+
+const CreateAttest = props => {
+  const id = props.wallet_id;
+  let coin_input = null;
+  let pubkey_input = null;
+  let puzhash_input = null;
+  const attest_packet = useSelector(state => state.wallet_state.wallets[id].did_attest);
+  const classes = useStyles();
+  const dispatch = useDispatch;
+
+  function copy() {
+    navigator.clipboard.writeText(attest_packet);
+  }
+
+  function create_attest() {
+    if (
+      coin_input.value === ""
+    ) {
+      dispatch(openDialog("Please enter a valid coin"));
+      return;
+    }
+    if (
+      pubkey_input.value === ""
+    ) {
+      dispatch(openDialog("Please enter a valid pubkey"));
+      return;
+    }
+    if (
+      puzhash_input.value === ""
+    ) {
+      dispatch(openDialog("Please enter a valid puzzlehash"));
+      return;
+    }
+    let address = puzhash_input.value.trim();
+    if (address.substring(0, 12) === "chia_addr://") {
+      address = address.substring(12);
+    }
+    if (address.startsWith("0x") || address.startsWith("0X")) {
+      address = address.substring(2);
+    }
+
+    dispatch(did_create_attest(id, coin_input.value, pubkey_input.value, address));
+
+    coin_input.value = "";
+    pubkey_input.value = "";
+    puzhash_input.value = "";
+  };
+
+  return (
+    <Paper className={classes.paper}>
+      <Grid container spacing={0}>
+        <Grid item xs={12}>
+          <div className={classes.cardTitle}>
+            <Typography component="h6" variant="h6">
+              Create An Attest
+            </Typography>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  variant="filled"
+                  color="secondary"
+                  margin="normal"
+                  fullWidth
+                  inputRef={input => {
+                    coin_input = input;
+                  }}
+                  label="Coin"
+                />
+              </Box>
+              <Box>
+              </Box>
+            </Box>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  variant="filled"
+                  color="secondary"
+                  margin="normal"
+                  fullWidth
+                  inputRef={input => {
+                    pubkey_input = input;
+                  }}
+                  label="Pubkey"
+                />
+              </Box>
+              <Box>
+              </Box>
+            </Box>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  variant="filled"
+                  color="secondary"
+                  margin="normal"
+                  fullWidth
+                  inputRef={input => {
+                    puzhash_input = input;
+                  }}
+                  label="Puzzlehash"
+                />
+              </Box>
+              <Box>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box>
+                <Button
+                  onClick={create_attest}
+                  className={classes.sendButton}
+                  variant="contained"
+                  color="primary"
+                >
+                  Create Attest
+                </Button>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
+        <Grid item xs={12}>
+          <div className={classes.cardSubSection}>
+            <Box display="flex">
+              <Box flexGrow={1}>
+                <TextField
+                  disabled
+                  fullWidth
+                  label="Attest Packet"
+                  value={attest_packet}
+                  variant="outlined"
+                />
+              </Box>
+              <Box>
+                <Button
+                  onClick={copy}
+                  className={classes.copyButton}
+                  variant="contained"
+                  color="secondary"
+                  disableElevation
+                >
+                  Copy
+                </Button>
+              </Box>
+            </Box>
+          </div>
+        </Grid>
       </Grid>
     </Paper>
   );
@@ -744,6 +938,7 @@ const DistributedIDWallet = props => {
       <MyDIDCard wallet_id={id}></MyDIDCard>
       <BalanceCard wallet_id={id}></BalanceCard>
       <ManageDIDsCard wallet_id={id}></ManageDIDsCard>
+      <CreateAttest wallet_id={id}></CreateAttest>
       <CashoutCard wallet_id={id}></CashoutCard>
       <HistoryCard wallet_id={id}></HistoryCard>
     </Grid>

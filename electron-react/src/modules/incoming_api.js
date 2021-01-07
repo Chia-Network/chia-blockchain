@@ -14,7 +14,10 @@ export const Wallet = (id, name, type, data) => ({
   address: "",
   colour: "",
   mydid: "",
+  didcoin: "",
   backup_dids: [],
+  dids_num_req: 0,
+  did_attest: "",
   sending_transaction: false,
   send_transaction_result: ""
 });
@@ -253,25 +256,42 @@ export const incomingReducer = (state = { ...initial_state }, action) => {
       } else if (command === "did_get_did") {
         console.log("get id: ", data)
         id = data.wallet_id;
+        console.log("GDID id: ", id)
         const mydid = data.my_did;
+        console.log("my did: ", mydid)
+        const coin_id = data.coin_id;
+        console.log("did coin id: ", coin_id)
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
         if (!wallet) {
           return state;
         }
         wallet.mydid = mydid;
+        wallet.didcoin = coin_id
+        console.log(wallet.mydid)
         return { ...state };
       } else if (command === "did_get_recovery_list") {
         id = data.wallet_id;
+        console.log("GRL id: ", id)
         const dids = data.recover_list;
-        console.log("INC API GRL")
-        console.log(dids)
+        let dids_num_req = data.num_required;
         wallets = state.wallets;
         wallet = wallets[parseInt(id)];
         if (!wallet) {
           return state;
         }
         wallet.backup_dids = dids;
+        wallet.dids_num_req = dids_num_req;
+        return { ...state };
+      } else if (command === "did_create_attest") {
+        id = data.wallet_id;
+        var attest = data.message_spend_bundle;
+        wallets = state.wallets;
+        wallet = wallets[parseInt(id)];
+        if (!wallet) {
+          return state;
+        }
+        wallet.did_attest = attest;
         return { ...state };
       }
       if (command === "state_changed" && data.state === "tx_update") {
