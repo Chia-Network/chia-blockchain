@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { useAsync } from 'react-use';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../modules/rootReducer';
@@ -17,7 +16,7 @@ export default function FarmCardCoinbaseRewards() {
   return (
     <FarmCard
       title={
-        <Trans id="FarmCardCoinbaseRewards.title">TXCH Framing Rewards</Trans>
+        <Trans id="FarmCardCoinbaseRewards.title">TXCH Farming Rewards</Trans>
       }
       value={coinbaseRewards}
       loading={loading}
