@@ -100,7 +100,7 @@ export default function PlotAddSelectTemporaryDirectory() {
               }}
               variant="outlined"
             />
-            <ButtonSelected onClick={handleSelect} size="large" variant="contained" selected={hasWorkspaceLocation2}>
+            <ButtonSelected onClick={handleSelect2} size="large" variant="contained" selected={hasWorkspaceLocation2}>
               {hasWorkspaceLocation2 ? (
                 <Trans id="PlotAddSelectTemporaryDirectory.selected">Selected</Trans>
               ) : (
