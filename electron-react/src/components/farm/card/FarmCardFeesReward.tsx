@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { useAsync } from 'react-use';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../modules/rootReducer';
