@@ -4,7 +4,13 @@ import logging
 import sys
 from typing import Dict, Optional, List, Tuple, Mapping, Container
 
+import aiosqlite
 import pytest
+
+from src.consensus import default_constants
+from src.consensus.default_constants import DEFAULT_CONSTANTS
+from src.full_node.block_store import BlockStore
+from src.util.path import path_from_root
 
 try:
     from reprlib import repr
@@ -214,7 +220,6 @@ class TestWeightProof:
             test_constants.SUB_SLOT_ITERS_STARTING,
             test_constants.DIFFICULTY_STARTING,
             None,
-            None,
         )
 
         assert res
@@ -290,6 +295,42 @@ class TestWeightProof:
         valid, fork_point = wpf.validate_weight_proof(new_wp)
         assert valid
         assert fork_point != 0
+
+    @pytest.mark.skip("used for debugging")
+    @pytest.mark.asyncio
+    async def test_weight_proof_from_database(self):
+        connection = await aiosqlite.connect("/Users/almog/Documents/blockchain_v22.db")
+        block_store: BlockStore = await BlockStore.create(connection)
+        sub_blocks, peak = await block_store.get_sub_block_records()
+        sub_height_to_hash = {}
+        sub_epoch_summaries = {}
+
+        if len(sub_blocks) == 0:
+            return None, None
+
+        assert peak is not None
+        peak_height = sub_blocks[peak].sub_block_height
+
+        # Sets the other state variables (peak_height and height_to_hash)
+        curr: SubBlockRecord = sub_blocks[peak]
+        while True:
+            sub_height_to_hash[curr.sub_block_height] = curr.header_hash
+            if curr.sub_epoch_summary_included is not None:
+                sub_epoch_summaries[curr.sub_block_height] = curr.sub_epoch_summary_included
+            if curr.sub_block_height == 0:
+                break
+            curr = sub_blocks[curr.prev_hash]
+        assert len(sub_height_to_hash) == peak_height + 1
+        block_cache = BlockCache(
+            sub_blocks, sub_height_to_hash, sub_epoch_summaries=sub_epoch_summaries, block_store=block_store
+        )
+
+        wpf = WeightProofHandler(DEFAULT_CONSTANTS, block_cache)
+        wp = await wpf._create_proof_of_weight(sub_height_to_hash[peak_height - 1])
+        valid, fork_point = wpf.validate_weight_proof(wp)
+
+        await connection.close()
+        assert valid
 
 
 def get_size(obj, seen=None):
