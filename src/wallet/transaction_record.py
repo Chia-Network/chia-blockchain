@@ -33,7 +33,7 @@ class TransactionRecord(Streamable):
     # included it in the mempool, and what the error message (if any) was
     sent_to: List[Tuple[str, uint8, Optional[str]]]
     trade_id: Optional[bytes32]
-    type: uint32
+    type: uint32  # TransactionType
 
     def name(self) -> bytes32:
         if self.spend_bundle:

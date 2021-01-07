@@ -8,6 +8,7 @@ from src.simulator.simulator_protocol import FarmNewBlockProtocol
 from src.types.peer_info import PeerInfo
 from src.protocols import full_node_protocol
 from src.util.ints import uint16, uint32
+from src.wallet.wallet_state_manager import WalletStateManager
 from tests.core.fixtures import default_400_blocks, default_1000_blocks
 from tests.setup_nodes import setup_node_and_wallet, test_constants, bt, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
@@ -99,7 +100,8 @@ class TestWalletSync:
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
-        wallet = wallet_node.wallet_state_manager.main_wallet
+        wsm: WalletStateManager = wallet_node.wallet_state_manager
+        wallet = wsm.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
         await server_2.start_client(PeerInfo("localhost", uint16(fn_server._port)), None)
@@ -119,6 +121,12 @@ class TestWalletSync:
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
 
+        async def get_tx_count(wallet_id):
+            txs = await wsm.get_all_transactions(wallet_id)
+            return len(txs)
+
+        await time_out_assert(5, get_tx_count, 2 * (num_blocks - 1), 1)
+
         # Reorg blocks that carry reward
         num_blocks = 30
         blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
@@ -126,6 +134,7 @@ class TestWalletSync:
         for block in blocks_reorg[-30:]:
             await full_node_api.full_node.respond_sub_block(full_node_protocol.RespondSubBlock(block))
 
+        await time_out_assert(50, get_tx_count, 0, 1)
         await time_out_assert(5, wallet.get_confirmed_balance, 0)
 
     @pytest.mark.asyncio
