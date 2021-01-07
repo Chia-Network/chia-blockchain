@@ -205,9 +205,7 @@ class FullNodeAPI:
         self.full_node.pow_pending.remove(peer.peer_node_id)
         validated, fork_point = self.full_node.weight_proof_handler.validate_weight_proof(response.wp)
         if not validated:
-            self.log.warning("bad weight proof, disconnecting peer")
-            await peer.close()
-            return None
+            raise Exception("bad weight proof, disconnecting peer")
         # get tip params
         tip_weight = response.wp.recent_chain_data[-1].reward_chain_sub_block.weight
         tip_height = response.wp.recent_chain_data[-1].reward_chain_sub_block.sub_block_height
