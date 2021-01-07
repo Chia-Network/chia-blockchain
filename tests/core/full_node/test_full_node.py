@@ -21,8 +21,9 @@ from src.server.address_manager import AddressManager
 from src.types.sized_bytes import bytes32
 from src.types.spend_bundle import SpendBundle
 from src.types.unfinished_block import UnfinishedBlock
+from src.util.block_tools import get_signage_point
 from src.util.hash import std_hash
-from src.util.ints import uint16, uint32, uint64
+from src.util.ints import uint16, uint32, uint64, uint8
 from src.types.condition_var_pair import ConditionVarPair
 from src.types.condition_opcodes import ConditionOpcode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
@@ -709,6 +710,63 @@ class TestFullNodeProtocol:
         # Have
         res = await full_node_1.new_unfinished_sub_block(fnp.NewUnfinishedSubBlock(unf.partial_hash))
         assert res is None
+
+    @pytest.mark.asyncio
+    async def test_request_unfinished_sub_block(self, two_nodes, wallet_blocks):
+        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        wallet_a, wallet_receiver, blocks = wallet_blocks
+        peer = await connect_and_get_peer(server_1, server_2)
+
+        block: FullBlock = blocks[0]
+        unf = UnfinishedBlock(
+            block.finished_sub_slots,
+            block.reward_chain_sub_block.get_unfinished(),
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            block.foliage_sub_block,
+            block.foliage_block,
+            block.transactions_info,
+            block.transactions_generator,
+        )
+
+        # Don't have
+        res = await full_node_1.request_unfinished_sub_block(fnp.RequestUnfinishedSubBlock(unf.partial_hash))
+        assert res is None
+        await full_node_1.full_node.respond_unfinished_sub_block(fnp.RespondUnfinishedSubBlock(unf), peer)
+
+        # Have
+        res = await full_node_1.request_unfinished_sub_block(fnp.RequestUnfinishedSubBlock(unf.partial_hash))
+        assert res is not None
+
+    # @pytest.mark.asyncio
+    # async def test_new_signage_point_or_end_of_sub_slot(self, two_nodes, wallet_blocks):
+    #     full_node_1, full_node_2, server_1, server_2 = two_nodes
+    #     wallet_a, wallet_receiver, blocks = wallet_blocks
+    #
+    #     for block in blocks:
+    #         await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(block))
+    #
+    #     blocks = bt.get_consecutive_blocks(1, block_list_input=blocks, skip_slots=1)
+    #     await full_node_1.full_node.respond_sub_block(fnp.RespondSubBlock(blocks[-1]))
+    #
+    #     blockchain = full_node_1.full_node.blockchain
+    #     peak = blockchain.get_peak()
+    #     log.info(f"Peak: {peak}")
+    #
+    #     sp = get_signage_point(
+    #         test_constants,
+    #         blockchain.sub_blocks,
+    #         peak,
+    #         peak.ip_sub_slot_total_iters(test_constants),
+    #         uint8(11),
+    #         [],
+    #         peak.sub_slot_iters,
+    #     )
+    #
+    #     res = await full_node_1.new_signage_point_or_end_of_sub_slot(
+    #         fnp.NewSignagePointOrEndOfSubSlot(None, sp.cc_vdf.challenge, uint8(11), sp.rc_vdf.challenge)
+    #     )
+    #     log.info(f"Res: {res}")
 
     # @pytest.mark.asyncio
     # async def test_new_unfinished(self, two_nodes, wallet_blocks):

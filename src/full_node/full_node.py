@@ -644,6 +644,10 @@ class FullNode:
                 fork_height != sub_block.sub_block_height - 1 and sub_block.sub_block_height != 0,
                 self.blockchain.sub_blocks,
             )
+            self.log.warning(f"New Sub slots: {len(self.full_node_store.finished_sub_slots)}")
+            for a, b, c in self.full_node_store.finished_sub_slots:
+                if a is not None:
+                    self.log.warning(f"{a.challenge_chain.get_hash()}")
             # Ensure the signage point is also in the store, for consistency
             self.full_node_store.new_signage_point(
                 new_peak.signage_point_index,
