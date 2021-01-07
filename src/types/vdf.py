@@ -70,7 +70,7 @@ class VDFProof(Streamable):
             return False
         try:
             disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
-            x = ClassGroup.from_ab_discriminant(input_el.a, input_el.b, disc)
+            # x = ClassGroup.from_ab_discriminant(input_el.a, input_el.b, disc)
             y = ClassGroup.from_ab_discriminant(info.output.a, info.output.b, disc)
         except Exception:
             return False
@@ -78,7 +78,8 @@ class VDFProof(Streamable):
         # TODO: check for maximum witness type
         return verify_n_wesolowski(
             str(disc),
-            str(x.a), str(x.b),
+            str(input_el.a),
+            str(input_el.b),
             y.serialize() + bytes(self.witness),
             info.number_of_iterations,
             constants.DISCRIMINANT_SIZE_BITS,
