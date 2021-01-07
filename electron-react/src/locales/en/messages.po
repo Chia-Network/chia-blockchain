@@ -75,7 +75,7 @@ msgstr "Pending Farming Rewards"
 
 #: src/components/wallet/standard/WalletStandard.tsx:248
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
-msgstr "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable. Farming rewards are frozen for 200 blocks."
+msgstr "This is the total amount of farming rewards farmed recently, that have been confirmed but are not yet spendable."
 
 #: src/components/wallet/standard/WalletStandard.tsx:232
 msgid "BalanceCard.pendingTotalBalance"
@@ -99,7 +99,7 @@ msgstr "Total Balance"
 
 #: src/components/wallet/standard/WalletStandard.tsx:206
 msgid "BalanceCard.totalBalanceTooltip"
-msgstr "This is the total amount of Chia in the blockchain at the LCA block (latest common ancestor) that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
+msgstr "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
 
 #: src/components/wallet/standard/WalletStandard.tsx:225
 msgid "BalanceCard.viewPendingBalances"
@@ -119,7 +119,7 @@ msgstr "Coinbase Amount"
 
 #: src/components/block/Block.jsx:257
 msgid "Block.coinbaseAmountTooltip"
-msgstr "The Chia block reward, goes to the pool (or farmer if not pooling)"
+msgstr "The chia block reward, goes to the pool (or farmer if not pooling)"
 
 #: src/components/block/Block.jsx:263
 msgid "Block.coinbasePuzzleHash"
@@ -203,7 +203,7 @@ msgstr "Total VDF Iterations"
 
 #: src/components/block/Block.jsx:199
 msgid "Block.totalVDFIterationsTooltip"
-msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
+msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
 
 #: src/components/block/Block.jsx:239
 msgid "Block.transactionsFilterHash"
@@ -219,7 +219,7 @@ msgstr "Weight"
 
 #: src/components/block/Block.jsx:180
 msgid "Block.weightTooltip"
-msgstr "Weight is the total added difficulty of all blocks up to and including this one"
+msgstr "Weight is the total added difficulty of all sub blocks up to and including this one"
 
 #: src/components/fullNode/FullNode.jsx:91
 #~ msgid "BlocksCard.expectedFinishTime"
@@ -424,11 +424,11 @@ msgstr "Delete"
 
 #: src/components/fullNode/FullNodeConnections.jsx:95
 msgid "Connections.ipAddress"
-msgstr "Ip address"
+msgstr "IP address"
 
 #: src/components/fullNode/FullNodeConnections.jsx:182
 msgid "Connections.ipAddressHost"
-msgstr "Ip address / host"
+msgstr "IP address / host"
 
 #: src/components/fullNode/FullNodeConnections.jsx:115
 msgid "Connections.lastMessage"
@@ -436,7 +436,7 @@ msgstr "Last message"
 
 #: src/components/fullNode/FullNodeConnections.jsx:92
 msgid "Connections.nodeId"
-msgstr "Node Id"
+msgstr "Node ID"
 
 #: src/components/fullNode/FullNodeConnections.jsx:98
 #: src/components/fullNode/FullNodeConnections.jsx:188
@@ -501,7 +501,7 @@ msgstr "Add"
 
 #: src/components/trading/CreateOffer.jsx:109
 msgid "CreateOffer.addTradePair"
-msgstr "Please add trade pair"
+msgstr "Please add a trade pair"
 
 #: src/components/trading/CreateOffer.jsx:213
 msgid "CreateOffer.amount"
@@ -509,7 +509,7 @@ msgstr "Amount"
 
 #: src/components/trading/CreateOffer.jsx:132
 msgid "CreateOffer.availableOnlyFromElectron"
-msgstr "This feature is available only from electron app"
+msgstr "This feature is available only from the GUI"
 
 #: src/components/trading/CreateOffer.jsx:174
 msgid "CreateOffer.buyOrSell"
@@ -824,7 +824,7 @@ msgstr "Host Name"
 #: src/components/farm/FarmFullNodeConnections.tsx:20
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:20
 msgid "FarmFullNodeConnections.nodeId"
-msgstr "Node Id"
+msgstr "Node ID"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:32
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:32
@@ -837,7 +837,7 @@ msgstr "Time"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:60
 msgid "FarmFullNodeConnections.title"
-msgstr "Your Full Node Connnection"
+msgstr "Your Full Node Connection"
 
 #: src/components/farm/FarmFullNodeConnections.tsx:43
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:43
@@ -1276,7 +1276,7 @@ msgstr "Farming"
 
 #: src/components/plot/PlotStatus.tsx:22
 msgid "PlotStatus.synching"
-msgstr "Synching"
+msgstr "Syncing"
 
 #: src/components/farmer/Farmer.jsx:581
 #~ msgid "Plots.back"
@@ -1305,7 +1305,7 @@ msgstr "Synching"
 
 #: src/components/farmer/Farmer.jsx:532
 #~ msgid "Plots.failedToOpenPlotsDescription"
-#~ msgstr "These plots are invalid, you might want to delete them forever."
+#~ msgstr "These plots are invalid, you might want to delete them."
 
 #: src/components/farmer/Farmer.jsx:410
 #~ msgid "Plots.filename"
@@ -1345,7 +1345,7 @@ msgstr "Synching"
 
 #: src/components/plot/PlotsFailed.tsx:26
 msgid "PlotsFailed.description"
-msgstr "These plots are invalid, you might want to delete them forever."
+msgstr "These plots are invalid, you might want to delete them."
 
 #: src/components/plot/PlotsFailed.tsx:24
 msgid "PlotsFailed.title"
@@ -1375,7 +1375,7 @@ msgstr "Not found Plots"
 
 #: src/components/plotter/Plotter.jsx:298
 #~ msgid "PlotterFinalLocation.availableOnlyFromElectron"
-#~ msgstr "This feature is available only from electron app"
+#~ msgstr "This feature is available only from the GUI."
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:52
 msgid "PlotterFinalLocation.browse"
@@ -1403,7 +1403,7 @@ msgstr "Selected"
 
 #: src/components/plotter/Plotter.jsx:630
 #~ msgid "PlotterProgress.plottingStoppedSuccesfully"
-#~ msgstr "Plotting stopped succesfully."
+#~ msgstr "Plotting stopped successfully."
 
 #: src/components/plotter/Plotter.jsx:619
 #~ msgid "PlotterProgress.title"
@@ -1774,7 +1774,7 @@ msgstr "Peak Time"
 
 #: src/components/fullNode/FullNode.jsx:187
 msgid "StatusItem.peakTimeTooltip"
-msgstr "This is the time of the latest common ancestor, which is a block ancestor of all tip blocks. Note that the full node keeps track of up to three tips at each height."
+msgstr "This is the time of the latest peak sub block."
 
 #: src/components/fullNode/FullNode.jsx:102
 #: src/components/fullNode/FullNode.jsx:119
@@ -1793,7 +1793,7 @@ msgstr "Not Synced"
 
 #: src/components/fullNode/FullNode.jsx:127
 msgid "StatusItem.statusNotSyncedTooltip"
-msgstr "The node is not synced and currently not syncing"
+msgstr "The node is not synced"
 
 #: src/components/fullNode/FullNode.jsx:136
 msgid "StatusItem.statusSynced"
@@ -2077,8 +2077,8 @@ msgstr "Wallets"
 
 #: src/hooks/useSelectDirectory.tsx:26
 msgid "useSelectDirectory.availableOnlyFromElectron"
-msgstr "This feature is available only from electron app"
+msgstr "This feature is available only from the GUI."
 
 #: src/hooks/useSelectFile.tsx:26
 msgid "useSelectFile.availableOnlyFromElectron"
-msgstr "This feature is available only from electron app"
+msgstr "This feature is available only from the GUI."
