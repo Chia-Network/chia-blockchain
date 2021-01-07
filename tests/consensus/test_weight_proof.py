@@ -299,7 +299,7 @@ class TestWeightProof:
     @pytest.mark.skip("used for debugging")
     @pytest.mark.asyncio
     async def test_weight_proof_from_database(self):
-        connection = await aiosqlite.connect("/Users/almog/Documents/blockchain_v22.db")
+        connection = await aiosqlite.connect("path to db")
         block_store: BlockStore = await BlockStore.create(connection)
         sub_blocks, peak = await block_store.get_sub_block_records()
         sub_height_to_hash = {}
