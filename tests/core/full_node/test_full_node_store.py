@@ -14,7 +14,7 @@ from src.types.unfinished_block import UnfinishedBlock
 from src.util.hash import std_hash
 from src.util.ints import uint32, uint8, uint128
 from tests.setup_nodes import test_constants, bt
-from tests.full_node.fixtures import empty_blockchain
+from tests.core.fixtures import empty_blockchain
 from src.util.block_tools import get_signage_point
 
 

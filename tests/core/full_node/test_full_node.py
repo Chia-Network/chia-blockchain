@@ -26,7 +26,7 @@ from src.types.condition_opcodes import ConditionOpcode
 from tests.setup_nodes import setup_two_nodes, test_constants, bt
 from src.util.wallet_tools import WalletTool
 from src.util.clvm import int_to_bytes
-from tests.full_node.test_full_sync import node_height_at_least
+from tests.core.full_node.test_full_sync import node_height_at_least
 from tests.time_out_assert import (
     time_out_assert,
     time_out_assert_custom_interval,
