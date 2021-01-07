@@ -494,6 +494,7 @@ class FullNodeStore:
                         continue
                 if sub_slot == ip_sub_slot:
                     new_finished_sub_slots.append((sub_slot, sps, total_iters))
+            # log.warning(f"Updated at not reorg")
             self.finished_sub_slots = new_finished_sub_slots
         if reorg or len(new_finished_sub_slots) == 0:
             # This is either a reorg, which means some sub-blocks are reverted, or this sub slot is not in our current
@@ -509,6 +510,7 @@ class FullNodeStore:
                         prev_sub_slot_total_iters,
                     )
                 ]
+            # log.warning(f"Updated at reorg")
             self.finished_sub_slots.append(
                 (
                     ip_sub_slot,
