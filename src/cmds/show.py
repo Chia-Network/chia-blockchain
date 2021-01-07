@@ -135,9 +135,8 @@ async def show_async(args, parser):
                     "\nCurrently synched to tip:",
                     sync_current_block,
                 )
-            else:
+            elif peak is not None and peak.height > 2:
                 print("Current Blockchain Status: Full Node Synced")
-            if peak is not None:
                 print("\nPeak: Hash:", peak.header_hash)
             else:
                 print("\nSearching for an initial chain.")
