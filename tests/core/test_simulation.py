@@ -1,5 +1,6 @@
 import pytest
-from tests.full_node.test_full_sync import node_height_at_least
+
+from tests.core.full_node.test_full_sync import node_height_at_least
 from tests.setup_nodes import setup_full_system, test_constants
 from src.util.ints import uint16
 from tests.time_out_assert import time_out_assert
