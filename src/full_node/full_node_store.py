@@ -526,6 +526,7 @@ class FullNodeStore:
                         prev_sub_slot_total_iters,
                     )
                 ]
+            # log.warning(f"Updated at reorg")
             self.finished_sub_slots.append(
                 (
                     ip_sub_slot,
