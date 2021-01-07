@@ -816,7 +816,12 @@ class WalletStateManager:
             return
 
         for record in records:
-            await self.tx_store.tx_reorged(record.name())
+            if record.type in [
+                TransactionType.OUTGOING_TX,
+                TransactionType.OUTGOING_TRADE,
+                TransactionType.INCOMING_TRADE,
+            ]:
+                await self.tx_store.tx_reorged(record.name())
 
         self.tx_pending_changed()
 
