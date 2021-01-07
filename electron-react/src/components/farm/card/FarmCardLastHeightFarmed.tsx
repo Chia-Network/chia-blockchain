@@ -8,9 +8,8 @@ import computeStatistics from '../../../util/computeStatistics';
 
 export default function FarmCardLastHeightFarmed() {
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
-  const { loading, value } = useAsync(() => computeStatistics(wallets), [
-    wallets,
-  ]);
+  const value = computeStatistics(wallets);
+  const loading = !wallets;
 
   const biggestHeight = value?.biggestHeight;
 
