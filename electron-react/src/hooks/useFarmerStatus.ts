@@ -5,11 +5,17 @@ import FarmerStatus from '../constants/FarmerStatus';
 function getFarmerStatus(
   connected: boolean,
   running: boolean,
+  blockchainSynced: boolean,
   blockchainSynching: boolean,
 ): FarmerStatus {
   if (blockchainSynching) {
     return FarmerStatus.SYNCHING;
   }
+
+  if (!blockchainSynced) {
+    return FarmerStatus.ERROR;
+  }
+
   if (connected && running) {
     return FarmerStatus.FARMING;
   }
@@ -18,6 +24,10 @@ function getFarmerStatus(
 }
 
 export default function useFarmerStatus(): FarmerStatus {
+  const blockchainSynced = useSelector(
+    (state: RootState) =>
+      !!state.full_node_state.blockchain_state?.sync?.synced,
+  );
   const blockchainSynching = useSelector(
     (state: RootState) =>
       !!state.full_node_state.blockchain_state?.sync?.sync_mode,
@@ -29,5 +39,5 @@ export default function useFarmerStatus(): FarmerStatus {
     (state: RootState) => state.daemon_state.farmer_running,
   );
 
-  return getFarmerStatus(connected, running, blockchainSynching);
+  return getFarmerStatus(connected, running, blockchainSynced, blockchainSynching);
 }

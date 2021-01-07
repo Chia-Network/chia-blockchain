@@ -246,7 +246,7 @@ const StatusCell = (props) => {
   const { tooltip } = item;
   const { colour } = item;
   return (
-    <Grid item xs={12} sm={6}>
+    <Grid item xs={12} md={6}>
       <Flex mb={-2} alignItems="center">
         <Flex flexGrow={1} gap={1} alignItems="center">
           <Typography variant="subtitle1">{label}</Typography>
