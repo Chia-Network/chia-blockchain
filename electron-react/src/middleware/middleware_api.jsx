@@ -20,9 +20,9 @@ import {
   service_wallet,
   service_full_node,
   service_simulator,
+  service_plotter,
   service_farmer,
   service_harvester,
-  service_plotter,
 } from '../util/service_names';
 import {
   pingFullNode,
@@ -45,13 +45,14 @@ import {
 import { plottingStopped } from '../modules/plotter_messages';
 
 import { plotQueueUpdate } from '../modules/plotQueue';
-import { startService, isServiceRunning } from '../modules/daemon_messages';
+import { startService, startServiceTest } from '../modules/daemon_messages';
 import { get_all_trades } from '../modules/trade_messages';
 import {
   COLOURED_COIN,
   STANDARD_WALLET,
   RATE_LIMITED,
 } from '../util/wallet_types';
+const config = require('../config/config');
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -100,10 +101,16 @@ async function ping_harvester(store) {
 export function refreshAllState() {
   return async (dispatch, getState) => {
     dispatch(format_message('get_wallets', {}));
-    const start_farmer = startService(service_farmer);
-    const start_harvester = startService(service_harvester);
-    dispatch(start_farmer);
-    dispatch(start_harvester);
+
+    if (config.local_test) {
+      dispatch(startServiceTest(service_wallet));
+      dispatch(startService(service_simulator));
+    } else {
+      dispatch(startService(service_wallet));
+      dispatch(startService(service_full_node));
+      dispatch(startService(service_farmer));
+      dispatch(startService(service_harvester));
+    }
 
     dispatch(get_height_info());
     dispatch(get_sync_status());
