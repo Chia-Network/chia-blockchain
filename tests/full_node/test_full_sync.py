@@ -124,7 +124,7 @@ class TestFullSync:
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1 (or at least num_blocks - 3, in case we sync to below the tip)
-        await time_out_assert(180, node_height_at_least, True, full_node_2, len(default_1000_blocks) - 1)
+        await time_out_assert(360, node_height_at_least, True, full_node_2, len(default_1000_blocks) - 1)
 
     @pytest.mark.skip("broken, peer 1 closes before the last 50 blocks are synced")
     @pytest.mark.asyncio
