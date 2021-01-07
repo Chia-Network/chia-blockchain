@@ -285,7 +285,7 @@ function BalanceCard(props: BalanceCardProps) {
             <Trans id="BalanceCard.spendableBalanceTooltip">
               This is the amount of Chia that you can currently use to make
               transactions. It does not include pending farming rewards, pending
-              incoming transctions, and Chia that you have just spent but is not
+              incoming transactions, and Chia that you have just spent but is not
               yet in the blockchain.
             </Trans>
           }
@@ -317,7 +317,7 @@ function BalanceCard(props: BalanceCardProps) {
                         balance={balance_ptotal}
                         tooltip={
                           <Trans id="BalanceCard.pendingTotalBalanceTooltip">
-                            This is the total balance + pending balance: it it
+                            This is the total balance + pending balance: it is
                             what your balance will be after all pending
                             transactions are confirmed.
                           </Trans>

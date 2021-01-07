@@ -1,13 +1,13 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useSelector } from 'react-redux';
-import moment from 'moment';
+// import moment from 'moment';
 import {
   Typography,
   Link,
   Tooltip,
 } from '@material-ui/core';
-import { Flex, Table, TooltipIcon, Card } from '@chia/core';
+import { Table, Card } from '@chia/core';
 import type { RootState } from '../../modules/rootReducer';
 import type { Row } from '../core/Table/Table';
 
@@ -28,8 +28,8 @@ const cols = [
   {
     width: '150px',
     field: (row: Row) => row.sp.signage_point_index,
-    title: <Trans id="FarmLatestBlockChallenges.height">Height</Trans>,
-  },
+    title: <Trans id="FarmLatestBlockChallenges.index">Index</Trans>,
+  }, /*
   {
     width: '200px',
     field(row: Row) {
@@ -55,7 +55,7 @@ const cols = [
         </TooltipIcon>
       </Flex>
     ),
-  },
+  }, */
 ];
 
 export default function FarmLatestBlockChallenges() {
@@ -68,7 +68,7 @@ export default function FarmLatestBlockChallenges() {
   );
 
   const hasPlots = !!plots && plots.length > 0;
-  const reducedSignagePoints = signagePoints.slice(0, 5);
+  const reducedSignagePoints = signagePoints;
 
   return (
     <Card
@@ -94,9 +94,12 @@ export default function FarmLatestBlockChallenges() {
           </Trans>
         </Typography>
       )}
-      <Table 
-        cols={cols} 
-        rows={reducedSignagePoints} 
+      <Table
+        cols={cols}
+        rows={reducedSignagePoints}
+        rowsPerPageOptions={[5, 10, 25, 100]}
+        rowsPerPage={5}
+        pages
       />
       <Typography variant="caption">
         <Trans id="FarmLatestBlockChallenges.subDescription">

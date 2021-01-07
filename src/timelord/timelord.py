@@ -831,8 +831,9 @@ class Timelord:
                     proof_bytes: bytes = stdout_bytes_io.read()
 
                     # Verifies our own proof just in case
-                    a = int.from_bytes(y_bytes[:129], "big", signed=True)
-                    b = int.from_bytes(y_bytes[129:], "big", signed=True)
+                    int_size = (self.constants.DISCRIMINANT_SIZE_BITS + 16) >> 4
+                    a = int.from_bytes(y_bytes[:int_size], "big", signed=True)
+                    b = int.from_bytes(y_bytes[int_size:], "big", signed=True)
                     output = ClassgroupElement(int512(a), int512(b))
                     time_taken = time.time() - self.chain_start_time[chain]
                     ips = int(iterations_needed / time_taken * 10) / 10

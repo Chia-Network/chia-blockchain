@@ -6,7 +6,8 @@ from typing import Optional, Tuple, Dict
 from chiavdf import create_discriminant
 from src.types.classgroup import ClassgroupElement
 from src.types.sized_bytes import bytes32
-from src.util.classgroup_utils import ClassGroup, check_proof_of_time_nwesolowski
+from src.util.classgroup_utils import ClassGroup
+from chiavdf import verify_n_wesolowski
 from src.util.ints import uint8, uint64
 from src.util.streamable import Streamable, streamable
 from src.consensus.constants import ConsensusConstants
@@ -69,15 +70,16 @@ class VDFProof(Streamable):
             return False
         try:
             disc: int = get_discriminant(info.challenge, constants.DISCRIMINANT_SIZE_BITS)
-            x = ClassGroup.from_ab_discriminant(input_el.a, input_el.b, disc)
+            # x = ClassGroup.from_ab_discriminant(input_el.a, input_el.b, disc)
             y = ClassGroup.from_ab_discriminant(info.output.a, info.output.b, disc)
         except Exception:
             return False
         # TODO: parallelize somehow, this might included multiple mini proofs (n weso)
         # TODO: check for maximum witness type
-        return check_proof_of_time_nwesolowski(
-            disc,
-            x,
+        return verify_n_wesolowski(
+            str(disc),
+            str(input_el.a),
+            str(input_el.b),
             y.serialize() + bytes(self.witness),
             info.number_of_iterations,
             constants.DISCRIMINANT_SIZE_BITS,
