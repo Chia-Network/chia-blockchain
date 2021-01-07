@@ -39,5 +39,10 @@ export default function useFarmerStatus(): FarmerStatus {
     (state: RootState) => state.daemon_state.farmer_running,
   );
 
-  return getFarmerStatus(connected, running, blockchainSynced, blockchainSynching);
+  return getFarmerStatus(
+    connected,
+    running,
+    blockchainSynced,
+    blockchainSynching,
+  );
 }
