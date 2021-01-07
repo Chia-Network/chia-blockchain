@@ -11,6 +11,7 @@ type FullNodeState = {
     space: number;
     sub_slot_iters: number;
     sync: {
+      synced: boolean;
       sync_mode: boolean;
       sync_progress_height: number;
       sync_tip_height: number;
