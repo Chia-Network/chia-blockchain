@@ -637,6 +637,8 @@ class FullNode:
             sub_slots = await self.blockchain.get_sp_and_ip_sub_slots(sub_block.header_hash)
             assert sub_slots is not None
 
+            self.log.warning(f"Initial Sub slots: {self.full_node_store.finished_sub_slots}")
+            self.log.warning(f"Ip sub slot: {sub_slots[1]}")
             added_eos, added_sps, new_ips = self.full_node_store.new_peak(
                 new_peak,
                 sub_slots[0],
@@ -644,7 +646,7 @@ class FullNode:
                 fork_height != sub_block.sub_block_height - 1 and sub_block.sub_block_height != 0,
                 self.blockchain.sub_blocks,
             )
-            self.log.warning(f"New Sub slots: {len(self.full_node_store.finished_sub_slots)}")
+            self.log.warning(f"New Sub slots: {self.full_node_store.finished_sub_slots}")
             for a, b, c in self.full_node_store.finished_sub_slots:
                 if a is not None:
                     self.log.warning(f"{a.challenge_chain.get_hash()}")
