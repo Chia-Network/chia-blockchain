@@ -33,7 +33,7 @@ const cols = [
         </Tooltip>
       );
     },
-    title: <Trans id="FarmFullNodeConnections.nodeId">Node Id</Trans>,
+    title: <Trans id="FarmFullNodeConnections.nodeId">Node ID</Trans>,
   },
   {
     width: '150px',

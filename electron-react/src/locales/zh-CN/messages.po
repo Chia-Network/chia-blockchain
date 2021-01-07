@@ -13,19 +13,19 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/components/wallet/standard/WalletStandard.tsx:522
+#: src/components/wallet/standard/WalletStandard.tsx:525
 msgid "AddressCard.address"
 msgstr "地址"
 
-#: src/components/wallet/standard/WalletStandard.tsx:526
+#: src/components/wallet/standard/WalletStandard.tsx:529
 msgid "AddressCard.copy"
 msgstr "复制"
 
-#: src/components/wallet/standard/WalletStandard.tsx:538
+#: src/components/wallet/standard/WalletStandard.tsx:541
 msgid "AddressCard.newAddress"
 msgstr "新建地址"
 
-#: src/components/wallet/standard/WalletStandard.tsx:514
+#: src/components/wallet/standard/WalletStandard.tsx:517
 msgid "AddressCard.title"
 msgstr "接收地址"
 
@@ -49,15 +49,15 @@ msgstr "连接到钱包"
 msgid "Application.loggingIn"
 msgstr "登录"
 
-#: src/components/wallet/standard/WalletStandard.tsx:202
+#: src/components/wallet/standard/WalletStandard.tsx:203
 msgid "BalanceCard.balance"
 msgstr "余额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:239
+#: src/components/wallet/standard/WalletStandard.tsx:240
 msgid "BalanceCard.pendingBalance"
 msgstr "未确认的金额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:241
+#: src/components/wallet/standard/WalletStandard.tsx:242
 msgid "BalanceCard.pendingBalanceTooltip"
 msgstr "这是未确认交易中（尚未包含在区块链中）的花费和接收的总金额。这不包括挖矿奖励。"
 
@@ -69,39 +69,39 @@ msgstr "未确认的找零"
 msgid "BalanceCard.pendingChangeTooltip"
 msgstr "这是未确认的零钱，是您已发送给自己但尚未确认的零钱。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:246
+#: src/components/wallet/standard/WalletStandard.tsx:247
 msgid "BalanceCard.pendingFarmingRewards"
 msgstr "未成熟的挖矿奖励"
 
-#: src/components/wallet/standard/WalletStandard.tsx:248
+#: src/components/wallet/standard/WalletStandard.tsx:249
 msgid "BalanceCard.pendingFarmingRewardsTooltip"
 msgstr "这是最近挖到的区块奖励，但是目前还不能使用。挖矿奖励会被冻结200个区块。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:232
+#: src/components/wallet/standard/WalletStandard.tsx:233
 msgid "BalanceCard.pendingTotalBalance"
 msgstr "未确认的总额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:234
+#: src/components/wallet/standard/WalletStandard.tsx:235
 msgid "BalanceCard.pendingTotalBalanceTooltip"
 msgstr "这是总金额+待处理金额：它是确认所有待处理交易后的余额。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:212
+#: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "BalanceCard.spendableBalance"
 msgstr "可用金额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:212
+#: src/components/wallet/standard/WalletStandard.tsx:213
 msgid "BalanceCard.spendableBalanceTooltip"
 msgstr "这是您当前可用于进行交易的金额。它不包括未完成的挖矿奖励、未确认的金额和您刚刚使用但尚未打包金额。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:206
+#: src/components/wallet/standard/WalletStandard.tsx:207
 msgid "BalanceCard.totalBalance"
 msgstr "总金额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:206
+#: src/components/wallet/standard/WalletStandard.tsx:207
 msgid "BalanceCard.totalBalanceTooltip"
 msgstr "这是 LCA 区块（最新的共同祖先）在区块链中的总余额，由您的私钥控制。其中包括冻结的挖矿奖励，但不包括未确认的收入和花费交易。"
 
-#: src/components/wallet/standard/WalletStandard.tsx:225
+#: src/components/wallet/standard/WalletStandard.tsx:226
 msgid "BalanceCard.viewPendingBalances"
 msgstr "查看未确认金额"
 
@@ -250,7 +250,7 @@ msgstr ""
 msgid "BlocksCard.timeCreated"
 msgstr "创建时间"
 
-#: src/components/fullNode/FullNode.jsx:319
+#: src/components/fullNode/FullNode.jsx:317
 msgid "BlocksCard.title"
 msgstr "区块"
 
@@ -282,123 +282,123 @@ msgstr "染色币选项"
 #~ msgid "Challenges.title"
 #~ msgstr "挑战"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:195
+#: src/components/wallet/coloured/WalletColoured.tsx:196
 msgid "ColourCard.colour"
 msgstr "染色币："
 
-#: src/components/wallet/coloured/WalletColoured.tsx:211
+#: src/components/wallet/coloured/WalletColoured.tsx:212
 msgid "ColourCard.nickname"
 msgstr "昵称"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:217
+#: src/components/wallet/coloured/WalletColoured.tsx:218
 msgid "ColourCard.rename"
 msgstr "重命名"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:186
+#: src/components/wallet/coloured/WalletColoured.tsx:187
 msgid "ColourCard.title"
 msgstr "染色币信息"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:597
+#: src/components/wallet/coloured/WalletColoured.tsx:601
 msgid "ColouredAddressCard.address"
 msgstr "地址"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:601
+#: src/components/wallet/coloured/WalletColoured.tsx:605
 msgid "ColouredAddressCard.copy"
 msgstr "复制"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:613
+#: src/components/wallet/coloured/WalletColoured.tsx:617
 msgid "ColouredAddressCard.newAddress"
 msgstr "新建地址"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:589
+#: src/components/wallet/coloured/WalletColoured.tsx:593
 msgid "ColouredAddressCard.title"
 msgstr "接收地址"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:313
+#: src/components/wallet/coloured/WalletColoured.tsx:314
 msgid "ColouredBalanceCard.spendableBalance"
 msgstr "支出金额"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:308
+#: src/components/wallet/coloured/WalletColoured.tsx:309
 msgid "ColouredBalanceCard.title"
 msgstr "金额"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:312
+#: src/components/wallet/coloured/WalletColoured.tsx:313
 msgid "ColouredBalanceCard.totalBalance"
 msgstr "总金额"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:322
+#: src/components/wallet/coloured/WalletColoured.tsx:323
 msgid "ColouredBalanceCard.viewPendingBalances"
 msgstr "查看未确认的金额……"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:563
+#: src/components/wallet/coloured/WalletColoured.tsx:567
 msgid "ColouredHistoryCard.title"
 msgstr "历史记录"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:443
+#: src/components/wallet/coloured/WalletColoured.tsx:444
 msgid "ColouredSendCard.address"
 msgstr "地址"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:455
+#: src/components/wallet/coloured/WalletColoured.tsx:456
 msgid "ColouredSendCard.amount"
 msgstr "金额({cc_unit})"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:472
+#: src/components/wallet/coloured/WalletColoured.tsx:473
 msgid "ColouredSendCard.farm"
 msgstr "挖矿"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:462
+#: src/components/wallet/coloured/WalletColoured.tsx:463
 msgid "ColouredSendCard.fee"
 msgstr "费用(TXCH)"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:477
+#: src/components/wallet/coloured/WalletColoured.tsx:478
 msgid "ColouredSendCard.send"
 msgstr "发送"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:428
+#: src/components/wallet/coloured/WalletColoured.tsx:429
 msgid "ColouredSendCard.title"
 msgstr "创建交易"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:523
+#: src/components/wallet/coloured/WalletColoured.tsx:527
 msgid "ColouredTransactionTable.amount"
 msgstr "金额"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:504
+#: src/components/wallet/coloured/WalletColoured.tsx:508
 msgid "ColouredTransactionTable.confirmed"
 msgstr "已确认"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:517
+#: src/components/wallet/coloured/WalletColoured.tsx:521
 msgid "ColouredTransactionTable.date"
 msgstr "日期"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:526
+#: src/components/wallet/coloured/WalletColoured.tsx:530
 msgid "ColouredTransactionTable.fee"
 msgstr "费用"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:499
+#: src/components/wallet/coloured/WalletColoured.tsx:505
 msgid "ColouredTransactionTable.incoming"
 msgstr "传入"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:492
+#: src/components/wallet/coloured/WalletColoured.tsx:493
 msgid "ColouredTransactionTable.noPreviousTransactions"
 msgstr "没有之前的交易"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:501
+#: src/components/wallet/coloured/WalletColoured.tsx:504
 msgid "ColouredTransactionTable.outgoing"
 msgstr "传出"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:504
+#: src/components/wallet/coloured/WalletColoured.tsx:508
 msgid "ColouredTransactionTable.pending"
 msgstr "待处理"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:520
+#: src/components/wallet/coloured/WalletColoured.tsx:524
 msgid "ColouredTransactionTable.status"
 msgstr "状态"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:514
+#: src/components/wallet/coloured/WalletColoured.tsx:518
 msgid "ColouredTransactionTable.to"
 msgstr "至"
 
-#: src/components/wallet/coloured/WalletColoured.tsx:511
+#: src/components/wallet/coloured/WalletColoured.tsx:515
 msgid "ColouredTransactionTable.type"
 msgstr "状态"
 
@@ -963,15 +963,15 @@ msgstr ""
 msgid "FormatConnectionStatus.notConnected"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:392
+#: src/components/fullNode/FullNode.jsx:390
 msgid "FullNode.title"
 msgstr "全节点"
 
-#: src/components/fullNode/FullNode.jsx:278
+#: src/components/fullNode/FullNode.jsx:276
 msgid "FullNodeStatus.title"
 msgstr "全节点状态"
 
-#: src/components/wallet/standard/WalletStandard.tsx:488
+#: src/components/wallet/standard/WalletStandard.tsx:491
 msgid "HistoryCard.title"
 msgstr "历史记录"
 
@@ -1525,23 +1525,23 @@ msgstr "建立交易"
 msgid "RLSendCard.waitForSyncing"
 msgstr "请在完成先完成同步"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:937
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:942
 msgid "RLTransactionTable.amount"
 msgstr "金额"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:913
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:918
 msgid "RLTransactionTable.confirmed"
 msgstr "已确认"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:931
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:936
 msgid "RLTransactionTable.date"
 msgstr "日期"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:940
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:945
 msgid "RLTransactionTable.fee"
 msgstr "费用"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:907
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:913
 msgid "RLTransactionTable.incoming"
 msgstr "传入"
 
@@ -1549,23 +1549,23 @@ msgstr "传入"
 msgid "RLTransactionTable.noPreviousTransactions"
 msgstr "没有先前的交易"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:909
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:912
 msgid "RLTransactionTable.outgoing"
 msgstr "传出"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:915
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:920
 msgid "RLTransactionTable.pending"
 msgstr "待处理"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:934
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:939
 msgid "RLTransactionTable.status"
 msgstr "状态"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:928
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:933
 msgid "RLTransactionTable.to"
 msgstr "至"
 
-#: src/components/wallet/rateLimited/WalletRateLimited.jsx:925
+#: src/components/wallet/rateLimited/WalletRateLimited.jsx:930
 msgid "RLTransactionTable.type"
 msgstr "类型"
 
@@ -1597,15 +1597,15 @@ msgstr "费率受限的用户钱包设置"
 msgid "RTIncompleteCard.userPubkey"
 msgstr "用户公钥"
 
-#: src/components/fullNode/FullNode.jsx:357
+#: src/components/fullNode/FullNode.jsx:355
 msgid "SearchBlock.blockHash"
 msgstr "区块哈希"
 
-#: src/components/fullNode/FullNode.jsx:368
+#: src/components/fullNode/FullNode.jsx:366
 msgid "SearchBlock.search"
 msgstr "搜索"
 
-#: src/components/fullNode/FullNode.jsx:351
+#: src/components/fullNode/FullNode.jsx:349
 msgid "SearchBlock.title"
 msgstr "按标题哈希搜索块"
 
@@ -1717,15 +1717,15 @@ msgstr "已连接"
 msgid "StatusItem.connectionStatusNotConnected"
 msgstr "未连接"
 
-#: src/components/fullNode/FullNode.jsx:197
+#: src/components/fullNode/FullNode.jsx:195
 msgid "StatusItem.difficulty"
 msgstr "难度"
 
-#: src/components/fullNode/FullNode.jsx:225
+#: src/components/fullNode/FullNode.jsx:223
 msgid "StatusItem.estimatedNetworkSpace"
 msgstr "预估的网络空间"
 
-#: src/components/fullNode/FullNode.jsx:231
+#: src/components/fullNode/FullNode.jsx:229
 msgid "StatusItem.estimatedNetworkSpaceTooltip"
 msgstr "网络中矿工的所有已创建的空间的估计总和"
 
@@ -1811,15 +1811,15 @@ msgstr "该节点正在同步，这意味着它正在从其他节点下载块，
 msgid "StatusItem.statusValue"
 msgstr "正在同步{progress} / {tip}"
 
-#: src/components/fullNode/FullNode.jsx:205
+#: src/components/fullNode/FullNode.jsx:203
 msgid "StatusItem.subSlotIters"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:213
+#: src/components/fullNode/FullNode.jsx:211
 msgid "StatusItem.totalIterations"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:217
+#: src/components/fullNode/FullNode.jsx:215
 msgid "StatusItem.totalIterationsTooltip"
 msgstr ""
 
@@ -1971,43 +1971,43 @@ msgstr ""
 msgid "TradingHistory.title"
 msgstr "交易记录"
 
-#: src/components/wallet/standard/WalletStandard.tsx:444
+#: src/components/wallet/standard/WalletStandard.tsx:447
 msgid "TransactionTable.amount"
 msgstr "金额"
 
-#: src/components/wallet/standard/WalletStandard.tsx:423
+#: src/components/wallet/standard/WalletStandard.tsx:426
 msgid "TransactionTable.confirmedAtHeight"
 msgstr "已确认在{0}"
 
-#: src/components/wallet/standard/WalletStandard.tsx:438
+#: src/components/wallet/standard/WalletStandard.tsx:441
 msgid "TransactionTable.date"
 msgstr "日期"
 
-#: src/components/wallet/standard/WalletStandard.tsx:447
+#: src/components/wallet/standard/WalletStandard.tsx:450
 msgid "TransactionTable.fee"
 msgstr "费用"
 
-#: src/components/wallet/standard/WalletStandard.tsx:418
+#: src/components/wallet/standard/WalletStandard.tsx:423
 msgid "TransactionTable.incoming"
 msgstr "传入"
 
-#: src/components/wallet/standard/WalletStandard.tsx:420
+#: src/components/wallet/standard/WalletStandard.tsx:422
 msgid "TransactionTable.outgoing"
 msgstr "传出"
 
-#: src/components/wallet/standard/WalletStandard.tsx:425
+#: src/components/wallet/standard/WalletStandard.tsx:428
 msgid "TransactionTable.pending"
 msgstr "待处理"
 
-#: src/components/wallet/standard/WalletStandard.tsx:441
+#: src/components/wallet/standard/WalletStandard.tsx:444
 msgid "TransactionTable.status"
 msgstr "状态"
 
-#: src/components/wallet/standard/WalletStandard.tsx:435
+#: src/components/wallet/standard/WalletStandard.tsx:438
 msgid "TransactionTable.to"
 msgstr "至"
 
-#: src/components/wallet/standard/WalletStandard.tsx:432
+#: src/components/wallet/standard/WalletStandard.tsx:435
 msgid "TransactionTable.type"
 msgstr "类型"
 

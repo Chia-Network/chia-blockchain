@@ -106,7 +106,7 @@ export default function CreateOffer() {
       dispatch(
         openDialog(
           <AlertDialog>
-            <Trans id="CreateOffer.addTradePair">Please add trade pair</Trans>
+            <Trans id="CreateOffer.addTradePair">Please add a trade pair</Trans>
           </AlertDialog>
         ),
       );
@@ -130,7 +130,7 @@ export default function CreateOffer() {
         openDialog(
           <AlertDialog>
             <Trans id="CreateOffer.availableOnlyFromElectron">
-              This feature is available only from electron app
+              This feature is available only from the GUI.
             </Trans>
           </AlertDialog>
         ),

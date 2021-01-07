@@ -125,7 +125,7 @@ const getStatusItems = (state, connected) => {
       colour: 'red',
       tooltip: (
         <Trans id="StatusItem.statusNotSyncedTooltip">
-          The node is not synced and currently not syncing
+          The node is not synced
         </Trans>
       ),
     };
@@ -185,9 +185,7 @@ const getStatusItems = (state, connected) => {
       : '',
     tooltip: (
       <Trans id="StatusItem.peakTimeTooltip">
-        This is the time of the latest common ancestor, which is a block
-        ancestor of all tip blocks. Note that the full node keeps track of up
-        to three tips at each height.
+        This is the time of the latest peak sub block.
       </Trans>
     ),
   });
