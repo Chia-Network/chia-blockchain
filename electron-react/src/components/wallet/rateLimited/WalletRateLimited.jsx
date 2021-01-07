@@ -28,7 +28,7 @@ import {
 import { mojo_to_chia_string, chia_to_mojo } from '../../../util/chia';
 import { get_transaction_result } from '../../../util/transaction_result';
 import { unix_to_short_date } from '../../../util/utils';
-
+import TransactionType from '../../../constants/TransactionType';
 import { openDialog } from '../../../modules/dialog';
 
 const drawerWidth = 240;
@@ -902,12 +902,17 @@ const TransactionTable = (props) => {
     );
   }
 
-  const incoming_string = (incoming) => {
-    if (incoming) {
-      return <Trans id="RLTransactionTable.incoming">Incoming</Trans>;
-    }
-    return <Trans id="RLTransactionTable.outgoing">Outgoing</Trans>;
+  const incoming_string = (type: TransactionType) => {
+    const isOutgoing = [
+      TransactionType.OUTGOING, 
+      TransactionType.OUTGOING_TRADE,
+    ].includes(type);
+
+    return isOutgoing
+      ? <Trans id="RLTransactionTable.outgoing">Outgoing</Trans>
+      : <Trans id="RLTransactionTable.incoming">Incoming</Trans>;
   };
+
   const confirmed_to_string = (confirmed) => {
     return confirmed ? (
       <Trans id="RLTransactionTable.confirmed">Confirmed</Trans>
@@ -948,7 +953,7 @@ const TransactionTable = (props) => {
               key={tx.to_address + tx.created_at_time + tx.amount}
             >
               <TableCell className={classes.cell_short}>
-                {incoming_string(tx.incoming)}
+                {incoming_string(tx.type)}
               </TableCell>
               <TableCell
                 style={{ maxWidth: '150px' }}

@@ -35,6 +35,7 @@ import { unix_to_short_date } from '../../../util/utils';
 import { openDialog } from '../../../modules/dialog';
 import { get_transaction_result } from '../../../util/transaction_result';
 import config from '../../../config/config';
+import TransactionType from '../../../constants/TransactionType';
 import type { RootState } from '../../../modules/rootReducer';
 
 const drawerWidth = 240;
@@ -702,12 +703,17 @@ function TransactionTable(props: TransactionTableProps) {
     );
   }
 
-  const incoming_string = (incoming: boolean) => {
-    if (incoming) {
-      return <Trans id="ColouredTransactionTable.incoming">Incoming</Trans>;
-    }
-    return <Trans id="ColouredTransactionTable.outgoing">Outgoing</Trans>;
+  const incoming_string = (type: TransactionType) => {
+    const isOutgoing = [
+      TransactionType.OUTGOING, 
+      TransactionType.OUTGOING_TRADE,
+    ].includes(type);
+
+    return isOutgoing
+      ? <Trans id="ColouredTransactionTable.outgoing">Outgoing</Trans>
+      : <Trans id="ColouredTransactionTable.incoming">Incoming</Trans>;
   };
+
   const confirmed_to_string = (confirmed: boolean) => {
     return confirmed ? (
       <Trans id="ColouredTransactionTable.confirmed">Confirmed</Trans>
@@ -748,7 +754,7 @@ function TransactionTable(props: TransactionTableProps) {
               key={tx.to_address + tx.created_at_time + tx.amount}
             >
               <TableCell className={classes.cell_short}>
-                {incoming_string(tx.incoming)}
+                {incoming_string(tx.type)}
               </TableCell>
               <TableCell
                 style={{ maxWidth: '150px' }}
