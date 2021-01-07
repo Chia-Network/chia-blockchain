@@ -9,9 +9,8 @@ import { mojo_to_chia } from '../../../util/chia';
 
 export default function FarmCardTotalChiaFarmed() {
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
-  const { loading, value } = useAsync(() => computeStatistics(wallets), [
-    wallets,
-  ]);
+  const value = computeStatistics(wallets);
+  const loading = !wallets;
 
   const total = useMemo((): number => mojo_to_chia(value?.totalChia), [value?.totalChia]);
 
