@@ -3,7 +3,7 @@ import dataclasses
 import time
 
 import src.server.ws_connection as ws
-from typing import AsyncGenerator, List, Optional, Tuple, Callable, Dict, Union
+from typing import AsyncGenerator, List, Optional, Tuple, Callable, Dict
 from chiabip158 import PyBIP158
 from blspy import G2Element, AugSchemeMPL
 
@@ -20,7 +20,6 @@ from src.consensus.sub_block_record import SubBlockRecord
 
 
 from src.protocols import (
-    introducer_protocol,
     farmer_protocol,
     full_node_protocol,
     timelord_protocol,
