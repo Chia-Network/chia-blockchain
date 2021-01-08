@@ -29,7 +29,7 @@ const cols = [
         </Tooltip>
       );
     },
-    title: <Trans id="FarmFullNodeConnections.nodeId">Node Id</Trans>,
+    title: <Trans id="FarmFullNodeConnections.nodeId">Node ID</Trans>,
   },
   {
     width: '150px',
@@ -88,7 +88,7 @@ export default function FarmFullNodeConnections() {
     <Card 
       title={(
         <Trans id="FarmFullNodeConnections.title">
-          Your Full Node Connnection
+          Your Full Node Connection
         </Trans>
       )}
       tooltip={(

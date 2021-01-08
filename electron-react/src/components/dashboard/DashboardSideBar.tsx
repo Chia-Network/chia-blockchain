@@ -47,7 +47,7 @@ export default function DashboardSideBar() {
         <SideBarItem
           to="/dashboard/plot"
           icon={<PlotIcon fontSize="large" />}
-          title={<Trans id="DashboardSideBar.plot">Plot</Trans>}
+          title={<Trans id="DashboardSideBar.plots">Plots</Trans>}
         />
         <SideBarItem
           to="/dashboard/farm"

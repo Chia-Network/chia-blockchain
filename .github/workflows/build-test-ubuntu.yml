@@ -53,12 +53,18 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Download Chia test blocks and plots
+    - name: Checkout test blocks and plots
+      uses: actions/checkout@v2
+      with:
+        repository: 'Chia-Network/test-cache'
+        path: '.chia'
+
+    - name: Link home directory
       run: |
-        mkdir $HOME/.chia
-        cd $HOME/.chia
-        curl -L https://download.chia.net/tests/blocks-2020-12-17.tgz | tar -zx
-        curl -L https://download.chia.net/tests/test-plots-2021-01-04.tgz | tar -zx
+        cd $HOME
+        ln -s $GITHUB_WORKSPACE/.chia
+        echo "$HOME/.chia"
+        ls -al $HOME/.chia
 
     - name: Install ubuntu dependencies
       run: |

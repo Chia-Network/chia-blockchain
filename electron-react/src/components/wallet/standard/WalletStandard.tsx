@@ -36,6 +36,7 @@ import { get_transaction_result } from '../../../util/transaction_result';
 import config from '../../../config/config';
 import type { RootState } from '../../../modules/rootReducer';
 import Transaction from '../../../types/Transaction';
+import TransactionType from '../../../constants/TransactionType';
 
 const drawerWidth = 240;
 
@@ -269,10 +270,10 @@ function BalanceCard(props: BalanceCardProps) {
           balance={balance}
           tooltip={
             <Trans id="BalanceCard.totalBalanceTooltip">
-              This is the total amount of Chia in the blockchain at the LCA
-              block (latest common ancestor) that is controlled by your private
-              keys. It includes frozen farming rewards, but not pending incoming
-              and outgoing transactions.
+              This is the total amount of chia in the blockchain at the current
+              peak sub block that is controlled by your private keys.
+              It includes frozen farming rewards,
+              but not pending incoming and outgoing transactions.
             </Trans>
           }
         />
@@ -285,7 +286,7 @@ function BalanceCard(props: BalanceCardProps) {
             <Trans id="BalanceCard.spendableBalanceTooltip">
               This is the amount of Chia that you can currently use to make
               transactions. It does not include pending farming rewards, pending
-              incoming transctions, and Chia that you have just spent but is not
+              incoming transactions, and Chia that you have just spent but is not
               yet in the blockchain.
             </Trans>
           }
@@ -317,7 +318,7 @@ function BalanceCard(props: BalanceCardProps) {
                         balance={balance_ptotal}
                         tooltip={
                           <Trans id="BalanceCard.pendingTotalBalanceTooltip">
-                            This is the total balance + pending balance: it it
+                            This is the total balance + pending balance: it is
                             what your balance will be after all pending
                             transactions are confirmed.
                           </Trans>
@@ -349,8 +350,7 @@ function BalanceCard(props: BalanceCardProps) {
                           <Trans id="BalanceCard.pendingFarmingRewardsTooltip">
                             This is the total amount of farming rewards farmed
                             recently, that have been confirmed but are not yet
-                            spendable. Farming rewards are frozen for 200
-                            blocks.
+                            spendable.
                           </Trans>
                         }
                       />
@@ -617,12 +617,17 @@ function TransactionTable(props: TransactionTableProps) {
     return <div style={{ margin: '30px' }}>No previous transactions</div>;
   }
 
-  const incoming_string = (incoming: boolean) => {
-    if (incoming) {
-      return <Trans id="TransactionTable.incoming">Incoming</Trans>;
-    }
-    return <Trans id="TransactionTable.outgoing">Outgoing</Trans>;
+  const incoming_string = (type: TransactionType) => {
+    const isOutgoing = [
+      TransactionType.OUTGOING, 
+      TransactionType.OUTGOING_TRADE,
+    ].includes(type);
+
+    return isOutgoing
+      ? <Trans id="TransactionTable.outgoing">Outgoing</Trans>
+      : <Trans id="TransactionTable.incoming">Incoming</Trans>;
   };
+
   const confirmed_to_string = (tx: Transaction) => {
     return tx.confirmed ? (
       <Trans id="TransactionTable.confirmedAtHeight">
@@ -671,7 +676,7 @@ function TransactionTable(props: TransactionTableProps) {
               }
             >
               <TableCell className={classes.cell_short}>
-                {incoming_string(tx.incoming)}
+                {incoming_string(tx.type)}
               </TableCell>
               <TableCell
                 style={{ maxWidth: '150px' }}
