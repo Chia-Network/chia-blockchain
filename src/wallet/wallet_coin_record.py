@@ -16,8 +16,10 @@ class WalletCoinRecord(Streamable):
     """
 
     coin: Coin
-    confirmed_block_index: uint32
-    spent_block_index: uint32
+    confirmed_block_sub_height: uint32
+    confirmed_block_height: uint32
+    spent_block_sub_height: uint32
+    spent_block_height: uint32
     spent: bool
     coinbase: bool
     wallet_type: WalletType
